@@ -52,18 +52,33 @@ def test_high_conviction_is_the_shared_four_cell_rule():
     assert not mp.is_high_conviction({"grade": "A+", "plans": {}})
 
 
-def test_marked_stacks_one_target_per_cell_like_the_deck_badge():
-    one = _row("XRF")
-    two = _row("ENR"); two["plans"]["3D"] = {"armed": True, "entry_trigger": "reclaim"}
-    three = dict(two, symbol="SOL"); three["plans"] = dict(two["plans"],
-                                                         **{"1D": {"armed": True, "entry_trigger": "break"}})
-    assert mp.marked(one) == "XRF " + mp.MARK
-    assert mp.marked(two) == "ENR " + mp.MARK * 2
-    assert mp.marked(three) == "SOL " + mp.MARK * 3
-    assert mp.marked(_row("PLAIN", trigger="retest")) == "PLAIN", "a non-HC row wears no mark"
-
-
-# ── the filter: long only, no funds, high-conviction (or opt-in A+) ──────────
+def test_the_ticker_list_is_clean_and_the_target_marks_ride_the_header():
+    """Owner 2026-09-21: a copy of the plays must be pure symbols. The tickers
+    carry NO marks (mp.sym), and the \U0001F3AF cell count moves to the group
+    HEADER instead -- one header per (label, cell-count), fewer marks first."""
+    two = {"1W": {"armed": True, "entry_trigger": "reclaim"},
+           "3D": {"armed": True, "entry_trigger": "reclaim"}}     # 2 cells
+    assert mp.sym(_row("XRF")) == "XRF"
+    assert mp.sym(_row("ENR", plans=two)) == "ENR", "the ticker itself never wears a mark"
+    msgs = mp.build_messages(
+        {"asx": [_row("NIC", score=9), _row("PPT", score=8),
+                 _row("ENR", score=10, plans=two)]},
+        {"asx": 1.0}, "Mon 1 Jan")
+    text = "\n".join(msgs)
+    M = mp.MARK
+    # the 1-cell names group under a one-target header, the 2-cell name under two
+    assert f"High conviction A+ {M}\nNIC\nPPT" in text
+    assert f"High conviction A+ {M}{M}\nENR" in text
+    # a mark only ever appears on a HEADER line, never glued to a ticker: every
+    # line carrying the mark also carries the conviction label or is the "A+"
+    # header, and no single-token ticker line contains it.
+    for line in text.splitlines():
+        if M in line:
+            assert ("conviction" in line.lower() or line.startswith("A+")
+                    or "VIVEK 5.0" in line), \
+                f"a non-header line carries a mark: {line!r}"
+        elif line and " " not in line and line.isupper():
+            pass  # a clean ticker line -- exactly what we want
 
 def test_qualifies_is_long_high_conviction_and_never_a_short_or_fund():
     assert mp.qualifies(_row("HC", grade="A+"))                       # long, HC
@@ -113,10 +128,13 @@ def test_all_suppressed_reads_differently_from_no_plays():
     assert "No new plays" in msgs[0] and "already shared" in msgs[0]
 
 
-def test_the_message_is_grouped_by_market_then_by_label_one_symbol_per_line():
-    """Owner, 2026-09-17: `ASX PLAYS` / `A+ High conviction` / NIC / PPT ... /
-    `High conviction` / TLS -- NOT a `SYM -> label` arrow per row."""
+def test_the_message_groups_by_label_and_cell_count_with_clean_tickers():
+    """Owner, 2026-09-21: `**ASX PLAYS**` / `High conviction A+ \U0001F3AF` / NIC / PPT,
+    tickers CLEAN (no per-row mark, no arrow), the \U0001F3AF count on the header."""
+    two = {"1W": {"armed": True, "entry_trigger": "reclaim"},
+           "3D": {"armed": True, "entry_trigger": "reclaim"}}
     picks = {"asx": [_row("NIC", grade="A+", score=9), _row("PPT", grade="A+", score=8),
+                     _row("ENR", grade="A+", score=10, plans=two),
                      _row("TLS", grade="A", score=7)],
              "nasdaq": [_row("CRWV", grade="A")],
              "crypto": [_row("LINK", grade="A+")]}
@@ -124,15 +142,13 @@ def test_the_message_is_grouped_by_market_then_by_label_one_symbol_per_line():
                              "Mon 1 Jan")
     text = "\n".join(msgs)
     M = mp.MARK
-    assert f"**ASX PLAYS**\nA+ High conviction\nNIC {M}\nPPT {M}\n\nHigh conviction\nTLS {M}" in text
-    assert f"**NASDAQ PLAYS**\nHigh conviction\nCRWV {M}" in text
-    assert f"**CRYPTO PLAYS**\nA+ High conviction\nLINK {M}" in text
-    assert "→" not in text and "->" not in text, "no per-row arrows"
-    assert text.count("A+ High conviction") == 2, "a label appears once per market, not per row"
+    assert f"**ASX PLAYS**\nHigh conviction A+ {M}\nNIC\nPPT\n\nHigh conviction A+ {M}{M}\nENR" in text
+    assert f"High conviction {M}\nTLS" in text                 # grade-A HC, no "A+"
+    assert f"**CRYPTO PLAYS**\nHigh conviction A+ {M}\nLINK" in text
+    assert "\u2192" not in text and "->" not in text, "no per-row arrows"
     # clean: none of the old entry/stop/RR clutter, no company names
     assert "entry" not in text and "stop" not in text and "R:R" not in text
-    assert "▲" not in text and "▼" not in text and "Ltd" not in text
-
+    assert "\u25b2" not in text and "\u25bc" not in text and "Ltd" not in text
 
 def test_a_market_with_no_plays_still_shows_a_header():
     msgs = mp.build_messages({"asx": [_row("JHX")], "nasdaq": [], "crypto": []},

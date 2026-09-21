@@ -83,10 +83,10 @@ conviction_count = conviction.conviction_count
 MARK = "\U0001F3AF"                          # the deck's target mark
 
 
-def marked(row: dict) -> str:
-    """`SYM` plus one mark per cell fired (up to three), e.g. `ENR 🎯🎯`."""
-    n = conviction_count(row)
-    return f"{row.get('symbol', '?')} {MARK * n}" if n else str(row.get("symbol", "?"))
+def sym(row: dict) -> str:
+    """Just the ticker, CLEAN -- no marks (owner 2026-09-21: the 🎯 moved to
+    the group HEADER so a copy of the ticker list is pure symbols)."""
+    return str(row.get("symbol", "?"))
 
 
 def _is_long(row: dict) -> bool:
@@ -222,25 +222,45 @@ def record_sent(sent: dict[str, str], delivered_by_market: dict[str, list[dict]]
 # ── formatting the clean text (pure) ─────────────────────────────────────────
 
 LABEL_ORDER = ("A+ High conviction", "High conviction", "A+")
+# The owner's 2026-09-21 mockup writes the conviction label as "High conviction
+# A+"; the internal play_label() text stays as-is (other code groups on it), and
+# this maps it to the header wording. The 🎯 cell count is appended per
+# sub-group, so the copyable tickers below the header carry no emoji at all.
+HEADER_TEXT = {
+    "A+ High conviction": "High conviction A+",
+    "High conviction": "High conviction",
+    "A+": "A+",
+}
 
 
 def _market_block(market: str, picks: list[dict], cap: int,
                   age: float | None, stale_h: float) -> list[str]:
     """One market, GROUPED BY LABEL (owner, 2026-09-17): a bold `MARKET PLAYS`
-    header, then each label once as a sub-heading with its symbols one per
-    line -- no per-row arrows. Strongest label group first (LABEL_ORDER)."""
+    header, then a sub-heading per (label, cell-count) carrying the 🎯 marks,
+    with its symbols CLEAN one per line beneath -- so the ticker list copies as
+    pure letters (owner 2026-09-21). Strongest label group first (LABEL_ORDER),
+    fewer marks first inside a label."""
     lines = [f"**{market.upper()} PLAYS**"]
     if not picks:
         lines.append("(none this morning)")
         return lines
     shown = picks[:cap]
     for label in LABEL_ORDER:
-        syms = [marked(r) for r in shown if play_label(r) == label]
-        if not syms:
+        group = [r for r in shown if play_label(r) == label]
+        if not group:
             continue
-        lines.append(label)
-        lines.extend(syms)
-        lines.append("")
+        head = HEADER_TEXT.get(label, label)
+        # Sub-group by conviction cell count and render one header per count,
+        # fewer marks first (owner mockup). A non-HC "A+" group is count 0, so
+        # its header is just "A+" with no mark.
+        by_count: dict[int, list[dict]] = {}
+        for r in group:
+            by_count.setdefault(conviction_count(r), []).append(r)
+        for count in sorted(by_count):
+            header = f"{head} {MARK * count}" if count else head
+            lines.append(header)
+            lines.extend(sym(r) for r in by_count[count])
+            lines.append("")
     if lines[-1] == "":
         lines.pop()
     if len(picks) > cap:
