@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-21T22:55:08+10:00",
+  "generated_at": "2026-09-22T02:04:18+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "WRK",
+      "name": "Wrkr Ltd",
+      "sector": "Software & Services",
+      "dir": "LONG",
+      "price": 0.062,
+      "turnover_avg20": 70561,
+      "turnover_today": 251536,
+      "rvol": 3.8,
+      "adv_usd": 70561.02,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "EPM",
       "name": "Eclipse Metals Limited.",
