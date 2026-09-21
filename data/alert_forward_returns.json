@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-09-20T00:11:03+00:00",
+ "updated_at": "2026-09-21T00:19:11+00:00",
  "entries": [
   {
    "key": "2026-08-20|nasdaq|TMUS|short|2",
@@ -51613,7 +51613,7 @@
    "base_day": "2026-09-19",
    "base_close": 0.67215824,
    "fwd": {
-    "1": null,
+    "1": 0.010871,
     "5": null,
     "10": null,
     "20": null
@@ -51633,7 +51633,7 @@
    "base_day": "2026-09-19",
    "base_close": 0.84281576,
    "fwd": {
-    "1": null,
+    "1": -0.014314,
     "5": null,
     "10": null,
     "20": null
@@ -51968,7 +51968,7 @@
    "base_day": "2026-09-19",
    "base_close": 110.87000275,
    "fwd": {
-    "1": null,
+    "1": 0.011666,
     "5": null,
     "10": null,
     "20": null
@@ -51991,13 +51991,83 @@
    "base_day": "2026-09-19",
    "base_close": 140.61000061,
    "fwd": {
-    "1": null,
+    "1": -0.016556,
     "5": null,
     "10": null,
     "20": null
    },
    "grade_raw": "A+",
    "score": 10,
+   "is_product": false
+  },
+  {
+   "key": "2026-09-20|crypto|KCS|short|2",
+   "date": "2026-09-20T14:15:21+00:00",
+   "market": "crypto",
+   "ticker": "KCS",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-20",
+   "base_close": 7.22641802,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "grade_raw": "B+",
+   "score": 4,
+   "is_product": false
+  },
+  {
+   "key": "2026-09-21|asx|RIC|short|2",
+   "date": "2026-09-20T14:15:21+00:00",
+   "market": "asx",
+   "ticker": "RIC",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-21",
+   "base_close": null,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "sector": "Consumer Staples",
+   "grade_raw": "B+",
+   "score": 7,
+   "is_product": false
+  },
+  {
+   "key": "2026-09-20|crypto|INJ|short|2",
+   "date": "2026-09-20T10:46:51+00:00",
+   "market": "crypto",
+   "ticker": "INJ",
+   "side": "short",
+   "count": 2,
+   "lenses": [
+    "PHASEMAP",
+    "VIVEK"
+   ],
+   "base_day": "2026-09-20",
+   "base_close": 7.73600006,
+   "fwd": {
+    "1": null,
+    "5": null,
+    "10": null,
+    "20": null
+   },
+   "grade_raw": "B+",
+   "score": 7,
    "is_product": false
   }
  ]
