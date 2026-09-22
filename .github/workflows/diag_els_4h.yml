@@ -1,50 +1,34 @@
 # THROWAWAY diagnostic (2026-09-23). Runs only on a push to its own branch,
-# never on main; read-only against the public site. Always exits green so a
-# probe finding never sends a failure email -- the answer is in the log.
+# never on main. GETs the public price relay (read-only) and commits the raw
+# bars to THIS branch so they can be analysed offline; nothing reaches main.
 name: diag ELS 4H (throwaway)
 on:
   push:
     branches: [diag-els-4h-2026-09-23]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  probe:
+  fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Raw hourly pull (the request the 4H pane makes)
+      - name: Fetch the bars the Momentum chart requests (read-only GETs)
         run: |
-          code=$(curl -sS -m 60 -o h.json -w '%{http_code}' \
-            "https://googy-boys-scanner.pages.dev/api/price?symbol=ELS.AX&range=2y&interval=1h" 2>curl.err || true)
-          echo "HTTP $code"
-          echo "curl stderr: $(cat curl.err 2>/dev/null)"
-          echo "response head: $(head -c 300 h.json 2>/dev/null)"
-          node -e '
-            const fs = require("fs");
-            let j = {}; try { j = JSON.parse(fs.readFileSync("h.json", "utf8")); } catch (e) { console.log("unparseable", String(e)); }
-            const c = j.candles || [];
-            console.log("ok", j.ok, "| hourly candles", c.length, "| bars", j.bars, "| degraded", j.degraded, "| basis", JSON.stringify(j.basis));
-            if (c.length) console.log("first", new Date(c[0].time*1000).toISOString(), "| last", new Date(c[c.length-1].time*1000).toISOString());
-            const src = fs.readFileSync("public/js/chart.js", "utf8");
-            const at = src.indexOf("function bucketBars(");
-            let fn = null;
-            for (let i = src.indexOf("{", at); i < src.length && !fn; i++) {
-              if (src[i] !== "}") continue;
-              try { fn = new Function("return (" + src.slice(at, i + 1) + ");")(); } catch (_) {}
-            }
-            const h4 = fn ? fn(c, 4 * 3600) : [];
-            console.log("4H buckets (chart.js bucketBars)", h4.length, "| chart needs >= 24 hourly and >= 6 buckets");
-            if (h4.length) console.log("4H first", new Date(h4[0].time*1000).toISOString(), "| 4H last", new Date(h4[h4.length-1].time*1000).toISOString());
-          ' || true
-      - name: Install Playwright + Chromium
+          mkdir -p diag/data
+          get() {
+            curl -sS -m 60 -o "diag/data/$1" -w "$1 HTTP %{http_code} %{size_download}B\n" \
+              "https://googy-boys-scanner.pages.dev/api/price?$2" || echo "$1 curl failed"
+            sleep 2
+          }
+          get ELS_1h.json   "symbol=ELS.AX&range=2y&interval=1h"
+          get ELS_1d.json   "symbol=ELS.AX&range=25y&interval=1d"
+          get AAPL_1h.json  "symbol=AAPL&range=1mo&interval=1h"
+          ls -la diag/data
+      - name: Commit the fetched bars to this branch only
         run: |
-          npm init -y > /dev/null 2>&1
-          npm install --no-save playwright > /dev/null 2>&1
-          npx playwright install --with-deps chromium > /dev/null 2>&1
-      - name: Tap 4H on the live Momentum chart (390x844)
-        timeout-minutes: 4
-        run: node diag/els_4h_probe.js || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diag/data
+          git commit -q -m "diag: fetched bars $(date -u +%FT%TZ)" || { echo "nothing new"; exit 0; }
+          git push origin HEAD:diag-els-4h-2026-09-23
