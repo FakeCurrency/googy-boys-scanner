@@ -3944,7 +3944,6 @@
     let wsGen = 0, wsFails = 0, wsTimer = null;
     let iv = "1h", ivSec = 3600;
 
-    const restURL   = () => `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${iv}&limit=${KEEP}`;
     const streamURL = () => `wss://stream.binance.com:9443/ws/${pair.toLowerCase()}@kline_${iv}`;
 
     const setMarks = (marks) => {
