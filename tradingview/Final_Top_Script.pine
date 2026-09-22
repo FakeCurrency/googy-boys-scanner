@@ -25,7 +25,10 @@
 //   * A Long / Short position box (profit box + red stop box) with an
 //     Entry / SL / TP1 / TP2 / TP3 ladder, taken from the last signal (if it is
 //     recent) or typed in by hand to mirror a posted call. The auto stop is
-//     capped at `maxStopPct` and targets never go below zero.
+//     capped at `maxStopPct` (AUTO MODE ONLY -- a Manual box with mSL = 0 uses an
+//     uncapped ATR stop), and targets are floored at 5% of entry, not at zero.
+//     That floor is unreachable in Auto: the 15% stop cap bounds risk at
+//     0.15 * entry, and reaching the floor at r3 = 3 needs risk > 0.3167 * entry.
 //
 // v5.3 (2026-09-09): RE10140 again (68). The real rule: a plot with a const
 // colour = 1 slot, an input or series colour = 2. Axis labels now use literal
