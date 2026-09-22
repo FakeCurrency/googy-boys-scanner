@@ -971,7 +971,11 @@ test("the realised figure is said ONCE — the header sparkline is retired", () 
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "journal.html"), "utf8");
   assert.ok(!/id="jr-pnl-track"/.test(html), "the duplicate realised row is back");
   assert.ok(!/jr-pnl-spark/.test(SRC), "journal.js still renders the retired sparkline");
-  assert.ok(/drawMiniEquity/.test(SRC), "the per-book equity curves must still be drawn");
+  // drawEquity is what draws the per-book curves. This line used to assert
+  // /drawMiniEquity/, the retired header sparkline -- a function with no
+  // caller -- so it passed while testing nothing (hygiene map section 8).
+  assert.ok(/\bdrawEquity\(pre \+ "-equity", series\(d\.closed\)/.test(SRC),
+    "the per-book equity curves must still be drawn (drawEquity, called per book)");
   assert.ok(/id="jr-pnl-total"/.test(html), "the UNREALISED headline must stay — it is this block's job");
 });
 
