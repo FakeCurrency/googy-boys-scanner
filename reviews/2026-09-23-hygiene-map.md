@@ -131,3 +131,9 @@ built as `"is-" + dir`). chart.css `s-*` (built as `s-${state}`). The nine e2e
 fixtures (each is served to a page as `/data/`, and they are hashed into the
 screenshot cache key). HTML pages (404.html is Cloudflare's not-found page and
 offline.html is sw.js's fallback).
+
+**Second pass (nav.js + chart.js only).** ESLint `no-unused-vars` was run as
+an independent check. nav.js: nothing. chart.js: the three names already kept
+above, plus `const ep = pl.entry` in `applyMomentumPlan`, which P2 (#26)
+orphaned when it dropped the `%·R` rung labels. Deleted in its own commit and
+pinned inside that function.
