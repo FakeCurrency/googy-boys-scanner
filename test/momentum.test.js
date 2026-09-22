@@ -325,4 +325,195 @@ function slice(name) {
      "payload fields are escaped before they reach innerHTML");
 })();
 
+/* ── CHART MODE (2026-09-22) ────────────────────────────────────────────────
+ * The lens screens a 20/50/200 stack and an RSI divergence. 5.0's chart draws
+ * 10/20/43/200 SMAs and a trade ladder. Opening a Momentum row on the 5.0
+ * chart therefore showed averages no Momentum rule consults, so the chart
+ * takes a `momentum` mode. The pins below are about the SEAM: the row asks for
+ * it, the chart honours it, and a 5.0 link never trips it.
+ */
+const CHART = fs.readFileSync(path.join(PUB, "js", "chart.js"), "utf8");
+const APP = fs.readFileSync(path.join(PUB, "js", "app.js"), "utf8");
+
+// --- the ask: the row sends what the chart reads -----------------------------
+ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
+
+// --- the honour: chart.js resolves that ask ----------------------------------
+{
+  // Execute the real resolution rather than grepping it: the bug class here is
+  // a mode that is spelled right and never reached.
+  // Slice ONLY the mode statement: the block after it touches `document`
+  // (the back-link), which has no business in a node-side parity check.
+  const MODE_END = '? "momentum" : "vivek";';
+  ok(CHART.includes(MODE_END),
+     "chart.js no longer resolves a momentum mode — every Momentum row would " +
+     "fall back to the 5.0 chart and its 10/20/43 stack");
+  const src = CHART.slice(CHART.indexOf("const urlMode"),
+                          CHART.indexOf(MODE_END) + MODE_END.length);
+  const resolve = (q) => new Function("search", `
+    const params = new URLSearchParams(search);
+    const market = (params.get("m") || "asx").toLowerCase();
+    ${src.replace(/const market =[^\n]*\n/, "")}
+    return mode;`)(q);
+  eq(resolve("?s=ELS&m=asx&src=momentum"), "momentum", "src=momentum enters momentum mode");
+  eq(resolve("?s=ELS&m=asx&mode=momentum"), "momentum", "mode=momentum enters momentum mode");
+  eq(resolve("?s=ELS&m=asx&SRC=MOMENTUM".toLowerCase()), "momentum", "the match is case-folded");
+  // REQUIREMENT 6 — the default must be untouched.
+  eq(resolve("?s=BHP&m=asx"), "vivek", "a bare link is still a 5.0 chart");
+  eq(resolve("?s=BHP&m=asx&mode=vivek"), "vivek", "an explicit 5.0 link is still 5.0");
+  eq(resolve("?s=BHP&m=asx&src=journal"), "vivek", "another lens's src does not divert");
+  eq(resolve("?s=X&m=asx&mode=spec"), "spec", "specs still wins its own mode");
+}
+
+// --- a 5.0 deck link must not carry it ---------------------------------------
+{
+  const links = APP.match(/chart\.html\?[^`"']*/g) || [];
+  ok(links.length >= 3, `expected several deck chart links, saw ${links.length}`);
+  const bad = links.filter((l) => /src=momentum|mode=momentum/.test(l));
+  eq(bad.length, 0, `no 5.0 deck link may request momentum mode, saw ${bad.join(" ")}`);
+}
+
+// --- the stack: Pine seeding, executed ---------------------------------------
+{
+  const slc = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    assert.ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) {}
+    }
+    throw new Error("slice " + name);
+  };
+  const emaPine = new Function("return (" + slc("emaPine") + ");")();
+  // Pine returns na before `length` bars and seeds on the SMA of the first
+  // `length` values. pandas' ewm(adjust=False) seeds on the FIRST value and
+  // emits from bar 0 — the difference decays as (1-alpha)^n, i.e. it is
+  // largest exactly on the 200 the trend filter tests `close > slow` against.
+  const flat = new Array(300).fill(5);
+  const e = emaPine(flat, 200);
+  ok(!isFinite(e[198]), "na before the seed window closes — not a flat guess");
+  ok(isFinite(e[199]), "the first value lands on bar length-1");
+  ok(Math.abs(e[199] - 5) < 1e-12, "seeded with the SMA of the first `length` values");
+  const ramp = Array.from({ length: 260 }, (_, i) => i + 1);
+  const r = emaPine(ramp, 200);
+  const sma200 = ramp.slice(0, 200).reduce((a, b) => a + b, 0) / 200;
+  ok(Math.abs(r[199] - sma200) < 1e-9, "the seed is the SMA, on a ramp too");
+  eq(emaPine(new Array(50).fill(1), 200).every((x) => !isFinite(x)), true,
+     "a history shorter than the span yields no line at all");
+  // The warm-up must not be back-filled: a drawn line before the seed would
+  // claim a 200 EMA on a name that has never had 200 bars.
+  eq(r.slice(0, 199).some(isFinite), false, "nothing is drawn before the seed");
+}
+
+// --- Rule A marks: pivot loud, confirmation quiet ----------------------------
+{
+  const slc = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    assert.ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) {}
+    }
+    throw new Error("slice " + name);
+  };
+  const barAtDate = new Function("return (" + slc("barAtDate") + ");")();
+  const momentumMarkers = new Function("barAtDate",
+    slc("momentumMarkers") + "; return momentumMarkers;")(barAtDate);
+
+  const DAY = 86400;
+  const t0 = Math.floor(Date.UTC(2026, 8, 22) / 1000) - 20 * DAY;
+  const bars = Array.from({ length: 21 }, (_, i) => ({ time: t0 + i * DAY, close: 1 }));
+  const iso = (t) => new Date(t * 1000).toISOString().slice(0, 10);
+
+  const m = momentumMarkers({ rule_a: true, rule_a_direction: "bull",
+    rule_a_bars_ago: 0, rule_a_pivot_bars_ago: 5,
+    rule_a_pivot_bar: iso(bars[15].time) + " 00:00:00" }, bars);
+  eq(m.length, 2, "both the pivot and the confirmation are marked");
+  eq(m[0].time, bars[15].time, "the pivot mark sits on the pivot bar");
+  eq(m[1].time, bars[20].time, "the confirmation mark sits on the confirming bar");
+  ok(/DIV/.test(m[0].text), "the pivot mark names the divergence");
+  ok(m[0].shape === "arrowUp" && m[1].shape === "circle",
+     "the confirmation is quieter than the pivot — it is the bookkeeping half");
+  ok(m[0].color !== m[1].color, "and visually subordinate");
+
+  // The DATE wins over the count. A live feed can be a session ahead of the
+  // committed scan, and counting back N bars then lands on the wrong candle —
+  // silently, which is the worst way for a chart to be wrong.
+  const ahead = bars.concat([{ time: bars[20].time + DAY, close: 1 }]);
+  const m2 = momentumMarkers({ rule_a: true, rule_a_direction: "bull",
+    rule_a_bars_ago: 0, rule_a_pivot_bars_ago: 5,
+    rule_a_pivot_bar: iso(bars[15].time) + " 00:00:00" }, ahead);
+  eq(m2[0].time, bars[15].time, "the pivot stays on its DATE when the feed runs ahead");
+
+  // No date → fall back to the count rather than dropping the mark.
+  const m3 = momentumMarkers({ rule_a: true, rule_a_direction: "bear",
+    rule_a_bars_ago: 1, rule_a_pivot_bars_ago: 6 }, bars);
+  eq(m3.length, 2, "a payload with no pivot date still marks both");
+  eq(m3[0].time, bars[14].time, "counted back from the last bar");
+  ok(m3[0].shape === "arrowDown", "a bear divergence points down");
+
+  eq(momentumMarkers({ rule_a: false }, bars).length, 0, "no Rule A, no marks");
+  eq(momentumMarkers(null, bars).length, 0, "no row, no marks");
+  // Coincident bars must not stack two marks on one candle.
+  const m4 = momentumMarkers({ rule_a: true, rule_a_direction: "bull",
+    rule_a_bars_ago: 3, rule_a_pivot_bars_ago: 3 }, bars);
+  eq(m4.length, 1, "a coincident pivot and confirmation render once");
+}
+
+// --- no invented trade plan --------------------------------------------------
+{
+  const fb = CHART.slice(CHART.indexOf("function momentumFallback("),
+                         CHART.indexOf("// ── Held-plan chart"));
+  ok(/level_lines:\s*\[\]/.test(fb), "the momentum chart publishes no level lines");
+  for (const k of ["tp1", "tp2", "tp3", "\\bstop\\b", "\\bentry\\b"]) {
+    ok(!new RegExp(`\\b${k}\\s*:`).test(fb),
+       `momentumFallback must not set ${k} — the spec calls the divergence an ` +
+       `attention filter, not an entry system, and the payload carries no plan`);
+  }
+  ok(/Momentum is a shortlist, not a 5\.0 plan\./.test(CHART),
+     "the caption states what the chart is");
+  {
+    // Assert the BASE RULE and its declarations, not the bare word: the word
+    // also appears in the comment above the rule and in the media query below
+    // it, so a substring test stayed green when the selector was renamed.
+    // (Found by mutation, not by reading -- the same shape as the `?symbol=`
+    // prose collisions earlier in this file.)
+    const css = fs.readFileSync(path.join(PUB, "css", "chart.css"), "utf8");
+    const rule = /\.mom-caption\s*\{([^}]*)\}/.exec(css);
+    ok(rule, "chart.css defines a .mom-caption rule");
+    ok(/position:\s*absolute/.test(rule[1]), "the caption is pinned over the canvas");
+    ok(/z-index/.test(rule[1]), "and sits above it");
+    ok(/mom-caption/.test(CHART), "and chart.js applies that class");
+  }
+  // It must be textContent — the family rule, pinned across the repo.
+  const cap = CHART.slice(CHART.indexOf("if (d._momentum) {"), CHART.indexOf("if (d._momentum) {") + 400);
+  ok(/textContent/.test(cap) && !/innerHTML/.test(cap), "the caption is set as text");
+}
+
+// --- history is NOT capped by momentum ---------------------------------------
+{
+  // The Daily pull must be the SHARED constant, not a momentum-only number.
+  const fb = CHART.slice(CHART.indexOf("function momentumFallback("),
+                         CHART.indexOf("// ── Held-plan chart"));
+  // The real property is not "no literals" -- the crypto branch legitimately
+  // says "5y", exactly as pmOnlyFallback does -- but that the daily pull is the
+  // SAME ONE 5.0 uses. Compared against the shipped pmOnlyFallback rather than
+  // a retyped expectation, so retuning the shared range moves both or fails.
+  const pmfb = CHART.slice(CHART.indexOf("function pmOnlyFallback("),
+                           CHART.indexOf("// ── Held-plan chart"));
+  const liveDailyOf = (body) => {
+    const at = body.indexOf("const liveDaily");
+    return body.slice(at, body.indexOf(";", body.indexOf("DAILY_RANGE", at)))
+               .replace(/\s+/g, " ").trim();
+  };
+  ok(/DAILY_RANGE/.test(fb), "the momentum chart pulls the shared DAILY_RANGE");
+  eq(liveDailyOf(fb), liveDailyOf(pmfb),
+     "momentum's daily history pull is byte-identical to the 5.0 fallback's -- " +
+     "a Momentum-only history cap is exactly what this forbids");
+  ok(!/setVisibleRange|setVisibleLogicalRange/.test(fb),
+     "and it sets no momentum-only zoom — render() fits content for every mode");
+}
+
 console.log(`momentum: ${checks} checks passed`);
