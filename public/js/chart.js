@@ -146,6 +146,11 @@
   let pmRec = null;
   function fetchPhaseMapRec() {
     if (market === "scalp") return Promise.resolve(null);
+    // MOMENTUM: the zones are a DIFFERENT lens's read on the same tape, and on
+    // a chart that now carries its own box, ladder and two panes they are
+    // clutter rather than context. Opt in with ?pm=1, which is the flag the
+    // zones used to require anyway.
+    if (isMomentum && params.get("pm") !== "1") return Promise.resolve(null);
     const want = decodeURIComponent(symbol || "").toUpperCase();
     // narrations live in a sidecar file since 2026-07-05 (slimmer latest.json)
     return Promise.all([
@@ -782,6 +787,80 @@
     };
   }
 
+  // Strict both-sides pivots ON THE RSI SERIES, returning CONFIRMATION indices
+  // (a pivot at i-right is only knowable at i). Strict on both sides means a
+  // tie is not a pivot -- scanner/momentum/config.py's pivot_strict_* default.
+  function pivotIdx(vals, left, right, low) {
+    const out = [], n = vals.length;
+    for (let i = left; i + right < n; i++) {
+      const v = vals[i];
+      if (!isFinite(v)) continue;
+      let ok = true;
+      for (let k = i - left; k <= i + right && ok; k++) {
+        if (k === i || !isFinite(vals[k])) { if (!isFinite(vals[k])) ok = false; continue; }
+        ok = low ? v < vals[k] : v > vals[k];
+      }
+      if (ok) out.push({ pivot: i, confirm: i + right });
+    }
+    return out;
+  }
+
+  // Regular bull/bear divergence, Final_RSI_Plus.pine's rule exactly.
+  //
+  // THE GAP IS 6..61, NOT 5..60, and it is inherited from TradingView's own
+  // Divergence Indicator: f_inRange is called with plFound[1], so
+  // ta.barssince() reads (i - previous_confirm - 1). scanner/momentum/screen.py
+  // carries the same note; the two must not drift.
+  function momentumDivs(bars, rsi, mp) {
+    const P = mp || {};
+    const L = +(P.piv_left ?? 5), R = +(P.piv_right ?? 5);
+    const LO = +(P.range_lower ?? 5), UP = +(P.range_upper ?? 60);
+    const lows = pivotIdx(rsi, L, R, true), highs = pivotIdx(rsi, L, R, false);
+    const out = [];
+    const scan = (piv, bull) => {
+      for (let k = 1; k < piv.length; k++) {
+        const cur = piv[k], prev = piv[k - 1];
+        const gap = cur.confirm - prev.confirm - 1;          // ta.barssince(cond[1])
+        if (!(gap >= LO && gap <= UP)) continue;
+        const rNow = rsi[cur.pivot], rPrev = rsi[prev.pivot];
+        if (!isFinite(rNow) || !isFinite(rPrev)) continue;
+        const pNow = bull ? bars[cur.pivot].low : bars[cur.pivot].high;
+        const pPrev = bull ? bars[prev.pivot].low : bars[prev.pivot].high;
+        const hit = bull ? (pNow < pPrev && rNow > rPrev) : (pNow > pPrev && rNow < rPrev);
+        if (hit) out.push({ bull, pivot: cur.pivot, confirm: cur.confirm, rsi: rNow });
+      }
+    };
+    scan(lows, true); scan(highs, false);
+    out.sort((a, b) => a.pivot - b.pivot);
+    return out;
+  }
+
+  // Every scored cross in the series, for the on-price labels the template
+  // draws ("+3 Bullish" / "-2 Bearish"). Same scoring as momentumPlan -- both
+  // read TV_PLAN, so a retune moves the labels and the box together.
+  function momentumCrosses(bars, mp) {
+    const P = Object.assign({}, MOM_MA_DEFAULTS, mp || {});
+    const cl = bars.map((b) => b.close);
+    const fast = emaPine(cl, +P.fast_len), mid = emaPine(cl, +P.mid_len), slow = emaPine(cl, +P.slow_len);
+    const { hist } = macdPine(cl, TV_PLAN.macd[0], TV_PLAN.macd[1], TV_PLAN.macd[2]);
+    const rsi = rsiPine(cl, TV_PLAN.rsiLen);
+    const out = [];
+    for (let i = 1; i < bars.length; i++) {
+      if (!(isFinite(fast[i]) && isFinite(mid[i]) && isFinite(fast[i - 1]) && isFinite(mid[i - 1]))) continue;
+      const bullX = fast[i - 1] <= mid[i - 1] && fast[i] > mid[i];
+      const bearX = fast[i - 1] >= mid[i - 1] && fast[i] < mid[i];
+      if (!bullX && !bearX) continue;
+      const above = isFinite(slow[i]) && cl[i] > slow[i], below = isFinite(slow[i]) && cl[i] < slow[i];
+      const bs = 1 + (TV_PLAN.useMacd && hist[i] > 0 ? 1 : 0) + (TV_PLAN.useSlow && above ? 1 : 0)
+                   + (TV_PLAN.useRsi && rsi[i] > 50 ? 1 : 0);
+      const rs = 1 + (TV_PLAN.useMacd && hist[i] < 0 ? 1 : 0) + (TV_PLAN.useSlow && below ? 1 : 0)
+                   + (TV_PLAN.useRsi && rsi[i] < 50 ? 1 : 0);
+      if (bullX && bs >= TV_PLAN.minScore) out.push({ i, bull: true, score: bs });
+      else if (bearX && rs >= TV_PLAN.minScore) out.push({ i, bull: false, score: rs });
+    }
+    return out;
+  }
+
   // MACD + RSI pane series for a timeframe, Pine-seeded throughout.
   function momentumPanes(bars) {
     const cl = bars.map((b) => b.close);
@@ -1251,13 +1330,26 @@
         // marks ONLY on 1D: the scan is a DAILY screen (`timeframe: "1d"`), so a
         // pivot index means nothing on a weekly or 3-day candle and snapping it
         // to one would invent a weekly divergence the lens never found.
-        d.timeframes["1D"] = barsToMomentumTF(daily, mp);
+        // EVERY timeframe recomputes the whole template on ITS OWN bars --
+        // plan, panes, cross labels, divergences, ATH. Gluing the Daily box
+        // onto a 3D chart would show a plan whose entry, stop and R are
+        // measured in a different bar size from the candles under it, which is
+        // exactly what the owner's 4H screenshot disproves: that pane carries
+        // its own Entry 6.46 / SL 7.39, not the Daily's 5.88 / 6.76.
+        const build = (bars) => {
+          const tf = barsToMomentumTF(bars, mp);
+          tf.panes = momentumPanes(bars);
+          tf.plan = momentumPlan(bars, mp);
+          tf.crosses = momentumCrosses(bars, mp);
+          tf.divs = momentumDivs(bars, rsiPine(bars.map((b) => b.close), TV_PLAN.rsiLen), mp);
+          tf.ath = bars.reduce((m, b) => (b.high > m ? b.high : m), -Infinity);
+          return tf;
+        };
+        d.timeframes["1D"] = build(daily);
+        // The scan row's OWN Rule A marks stay on the Daily pane: they are what
+        // the published scan found, and they must not be silently replaced by
+        // the chart's recomputation of the same rule.
         d.timeframes["1D"].markers = momentumMarkers(row, daily);
-        // The Pine template's panes + Auto trade box, on the DAILY series the
-        // screen itself runs on. 3D/1W get the stack but no plan: the script is
-        // a 1D chart and a cross index means nothing on a resampled candle.
-        d.timeframes["1D"].panes = momentumPanes(daily);
-        d.timeframes["1D"].plan = momentumPlan(daily, mp);
         const pl = d.timeframes["1D"].plan;
         if (pl) {
           d.dir = pl.dir === 1 ? "LONG" : "SHORT";
@@ -1266,9 +1358,9 @@
           d.rr = 3;
         }
         const d3 = bucketBars(daily, 3 * 86400);
-        if (d3.length >= 6) d.timeframes["3D"] = barsToMomentumTF(d3, mp);
+        if (d3.length >= 6) d.timeframes["3D"] = build(d3);
         const wk = resampleWeekly(daily);
-        if (wk.length >= 6) d.timeframes["1W"] = barsToMomentumTF(wk, mp);
+        if (wk.length >= 6) d.timeframes["1W"] = build(wk);
         if (d.price == null) d.price = daily[daily.length - 1].close;
         renderDataHonesty();
         render(d);
@@ -1702,6 +1794,43 @@
     }
   }
 
+  // The Auto box as a metric strip: direction, the five levels, the R each one
+  // sits at, and how old the signal is. `age` is the honest half -- the box is
+  // drawn from a cross that may be 50 bars back, and a reader who cannot see
+  // that will read a stale plan as a live one.
+  function renderMomentumFooter(d, tfKey) {
+    const cur = d.currency_symbol || "";
+    const metric = (label, val, cls) =>
+      `<div class="cf-metric"><span class="cfm-label">${label}</span>` +
+      `<span class="cfm-val ${cls || ""}">${val}</span></div>`;
+    const tf = (d.timeframes || {})[tfKey] || {};
+    const pl = tf.plan;
+    const el = $("#cf-metrics");
+    if (!el) return;
+    if (!pl) {
+      el.innerHTML = metric("Auto plan", "none", "amber") +
+        metric("Why", `no scored cross in the last ${TV_PLAN.autoMaxAge} bars`, "");
+      const an = $("#cf-analysis");
+      if (an) an.textContent = d.analysis || "";
+      return;
+    }
+    const isLong = pl.dir === 1;
+    el.innerHTML = [
+      metric("Auto", isLong ? "LONG" : "SHORT", isLong ? "green" : "red"),
+      metric("Entry", fmt(pl.entry, cur)),
+      metric("SL", fmt(pl.stop, cur), "red"),
+      metric("TP1", fmt(pl.tp1, cur), "green"),
+      metric("TP2", fmt(pl.tp2, cur), "green"),
+      metric("TP3", fmt(pl.tp3, cur), "green"),
+      metric("R", fmt(pl.risk, cur), "amber"),
+      metric("R:R", "3.00", "green"),
+      metric("Signal", `${pl.age}b ago · score ${pl.score}`, ""),
+      metric("Stop", pl.capped ? `swing, cut to ${TV_PLAN.maxStopPct}%` : "5-bar swing + ATR pad", ""),
+    ].join("");
+    const an = $("#cf-analysis");
+    if (an) an.textContent = d.analysis || "";
+  }
+
   function footer(d) {
     const cur = d.currency_symbol || "";
     const metric = (label, val, cls) =>
@@ -1710,6 +1839,13 @@
     // VIVEK: render the default-TF levels now; applyTF re-renders per timeframe.
     if (d._vivek) {
       renderVivekFooter(d, d, d.default_tf || "1D");
+      return;
+    }
+    // MOMENTUM: the Auto box, not the 5.0 strip. The generic footer below
+    // prints SCORE 0/0 and RISK — because this lens publishes neither, and a
+    // row of blanks reads as a broken page rather than as a different system.
+    if (d._momentum) {
+      renderMomentumFooter(d, d.default_tf || "1D");
       return;
     }
 
@@ -2354,11 +2490,57 @@
     // own maths -- NOT from vivek.py, which is a different system and is not
     // consulted here. Redrawn per timeframe; only 1D carries a plan.
     let momHandles = [];
+    // The two shaded zones the template draws: entry->stop in red, entry->TP3
+    // in the direction colour. Baseline series with a PRICE baseline, the same
+    // mechanism the PhaseMap bands use, so the fill is a real band rather than
+    // a line pretending to be one.
+    let momRiskBand = null, momRewardBand = null, momAthLine = null;
+    if (d._momentum) {
+      const mkBand = (fill) => chart.addBaselineSeries({
+        baseValue: { type: "price", price: 0 },
+        topFillColor1: fill, topFillColor2: fill,
+        bottomFillColor1: fill, bottomFillColor2: fill,
+        topLineColor: "transparent", bottomLineColor: "transparent",
+        lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
+      });
+      momRiskBand = mkBand("rgba(239,68,68,0.16)");
+      momRewardBand = mkBand("rgba(59,130,246,0.14)");
+    }
+    function paintMomentumZones(key) {
+      if (!momRiskBand) return;
+      const pl = (tfs[key] || {}).plan;
+      const cs = (tfs[key] || {}).candles || [];
+      if (!pl || !cs.length) { momRiskBand.setData([]); momRewardBand.setData([]); return; }
+      // The box spans the signal bar to the right edge, as the Pine box does.
+      const t0 = pl.bar && pl.bar.time ? pl.bar.time : cs[0].time;
+      const tN = cs[cs.length - 1].time;
+      const span = (base, top) => {
+        const lo = Math.min(base, top), hi = Math.max(base, top);
+        return { lo, hi, rows: [{ time: t0, value: hi }, { time: tN, value: hi }] };
+      };
+      const risk = span(pl.entry, pl.stop);
+      momRiskBand.applyOptions({ baseValue: { type: "price", price: risk.lo } });
+      momRiskBand.setData(risk.rows);
+      const rew = span(pl.entry, pl.tp3);
+      momRewardBand.applyOptions({ baseValue: { type: "price", price: rew.lo } });
+      momRewardBand.setData(rew.rows);
+    }
+    // ATH — the horizontal the template pins at the highest high it can see.
+    function paintMomentumAth(key) {
+      if (!d._momentum) return;
+      if (momAthLine) { try { candle.removePriceLine(momAthLine); } catch (_) {} momAthLine = null; }
+      const ath = (tfs[key] || {}).ath;
+      if (!isFinite(ath)) return;
+      momAthLine = candle.createPriceLine({ price: ath, color: "#2fd07f", lineWidth: 1,
+        lineStyle: LC.LineStyle.Solid, axisLabelVisible: true, title: "ATH" });
+    }
     function applyMomentumPlan(key) {
       momHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
       momHandles = [];
+      paintMomentumZones(key);
+      paintMomentumAth(key);
       const pl = (tfs[key] || {}).plan;
-      if (!pl) return;
+      if (!pl) { d._activeLevels = null; return; }
       const ep = pl.entry;
       const line = (price, color, label, weight) => {
         if (price == null || !isFinite(price)) return;
@@ -2630,20 +2812,52 @@
           // RSI line at the divergence PIVOT -- the same bar the price pane
           // marks, so the two panes agree about when it happened.
           if (typeof rsiS.setMarkers === "function") {
-            const mk = (key === "1D" ? ((tfs[key] || {}).markers || []) : [])
-              .filter((m) => /DIV/.test(m.text || ""))
-              .map((m) => ({ time: m.time, position: m.position, color: m.color,
-                             shape: m.shape, text: /BULL/.test(m.text) ? "Bull" : "Bear" }));
+            // EVERY divergence in the series, not just the newest one. The
+            // scan row carries only the current hit; the pane is history, and
+            // a reader judging whether this signal is worth anything needs to
+            // see how the previous ones resolved. Placed on the PIVOT bar
+            // (Pine's offset = -lbR), so the tag sits where the divergence is
+            // drawn rather than where it was confirmed.
+            const cs = (tfs[key] || {}).candles || [];
+            const mk = ((tfs[key] || {}).divs || []).map((dv) => {
+              const b = cs[dv.pivot];
+              return b ? {
+                time: b.time,
+                position: dv.bull ? "belowBar" : "aboveBar",
+                color: dv.bull ? "#3b82f6" : "#ef4444",
+                shape: dv.bull ? "arrowUp" : "arrowDown",
+                text: dv.bull ? "Bull" : "Bear",
+              } : null;
+            }).filter(Boolean);
+            mk.sort((a, b) => a.time - b.time);
             rsiS.setMarkers(mk);
           }
         }
         applyMomentumPlan(key);
+        renderMomentumFooter(d, key);       // the box changes per timeframe
       }
       if (d._momentum && typeof candle.setMarkers === "function") {
-        // Rule A marks for THIS timeframe (only 1D carries any). Runs before
+        // Rule A marks for THIS timeframe (only 1D carries any) PLUS the scored
+        // cross labels the template writes on price: "+3 Bullish" / "-2 Bearish",
+        // signed so the direction reads without the word. Runs before
         // applyPmZones, which re-composes them with the sweep/displacement
-        // arrows when the ticker also has a PhaseMap record.
-        candle.setMarkers(((tfs[key] || {}).markers || []).slice());
+        // arrows when ?pm=1 brought a PhaseMap record along.
+        const base = ((tfs[key] || {}).markers || []).slice();
+        const cs = (tfs[key] || {}).candles || [];
+        for (const x of ((tfs[key] || {}).crosses || [])) {
+          const b = cs[x.i];
+          if (!b) continue;
+          base.push({
+            time: b.time, position: x.bull ? "belowBar" : "aboveBar",
+            color: x.bull ? "rgba(59,130,246,0.85)" : "rgba(239,68,68,0.85)",
+            shape: "circle",
+            text: `${x.bull ? "+" : "-"}${x.score} ${x.bull ? "Bullish" : "Bearish"}`,
+          });
+        }
+        // setMarkers requires ascending unique times; a cross and a Rule A mark
+        // can land on one bar, so sort and let the later one sit beside it.
+        base.sort((a, b) => a.time - b.time);
+        candle.setMarkers(base);
       }
       applyPmZones(key);                     // PhaseMap bands ride every timeframe
       applyShade(key);                       // #9: session / weekend banding
