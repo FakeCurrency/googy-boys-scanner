@@ -1179,6 +1179,31 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok((es.match(/location\.href = /g) || []).length === 1, "and it is the empty state's only navigation");
 }
 
+/* ── EVERY TF SWITCH OPENS ON THE LIVE MOVE (2026-09-23 nap audit) ─────────────
+ * The first view was set on the price chart alone, BEFORE the MACD/RSI panes
+ * got the new timeframe's bars, so the panes' previous range synced back over
+ * it: on production ELS 4H opened on Oct-Nov 2025 with the Auto box off
+ * screen, 3D on 2021. The view now goes on all three charts, last.
+ */
+{
+  const at = CHART.indexOf("function applyTF(key) {");
+  ok(at > 0, "chart.js no longer defines applyTF");
+  let fn = "";
+  for (let i = CHART.indexOf("{", at); i < CHART.length && !fn; i++) {
+    if (CHART[i] !== "}") continue;
+    try { new Function("return (function " + CHART.slice(at + 9, i + 1) + ");"); fn = CHART.slice(at, i + 1); } catch (_) { /* keep walking */ }
+  }
+  const code = fn.replace(/\/\/[^\n]*/g, "");
+  const iView = code.indexOf("momView = {"), iRsi = code.indexOf("rsiS.setData(pn ? pn.rsi : [])");
+  const iPlan = code.indexOf("applyMomentumPlan(key);");
+  const iAll = code.indexOf("[chart, ...subCharts].forEach((c) => {");
+  ok(iView > 0 && /from: momentumViewStart\(cs\)/.test(code), "the Momentum view is still the live-move window");
+  ok(iAll > 0 && /c\.timeScale\(\)\.setVisibleLogicalRange\(momView\)/.test(code.slice(iAll, iAll + 200)),
+     "the view is applied to the price chart AND both oscillator panes");
+  ok(iAll > iRsi && iAll > iPlan && iRsi > iView,
+     "and only after the panes hold this timeframe's bars and the plan is drawn");
+}
+
 /* ── TIMEFRAMES ALIGNED TO THE EXCHANGE SESSION (2026-09-23) ────────────────────
  * The Momentum chart is checked against TradingView, which builds ASX / NASDAQ
  * bars on the exchange's own session. The live ELS 4H box read 6.51 / 7.386

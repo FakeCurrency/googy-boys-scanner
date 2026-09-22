@@ -3061,15 +3061,16 @@
       // MOMENTUM Daily first paint. Runs AFTER fitContent so the fallback is
       // the shared behaviour: too few bars to window (a young listing) and the
       // chart simply fits what it has rather than padding empty history.
+      let momView = null;
       if (d._momentum) {
         const cs = (tfs[key] || {}).candles || [];
         if (cs.length >= MOM_VIEW_MIN_BARS) {
-          try {
-            chart.timeScale().setVisibleLogicalRange({
-              from: momentumViewStart(cs),
-              to: cs.length - 1 + 6,     // + rightOffset, so the last bar is not flush
-            });
-          } catch (_) { /* a refused range must never cost the chart */ }
+          momView = {
+            from: momentumViewStart(cs),
+            to: cs.length - 1 + 6,       // + rightOffset, so the last bar is not flush
+          };
+          try { chart.timeScale().setVisibleLogicalRange(momView); }
+          catch (_) { /* a refused range must never cost the chart */ }
         }
       }
       legend(tf);
@@ -3145,6 +3146,17 @@
         }
         applyMomentumPlan(key);
         renderMomentumFooter(d, key);       // the box changes per timeframe
+        // Nap audit 2026-09-23: the view goes on ALL THREE charts, and only
+        // once every series holds this timeframe's bars. It used to be set on
+        // the price chart alone, BEFORE the MACD/RSI panes were fed, so the
+        // panes' previous-timeframe range (Daily bar indices ~2100-2360 against
+        // a 914-bar 4H series) synced back over it: every TF switch opened on
+        // a stale window (ELS 4H showed Oct-Nov 2025, 3D showed 2021).
+        if (momView) {
+          [chart, ...subCharts].forEach((c) => {
+            try { c.timeScale().setVisibleLogicalRange(momView); } catch (_) { /* never cost the chart */ }
+          });
+        }
       }
       if (d._momentum && typeof candle.setMarkers === "function") {
         // Rule A marks for THIS timeframe (only 1D carries any) PLUS the scored
