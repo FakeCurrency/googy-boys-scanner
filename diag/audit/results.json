@@ -1,0 +1,144 @@
+{
+ "base": "https://googy-boys-scanner.pages.dev",
+ "at": "2026-09-22T22:59:00.727Z",
+ "results": [
+  {
+   "page": "momentum asx",
+   "check": "loads with no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "momentum asx",
+   "check": "header: title + scanned/gated/last bar",
+   "pass": true,
+   "detail": "MOMENTUM · 4 names || mode A · 1-bar window · 298 scanned · 867 gated · last bar 2026-09-22 || scanned Tue, 22 Sept, 5:25 pm Melb"
+  },
+  {
+   "page": "momentum asx",
+   "check": "rows rendered = header count",
+   "pass": true,
+   "detail": "header 4, .mo-row 4"
+  },
+  {
+   "page": "momentum asx",
+   "check": "every row link is ?s=...&m=...&src=momentum, never ?symbol=",
+   "pass": true,
+   "detail": "4 links, e.g. chart.html?s=ELS&m=asx&src=momentum"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "loads with no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "header: title + scanned/gated/last bar",
+   "pass": true,
+   "detail": "MOMENTUM · 20 names || mode A · 1-bar window · 1157 scanned · 268 gated · last bar 2026-09-21 || scanned Tue, 22 Sept, 5:35 pm Melb"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "rows rendered = header count",
+   "pass": true,
+   "detail": "header 20, .mo-row 20"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "every row link is ?s=...&m=...&src=momentum, never ?symbol=",
+   "pass": true,
+   "detail": "20 links, e.g. chart.html?s=CTSH&m=nasdaq&src=momentum"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "serves the aligned build",
+   "pass": true,
+   "detail": "/js/chart.js?v=121"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: SHORT 5.88 / 6.76 family",
+   "pass": true,
+   "detail": "entry 5.88 sl 6.762 | PLAN SHORT ENTRY A$5.880 SL A$6.762 TP1 A$4.998 TP2 A$4.116 TP3 A$3.234 R:R 3.00 TF 1D SIGNAL 41b ago · score "
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: 3 panes (price + MACD + RSI)",
+   "pass": true,
+   "detail": "2 oscillator panes"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: bars chip",
+   "pass": true,
+   "detail": "2353 daily bars"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: no PhaseMap, no SCORE 0/8",
+   "pass": true,
+   "detail": "top: ← Momentum ‹ › ELS ASX TECHNOLOGY HARDWARE & EQUIPMENT A$4.690 ~15m delayed SHORT Rule A bull Auto plan from the Pine te"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "timeframe bar on screen (phone)",
+   "pass": true,
+   "detail": "bar top 729 / viewport 844"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: chip is real history (not 187)",
+   "pass": true,
+   "detail": "912 4H bars"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: own plan, not Daily's numbers",
+   "pass": true,
+   "detail": "entry 6.46 sl 7.384 (daily 5.88/6.762)"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: within $0.02 of TV 6.46 / 7.39",
+   "pass": true,
+   "detail": "entry 6.46 sl 7.384"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "3D: own plan or honest no-cross",
+   "pass": true,
+   "detail": "785 3-day bars | PLAN — No Auto box on this TF — no scored cross in 60 bars. TF 3D Auto plan from the Pine template —"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "1W: own plan or honest no-cross",
+   "pass": true,
+   "detail": "486 weekly bars | PLAN — No Auto box on this TF — no scored cross in 60 bars. TF 1W Auto plan from the Pine template —"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "no page errors",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "SMA 10 / 20 / 43 in the legend",
+   "pass": true,
+   "detail": "SMA 10 A$61.219 SMA 20 A$62.700 SMA 43 A$61.907 SMA 200 A$54.619"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "no Pine caption, no Momentum panes",
+   "pass": true,
+   "detail": "panes 0"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "no page errors",
+   "pass": true,
+   "detail": "none"
+  }
+ ]
+}
