@@ -1365,7 +1365,7 @@
     $("#jr-pnl-split").innerHTML =
       `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(total)}">${d2(total)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>`;
     // The realised mini-sparkline was retired from this header (UI pass
-    // 2026-08-18) - see journal.html. drawMiniEquity still drives the full
+    // 2026-08-18) - see journal.html. drawEquity still draws the full
     // per-book equity curves, so nothing else changes; this block simply stops
     // re-stating a number that appears three more times below.
   }
