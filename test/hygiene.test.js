@@ -55,6 +55,15 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
        `${rel}: ${sym} was proven dead and deleted 2026-09-23; re-adding it needs a caller`);
 }
 
+// CSS: the floating live-P&L box went with the manual journal (2026-09-21);
+// its .live-pos-box / .lpb-* rules styled markup nothing creates.
+{
+  const css = code("css/chart.css");
+  ok(css.includes("@keyframes ctLivePulse"), "css/chart.css moved -- pin would be vacuous");
+  ok(!/\.live-pos-box\b|\.lpb-[\w-]/.test(css),
+     "css/chart.css: .live-pos-box / .lpb-* rules were proven dead and deleted 2026-09-23");
+}
+
 // `$$` cannot be pinned by name: the two characters legitimately occur in
 // `US$${...}` template text on the journal page. Pin the declaration instead.
 ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),
