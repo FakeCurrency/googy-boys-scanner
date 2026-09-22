@@ -118,13 +118,6 @@
   // vivek.py. Saying so is the whole job of this line: five lines labelled
   // ENTRY/SL/TP look exactly like a 5.0 ladder and are a different system.
   const MOM_CAPTION = "Auto plan from the Pine template \u2014 not a 5.0 plan.";
-  // ~3 years of sessions. The Daily pull is 25y and the stitcher really
-  // serves it, so fitContent() on a long-listed name squeezes 6,000+ bars
-  // into the canvas and the recent structure the lens actually screens is
-  // unreadable. First paint therefore WINDOWS to the last ~750 bars; the
-  // full series is still loaded and panning reaches all of it. Momentum
-  // only -- 5.0 first paint stays fitContent.
-  const MOM_FIRST_PAINT_BARS = 750;
   // P1: the first paint is the LIVE MOVE, not the whole listing. ELS spent
   // 2021-2024 as a 40c penny and fitContent squeezed the part anyone is
   // trading into the right-hand fifth of the canvas. Left edge is the LATER of
