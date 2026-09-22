@@ -31,7 +31,7 @@ const code = (rel) => fs.readFileSync(path.join(PUB, rel), "utf8")
 const GONE = {
   "js/chart.js": {
     live: "function momentumViewStart(",
-    dead: ["MOM_FIRST_PAINT_BARS", "entryRelTargets", "fetchStockQuote", "levTag", "SIM_CRYPTO_MARGIN", "SIM_CRYPTO_LEVERAGE", "SIM_STOCK_SIZE"],
+    dead: ["MOM_FIRST_PAINT_BARS", "entryRelTargets", "fetchStockQuote", "levTag", "SIM_CRYPTO_MARGIN", "SIM_CRYPTO_LEVERAGE", "SIM_STOCK_SIZE", "restURL"],
   },
 };
 
