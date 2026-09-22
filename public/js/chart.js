@@ -92,6 +92,7 @@
       specs:    ["specs.html",    "← Specs"],
       alerts:   ["alerts.html",   "← Alerts"],
       sectors:  ["sectors.html",  "← News"],
+      momentum: ["momentum.html", "← Momentum"],
     };
     const back = SRC_BACK[(params.get("src") || "").toLowerCase()];
     const el = document.querySelector(".back-link");
