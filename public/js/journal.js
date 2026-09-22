@@ -260,7 +260,6 @@
   }
 
   const rOf = (price, entry, risk, isLong) => (isLong ? (price - entry) : (entry - price)) / risk;
-  const fav = (nsl, csl, isLong) => (isLong ? nsl > csl : nsl < csl);
   const isVivek = (t) => t && t.stop != null && t.tp1 != null;
 
   // ── auto-management of a manual position (mirror of vivek_journal._mark) ──────
