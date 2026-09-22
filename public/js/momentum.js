@@ -109,6 +109,20 @@
     };
   }
 
+  // A local spark, deliberately NOT imported from app.js: that file is the 5.0
+  // deck's and this page must not take a runtime dependency on it. Unused while
+  // the payload carries no series -- present so the slot works the day it does.
+  function spark(vals, w, h, color) {
+    if (!vals || vals.length < 2) return "";
+    const min = Math.min(...vals), max = Math.max(...vals), rng = (max - min) || 1;
+    const step = w / (vals.length - 1);
+    const pts = vals.map((v, i) =>
+      `${(i * step).toFixed(1)},${(h - ((v - min) / rng) * h).toFixed(1)}`).join(" ");
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">` +
+      `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" ` +
+      `stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  }
+
   /* ---- chrome ---------------------------------------------------------- */
 
   function renderHead() {
@@ -139,6 +153,9 @@
       `${s.skipped_gates == null ? "?" : s.skipped_gates} gated`,
     ];
     if (s.errors) bits.push(`${s.errors} errored`);
+    // The last CLOSED bar, visible rather than hidden in a title attribute:
+    // it is the date every number on this page was measured on.
+    if (state.data.last_closed_bar) bits.push(`last bar ${state.data.last_closed_bar}`);
     sub.textContent = bits.join(" · ");
     const stamp = $("mo-stamp");
     stamp.textContent = state.data.generated_at
@@ -220,22 +237,39 @@
     const cls = ["mo-row"];
     if (dir) cls.push("is-" + dir);
     if (conflict) cls.push("is-conflict");
+    const href = `chart.html?s=${encodeURIComponent(r.symbol || "")}` +
+      `&amp;m=${encodeURIComponent(state.market)}&amp;src=momentum`;
+    // Only a series the SCANNER published is a spark. Nothing here reaches for
+    // another payload to draw one -- test-pinned.
+    const sparkVals = Array.isArray(r.spark) && r.spark.length > 1 ? r.spark : null;
 
     return `<article class="${cls.join(" ")}">` +
       `<div class="mo-rail" aria-hidden="true"></div>` +
       `<div class="mo-badge" title="Which rules fired">${esc(rulesBadge(r))}</div>` +
       `<div class="mo-main">` +
         `<div class="mo-head">` +
-          `<a class="mo-sym" href="chart.html?s=${encodeURIComponent(r.symbol || "")}` +
-          `&amp;m=${encodeURIComponent(state.market)}&amp;src=momentum">${esc(r.symbol)}</a>` +
+          `<a class="mo-sym" href="${href}">${esc(r.symbol)}</a>` +
           `<span class="mo-name">${esc(r.name || "")}</span>` +
         `</div>` +
         `<div class="mo-chips">${chips.join("")}</div>` +
       `</div>` +
       `<div class="mo-right">` +
-        `<div class="mo-price">${esc(fmtPrice(r.close))}</div>` +
-        `<div class="mo-meta">RSI ${r.rsi == null ? "—" : Math.round(r.rsi)}` +
-        ` · ${esc(fmtTurnover(r.dollar_adv_20))}</div>` +
+        // THE SPARK SLOT IS RESERVED AND EMPTY, ON PURPOSE. The payload carries
+        // `close` and `n_bars` but no price SERIES, and the three ways to get
+        // one are each worse than a blank: read another lens's payload, fetch
+        // per-row history (ASX-only, one request per card), or draw something
+        // that is not the price. The box is held so the card height matches the
+        // 5.0 deck and the absence is stated rather than filled. If the scanner
+        // ever publishes `spark`, this is where it goes.
+        `<a class="mo-spark${sparkVals ? "" : " is-empty"}" href="${href}" ` +
+          `title="${sparkVals ? "Open chart" : "No price series in this payload — open the chart for one"}">` +
+          `${sparkVals ? spark(sparkVals, 64, 28, dir === "bear" ? "var(--red)" : "var(--green)") : `<span class="mo-nospark">no spark</span>`}` +
+        `</a>` +
+        `<div class="mo-pricewrap">` +
+          `<div class="mo-price">${esc(fmtPrice(r.close))}</div>` +
+          `<div class="mo-meta">RSI ${r.rsi == null ? "—" : Math.round(r.rsi)}` +
+          ` · ${esc(fmtTurnover(r.dollar_adv_20))}</div>` +
+        `</div>` +
       `</div>` +
     `</article>`;
   }
