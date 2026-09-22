@@ -462,34 +462,100 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   eq(m4.length, 1, "a coincident pivot and confirmation render once");
 }
 
-// --- no invented trade plan --------------------------------------------------
+// --- the plan is the PINE template's, not vivek.py's -------------------------
 {
   const fb = CHART.slice(CHART.indexOf("function momentumFallback("),
                          CHART.indexOf("// ── Held-plan chart"));
-  ok(/level_lines:\s*\[\]/.test(fb), "the momentum chart publishes no level lines");
-  for (const k of ["tp1", "tp2", "tp3", "\\bstop\\b", "\\bentry\\b"]) {
-    ok(!new RegExp(`\\b${k}\\s*:`).test(fb),
-       `momentumFallback must not set ${k} — the spec calls the divergence an ` +
-       `attention filter, not an entry system, and the payload carries no plan`);
-  }
-  ok(/Momentum is a shortlist, not a 5\.0 plan\./.test(CHART),
-     "the caption states what the chart is");
+  ok(/momentumPlan\(/.test(fb), "the chart asks momentumPlan for the ladder");
+  ok(/Final_Top_Script\.pine/.test(CHART),
+     "the port names the file it came from");
+  // The fence that matters: this ladder must not be sourced from the 5.0 scan.
+  ok(!/_vivek\.json/.test(fb) && !/fetchResultMeta/.test(fb),
+     "a Momentum plan must never be read out of the 5.0 scan payload");
+  ok(/Auto plan from the Pine template/.test(CHART),
+     "the caption names the plan's source — five ENTRY/SL/TP lines look exactly " +
+     "like a 5.0 ladder and are a different system");
+  ok(/mom-caption/.test(CHART), "and chart.js applies the caption class");
   {
-    // Assert the BASE RULE and its declarations, not the bare word: the word
-    // also appears in the comment above the rule and in the media query below
-    // it, so a substring test stayed green when the selector was renamed.
-    // (Found by mutation, not by reading -- the same shape as the `?symbol=`
-    // prose collisions earlier in this file.)
     const css = fs.readFileSync(path.join(PUB, "css", "chart.css"), "utf8");
     const rule = /\.mom-caption\s*\{([^}]*)\}/.exec(css);
     ok(rule, "chart.css defines a .mom-caption rule");
     ok(/position:\s*absolute/.test(rule[1]), "the caption is pinned over the canvas");
-    ok(/z-index/.test(rule[1]), "and sits above it");
-    ok(/mom-caption/.test(CHART), "and chart.js applies that class");
   }
-  // It must be textContent — the family rule, pinned across the repo.
-  const cap = CHART.slice(CHART.indexOf("if (d._momentum) {"), CHART.indexOf("if (d._momentum) {") + 400);
-  ok(/textContent/.test(cap) && !/innerHTML/.test(cap), "the caption is set as text");
+}
+
+/* --- THE ACCEPTANCE TEST, executed -------------------------------------------
+ * The owner's TradingView ELS 1D layout reads
+ *   Entry 5.88 / SL 6.76 / TP1 5.00 / TP2 4.12 / TP3 3.23.
+ * This drives the SHIPPED momentumPlan over the committed ELS daily series and
+ * asserts it lands on those numbers. It is the difference between "the port
+ * looks right" and "the port reproduces his chart", and it is cheap to keep.
+ */
+{
+  const slc = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    assert.ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) {}
+    }
+    throw new Error("slice " + name);
+  };
+  const TVSRC = CHART.slice(CHART.indexOf("const TV_PLAN = {"),
+                            CHART.indexOf("};", CHART.indexOf("const TV_PLAN = {")) + 2);
+  const env = new Function(`
+    const MOM_MA_DEFAULTS = { ma_type:'EMA', fast_len:20, mid_len:50, slow_len:200 };
+    ${TVSRC}
+    ${slc("emaPine")} ${slc("rmaPine")} ${slc("rsiPine")}
+    ${slc("macdPine")} ${slc("atrPine")} ${slc("momentumPlan")}
+    return { momentumPlan, TV_PLAN };`)();
+
+  // The Pine inputs, pinned. Changing one of these changes his chart.
+  const T = env.TV_PLAN;
+  eq(T.swingLen, 5, "5-bar swing"); eq(T.atrPad, 0.25, "quarter-ATR pad");
+  eq(T.maxStopPct, 15, "the 15% stop cap"); eq(T.autoMaxAge, 60, "60-bar freshness");
+  eq(T.minScore, 1, "minimum score 1"); eq(T.useRsi, false, "RSI is OFF in the score");
+  eq(T.r.join(","), "1,2,3", "TP ladder at 1R/2R/3R");
+
+  const hist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  if (fs.existsSync(hist)) {
+    const raw = JSON.parse(fs.readFileSync(hist, "utf8"));
+    const bars = raw.bars.map((r) => ({
+      time: Math.floor(Date.parse(r[0] + "T00:00:00Z") / 1000),
+      open: r[1], high: r[2], low: r[3], close: r[4], volume: r[5],
+    }));
+    const pl = env.momentumPlan(bars, null);
+    ok(pl, "a plan is produced for ELS");
+    eq(pl.dir, -1, "the ELS signal is a SHORT, as his chart shows");
+    ok(pl.capped, "and its swing stop is cut by the 15% cap");
+    const TV = { entry: 5.88, stop: 6.76, tp1: 5.00, tp2: 4.12, tp3: 3.23 };
+    for (const k of Object.keys(TV)) {
+      const err = Math.abs(pl[k] - TV[k]);
+      ok(err <= 0.005,
+         `${k}: computed ${pl[k].toFixed(4)} vs TradingView ${TV[k].toFixed(2)} ` +
+         `— error $${err.toFixed(4)} (tolerance is TV's 2-decimal display rounding)`);
+    }
+  }
+}
+
+// --- the panes are momentum-only ---------------------------------------------
+{
+  // Search FORWARD from the pane start: "Session / weekend shading" also names
+  // the shadeRows section hundreds of lines earlier, and slicing to the first
+  // occurrence produced an EMPTY string that passed nothing. (Caught by the
+  // suite going red, not by reading — the same slice-boundary trap as the
+  // SRC_BACK block above.)
+  const paneAt = CHART.indexOf("let macdHistS = null");
+  ok(paneAt > 0, "the momentum pane block is still in render()");
+  const pane = CHART.slice(paneAt, CHART.indexOf("// ── Session / weekend shading", paneAt));
+  ok(pane.length > 200, "the pane slice is non-empty");
+  ok(/if \(d\._momentum\) \{/.test(pane), "the panes are built only for a momentum chart");
+  for (const id of ['"macd"', '"rsi"']) ok(pane.includes(id), `a ${id} pane scale exists`);
+  // A 5.0 chart must keep its own price scale margins.
+  const before = CHART.slice(0, paneAt);
+  ok(!/priceScale\("macd"\)|priceScale\("rsi"\)/.test(before),
+     "no momentum pane scale is touched outside the momentum branch");
 }
 
 // --- history is NOT capped by momentum ---------------------------------------

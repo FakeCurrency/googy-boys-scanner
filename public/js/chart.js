@@ -111,7 +111,10 @@
   // Stated in one place because it is a CLAIM ABOUT THE EVIDENCE, not a label:
   // the spec calls the divergence screen an attention filter, not an entry
   // system, so the chart must never read as a plan. See momentumFallback.
-  const MOM_CAPTION = "Momentum is a shortlist, not a 5.0 plan.";
+  // The plan drawn on a Momentum chart comes from the Pine template, NOT from
+  // vivek.py. Saying so is the whole job of this line: five lines labelled
+  // ENTRY/SL/TP look exactly like a 5.0 ladder and are a different system.
+  const MOM_CAPTION = "Auto plan from the Pine template \u2014 not a 5.0 plan.";
   // ~3 years of sessions. The Daily pull is 25y and the stitcher really
   // serves it, so fitContent() on a long-listed name squeezes 6,000+ bars
   // into the canvas and the recent structure the lens actually screens is
@@ -659,6 +662,141 @@
     ];
   }
 
+  // Wilder's RMA (ta.rma): alpha = 1/length, seeded with the SMA of the first
+  // `length` values -- the same seeding discipline as emaPine, and what
+  // scanner/momentum/ema.py::wilder_rma does. RSI and ATR both ride on it.
+  function rmaPine(vals, period) {
+    const n = vals.length, out = new Array(n).fill(NaN), len = Math.floor(period);
+    if (!(len >= 1) || !n) return out;
+    let f = -1;
+    for (let i = 0; i < n; i++) if (isFinite(vals[i])) { f = i; break; }
+    if (f < 0 || n - f < len) return out;
+    const alpha = 1 / len;
+    let start = -1, seed = NaN;
+    for (let st = f; st <= n - len; st++) {
+      let sum = 0, bad = false;
+      for (let k = st; k < st + len; k++) { if (!isFinite(vals[k])) { bad = true; break; } sum += vals[k]; }
+      if (!bad) { start = st + len - 1; seed = sum / len; break; }
+    }
+    if (start < 0) return out;
+    let prev = seed; out[start] = prev;
+    for (let i = start + 1; i < n; i++) {
+      const x = vals[i];
+      if (!isFinite(x)) { prev = NaN; out[i] = NaN; continue; }
+      if (!isFinite(prev)) { prev = x; out[i] = x; continue; }
+      prev = alpha * x + (1 - alpha) * prev;
+      out[i] = prev;
+    }
+    return out;
+  }
+
+  function rsiPine(cl, period) {
+    const n = cl.length, up = new Array(n).fill(NaN), dn = new Array(n).fill(NaN);
+    for (let i = 1; i < n; i++) {
+      const ch = cl[i] - cl[i - 1];
+      up[i] = Math.max(ch, 0); dn[i] = Math.max(-ch, 0);
+    }
+    const ru = rmaPine(up, period), rd = rmaPine(dn, period), out = new Array(n).fill(NaN);
+    for (let i = 0; i < n; i++) {
+      if (!isFinite(ru[i]) || !isFinite(rd[i])) continue;
+      out[i] = rd[i] === 0 ? (ru[i] > 0 ? 100 : 50) : 100 - 100 / (1 + ru[i] / rd[i]);
+    }
+    return out;
+  }
+
+  function macdPine(cl, f, sl, sg) {
+    const ef = emaPine(cl, f), es = emaPine(cl, sl);
+    const line = cl.map((_, i) => (isFinite(ef[i]) && isFinite(es[i]) ? ef[i] - es[i] : NaN));
+    const sig = emaPine(line, sg);
+    return { line, signal: sig, hist: line.map((v, i) => (isFinite(v) && isFinite(sig[i]) ? v - sig[i] : NaN)) };
+  }
+
+  function atrPine(bars, period) {
+    const tr = bars.map((b, i) => (i === 0 ? b.high - b.low : Math.max(
+      b.high - b.low, Math.abs(b.high - bars[i - 1].close), Math.abs(b.low - bars[i - 1].close))));
+    return rmaPine(tr, period);
+  }
+
+  // ── THE AUTO TRADE BOX, from tradingview/Final_Top_Script.pine ─────────────
+  // Recovered 2026-09-22 and ported line-for-line. It is NOT vivek.py's plan and
+  // shares no code with it: it anchors to the last SCORED CROSS (the 20/50 cross
+  // that is Rule B) within `autoMaxAge` bars, stops at the 5-bar swing plus an
+  // ATR pad, caps that distance at `maxStopPct` of entry, and lays TP1/2/3 at
+  // 1R/2R/3R -- `math.max(..., entRaw * 0.05)` and all.
+  //
+  // Verified against the owner's TradingView ELS 1D screenshot on the committed
+  // daily series: Entry 5.88 / SL 6.76 / TP1 5.00 / TP2 4.12 / TP3 3.23, worst
+  // absolute error $0.0040, which is TradingView printing 6.76 for 6.7620.
+  const TV_PLAN = {
+    swingLen: 5, atrPad: 0.25, atrMult: 1.5, slMode: "Swing",
+    maxStopPct: 15, r: [1, 2, 3], autoMaxAge: 60, minScore: 1,
+    macd: [12, 26, 9], rsiLen: 14, atrLen: 14,
+    useMacd: true, useSlow: true, useRsi: false,
+  };
+  function momentumPlan(bars, mp) {
+    const P = Object.assign({}, MOM_MA_DEFAULTS, mp || {});
+    const n = bars.length;
+    if (n < 2) return null;
+    const cl = bars.map((b) => b.close);
+    const fast = emaPine(cl, +P.fast_len), mid = emaPine(cl, +P.mid_len), slow = emaPine(cl, +P.slow_len);
+    const { hist } = macdPine(cl, TV_PLAN.macd[0], TV_PLAN.macd[1], TV_PLAN.macd[2]);
+    const rsi = rsiPine(cl, TV_PLAN.rsiLen);
+    const atr = atrPine(bars, TV_PLAN.atrLen);
+    const L = TV_PLAN.swingLen;
+    let sigBar = -1, sigDir = 0, sigScore = 0, sigEntry = NaN, sigStop = NaN;
+    for (let i = 1; i < n; i++) {
+      if (!(isFinite(fast[i]) && isFinite(mid[i]) && isFinite(fast[i - 1]) && isFinite(mid[i - 1]))) continue;
+      const bullX = fast[i - 1] <= mid[i - 1] && fast[i] > mid[i];
+      const bearX = fast[i - 1] >= mid[i - 1] && fast[i] < mid[i];
+      if (!bullX && !bearX) continue;
+      const above = isFinite(slow[i]) && cl[i] > slow[i], below = isFinite(slow[i]) && cl[i] < slow[i];
+      const bullScore = 1 + (TV_PLAN.useMacd && hist[i] > 0 ? 1 : 0) + (TV_PLAN.useSlow && above ? 1 : 0)
+                          + (TV_PLAN.useRsi && rsi[i] > 50 ? 1 : 0);
+      const bearScore = 1 + (TV_PLAN.useMacd && hist[i] < 0 ? 1 : 0) + (TV_PLAN.useSlow && below ? 1 : 0)
+                          + (TV_PLAN.useRsi && rsi[i] < 50 ? 1 : 0);
+      let dir = 0, score = 0;
+      if (bullX && bullScore >= TV_PLAN.minScore) { dir = 1; score = bullScore; }
+      else if (bearX && bearScore >= TV_PLAN.minScore) { dir = -1; score = bearScore; }
+      else continue;
+      // 5-bar swing at the signal bar, ATR-padded — ta.lowest/highest(len).
+      let lo = Infinity, hi = -Infinity;
+      for (let k = Math.max(0, i - L + 1); k <= i; k++) { lo = Math.min(lo, bars[k].low); hi = Math.max(hi, bars[k].high); }
+      const a = isFinite(atr[i]) ? atr[i] : 0;
+      sigBar = i; sigDir = dir; sigScore = score; sigEntry = cl[i];
+      sigStop = TV_PLAN.slMode === "ATR"
+        ? (dir === 1 ? cl[i] - a * TV_PLAN.atrMult : cl[i] + a * TV_PLAN.atrMult)
+        : (dir === 1 ? lo - a * TV_PLAN.atrPad : hi + a * TV_PLAN.atrPad);
+    }
+    if (sigBar < 0 || !isFinite(sigEntry)) return null;
+    const age = (n - 1) - sigBar;
+    if (age > TV_PLAN.autoMaxAge) return null;          // stale signal draws nothing
+    const capD = sigEntry * TV_PLAN.maxStopPct / 100;
+    const stop = TV_PLAN.maxStopPct <= 0 ? sigStop
+      : sigDir === 1 ? Math.max(sigStop, sigEntry - capD) : Math.min(sigStop, sigEntry + capD);
+    const risk = Math.abs(sigEntry - stop);
+    const tp = TV_PLAN.r.map((r) => Math.max(sigEntry + sigDir * risk * r, sigEntry * 0.05));
+    return {
+      dir: sigDir, score: sigScore, age, capped: Math.abs(stop - sigStop) > 1e-12,
+      bar: bars[sigBar], entry: sigEntry, stop, risk,
+      tp1: tp[0], tp2: tp[1], tp3: tp[2], rawStop: sigStop,
+    };
+  }
+
+  // MACD + RSI pane series for a timeframe, Pine-seeded throughout.
+  function momentumPanes(bars) {
+    const cl = bars.map((b) => b.close);
+    const m = macdPine(cl, TV_PLAN.macd[0], TV_PLAN.macd[1], TV_PLAN.macd[2]);
+    const rsi = rsiPine(cl, TV_PLAN.rsiLen);
+    const at = (arr) => bars.map((b, i) => (isFinite(arr[i]) ? { time: b.time, value: arr[i] } : null)).filter(Boolean);
+    return {
+      macd: at(m.line), macdSignal: at(m.signal),
+      macdHist: bars.map((b, i) => (isFinite(m.hist[i])
+        ? { time: b.time, value: m.hist[i],
+            color: m.hist[i] >= 0 ? "rgba(47,208,127,0.7)" : "rgba(255,91,91,0.7)" } : null)).filter(Boolean),
+      rsi: at(rsi),
+    };
+  }
+
   // Candles + volume + the Momentum stack. Same volume colouring as the VIVEK
   // block so the two charts read identically where they mean the same thing.
   function barsToMomentumTF(bars, mp) {
@@ -1115,6 +1253,18 @@
         // to one would invent a weekly divergence the lens never found.
         d.timeframes["1D"] = barsToMomentumTF(daily, mp);
         d.timeframes["1D"].markers = momentumMarkers(row, daily);
+        // The Pine template's panes + Auto trade box, on the DAILY series the
+        // screen itself runs on. 3D/1W get the stack but no plan: the script is
+        // a 1D chart and a cross index means nothing on a resampled candle.
+        d.timeframes["1D"].panes = momentumPanes(daily);
+        d.timeframes["1D"].plan = momentumPlan(daily, mp);
+        const pl = d.timeframes["1D"].plan;
+        if (pl) {
+          d.dir = pl.dir === 1 ? "LONG" : "SHORT";
+          d.entry = pl.entry; d.stop = pl.stop;
+          d.tp1 = pl.tp1; d.tp2 = pl.tp2; d.tp3 = pl.tp3; d.target = pl.tp1;
+          d.rr = 3;
+        }
         const d3 = bucketBars(daily, 3 * 86400);
         if (d3.length >= 6) d.timeframes["3D"] = barsToMomentumTF(d3, mp);
         const wk = resampleWeekly(daily);
@@ -1906,6 +2056,37 @@
       chart.priceScale("mom").applyOptions({ scaleMargins: { top: 0.72, bottom: 0.06 } });
     }
 
+    // ── MOMENTUM sub-panes (2026-09-22): MACD and RSI, the two panes the
+    // owner's TradingView layout carries beside the price. Built with the same
+    // priceScaleId + scaleMargins banding as the squeeze histogram above, so
+    // the price is squeezed into the top and each pane owns a strip. Momentum
+    // only -- a 5.0 chart adds no series and keeps its scale margins.
+    let macdHistS = null, macdLineS = null, macdSigS = null, rsiS = null;
+    if (d._momentum) {
+      chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.03, bottom: 0.46 } });
+      macdHistS = chart.addHistogramSeries({
+        priceScaleId: "macd", lastValueVisible: false, priceLineVisible: false });
+      macdLineS = chart.addLineSeries({
+        priceScaleId: "macd", color: "#4d9fff", lineWidth: 1,
+        lastValueVisible: false, priceLineVisible: false });
+      macdSigS = chart.addLineSeries({
+        priceScaleId: "macd", color: "#ffb020", lineWidth: 1,
+        lastValueVisible: false, priceLineVisible: false });
+      chart.priceScale("macd").applyOptions({ scaleMargins: { top: 0.56, bottom: 0.24 } });
+      rsiS = chart.addLineSeries({
+        priceScaleId: "rsi", color: "#a78bfa", lineWidth: 1,
+        lastValueVisible: false, priceLineVisible: false });
+      chart.priceScale("rsi").applyOptions({ scaleMargins: { top: 0.80, bottom: 0.02 } });
+      // 70 / 50 / 30 guides, drawn on the RSI series so they ride its scale.
+      [[70, "rgba(255,91,91,0.45)"], [50, "rgba(140,155,180,0.30)"], [30, "rgba(47,208,127,0.45)"]]
+        .forEach(([v, c]) => {
+          try {
+            rsiS.createPriceLine({ price: v, color: c, lineWidth: 1,
+              lineStyle: LC.LineStyle.Dotted, axisLabelVisible: false, title: String(v) });
+          } catch (_) { /* a refused guide must never cost the pane */ }
+        });
+    }
+
     // ── Session / weekend shading (UX-20 #9) — created BEFORE the flash series
     // so event flashes always paint over the calendar banding.
     const shadeSeries = chart.addHistogramSeries({
@@ -2168,6 +2349,37 @@
         lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
     });
 
+    // MOMENTUM: the Pine template's AUTO trade box. Same five lines the owner's
+    // TradingView layout draws (Entry / SL / TP1-3), from Final_Top_Script.pine's
+    // own maths -- NOT from vivek.py, which is a different system and is not
+    // consulted here. Redrawn per timeframe; only 1D carries a plan.
+    let momHandles = [];
+    function applyMomentumPlan(key) {
+      momHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
+      momHandles = [];
+      const pl = (tfs[key] || {}).plan;
+      if (!pl) return;
+      const ep = pl.entry;
+      const line = (price, color, label, weight) => {
+        if (price == null || !isFinite(price)) return;
+        let t = label;
+        if (ep > 0 && price !== ep) {
+          const pct = (price - ep) / ep * 100;
+          t += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+          if (pl.risk > 0) t += ` · ${(Math.abs(price - ep) / pl.risk).toFixed(1)}R`;
+        }
+        momHandles.push(candle.createPriceLine({ price, color, lineWidth: weight || 1,
+          lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: t }));
+      };
+      line(pl.stop, "#ef4444", "SL", 2);
+      line(pl.entry, "#9ca3af", "ENTRY", 2);
+      line(pl.tp1, "#22c55e", "TP1", 2);
+      line(pl.tp2, "#22c55e", "TP2", 1);
+      line(pl.tp3, "#22c55e", "TP3", 1);
+      d._activeLevels = { entry: pl.entry, stop: pl.stop, tp1: pl.tp1, tp2: pl.tp2, tp3: pl.tp3, rr: 3 };
+      d._activeTf = key;
+    }
+
     // VIVEK: per-timeframe trade levels (200 SMA · swing high/low · SL · Entry ·
     // TP1/2/3), redrawn whenever the timeframe changes, plus the matching footer.
     let vkHandles = [];
@@ -2404,6 +2616,28 @@
           tfNotice.hidden = !isRef;
         }
         if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
+      }
+      if (d._momentum) {
+        // Panes follow the timeframe; a TF with no panes clears them rather
+        // than leaving the Daily's series under a weekly chart.
+        const pn = (tfs[key] || {}).panes || null;
+        if (macdHistS) macdHistS.setData(pn ? pn.macdHist : []);
+        if (macdLineS) macdLineS.setData(pn ? pn.macd : []);
+        if (macdSigS) macdSigS.setData(pn ? pn.macdSignal : []);
+        if (rsiS) {
+          rsiS.setData(pn ? pn.rsi : []);
+          // The Bear/Bull labels the owner's RSI+ pane carries, placed on the
+          // RSI line at the divergence PIVOT -- the same bar the price pane
+          // marks, so the two panes agree about when it happened.
+          if (typeof rsiS.setMarkers === "function") {
+            const mk = (key === "1D" ? ((tfs[key] || {}).markers || []) : [])
+              .filter((m) => /DIV/.test(m.text || ""))
+              .map((m) => ({ time: m.time, position: m.position, color: m.color,
+                             shape: m.shape, text: /BULL/.test(m.text) ? "Bull" : "Bear" }));
+            rsiS.setMarkers(mk);
+          }
+        }
+        applyMomentumPlan(key);
       }
       if (d._momentum && typeof candle.setMarkers === "function") {
         // Rule A marks for THIS timeframe (only 1D carries any). Runs before
