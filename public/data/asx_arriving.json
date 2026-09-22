@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-22T23:39:13+10:00",
+  "generated_at": "2026-09-23T02:44:20+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "MRR",
+      "name": "Minrex Resources Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.013,
+      "turnover_avg20": 24613,
+      "turnover_today": 170224,
+      "rvol": 7.4,
+      "adv_usd": 24613.16,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "ADD",
       "name": "Adavale Resources Limited",
