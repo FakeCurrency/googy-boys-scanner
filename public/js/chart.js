@@ -3008,6 +3008,18 @@
         if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
       }
       if (d._momentum) {
+        // SHIFT 3: HOW MUCH HISTORY IS ACTUALLY LOADED, per timeframe. The
+        // first paint deliberately crops to the live move (P1), so a reader
+        // cannot tell from the canvas whether the rest exists or was never
+        // fetched. The chip states it: "1265 daily bars loaded" vs "312 4H
+        // bars". It reports the SERIES, not the window.
+        const barsChip = document.querySelector(".mom-bars");
+        const nBars = ((tfs[key] || {}).candles || []).length;
+        if (barsChip) {
+          const unit = key === "4H" ? "4H" : key === "1W" ? "weekly" : key === "3D" ? "3-day" : "daily";
+          barsChip.textContent = nBars ? `${nBars} ${unit} bars` : "";
+          barsChip.hidden = !nBars;
+        }
         // Panes follow the timeframe; a TF with no panes clears them rather
         // than leaving the Daily's series under a weekly chart.
         const pn = (tfs[key] || {}).panes || null;
@@ -3110,6 +3122,14 @@
         cap.className = "mom-caption";
         cap.textContent = MOM_CAPTION;
         host.appendChild(cap);
+      }
+      if (host && !host.querySelector(".mom-bars")) {
+        const b = document.createElement("span");
+        b.className = "mom-bars";
+        b.title = "Bars loaded for this timeframe. The first paint crops to the " +
+          "live move — pan left to reach all of them.";
+        b.hidden = true;
+        host.appendChild(b);
       }
     }
 
