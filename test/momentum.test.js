@@ -480,7 +480,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
     const css = fs.readFileSync(path.join(PUB, "css", "chart.css"), "utf8");
     const rule = /\.mom-caption\s*\{([^}]*)\}/.exec(css);
     ok(rule, "chart.css defines a .mom-caption rule");
-    ok(/position:\s*absolute/.test(rule[1]), "the caption is pinned over the canvas");
+    ok(!/position:\s*absolute/.test(rule[1]), "the caption is a header chip, not an overlay");
   }
 }
 
@@ -599,55 +599,75 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
  * asserts the data is never truncated.
  */
 {
-  const START = "if (d._momentum && key === \"1D\") {";
-  const at = CHART.indexOf(START);
-  ok(at > 0, "the momentum first-paint block is still in the TF hook");
-  // Slice to the matching close by asking the parser, same discipline as above.
-  let body = null;
-  for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
-    if (CHART[i] !== "}") continue;
-    const cand = CHART.slice(at, i + 1);
-    try { new Function("d", "key", "tfs", "chart", "MOM_FIRST_PAINT_BARS", cand); body = cand; break; }
-    catch (_) { /* keep going */ }
-  }
-  ok(body, "could not slice the first-paint block");
-
-  const BARS = +(/const MOM_FIRST_PAINT_BARS = (\d+);/.exec(CHART) || [])[1];
-  eq(BARS, 750, "~3 years of sessions");
-
-  const run = (nBars, opts) => {
-    const calls = [];
-    const chart = { timeScale: () => ({ setVisibleLogicalRange: (r) => calls.push(r) }) };
-    const tfs = { "1D": { candles: Array.from({ length: nBars }, (_, i) => ({ time: i })) } };
-    new Function("d", "key", "tfs", "chart", "MOM_FIRST_PAINT_BARS", body)(
-      opts.d, opts.key, tfs, chart, BARS);
-    return calls;
+  // P1 (2026-09-22) SUPERSEDED the 750-bar window: first paint is now the LIVE
+  // MOVE -- the later of twelve months back and the end of the dead regime --
+  // and it applies to every momentum timeframe, not just 1D. The old pins
+  // asserted `key === "1D"` and a 750 constant; left as they were they would
+  // have demanded the penny-chart back.
+  const slc2 = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    assert.ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) {}
+    }
+    throw new Error("slice " + name);
   };
+  const MONTHS = +(/const MOM_VIEW_MONTHS = (\d+);/.exec(CHART) || [])[1];
+  const MULT = +(/const MOM_REGIME_MULT = ([\d.]+);/.exec(CHART) || [])[1];
+  const MIN = +(/const MOM_VIEW_MIN_BARS = (\d+);/.exec(CHART) || [])[1];
+  eq(MONTHS, 12, "twelve months of context");
+  eq(MULT, 1.5, "1.5x the 5th-percentile close ends the dead regime");
+  const viewStart = new Function("MOM_VIEW_MONTHS", "MOM_REGIME_MULT", "MOM_VIEW_MIN_BARS",
+    "return (" + slc2("momentumViewStart") + ");")(MONTHS, MULT, MIN);
 
-  // A long series windows to the last ~750 bars.
-  const deep = run(6300, { d: { _momentum: true }, key: "1D" });
-  eq(deep.length, 1, "a deep series gets an explicit visible range");
-  eq(deep[0].from, 6300 - 750, "the window starts 750 bars back");
-  ok(deep[0].to >= 6299, "and runs to the last bar");
-  ok(deep[0].to - deep[0].from >= 750, "showing at least ~3 years");
+  const hist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  if (fs.existsSync(hist)) {
+    const raw = JSON.parse(fs.readFileSync(hist, "utf8"));
+    const bars = raw.bars.map((r) => ({
+      time: Math.floor(Date.parse(r[0] + "T00:00:00Z") / 1000), close: r[4] }));
+    const i = viewStart(bars);
+    const leftDate = raw.bars[i][0];
+    ok(!/^2021|^2022|^2023|^2024/.test(leftDate),
+       `ELS first paint must skip the penny regime, left edge was ${leftDate}`);
+    ok(bars.length - i >= MIN, "and still shows a readable number of bars");
+    ok(i > 0, "a five-year series is not shown whole on first paint");
+    // It is a VIEW: every bar stays loaded.
+    ok(!/slice\(|splice\(/.test(slc2("momentumViewStart")),
+       "the view rule must not truncate the series — panning reaches all of it");
+  }
+  // A short series is shown whole rather than padded.
+  const shortBars = Array.from({ length: 40 }, (_, k) => ({ time: k * 86400, close: 10 }));
+  eq(viewStart(shortBars), 0, "a young listing is shown whole");
 
-  // Exactly at the threshold still windows; one short does not.
-  eq(run(750, { d: { _momentum: true }, key: "1D" }).length, 1, "750 bars windows");
-  eq(run(749, { d: { _momentum: true }, key: "1D" }).length, 0,
-     "a shorter series falls through to fitContent — never pad empty history");
-  eq(run(120, { d: { _momentum: true }, key: "1D" }).length, 0, "a young listing fits its own bars");
+  // Applies to the momentum chart only, and to every one of its timeframes.
+  const hook = CHART.slice(CHART.indexOf("chart.timeScale().fitContent();"),
+                           CHART.indexOf("legend(tf);"));
+  ok(/if \(d\._momentum\) \{/.test(hook), "gated on momentum");
+  ok(/momentumViewStart\(cs\)/.test(hook), "and driven by the view rule");
+  ok(!/key === "1D"/.test(hook), "no longer 1D-only");
+  eq((hook.match(/setVisibleLogicalRange|setVisibleRange/g) || []).length, 1,
+     "exactly one visible-range call in the TF hook");
+  ok(/fitContent\(\);/.test(hook), "fitContent still runs first, for every mode");
+}
 
-  // REQUIREMENT: 5.0 first paint is untouched.
-  eq(run(6300, { d: { _momentum: false, _vivek: true }, key: "1D" }).length, 0,
-     "a 5.0 chart never gets a momentum visible range — its first paint is fitContent");
-  eq(run(6300, { d: {}, key: "1D" }).length, 0, "and neither does any other mode");
-  // Only the Daily pane; 3D/1W keep fitContent.
-  eq(run(6300, { d: { _momentum: true }, key: "1W" }).length, 0, "weekly is left alone");
-  eq(run(6300, { d: { _momentum: true }, key: "3D" }).length, 0, "3-day is left alone");
-
-  // It is a VIEW, not a cap: nothing truncates the series it was handed.
-  ok(!/\.slice\(|\.splice\(|length\s*=/.test(body),
-     "first paint must not truncate the loaded series — panning reaches all of it");
+// P2 — the Auto box and its rungs are TIME-BOUNDED.
+{
+  const ladder = CHART.slice(CHART.indexOf("function applyMomentumPlan"),
+                             CHART.indexOf("// VIVEK: per-timeframe trade levels"));
+  ok(/const x0 = pl\.bar/.test(ladder), "the ladder starts at the signal bar");
+  // Scoped to the RUNG HELPER: the slice also holds paintMomentumAth, which
+  // legitimately keeps createPriceLine (a single all-time high really does
+  // apply across the whole axis).
+  const rung = ladder.slice(ladder.indexOf("const line = ("), ladder.indexOf("line(pl.stop"));
+  ok(/addLineSeries/.test(rung) && !/createPriceLine/.test(rung),
+     "rungs are clipped line series, not full-width price lines — a price line " +
+     "spans the whole axis and drew the SL back across bars it was never " +
+     "measured against");
+  ok(/setData\(\[\{ time: x0[\s\S]{0,80}time: xN/.test(rung),
+     "each rung runs signal-bar -> last-bar only");
+  ok(/removeSeries/.test(ladder), "and is removed as a series on redraw");
 }
 
 /* A 1y default on the 5.0 path would be the same bug in reverse: the owner's
@@ -874,7 +894,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok(/title: label\b/.test(lineFn), "a ladder tag is just its name");
   ok(!lineFn.includes("%"), "no percent clutter on the tags, in any spelling");
   ok(!/\bR\b/.test(lineFn.replace(/LineStyle|\bLC\b/g, "")), "and no R multiple");
-  ok(/axisLabelVisible: true/.test(ladder), "the axis carries the price");
+  ok(/lastValueVisible: true/.test(lineFn), "the axis carries the price, via the series last-value label");
   for (const k of ['"SL"', '"ENTRY"', '"TP1"', '"TP2"', '"TP3"'])
     ok(ladder.includes(k), `the box is tagged ${k}`);
 
