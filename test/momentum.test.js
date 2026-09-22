@@ -926,4 +926,35 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
      "PhaseMap is still opt-in on this mode");
 }
 
+/* ── overnight audit pins (2026-09-22) ─────────────────────────────────────── */
+{
+  // C — the 5.0 chart must never speak the momentum caption. Asserted on the
+  // SHIPPED 5.0 render path, not on the file (chart.js holds both modes), so
+  // the check is "the vivek branch cannot reach it", not "the string is absent".
+  const vf = CHART.slice(CHART.indexOf("function vivekFallback"),
+                         CHART.indexOf("function vivekCryptoBars"));
+  ok(vf.length > 200, "the 5.0 fallback slice is bounded");
+  ok(!/MOM_CAPTION|mom-caption|Pine template/.test(vf),
+     "the 5.0 chart path never sets the momentum caption");
+  ok(!/_momentum/.test(vf), "and never flags itself as one");
+
+  // D — PhaseMap is not merely hidden, it is NOT FETCHED unless ?pm=1, so the
+  // zones cannot be drawn at all. Asserted at the fetch, which is the only
+  // place a record can enter.
+  const pm = CHART.slice(CHART.indexOf("function fetchPhaseMapRec"),
+                         CHART.indexOf("function fetchPhaseMapRec") + 900);
+  ok(/isMomentum && params\.get\("pm"\) !== "1"[\s\S]{0,40}return Promise\.resolve\(null\)/.test(pm),
+     "a momentum chart returns a null PhaseMap record before any fetch");
+
+  // The footer never prints the 5.0 SCORE x/8 strip on this mode.
+  const mf = CHART.slice(CHART.indexOf("function renderMomentumFooter"),
+                         CHART.indexOf("function footer(d)"))
+                  .replace(/\/\/[^\n]*/g, "");
+  ok(!/score_max|"Score"/.test(mf), "no SCORE x/8 on a momentum footer");
+
+  // One caption, not two.
+  eq((CHART.match(/className = "mom-caption"/g) || []).length, 1,
+     "exactly one caption element is ever created");
+}
+
 console.log(`momentum: ${checks} checks passed`);
