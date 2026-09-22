@@ -31,7 +31,7 @@ const code = (rel) => fs.readFileSync(path.join(PUB, rel), "utf8")
 const GONE = {
   "js/app.js": {
     live: "function isHighConviction(",
-    dead: ["fmtTurn"],
+    dead: ["fmtTurn", "VIEW_KEYS"],
   },
   "js/chart.js": {
     live: "function momentumViewStart(",

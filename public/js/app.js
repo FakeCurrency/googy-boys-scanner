@@ -1091,7 +1091,6 @@
   // Applying (and boot) goes through gbs:prefs + a one-shot gbs:view-apply so
   // the EXISTING boot path rebuilds every control consistently. The URL gets
   // the view encoded (?tab=&sort=…) so a copied link reproduces the view.
-  const VIEW_KEYS = ["tab", "sort", "sortDir", "view"];
   function captureView() {
     return { market: state.market, tab: state.tab, sort: state.sort, sortDir: state.sortDir,
       dir: state.vkDir, entry: [...state.vkEntry], recent: state.vkRecent,
