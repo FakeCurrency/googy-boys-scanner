@@ -425,6 +425,10 @@
     background: var(--panel); border-top: 1px solid var(--border);
   }
   .tf-btn { padding: 8px 13px; font-size: 12.5px; }
+  /* Momentum moves the bar INSIDE .chart-main, under the price pane (chart.js
+     placeMomTfBar). There it is a block child rather than a flex item of the
+     body column, so it has to be a full-width flex row on its own. */
+  .chart-main > .tf-toggle { display: flex; }
   .chart-foot { order: 2; }
   .draw-tools { top: 12px; right: 12px; }
 }
