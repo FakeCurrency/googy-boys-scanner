@@ -29,6 +29,10 @@ const code = (rel) => fs.readFileSync(path.join(PUB, rel), "utf8")
   .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
 const GONE = {
+  "js/journal.js": {
+    live: "function splitBot(",
+    dead: ["inBatches"],
+  },
   "js/app.js": {
     live: "function isHighConviction(",
     dead: ["fmtTurn", "VIEW_KEYS"],
