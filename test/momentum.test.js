@@ -551,11 +551,15 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   const pane = CHART.slice(paneAt, CHART.indexOf("// ── Session / weekend shading", paneAt));
   ok(pane.length > 200, "the pane slice is non-empty");
   ok(/if \(d\._momentum\) \{/.test(pane), "the panes are built only for a momentum chart");
-  for (const id of ['"macd"', '"rsi"']) ok(pane.includes(id), `a ${id} pane scale exists`);
-  // A 5.0 chart must keep its own price scale margins.
+  // SUPERSEDED 2026-09-22: these were `priceScaleId: "macd"/"rsi"` bands on the
+  // PRICE chart. That is exactly the shape the TV-look pass removed -- a band
+  // claiming 0-100 on a price axis is why a $5 stock scaled to -8 -- so the
+  // pin now asserts the two are their OWN charts. Kept rather than deleted
+  // because the old assertion, left as it was, would have DEMANDED the bug.
+  for (const id of ["macdChart", "rsiChart"]) ok(pane.includes(id), `${id} is its own chart`);
   const before = CHART.slice(0, paneAt);
   ok(!/priceScale\("macd"\)|priceScale\("rsi"\)/.test(before),
-     "no momentum pane scale is touched outside the momentum branch");
+     "no oscillator scale is touched outside the momentum branch");
 }
 
 // --- history is NOT capped by momentum ---------------------------------------
@@ -790,7 +794,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok(ft.length > 400, "renderMomentumFooter exists");
   for (const k of ["Entry", "SL", "TP1", "TP2", "TP3"]) ok(ft.includes(`"${k}"`), `the footer shows ${k}`);
   ok(!/score_max/.test(ft), "and never the 5.0 SCORE x/8 strip");
-  ok(/no scored cross in the last/.test(ft),
+  ok(/no scored cross in/.test(ft),
      "a timeframe with no plan says WHY rather than printing blanks");
   ok(/if \(d\._momentum\) \{\n      renderMomentumFooter/.test(CHART),
      "footer() routes a momentum chart to it");
@@ -814,6 +818,112 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   const vivekFooter = CHART.slice(vfStart, vfEnd);
   ok(!/momRiskBand|renderMomentumFooter|TV_PLAN/.test(vivekFooter),
      "the 5.0 footer is untouched by any of it");
+}
+
+/* ── TV LOOK (2026-09-22) ───────────────────────────────────────────────────
+ * The page had the right numbers and the wrong face: 5.0's MA palette, 5.0's
+ * chrome, and oscillators painted as scaleMargins bands on the PRICE scale --
+ * which is why a $5 stock's axis ran to -8. These pin the shape, not the pixels.
+ */
+{
+  // THREE REAL PANES. lightweight-charts 4.1.3 has no multi-pane API, so the
+  // oscillators are their own chart instances. A band on the price chart is
+  // the failure this forbids.
+  const pAt = CHART.indexOf("let macdHistS = null");
+  ok(pAt > 0, "the momentum pane block is present");
+  const pane = CHART.slice(pAt, CHART.indexOf("// ── Session / weekend shading", pAt));
+  ok(/LC\.createChart\(macdBox/.test(pane), "MACD gets its own chart");
+  ok(/LC\.createChart\(rsiBox/.test(pane), "RSI gets its own chart");
+  ok(!/priceScaleId: "macd"|priceScaleId: "rsi"/.test(CHART),
+     "no oscillator rides the PRICE chart's scale any more — that is what made " +
+     "a $5 stock's axis run to -8");
+  ok(/subscribeVisibleLogicalRangeChange/.test(pane), "the panes are time-synced");
+  // `if (syncing` specifically, not just the word: the flag is declared and
+  // cleared elsewhere, so a bare /syncing/ stayed green when the GUARD ITSELF
+  // was deleted from the handler — the mutation that matters most here,
+  // because the recursion it prevents blows the stack on the first pan.
+  ok(/if \(syncing[ ,|)]/.test(pane),
+     "behind a re-entrancy guard — each handler sets the others, so without it " +
+     "the first pan recurses");
+  ok((pane.match(/if \(syncing[ ,|)]/g) || []).length >= 2,
+     "both the range and the crosshair handlers are guarded");
+  ok(/onRenderTeardown\(/.test(pane),
+     "and torn down per render — render() re-runs on every timeframe click");
+  ok(/autoscaleInfoProvider/.test(pane) && /maxValue: 100/.test(pane),
+     "the RSI pane is pinned to 0-100 rather than autoscaling past it");
+  ok(/rsiSigS/.test(CHART), "the RSI pane carries its MA, as RSI+ draws it");
+
+  // TV PALETTE on the price stack, not the 5.0 one.
+  const mas = CHART.slice(CHART.indexOf("function momentumMAs"),
+                          CHART.indexOf("function barsToMomentumTF"));
+  ok(/#2196f3/.test(mas), "fast is TV blue");
+  ok(/#26a69a/.test(mas), "slow is TV green");
+  for (const c of ["#ffd23f", "#a78bfa", "#e5e9f0"])
+    ok(!mas.includes(c), `the 5.0 palette colour ${c} is gone from the momentum stack`);
+
+  // TAGS: the name, with the price in the axis label. TV shows "SL 6.76", not
+  // "SL +15.00% · 1.0R".
+  const ladder = CHART.slice(CHART.indexOf("function applyMomentumPlan"),
+                             CHART.indexOf("// VIVEK: per-timeframe trade levels"));
+  // The whole `line(` helper, comments stripped, must mention no percent and no
+  // R at all. The first version banned one SPELLING (`toFixed(2)}%`) and stayed
+  // green when the clutter came back as string concatenation.
+  const ladderCode = ladder.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const lineFn = ladderCode.slice(ladderCode.indexOf("const line = ("),
+                                  ladderCode.indexOf("line(pl.stop"));
+  ok(/title: label\b/.test(lineFn), "a ladder tag is just its name");
+  ok(!lineFn.includes("%"), "no percent clutter on the tags, in any spelling");
+  ok(!/\bR\b/.test(lineFn.replace(/LineStyle|\bLC\b/g, "")), "and no R multiple");
+  ok(/axisLabelVisible: true/.test(ladder), "the axis carries the price");
+  for (const k of ['"SL"', '"ENTRY"', '"TP1"', '"TP2"', '"TP3"'])
+    ok(ladder.includes(k), `the box is tagged ${k}`);
+
+  // CHROME that must be off on this mode.
+  const dh = CHART.slice(CHART.indexOf("function renderDataHonesty"),
+                         CHART.indexOf("function renderDataHonesty") + 700);
+  ok(/if \(suppress\)/.test(dh), "renderDataHonesty can be suppressed");
+  ok(/renderDataHonesty\(true\)/.test(CHART), "and the momentum chart suppresses it");
+  ok(/!d\._heldPlan && !d\._momentum\)/.test(CHART),
+     "no 'live fallback' badge — every momentum chart is live-built, so it " +
+     "fires on all of them and distinguishes nothing");
+  const flash = CHART.slice(CHART.indexOf("function setFlashes"),
+                            CHART.indexOf("function setFlashes") + 500);
+  ok(/d\._momentum/.test(flash), "no 5.0 FLASH bands on this mode");
+
+  // VOLUME as a thin strip at the foot of the PRICE pane.
+  ok(/top: 0\.90, bottom: 0 \}/.test(CHART), "volume is a slim bottom strip here");
+
+  // FOOTER shape: PLAN / ENTRY / SL / TP1-3 / R:R / TF, and never SCORE x/8.
+  const ft = CHART.slice(CHART.indexOf("function renderMomentumFooter"),
+                         CHART.indexOf("function footer(d)"));
+  for (const k of ['"Plan"', '"Entry"', '"SL"', '"TP1"', '"TP2"', '"TP3"', '"R:R"', '"TF"'])
+    ok(ft.includes(k), `the footer carries ${k}`);
+  // Comments stripped first. The check matched the COMMENT that explains why
+  // TRAIL is absent -- the fourth prose collision in this file (the others:
+  // "momentum" as existing prose, the `?symbol=` explainer, the `vivek-frames`
+  // note). The rule that keeps emerging: assert against code, never against a
+  // file that also DESCRIBES the thing being forbidden.
+  const ftCode = ft.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(!/score_max|TRAIL/.test(ftCode), "and neither SCORE x/8 nor 5.0's TRAIL row");
+  ok(/No Auto box on this TF/.test(ft), "a plan-less timeframe says so in words");
+
+  // 5.0 IS UNTOUCHED — every new surface is inside the momentum branch.
+  const vfStart = CHART.indexOf("function renderVivekFooter");
+  const vfEnd = CHART.indexOf("function renderMomentumFooter");
+  ok(vfStart > 0 && vfEnd > vfStart, "renderVivekFooter still precedes it");
+  ok(!/macdBox|rsiBox|mom-pane|TV_PLAN/.test(CHART.slice(vfStart, vfEnd)),
+     "the 5.0 footer knows nothing about any of it");
+  ok(/if \(d\._momentum\) \{\n      const host = el\.parentNode;/.test(CHART) ||
+     /let subCharts = \[\];\n    if \(d\._momentum\) \{/.test(CHART),
+     "the panes are created only for a momentum chart");
+  // and the 5.0 stack survives
+  ok(/mkSma\(10,  "SMA 10"/.test(CHART) && /mkSma\(43,  "SMA 43"/.test(CHART),
+     "the 5.0 chart still draws SMA 10/20/43");
+  ok(/function applyVivekLevels/.test(CHART), "and still has its own level ladder");
+
+  // PhaseMap still gated.
+  ok(/isMomentum && params\.get\("pm"\) !== "1"/.test(CHART),
+     "PhaseMap is still opt-in on this mode");
 }
 
 console.log(`momentum: ${checks} checks passed`);

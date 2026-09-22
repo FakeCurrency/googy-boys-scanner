@@ -557,10 +557,25 @@
    and moving averages but no levels reads as a plan still loading. This says
    otherwise, permanently and without a dismiss control. */
 .mom-caption {
-  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  /* bottom-LEFT, not centred: the volume strip now sits along the foot of the
+     price pane and a centred caption landed on top of it. */
+  position: absolute; bottom: 8px; left: 10px;
   z-index: 9; max-width: calc(100% - 28px); text-align: center;
   background: rgba(167,139,250,.16); border: 1px solid #a78bfa; color: #d8ccff;
   font: 600 12px/1.35 var(--sans); padding: 7px 13px; border-radius: 10px;
   box-shadow: 0 6px 20px rgba(0,0,0,.4); backdrop-filter: blur(7px); pointer-events: none;
 }
-@media (max-width: 560px) { .mom-caption { font-size: 11px; padding: 6px 10px; bottom: 8px; } }
+@media (max-width: 560px) { .mom-caption { font-size: 10.5px; padding: 5px 9px; bottom: 6px; left: 6px; } }
+
+/* ── MOMENTUM oscillator panes (2026-09-22) ─────────────────────────────────
+   lightweight-charts 4.1.3 has no multi-pane API, so MACD and RSI are their
+   OWN chart instances stacked under the price one and time-synced in JS. They
+   used to be scaleMargins bands sharing the candles' price scale, which is why
+   a $5 stock's axis ran to -8: an RSI band claiming 0-100 forces the shared
+   scale to span both. Separate charts mean separate axes, which is the whole
+   point. The top border is the pane separator TV draws. */
+.mom-pane {
+  position: relative; width: 100%; min-height: 96px;
+  border-top: 1px solid rgba(110,125,150,0.22);
+}
+@media (max-width: 560px) { .mom-pane { min-height: 74px; } }
