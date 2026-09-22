@@ -172,11 +172,6 @@
   const STOCK_TYPES = new Set(["asx", "nasdaq", "commodity", "index"]);
   const NONCRYPTO = new Set(["NAS100","US30","SPX500","GER40","UK100","JP225",
     "GOLD","SILVER","OIL","WTI","BRENT","NATGAS","COPPER","PLATINUM","PALLADIUM","WHEAT","COFFEE"]);
-  const YF_TICKER = {
-    NAS100:"^NDX",US30:"^DJI",SPX500:"^GSPC",GER40:"^GDAXI",UK100:"^FTSE",JP225:"^N225",
-    GOLD:"GC=F",SILVER:"SI=F",COPPER:"HG=F",PLATINUM:"PL=F",PALLADIUM:"PA=F",
-    OIL:"CL=F",WTI:"CL=F",BRENT:"BZ=F",NATGAS:"NG=F",WHEAT:"ZW=F",COFFEE:"KC=F",
-  };
 
   function isCryptoTrade(t) {
     // Bot trades carry `market` ("asx"/"nasdaq"/"crypto"); manual trades from the
@@ -1010,36 +1005,6 @@
     document.body.appendChild(el);
     setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 400); }, 5600);
   }
-
-  // ── live prices (reused from the manual-journal helpers) ──────────────────
-  // Hard client-side timeout so a slow/hanging upstream can never leave the
-  // "Now" cell stuck on the "…" placeholder — it aborts and we fall back to "—".
-  async function fetchJSON(url, ms = 6000) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), ms);
-    try {
-      const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
-      return r.ok ? await r.json() : null;
-    } catch (_) { return null; }
-    finally { clearTimeout(t); }
-  }
-  async function cryptoPrice(sym) {
-    const pair = encodeURIComponent(String(sym || "").toUpperCase() + "USDT");
-    let j = await fetchJSON(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
-    if (j && j.price != null) return +j.price;
-    // Binance doesn't list every coin (e.g. BDX/Beldex) — fall back to Yahoo's
-    // <base>-USD via our quote proxy so those still get a live price.
-    j = await fetchJSON(`/api/quote?sym=${encodeURIComponent(String(sym || "").toUpperCase() + "-USD")}`);
-    return j && j.price != null ? +j.price : null;
-  }
-  async function stockPrice(sym, market) {
-    const up_ = String(sym || "").toUpperCase();
-    const ticket = YF_TICKER[up_] || (market === "asx" && !String(sym).includes(".") ? sym + ".AX" : sym);
-    const j = await fetchJSON(`/api/quote?sym=${encodeURIComponent(ticket)}`);
-    return j && j.price != null ? +j.price : null;
-  }
-  const priceFor = (t) => (marketOf(t) === "crypto" ? cryptoPrice(t.symbol) : stockPrice(t.symbol, marketOf(t)));
-
 
   // ── state + render ────────────────────────────────────────────────────────
   const state = { bot: { open: [], closed: [] } };
