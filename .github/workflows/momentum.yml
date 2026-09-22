@@ -1,0 +1,196 @@
+name: Momentum scan
+
+# VIVEK MOMENTUM -- the divergence lens. REPORT-ONLY: it publishes
+# public/data/momentum/<market>.json and touches nothing else, ever.
+#
+# ONE MARKET PER RUN, AFTER THAT MARKET'S CLOSE. Spec 5.11 is explicit that a
+# daily screener must NOT run during market hours: a forming bar's RSI and EMA
+# move all session, so an intraday run produces a signal that may not exist at
+# the close. That inverts the usual in-job gate here -- the question is not "is
+# the market open" but "is the last bar the latest close", which the scanner
+# answers from the DATA (config.MAX_DATA_AGE_DAYS, measured in the market's own
+# calendar) rather than from the clock.
+#
+# THE CRON TIMES ARE CHOSEN TO CLEAR THE CLOSE IN BOTH HALVES OF THE DST YEAR,
+# which is the same lesson every ASX cron in this repo learned the hard way:
+#   ASX     16:00 Sydney   = 06:00 UTC under AEST, 05:00 under AEDT -> 06:30 UTC
+#   NASDAQ  16:00 New York = 21:00 UTC under EST,  20:00 under EDT  -> 21:30 UTC
+#   crypto  the daily bar closes at the UTC day boundary            -> 00:30 UTC
+# Never hard-code the offset you happen to be in.
+#
+# ITS OWN CONCURRENCY GROUP, and that is enforced, not merely advised: joining
+# `group: scan` would make this a member of the paper-book mutex, and
+# tests/test_workflow_mutex.py would then require it in close_position.yml's
+# wait-loop watch list. It writes no book, so it has no business in that queue.
+
+on:
+  schedule:
+    - cron: "30 6 * * 1-5"    # ASX,    after the Sydney close (AEST and AEDT)
+    - cron: "30 21 * * 1-5"   # NASDAQ, after the New York close (EST and EDT)
+    - cron: "30 0 * * *"      # crypto, just past the UTC day boundary; 7 days
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Market to screen"
+        default: "asx"
+        required: false
+        type: choice
+        options: ["asx", "nasdaq", "crypto"]
+      mode:
+        description: "A = divergence only (default) | B = A or B | C = both, aligned"
+        default: "A"
+        required: false
+        type: choice
+        options: ["A", "B", "C"]
+      window:
+        description: "Freshness in BARS for both rules (blank = config default, 1)"
+        default: ""
+        required: false
+      dry_run:
+        description: "Screen and print the summary, publish nothing"
+        default: false
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: momentum
+  cancel-in-progress: false
+
+jobs:
+  momentum:
+    runs-on: ubuntu-latest
+    # One market, but ASX is ~2,000 names and the download is the slow part.
+    # Bounded because an unbounded job holds a runner for six hours and, holding
+    # this group, stalls every later Momentum refresh rather than just itself.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Its OWN cache namespace. Sharing `vivek-frames-` would mix a 3y window
+      # with the scan's 5y one under the same keys, and a separate namespace is
+      # one more thing that disappears cleanly when the lens does.
+      - name: Restore frame cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/frames
+          key: momentum-frames-${{ github.run_id }}
+          restore-keys: |
+            momentum-frames-
+
+      - name: Screen the market
+        id: scan
+        run: |
+          set -u
+          # Which market this firing is for. A scheduled run is identified by
+          # its own cron string -- the morning_plays pattern -- so the three
+          # schedules cannot be confused with each other and a manual dispatch
+          # can still pick any of them.
+          case "${{ github.event.schedule }}" in
+            "30 6 * * 1-5")  MARKET=asx ;;
+            "30 21 * * 1-5") MARKET=nasdaq ;;
+            "30 0 * * *")    MARKET=crypto ;;
+            *)               MARKET="${{ inputs.market }}" ;;
+          esac
+          MARKET="${MARKET:-asx}"
+          echo "market=$MARKET" >> "$GITHUB_OUTPUT"
+
+          ARGS="--market $MARKET"
+          if [ -n "${{ inputs.mode }}" ]; then ARGS="$ARGS --mode ${{ inputs.mode }}"; fi
+          if [ -n "${{ inputs.window }}" ]; then ARGS="$ARGS --window ${{ inputs.window }}"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+
+          # THREE OUTCOMES, AND THE EXIT CODE IS WHAT TELLS THEM APART.
+          #   0  screened and published
+          #   3  deliberately published nothing (download blocked/empty); the
+          #      previous file stands, which is the whole point -- publishing an
+          #      empty results list over it would make the page say "nothing set
+          #      up today" when the truth is "we could not look"
+          #   *  a real failure
+          # `|| RC=$?` neutralises the STATUS without appending to the OUTPUT,
+          # which is the distinction from the `|| echo` form that caused the
+          # "000000" bug in the old stop-watcher.
+          RC=0
+          python -m scanner.momentum.run $ARGS || RC=$?
+          echo "rc=$RC"
+          case "$RC" in
+            0)
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              ;;
+            3)
+              echo "published=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::momentum $MARKET published nothing - the download came back empty and the previous file was kept. This is a REPORTED DECISION, not a fault; the watchdog for it is the next run."
+              ;;
+            *)
+              echo "::error::momentum $MARKET failed with exit $RC"
+              exit "$RC"
+              ;;
+          esac
+
+      - name: Commit and push
+        if: steps.scan.outputs.published == 'true' && inputs.dry_run != true
+        run: |
+          set -u
+          MARKET="${{ steps.scan.outputs.market }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # ONE path, and one pathspec per `git add`. `git add a b` is
+          # ALL-OR-NOTHING -- with one missing it exits 128 and stages NEITHER
+          # -- so the repo bans the shape outright, and the loop form keeps
+          # this honest if the list ever grows.
+          PATHS="public/data/momentum/$MARKET.json"
+          for p in $PATHS; do
+            if [ -e "$p" ]; then
+              git add -- "$p"
+            else
+              echo "::warning::$p is not present - nothing to stage for it"
+            fi
+          done
+
+          # The must-change gate. Reached ONLY when the scanner reported a real
+          # publish, so an empty index here means output was silently lost --
+          # which is the 2026-07-20 incident this gate exists for. The
+          # deliberate no-publish path never gets here, so the gate is never
+          # asked a question it cannot answer.
+          bash scripts/assert_staged.sh "momentum $MARKET" "public/data/momentum/$MARKET.json"
+
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "data: momentum $MARKET $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+
+          # Rebase-and-retry. Generated data is fully recomputed each run, so
+          # the latest scan wins -- but only ever REPLACE a path THIS run
+          # generated, or a sibling's newer copy gets deleted and pushed.
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            for p in $PATHS; do
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+                git checkout "$SHA" -- "$p"
+              fi
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
+            git commit -m "data: momentum $MARKET $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then
+              echo "Pushed."
+              exit 0
+            fi
+            echo "Push race - retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

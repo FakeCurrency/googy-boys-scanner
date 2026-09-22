@@ -809,10 +809,12 @@ inventing new filters"*, and *"If a spec sentence and HANDOFF Part 17 conflict, 
    new page that no unit suite would. HANDOFF 17.7 calls it "cheap insurance". It edits a file off
    the allowed list. **Recommendation: yes, as its own droppable commit**, and explicitly **not**
    `screenshots.e2e.js` / `screenshot-diff.e2e.js`, so no baseline re-cut is ever needed (§5.5).
-5. **Crypto in v1.** Brief: "crypto optional v1", owner defaults say "Markets v1: ASX + NASDAQ
-   (crypto engine may run, page may show it)". **Plan: engine + CLI support all three; the workflow
-   schedules ASX + NASDAQ only**; the page shows a CRYPTO button that honestly renders empty until
-   something publishes.
+5. **Crypto in v1 — DECIDED IN PHASE 4: all three are scheduled.** The brief says "crypto optional
+   v1" and the owner's defaults say "Markets v1: ASX + NASDAQ (crypto engine may run, page may show
+   it)". My Phase 0 plan was ASX + NASDAQ only; Phase 4 schedules crypto too, because "the page may
+   show it" reads better with data than with an honest-but-empty CRYPTO button, and the cost is one
+   cron line (`30 0 * * *`, just past the UTC day boundary that defines the daily bar) that deletes
+   in one edit. Easy to reverse if the owner would rather not spend the runner minutes.
 6. **The strict-pivot tie convention** (§4.2) — a five-minute check against a real TradingView chart
    that only the owner can do. Default strict until then.
 7. **The `is-here` pill contrast.** White on `var(--purple)` measures **3.52:1**, essentially matching
