@@ -1011,13 +1011,6 @@
     setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 400); }, 5600);
   }
 
-  // ── Same positions: you and Claude in the same trade, head to head ─────────
-  // A trade "matches" when both sides hold the same symbol, in the same market,
-  // the same way (long/short). One shared Now column (same live price for both);
-  // Claude's R/$ are marked server-side each scan, yours update live.
-  const tradeKey = (t) => `${marketOf(t)}:${symKey(t)}:${t.direction === "short" ? "S" : "L"}`;
-
-
   // ── live prices (reused from the manual-journal helpers) ──────────────────
   // Hard client-side timeout so a slow/hanging upstream can never leave the
   // "Now" cell stuck on the "…" placeholder — it aborts and we fall back to "—".
