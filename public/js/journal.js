@@ -1683,15 +1683,6 @@
     }
   }
 
-  // Run async work in small waves so we never burst dozens of quote requests at
-  // once (Yahoo throttles bursts, which made the "Now" column fall back to "—").
-  async function inBatches(items, size, fn) {
-    for (let i = 0; i < items.length; i += size) {
-      await Promise.all(items.slice(i, i + size).map(fn));
-    }
-  }
-
-
   // TOP100 #29: a failed refresh keeps the LAST GOOD BOOK on screen, so the
   // error has to be surfaced or a frozen book looks like an unchanged one.
   // r.ok is checked too: a 404 (never published) and a 500 both used to fall
