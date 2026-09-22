@@ -2687,7 +2687,6 @@
       paintMomentumAth(key);
       const pl = (tfs[key] || {}).plan;
       if (!pl) { d._activeLevels = null; return; }
-      const ep = pl.entry;
       // TV tags the box with the NAME only and lets the axis label carry the
       // price -- "SL | 6.762". The 5.0 habit of appending "+15.00% · 1.0R"
       // turns five clean tags into five sentences, and the R ladder is already

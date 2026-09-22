@@ -64,6 +64,23 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
      "css/chart.css: .live-pos-box / .lpb-* rules were proven dead and deleted 2026-09-23");
 }
 
+// Locals are pinned inside the function that held them: a two-letter name is
+// too common for a whole-file pin. The slice ends where the PARSER says the
+// declaration closes, not at a guessed brace.
+function fnBody(src, name) {
+  const at = src.indexOf(`function ${name}(`);
+  ok(at > 0, `${name} moved -- pin would be vacuous`);
+  for (let i = src.indexOf("{", at); i < src.length; i++) {
+    if (src[i] !== "}") continue;
+    const cand = src.slice(at, i + 1);
+    try { new Function("return (" + cand + ");"); return cand; } catch (_) { /* keep walking */ }
+  }
+  throw new Error(`could not slice ${name}`);
+}
+ok(!/\bep\b/.test(fnBody(code("js/chart.js"), "applyMomentumPlan")),
+   "js/chart.js applyMomentumPlan: the unused `ep` local was deleted 2026-09-23 (P2 made the " +
+   "rungs line series and dropped the %-label that read it)");
+
 // `$$` cannot be pinned by name: the two characters legitimately occur in
 // `US$${...}` template text on the journal page. Pin the declaration instead.
 ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),
