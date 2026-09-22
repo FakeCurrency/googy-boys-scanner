@@ -1339,13 +1339,17 @@
     const mp = (mom && mom.params) || null;
     const assetType = market === "crypto" ? "crypto" : null;
     const bull = String((row && (row.rule_a_direction || row.direction)) || "bull") === "bull";
-    const rulesTag = row && row.rules ? `Rule ${row.rules}` : "";
+    // P12: the header carries the PLAN SIDE (its own badge) and the RULES that
+    // fired -- nothing else. "trend up" beside a SHORT box reads as a
+    // contradiction rather than as two different rules, and a divergence
+    // restates what "Rule A" already says. Both live in the row payload and on
+    // the momentum page; the chart header is not where they earn their space.
+    // `is_product` and a short-history warning stay: each changes how much the
+    // row is worth, which is the bar for a chip here.
     const chips = [];
     if (row) {
-      if (rulesTag) chips.push(rulesTag);
-      if (row.rule_a) chips.push(bull ? "bull divergence" : "bear divergence");
-      if (row.rule_b && row.rule_b_score != null) chips.push(`cross ${row.rule_b_score}/3`);
-      if (row.trend) chips.push(`trend ${row.trend}`);
+      if (row.rule_a) chips.push(bull ? "Rule A bull" : "Rule A bear");
+      if (row.rule_b && row.rule_b_score != null) chips.push(`Rule B ${row.rule_b_score}/3`);
       if (row.is_product) chips.push("PRODUCT");
       if (row.history_warning) chips.push(row.history_warning);
     }
@@ -3024,8 +3028,14 @@
             // (Pine's offset = -lbR), so the tag sits where the divergence is
             // drawn rather than where it was confirmed.
             const cs = (tfs[key] || {}).candles || [];
+            // P13: one tag per bar. Two divergences confirming on the same
+            // candle rendered their labels on top of each other and read as
+            // "BeaBear" -- the same collision the cross labels have (P5).
+            const taken = new Set();
             const mk = ((tfs[key] || {}).divs || []).map((dv) => {
               const b = cs[dv.pivot];
+              if (!b || taken.has(b.time)) return null;
+              taken.add(b.time);
               return b ? {
                 time: b.time,
                 position: dv.bull ? "belowBar" : "aboveBar",
