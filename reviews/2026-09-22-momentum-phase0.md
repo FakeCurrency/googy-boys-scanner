@@ -94,10 +94,22 @@ and neither was mentioned.
 
 Each of these was read, not inferred. None is fatal; all would have produced a wrong build.
 
-### 3.1 The index nav pill is labelled `SCAN`, not `VIVEK 5.0`
+### 3.1 ~~The index nav pill is labelled `SCAN`~~ — RETRACTED, the brief was right
 
-`public/js/nav.js:26` — `{ href: "index.html", label: "SCAN", tab: "📡", key: "index" }`.
-A nav test written against the brief's `"VIVEK 5.0"` would fail on a true tree.
+**This was my error and it is corrected rather than quietly dropped.** I read
+`public/js/nav.js:26` — `{ href: "index.html", label: "SCAN", tab: "📡", key: "index" }` — and
+called the brief wrong. The brief says *"index (label **rendered** "VIVEK 5.0")"*, and that word is
+load-bearing: both render sites override the data field.
+
+```js
+nav.js:88   const label    = it.key === "index" ? "VIVEK 5.0" : it.label;   // desktop pill
+nav.js:156  const tabLabel = it.key === "index" ? "VIVEK 5.0" : it.label;   // mobile tab
+```
+
+So both are true: `PRIMARY[0].label === "SCAN"` is the datum, and the pill on screen reads
+**VIVEK 5.0**. **Consequence for Phase 6:** a nav test must be explicit about which it asserts. A
+test checking rendered pill text has to account for the override; a test checking the array checks
+`"SCAN"`. Conflating them is how a green test ends up describing neither.
 
 ### 3.2 The mode enum is `1`/`2`, and "mode B" is a UNION — there is no "B only"
 
@@ -390,7 +402,7 @@ applies to *our own* loading path, where we control the order — not to launder
 
 | key | href | label | tab |
 |---|---|---|---|
-| index | index.html | **SCAN** | 📡 |
+| index | index.html | `"SCAN"` — but **rendered** as "VIVEK 5.0", see §3.1 | 📡 |
 | recommendations | recommendations.html | RECS | 🧭 |
 | phasemap | phasemap.html | PHASEMAP | 🗺️ |
 | specs | specs.html | SPECS ⚡ | ⚡ |
@@ -832,6 +844,100 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 Exact pins installed: numpy 2.4.6, pandas 3.0.3, pytest 9.1.1, PyYAML 6.0.3, yfinance 1.4.1.
 **Run every gate as `.venv/bin/python -m pytest`,** not bare `python`.
+
+---
+
+## 8B. ADDENDUM — corrections found while building Phases 1–2
+
+Recorded here so the inventory stays the single authoritative document. Each was
+verified by reading or running the code, and three of them changed a design decision.
+
+### 8B.1 The schema ruling in §3.5 is REVISED: flat row keys, spec envelope
+
+§3.5 ruled that the CORE spec's nested row (`rule_a: {bars_ago, …}`) wins. Reading the
+**reference** changes that: it emits a **FLAT, RAGGED** dict — 35 keys always present plus 14 that
+appear only when the corresponding rule fired, 49 possible. And spec §5.8 labels its own nested
+shape a *suggestion* ("Suggested: `public/data/<market>_rsidiv.json`").
+
+**Revised ruling — take the best of each.** The row keys are the reference's **flat** ones, because
+that is what the tested code produces, what makes the 28 borrowed assertions portable, and what the
+brief's own field names (`rule_a_bars_ago`, `rule_a_pivot_bars_ago`) literally are. The **envelope**
+is the spec's, because §5.8 argues for it and it is plainly better: `generated_at` · `market` ·
+`mode` · `params` · `summary` · `results` · **`errors` as a first-class array**, so a symbol that
+throws every night is visible rather than indistinguishable from one that never sets up.
+
+### 8B.2 Mode C is not a third code path, and that is deliberate
+
+The reference implements only modes 1 and 2 and applies the C filter *in the runner*, with a stated
+reason: *"'both rules, directions agreeing' is a view of the same computation rather than a
+different screen."* So the engine treats C exactly as B and the selection step filters. Followed.
+
+One consequence worth knowing, because it is a real edge: mode C's agreement test is a string
+equality of the two direction fields, `rule_a_direction` can be `"both"`, and `rule_b_direction`
+never can (crossover and crossunder are mutually exclusive on a bar). **So a `both` Rule A can
+never satisfy mode C.** Faithfully reproduced; flagged rather than silently "fixed".
+
+### 8B.3 `run.py` is the template, NOT `spec_run.py`
+
+The brief calls `scanner/spec_run.py` "my run.py template". It is the weaker of the two available,
+on two specific behaviours, and copying it reproduces both:
+
+1. **No empty-frames guard.** With `frames == {}` the per-ticker loop never runs, `results == []`,
+   and it *still publishes* — overwriting the previous good `<market>_spec.json` with an empty list.
+   `scanner/run.py` deliberately skips the publish and keeps yesterday's JSON.
+2. **No failed-market accounting.** An exception inside `scan_market` propagates out of the loop and
+   kills the remaining markets and the process. `run.py` collects
+   `failed_markets.append(...)` and raises `SystemExit(1)` at the end.
+
+**Ruling: Phase 3 copies `run.py`'s behaviour on both points.** A Yahoo-blocked market must leave the
+last good file alone.
+
+### 8B.4 The plumbing, exactly
+
+- `write_json(path, payload, *, indent=2, separators=None, sort_keys=False, ensure_ascii=True, newline=False)`.
+  Guarantees: non-finite floats → `null` (`_finite`, with `allow_nan=False` as a loud backstop);
+  atomic via `journal_common.atomic_write` with `newline="\n"` so a Windows run cannot publish CRLF;
+  numpy 0-d scalars via `.item()` while a ≥1-d ndarray **raises** rather than being flattened; the
+  caller's payload is not mutated.
+- `load_universe(market_key, full=True) -> list[dict]` with **exactly four keys**: `symbol`, `name`,
+  `sector`, `yf`. **There is no `adv`** — liquidity must be computed from the frames at scan time.
+  `sector` is GICS for **ASX only**; empty string for NASDAQ and crypto. (Its own docstring is stale
+  and omits `sector`.)
+- `download(...) -> {ticker: DataFrame}` keyed by the **Yahoo** ticker (`yf`, e.g. `BHP.AX`), not the
+  bare symbol, and each frame is `.dropna()`ed — any row with any NaN in that ticker's OHLCV block is
+  gone before we see it.
+- `merge_with_cache(market_key, fresh, tickers) -> (frames, stats)`, `stats` keys
+  `{fresh, reused, merged, universe, stale_dropped}`; it refuses a cached frame older than
+  `FRAME_CACHE_MAX_AGE_DAYS` (10) measured in the market's tz.
+- **`validate_bars` is scalp-era and inert on daily data** — `min_bars` defaults to
+  `SCALP_DATA_MIN_BARS` (65) and the staleness branch only runs for intraday intervals. Do not lean
+  on it; the lens applies its own §5.6 gates.
+- **No column adapter is needed.** `prepare_frame` lowercases every incoming column, so the repo's
+  Title-case yfinance frames feed straight in and the normalisation sits at the screen's front door
+  rather than in the loader. (This corrects a remark in §4.1's ruling.)
+
+### 8B.5 A third auto-enrolling gate on the engine
+
+`tests/test_publish_integrity.py` sweeps **`scanner/` recursively**, so `scanner/momentum/**` is
+already enrolled: a hand-rolled `write_text(json.dumps(...))` or `fh.write(json.dumps(...))` here
+trips a gate that is not ours. This matters more than it sounds, because **the reference's own writer
+is exactly that shape** (`os.fdopen` + `json.dump` + `os.replace`) and would slip past *both* of that
+suite's construct sweeps if it were copied in wholesale — while also handling NaN differently (it
+**raises** on a native NaN where `write_json` maps non-finite floats to `null`). Pinned locally in
+`test_the_lens_publishes_only_through_output_write_json`.
+
+### 8B.6 Two findings from building, worth keeping
+
+- **`validate()` must stay structurally equivalent to the reference's**, or the 28 borrowed
+  assertions stop running. I first added a cross-field satisfiability check to it (an unsatisfiable
+  `min_signal_score`) and it broke a borrowed test that legitimately explores every switch
+  combination. The check is right, but it belongs in `assert_screenable()`, called by the runner —
+  a property of *screening*, not of the value. The lesson generalises: a stricter validator silently
+  costs substitutability.
+- **A differential with explicit arguments cannot see a default-path bug.** The port was
+  bit-identical across 35,360 field values while still carrying **six** latent `NameError`s in its
+  `cfg = (cfg or DEFAULT_CONFIG)` fallbacks, because the differential always passed `cfg`. The
+  borrowed layer caught all six on its first run. That is why the suite has three layers and not one.
 
 ---
 

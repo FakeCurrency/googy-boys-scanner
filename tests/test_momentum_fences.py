@@ -376,15 +376,59 @@ def test_every_tunable_lives_in_config():
     offenders = []
     for p in _require_engine():
         tree = ast.parse(p.read_text(encoding="utf-8"), filename=str(p))
+        # A FUNCTION SIGNATURE DEFAULT is not a hardcoded threshold, and the
+        # distinction is the whole difference between a useful gate and a
+        # noisy one. `def rsi_wilder(close, period=14)` is a pure indicator
+        # stating the Pine default it mirrors; what would actually be a defect
+        # is a CALL SITE that omits the argument and silently inherits it, and
+        # that is what the companion test below checks. Exempting these by
+        # NODE IDENTITY rather than by value keeps a bare 14 in a function
+        # BODY caught.
+        exempt = set()
+        for fn in ast.walk(tree):
+            if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                for d in list(fn.args.defaults) + [k for k in fn.args.kw_defaults if k]:
+                    exempt.update(id(x) for x in ast.walk(d))
         for node in ast.walk(tree):
             if (isinstance(node, ast.Constant)
                     and isinstance(node.value, (int, float))
                     and not isinstance(node.value, bool)
-                    and float(node.value) in tunables):
+                    and float(node.value) in tunables
+                    and id(node) not in exempt):
                 offenders.append(f"{p.name}:{node.lineno}: bare literal "
                                  f"{node.value} is a config value")
     assert offenders == [], (
         "read the threshold from config instead:\n  " + "\n  ".join(offenders))
+
+
+def test_no_indicator_is_called_without_its_config_length():
+    """The other half of the gate above, and the half that would actually bite.
+
+    The indicator signatures carry Pine's defaults so they can be used
+    directly, which means an omitted argument at a CALL SITE is silent: the
+    screen would compute a 14-period RSI because that is the default, not
+    because config said so, and a retune of `rsi_len` would change nothing.
+    Every length-taking call in the screen must therefore pass one explicitly.
+    """
+    src = (LENS / "screen.py").read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    # (callee, how many positional args must be present beyond the series)
+    needs = {"rsi_wilder": 1, "atr_wilder": 1, "sma_pine": 1, "ema_pine": 1,
+             "ma_pine": 1, "macd_pine": 3}
+    bad = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+        if name not in needs:
+            continue
+        supplied = ast.unparse(node)
+        given = len(node.args) - 1 + len(node.keywords)
+        if given < needs[name] or "cfg." not in supplied:
+            bad.append(f"{name} at line {node.lineno}: {supplied[:90]}")
+    assert bad == [], (
+        "an indicator called without an explicit config length silently uses "
+        "its signature default:\n  " + "\n  ".join(bad))
 
 
 def test_the_config_is_versioned_and_self_checking():
