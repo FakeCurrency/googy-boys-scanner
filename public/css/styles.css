@@ -2695,3 +2695,63 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 .bt-pos  { color: var(--green); font-weight: 700; }
 .bt-neg  { color: var(--red);   font-weight: 700; }
 .bt-flat { color: var(--muted); }
+
+/* ── MOMENTUM — the one purple destination (2026-09-22) ───────────────────
+ *
+ * WHY THIS IS IN styles.css AND NOT momentum.css. The pill row renders on all
+ * 13 pages via nav.js, but a per-page stylesheet is fetched only by its own
+ * page. Put this in momentum.css and the pill is purple on momentum.html and
+ * default grey on the other twelve — i.e. the wayfinding colour is missing
+ * from every page you would navigate FROM, which is the only place it works.
+ * Every other piece of cross-page nav chrome already lives here (.nav-back,
+ * .pm-topnav .howto-link, .site-tab[data-tabkey=…]).
+ *
+ * WHY EVERY SELECTOR CARRIES [href="momentum.html"]. Two reasons. It keeps
+ * nav.js's RENDER path byte-untouched — only its data arrays changed — so the
+ * other twelve pills cannot be affected by construction and the whole block
+ * reverts in one delete. And the existing cascade actively fights back, so
+ * each state needs its own specificity:
+ *
+ *   :1408  .nav-pills .howto-link               (0,2,0)  the base pill
+ *   :1414  .nav-pills .howto-link:hover         (0,3,0)  sets color: var(--green)
+ *   :1500  .nav-pills .howto-link.is-here       (0,3,0)  sets background: var(--blue)
+ *
+ * A rest-only rule at (0,3,0) would flicker GREEN on mouse-over, and an
+ * is-here rule that does not exceed (0,3,0) would stay BLUE. Hence the
+ * attribute selector on the rest rule (0,3,0) and attribute-plus-pseudo /
+ * attribute-plus-class on the other two (0,4,0).
+ *
+ * --purple is NOT redefined. It is byte-identical to --ema-144 and already
+ * sits inside test/contrast.test.js's 3.0:1 gate; changing its value would
+ * repaint a chart line, PhaseMap's fund tag, a journal exit chip and the SPECS
+ * label in the insights diagram. The tint is a literal rgba at the house
+ * strength (0.16, matching --blue-soft / --green-soft / --red-soft).
+ *
+ * KNOWN AND ACCEPTED: #fff on --purple measures 3.52:1, essentially the
+ * shipped blue pill's 3.65:1 and below AA-normal at 12.5px/700. Parity with
+ * the existing pill was chosen over a one-off dark foreground that would make
+ * MOMENTUM the only pill in the row that reads differently. Nothing in CI
+ * gates a foreground-on-accent pair either way, so this is a decision, not a
+ * constraint.
+ */
+.nav-pills .howto-link[href="momentum.html"] {
+  color: #e9c4ff;
+  border-color: rgba(191, 90, 242, 0.45);
+  background: rgba(191, 90, 242, 0.16);
+}
+.nav-pills .howto-link[href="momentum.html"]:hover {
+  color: var(--purple);
+  border-color: rgba(191, 90, 242, 0.65);
+  background: rgba(191, 90, 242, 0.24);
+}
+/* ILLUMINATE: the destination you are standing on. */
+.nav-pills .howto-link[href="momentum.html"].is-here {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: #fff;
+}
+/* Mobile reaches MOMENTUM through the MORE sheet rather than a bottom tab —
+ * the tab grid is repeat(6, 1fr) and is full — so the sheet row carries the
+ * same illuminate. (0,3,0) beats the key-agnostic .more-sheet-row.is-here at
+ * :1613, which is (0,2,0) and blue. */
+.more-sheet-row[href="momentum.html"].is-here { color: var(--purple); }

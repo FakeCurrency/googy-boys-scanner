@@ -27,26 +27,34 @@
     { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
     { href: "phasemap.html",        label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
     { href: "specs.html",           label: "SPECS ⚡",   tab: "⚡", key: "specs" },
+    { href: "momentum.html",        label: "MOMENTUM",   tab: "🟣", key: "momentum" },
     { href: "alerts.html",          label: "ALERTS",     tab: "🔔", key: "alerts" },
     { href: "journal.html",         label: "JOURNAL",    tab: "📒", key: "journal" },
   ];
-  // Bottom tab bar fits 5 — SPECS + ALERTS live in the top pills / MORE on
-  // mobile (RECS took a slot, owner 2026-07-22; five tabs is the rule).
-  const TABS = PRIMARY.filter(
-    (x) => x.key !== "alerts",
-  );
+  // THE BOTTOM TAB BAR FITS EXACTLY 5, and the constraint is CSS rather than
+  // anything in this file: styles.css's `.site-tabs` is
+  // `grid-template-columns: repeat(6, 1fr)` = 5 tabs + the MORE button. A 6th
+  // tab becomes a 7th grid child and overflows on every phone. (RECS took a
+  // slot, owner 2026-07-22.)
+  //
+  // OFF_TAB is the SINGLE SOURCE for both derivations below. They used to be
+  // two independent predicates each keyed on the literal "alerts", so adding a
+  // PRIMARY entry silently did two wrong things at once: widened TABS to six,
+  // and left the new key out of the sheet — which on a phone is a shipped page
+  // with NO entry point at all, because the pill row is display:none under
+  // 680px. A set cannot drift from itself.
+  const OFF_TAB = new Set(["alerts", "momentum"]);
+  const TABS = PRIMARY.filter((x) => !OFF_TAB.has(x.key));
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
     { href: "system.html",  label: "SYSTEM",       key: "system", tab: "⚙️" },
     { href: "about.html",   label: "HOW IT WORKS", key: "about", tab: "❓" },
   ];
   // Everything not on the 5-slot bottom bar, for the mobile MORE sheet (#30):
-  // ALERTS (top-pill-only on desktop) plus the MORE set. (SPECS took the
-  // slot ★ MY NAMES vacated when that page was removed, 2026-09-21.)
+  // the OFF_TAB keys (top-pill-only on desktop) plus the MORE set. (SPECS took
+  // the slot ★ MY NAMES vacated when that page was removed, 2026-09-21.)
   const SHEET = [
-    ...PRIMARY.filter(
-      (x) => x.key === "alerts",
-    ),
+    ...PRIMARY.filter((x) => OFF_TAB.has(x.key)),
     ...MORE,
   ];
 
