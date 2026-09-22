@@ -1,0 +1,47 @@
+# THROWAWAY diagnostic (2026-09-23). Runs only on a push to its own branch,
+# never on main; read-only against the public site. Always exits green so a
+# probe finding never sends a failure email -- the answer is in the log.
+name: diag ELS 4H (throwaway)
+on:
+  push:
+    branches: [diag-els-4h-2026-09-23]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Raw hourly pull (the request the 4H pane makes)
+        run: |
+          code=$(curl -sS -m 60 -o h.json -w '%{http_code}' \
+            "https://googy-boys-scanner.pages.dev/api/price?symbol=ELS.AX&range=2y&interval=1h" || true)
+          echo "HTTP $code"
+          node -e '
+            const fs = require("fs");
+            let j = {}; try { j = JSON.parse(fs.readFileSync("h.json", "utf8")); } catch (e) { console.log("unparseable", String(e)); }
+            const c = j.candles || [];
+            console.log("ok", j.ok, "| hourly candles", c.length, "| bars", j.bars, "| degraded", j.degraded, "| basis", JSON.stringify(j.basis));
+            if (c.length) console.log("first", new Date(c[0].time*1000).toISOString(), "| last", new Date(c[c.length-1].time*1000).toISOString());
+            const src = fs.readFileSync("public/js/chart.js", "utf8");
+            const at = src.indexOf("function bucketBars(");
+            let fn = null;
+            for (let i = src.indexOf("{", at); i < src.length && !fn; i++) {
+              if (src[i] !== "}") continue;
+              try { fn = new Function("return (" + src.slice(at, i + 1) + ");")(); } catch (_) {}
+            }
+            const h4 = fn ? fn(c, 4 * 3600) : [];
+            console.log("4H buckets (chart.js bucketBars)", h4.length, "| chart needs >= 24 hourly and >= 6 buckets");
+            if (h4.length) console.log("4H first", new Date(h4[0].time*1000).toISOString(), "| 4H last", new Date(h4[h4.length-1].time*1000).toISOString());
+          ' || true
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y > /dev/null 2>&1
+          npm install --no-save playwright > /dev/null 2>&1
+          npx playwright install --with-deps chromium > /dev/null 2>&1
+      - name: Tap 4H on the live Momentum chart (390x844)
+        run: node diag/els_4h_probe.js || true
