@@ -1053,4 +1053,97 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
      "one renderer for every market — no per-market branch");
 }
 
+/* ── PHONE TIMEFRAME BAR (2026-09-23) ──────────────────────────────────────────
+ * On a 390x844 phone the D / 3D / W bar sat at y=986: the #72 phone rule moves
+ * it below .chart-main, and on this mode that is also below MACD + RSI, under
+ * three charts that take every drag. placeMomTfBar puts it under the PRICE
+ * pane on phones and back in its home slot anywhere else. The real function
+ * runs here against a minimal DOM: no browser in this job.
+ */
+{
+  const CODE = CHART.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  const at = CHART.indexOf("function placeMomTfBar(");
+  ok(at > 0, "chart.js no longer defines placeMomTfBar");
+  let src = null;
+  for (let i = CHART.indexOf("{", at); i < CHART.length && !src; i++) {
+    if (CHART[i] !== "}") continue;
+    const cand = CHART.slice(at, i + 1);
+    try { new Function("return (" + cand + ");"); src = cand; } catch (_) { /* keep walking */ }
+  }
+  const place = new Function("return (" + src + ");")();
+
+  // Just enough DOM: ordered children, parentNode, nextSibling, insertBefore.
+  class N {
+    constructor(name) { this.name = name; this.kids = []; this.parentNode = null; }
+    get nextSibling() {
+      if (!this.parentNode) return null;
+      const k = this.parentNode.kids; return k[k.indexOf(this) + 1] || null;
+    }
+    insertBefore(node, ref) {
+      if (node.parentNode) node.parentNode.kids.splice(node.parentNode.kids.indexOf(node), 1);
+      const i = ref ? this.kids.indexOf(ref) : -1;
+      if (i < 0) this.kids.push(node); else this.kids.splice(i, 0, node);
+      node.parentNode = this; return node;
+    }
+    append(...ns) { ns.forEach((n) => this.insertBefore(n, null)); return this; }
+    order() { return this.kids.map((k) => k.name).join(","); }
+  }
+  const build = () => {
+    const body = new N("body"), bar = new N("bar"), main = new N("main");
+    const canvas = new N("canvas"), macd = new N("macd"), rsi = new N("rsi");
+    body.append(new N("header"), bar, main, new N("foot"));
+    main.append(canvas, macd, rsi);
+    return { body, bar, main, macd, home: { parent: body, next: main } };
+  };
+
+  let t = build();
+  place(t.bar, t.macd, t.home, true);
+  eq(t.main.order(), "canvas,bar,macd,rsi", "phone: the bar sits under the PRICE pane, above MACD");
+  eq(t.body.order(), "header,main,foot", "and has left the body column");
+  place(t.bar, t.macd, t.home, true);
+  eq(t.main.order(), "canvas,bar,macd,rsi", "placing twice is a no-op");
+  place(t.bar, t.macd, t.home, false);
+  eq(t.body.order(), "header,bar,main,foot", "wider than a phone (rotation): the bar goes HOME, above the chart");
+  eq(t.main.order(), "canvas,macd,rsi", "and leaves nothing behind in the chart column");
+  place(t.bar, t.macd, t.home, false);
+  eq(t.body.order(), "header,bar,main,foot", "sending it home twice is a no-op");
+
+  // Teardown removes the panes before the bar is sent home; a phone call with
+  // a detached pane must leave the bar where it is rather than throw.
+  t = build();
+  t.main.kids.splice(t.main.kids.indexOf(t.macd), 1); t.macd.parentNode = null;
+  place(t.bar, t.macd, t.home, true);
+  eq(t.body.order(), "header,bar,main,foot", "a detached MACD pane leaves the bar at home");
+  place(null, t.macd, t.home, true);
+  place(t.bar, t.macd, null, true);
+  ok(true, "a missing bar or home is a no-op, not a throw");
+
+  // Wiring: momentum-only, re-placed on rotation, sent home on teardown.
+  eq((CODE.match(/placeMomTfBar\(/g) || []).length, 3,
+     "placeMomTfBar: the declaration, the media-query placer, the teardown -- no 5.0 call site");
+  const momBlock = CODE.slice(CODE.indexOf("if (d._momentum) {", CODE.indexOf("let subCharts = [];")),
+                              CODE.indexOf("subCharts.forEach((c) => { try { c.remove(); }"));
+  ok(/placeMomTfBar\(tfBar, macdBox, tfHome, !!\(phoneMq && phoneMq\.matches\)\)/.test(momBlock),
+     "the bar is placed against the MACD pane, inside the Momentum pane block");
+  ok(/window\.matchMedia\(PHONE_MQ\)/.test(momBlock) && /addEventListener\("change", placeTfBar\)/.test(momBlock),
+     "rotation across the breakpoint re-places it");
+  ok(/removeEventListener\("change", placeTfBar\)/.test(momBlock) &&
+     /placeMomTfBar\(tfBar, macdBox, tfHome, false\)/.test(momBlock),
+     "teardown drops the listener and sends the bar home, so each render starts from the same DOM");
+
+  // One breakpoint: the JS query and the chart.css block that styles the bar
+  // inside .chart-main must name the same width, or a phone between them gets
+  // an unstyled bar in the chart column.
+  const q = /const PHONE_MQ = "\(max-width: (\d+)px\)"/.exec(CODE);
+  ok(q, "PHONE_MQ is a max-width query");
+  const CCSS = fs.readFileSync(path.join(PUB, "css", "chart.css"), "utf8");
+  const rule = CCSS.indexOf(".chart-main > .tf-toggle { display: flex; }");
+  ok(rule > 0, "chart.css styles the bar as a full-width row inside .chart-main");
+  const mq = CCSS.lastIndexOf("@media", rule);
+  const w = /@media \(max-width: (\d+)px\)/.exec(CCSS.slice(mq, rule));
+  eq(w && w[1], q && q[1], "the JS breakpoint and the chart.css phone block agree");
+  ok(/\.tf-toggle \{\s*order: 1;/.test(CCSS.slice(mq, rule)),
+     "and it is the #72 block that reorders the bar -- the rule this placement answers");
+}
+
 console.log(`momentum: ${checks} checks passed`);

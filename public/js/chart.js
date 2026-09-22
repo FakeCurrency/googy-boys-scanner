@@ -118,6 +118,25 @@
   // vivek.py. Saying so is the whole job of this line: five lines labelled
   // ENTRY/SL/TP look exactly like a 5.0 ladder and are a different system.
   const MOM_CAPTION = "Auto plan from the Pine template \u2014 not a 5.0 plan.";
+  // Where the timeframe bar lives on a Momentum chart. The #72 phone rule in
+  // chart.css moves #tf-toggle below .chart-main with `order` so it sits under
+  // the canvas in thumb reach -- which on this mode is also under the MACD and
+  // RSI panes: 986px down an 844px screen (measured on ELS at 390x844), below
+  // three charts that take every drag, so nothing on screen said it existed.
+  // On phones it goes directly under the PRICE pane instead; anywhere else it
+  // stays in its home slot. Pure DOM moves, no measuring, so a media-query
+  // listener can drive it and a test can run it without a browser.
+  const PHONE_MQ = "(max-width: 560px)";   // the #72 breakpoint in chart.css
+  function placeMomTfBar(bar, beforePane, home, phone) {
+    if (!bar || !home || !home.parent) return;
+    if (phone) {
+      if (beforePane && beforePane.parentNode && bar.nextSibling !== beforePane) {
+        beforePane.parentNode.insertBefore(bar, beforePane);
+      }
+    } else if (bar.parentNode !== home.parent) {
+      home.parent.insertBefore(bar, home.next && home.next.parentNode === home.parent ? home.next : null);
+    }
+  }
   // P1: the first paint is the LIVE MOVE, not the whole listing. ELS spent
   // 2021-2024 as a 40c penny and fitContent squeezed the part anyone is
   // trading into the right-hand fifth of the canvas. Left edge is the LATER of
@@ -2286,6 +2305,20 @@
       // inserted after `el`, so build BOTTOM-UP to end with MACD above RSI
       const rsiBox = mkPane("15vh");
       const macdBox = mkPane("15vh");
+      // Phones: timeframe bar under the price pane, above MACD (see
+      // placeMomTfBar). Re-placed when the viewport crosses the breakpoint
+      // (rotation), and sent home on teardown so every render starts from the
+      // same DOM. A 5.0 chart never reaches this block.
+      const tfBar = $("#tf-toggle");
+      const tfHome = tfBar ? { parent: tfBar.parentNode, next: tfBar.nextSibling } : null;
+      const phoneMq = window.matchMedia ? window.matchMedia(PHONE_MQ) : null;
+      const placeTfBar = () => placeMomTfBar(tfBar, macdBox, tfHome, !!(phoneMq && phoneMq.matches));
+      placeTfBar();
+      if (phoneMq && phoneMq.addEventListener) phoneMq.addEventListener("change", placeTfBar);
+      onRenderTeardown(() => {
+        if (phoneMq && phoneMq.removeEventListener) phoneMq.removeEventListener("change", placeTfBar);
+        placeMomTfBar(tfBar, macdBox, tfHome, false);
+      });
       const paneOpts = (box) => ({
         width: box.clientWidth, height: box.clientHeight,
         layout: { background: { color: "transparent" }, textColor: "#aab4c5",
