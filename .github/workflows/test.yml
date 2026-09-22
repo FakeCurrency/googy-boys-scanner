@@ -214,6 +214,12 @@ jobs:
       # draws the label on, which are five apart and mean different things.
       - name: Momentum lens (nav contract, purple scoping, row evidence, 82)
         run: node test/momentum.test.js
+      # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
+      # reference, comments stripped) and deleted stay deleted: each pin fails
+      # on the name coming back even as a string, and each file must still
+      # carry a known-live symbol so a moved file cannot pass vacuously.
+      - name: Hygiene (proven-dead symbols stay gone)
+        run: node test/hygiene.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
