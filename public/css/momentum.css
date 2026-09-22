@@ -1,0 +1,142 @@
+/* VIVEK MOMENTUM — the page's own styles.
+ *
+ * WHAT IS NOT HERE, DELIBERATELY: the purple NAV PILL. That lives in
+ * styles.css, because the pill row renders on all 13 pages via nav.js while a
+ * per-page stylesheet is fetched only by its own page — put the pill colour
+ * here and MOMENTUM is purple on this page and default grey on every page you
+ * would navigate FROM, which is the only place a wayfinding colour does any
+ * work.
+ *
+ * PURPLE IS BORROWED, NOT INVENTED. --purple (#bf5af2) already exists in
+ * styles.css's iOS system palette, is byte-identical to --ema-144, and is
+ * already inside test/contrast.test.js's 3.0:1 gate. It is NOT redefined here:
+ * changing its value would silently repaint a chart line, PhaseMap's fund tag,
+ * a journal exit chip and the SPECS label in the insights diagram. The soft
+ * tint is written as a literal rgba at the house strength (0.16, the same as
+ * --blue-soft / --green-soft / --red-soft / --orange-soft) rather than added
+ * to :root, which also keeps it invisible to that gate — whose regex requires
+ * a # hex — instead of smuggling an ungated token in beside the gated ones.
+ *
+ * Namespaced --mo-* tokens, following phasemap.css's precedent, so nothing
+ * here can leak into another page's cascade.
+ */
+
+:root {
+  --mo-accent: var(--purple);
+  --mo-soft: rgba(191, 90, 242, 0.16);
+  --mo-edge: rgba(191, 90, 242, 0.45);
+  --mo-text: #e9c4ff;          /* purple, lightened for body-size text on --panel */
+}
+
+/* ---- the deck stamp ---------------------------------------------------- */
+
+.mo-stamp {
+  font: 600 11px/1 var(--mono);
+  color: var(--muted-2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ---- a row ------------------------------------------------------------- */
+/* Same anatomy as the deck: a left marker, symbol + chips in the middle,
+   price and a metric on the right. */
+
+.mo-row {
+  display: grid;
+  grid-template-columns: 3px 46px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 12px 10px 0;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* The rail is the lens's signature: purple by default, tinted by direction
+   where there is one. A conflict keeps the neutral purple on purpose — it has
+   no single direction and colouring it either way would be the collapse this
+   page exists to avoid. */
+.mo-rail { align-self: stretch; background: var(--mo-accent); }
+.mo-row.is-bull .mo-rail { background: var(--green); }
+.mo-row.is-bear .mo-rail { background: var(--red); }
+.mo-row.is-conflict .mo-rail {
+  background: linear-gradient(var(--green), var(--red));
+}
+
+.mo-badge {
+  justify-self: center;
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--mo-text);
+  background: var(--mo-soft);
+  border: 1px solid var(--mo-edge);
+  border-radius: var(--radius-sm);
+  padding: 6px 4px;
+  text-align: center;
+  min-width: 42px;
+}
+
+.mo-main { min-width: 0; }
+.mo-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.mo-sym {
+  font: 800 15px/1.1 var(--mono);
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.mo-sym:hover { color: var(--mo-accent); }
+.mo-name {
+  font: 500 12px/1.2 var(--sans);
+  color: var(--muted-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mo-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mo-chip {
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: 0.03em;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--fill);
+  border: 1px solid var(--border-soft);
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: help;
+}
+.mo-chip-a { color: var(--mo-text); background: var(--mo-soft); border-color: var(--mo-edge); }
+.mo-chip-b { color: var(--text-2); }
+/* The lag chip is deliberately the QUIETEST thing in the row. It is context
+   for the A chip beside it, not a warning — it is true of every Rule A hit. */
+.mo-chip-lag { color: var(--muted-2); background: transparent; border-style: dashed; }
+.mo-chip-conflict { color: var(--orange); background: var(--orange-soft); border-color: rgba(255, 159, 10, 0.45); }
+.mo-chip-warn { color: var(--muted-2); border-style: dashed; }
+
+.mo-right { text-align: right; padding-left: 8px; }
+.mo-price { font: 800 15px/1.1 var(--mono); color: var(--text); }
+.mo-meta { font: 600 10.5px/1.2 var(--mono); color: var(--muted-2); margin-top: 4px; }
+
+/* ---- the honest empty state -------------------------------------------- */
+
+.mo-empty {
+  color: var(--muted);
+  font: 500 13.5px/1.55 var(--sans);
+  text-align: center;
+  padding: 22px 16px;
+  margin: 0;
+}
+
+/* ---- phones ------------------------------------------------------------ */
+
+@media (max-width: 560px) {
+  .mo-row { grid-template-columns: 3px 40px 1fr; row-gap: 6px; }
+  .mo-badge { min-width: 36px; font-size: 11px; }
+  /* The price moves under the chips rather than being squeezed against them. */
+  .mo-right { grid-column: 2 / -1; text-align: left; padding-left: 0; }
+  .mo-name { flex-basis: 100%; }
+}
