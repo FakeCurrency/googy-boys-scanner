@@ -1946,8 +1946,6 @@
     $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
   }
 
-  const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
-
   // Real-money position sizer: your account + risk% against THIS setup's
   // entry/stop → exact share count for the broker order. Persisted locally.
   //
