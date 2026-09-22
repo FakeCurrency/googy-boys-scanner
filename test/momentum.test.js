@@ -509,11 +509,87 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
                .replace(/\s+/g, " ").trim();
   };
   ok(/DAILY_RANGE/.test(fb), "the momentum chart pulls the shared DAILY_RANGE");
+  // The constant itself, so "same as 5.0" is anchored to a value and not just
+  // to a name: momentum Daily requests range=25y&interval=1d, like 5.0.
+  ok(/const DAILY_RANGE = "25y";/.test(CHART), "the shared daily range is 25y");
+  ok(/DAILY_RANGE, "1d"/.test(fb), "momentum asks for DAILY bars at that range");
   eq(liveDailyOf(fb), liveDailyOf(pmfb),
      "momentum's daily history pull is byte-identical to the 5.0 fallback's -- " +
      "a Momentum-only history cap is exactly what this forbids");
   ok(!/setVisibleRange|setVisibleLogicalRange/.test(fb),
      "and it sets no momentum-only zoom — render() fits content for every mode");
+}
+
+/* ── DAILY FIRST PAINT (2026-09-22) ─────────────────────────────────────────
+ * The Daily pull is 25y and the stitcher really serves it
+ * (deep_history.test.js pins targetBars("25y","1d") >= 6300), so fitContent()
+ * on a long-listed name squeezes 6,000+ bars into the canvas. The lens screens
+ * recent structure, so first paint windows to the last ~750 sessions. The full
+ * series stays loaded -- this is a VIEW, not a fetch cap, and the test below
+ * asserts the data is never truncated.
+ */
+{
+  const START = "if (d._momentum && key === \"1D\") {";
+  const at = CHART.indexOf(START);
+  ok(at > 0, "the momentum first-paint block is still in the TF hook");
+  // Slice to the matching close by asking the parser, same discipline as above.
+  let body = null;
+  for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+    if (CHART[i] !== "}") continue;
+    const cand = CHART.slice(at, i + 1);
+    try { new Function("d", "key", "tfs", "chart", "MOM_FIRST_PAINT_BARS", cand); body = cand; break; }
+    catch (_) { /* keep going */ }
+  }
+  ok(body, "could not slice the first-paint block");
+
+  const BARS = +(/const MOM_FIRST_PAINT_BARS = (\d+);/.exec(CHART) || [])[1];
+  eq(BARS, 750, "~3 years of sessions");
+
+  const run = (nBars, opts) => {
+    const calls = [];
+    const chart = { timeScale: () => ({ setVisibleLogicalRange: (r) => calls.push(r) }) };
+    const tfs = { "1D": { candles: Array.from({ length: nBars }, (_, i) => ({ time: i })) } };
+    new Function("d", "key", "tfs", "chart", "MOM_FIRST_PAINT_BARS", body)(
+      opts.d, opts.key, tfs, chart, BARS);
+    return calls;
+  };
+
+  // A long series windows to the last ~750 bars.
+  const deep = run(6300, { d: { _momentum: true }, key: "1D" });
+  eq(deep.length, 1, "a deep series gets an explicit visible range");
+  eq(deep[0].from, 6300 - 750, "the window starts 750 bars back");
+  ok(deep[0].to >= 6299, "and runs to the last bar");
+  ok(deep[0].to - deep[0].from >= 750, "showing at least ~3 years");
+
+  // Exactly at the threshold still windows; one short does not.
+  eq(run(750, { d: { _momentum: true }, key: "1D" }).length, 1, "750 bars windows");
+  eq(run(749, { d: { _momentum: true }, key: "1D" }).length, 0,
+     "a shorter series falls through to fitContent — never pad empty history");
+  eq(run(120, { d: { _momentum: true }, key: "1D" }).length, 0, "a young listing fits its own bars");
+
+  // REQUIREMENT: 5.0 first paint is untouched.
+  eq(run(6300, { d: { _momentum: false, _vivek: true }, key: "1D" }).length, 0,
+     "a 5.0 chart never gets a momentum visible range — its first paint is fitContent");
+  eq(run(6300, { d: {}, key: "1D" }).length, 0, "and neither does any other mode");
+  // Only the Daily pane; 3D/1W keep fitContent.
+  eq(run(6300, { d: { _momentum: true }, key: "1W" }).length, 0, "weekly is left alone");
+  eq(run(6300, { d: { _momentum: true }, key: "3D" }).length, 0, "3-day is left alone");
+
+  // It is a VIEW, not a cap: nothing truncates the series it was handed.
+  ok(!/\.slice\(|\.splice\(|length\s*=/.test(body),
+     "first paint must not truncate the loaded series — panning reaches all of it");
+}
+
+/* A 1y default on the 5.0 path would be the same bug in reverse: the owner's
+ * 2026-09-19 deep-history work exists precisely so the weekly 200-SMA has bars
+ * to stand on. This fails if anyone windows the shared path. */
+{
+  const hook = CHART.slice(CHART.indexOf("chart.timeScale().fitContent();"),
+                           CHART.indexOf("legend(tf);"));
+  const ranges = hook.match(/setVisibleLogicalRange|setVisibleRange/g) || [];
+  eq(ranges.length, 1, "exactly one visible-range call in the TF hook");
+  ok(/d\._momentum/.test(hook), "and it is gated on momentum");
+  ok(/fitContent\(\);/.test(hook), "fitContent still runs first, for every mode");
 }
 
 console.log(`momentum: ${checks} checks passed`);

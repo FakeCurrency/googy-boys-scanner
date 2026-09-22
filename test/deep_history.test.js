@@ -196,7 +196,10 @@ suite("the chart asks for the deep range through one constant");
 
 test("one constant drives every stock daily call site", () => {
   assert.match(CHART, /const DAILY_RANGE = "25y";/);
-  assert.equal((CHART.match(/yahooBars\(yfTickerFor\(SYM, assetType\), DAILY_RANGE, "1d", true\)/g) || []).length, 3);
+  // 4 since 2026-09-22: momentumFallback is the fourth stock-daily call site
+  // and it goes through the SAME constant. The count is the tripwire -- a new
+  // call site must come here and prove it did not hardcode its own range.
+  assert.equal((CHART.match(/yahooBars\(yfTickerFor\(SYM, assetType\), DAILY_RANGE, "1d", true\)/g) || []).length, 4);
   assert.ok(!/yahooBars\(yfTickerFor\(SYM, assetType\), "5y", "1d", true\)/.test(CHART),
     "a hardcoded 5y stock daily call survived the change");
 });
