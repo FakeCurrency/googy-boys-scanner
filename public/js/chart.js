@@ -1948,32 +1948,6 @@
 
   const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
 
-  // Recompute TP1/2/3 as fresh R-multiples from the ACTUAL entry, so a late or
-  // chased fill still gets three real targets sized to its own risk (|entry −
-  // stop|). We preserve the plan's R-multiples when they're sane and strictly
-  // increasing; otherwise fall back to 1R / 2R / 3R. Returns the plan targets
-  // unchanged if there's no usable stop to measure risk against.
-  function entryRelTargets(isLong, entry, stop, planEntry, planTps) {
-    const plan = (planTps || []).slice(0, 3);
-    const risk = stop != null ? Math.abs(entry - stop) : 0;
-    if (!(risk > 0)) return plan;
-    const planRisk = planEntry != null && stop != null ? Math.abs(planEntry - stop) : 0;
-    const fallback = [1, 2, 3];
-    const out = [];
-    let prev = 0;
-    for (let i = 0; i < 3; i++) {
-      let mult = fallback[i];
-      const tp = plan[i];
-      if (planRisk > 0 && tp != null) {
-        const m = (isLong ? tp - planEntry : planEntry - tp) / planRisk;
-        if (m > prev + 0.05) mult = m;          // use the plan's ratio when it's valid + rising
-      }
-      prev = mult;
-      out.push(+(isLong ? entry + mult * risk : entry - mult * risk).toFixed(8));
-    }
-    return out;
-  }
-
   // ── Yahoo Finance proxy for ASX / NASDAQ live prices ──────────────────────
   async function fetchStockQuote(sym, assetType) {
     const ticket = assetType === "asx" ? sym + ".AX" : sym;
