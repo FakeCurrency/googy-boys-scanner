@@ -112,6 +112,13 @@
   // the spec calls the divergence screen an attention filter, not an entry
   // system, so the chart must never read as a plan. See momentumFallback.
   const MOM_CAPTION = "Momentum is a shortlist, not a 5.0 plan.";
+  // ~3 years of sessions. The Daily pull is 25y and the stitcher really
+  // serves it, so fitContent() on a long-listed name squeezes 6,000+ bars
+  // into the canvas and the recent structure the lens actually screens is
+  // unreadable. First paint therefore WINDOWS to the last ~750 bars; the
+  // full series is still loaded and panning reaches all of it. Momentum
+  // only -- 5.0 first paint stays fitContent.
+  const MOM_FIRST_PAINT_BARS = 750;
   // `data/charts/<market>[<mode>]/<SYM>.json` — the per-ticker pre-rendered
   // chart files — were REMOVED 2026-08-15. The directory has never existed in
   // this repo (git ls-files: zero entries), so every fetch of it was a
@@ -2366,6 +2373,20 @@
         candle.setMarkers(em ? [...marks, em] : marks);
       }
       chart.timeScale().fitContent();
+      // MOMENTUM Daily first paint. Runs AFTER fitContent so the fallback is
+      // the shared behaviour: too few bars to window (a young listing) and the
+      // chart simply fits what it has rather than padding empty history.
+      if (d._momentum && key === "1D") {
+        const cs = (tfs[key] || {}).candles || [];
+        if (cs.length >= MOM_FIRST_PAINT_BARS) {
+          try {
+            chart.timeScale().setVisibleLogicalRange({
+              from: cs.length - MOM_FIRST_PAINT_BARS,
+              to: cs.length - 1 + 6,     // + rightOffset, so the last bar is not flush
+            });
+          } catch (_) { /* a refused range must never cost the chart */ }
+        }
+      }
       legend(tf);
       if (d._vivek) {
         applyVivekLevels(key);               // re-read trade levels for this timeframe
