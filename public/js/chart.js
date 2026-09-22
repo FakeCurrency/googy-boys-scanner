@@ -551,6 +551,102 @@
     return out;
   }
 
+  // ── EXCHANGE-SESSION BARS (Momentum only, 2026-09-23) ─────────────────────
+  // bucketBars / resampleWeekly group on UTC arithmetic, which is right for the
+  // 5.0 chart (it must agree with the engine) and for 24/7 crypto, but it is not
+  // how TradingView builds an exchange's bars, and the Momentum chart is
+  // checked against TradingView. Measured on ELS (reviews/2026-09-23-tf-align.md):
+  //   * 4H: UTC 00/04/08 buckets only coincide with the 10:00 / 14:00 Sydney
+  //     session while Sydney is UTC+10. Under daylight saving they drift an hour
+  //     (192 of 1086 ELS 4H bars opened at 07:00 Sydney).
+  //   * Yahoo's hourly ASX feed ends each day with a 16:00 bar that is the
+  //     closing auction alone (open = high = low = close). TradingView's intraday
+  //     ASX session stops at 16:00 and leaves it out -- inferred, not documented:
+  //     dropping it reproduces TV's ELS 4H entry to the cent. Its DAILY bar still
+  //     closes on the auction, which is why Daily already matched. With the
+  //     session open anchored and that bar dropped, the ELS 4H Auto box reads
+  //     6.4600 / 7.3838 against TradingView's 6.46 / 7.39 (was 6.5100 / 7.3858).
+  //   * 3D: three CALENDAR days leaves a third of the "3-day" bars holding a
+  //     single session. TradingView counts trading sessions.
+  //   * Daily bars arrive stamped at the session open in UTC, so an AEDT Monday
+  //     carries a SUNDAY UTC date. Anything grouping by date must use the
+  //     exchange's own calendar date.
+  const MOM_SESSION = {
+    asx:    { tz: "Australia/Sydney", open: 10 * 60,      close: 16 * 60 },
+    nasdaq: { tz: "America/New_York", open: 9 * 60 + 30,  close: 16 * 60 },
+  };
+  const _sessFmt = {};
+  // The exchange's own calendar date and minute-of-day for a UTC timestamp.
+  function sessionClock(t, tz) {
+    const f = _sessFmt[tz] || (_sessFmt[tz] = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23" }));
+    const p = {};
+    for (const x of f.formatToParts(new Date(t * 1000))) p[x.type] = x.value;
+    return { day: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute };
+  }
+  // Intraday bars -> `widthMin` bars anchored on the session OPEN in the
+  // exchange's clock, ending at the session CLOSE. Each bar is stamped at its
+  // slot's nominal open, as TradingView stamps it, even when the feed is
+  // missing that slot's first hour.
+  function sessionBars(bars, sess, widthMin) {
+    const out = []; let cur = null, curKey = null;
+    for (const b of bars) {
+      const L = sessionClock(b.time, sess.tz);
+      if (L.min >= sess.close) continue;               // post-close auction print
+      const slot = Math.max(0, Math.floor((L.min - sess.open) / widthMin));
+      const key = L.day + "#" + slot;
+      if (key !== curKey) {
+        if (cur) out.push(cur);
+        const t0 = b.time - (L.min - (sess.open + slot * widthMin)) * 60;
+        cur = { time: t0, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = key;
+      } else {
+        cur.high = Math.max(cur.high, b.high);
+        cur.low = Math.min(cur.low, b.low);
+        cur.close = b.close;
+        cur.volume += b.volume || 0;
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  // Daily bars -> one bar per `n` TRADING SESSIONS (no weekend padding),
+  // counted from the first loaded session and stamped at the group's first.
+  function sessionGroups(bars, n) {
+    const out = [];
+    for (let i = 0; i < bars.length; i += n) {
+      const g = bars.slice(i, i + n);
+      let hi = -Infinity, lo = Infinity, vol = 0;
+      for (const b of g) { hi = Math.max(hi, b.high); lo = Math.min(lo, b.low); vol += b.volume || 0; }
+      out.push({ time: g[0].time, open: g[0].open, high: hi, low: lo, close: g[g.length - 1].close, volume: vol });
+    }
+    return out;
+  }
+  // Daily bars -> Monday-start weeks on the EXCHANGE's calendar date, stamped at
+  // the week's first session (TradingView's week-start convention). For a
+  // Mon-Fri equity this is the same membership resampleWeekly produces; only
+  // the stamp moves from the week's last session to its first.
+  function sessionWeeks(bars, sess) {
+    const out = []; let cur = null, curKey = null;
+    for (const b of bars) {
+      const d = new Date(sessionClock(b.time, sess.tz).day + "T00:00:00Z");
+      const key = d.getTime() / 1000 - ((d.getUTCDay() + 6) % 7) * 86400;   // that week's Monday
+      if (key !== curKey) {
+        if (cur) out.push(cur);
+        cur = { time: b.time, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = key;
+      } else {
+        cur.high = Math.max(cur.high, b.high);
+        cur.low = Math.min(cur.low, b.low);
+        cur.close = b.close;
+        cur.volume += b.volume || 0;
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
   // ── VIVEK plans come from Python (the single source of truth) ───────────────
   // The scanner emits a per-timeframe plan (entry/SL/TP1-3 + the 200 SMA level +
   // trigger state) and a small marker set in each row. The chart no longer
@@ -1386,9 +1482,9 @@
       ? vivekCryptoBars(SYM, "5y", "1d", true)
       : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true));
     // 4H is where the owner actually trades this template, so it is a first
-    // class timeframe here rather than a bonus: hourly history bucketed to 4H
-    // exactly as the 5.0 chart does it (epoch-anchored, same bucketBars), then
-    // run through the SAME builder. Started in parallel with the daily pull and
+    // class timeframe here rather than a bonus: hourly history grouped into 4H
+    // on the EXCHANGE SESSION (sessionBars; UTC buckets for crypto), then run
+    // through the SAME builder. Started in parallel with the daily pull and
     // allowed to fail — a market with no hourly feed simply has no 4H tab.
     const intradayP = (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "2y", "1h")
@@ -1427,14 +1523,17 @@
           d.tp1 = pl.tp1; d.tp2 = pl.tp2; d.tp3 = pl.tp3; d.target = pl.tp1;
           d.rr = 3;
         }
-        const d3 = bucketBars(daily, 3 * 86400);
+        // Exchange-session bars for a listed market (see MOM_SESSION); crypto
+        // trades 24/7 and keeps the UTC buckets. Daily is never regrouped.
+        const sess = MOM_SESSION[market] || null;
+        const d3 = sess ? sessionGroups(daily, 3) : bucketBars(daily, 3 * 86400);
         if (d3.length >= 6) d.timeframes["3D"] = build(d3);
-        const wk = resampleWeekly(daily);
+        const wk = sess ? sessionWeeks(daily, sess) : resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = build(wk);
         if (d.price == null) d.price = daily[daily.length - 1].close;
         return intradayP.then((intraday) => {
           if (intraday && intraday.length >= 24) {
-            const h4 = bucketBars(intraday, 4 * 3600);
+            const h4 = sess ? sessionBars(intraday, sess, 240) : bucketBars(intraday, 4 * 3600);
             // build(), not a Daily borrow: the 4H pane gets its own cross, its
             // own swing stop and therefore its own entry/SL. The owner's 4H
             // screenshot reads Entry 6.46 / SL 7.39 against the Daily's
