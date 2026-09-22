@@ -1,52 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-22T14:49:37+10:00",
+  "generated_at": "2026-09-22T16:55:37+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "WRK",
-      "name": "Wrkr Ltd",
-      "sector": "Software & Services",
-      "dir": "LONG",
-      "price": 0.062,
-      "turnover_avg20": 70561,
-      "turnover_today": 251536,
-      "rvol": 3.8,
-      "adv_usd": 70561.02,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "EPM",
-      "name": "Eclipse Metals Limited.",
-      "sector": "Energy",
-      "dir": "LONG",
-      "price": 0.017,
-      "turnover_avg20": 28946,
-      "turnover_today": 234151,
-      "rvol": 7.2,
-      "adv_usd": 28946.89,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "CIN",
-      "name": "Carlton Investments Limited",
-      "sector": "Not Applic",
-      "dir": "LONG",
-      "price": 35.0,
-      "turnover_avg20": 44314,
-      "turnover_today": 208915,
-      "rvol": 4.7,
-      "adv_usd": 44314.39,
-      "fund": true,
-      "is_product": true
-    },
     {
       "symbol": "G11",
       "name": "G11 Resources Limited",
@@ -61,28 +22,15 @@
       "is_product": false
     },
     {
-      "symbol": "AQN",
-      "name": "Aquirian Limited",
-      "sector": "Commercial & Professional Services",
+      "symbol": "ADD",
+      "name": "Adavale Resources Limited",
+      "sector": "Energy",
       "dir": "SHORT",
-      "price": 0.41,
-      "turnover_avg20": 31981,
-      "turnover_today": 167370,
-      "rvol": 5.1,
-      "adv_usd": 31981.14,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "CTO",
-      "name": "Citigold Corporation Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "price": 0.016,
-      "turnover_avg20": 46233,
-      "turnover_today": 164894,
+      "price": 0.043,
+      "turnover_avg20": 36212,
+      "turnover_today": 136815,
       "rvol": 3.7,
-      "adv_usd": 46233.52,
+      "adv_usd": 36212.77,
       "fund": false,
       "is_product": false
     }
