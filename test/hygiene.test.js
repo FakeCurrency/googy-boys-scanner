@@ -51,4 +51,9 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
        `${rel}: ${sym} was proven dead and deleted 2026-09-23; re-adding it needs a caller`);
 }
 
+// `$$` cannot be pinned by name: the two characters legitimately occur in
+// `US$${...}` template text on the journal page. Pin the declaration instead.
+ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),
+   "js/journal.js: $$ was proven dead and deleted 2026-09-23; re-adding it needs a caller");
+
 console.log(`hygiene: ${checks} checks passed`);
