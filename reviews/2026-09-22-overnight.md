@@ -70,3 +70,36 @@ actions.
 **Unverified: proxy** — 4H against TradingView 6.46/7.39. No hourly series in
 the repo, Yahoo and pages.dev both blocked, so the 4H figures above come from
 hourly bars synthesised off the real daily ones and are NOT a match claim.
+
+## Q35 — click paths, observed in a headless browser on repo fixtures
+
+Served `public/` locally with `/api/price` answering from
+`data/history/asx/ELS.json` (daily) and, for 4H only, hourly bars synthesised
+off those daily ones. **Unverified: proxy** for anything needing the live site.
+
+**ELS Daily, `?s=ELS&m=asx&src=momentum`** — header `← Momentum · ELS · ASX ·
+TECHNOLOGY HARDWARE & EQUIPMENT · A$4.690 · SHORT · Rule A · bull divergence ·
+trend up`. Tabs `4H 1D 3D 1W`. Price pane: EMA 20 blue / 50 orange / 200 green,
+red zone entry→SL with a blue zone entry→TP3, right-edge tags `SL 6.762`,
+`ENTRY 5.880`, `TP1 4.998`, `TP2 4.116`, `TP3 3.234`, an `ATH 8.560` rule, and
+`-2 Bearish` / `+3 Bullish` on the cross bars. Volume is a slim strip at the
+foot of that pane. Below it a MACD pane (histogram plus blue/orange lines) and
+an RSI pane (RSI plus its MA, 70/50/30, `Bear` tags across the window). Footer
+`PLAN SHORT · ENTRY A$5.880 · SL A$6.762 · TP1 A$4.998 · TP2 A$4.116 ·
+TP3 A$3.234 · R:R 3.00 · TF 1D · SIGNAL 25b ago · score 2 · stop cut to 15%`.
+Caption top-right. No THIN TAPE, no live-fallback badge, no PhaseMap. Zero
+page errors.
+
+**ELS 4H** — same furniture, its own box: `ENTRY A$6.682 · SL A$7.342 ·
+TP1 A$6.022 · TP2 A$5.362 · TP3 A$4.702`. Different from Daily, which is the
+point; not a match claim against TradingView's 6.46 / 7.39.
+
+**ELS 3D and 1W** — `PLAN — No Auto box on this TF — no scored cross in 60
+bars.` No ladder invented.
+
+**BHP 5.0, `?s=BHP&m=asx`** — 0 momentum panes, no Pine caption, legend
+`SMA 10 / SMA 20 / SMA 43 / SMA 200`, footer still the 5.0 strip
+(`ENTRY — STOP — TARGET — TRAIL after entry SCORE 0/0 RISK — R:R 0.00`).
+Unchanged. Zero page errors.
+
+Stopped after Q35.
