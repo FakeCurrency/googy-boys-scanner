@@ -31,7 +31,7 @@ const code = (rel) => fs.readFileSync(path.join(PUB, rel), "utf8")
 const GONE = {
   "js/journal.js": {
     live: "function splitBot(",
-    dead: ["inBatches", "fav"],
+    dead: ["inBatches", "fav", "nowTime"],
   },
   "js/app.js": {
     live: "function isHighConviction(",
