@@ -65,7 +65,7 @@
       "level_tf": "weekly",
       "signal_entry": 27.37999916,
       "fill_slip_bps": -40.2,
-      "last_mark": 26.54000092,
+      "last_mark": 26.65999985,
       "day_marks": {
         "2026-09-17": 27.27000046,
         "2026-09-18": 27.01000023,
@@ -74,8 +74,8 @@
         "2026-09-21": 27.12999916,
         "2026-09-22": 26.86000061
       },
-      "unreal_r": -0.171,
-      "unreal_usd": -136.75
+      "unreal_r": -0.143,
+      "unreal_usd": -114.27
     },
     {
       "id": "ASTS:long:3D:2026-09-18",
@@ -112,9 +112,9 @@
       "cost_r": 0.0028,
       "exits": [],
       "mae": 58.165000915527344,
-      "mfe": 63.442298889160156,
+      "mfe": 64.9811019897461,
       "mae_r": -0.038,
-      "mfe_r": 0.474,
+      "mfe_r": 0.623,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 79.73210131,
       "notional": 5000.0,
@@ -139,7 +139,7 @@
       "level_tf": "3d",
       "signal_entry": 62.70999908,
       "fill_slip_bps": -661.8,
-      "last_mark": 63.44229889,
+      "last_mark": 64.98110199,
       "day_marks": {
         "2026-09-18": 58.56000137,
         "2026-09-19": 58.52000046,
@@ -147,8 +147,8 @@
         "2026-09-21": 58.52000046,
         "2026-09-22": 61.88999939
       },
-      "unreal_r": 0.474,
-      "unreal_usd": 546.14
+      "unreal_r": 0.623,
+      "unreal_usd": 718.27
     },
     {
       "id": "CVLT:long:1D:2026-09-21",
@@ -212,13 +212,13 @@
       "level_tf": "3d",
       "signal_entry": 141.99000549,
       "fill_slip_bps": 388.4,
-      "last_mark": 143.55999756,
+      "last_mark": 145.78999329,
       "day_marks": {
         "2026-09-21": 147.50500488,
         "2026-09-22": 145.72000122
       },
-      "unreal_r": -0.101,
-      "unreal_usd": -119.38
+      "unreal_r": -0.044,
+      "unreal_usd": -51.9
     },
     {
       "id": "SMCI:long:3D:2026-09-21",
@@ -255,9 +255,9 @@
       "cost_r": 0.0019,
       "exits": [],
       "mae": 40.65739822387695,
-      "mfe": 41.09999847,
+      "mfe": 41.2599983215332,
       "mae_r": -0.041,
-      "mfe_r": 0.0,
+      "mfe_r": 0.015,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 127.9099509,
       "notional": 5000.0,
@@ -282,13 +282,13 @@
       "level_tf": "weekly",
       "signal_entry": 39.09000015,
       "fill_slip_bps": 514.2,
-      "last_mark": 40.65739822,
+      "last_mark": 41.25999832,
       "day_marks": {
         "2026-09-21": 41.09999847,
         "2026-09-22": 41.20000076
       },
-      "unreal_r": -0.041,
-      "unreal_usd": -46.09
+      "unreal_r": 0.015,
+      "unreal_usd": 16.66
     },
     {
       "id": "GLBE:long:3D:2026-09-21",
@@ -301,7 +301,7 @@
       "entry_type": "reclaim",
       "timeframe": "3D",
       "entry": 39.36999893,
-      "stop": 33.35022142,
+      "stop": 39.36999893,
       "tp1": 41.93999863,
       "tp2": 52.10933941,
       "tp3": 61.4888984,
@@ -316,18 +316,25 @@
       "entry_date": "2026-09-21",
       "opened_at": "2026-09-21T15:58:57+00:00",
       "status": "open",
-      "tp1_hit": false,
+      "tp1_hit": true,
       "tp2_hit": false,
       "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0033,
-      "gross_r": 0.0,
-      "cost_r": 0.0033,
-      "exits": [],
+      "booked_pct": 0.25,
+      "realized_r": 0.1033,
+      "gross_r": 0.1067,
+      "cost_r": 0.0034,
+      "exits": [
+        {
+          "reason": "tp1",
+          "price": 41.93999863,
+          "pct": 0.25,
+          "date": "2026-09-22"
+        }
+      ],
       "mae": 39.36999893,
-      "mfe": 41.564998626708984,
+      "mfe": 42.27000045776367,
       "mae_r": 0.0,
-      "mfe_r": 0.365,
+      "mfe_r": 0.482,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 131.44058567,
       "notional": 5000.0,
@@ -343,13 +350,13 @@
       "level_tf": "3d",
       "signal_entry": 38.04000092,
       "fill_slip_bps": 349.6,
-      "last_mark": 41.56499863,
+      "last_mark": 42.27000046,
       "day_marks": {
         "2026-09-21": 39.36999893,
         "2026-09-22": 39.68999863
       },
-      "unreal_r": 0.365,
-      "unreal_usd": 224.77
+      "unreal_r": 0.361,
+      "unreal_usd": 222.72
     },
     {
       "id": "INTR:long:1W:2026-09-22",
@@ -381,14 +388,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0027,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0027,
       "exits": [],
       "mae": 5.45499992,
-      "mfe": 5.45499992,
+      "mfe": 5.489999771118164,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.035,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 897.66604083,
       "notional": 5000.0,
@@ -413,7 +420,12 @@
       "level_tf": "weekly",
       "signal_entry": 5.57000017,
       "fill_slip_bps": -206.5,
-      "last_mark": 5.45499992
+      "last_mark": 5.48999977,
+      "day_marks": {
+        "2026-09-22": 5.45499992
+      },
+      "unreal_r": 0.035,
+      "unreal_usd": 35.03
     },
     {
       "id": "RIVN:long:1W:2026-09-22",
@@ -445,14 +457,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0029,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0029,
       "exits": [],
       "mae": 15.10499954,
-      "mfe": 15.10499954,
+      "mfe": 15.126700401306152,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.008,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 325.52084054,
       "notional": 5000.0,
@@ -477,7 +489,12 @@
       "level_tf": "weekly",
       "signal_entry": 15.35999966,
       "fill_slip_bps": -166.0,
-      "last_mark": 15.10499954
+      "last_mark": 15.1267004,
+      "day_marks": {
+        "2026-09-22": 15.10499954
+      },
+      "unreal_r": 0.008,
+      "unreal_usd": 7.76
     },
     {
       "id": "BEAM:long:3D:2026-09-22",
@@ -509,14 +526,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0023,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0023,
       "exits": [],
       "mae": 25.85000038,
-      "mfe": 25.85000038,
+      "mfe": 26.219999313354492,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.067,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 197.94140754,
       "notional": 5000.0,
@@ -541,7 +558,12 @@
       "level_tf": "3d",
       "signal_entry": 25.26000023,
       "fill_slip_bps": 233.6,
-      "last_mark": 25.85000038
+      "last_mark": 26.21999931,
+      "day_marks": {
+        "2026-09-22": 25.85000038
+      },
+      "unreal_r": 0.067,
+      "unreal_usd": 65.44
     },
     {
       "id": "NXST:long:1W:2026-09-22",
@@ -573,14 +595,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0033,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0033,
       "exits": [],
       "mae": 165.02000427,
-      "mfe": 165.02000427,
+      "mfe": 165.2899932861328,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.011,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 30.0932903,
       "notional": 5000.0,
@@ -605,7 +627,12 @@
       "level_tf": "weekly",
       "signal_entry": 166.1499939,
       "fill_slip_bps": -68.0,
-      "last_mark": 165.02000427
+      "last_mark": 165.28999329,
+      "day_marks": {
+        "2026-09-22": 165.02000427
+      },
+      "unreal_r": 0.011,
+      "unreal_usd": 8.49
     },
     {
       "id": "MESO:long:3D:2026-09-22",
@@ -637,14 +664,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0031,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0031,
       "exits": [],
       "mae": 15.78499985,
-      "mfe": 15.78499985,
+      "mfe": 15.899999618530273,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.045,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 322.99742562,
       "notional": 5000.0,
@@ -669,7 +696,12 @@
       "level_tf": "3d",
       "signal_entry": 15.47999954,
       "fill_slip_bps": 197.0,
-      "last_mark": 15.78499985
+      "last_mark": 15.89999962,
+      "day_marks": {
+        "2026-09-22": 15.78499985
+      },
+      "unreal_r": 0.045,
+      "unreal_usd": 32.68
     },
     {
       "id": "HBAN:long:3D:2026-09-22",
@@ -701,13 +733,13 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0107,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0107,
       "exits": [],
-      "mae": 15.67500019,
+      "mae": 15.645000457763672,
       "mfe": 15.67500019,
-      "mae_r": 0.0,
+      "mae_r": -0.041,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 311.72068038,
@@ -724,7 +756,12 @@
       "level_tf": "3d",
       "signal_entry": 16.04000092,
       "fill_slip_bps": -227.6,
-      "last_mark": 15.67500019
+      "last_mark": 15.64500046,
+      "day_marks": {
+        "2026-09-22": 15.67500019
+      },
+      "unreal_r": -0.041,
+      "unreal_usd": -14.02
     },
     {
       "id": "WMT:long:3D:2026-09-22",
@@ -756,14 +793,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0052,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0052,
       "exits": [],
       "mae": 109.17500305,
-      "mfe": 109.17500305,
+      "mfe": 109.54499816894531,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.035,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 46.53760133,
       "notional": 5000.0,
@@ -779,7 +816,12 @@
       "level_tf": "3d",
       "signal_entry": 107.44000244,
       "fill_slip_bps": 161.5,
-      "last_mark": 109.17500305
+      "last_mark": 109.54499817,
+      "day_marks": {
+        "2026-09-22": 109.17500305
+      },
+      "unreal_r": 0.035,
+      "unreal_usd": 14.36
     },
     {
       "id": "FWONA:long:3D:2026-09-22",
@@ -811,13 +853,13 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0073,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0073,
       "exits": [],
-      "mae": 88.09999847,
+      "mae": 87.5199966430664,
       "mfe": 88.09999847,
-      "mae_r": 0.0,
+      "mae_r": -0.096,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 56.72149646,
@@ -834,7 +876,12 @@
       "level_tf": "3d",
       "signal_entry": 88.15000153,
       "fill_slip_bps": -5.7,
-      "last_mark": 88.09999847
+      "last_mark": 87.51999664,
+      "day_marks": {
+        "2026-09-22": 88.09999847
+      },
+      "unreal_r": -0.096,
+      "unreal_usd": -33.17
     },
     {
       "id": "SKYW:long:3D:2026-09-22",
@@ -866,14 +913,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.004,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.004,
       "exits": [],
       "mae": 101.20999908,
-      "mfe": 101.20999908,
+      "mfe": 101.37000274658203,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.013,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 49.90020112,
       "notional": 5000.0,
@@ -889,7 +936,12 @@
       "level_tf": "3d",
       "signal_entry": 100.19999695,
       "fill_slip_bps": 100.8,
-      "last_mark": 101.20999908
+      "last_mark": 101.37000275,
+      "day_marks": {
+        "2026-09-22": 101.20999908
+      },
+      "unreal_r": 0.013,
+      "unreal_usd": 7.34
     },
     {
       "id": "FWONK:long:3D:2026-09-22",
@@ -921,13 +973,13 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0071,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0071,
       "exits": [],
-      "mae": 96.62999725,
+      "mae": 95.80999755859375,
       "mfe": 96.62999725,
-      "mae_r": 0.0,
+      "mae_r": -0.12,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 51.85108352,
@@ -944,7 +996,12 @@
       "level_tf": "3d",
       "signal_entry": 96.43000031,
       "fill_slip_bps": 20.7,
-      "last_mark": 96.62999725
+      "last_mark": 95.80999756,
+      "day_marks": {
+        "2026-09-22": 96.62999725
+      },
+      "unreal_r": -0.12,
+      "unreal_usd": -41.27
     },
     {
       "id": "TSLA:long:3D:2026-09-22",
@@ -976,14 +1033,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0028,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0028,
       "exits": [],
       "mae": 377.88000488,
-      "mfe": 377.88000488,
+      "mfe": 378.7550048828125,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.013,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 13.32267563,
       "notional": 5000.0,
@@ -1008,7 +1065,12 @@
       "level_tf": "3d",
       "signal_entry": 375.29998779,
       "fill_slip_bps": 68.7,
-      "last_mark": 377.88000488
+      "last_mark": 378.75500488,
+      "day_marks": {
+        "2026-09-22": 377.88000488
+      },
+      "unreal_r": 0.013,
+      "unreal_usd": 11.21
     }
   ],
   "closed": [
@@ -5361,27 +5423,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -816.7,
+      "week_usd": -362.3,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 183.83,
-      "worst_week_usd": -816.7,
+      "worst_session_usd": 637.87,
+      "worst_week_usd": -362.3,
       "realised_usd": 0.0,
-      "open_realised_usd": 0.0,
-      "unrealised_usd": 183.83,
-      "session_usd": 183.83,
+      "open_realised_usd": 29.21,
+      "unrealised_usd": 608.66,
+      "session_usd": 637.87,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 5,
-      "open_total_usd": 456.48,
+      "open": 16,
+      "open_total_usd": 910.86,
       "notified": ""
     }
   },
   "summary": {
     "open": 16,
-    "unreal_usd": 468.69,
+    "unreal_usd": 885.33,
     "updated_day": "2026-09-22"
   },
-  "updated_at": "2026-09-22T16:38:25+00:00"
+  "updated_at": "2026-09-22T18:18:21+00:00"
 }
