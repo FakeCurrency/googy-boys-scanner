@@ -1722,7 +1722,10 @@
       ev.preventDefault();
       const s = inp.value.trim().toUpperCase();
       if (!/^[A-Z0-9.\-]{1,15}$/.test(s)) { inp.focus(); return; }
-      location.href = `chart.html?m=${encodeURIComponent(mktSel.value)}&s=${encodeURIComponent(s)}`;
+      // src=momentum selects the LENS, not just the back-link: dropping it here
+      // sent a name picked from the Momentum page's empty chart to the 5.0 chart.
+      const keep = srcParam === "momentum" ? "&src=momentum" : "";
+      location.href = `chart.html?m=${encodeURIComponent(mktSel.value)}&s=${encodeURIComponent(s)}${keep}`;
     });
     inp.focus();
   }

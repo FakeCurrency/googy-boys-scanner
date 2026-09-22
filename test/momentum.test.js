@@ -1146,6 +1146,39 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
      "and it is the #72 block that reorders the bar -- the rule this placement answers");
 }
 
+/* ── FAIL / EMPTY STATE KEEP THE MOMENTUM CONTEXT (2026-09-23 nap audit) ────────
+ * Both rebuild the header from scratch, so each must re-derive the back-link
+ * from src (the #26 P10 bug hard-coded "Dashboard"), and the empty state's
+ * ticker search must carry src=momentum: src picks the LENS, so dropping it
+ * sent a name picked from the Momentum page to the 5.0 chart.
+ */
+{
+  const body = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand.replace(/\/\/[^\n]*/g, ""); } catch (_) { /* keep walking */ }
+    }
+    throw new Error("slice " + name);
+  };
+  const map = new Function(CHART.slice(CHART.indexOf("const SRC_BACK_MAP = {"),
+    CHART.indexOf("};", CHART.indexOf("const SRC_BACK_MAP = {")) + 2) + " return SRC_BACK_MAP;")();
+  eq(map.momentum.join(" "), "momentum.html ← Momentum", "src=momentum backs out to the Momentum page");
+  for (const fn of ["fail", "emptyState"]) {
+    const b = body(fn);
+    ok(/const bk = SRC_BACK_MAP\[srcParam\] \|\| \["index\.html", "← Dashboard"\];/.test(b) &&
+       /class="back-link" href="\$\{esc\(bk\[0\]\)\}">\$\{esc\(bk\[1\]\)\}/.test(b),
+       `${fn}() builds its back-link from src, not a hard-coded Dashboard`);
+  }
+  const es = body("emptyState");
+  ok(/const keep = srcParam === "momentum" \? "&src=momentum" : "";/.test(es) &&
+     /location\.href = `chart\.html\?m=\$\{encodeURIComponent\(mktSel\.value\)\}&s=\$\{encodeURIComponent\(s\)\}\$\{keep\}`/.test(es),
+     "the empty state's search keeps src=momentum, so a Momentum pick opens the Momentum chart");
+  ok((es.match(/location\.href = /g) || []).length === 1, "and it is the empty state's only navigation");
+}
+
 /* ── TIMEFRAMES ALIGNED TO THE EXCHANGE SESSION (2026-09-23) ────────────────────
  * The Momentum chart is checked against TradingView, which builds ASX / NASDAQ
  * bars on the exchange's own session. The live ELS 4H box read 6.51 / 7.386
