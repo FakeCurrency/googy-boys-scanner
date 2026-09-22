@@ -1948,17 +1948,6 @@
 
   const levTag = (t) => (t && t.leverage > 1 ? ` <small>×${t.leverage}</small>` : "");
 
-  // ── Yahoo Finance proxy for ASX / NASDAQ live prices ──────────────────────
-  async function fetchStockQuote(sym, assetType) {
-    const ticket = assetType === "asx" ? sym + ".AX" : sym;
-    try {
-      const r = await fetch(`/api/quote?sym=${encodeURIComponent(ticket)}`);
-      if (!r.ok) return null;
-      const j = await r.json();
-      return j.price != null ? j.price : null;
-    } catch (_) { return null; }
-  }
-
   // Real-money position sizer: your account + risk% against THIS setup's
   // entry/stop → exact share count for the broker order. Persisted locally.
   //
