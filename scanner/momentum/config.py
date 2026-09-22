@@ -19,6 +19,13 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace as _dc_replace
 from typing import Any, Dict, Tuple
 
+# The ONLY thing this lens borrows from the shared config: the measured
+# product-name patterns spec 5.6 says to reuse rather than retype. `scanner.config`
+# is a pure-constants module, so this costs no import weight and removing the
+# lens leaves it untouched.
+from scanner.config import MARKETS as MARKETS_META  # noqa: F401
+from scanner.config import PRODUCT_NAME_PATTERNS  # noqa: F401
+
 RULESET_VERSION = "1.0.0"   # 1.0.0: first cut. Rule A (RSI divergence off
 #                             strict pivots) + Rule B (scored 20/50 cross),
 #                             daily bars, mode A default, 1-bar freshness.
@@ -316,3 +323,15 @@ DATA_PERIOD: str = "3y"
 # word boundaries: the bot's is substring, where "ETF" in "NETFLIX" is True.
 # A product is FLAGGED on every row regardless; this only decides exclusion.
 EXCLUDE_PRODUCTS: bool = True
+
+# THE WORD LISTS, copied rather than imported, and the reason matters.
+# `scan.py::_product_tag` gets these by importing `scanner/broker/vivek_bot.py`.
+# This lens must not be able to reach the bot at all -- that fence is the whole
+# basis of the report-only claim -- so the values are declared here and
+# `tests/test_momentum_publish.py` reads vivek_bot.py AS SOURCE and fails if the
+# sets diverge. Reading a file is not importing it, and a parity test catches
+# the drift a silent copy would hide.
+FUND_NAME_KEYWORDS = ("REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
+                      "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X")
+FUND_SECTOR_HINTS = ("reit", "real estate investment trust")
+NON_OPERATING_SECTORS = frozenset({"not applicable", "not applic", "n/a"})

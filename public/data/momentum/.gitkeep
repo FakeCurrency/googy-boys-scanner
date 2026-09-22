@@ -1,0 +1,11 @@
+# VIVEK MOMENTUM publishes <market>.json here, written by CI
+# (.github/workflows/momentum.yml), never committed by hand.
+#
+# This directory is the lens's ENTIRE write-set, which is what makes the lens
+# removable in one commit: `git rm -r scanner/momentum public/data/momentum`.
+# `tests/test_momentum_fences.py` reads scanner/momentum/run.py and fails if it
+# ever names a path outside here.
+#
+# It is deliberately a SUBDIRECTORY rather than public/data/<market>_momentum.json:
+# nothing in the repo globs public/data/*.json today, but a subdirectory cannot
+# be caught by one that appears later.

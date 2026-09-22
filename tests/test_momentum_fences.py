@@ -295,11 +295,17 @@ def test_the_lens_imports_nothing_that_could_change_a_trade():
         for mod in _imports(p):
             if mod.startswith("."):          # intra-package, always fine
                 continue
-            root = mod.split(".")[0]
-            if root in ("phasemap",):
+            parts = mod.split(".")
+            root = parts[0]
+            if root == "phasemap":
                 offenders.append(f"{p.name}: imports another lens ({mod})")
             elif root == "scanner":
-                top2 = ".".join(mod.split(".")[:2])
+                if len(parts) == 1:
+                    # `from scanner import data` yields BOTH "scanner" and
+                    # "scanner.data"; the bare package name carries no
+                    # information and the submodule entry is what gets checked.
+                    continue
+                top2 = ".".join(parts[:2])
                 if top2 not in ALLOWED_SCANNER_IMPORTS:
                     offenders.append(f"{p.name}: imports {mod} (not on the allowlist)")
     assert offenders == [], "\n  ".join(offenders)
