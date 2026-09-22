@@ -57,7 +57,7 @@ let browser;
     const d = await read();
     const num = (re, s) => { const m = re.exec(s); return m ? +m[1] : NaN; };
     const eD = num(/ENTRY A\$([\d.]+)/, d.foot), sD = num(/SL A\$([\d.]+)/, d.foot);
-    rec(P, "serves the aligned build", /chart\.js\?v=(\d+)/.test(d.chartJs) && +/chart\.js\?v=(\d+)/.exec(d.chartJs)[1] >= 121, d.chartJs.replace(BASE, ""));
+    rec(P, "serves the aligned build", /chart\.js\?v=(\d+)/.test(d.chartJs) && +/chart\.js\?v=(\d+)/.exec(d.chartJs)[1] >= 122, d.chartJs.replace(BASE, ""));
     rec(P, "D: SHORT 5.88 / 6.76 family", /SHORT/.test(d.foot) && Math.abs(eD - 5.88) <= 0.01 && Math.abs(sD - 6.762) <= 0.01, `entry ${eD} sl ${sD} | ${d.foot.slice(0, 110)}`);
     rec(P, "D: 3 panes (price + MACD + RSI)", d.panes === 2, `${d.panes} oscillator panes`);
     rec(P, "D: bars chip", /\d+ daily bars/.test(d.chip), d.chip);
@@ -75,9 +75,13 @@ let browser;
         rec(P, "4H: within $0.02 of TV 6.46 / 7.39", Math.abs(e4 - 6.46) <= 0.02 && Math.abs(s4 - 7.39) <= 0.02, `entry ${e4} sl ${s4}`);
         await page.screenshot({ path: `${OUT}/els-4H.png` });
       } else {
+        await page.screenshot({ path: `${OUT}/els-${tf}.png` });
         rec(P, `${tf}: own plan or honest no-cross`, /ENTRY A\$/.test(x.foot) || /no scored cross in 60 bars/i.test(x.foot), `${x.chip} | ${x.foot.slice(0, 100)}`);
       }
     }
+    // back to D after the switches: the #33 fix means it opens on the live move
+    await page.tap('#tf-toggle .tf-btn[data-tf="1D"]'); await page.waitForTimeout(1200);
+    await page.screenshot({ path: `${OUT}/els-D-after.png` });
     rec(P, "no page errors", errs.length === 0, errs.join(" ; ") || "none");
     await ctx.close();
   }
