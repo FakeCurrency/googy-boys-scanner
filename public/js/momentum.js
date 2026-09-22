@@ -164,12 +164,18 @@
       ? `last closed bar ${state.data.last_closed_bar}` : "";
   }
 
+  // The deck's own pill (app.js renderDeck): .fpill, count in <b>, and
+  // aria-pressed so the on/off state reaches assistive tech, not just colour.
+  // It used to render .deck-pill / .deck-pill-n, which no stylesheet defines:
+  // browser-default grey buttons reading "ALL4", "RULE A4".
   function renderPills() {
     const c = counts();
-    $("mo-pills").innerHTML = FILTERS.map(([key, label, why]) =>
-      `<button class="deck-pill${state.filter === key ? " is-active" : ""}" ` +
-      `data-pill="${esc(key)}" title="${esc(why)}">${esc(label)}` +
-      `<span class="deck-pill-n">${c[key]}</span></button>`).join("");
+    $("mo-pills").innerHTML = FILTERS.map(([key, label, why]) => {
+      const on = state.filter === key;
+      return `<button class="fpill${on ? " is-active" : ""}" data-pill="${esc(key)}" ` +
+        `aria-pressed="${on ? "true" : "false"}" title="${esc(why)}">` +
+        `${esc(label)} <b>${c[key]}</b></button>`;
+    }).join("");
   }
 
   function renderMarkets() {
@@ -322,7 +328,7 @@
       load(state.market);
     });
     document.getElementById("mo-pills").addEventListener("click", (e) => {
-      const b = e.target.closest(".deck-pill");
+      const b = e.target.closest(".fpill");
       if (!b) return;
       state.filter = b.dataset.pill;
       render();
