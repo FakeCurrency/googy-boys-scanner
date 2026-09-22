@@ -177,6 +177,22 @@ ok(!/beforeunload/.test(MOM), "a beforeunload listener disqualifies the bfcache"
 ok(!/innerHTML\s*=\s*[^;]*\+\s*r\.(name|symbol)\b/.test(MOM),
    "raw interpolation of a payload field into innerHTML");
 
+// The same property as a source pin, because the executed check above can only
+// see the ONE href rowHTML renders. If a second link is ever added to this file
+// it must not reintroduce the dead key, and this catches it without needing a
+// fixture for whatever new row renders it.
+ok(!/chart\.html\?symbol=/.test(MOM),
+   "chart.html?symbol= is read by nothing — chart.js reads ?s=");
+ok(!/[?&]symbol=/.test(MOM), "no ?symbol= query key anywhere in the page");
+
+// chart.js must know where a Momentum row came from, or the back link on the
+// chart page falls back to the dashboard and the trip is one-way.
+const CHARTJS = fs.readFileSync(path.join(PUB, "js", "chart.js"), "utf8");
+const SRCBACK = CHARTJS.slice(CHARTJS.indexOf("const SRC_BACK"),
+                              CHARTJS.indexOf("const back = SRC_BACK"));
+ok(/momentum:\s*\["momentum\.html"/.test(SRCBACK),
+   "chart.js SRC_BACK carries a momentum entry for src=momentum");
+
 /* ── the honest failures, executed ──────────────────────────────────────── */
 
 function slice(name) {
@@ -250,6 +266,26 @@ function slice(name) {
   eq((a.match(/mo-chip/g) || []).length >= 2, true, "both chips render");
   ok(/class="[^"]*is-bull/.test(a), "the rail is tinted by direction");
   ok(/>A</.test(a), "the badge names the rule that fired");
+
+  /* THE CHART LINK — the 2026-09-22 shipped bug, and why this is executed.
+   *
+   * v1 wrote `chart.html?symbol=ELS&m=asx`. chart.js reads `params.get("s")`,
+   * so the symbol arrived as an unread query key, chart.js saw an empty symbol
+   * and rendered its "Pick a ticker" placeholder. Every Momentum row led to a
+   * dead end, and nothing caught it because no test had ever OPENED the href
+   * the row renders. Asserting on the rendered attribute is the whole point:
+   * a source grep for "chart.html" would have passed against the broken file.
+   */
+  const href = (/href="([^"]+)"/.exec(a) || [])[1] || "";
+  ok(href.startsWith("chart.html?"), `the symbol links to the chart, saw "${href}"`);
+  // The page is served as HTML, so the row's `&amp;` are entities; a browser
+  // hands chart.js the decoded form. Decode before parsing, or this asserts
+  // against a string no URLSearchParams will ever see.
+  const q = new URLSearchParams(href.replace(/&amp;/g, "&").split("?")[1] || "");
+  eq(q.get("s"), "AAA", "chart.js reads ?s= — ?symbol= is the bug, and is silent");
+  ok(!q.has("symbol"), "no ?symbol= key, under any spelling");
+  eq(q.get("m"), "asx", "the market rides along so the chart loads the right file");
+  eq(q.get("src"), "momentum", "src= drives chart.js's back link");
 
   const both = rowHTML({ symbol: "BBB", rule_a: true, rule_b: true,
                          rule_a_direction: "bull", rule_b_direction: "bull",

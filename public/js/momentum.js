@@ -226,8 +226,8 @@
       `<div class="mo-badge" title="Which rules fired">${esc(rulesBadge(r))}</div>` +
       `<div class="mo-main">` +
         `<div class="mo-head">` +
-          `<a class="mo-sym" href="chart.html?symbol=${encodeURIComponent(r.symbol || "")}` +
-          `&amp;m=${encodeURIComponent(state.market)}">${esc(r.symbol)}</a>` +
+          `<a class="mo-sym" href="chart.html?s=${encodeURIComponent(r.symbol || "")}` +
+          `&amp;m=${encodeURIComponent(state.market)}&amp;src=momentum">${esc(r.symbol)}</a>` +
           `<span class="mo-name">${esc(r.name || "")}</span>` +
         `</div>` +
         `<div class="mo-chips">${chips.join("")}</div>` +
