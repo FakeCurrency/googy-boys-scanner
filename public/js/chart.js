@@ -89,20 +89,23 @@
   const mode = market === "scalp" ? (urlMode || "scalp")
     : urlMode === "spec" ? "spec"
     : wantsMomentum ? "momentum" : "vivek";
+  // Module-scope so fail() and emptyState() read the SAME table: both REPLACE
+  // the whole body and rebuild the header, and a rebuilt link that forgets
+  // `src` strands the reader on Dashboard, losing the lens they came from.
+  const SRC_BACK_MAP = {
+    journal:  ["journal.html",  "← Journal"],
+    phasemap: ["phasemap.html", "← Phase Map"],
+    specs:    ["specs.html",    "← Specs"],
+    alerts:   ["alerts.html",   "← Alerts"],
+    sectors:  ["sectors.html",  "← News"],
+    momentum: ["momentum.html", "← Momentum"],
+  };
   // Back-link context: return to wherever the user actually came from
   // (journal / phasemap / specs / alerts pass src=...) instead of
   // always dumping them on the dashboard. src already drives prev/next
   // lists. (The TURTLE back-link went with the lens, 2026-09-17.)
   {
-    const SRC_BACK = {
-      journal:  ["journal.html",  "← Journal"],
-      phasemap: ["phasemap.html", "← Phase Map"],
-      specs:    ["specs.html",    "← Specs"],
-      alerts:   ["alerts.html",   "← Alerts"],
-      sectors:  ["sectors.html",  "← News"],
-      momentum: ["momentum.html", "← Momentum"],
-    };
-    const back = SRC_BACK[srcParam];
+    const back = SRC_BACK_MAP[srcParam];
     const el = document.querySelector(".back-link");
     if (back && el) { el.href = back[0]; el.textContent = back[1]; }
   }
@@ -1529,7 +1532,8 @@
     const offline = typeof navigator !== "undefined" && navigator.onLine === false;
     const h = document.createElement("header");
     h.className = "chart-top";
-    h.innerHTML = `<a class="back-link" href="index.html">← Dashboard</a>`;
+    const bk = SRC_BACK_MAP[srcParam] || ["index.html", "← Dashboard"];
+    h.innerHTML = `<a class="back-link" href="${esc(bk[0])}">${esc(bk[1])}</a>`;
     const d = document.createElement("div");
     d.className = "chart-error" + (offline ? " is-offline" : "");
     const tvSym = symbol
@@ -1562,7 +1566,8 @@
     hideSkeleton();
     const h = document.createElement("header");
     h.className = "chart-top";
-    h.innerHTML = `<a class="back-link" href="index.html">← Dashboard</a>`;
+    const bk = SRC_BACK_MAP[srcParam] || ["index.html", "← Dashboard"];
+    h.innerHTML = `<a class="back-link" href="${esc(bk[0])}">${esc(bk[1])}</a>`;
     const d = document.createElement("div");
     d.className = "chart-error chart-empty";
     d.innerHTML = `<h2>Pick a ticker</h2>
@@ -3044,14 +3049,25 @@
         // arrows when ?pm=1 brought a PhaseMap record along.
         const base = ((tfs[key] || {}).markers || []).slice();
         const cs = (tfs[key] || {}).candles || [];
+        // P5 LABEL DIET. Every cross in five years carried a text label, so the
+        // flat 2021-2024 tape wore a pile-up of them that no one will ever read
+        // and that hid the bars underneath. Text is now written only inside the
+        // opening window; older crosses keep their DOT, so the history is still
+        // visible without the essay. One text per bar, so two crosses on one
+        // candle cannot stack into "BeaBear".
+        const from = cs.length >= MOM_VIEW_MIN_BARS ? momentumViewStart(cs) : 0;
+        const tMin = cs[from] ? cs[from].time : -Infinity;
+        const titled = new Set();
         for (const x of ((tfs[key] || {}).crosses || [])) {
           const b = cs[x.i];
           if (!b) continue;
+          const inWindow = b.time >= tMin && x.score !== 0 && !titled.has(b.time);
+          if (inWindow) titled.add(b.time);
           base.push({
             time: b.time, position: x.bull ? "belowBar" : "aboveBar",
             color: x.bull ? "rgba(59,130,246,0.85)" : "rgba(239,68,68,0.85)",
             shape: "circle",
-            text: `${x.bull ? "+" : "-"}${x.score} ${x.bull ? "Bullish" : "Bearish"}`,
+            text: inWindow ? `${x.bull ? "+" : "-"}${x.score} ${x.bull ? "Bullish" : "Bearish"}` : "",
           });
         }
         // setMarkers requires ascending unique times; a cross and a Rule A mark

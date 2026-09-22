@@ -782,6 +782,17 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   }
   ok(/\$\{x\.bull \? "\+" : "-"\}\$\{x\.score\}/.test(CHART),
      "the label is signed, so direction reads without the word");
+  {
+    // P5 LABEL DIET: text only inside the opening window, one per bar; older
+    // crosses keep their dot. A five-year tape wore a pile-up of labels that
+    // hid the bars under them.
+    const mk = CHART.slice(CHART.indexOf("const base = ((tfs[key] || {}).markers"),
+                           CHART.indexOf("candle.setMarkers(base)"));
+    ok(/momentumViewStart\(cs\)/.test(mk), "the diet uses the same window as first paint");
+    ok(/titled\.has\(b\.time\)/.test(mk), "one text per bar — no stacked \"BeaBear\"");
+    ok(/x\.score !== 0/.test(mk), "a zero score gets no text");
+    ok(/text: inWindow \?/.test(mk), "out-of-window crosses keep the dot, lose the words");
+  }
   ok(/Bullish/.test(CHART) && /Bearish/.test(CHART), "and names the direction");
 
   // 4 — the RSI pane shows HISTORY, not just the newest divergence.
