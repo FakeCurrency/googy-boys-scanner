@@ -2,9 +2,12 @@
 // ELS in PRODUCTION? Read-only: GETs the public site, writes nothing. Lives
 // only on branch diag-els-4h-2026-09-23, which is deleted after the run.
 const { chromium } = require("playwright");
-const BASE = "https://googy-boys-scanner.pages.dev";
+const BASE = process.env.PROBE_BASE || "https://googy-boys-scanner.pages.dev";
+// Hard stop: a probe that hangs tells nobody anything.
+setTimeout(() => { console.log("WATCHDOG: probe exceeded 120s"); process.exit(0); }, 120000).unref();
+let browser = null;
 (async () => {
-  const browser = await chromium.launch();
+  browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 },
     isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
@@ -22,8 +25,17 @@ const BASE = "https://googy-boys-scanner.pages.dev";
     } catch (e) { row.parse = String(e); }
     prices.push(row);
   });
-  await page.goto(BASE + "/chart.html?s=ELS&m=asx&src=momentum", { waitUntil: "networkidle", timeout: 90000 });
-  await page.waitForTimeout(5000);
+  // NOT networkidle: the page polls a live quote, so the network may never go
+  // quiet. The timeframe buttons render only after BOTH the daily and the
+  // hourly pulls resolve (momentumFallback -> intradayP -> render), so their
+  // appearance is the real "loaded" signal.
+  const t0 = Date.now();
+  await page.goto(BASE + "/chart.html?s=ELS&m=asx&src=momentum", { waitUntil: "domcontentloaded", timeout: 60000 });
+  try {
+    await page.waitForSelector("#tf-toggle .tf-btn[data-tf]", { timeout: 70000 });
+    console.log("tf buttons rendered after", Date.now() - t0, "ms");
+  } catch (e) { console.log("tf buttons NEVER rendered within 70s:", String(e).slice(0, 160)); }
+  await page.waitForTimeout(1500);
   const read = () => page.evaluate(() => ({
     chartJs: (document.querySelector('script[src*="js/chart.js"]') || {}).src || null,
     buttons: [...document.querySelectorAll("#tf-toggle .tf-btn[data-tf]")]
@@ -43,5 +55,5 @@ const BASE = "https://googy-boys-scanner.pages.dev";
   }
   console.log("PRICE RESPONSES", JSON.stringify(prices, null, 1));
   console.log("PAGE ERRORS", JSON.stringify(errs));
-  await browser.close();
-})().catch((e) => { console.log("PROBE FAILED", String(e)); });
+})().catch((e) => { console.log("PROBE FAILED", String(e)); })
+  .finally(async () => { try { if (browser) await browser.close(); } catch (_) {} process.exit(0); });

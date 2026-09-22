@@ -19,8 +19,10 @@ jobs:
       - name: Raw hourly pull (the request the 4H pane makes)
         run: |
           code=$(curl -sS -m 60 -o h.json -w '%{http_code}' \
-            "https://googy-boys-scanner.pages.dev/api/price?symbol=ELS.AX&range=2y&interval=1h" || true)
+            "https://googy-boys-scanner.pages.dev/api/price?symbol=ELS.AX&range=2y&interval=1h" 2>curl.err || true)
           echo "HTTP $code"
+          echo "curl stderr: $(cat curl.err 2>/dev/null)"
+          echo "response head: $(head -c 300 h.json 2>/dev/null)"
           node -e '
             const fs = require("fs");
             let j = {}; try { j = JSON.parse(fs.readFileSync("h.json", "utf8")); } catch (e) { console.log("unparseable", String(e)); }
@@ -44,4 +46,5 @@ jobs:
           npm install --no-save playwright > /dev/null 2>&1
           npx playwright install --with-deps chromium > /dev/null 2>&1
       - name: Tap 4H on the live Momentum chart (390x844)
+        timeout-minutes: 4
         run: node diag/els_4h_probe.js || true
