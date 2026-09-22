@@ -471,13 +471,6 @@
   }
   const pctCls = (v) => (v >= 0 ? "pct-up" : "pct-down");
 
-  function fmtTurn(v) {
-    if (v == null) return "";
-    if (v >= 1e9) return state.cur + (v / 1e9).toFixed(1) + "B";
-    if (v >= 1e6) return state.cur + (v / 1e6).toFixed(1) + "M";
-    if (v >= 1e3) return state.cur + Math.round(v / 1e3) + "k";
-    return state.cur + v;
-  }
   function num(v) {
     if (v == null || isNaN(v)) return "—";
     const dp = decimals(v);

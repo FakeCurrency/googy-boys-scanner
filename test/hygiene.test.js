@@ -29,6 +29,10 @@ const code = (rel) => fs.readFileSync(path.join(PUB, rel), "utf8")
   .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
 const GONE = {
+  "js/app.js": {
+    live: "function isHighConviction(",
+    dead: ["fmtTurn"],
+  },
   "js/chart.js": {
     live: "function momentumViewStart(",
     dead: ["MOM_FIRST_PAINT_BARS", "entryRelTargets", "fetchStockQuote", "levTag", "SIM_CRYPTO_MARGIN", "SIM_CRYPTO_LEVERAGE", "SIM_STOCK_SIZE", "restURL"],
