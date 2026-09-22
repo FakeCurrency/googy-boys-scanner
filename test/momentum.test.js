@@ -1146,4 +1146,159 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
      "and it is the #72 block that reorders the bar -- the rule this placement answers");
 }
 
+/* ── TIMEFRAMES ALIGNED TO THE EXCHANGE SESSION (2026-09-23) ────────────────────
+ * The Momentum chart is checked against TradingView, which builds ASX / NASDAQ
+ * bars on the exchange's own session. The live ELS 4H box read 6.51 / 7.386
+ * against TV's 6.46 / 7.39: UTC 4H buckets plus Yahoo's 16:00 closing-auction
+ * bar, which TV's intraday session leaves out. reviews/2026-09-23-tf-align.md
+ * has the measurements. These run the SHIPPED builders over real production
+ * bars frozen in test/fixtures/momentum/.
+ */
+{
+  const fnSrc = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) { /* keep walking */ }
+    }
+    throw new Error("slice " + name);
+  };
+  const constSrc = (name) => {
+    const at = CHART.indexOf(`const ${name} = `);
+    ok(at > 0, `chart.js no longer declares ${name}`);
+    for (let i = CHART.indexOf(";", at); i > 0; i = CHART.indexOf(";", i + 1)) {
+      const cand = CHART.slice(at, i + 1);
+      try { new Function(cand); return cand; } catch (_) { /* keep walking */ }
+    }
+    throw new Error("slice const " + name);
+  };
+  const E = new Function(`
+    const MOM_MA_DEFAULTS = { ma_type: "EMA", fast_len: 20, mid_len: 50, slow_len: 200 };
+    ${constSrc("TV_PLAN")} ${constSrc("MOM_SESSION")} ${constSrc("_sessFmt")}
+    ${["emaPine", "rmaPine", "rsiPine", "macdPine", "atrPine", "momentumPlan", "bucketBars",
+       "resampleWeekly", "sessionClock", "sessionBars", "sessionGroups", "sessionWeeks"].map(fnSrc).join("\n")}
+    return { momentumPlan, bucketBars, resampleWeekly, sessionClock, sessionBars,
+             sessionGroups, sessionWeeks, MOM_SESSION };`)();
+  const FX = path.join(__dirname, "fixtures", "momentum");
+  const fx = (f) => JSON.parse(fs.readFileSync(path.join(FX, f), "utf8")).bars
+    .map(([time, open, high, low, close, volume]) => ({ time, open, high, low, close, volume }));
+  const iso = (t) => new Date(t * 1000).toISOString().replace(".000Z", "Z");
+  const ASX = E.MOM_SESSION.asx, NQ = E.MOM_SESSION.nasdaq;
+
+  // The session table is the claim; pin it in full.
+  eq(`${ASX.tz} ${ASX.open} ${ASX.close}`, "Australia/Sydney 600 960", "ASX cash session: 10:00-16:00 Sydney");
+  eq(`${NQ.tz} ${NQ.open} ${NQ.close}`, "America/New_York 570 960", "NASDAQ: 09:30-16:00 New York");
+  ok(!("crypto" in E.MOM_SESSION), "crypto has no session: it trades 24/7 and keeps UTC buckets");
+
+  // ── ELS 4H against TradingView (6.46 / 7.39), within $0.02 ──
+  const hourly = fx("ELS.AX_1h.json");
+  const h4 = E.sessionBars(hourly, ASX, 240);
+  const p4 = E.momentumPlan(h4, null);
+  ok(p4, "ELS 4H produces an Auto plan");
+  eq(iso(p4.bar.time), "2026-08-13T04:00:00Z", "signal bar: 13 Aug 2026 14:00 Sydney");
+  for (const [k, tv] of [["entry", 6.46], ["stop", 7.39]]) {
+    const err = Math.abs(p4[k] - tv);
+    ok(err <= 0.02, `ELS 4H ${k}: computed ${p4[k].toFixed(4)} vs TradingView ${tv.toFixed(2)} -- error $${err.toFixed(4)}`);
+  }
+  // The old UTC build on the same bars is the 5c miss this fixes -- kept as a
+  // witness, so a revert to bucketBars cannot pass quietly.
+  const old4 = E.momentumPlan(E.bucketBars(hourly, 4 * 3600), null);
+  ok(Math.abs(old4.entry - 6.46) > 0.02, `the UTC build misses TV (entry ${old4.entry.toFixed(4)})`);
+
+  // ── 4H is its OWN plan, never the Daily one ──
+  const dhist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  if (fs.existsSync(dhist)) {
+    const daily = JSON.parse(fs.readFileSync(dhist, "utf8")).bars.map((r) => ({
+      time: Math.floor(Date.parse(r[0] + "T00:00:00Z") / 1000), open: r[1], high: r[2], low: r[3], close: r[4], volume: r[5] }));
+    const p1 = E.momentumPlan(daily, null);
+    ok(Math.abs(p1.entry - 5.88) <= 0.01, "Daily entry still 5.88 on the same page");
+    ok(Math.abs(p4.entry - p1.entry) > 0.5 && Math.abs(p4.stop - p1.stop) > 0.5,
+       `4H plan (${p4.entry.toFixed(2)} / ${p4.stop.toFixed(2)}) is not the Daily's (${p1.entry.toFixed(2)} / ${p1.stop.toFixed(2)})`);
+    ok(p4.bar.time !== p1.bar.time, "and it comes from a different signal bar");
+
+    // ── 3D: three trading sessions per bar, no weekend padding ──
+    const g3 = E.sessionGroups(daily, 3);
+    eq(g3.length, Math.ceil(daily.length / 3), "3D = one bar per three sessions");
+    ok(g3.every((b, i) => b.time === daily[3 * i].time && b.open === daily[3 * i].open),
+       "each 3D bar opens on its first session");
+    ok(g3.every((b, i) => {
+      const own = daily.slice(3 * i, 3 * i + 3);
+      return b.close === own[own.length - 1].close &&
+        b.high === Math.max(...own.map((d) => d.high)) && b.low === Math.min(...own.map((d) => d.low));
+    }), "and closes on its third, spanning exactly its own three sessions");
+    const cal = E.bucketBars(daily, 3 * 86400);
+    const single = cal.filter((b, i) => {
+      const next = i + 1 < cal.length ? cal[i + 1].time : Infinity;
+      return daily.filter((d) => d.time >= b.time && d.time < next).length === 1;
+    }).length;
+    ok(single > 100, `the calendar build this replaces left ${single} one-session "3-day" bars`);
+
+    // ── W: Monday weeks, same membership as the engine's weeks for equities ──
+    const w = E.sessionWeeks(daily, ASX), rw = E.resampleWeekly(daily);
+    eq(w.length, rw.length, "Monday weeks = the same number of weeks");
+    ok(w.every((b, i) => b.open === rw[i].open && b.high === rw[i].high && b.low === rw[i].low && b.close === rw[i].close),
+       "and the same OHLC in every week");
+    ok(w.every((b) => daily.some((d) => d.time === b.time)), "each week is stamped at one of its own sessions");
+    ok(w.slice(1, -1).filter((b) => new Date(b.time * 1000).getUTCDay() === 1).length > w.length * 0.8,
+       "and that session is (almost always) the Monday -- TV's week-start stamp");
+  }
+
+  // Production daily ASX bars are stamped at the session open in UTC, so under
+  // AEDT a Monday session carries a SUNDAY UTC date (2026-01-11T23:00Z is
+  // Monday 12 Jan in Sydney). Weeks must be cut on the exchange's own date.
+  const aedt = ["2026-01-11", "2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15", "2026-01-18"]
+    .map((d, i) => { const t = Date.parse(d + "T23:00:00Z") / 1000;
+      return { time: t, open: 1 + i, high: 2 + i, low: 0.5 + i, close: 1.5 + i, volume: 10 }; });
+  const aw = E.sessionWeeks(aedt, ASX);
+  eq(aw.length, 2, "an AEDT week stamped Sunday-to-Thursday UTC is ONE week, not split at the UTC weekend");
+  eq(aw[0].close, 5.5, "its close is the Friday session's");
+  eq(iso(aw[1].time), "2026-01-18T23:00:00Z", "and the next Monday session opens the next week");
+
+  // ── ASX 4H bars open on the Sydney session, through daylight saving ──
+  const opens = new Set(h4.map((b) => E.sessionClock(b.time, ASX.tz).min));
+  eq([...opens].sort().join(","), "600,840", "every ASX 4H bar opens at 10:00 or 14:00 Sydney");
+  const day = (d) => h4.filter((b) => E.sessionClock(b.time, ASX.tz).day === d).map((b) => iso(b.time)).join(" ");
+  eq(day("2026-01-15"), "2026-01-14T23:00:00Z 2026-01-15T03:00:00Z", "AEDT (UTC+11): 10:00 Sydney is 23:00Z the day before");
+  eq(day("2026-08-13"), "2026-08-13T00:00:00Z 2026-08-13T04:00:00Z", "AEST (UTC+10): 10:00 Sydney is 00:00Z");
+  const utcOpens = new Set(E.bucketBars(hourly, 4 * 3600).map((b) => E.sessionClock(b.time, ASX.tz).min));
+  ok(utcOpens.has(420), "the UTC build opened bars at 07:00 Sydney under daylight saving");
+
+  // The 16:00 bar is the closing auction alone; TV's intraday session leaves it out.
+  const auction = hourly.find((b) => iso(b.time) === "2026-08-13T06:00:00Z");
+  ok(auction && auction.open === auction.high && auction.high === auction.low && auction.low === auction.close,
+     "Yahoo's 16:00 ASX bar is a single auction price");
+  const aft = h4.find((b) => iso(b.time) === "2026-08-13T04:00:00Z");
+  eq(aft.close, 6.46, "13 Aug 14:00 Sydney 4H closes on the 15:00 hour (6.46), not the 16:00 auction (6.49)");
+
+  // ── NASDAQ: 09:30 / 13:30 New York, 16:00 print dropped ──
+  const aapl = fx("AAPL_1h.json");
+  const a4 = E.sessionBars(aapl, NQ, 240);
+  eq([...new Set(a4.map((b) => E.sessionClock(b.time, NQ.tz).min))].sort().join(","), "570,810",
+     "every NASDAQ 4H bar opens at 09:30 or 13:30 New York");
+  const lastRaw = aapl[aapl.length - 1];
+  eq(E.sessionClock(lastRaw.time, NQ.tz).min, 960, "the fixture's last hourly print is at 16:00 New York");
+  ok(a4[a4.length - 1].time < lastRaw.time, "and no 4H bar is built from it");
+
+  // ── Wiring: Momentum only. The 5.0 builders keep the engine's UTC weeks. ──
+  const code = CHART.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  const mfAt = code.indexOf("function momentumFallback(");
+  let mf = "";                                   // bounded by the parser, not by the next name
+  for (let i = code.indexOf("{", mfAt); i < code.length && !mf; i++) {
+    if (code[i] !== "}") continue;
+    try { new Function("return (" + code.slice(mfAt, i + 1) + ");"); mf = code.slice(mfAt, i + 1); } catch (_) { /* keep walking */ }
+  }
+  ok(mf.length > 1000 && !mf.includes("function heldPlanFallback("), "momentumFallback sliced on its own");
+  const outside = code.slice(0, mfAt) + code.slice(mfAt + mf.length);
+  for (const f of ["sessionBars(", "sessionGroups(", "sessionWeeks("])
+    ok(mf.includes(f) && (outside.match(new RegExp(f.replace("(", "\\("), "g")) || []).length === 1,
+       `${f.slice(0, -1)} is called only by the Momentum builder`);
+  ok(/const sess = MOM_SESSION\[market\] \|\| null;/.test(mf), "the session comes from the page's market");
+  ok(/sess \? sessionBars\(intraday, sess, 240\) : bucketBars\(intraday, 4 \* 3600\)/.test(mf),
+     "a market with no session (crypto) keeps the UTC 4H");
+  eq((outside.match(/bucketBars\(intraday, 4 \* 3600\)/g) || []).length, 3, "the three 5.0 4H builders are untouched");
+  eq((outside.match(/resampleWeekly\(daily\)/g) || []).length, 3, "and so are their weeks");
+}
+
 console.log(`momentum: ${checks} checks passed`);
