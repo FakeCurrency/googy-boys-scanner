@@ -7,7 +7,6 @@
 
   const grab = (url) => fetch(url, { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : null)).catch(() => null);
-  const pct = (x, dp = 1) => (x == null ? "—" : (x * 100).toFixed(dp) + "%");
   const spct = (x) => (x == null ? "—" : (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%");
   const hit = (c) => (c && c.t1_hit_pct != null ? c.t1_hit_pct + "%" : "—");
   const set = (id, term, html) => {

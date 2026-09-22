@@ -29,6 +29,10 @@ const code = (rel) => fs.readFileSync(path.join(PUB, rel), "utf8")
   .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
 const GONE = {
+  "js/phasemap-insights.js": {
+    live: "const spct = ",
+    dead: ["pct"],
+  },
   "js/journal.js": {
     live: "function splitBot(",
     dead: ["inBatches", "fav", "nowTime", "tradeKey", "priceFor", "cryptoPrice", "stockPrice", "fetchJSON", "YF_TICKER"],
