@@ -16,7 +16,7 @@ what it is, which the name already says.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace as _dc_replace
 from typing import Any, Dict, Tuple
 
 RULESET_VERSION = "1.0.0"   # 1.0.0: first cut. Rule A (RSI divergence off
@@ -58,11 +58,25 @@ class MomentumConfig:
     rsi_ma_len: int = 14               # maLen   = input.int(14)
     rsi_ma_type: str = "SMA"           # maType  = input.string("SMA")
     rsi_midline: float = 50.0          # midL    = input.float(50)
-    # The price-pane RSI columns fire at 75/25, NOT 70/30 -- a stale claim in
-    # the template's own README that 80d4d44 corrected. Carried as evidence
-    # fields only; no gate reads them.
-    rsi_ob: float = 75.0
-    rsi_os: float = 25.0
+    rsi_long_avg_len: int = 50         # longLen = input.int(50); evidence only
+    show_div: bool = True              # showDiv = input.bool(true) -- the
+    #                                    master switch on Rule A. Kept because
+    #                                    the ported divergence body reads it;
+    #                                    turning it off makes mode A screen
+    #                                    nothing, which validate() does not
+    #                                    forbid because "compute Rule B only"
+    #                                    is a legitimate diagnostic.
+    # TWO BANDS PER SIDE, which the template's own README got wrong and the
+    # spec commit corrected: the price-pane RSI columns fire at the EXTREME
+    # pair (75/25), not the ordinary pair (70/30). Both are carried because the
+    # ported body reads all four; they are evidence fields and no gate reads
+    # them. Named ob1/ob2/os1/os2 exactly as the Pine inputs are -- a single
+    # `rsi_ob`/`rsi_os` pair looks tidier and is simply not what the screen
+    # asks for, which is an AttributeError on the first real frame.
+    rsi_ob1: float = 70.0              # ob1 = input.float(70, "Overbought")
+    rsi_ob2: float = 75.0              # ob2 = input.float(75, "extreme")
+    rsi_os1: float = 30.0              # os1 = input.float(30, "Oversold")
+    rsi_os2: float = 25.0              # os2 = input.float(25, "extreme")
 
     # ---- RULE A: the divergence pivots --------------------------------------
     piv_left: int = 5                  # lbL = input.int(5)
@@ -93,6 +107,11 @@ class MomentumConfig:
     pivot_strict_right: bool = True
 
     # ---- RULE B: the scored cross, and MACD ---------------------------------
+    # Rule B's optional RSI term reads the TOP script's own RSI input, which is
+    # a DIFFERENT Pine input from Final_RSI_Plus's `rsi_len` above even though
+    # both ship at 14. They are kept separate so a retune of one cannot
+    # silently move the other.
+    top_rsi_len: int = 14              # rsiLen = input.int(14) in the Top script
     macd_fast: int = 12                # fastLen = input.int(12)
     macd_slow: int = 26                # slowLen = input.int(26)
     macd_signal: int = 9               # sigLen  = input.int(9)
@@ -110,6 +129,15 @@ class MomentumConfig:
     use_macd: bool = True              # useMacd = input.bool(true)
     use_slow: bool = True              # useSlow = input.bool(true)
     use_rsi: bool = False              # useRsi  = input.bool(false)
+
+    # TWO THRESHOLDS THAT COMPOSE, and conflating them is easy.
+    # `min_score` is Pine's LABEL-DRAWING threshold, applied inside the cross
+    # signal itself; `min_signal_score` below is the SCREEN's gate, re-applied
+    # afterwards. The effective gate is max(min_score, min_signal_score), so
+    # with the shipped 1 and 2 the screen's threshold is what binds. Both are
+    # carried because the ported Pine body reads the first one, and collapsing
+    # them would change a code path to save a line.
+    min_score: int = 1                 # minScore = input.int(1)
 
     # ---- the screen (the owner's rules; no Pine counterpart) ----------------
     mode: str = "A"                    # v1 default: divergence only.
@@ -170,9 +198,10 @@ class MomentumConfig:
         """
         if self.mode not in MODES:
             raise ValueError("mode must be one of %s, got %r" % (", ".join(MODES), self.mode))
-        for name in ("rsi_len", "rsi_ma_len", "piv_left", "piv_right", "fast_len",
-                     "mid_len", "slow_len", "macd_fast", "macd_slow", "macd_signal",
-                     "atr_len", "min_bars", "warn_bars"):
+        for name in ("rsi_len", "rsi_ma_len", "rsi_long_avg_len", "top_rsi_len",
+                     "piv_left", "piv_right", "fast_len", "mid_len", "slow_len",
+                     "macd_fast", "macd_slow", "macd_signal", "atr_len",
+                     "min_bars", "warn_bars"):
             if int(getattr(self, name)) < 1:
                 raise ValueError("%s must be >= 1" % name)
         if self.range_lower > self.range_upper:
@@ -190,15 +219,49 @@ class MomentumConfig:
                 raise ValueError("%s must be 'sma' or 'first'" % name)
         if self.div_fresh_bars < 1 or self.signal_fresh_bars < 1:
             raise ValueError("freshness windows are counted in bars and are >= 1")
-        if not 1 <= self.min_signal_score <= self.max_score:
-            raise ValueError("min_signal_score must be in 1..%d for these terms"
-                             % self.max_score)
+        for name in ("min_score", "min_signal_score"):
+            if int(getattr(self, name)) < 1:
+                raise ValueError("%s must be >= 1" % name)
+        return self
+
+    def assert_screenable(self) -> "MomentumConfig":
+        """The CROSS-FIELD check, deliberately NOT part of validate().
+
+        With every optional term switched off, `max_score` is 1, so a
+        `min_signal_score` of 2 makes Rule B UNSATISFIABLE -- the screen would
+        run, find nothing, and say nothing about why. That is worth refusing,
+        but it is a property of SCREENING rather than of the value, and keeping
+        it out of `validate()` has a second payoff that is easy to lose: it
+        keeps this config STRUCTURALLY SUBSTITUTABLE for the reference
+        implementation's, which is what lets `tests/test_momentum_screen.py`
+        drive the reference's own 28 assertions against this code instead of
+        re-typing them. A stricter `validate()` silently costs that.
+
+        Called by the runner at start-up, where an unscreenable config is a
+        setup error worth failing loudly on.
+        """
+        if self.min_signal_score > self.max_score:
+            raise ValueError(
+                "min_signal_score=%d can never be reached: with use_macd=%s, "
+                "use_slow=%s, use_rsi=%s the maximum score is %d, so Rule B "
+                "could never fire. Lower the threshold or switch a term on."
+                % (self.min_signal_score, self.use_macd, self.use_slow,
+                   self.use_rsi, self.max_score))
+        if self.min_score > self.max_score:
+            raise ValueError(
+                "min_score=%d exceeds the maximum score %d for these terms"
+                % (self.min_score, self.max_score))
         return self
 
     @property
     def max_score(self) -> int:
         """1 + macd + beyond-slow + rsi. With the shipped defaults: 3, not 4."""
         return 1 + int(self.use_macd) + int(self.use_slow) + int(self.use_rsi)
+
+    def replace(self, **kw: Any) -> "MomentumConfig":
+        """A validated variant. Re-validates on purpose: a tweaked config is
+        exactly where an unsatisfiable combination gets introduced."""
+        return _dc_replace(self, **kw).validate()
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
