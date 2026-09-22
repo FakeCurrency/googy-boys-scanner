@@ -658,4 +658,145 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok(/fitContent\(\);/.test(hook), "fitContent still runs first, for every mode");
 }
 
+/* ── A-GRADE CHART (2026-09-22) ─────────────────────────────────────────────
+ * Eight owner-specified behaviours. The ones with maths behind them are
+ * EXECUTED against the shipped functions; the wiring ones are read off the
+ * source at the point that actually does the work.
+ */
+{
+  const slc = (name) => {
+    const at = CHART.indexOf(`function ${name}(`);
+    assert.ok(at > 0, `chart.js no longer defines ${name}`);
+    for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+      if (CHART[i] !== "}") continue;
+      const cand = CHART.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) {}
+    }
+    throw new Error("slice " + name);
+  };
+  const TVSRC = CHART.slice(CHART.indexOf("const TV_PLAN = {"),
+                            CHART.indexOf("};", CHART.indexOf("const TV_PLAN = {")) + 2);
+  const env = new Function(`
+    const MOM_MA_DEFAULTS = { ma_type:'EMA', fast_len:20, mid_len:50, slow_len:200 };
+    ${TVSRC}
+    ${slc("emaPine")} ${slc("rmaPine")} ${slc("rsiPine")} ${slc("macdPine")}
+    ${slc("atrPine")} ${slc("momentumPlan")} ${slc("pivotIdx")}
+    ${slc("momentumDivs")} ${slc("momentumCrosses")}
+    return { momentumPlan, pivotIdx, momentumDivs, momentumCrosses, rsiPine };`)();
+
+  const hist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  const bars = fs.existsSync(hist)
+    ? JSON.parse(fs.readFileSync(hist, "utf8")).bars.map((r) => ({
+        time: Math.floor(Date.parse(r[0] + "T00:00:00Z") / 1000),
+        open: r[1], high: r[2], low: r[3], close: r[4], volume: r[5] }))
+    : null;
+
+  // 6 — EVERY timeframe recomputes. Resampling to 3D must move the plan, or the
+  // Daily box has been glued onto a chart whose candles are a different size.
+  if (bars) {
+    const daily = env.momentumPlan(bars, null);
+    const b3 = [];
+    for (let i = 0; i < bars.length; i += 3) {
+      const g = bars.slice(i, i + 3);
+      if (!g.length) continue;
+      b3.push({ time: g[0].time, open: g[0].open, close: g[g.length - 1].close,
+                high: Math.max(...g.map((x) => x.high)), low: Math.min(...g.map((x) => x.low)),
+                volume: 0 });
+    }
+    const three = env.momentumPlan(b3, null);
+    ok(daily, "the daily plan exists");
+    ok(!three || three.entry !== daily.entry,
+       "a 3D series must not reproduce the Daily entry — that would mean the " +
+       "box was glued on rather than recomputed");
+    // and the Daily numbers must not have moved (the standing acceptance test)
+    const TV = { entry: 5.88, stop: 6.76, tp1: 5.00, tp2: 4.12, tp3: 3.23 };
+    for (const k of Object.keys(TV)) {
+      ok(Math.abs(daily[k] - TV[k]) <= 0.01,
+         `${k} stays within $0.01 of TradingView (${daily[k].toFixed(4)} vs ${TV[k]})`);
+    }
+  }
+  {
+    // Scoped to the BUILDER, not the whole file: `momentumPlan(bars` is also
+    // the function's own declaration, so a file-wide includes() was satisfied
+    // by the definition and stayed green when the call was changed to
+    // momentumPlan(daily, ...) — i.e. when the Daily box WAS glued onto every
+    // timeframe, the exact thing this section exists to forbid. Found by
+    // mutation; a source check must look where the work happens.
+    const bAt = CHART.indexOf("const build = (bars) =>");
+    ok(bAt > 0, "one builder runs per timeframe");
+    const body = CHART.slice(bAt, CHART.indexOf("d.timeframes[\"1D\"] = build(daily)", bAt));
+    ok(body.length > 100 && body.length < 1200, "the builder slice is bounded");
+    for (const f of ["momentumPanes(bars", "momentumPlan(bars", "momentumCrosses(bars", "momentumDivs(bars"])
+      ok(body.includes(f), `the builder recomputes ${f.split("(")[0]} on ITS OWN bars`);
+    ok(!/\b(daily|d3|wk)\b/.test(body),
+       "the builder must not reach for another timeframe's series");
+  }
+
+  // 3 — scored-cross labels, signed, on price.
+  if (bars) {
+    const xs = env.momentumCrosses(bars, null);
+    ok(xs.length > 5, `several crosses over five years, saw ${xs.length}`);
+    ok(xs.every((x) => x.score >= 1 && x.score <= 3), "each carries its 1-3 score");
+    ok(xs.some((x) => x.bull) && xs.some((x) => !x.bull), "both directions occur");
+  }
+  ok(/\$\{x\.bull \? "\+" : "-"\}\$\{x\.score\}/.test(CHART),
+     "the label is signed, so direction reads without the word");
+  ok(/Bullish/.test(CHART) && /Bearish/.test(CHART), "and names the direction");
+
+  // 4 — the RSI pane shows HISTORY, not just the newest divergence.
+  if (bars) {
+    const rsi = env.rsiPine(bars.map((b) => b.close), 14);
+    const dv = env.momentumDivs(bars, rsi, null);
+    ok(dv.length > 5, `several divergences over five years, saw ${dv.length}`);
+    ok(dv.some((x) => x.bull) && dv.some((x) => !x.bull), "both bull and bear");
+    // The pivot must precede its confirmation by piv_right bars.
+    ok(dv.every((x) => x.confirm - x.pivot === 5), "each tag knows its own 5-bar lag");
+    // THE GAP RULE: 6..61 between confirmations, not 5..60. Inherited from
+    // TradingView's own indicator via plFound[1]; screen.py carries the note.
+    ok(/6\.\.61/.test(CHART), "the off-by-one gap is written down where it is used");
+  }
+  ok(/\(\(tfs\[key\] \|\| \{\}\)\.divs \|\| \[\]\)\.map/.test(CHART),
+     "the pane maps EVERY divergence, not just the latest");
+
+  // 5 — ATH.
+  ok(/title: "ATH"/.test(CHART), "an ATH line is drawn");
+  ok(/tf\.ath = bars\.reduce/.test(CHART), "from the highest high the timeframe can see");
+
+  // 2 — the shaded zones, not only hairlines.
+  ok(/momRiskBand/.test(CHART) && /momRewardBand/.test(CHART), "both zones exist");
+  ok(/addBaselineSeries/.test(CHART.slice(CHART.indexOf("const mkBand"))),
+     "drawn as filled bands");
+
+  // 1 — the footer is the Auto box, never the empty 5.0 strip.
+  const ft = CHART.slice(CHART.indexOf("function renderMomentumFooter"),
+                         CHART.indexOf("function footer(d)"));
+  ok(ft.length > 400, "renderMomentumFooter exists");
+  for (const k of ["Entry", "SL", "TP1", "TP2", "TP3"]) ok(ft.includes(`"${k}"`), `the footer shows ${k}`);
+  ok(!/score_max/.test(ft), "and never the 5.0 SCORE x/8 strip");
+  ok(/no scored cross in the last/.test(ft),
+     "a timeframe with no plan says WHY rather than printing blanks");
+  ok(/if \(d\._momentum\) \{\n      renderMomentumFooter/.test(CHART),
+     "footer() routes a momentum chart to it");
+
+  // 7 — PhaseMap off unless ?pm=1.
+  const pmFn = CHART.slice(CHART.indexOf("function fetchPhaseMapRec"),
+                           CHART.indexOf("function fetchPhaseMapRec") + 900);
+  ok(/isMomentum && params\.get\("pm"\) !== "1"/.test(pmFn),
+     "a momentum chart fetches no PhaseMap record unless ?pm=1");
+
+  // 8 — 5.0 untouched: every new surface is inside the momentum branch.
+  for (const sym of ["momRiskBand = mkBand", "renderMomentumFooter(d, key)"])
+    ok(CHART.includes(sym), `${sym} is wired`);
+  // Bound at renderMomentumFooter, which now sits BETWEEN renderVivekFooter and
+  // footer() — slicing to footer() swallowed the momentum one and made this
+  // assert the opposite of what it says. Third time this file has hit a bad
+  // slice boundary; the lesson is to bound at the next thing, not a later one.
+  const vfStart = CHART.indexOf("function renderVivekFooter");
+  const vfEnd = CHART.indexOf("function renderMomentumFooter");
+  ok(vfStart > 0 && vfEnd > vfStart, "renderVivekFooter still precedes the momentum footer");
+  const vivekFooter = CHART.slice(vfStart, vfEnd);
+  ok(!/momRiskBand|renderMomentumFooter|TV_PLAN/.test(vivekFooter),
+     "the 5.0 footer is untouched by any of it");
+}
+
 console.log(`momentum: ${checks} checks passed`);
