@@ -577,6 +577,11 @@
    point. The top border is the pane separator TV draws. */
 .mom-pane {
   position: relative; width: 100%; min-height: 96px;
-  border-top: 1px solid rgba(110,125,150,0.22);
+  /* Q26: a heavier, lighter-coloured rule than the chart's own gridlines, so
+     the seam reads as a PANE BOUNDARY. At gridline weight the MACD histogram
+     below it looked like negative-price candles continuing off the price
+     pane -- which is exactly the confusion the split was meant to end. */
+  border-top: 2px solid rgba(140,158,190,0.38);
+  margin-top: 2px;
 }
 @media (max-width: 560px) { .mom-pane { min-height: 74px; } }

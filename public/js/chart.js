@@ -2673,8 +2673,14 @@
       if (momAthLine) { try { candle.removePriceLine(momAthLine); } catch (_) {} momAthLine = null; }
       const ath = (tfs[key] || {}).ath;
       if (!isFinite(ath)) return;
+      // Q29: on a name near its highs the ATH and SL axis labels land on the
+      // same strip and overlap. The SL is the actionable one, so ATH keeps its
+      // LINE and gives up its axis label when the two are within 1.5%.
+      const pl = (tfs[key] || {}).plan;
+      const clash = pl && isFinite(pl.stop) && ath > 0 &&
+        Math.abs(ath - pl.stop) / ath < 0.015;
       momAthLine = candle.createPriceLine({ price: ath, color: "#2fd07f", lineWidth: 1,
-        lineStyle: LC.LineStyle.Solid, axisLabelVisible: true, title: "ATH" });
+        lineStyle: LC.LineStyle.Solid, axisLabelVisible: !clash, title: "ATH" });
     }
     function applyMomentumPlan(key) {
       momHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
