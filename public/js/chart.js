@@ -122,6 +122,37 @@
   // full series is still loaded and panning reaches all of it. Momentum
   // only -- 5.0 first paint stays fitContent.
   const MOM_FIRST_PAINT_BARS = 750;
+  // P1: the first paint is the LIVE MOVE, not the whole listing. ELS spent
+  // 2021-2024 as a 40c penny and fitContent squeezed the part anyone is
+  // trading into the right-hand fifth of the canvas. Left edge is the LATER of
+  // (a) twelve months back and (b) the first bar where close exceeds 1.5x the
+  // 5th-percentile close -- the point the dead regime ends. Panning left still
+  // reaches every loaded bar; this is a view, never a fetch cap.
+  const MOM_VIEW_MONTHS = 12;
+  const MOM_REGIME_MULT = 1.5;
+  const MOM_VIEW_MIN_BARS = 60;
+  function momentumViewStart(bars) {
+    const n = bars.length;
+    if (n < MOM_VIEW_MIN_BARS) return 0;
+    const lastT = bars[n - 1].time;
+    let byTime = 0;
+    for (let i = n - 1; i >= 0; i--) {
+      if (lastT - bars[i].time > MOM_VIEW_MONTHS * 30.44 * 86400) { byTime = i + 1; break; }
+    }
+    const sorted = bars.map((b) => b.close).filter(isFinite).sort((a, b) => a - b);
+    let byRegime = 0;
+    if (sorted.length) {
+      const floor = sorted[Math.floor(sorted.length * 0.05)] * MOM_REGIME_MULT;
+      for (let i = 0; i < n; i++) {
+        if (isFinite(bars[i].close) && bars[i].close > floor) { byRegime = i; break; }
+      }
+    }
+    // The LATER of the two, so a name that woke recently is not padded with its
+    // dead years and one that has run all year is not cut back to the wake.
+    let start = Math.max(byTime, byRegime);
+    if (n - start < MOM_VIEW_MIN_BARS) start = Math.max(0, n - MOM_VIEW_MIN_BARS);
+    return start;
+  }
   // `data/charts/<market>[<mode>]/<SYM>.json` — the per-ticker pre-rendered
   // chart files — were REMOVED 2026-08-15. The directory has never existed in
   // this repo (git ls-files: zero entries), so every fetch of it was a
@@ -2233,6 +2264,15 @@
       // a reader came for. 5.0 keeps both, unchanged.
       lastValueVisible: !d._momentum,
       priceLineVisible: !d._momentum,
+      // P4: a stock cannot trade below zero, so the axis must not either. The
+      // fitted range ran negative on a $5 name once a wide Auto box and the
+      // volume strip were both in the domain. Momentum only; the 5.0 chart is
+      // left exactly as it was.
+      autoscaleInfoProvider: d._momentum ? (orig) => {
+        const r = orig();
+        if (!r || !r.priceRange) return r;
+        return { ...r, priceRange: { ...r.priceRange, minValue: Math.max(0, r.priceRange.minValue) } };
+      } : undefined,
     });
     const vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" } });
     // TV keeps volume as a thin strip at the FOOT of the price pane. With the
@@ -2683,7 +2723,7 @@
         lineStyle: LC.LineStyle.Solid, axisLabelVisible: !clash, title: "ATH" });
     }
     function applyMomentumPlan(key) {
-      momHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
+      momHandles.forEach((h) => { try { chart.removeSeries(h); } catch (_) {} });
       momHandles = [];
       paintMomentumZones(key);
       paintMomentumAth(key);
@@ -2694,10 +2734,23 @@
       // price -- "SL | 6.762". The 5.0 habit of appending "+15.00% · 1.0R"
       // turns five clean tags into five sentences, and the R ladder is already
       // in the footer.
+      // P2: TIME-BOUNDED. createPriceLine spans the entire x-axis, so a plan
+      // anchored to a July cross drew its SL back across 2024 -- a level that
+      // did not exist then, on bars it was never measured against. Each rung is
+      // now a two-point line SERIES from the signal bar to the last bar, and
+      // the axis tag rides the series' own last-value label.
+      const cs = (tfs[key] || {}).candles || [];
+      const x0 = pl.bar && pl.bar.time ? pl.bar.time : (cs.length ? cs[0].time : null);
+      const xN = cs.length ? cs[cs.length - 1].time : null;
       const line = (price, color, label, weight) => {
-        if (price == null || !isFinite(price)) return;
-        momHandles.push(candle.createPriceLine({ price, color, lineWidth: weight || 1,
-          lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: label }));
+        if (price == null || !isFinite(price) || x0 == null || xN == null) return;
+        const ser = chart.addLineSeries({
+          color, lineWidth: weight || 1, lineStyle: LC.LineStyle.Dashed,
+          priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false,
+          title: label,
+        });
+        ser.setData([{ time: x0, value: price }, { time: xN, value: price }]);
+        momHandles.push(ser);
       };
       line(pl.stop, "#ef4444", "SL", 2);
       line(pl.entry, "#9ca3af", "ENTRY", 2);
@@ -2916,12 +2969,12 @@
       // MOMENTUM Daily first paint. Runs AFTER fitContent so the fallback is
       // the shared behaviour: too few bars to window (a young listing) and the
       // chart simply fits what it has rather than padding empty history.
-      if (d._momentum && key === "1D") {
+      if (d._momentum) {
         const cs = (tfs[key] || {}).candles || [];
-        if (cs.length >= MOM_FIRST_PAINT_BARS) {
+        if (cs.length >= MOM_VIEW_MIN_BARS) {
           try {
             chart.timeScale().setVisibleLogicalRange({
-              from: cs.length - MOM_FIRST_PAINT_BARS,
+              from: momentumViewStart(cs),
               to: cs.length - 1 + 6,     // + rightOffset, so the last bar is not flush
             });
           } catch (_) { /* a refused range must never cost the chart */ }
@@ -3021,12 +3074,17 @@
     // loaded yet; this says, on the canvas, that there are none to load.
     // textContent, not innerHTML: it is a fixed string but the habit is the
     // point (escaping.test.js pins the family).
+    // P6: the caption lives in the HEADER strip, not as a chip floating over
+    // the candles. On the plot it covered bars and read as chart furniture; in
+    // the header it reads as what it is, a statement about the page.
     if (d._momentum) {
-      const cap = document.createElement("div");
-      cap.className = "mom-caption";
-      cap.textContent = MOM_CAPTION;
-      el.style.position = "relative";
-      el.appendChild(cap);
+      const host = document.querySelector(".ct-chips") || document.querySelector(".chart-top");
+      if (host && !host.querySelector(".mom-caption")) {
+        const cap = document.createElement("span");
+        cap.className = "mom-caption";
+        cap.textContent = MOM_CAPTION;
+        host.appendChild(cap);
+      }
     }
 
     const toggle = $("#tf-toggle");
