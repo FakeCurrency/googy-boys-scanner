@@ -1364,4 +1364,35 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   eq((outside.match(/resampleWeekly\(daily\)/g) || []).length, 3, "and so are their weeks");
 }
 
+/* ── FILTER PILLS ARE THE DECK'S .fpill (2026-09-23, owner ask) ─────────────────
+ * They rendered .deck-pill / .deck-pill-n, which no stylesheet defines, so the
+ * page showed browser-default grey buttons reading "ALL4". The real
+ * renderPills runs here against the real FILTERS; the stylesheet half checks
+ * .fpill is actually defined where momentum.html loads it from.
+ */
+{
+  const filtersSrc = MOM.slice(MOM.indexOf("const FILTERS = ["), MOM.indexOf("];", MOM.indexOf("const FILTERS = [")) + 2);
+  const out = {};
+  const run = (filter) => new Function("counts", "state", "esc", "$",
+    filtersSrc + "\nreturn (" + slice("renderPills") + ");")(
+    () => ({ all: 4, a: 4, b: 0, bull: 3, bear: 1 }), { filter },
+    (v) => String(v).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`),
+    (id) => ({ set innerHTML(v) { out[id] = v; } }))();
+  run("a");
+  const html = out["mo-pills"] || "";
+  const btns = html.match(/<button[^>]*>[\s\S]*?<\/button>/g) || [];
+  eq(btns.length, 5, "five filter pills");
+  ok(btns.every((b) => /^<button class="fpill( is-active)?" data-pill="[a-z]+" aria-pressed="(true|false)"/.test(b)),
+     "every pill is a .fpill with data-pill and aria-pressed");
+  ok(btns.every((b) => /<\/b><\/button>$/.test(b) && /\s<b>\d+<\/b>/.test(b)), "the count sits in <b>, spaced from its label");
+  eq(btns.filter((b) => /is-active/.test(b)).length, 1, "exactly one pill is active");
+  ok(/class="fpill is-active" data-pill="a" aria-pressed="true"[^>]*>RULE A <b>4<\/b>/.test(html),
+     "the active pill is the current filter, pressed");
+  ok(!/deck-pill/.test(html), "no .deck-pill markup is left");
+  ok(/closest\("\.fpill"\)/.test(MOM) && !/closest\("\.deck-pill"\)/.test(MOM), "the click handler reads .fpill");
+  ok(/href="css\/styles\.css\?v=\d+"/.test(HTML), "momentum.html loads styles.css");
+  ok(/\.fpill\s*\{[^}]*border-radius/.test(CSS) && /\.fpill\.is-active\s*\{/.test(CSS),
+     "styles.css defines .fpill and its active state");
+}
+
 console.log(`momentum: ${checks} checks passed`);
