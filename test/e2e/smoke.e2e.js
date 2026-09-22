@@ -8,6 +8,8 @@
  *   5. recommendations page (market cards render)
  *   6. 390px mobile: zero horizontal overflow, toolbar + price visible
  *   7. momentum chart: back link, header caption, no PhaseMap without ?pm=1
+ *   8. momentum page: heading renders; rows + ?s=&src=momentum links whenever
+ *      the committed asx.json has results (no symbol is hard-coded)
  * Any uncaught page error on any page fails the run.
  *
  * CI: test.yml installs playwright + chromium and runs this file.
@@ -15,6 +17,7 @@
  * download is unavailable.
  */
 const { spawn } = require("child_process");
+const fs = require("fs");
 const net = require("net");
 const path = require("path");
 
@@ -230,6 +233,36 @@ const check = (ok, label) => {
       // assertable without a feed is that the failure keeps its context.
       check(!/Dashboard/.test(r.back), "momentum chart: a data failure does not strand the reader on Dashboard");
       check(!r.pm, "momentum chart: no PhaseMap strip without ?pm=1");
+      await pg.context().close();
+    }
+
+    // ── 8. MOMENTUM page (nap audit 7d) ─────────────────────────────────────
+    // Served from the COMMITTED public/data/momentum/asx.json, which the
+    // scheduled scan rewrites, so the row checks follow whatever that file
+    // holds today and name no symbol. An empty day still has to render the
+    // heading.
+    {
+      let n = 0;
+      try {
+        n = (JSON.parse(fs.readFileSync(path.join(ROOT, "data", "momentum", "asx.json"), "utf8")).results || []).length;
+      } catch (_) { /* a missing file leaves n = 0: heading-only check */ }
+      const pg = await newPage({ width: 390, height: 844 });
+      await pg.goto(`${BASE}/momentum.html?m=asx`, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await pg.waitForFunction(() => !/loading/i.test((document.getElementById("mo-title") || {}).textContent || "loading"),
+        null, { timeout: 15000 }).catch(() => {});
+      const r = await pg.evaluate(() => ({
+        title: ((document.getElementById("mo-title") || {}).textContent || "").trim(),
+        rows: document.querySelectorAll(".mo-row").length,
+        hrefs: [...document.querySelectorAll("a.mo-sym")].map((a) => a.getAttribute("href")),
+      }));
+      check(/^MOMENTUM · \d+ names?$/.test(r.title), `momentum page: heading renders ("${r.title}")`);
+      if (n > 0) {
+        check(r.rows === n, `momentum page: ${r.rows} rows for the ${n} results in asx.json`);
+        check(r.hrefs.length === r.rows && r.hrefs.every((h) => /[?&]s=/.test(h) && /src=momentum/.test(h) && !/[?&]symbol=/.test(h)),
+          "momentum page: every row links to chart.html?s=…&src=momentum");
+      } else {
+        check(true, "momentum page: asx.json has no results today, row checks skipped");
+      }
       await pg.context().close();
     }
 
