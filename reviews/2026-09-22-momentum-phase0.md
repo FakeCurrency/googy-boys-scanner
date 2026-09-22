@@ -490,6 +490,21 @@ nine times (CLAUDE.md's screenshot-gate section, v1→v10). On the nine `deck-to
 `flex: 1 1 0` with `overflow-x: auto`, so the 7th pill may simply scroll out of view at 1280 rather
 than reflow anything. That is a measurement to take in Phase 6, not a prediction to make now.
 
+> **MEASURED IN PHASE 6 — worst 0.59%, so NO key bump.** The pre-nav tree (the Phase 5 commit) and
+> the post-nav tree were served side by side, both pinned to the e2e `/data/` fixtures and both with
+> the page clock frozen to the same instant, so the only variable was the nav edit:
+>
+> | view | drift |
+> |---|---|
+> | `index-desktop` 1280×800 | **0.01%** |
+> | `index-390` | 0.00% |
+> | `journal-desktop` 1280×900 | **0.59%** |
+> | `journal-390` | 0.00% |
+>
+> Against a 2% budget. The 390 views are 0.00% because `.nav-pills` is `display:none` ≤680px, and
+> `index-desktop` is 0.01% because its strip really does scroll rather than reflow — the possibility
+> flagged above, confirmed rather than assumed. `screenshot-baselines-v22` stands.
+
 *Unverified and worth a look in Phase 6:* `about.html`, `recommendations.html` and `system.html` use
 a bare `<header class="topbar">` with no `deck-top`, so their `.nav-pills` is `inline-flex` with no
 overflow scroll. A 7th pill could push those three headers past the viewport somewhere around

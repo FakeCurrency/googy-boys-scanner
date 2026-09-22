@@ -203,6 +203,17 @@ jobs:
       # existed as healthy.
       - name: Status control (read-only promise / uptime clamp / states matrix, 48)
         run: node test/status.test.js
+      # MOMENTUM (2026-09-22). The lens is report-only, so what is gated here is
+      # the nav contract and the page's honest failures rather than any signal:
+      # TABS stays at exactly 5 (the bottom bar is a 6-column grid = 5 tabs +
+      # MORE, so a 6th overflows every phone) while the new destination is still
+      # reachable on mobile through the sheet; the purple is momentum-scoped so
+      # no other pill can move and --purple itself is never redefined; a 404
+      # and a dead connection produce DIFFERENT sentences; and every Rule A row
+      # carries both the bar the scanner could know on and the bar TradingView
+      # draws the label on, which are five apart and mean different things.
+      - name: Momentum lens (nav contract, purple scoping, row evidence, 82)
+        run: node test/momentum.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
