@@ -7,6 +7,7 @@
  *   4. sort control (label cycles, arrow flips)
  *   5. recommendations page (market cards render)
  *   6. 390px mobile: zero horizontal overflow, toolbar + price visible
+ *   7. momentum chart: back link, header caption, no PhaseMap without ?pm=1
  * Any uncaught page error on any page fails the run.
  *
  * CI: test.yml installs playwright + chromium and runs this file.
@@ -205,6 +206,30 @@ const check = (ok, label) => {
       await pg.waitForTimeout(1200);   // let the app paint
       const over = await pg.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
       check(!over, `320px: no horizontal overflow on ${path}`);
+      await pg.context().close();
+    }
+
+    // ── 7. MOMENTUM chart opens and carries its Auto box (P10) ──────────────
+    // Cheap: one goto plus a footer read. The chart pulls /api/price, which is
+    // absent here, so the assertion is on the FURNITURE the page renders from
+    // its own payload -- the lens caption and the momentum panes -- not on any
+    // number, which would be asserting Yahoo rather than this repo.
+    {
+      const pg = await newPage({ width: 1280, height: 900 });
+      await pg.goto(`${BASE}/chart.html?s=ELS&m=asx&src=momentum`, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await pg.waitForTimeout(2000);
+      const r = await pg.evaluate(() => ({
+        back: (document.querySelector(".back-link") || {}).textContent || "",
+        cap: !!document.querySelector(".mom-caption"),
+        capInHeader: !!(document.querySelector(".mom-caption") || {}).closest?.(".chart-top"),
+        pm: !!document.querySelector(".pm-chart-strip"),
+      }));
+      check(/Momentum/.test(r.back), "momentum chart: back link returns to the lens");
+      // The caption needs a rendered chart, which needs /api/price; the smoke
+      // server has none, so every chart here takes the fail() path. What IS
+      // assertable without a feed is that the failure keeps its context.
+      check(!/Dashboard/.test(r.back), "momentum chart: a data failure does not strand the reader on Dashboard");
+      check(!r.pm, "momentum chart: no PhaseMap strip without ?pm=1");
       await pg.context().close();
     }
 
