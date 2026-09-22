@@ -111,12 +111,12 @@
   }
   const isVivek = mode === "vivek";
   const isMomentum = mode === "momentum";
-  // Stated in one place because it is a CLAIM ABOUT THE EVIDENCE, not a label:
-  // the spec calls the divergence screen an attention filter, not an entry
-  // system, so the chart must never read as a plan. See momentumFallback.
-  // The plan drawn on a Momentum chart comes from the Pine template, NOT from
-  // vivek.py. Saying so is the whole job of this line: five lines labelled
-  // ENTRY/SL/TP look exactly like a 5.0 ladder and are a different system.
+  // Stated in one place because it is a CLAIM ABOUT THE EVIDENCE, not a label.
+  // The box a Momentum chart draws is the Pine template's Auto plan
+  // (Final_Top_Script.pine, #22), recomputed on each timeframe's own bars --
+  // NOT a vivek.py plan. Saying so is the whole job of this line: five lines
+  // labelled ENTRY/SL/TP look exactly like a 5.0 ladder and are a different
+  // system. See momentumFallback.
   const MOM_CAPTION = "Auto plan from the Pine template \u2014 not a 5.0 plan.";
   // Where the timeframe bar lives on a Momentum chart. The #72 phone rule in
   // chart.css moves #tf-toggle below .chart-main with `order` so it sits under
@@ -1376,16 +1376,15 @@
   // was SEEN and where it became KNOWABLE. PhaseMap zones still ride along when
   // the ticker has a record (render() draws them from pmRec regardless of mode).
   //
-  // IT DRAWS NO TRADE LEVELS, AND THAT IS A FINDING RATHER THAN AN OMISSION.
-  // The spec is explicit: "The scored cross and the divergence screen are
-  // *attention filters*, not entry systems" (VIVEK_5.0_SCANNER_SPEC.md 1.2).
-  // The two position boxes it does define anchor somewhere else -- the trend box
-  // to the most recent scored CROSS, the reversal box to an RSI EXTREME, and the
-  // latter is flagged in the spec itself as "Not part of the screen" and a
-  // "RECONSTRUCTION ... Not his rule". Neither is a stop/target for a
-  // divergence, and the published row carries no entry/stop/target field to
-  // draw one from. So the caption says what the chart is instead of inventing a
-  // 5.0-style TP1-3 ladder over a shortlist.
+  // THE LEVELS ARE THE PINE TEMPLATE'S AUTO PLAN, NOT A 5.0 LADDER (#22).
+  // The spec calls the scored cross and the divergence screen *attention
+  // filters*, not entry systems (VIVEK_5.0_SCANNER_SPEC.md 1.2), and the
+  // published row still carries no entry/stop/target field. So the chart
+  // draws the box the owner's TradingView template draws: momentumPlan, run on
+  // each timeframe's own bars -- the last scored 20/50 cross within 60 bars,
+  // a 5-bar swing stop padded by 0.25 ATR and capped at 15%, TP1-3 at 1/2/3R
+  // (ELS Daily 5.88 / 6.76 / 5.00 / 4.12 / 3.23, test-pinned). The caption
+  // says whose plan it is on every chart.
   function momentumRow(SYM) {
     const want = String(SYM || "").toUpperCase();
     return fetch(`data/momentum/${market}.json`, { cache: "no-cache" })
