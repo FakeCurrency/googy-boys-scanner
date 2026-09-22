@@ -583,3 +583,14 @@
   margin-top: 2px;
 }
 @media (max-width: 560px) { .mom-pane { min-height: 74px; } }
+
+/* SHIFT 3: how much history this pane really holds. The first paint crops to
+   the live move, so the canvas alone cannot tell a reader whether the rest
+   exists or was never fetched. Quieter than the caption — it is a fact, not a
+   claim. */
+.mom-bars {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  background: rgba(140,158,190,.10); border: 1px solid rgba(140,158,190,.28);
+  color: #9fb0c9; font: 600 11px/1 var(--sans); padding: 4px 9px; border-radius: 999px;
+}
+.mom-bars[hidden] { display: none; }

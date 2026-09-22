@@ -68,7 +68,23 @@ function binanceInterval(interval) {
  * the deck first-paint. Binance klines are hard-capped at 1000 by the exchange
  * (fetchBinanceCandles clamps) — VIVEK crypto charts use the Yahoo path. */
 export function targetBars(range, interval) {
-  if (["1m", "5m", "15m", "30m", "60m", "1h"].includes(interval)) return 750;
+  // HOURLY IS RANGE-AWARE (2026-09-22). This branch returned a flat 750 for
+  // every intraday interval regardless of the range asked for, so a `2y&1h`
+  // request came back as ~750 hourly bars -- about 125 ASX sessions, five
+  // months. Both the 5.0 and the Momentum charts bucket that into their 4H
+  // pane, so BOTH have been drawing a 4H chart with roughly a fifth of the
+  // history the caller asked for; the momentum chart just made it visible by
+  // putting a 200 EMA on it.
+  //
+  // Yahoo serves ~730 days of 1h. Two years is ~504 ASX sessions x 6 hours =
+  // ~3,024 bars (NASDAQ ~3,276 at 6.5), so 3,300 covers the deepest honest
+  // request without inviting a trim. The finer intraday intervals stay at 750:
+  // they are the scalp path, nothing asks them for two years, and deep 1m
+  // history is a different cost question.
+  if (interval === "1h" || interval === "60m") {
+    return ({ "1d": 10, "5d": 40, "1mo": 160, "3mo": 450, "6mo": 900 })[range] || 3300;
+  }
+  if (["1m", "5m", "15m", "30m"].includes(interval)) return 750;
   return ({
     "1d": 2, "5d": 5, "1mo": 22, "3mo": 66, "6mo": 130,
     "1y": 260, "2y": 520, "5y": 1900,

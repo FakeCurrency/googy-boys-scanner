@@ -87,6 +87,20 @@ test("every pre-existing range stays SHALLOW, so no current caller changes path"
   }
 });
 
+test("hourly is range-aware — a 2y/1h request is not trimmed to five months", () => {
+  // The flat 750 was why every 4H pane, on BOTH charts, drew about a fifth of
+  // the history it asked for: 750 hourly bars is ~125 ASX sessions, and
+  // bucketed to 4H that is ~187 candles. Reported by the owner on LRV 4H.
+  const a = load();
+  assert.ok(a.targetBars("2y", "1h") >= 3000,
+    "2y of hourly must allow ~504 sessions x 6 hours");
+  assert.equal(a.targetBars("1mo", "1h"), 160, "a short hourly range stays short");
+  // The finer intraday intervals are the scalp path and are unchanged.
+  for (const iv of ["1m", "5m", "15m", "30m"]) {
+    assert.equal(a.targetBars("2y", iv), 750, `${iv} must keep the old cap`);
+  }
+});
+
 test("the bar cap allows a whole deep span instead of the old flat 2600", () => {
   const a = load();
   assert.ok(a.targetBars("25y", "1d") >= 6300, "25y would be trimmed back to ~10y");
