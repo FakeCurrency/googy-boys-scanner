@@ -224,11 +224,6 @@
   // Intraday live timeframes for crypto (Binance kline intervals).
   const BINANCE_IV    = { "15M": "15m", "30M": "30m", "1H": "1h" };
   const LIVE_TF_ORDER = ["15M", "30M", "1H"];
-  // Default sim sizing. Crypto intraday/scalps are sized at $500 margin × 10×
-  // leverage (= $5,000 exposure); stocks stay at a flat $1,000 cash position.
-  const SIM_CRYPTO_MARGIN   = 500;
-  const SIM_CRYPTO_LEVERAGE = 10;
-  const SIM_STOCK_SIZE      = 1000;
 
   // ── Trading costs — ONE model, the published one (TOP100 #28) ──────────────
   //
