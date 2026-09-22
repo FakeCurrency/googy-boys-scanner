@@ -1323,6 +1323,14 @@
     const liveDaily = () => (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "5y", "1d", true)
       : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true));
+    // 4H is where the owner actually trades this template, so it is a first
+    // class timeframe here rather than a bonus: hourly history bucketed to 4H
+    // exactly as the 5.0 chart does it (epoch-anchored, same bucketBars), then
+    // run through the SAME builder. Started in parallel with the daily pull and
+    // allowed to fail — a market with no hourly feed simply has no 4H tab.
+    const intradayP = (isCryptoMarket(assetType)
+      ? vivekCryptoBars(SYM, "2y", "1h")
+      : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
     liveDaily()
       .then((daily) => {
         if (!daily || daily.length < 6) throw new Error("thin");
@@ -1362,8 +1370,18 @@
         const wk = resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = build(wk);
         if (d.price == null) d.price = daily[daily.length - 1].close;
-        renderDataHonesty();
-        render(d);
+        return intradayP.then((intraday) => {
+          if (intraday && intraday.length >= 24) {
+            const h4 = bucketBars(intraday, 4 * 3600);
+            // build(), not a Daily borrow: the 4H pane gets its own cross, its
+            // own swing stop and therefore its own entry/SL. The owner's 4H
+            // screenshot reads Entry 6.46 / SL 7.39 against the Daily's
+            // 5.88 / 6.76, which is precisely why it must not be glued on.
+            if (h4.length >= 6) d.timeframes["4H"] = build(h4);
+          }
+          renderDataHonesty();
+          render(d);
+        });
       })
       .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
   }

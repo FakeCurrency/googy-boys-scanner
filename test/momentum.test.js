@@ -728,8 +728,25 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
     ok(body.length > 100 && body.length < 1200, "the builder slice is bounded");
     for (const f of ["momentumPanes(bars", "momentumPlan(bars", "momentumCrosses(bars", "momentumDivs(bars"])
       ok(body.includes(f), `the builder recomputes ${f.split("(")[0]} on ITS OWN bars`);
-    ok(!/\b(daily|d3|wk)\b/.test(body),
+    ok(!/\b(daily|d3|wk|h4)\b/.test(body),
        "the builder must not reach for another timeframe's series");
+  }
+
+  // 4H — where the owner actually trades this template. Built from hourly
+  // history bucketed to 4H, exactly as the 5.0 chart does it, and put through
+  // the SAME builder: his 4H reads Entry 6.46 / SL 7.39 against the Daily's
+  // 5.88 / 6.76, so a borrowed Daily box would be wrong by more than a dollar.
+  {
+    const fb = CHART.slice(CHART.indexOf("function momentumFallback("),
+                           CHART.indexOf("// ── Held-plan chart"));
+    ok(/bucketBars\(intraday, 4 \* 3600\)/.test(fb), "4H is bucketed from hourly bars");
+    ok(/d\.timeframes\["4H"\] = build\(h4\)/.test(fb),
+       "and goes through the same builder — never a Daily borrow");
+    ok(!/makeTF\(h4|approx/.test(fb),
+       "momentum has no approx/reference timeframe: every pane is computed");
+    ok(/\.catch\(\(\) => \[\]\)/.test(fb),
+       "a market with no hourly feed loses the tab rather than the chart");
+    ok(/intraday\.length >= 24/.test(fb), "and a thin intraday feed is refused");
   }
 
   // 3 — scored-cross labels, signed, on price.
