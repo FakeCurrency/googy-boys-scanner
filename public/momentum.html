@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>MOMENTUM — Vivek 5.0</title>
+  <meta name="theme-color" content="#10141b" />
+  <script src="js/telemetry.js?v=1"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vivek 5.0" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="favicon-32.png" />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-600.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-800.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
+  <link rel="stylesheet" href="css/fonts.css?v=2" />
+  <link rel="stylesheet" href="css/styles.css?v=115" />
+  <link rel="stylesheet" href="css/status.css?v=1" />
+  <link rel="stylesheet" href="css/momentum.css?v=1" />
+  <script src="js/nav.js?v=24"></script>
+  <script src="js/status.js?v=4"></script>
+  <script src="js/sw-register.js?v=4" defer></script>
+</head>
+<body>
+  <!-- Same single-row deck header as SCAN / SPECS / PHASEMAP. No SCAN button:
+       /api/scan does not know this lens's markets, so one here would be a
+       control that looks like it does something and does not. -->
+  <header class="topbar deck-top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
+      </span>
+      <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">MOMENTUM</span></div>
+    </div>
+    <div class="market-switch" id="mo-market" role="tablist" aria-label="Market">
+      <button class="market-btn is-active" data-market="asx" role="tab" aria-selected="true">ASX</button>
+      <button class="market-btn" data-market="nasdaq" role="tab" aria-selected="false">NASDAQ</button>
+      <button class="market-btn" data-market="crypto" role="tab" aria-selected="false">CRYPTO</button>
+    </div>
+    <div class="nav-pills" id="site-nav"></div>
+    <div class="deck-top-right">
+      <span class="mo-stamp" id="mo-stamp"></span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="deck" id="deck">
+      <div class="deck-status">
+        <div class="deck-title" id="mo-title">MOMENTUM · loading…</div>
+        <div class="deck-sub">
+          <span class="deck-dot" id="mo-dot" aria-hidden="true"></span>
+          <span id="mo-sub">RSI divergence and scored 20/50 crosses · report only</span>
+        </div>
+      </div>
+      <div class="deck-pills" id="mo-pills" role="group" aria-label="Momentum filters"></div>
+    </section>
+
+    <section class="rows" id="mo-list" aria-live="polite"></section>
+
+    <p class="pm-disclaimer">MOMENTUM is a separate lens and a shortlist for eyeballing, not a grade and not a trade. It is NOT the VIVEK 5.0 grade, it is NOT HIGH CONVICTION, and the paper bot does not read it — nothing here changes which trades get taken. Rule A is an RSI divergence off a strict pivot: it is only knowable five bars after the pivot it describes, so every row shows both the bar the scanner could know on and the bar TradingView draws the label on. Rule B is a 20/50 cross scored out of 3, and the score is not a filter — over 1.95M simulated symbol-days a bare score of 1 is only 2% of crosses. Where the two rules disagree on direction the row says CONFLICT rather than picking a side. Analysis only — not financial advice.</p>
+  </main>
+  <script src="js/phasemap-shared.js?v=17"></script>
+  <script src="js/momentum.js?v=1"></script>
+</body>
+</html>
