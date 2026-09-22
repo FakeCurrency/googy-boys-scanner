@@ -50,6 +50,11 @@ ok(/\.site-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(6,\s*1fr\)/.test(CSS),
    "styles.css no longer declares the 6-column tab grid this 5 depends on");
 
 ok(NAVL.PRIMARY.some((x) => x.key === "momentum"), "momentum is a desktop pill");
+{
+  // Position, not just presence: the purple pill sits straight after SPECS.
+  const keys = NAVL.PRIMARY.map((x) => x.key);
+  eq(keys.indexOf("momentum"), keys.indexOf("specs") + 1, `momentum follows specs in PRIMARY (${keys.join(" · ")})`);
+}
 ok(NAVL.SHEET.some((x) => x.key === "momentum"), "momentum is in the mobile MORE sheet");
 ok(!NAVL.TABS.some((x) => x.key === "momentum"), "momentum is NOT a bottom tab");
 
