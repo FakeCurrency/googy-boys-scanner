@@ -659,11 +659,15 @@
     };
     const ma = (span) => (String(P.ma_type).toUpperCase() === "SMA" ? sma(span) : emaPine(cl, span));
     const t = String(P.ma_type).toUpperCase() === "SMA" ? "SMA" : "EMA";
+    // TV palette, NOT the 5.0 one. Final_Top_Script plots fast/mid/slow as
+    // blue / orange / green and the owner's screenshot reads that way at a
+    // glance: a blue fast line over a green 200. The 5.0 chart's
+    // white/yellow/purple/amber belongs to a different system and using it
+    // here is most of why this page still looked like 5.0.
     return [
-      { span: +P.fast_len, name: `${t} ${P.fast_len}`, color: "#ffd23f", vals: ma(+P.fast_len) },
-      { span: +P.mid_len,  name: `${t} ${P.mid_len}`,  color: "#4d9fff", vals: ma(+P.mid_len) },
-      // amber, the same weight 5.0 gives its 200 — this IS the trend filter.
-      { span: +P.slow_len, name: `${t} ${P.slow_len}`, color: "#ffb020", vals: ma(+P.slow_len) },
+      { span: +P.fast_len, name: `${t} ${P.fast_len}`, color: "#2196f3", vals: ma(+P.fast_len) },
+      { span: +P.mid_len,  name: `${t} ${P.mid_len}`,  color: "#ff9800", vals: ma(+P.mid_len) },
+      { span: +P.slow_len, name: `${t} ${P.slow_len}`, color: "#26a69a", vals: ma(+P.slow_len) },
     ];
   }
 
@@ -873,6 +877,19 @@
         ? { time: b.time, value: m.hist[i],
             color: m.hist[i] >= 0 ? "rgba(47,208,127,0.7)" : "rgba(255,91,91,0.7)" } : null)).filter(Boolean),
       rsi: at(rsi),
+      // RSI+ draws the RSI and its MA together with a fill between them; the
+      // MA is an SMA(14) of the RSI by default (maType "SMA").
+      rsiSignal: at((() => {
+        const out = new Array(rsi.length).fill(NaN);
+        let sum = 0, n = 0;
+        for (let i = 0; i < rsi.length; i++) {
+          if (!isFinite(rsi[i])) { sum = 0; n = 0; continue; }
+          sum += rsi[i]; n++;
+          if (n > 14) { sum -= rsi[i - 14]; n = 14; }
+          if (n === 14) out[i] = sum / 14;
+        }
+        return out;
+      })()),
     };
   }
 
@@ -1379,7 +1396,7 @@
             // 5.88 / 6.76, which is precisely why it must not be glued on.
             if (h4.length >= 6) d.timeframes["4H"] = build(h4);
           }
-          renderDataHonesty();
+          renderDataHonesty(true);   // no THIN TAPE chip on this mode
           render(d);
         });
       })
@@ -1673,7 +1690,17 @@
   // reading. Severity order: degraded interval beats thin tape beats raw
   // basis — one message, the worst one, never a chip pile-up.
   const THIN_TAPE_MIN_SHARE = 0.10;   // >=10% flat sessions ⇒ the tape is unreliable
-  function renderDataHonesty() {
+  // `suppress` is a PARAMETER, not a read of the module-scope `isMomentum`,
+  // and that is deliberate: staleview.test.js slices this function out and
+  // executes it in its own sandbox, where a free variable is a ReferenceError.
+  // A shipped function that only runs inside this file's closure is a function
+  // its own test cannot drive.
+  function renderDataHonesty(suppress) {
+    // Off on a momentum chart. The chip is a 5.0 surface whose whole job is to
+    // caveat the tape a 5.0 PLAN was measured on; this mode already tells the
+    // reader what it is in one caption, and a second amber warning beside it
+    // is the "5.0 with things glued on" look the owner objected to.
+    if (suppress) { const w = $("#ct-datawarn"); if (w) w.hidden = true; return; }
     const el = $("#ct-datawarn");
     if (!el || !DATA_META) return;
     const m = DATA_META;
@@ -1826,24 +1853,29 @@
     const el = $("#cf-metrics");
     if (!el) return;
     if (!pl) {
-      el.innerHTML = metric("Auto plan", "none", "amber") +
-        metric("Why", `no scored cross in the last ${TV_PLAN.autoMaxAge} bars`, "");
+      el.innerHTML = metric("Plan", "—", "amber") +
+        metric("", `No Auto box on this TF — no scored cross in ${TV_PLAN.autoMaxAge} bars.`, "") +
+        metric("TF", tfKey, "");
       const an = $("#cf-analysis");
       if (an) an.textContent = d.analysis || "";
       return;
     }
     const isLong = pl.dir === 1;
+    // PLAN · SHORT|LONG · ENTRY · SL · TP1-3 · R:R · TF, in that order. No
+    // SCORE x/8 and no "TRAIL after entry" -- both are 5.0 fields this lens
+    // does not publish, and printing them blank is what made the strip read
+    // as a broken 5.0 footer rather than a different system's.
     el.innerHTML = [
-      metric("Auto", isLong ? "LONG" : "SHORT", isLong ? "green" : "red"),
+      metric("Plan", isLong ? "LONG" : "SHORT", isLong ? "green" : "red"),
       metric("Entry", fmt(pl.entry, cur)),
       metric("SL", fmt(pl.stop, cur), "red"),
       metric("TP1", fmt(pl.tp1, cur), "green"),
       metric("TP2", fmt(pl.tp2, cur), "green"),
       metric("TP3", fmt(pl.tp3, cur), "green"),
-      metric("R", fmt(pl.risk, cur), "amber"),
       metric("R:R", "3.00", "green"),
-      metric("Signal", `${pl.age}b ago · score ${pl.score}`, ""),
-      metric("Stop", pl.capped ? `swing, cut to ${TV_PLAN.maxStopPct}%` : "5-bar swing + ATR pad", ""),
+      metric("TF", tfKey, ""),
+      metric("Signal", `${pl.age}b ago · score ${pl.score}` +
+        (pl.capped ? ` · stop cut to ${TV_PLAN.maxStopPct}%` : ""), ""),
     ].join("");
     const an = $("#cf-analysis");
     if (an) an.textContent = d.analysis || "";
@@ -2148,7 +2180,9 @@
     // A held position gets its own badge below instead — "no saved scan chart"
     // would be misleading here, since the reason has nothing to do with a
     // missing scan.
-    if (d._fallback && !d._vivek && !d._pm && !d._heldPlan) {
+    // `_momentum` excluded: EVERY momentum chart is live-built, so the badge
+    // fires on all of them and distinguishes nothing.
+    if (d._fallback && !d._vivek && !d._pm && !d._heldPlan && !d._momentum) {
       const note = document.createElement("span");
       note.className = "ct-fallback-note";
       note.textContent = "live fallback";
@@ -2194,7 +2228,14 @@
       borderVisible: false, priceFormat: { type: "price", precision: prec, minMove: Math.pow(10, -prec) },
     });
     const vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" } });
-    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+    // TV keeps volume as a thin strip at the FOOT of the price pane. With the
+    // oscillators moved to their own charts the price pane owns its whole
+    // height again, so the strip can be slimmer than 5.0's.
+    chart.priceScale("vol").applyOptions({
+      scaleMargins: d._momentum ? { top: 0.90, bottom: 0 } : { top: 0.84, bottom: 0 } });
+    if (d._momentum) {
+      chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.06, bottom: 0.14 } });
+    }
 
     // TTM Squeeze momentum histogram (scalp 1H charts only) — its own pane band
     // below the price, with LazyBear-style colouring baked into the data.
@@ -2215,30 +2256,102 @@
     // priceScaleId + scaleMargins banding as the squeeze histogram above, so
     // the price is squeezed into the top and each pane owns a strip. Momentum
     // only -- a 5.0 chart adds no series and keeps its scale margins.
-    let macdHistS = null, macdLineS = null, macdSigS = null, rsiS = null;
+    let macdHistS = null, macdLineS = null, macdSigS = null, rsiS = null, rsiSigS = null;
+    let subCharts = [];
     if (d._momentum) {
-      chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.03, bottom: 0.46 } });
-      macdHistS = chart.addHistogramSeries({
-        priceScaleId: "macd", lastValueVisible: false, priceLineVisible: false });
-      macdLineS = chart.addLineSeries({
-        priceScaleId: "macd", color: "#4d9fff", lineWidth: 1,
-        lastValueVisible: false, priceLineVisible: false });
-      macdSigS = chart.addLineSeries({
-        priceScaleId: "macd", color: "#ffb020", lineWidth: 1,
-        lastValueVisible: false, priceLineVisible: false });
-      chart.priceScale("macd").applyOptions({ scaleMargins: { top: 0.56, bottom: 0.24 } });
-      rsiS = chart.addLineSeries({
-        priceScaleId: "rsi", color: "#a78bfa", lineWidth: 1,
-        lastValueVisible: false, priceLineVisible: false });
-      chart.priceScale("rsi").applyOptions({ scaleMargins: { top: 0.80, bottom: 0.02 } });
-      // 70 / 50 / 30 guides, drawn on the RSI series so they ride its scale.
-      [[70, "rgba(255,91,91,0.45)"], [50, "rgba(140,155,180,0.30)"], [30, "rgba(47,208,127,0.45)"]]
+      // ── THREE REAL PANES ──────────────────────────────────────────────────
+      // These used to be `scaleMargins` bands on the PRICE chart, which is why
+      // a $5 stock's axis ran to -8: an RSI band claiming 0-100 forces the
+      // shared price scale to span both. lightweight-charts 4.1.3 has no
+      // multi-pane API (`addPane` does not exist; that arrived in v5), so the
+      // only way to give each oscillator its own axis is its own chart.
+      //
+      // Two extra charts are stacked under the price one and their time scales
+      // are kept in lockstep. The guard flag is load-bearing: each chart's
+      // range handler sets the others, so without it the first pan recurses
+      // until the stack blows.
+      const host = el.parentNode;
+      const mkPane = (h) => {
+        const box = document.createElement("div");
+        box.className = "mom-pane";
+        box.style.height = h;
+        host.insertBefore(box, el.nextSibling);
+        return box;
+      };
+      // inserted after `el`, so build BOTTOM-UP to end with MACD above RSI
+      const rsiBox = mkPane("15vh");
+      const macdBox = mkPane("15vh");
+      const paneOpts = (box) => ({
+        width: box.clientWidth, height: box.clientHeight,
+        layout: { background: { color: "transparent" }, textColor: "#aab4c5",
+          fontFamily: '"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace' },
+        grid: { vertLines: { color: "rgba(110,125,150,0.08)" },
+                horzLines: { color: "rgba(110,125,150,0.08)" } },
+        rightPriceScale: { borderColor: "rgba(110,125,150,0.22)" },
+        timeScale: { borderColor: "rgba(110,125,150,0.22)", rightOffset: 6, visible: false },
+        crosshair: { mode: LC.CrosshairMode.Normal },
+        handleScroll: true, handleScale: true,
+      });
+      const macdChart = LC.createChart(macdBox, paneOpts(macdBox));
+      const rsiChart = LC.createChart(rsiBox, Object.assign(paneOpts(rsiBox), {
+        timeScale: { borderColor: "rgba(110,125,150,0.22)", rightOffset: 6, visible: true },
+      }));
+      subCharts = [macdChart, rsiChart];
+
+      macdHistS = macdChart.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false });
+      macdLineS = macdChart.addLineSeries({ color: "#2196f3", lineWidth: 2, priceLineVisible: false, lastValueVisible: false });
+      macdSigS = macdChart.addLineSeries({ color: "#ff9800", lineWidth: 2, priceLineVisible: false, lastValueVisible: false });
+      rsiS = rsiChart.addLineSeries({
+        color: "#dbe4ff", lineWidth: 2, priceLineVisible: false, lastValueVisible: false,
+        // RSI is a 0-100 oscillator, so pin the pane to it. Left to autoscale
+        // the axis ran 0-150 because the 70/30 guides widen the range it fits.
+        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
+      });
+      rsiSigS = rsiChart.addLineSeries({ color: "#f59e0b", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      // 70 / 50 / 30, on the RSI pane's own scale.
+      [[70, "rgba(59,130,246,0.55)"], [50, "rgba(140,155,180,0.30)"], [30, "rgba(239,68,68,0.55)"]]
         .forEach(([v, c]) => {
           try {
             rsiS.createPriceLine({ price: v, color: c, lineWidth: 1,
-              lineStyle: LC.LineStyle.Dotted, axisLabelVisible: false, title: String(v) });
+              lineStyle: LC.LineStyle.Dotted, axisLabelVisible: true, title: String(v) });
           } catch (_) { /* a refused guide must never cost the pane */ }
         });
+
+      // Time-sync, both ways, behind one re-entrancy guard.
+      let syncing = false;
+      const chain = [chart, macdChart, rsiChart];
+      chain.forEach((c) => {
+        c.timeScale().subscribeVisibleLogicalRangeChange((r) => {
+          if (syncing || !r) return;
+          syncing = true;
+          try { chain.forEach((o) => { if (o !== c) o.timeScale().setVisibleLogicalRange(r); }); }
+          finally { syncing = false; }
+        });
+      });
+      // Crosshair follows across the panes, as TV's does.
+      chain.forEach((c) => {
+        c.subscribeCrosshairMove((param) => {
+          if (syncing) return;
+          syncing = true;
+          try {
+            chain.forEach((o) => {
+              if (o === c) return;
+              if (param && param.time != null) { try { o.setCrosshairPosition(0, param.time, o.__anchor); } catch (_) {} }
+              else { try { o.clearCrosshairPosition(); } catch (_) {} }
+            });
+          } finally { syncing = false; }
+        });
+      });
+      macdChart.__anchor = macdLineS;
+      rsiChart.__anchor = rsiS;
+      // render() is RE-ENTRANT -- every timeframe click is another call -- so
+      // the two charts and their host divs MUST be unwired here or each click
+      // leaves an orphaned chart behind still subscribed to the shared time
+      // scale. This is exactly the leak the teardown registry exists for.
+      onRenderTeardown(() => {
+        subCharts.forEach((c) => { try { c.remove(); } catch (_) {} });
+        [macdBox, rsiBox].forEach((b) => { try { b.remove(); } catch (_) {} });
+      });
     }
 
     // ── Session / weekend shading (UX-20 #9) — created BEFORE the flash series
@@ -2263,6 +2376,10 @@
       scaleMargins: { top: 0, bottom: 0 }, visible: false,
     });
     function setFlashes(items) {
+      // 5.0's "review this bar" tint. A momentum chart already marks its
+      // crosses and its divergences; a third highlight on the same bars is
+      // noise, so this mode draws none.
+      if (d._momentum) { flashSeries.setData([]); return; }
       // items: [{time, color}] — dedupe on time (lightweight-charts requires
       // ascending unique times)
       const seen = new Map();
@@ -2560,16 +2677,14 @@
       const pl = (tfs[key] || {}).plan;
       if (!pl) { d._activeLevels = null; return; }
       const ep = pl.entry;
+      // TV tags the box with the NAME only and lets the axis label carry the
+      // price -- "SL | 6.762". The 5.0 habit of appending "+15.00% · 1.0R"
+      // turns five clean tags into five sentences, and the R ladder is already
+      // in the footer.
       const line = (price, color, label, weight) => {
         if (price == null || !isFinite(price)) return;
-        let t = label;
-        if (ep > 0 && price !== ep) {
-          const pct = (price - ep) / ep * 100;
-          t += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
-          if (pl.risk > 0) t += ` · ${(Math.abs(price - ep) / pl.risk).toFixed(1)}R`;
-        }
         momHandles.push(candle.createPriceLine({ price, color, lineWidth: weight || 1,
-          lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: t }));
+          lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: label }));
       };
       line(pl.stop, "#ef4444", "SL", 2);
       line(pl.entry, "#9ca3af", "ENTRY", 2);
@@ -2824,6 +2939,7 @@
         if (macdHistS) macdHistS.setData(pn ? pn.macdHist : []);
         if (macdLineS) macdLineS.setData(pn ? pn.macd : []);
         if (macdSigS) macdSigS.setData(pn ? pn.macdSignal : []);
+        if (rsiSigS) rsiSigS.setData(pn ? pn.rsiSignal : []);
         if (rsiS) {
           rsiS.setData(pn ? pn.rsi : []);
           // The Bear/Bull labels the owner's RSI+ pane carries, placed on the
