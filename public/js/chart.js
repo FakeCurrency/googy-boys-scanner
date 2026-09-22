@@ -2226,6 +2226,13 @@
     const candle = chart.addCandlestickSeries({
       upColor: "#2fd07f", downColor: "#ff5b5b", wickUpColor: "#2fd07f", wickDownColor: "#ff5b5b",
       borderVisible: false, priceFormat: { type: "price", precision: prec, minMove: Math.pow(10, -prec) },
+      // The ENTRY tag and the series' own last-value label land on the same
+      // strip of axis whenever price is near entry, and they overlap. The
+      // header already prints the live price in large type on this mode, so
+      // the duplicate is what gives way -- the five ladder tags are the thing
+      // a reader came for. 5.0 keeps both, unchanged.
+      lastValueVisible: !d._momentum,
+      priceLineVisible: !d._momentum,
     });
     const vol = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" } });
     // TV keeps volume as a thin strip at the FOOT of the price pane. With the
