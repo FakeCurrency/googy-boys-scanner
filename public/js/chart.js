@@ -79,8 +79,16 @@
   // honoured so SPECS cards get the generic EMA chart with the spec row's
   // entry/stop/target lines (fetchResultMeta reads <market>_spec.json off it).
   const urlMode = (params.get("mode") || "").toLowerCase();
+  const srcParam = (params.get("src") || "").toLowerCase();
+  // MOMENTUM (2026-09-22): the fourth lens screens a DIFFERENT stack (20/50/200
+  // Pine-seeded EMAs + an RSI divergence) from 5.0's 200-SMA reaction, so a row
+  // opened from that page must not be dressed in 5.0's 10/20/43 and its trade
+  // ladder. Entered by `src=momentum` (what momentum.js links) OR an explicit
+  // `mode=momentum`; a bare `?s=&m=` link is untouched and still reads VIVEK.
+  const wantsMomentum = urlMode === "momentum" || srcParam === "momentum";
   const mode = market === "scalp" ? (urlMode || "scalp")
-    : urlMode === "spec" ? "spec" : "vivek";
+    : urlMode === "spec" ? "spec"
+    : wantsMomentum ? "momentum" : "vivek";
   // Back-link context: return to wherever the user actually came from
   // (journal / phasemap / specs / alerts pass src=...) instead of
   // always dumping them on the dashboard. src already drives prev/next
@@ -94,11 +102,16 @@
       sectors:  ["sectors.html",  "← News"],
       momentum: ["momentum.html", "← Momentum"],
     };
-    const back = SRC_BACK[(params.get("src") || "").toLowerCase()];
+    const back = SRC_BACK[srcParam];
     const el = document.querySelector(".back-link");
     if (back && el) { el.href = back[0]; el.textContent = back[1]; }
   }
   const isVivek = mode === "vivek";
+  const isMomentum = mode === "momentum";
+  // Stated in one place because it is a CLAIM ABOUT THE EVIDENCE, not a label:
+  // the spec calls the divergence screen an attention filter, not an entry
+  // system, so the chart must never read as a plan. See momentumFallback.
+  const MOM_CAPTION = "Momentum is a shortlist, not a 5.0 plan.";
   // `data/charts/<market>[<mode>]/<SYM>.json` — the per-ticker pre-rendered
   // chart files — were REMOVED 2026-08-15. The directory has never existed in
   // this repo (git ls-files: zero entries), so every fetch of it was a
@@ -565,6 +578,97 @@
     return { candles, volume, lines };
   }
 
+  // ── MOMENTUM display stack (2026-09-22) ────────────────────────────────────
+  // The Momentum lens does NOT use 5.0's 10/20/43/200 SMAs. It screens a
+  // 20/50 cross (Rule B) under a 200 trend filter, and the 200 is the one the
+  // score reads — so drawing 5.0's stack on a Momentum row would show a reader
+  // averages no rule in that lens has ever consulted.
+  //
+  // THE SEEDING IS THE WHOLE POINT, and it is why this is not `emaArr` above.
+  // `emaArr` is pandas' ewm(adjust=false): it seeds on the FIRST value and
+  // emits from bar 0. Pine — and therefore scanner/momentum/ema.py — seeds with
+  // the SMA of the first `length` values and is `na` before that. The seed
+  // error decays as (1-alpha)^n, so it matters in inverse proportion to alpha:
+  // negligible on the 20, measurable on the 200, which is exactly the line the
+  // trend filter tests `close > slow` against. A chart drawn with the wrong
+  // seed can therefore show price on the opposite side of the 200 from the
+  // side the scanner scored. This is a direct port of `_recursive_ma(..., seed
+  // = "sma")`; keep the two in step.
+  function emaPine(vals, period) {
+    const n = vals.length;
+    const out = new Array(n).fill(NaN);
+    const len = Math.floor(period);
+    if (!(len >= 1) || !n) return out;
+    let f = -1;
+    for (let i = 0; i < n; i++) if (isFinite(vals[i])) { f = i; break; }
+    if (f < 0 || n - f < len) return out;            // Pine returns na, not a guess
+    const alpha = 2 / (len + 1);
+    // A NaN inside the seed window: walk forward to the first clean one, exactly
+    // as the Python does, rather than seeding off a mean that carries a hole.
+    let start = -1, seed = NaN;
+    for (let st = f; st <= n - len; st++) {
+      let sum = 0, bad = false;
+      for (let k = st; k < st + len; k++) { if (!isFinite(vals[k])) { bad = true; break; } sum += vals[k]; }
+      if (!bad) { start = st + len - 1; seed = sum / len; break; }
+    }
+    if (start < 0) return out;
+    let prev = seed;
+    out[start] = prev;
+    for (let i = start + 1; i < n; i++) {
+      const x = vals[i];
+      if (!isFinite(x)) { prev = NaN; out[i] = NaN; continue; }
+      if (!isFinite(prev)) { prev = x; out[i] = x; continue; }
+      prev = alpha * x + (1 - alpha) * prev;
+      out[i] = prev;
+    }
+    return out;
+  }
+
+  // The lengths and the average TYPE are read from the payload's own `params`,
+  // never hardcoded here: the scanner publishes the config it actually ran
+  // (ma_type/fast_len/mid_len/slow_len), so retuning the screen moves the chart
+  // with it instead of leaving a second copy to drift. Falls back to the
+  // shipped defaults when an old payload has no params block.
+  const MOM_MA_DEFAULTS = { ma_type: "EMA", fast_len: 20, mid_len: 50, slow_len: 200 };
+  function momentumMAs(cl, mp) {
+    const P = Object.assign({}, MOM_MA_DEFAULTS, mp || {});
+    const sma = (span) => {
+      const o = new Array(cl.length).fill(NaN);
+      let sum = 0;
+      for (let i = 0; i < cl.length; i++) {
+        sum += cl[i];
+        if (i >= span) sum -= cl[i - span];
+        if (i >= span - 1) o[i] = sum / span;
+      }
+      return o;
+    };
+    const ma = (span) => (String(P.ma_type).toUpperCase() === "SMA" ? sma(span) : emaPine(cl, span));
+    const t = String(P.ma_type).toUpperCase() === "SMA" ? "SMA" : "EMA";
+    return [
+      { span: +P.fast_len, name: `${t} ${P.fast_len}`, color: "#ffd23f", vals: ma(+P.fast_len) },
+      { span: +P.mid_len,  name: `${t} ${P.mid_len}`,  color: "#4d9fff", vals: ma(+P.mid_len) },
+      // amber, the same weight 5.0 gives its 200 — this IS the trend filter.
+      { span: +P.slow_len, name: `${t} ${P.slow_len}`, color: "#ffb020", vals: ma(+P.slow_len) },
+    ];
+  }
+
+  // Candles + volume + the Momentum stack. Same volume colouring as the VIVEK
+  // block so the two charts read identically where they mean the same thing.
+  function barsToMomentumTF(bars, mp) {
+    const base = barsToVivekTF(bars);
+    const cl = bars.map((b) => b.close);
+    base.lines = momentumMAs(cl, mp)
+      .filter((L) => isFinite(L.span) && L.span >= 1 && bars.length >= L.span)
+      .map((L) => {
+        const data = [];
+        for (let i = 0; i < bars.length; i++) {
+          if (isFinite(L.vals[i])) data.push({ time: bars[i].time, value: L.vals[i] });
+        }
+        return { name: L.name, color: L.color, data };
+      });
+    return base;
+  }
+
   // ── Session / weekend shading (UX-20 #9) ───────────────────────────────────
   // Per-bar background tints, drawn with the same full-height hidden-scale
   // histogram trick as the FLASH bands: intraday timeframes get alternating
@@ -885,6 +989,132 @@
           renderDataHonesty();
           render(d);
         });
+      })
+      .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
+  }
+
+  // ── MOMENTUM chart (2026-09-22) ────────────────────────────────────────────
+  // Candles + the lens's own 20/50/200 + the Rule A divergence marked where it
+  // was SEEN and where it became KNOWABLE. PhaseMap zones still ride along when
+  // the ticker has a record (render() draws them from pmRec regardless of mode).
+  //
+  // IT DRAWS NO TRADE LEVELS, AND THAT IS A FINDING RATHER THAN AN OMISSION.
+  // The spec is explicit: "The scored cross and the divergence screen are
+  // *attention filters*, not entry systems" (VIVEK_5.0_SCANNER_SPEC.md 1.2).
+  // The two position boxes it does define anchor somewhere else -- the trend box
+  // to the most recent scored CROSS, the reversal box to an RSI EXTREME, and the
+  // latter is flagged in the spec itself as "Not part of the screen" and a
+  // "RECONSTRUCTION ... Not his rule". Neither is a stop/target for a
+  // divergence, and the published row carries no entry/stop/target field to
+  // draw one from. So the caption says what the chart is instead of inventing a
+  // 5.0-style TP1-3 ladder over a shortlist.
+  function momentumRow(SYM) {
+    const want = String(SYM || "").toUpperCase();
+    return fetch(`data/momentum/${market}.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!j) return null;
+        const row = ((j.results) || []).find(
+          (r) => String(r.symbol || "").toUpperCase() === want);
+        // The params travel even when the symbol is not a hit, so the MA stack
+        // is still the one the scanner ran rather than the hardcoded fallback.
+        return { row: row || null, params: j.params || null, generated_at: j.generated_at || null };
+      })
+      .catch(() => null);
+  }
+
+  // Rule A on the DAILY pane. Two marks, deliberately unequal in weight:
+  //   * the PIVOT bar -- where the divergence is drawn, the older of the two.
+  //   * the CONFIRMATION bar -- where it could first be KNOWN, piv_right bars
+  //     later. Quieter, because it is the bookkeeping half.
+  // The gap between them is the lens's whole honesty claim (a divergence is
+  // only knowable after its right-hand pivot closes), so drawing one without
+  // the other would misstate when a reader could have acted.
+  function momentumMarkers(row, bars) {
+    if (!row || !row.rule_a || !bars || !bars.length) return [];
+    const bull = String(row.rule_a_direction || row.direction || "bull") === "bull";
+    const last = bars.length - 1;
+    const byAgo = (n) => (Number.isFinite(+n) && +n >= 0 && last - +n >= 0 ? bars[last - +n] : null);
+    // Prefer the explicit pivot DATE -- it survives a chart whose last bar is
+    // not the scan's last bar (a live feed one session ahead of the committed
+    // scan), where counting back N bars silently lands on the wrong candle.
+    const pivotDate = String(row.rule_a_pivot_bar || "").slice(0, 10);
+    const pivotBar = (pivotDate && barAtDate(bars, pivotDate)) ||
+                     byAgo(row.rule_a_pivot_bars_ago);
+    const confBar = byAgo(row.rule_a_bars_ago);
+    const out = [];
+    if (pivotBar) out.push({
+      time: pivotBar.time, position: bull ? "belowBar" : "aboveBar",
+      color: bull ? "#2fd07f" : "#ff5b5b",
+      shape: bull ? "arrowUp" : "arrowDown",
+      text: bull ? "BULL DIV" : "BEAR DIV",
+    });
+    // Skip the confirmation mark when it lands on the pivot itself (piv_right
+    // = 0 would do it): two markers on one bar read as two events.
+    if (confBar && (!pivotBar || confBar.time !== pivotBar.time)) out.push({
+      time: confBar.time, position: bull ? "belowBar" : "aboveBar",
+      color: "#8aa0c8", shape: "circle", text: "confirmed",
+    });
+    out.sort((a, b) => a.time - b.time);
+    return out;
+  }
+
+  function momentumFallback(SYM, mom, rec) {
+    const row = (mom && mom.row) || null;
+    const mp = (mom && mom.params) || null;
+    const assetType = market === "crypto" ? "crypto" : null;
+    const bull = String((row && (row.rule_a_direction || row.direction)) || "bull") === "bull";
+    const rulesTag = row && row.rules ? `Rule ${row.rules}` : "";
+    const chips = [];
+    if (row) {
+      if (rulesTag) chips.push(rulesTag);
+      if (row.rule_a) chips.push(bull ? "bull divergence" : "bear divergence");
+      if (row.rule_b && row.rule_b_score != null) chips.push(`cross ${row.rule_b_score}/3`);
+      if (row.trend) chips.push(`trend ${row.trend}`);
+      if (row.is_product) chips.push("PRODUCT");
+      if (row.history_warning) chips.push(row.history_warning);
+    }
+    const d = {
+      symbol: String(SYM).toUpperCase(),
+      name: (row && row.name) || SYM,
+      asset_type: assetType,
+      price: row && row.close != null ? row.close : null,
+      grade: "", score: 0, score_max: 0,
+      chips,
+      sector: (row && row.sector) || "",
+      currency_symbol: market === "asx" ? "A$" : "$",
+      tv_symbol: SYM,
+      dir: row && row.rule_a ? (bull ? "LONG" : "SHORT") : "",
+      analysis: row
+        ? `${MOM_CAPTION} ${bull ? "Bullish" : "Bearish"} RSI divergence` +
+          (row.rule_a_pivot_bars_ago != null
+            ? ` labelled ${row.rule_a_pivot_bars_ago} bars back, knowable ${row.rule_a_bars_ago} bars ago.`
+            : ".") +
+          ` The 20/50/200 drawn here are the averages the screen itself reads.`
+        : `${MOM_CAPTION} ${String(SYM).toUpperCase()} is not on the latest ` +
+          `${MARKET_LABEL[market] || market} momentum scan — showing the raw chart with the lens's own moving averages.`,
+      default_tf: "1D", level_lines: [], timeframes: {},
+      _fallback: true, _vivek: false, _momentum: true, _momRow: row, _momParams: mp,
+    };
+    const liveDaily = () => (isCryptoMarket(assetType)
+      ? vivekCryptoBars(SYM, "5y", "1d", true)
+      : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true));
+    liveDaily()
+      .then((daily) => {
+        if (!daily || daily.length < 6) throw new Error("thin");
+        // The Momentum stack on every timeframe the page offers, but the Rule A
+        // marks ONLY on 1D: the scan is a DAILY screen (`timeframe: "1d"`), so a
+        // pivot index means nothing on a weekly or 3-day candle and snapping it
+        // to one would invent a weekly divergence the lens never found.
+        d.timeframes["1D"] = barsToMomentumTF(daily, mp);
+        d.timeframes["1D"].markers = momentumMarkers(row, daily);
+        const d3 = bucketBars(daily, 3 * 86400);
+        if (d3.length >= 6) d.timeframes["3D"] = barsToMomentumTF(d3, mp);
+        const wk = resampleWeekly(daily);
+        if (wk.length >= 6) d.timeframes["1W"] = barsToMomentumTF(wk, mp);
+        if (d.price == null) d.price = daily[daily.length - 1].close;
+        renderDataHonesty();
+        render(d);
       })
       .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
   }
@@ -1892,7 +2122,13 @@
       // Sweep / displacement arrows — only where nothing else sets markers.
       if (!(tfs[key] || {}).levels && !(tfs[key] || {}).squeeze_dots &&
           typeof candle.setMarkers === "function") {
-        const mk = [];
+        // Seeded from the timeframe's own markers rather than []: a Momentum
+        // chart sets Rule A marks with NO levels, which is exactly the branch
+        // this block owns, and a bare [] would drop them the moment a ticker
+        // also had a PhaseMap record. Behaviour-preserving elsewhere -- every
+        // other path sets `markers` only alongside `levels`, which this block
+        // already excludes.
+        const mk = ((tfs[key] || {}).markers || []).slice();
         if (sweepT) mk.push({ time: sweepT, position: bull ? "belowBar" : "aboveBar",
           color: "#ffb224", shape: bull ? "arrowUp" : "arrowDown", text: "SWEEP" });
         if (dispT) mk.push({ time: dispT, position: bull ? "belowBar" : "aboveBar",
@@ -2148,6 +2384,12 @@
         }
         if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
       }
+      if (d._momentum && typeof candle.setMarkers === "function") {
+        // Rule A marks for THIS timeframe (only 1D carries any). Runs before
+        // applyPmZones, which re-composes them with the sweep/displacement
+        // arrows when the ticker also has a PhaseMap record.
+        candle.setMarkers(((tfs[key] || {}).markers || []).slice());
+      }
       applyPmZones(key);                     // PhaseMap bands ride every timeframe
       applyShade(key);                       // #9: session / weekend banding
       rsApply(key);                          // #8: re-map the RS overlay to this TF
@@ -2158,6 +2400,18 @@
       className: "tf-notice", hidden: true,
     }) : null;
     if (tfNotice) { el.style.position = "relative"; el.appendChild(tfNotice); }
+    // MOMENTUM caption — always on, never dismissible. A chart with markers and
+    // moving averages and no levels looks like a plan whose lines have not
+    // loaded yet; this says, on the canvas, that there are none to load.
+    // textContent, not innerHTML: it is a fixed string but the habit is the
+    // point (escaping.test.js pins the family).
+    if (d._momentum) {
+      const cap = document.createElement("div");
+      cap.className = "mom-caption";
+      cap.textContent = MOM_CAPTION;
+      el.style.position = "relative";
+      el.appendChild(cap);
+    }
 
     const toggle = $("#tf-toggle");
     // Live Binance feed only for genuine crypto (by asset_type) — commodities and
@@ -3596,6 +3850,15 @@
     //   1. live VIVEK plan  -> full ladder chart (+ zones overlay if any)
     //   2. PhaseMap setup   -> zones-as-ladder chart
     //   3. neither          -> plain candles + SMAs, always renders
+    // MOMENTUM: its own payload, its own stack, no 5.0 ladder. Fetched
+    // alongside the PhaseMap record so zones still ride along (requirement 1).
+    if (isMomentum) {
+      Promise.all([momentumRow(baseSymbol), fetchPhaseMapRec()]).then(([mom, rec]) => {
+        pmRec = rec;
+        momentumFallback(baseSymbol, mom, rec);
+      });
+      return;
+    }
     if (isVivek) {
       Promise.all([fetchResultMeta(), fetchPhaseMapRec()]).then(([meta, rec]) => {
         pmRec = rec;

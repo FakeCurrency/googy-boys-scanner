@@ -547,3 +547,20 @@
 /* Fix-10 #9: REPLAY/VS live in the sheet's ANALYZE row on phones */
 #ct-sheet .cts-actions .tf-btn { padding: 11px 16px; font-size: 13px; border-radius: 10px; background: rgba(120,120,128,.14); }
 #ct-sheet .cts-actions .tf-btn.is-active { background: var(--blue); color: #fff; }
+
+/* ── MOMENTUM caption (2026-09-22) ──────────────────────────────────────────
+   Pinned to the BOTTOM of the canvas, unlike .tf-notice at the top, because it
+   is standing context rather than a per-timeframe warning and must not compete
+   with one when both are on screen. Purple to match the lens's nav pill.
+   The Momentum chart draws no SL/TP by design -- the spec calls the divergence
+   screen an attention filter, not an entry system -- and a chart with markers
+   and moving averages but no levels reads as a plan still loading. This says
+   otherwise, permanently and without a dismiss control. */
+.mom-caption {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 9; max-width: calc(100% - 28px); text-align: center;
+  background: rgba(167,139,250,.16); border: 1px solid #a78bfa; color: #d8ccff;
+  font: 600 12px/1.35 var(--sans); padding: 7px 13px; border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4); backdrop-filter: blur(7px); pointer-events: none;
+}
+@media (max-width: 560px) { .mom-caption { font-size: 11px; padding: 6px 10px; bottom: 8px; } }
