@@ -988,4 +988,69 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
      "exactly one caption element is ever created");
 }
 
+/* ── SHIFT 2: the list card ─────────────────────────────────────────────────
+ * The owner's complaint is density, not correctness: four skinny rows beside a
+ * dense 5.0 deck. The card borrows the deck's STRUCTURE and none of its
+ * VERDICTS -- no grade, no score/max, no paper-book slot.
+ */
+{
+  // The spark slot is held open even with nothing to draw, so the card stands
+  // as tall as a deck row and the absence reads as an absence.
+  ok(/mo-spark/.test(MOM), "the card reserves a spark slot");
+  ok(/no spark/.test(MOM), "and says so when there is no series");
+  ok(/Array\.isArray\(r\.spark\)/.test(MOM),
+     "a spark is drawn only from a series the SCANNER published");
+  {
+    const css = fs.readFileSync(path.join(PUB, "css", "momentum.css"), "utf8");
+    const rule = /\.mo-spark\s*\{([^}]*)\}/.exec(css);
+    ok(rule, "momentum.css sizes the slot");
+    ok(/width:\s*64px/.test(rule[1]), "at the deck's 64px spark width");
+  }
+
+  // 5e — NO OTHER LENS'S PAYLOAD. Reading <market>_vivek.json here would make a
+  // Momentum card depend on a scan it does not own, and a grade it must not show.
+  ok(!/_vivek|vivek_detail|bot_rules|conviction/.test(MOM),
+     "momentum.js reads no 5.0 / bot payload for any purpose");
+  {
+    const fetches = (MOM.match(/fetch\((["'`][^"'`]+)/g) || []).join(" ");
+    ok(!/vivek|spec|phasemap/.test(fetches),
+       `the page fetches only its own data, saw ${fetches}`);
+  }
+
+  // 5d — and none of the deck's vocabulary.
+  const htmlRaw = fs.readFileSync(path.join(PUB, "momentum.html"), "utf8")
+    .replace(/<!--[\s\S]*?-->/g, "");
+  // The DISCLAIMER is stripped before this check and asserted separately. It
+  // says "it is NOT HIGH CONVICTION" and "the paper bot does not read it" --
+  // i.e. it uses the deck's vocabulary to DENY the deck's claims, which is the
+  // opposite of the thing being forbidden. A blunt substring ban made the
+  // honest sentence the violation. (Fifth prose collision in this file; the
+  // standing rule is to assert against what the page CLAIMS, not what it
+  // mentions.)
+  ok(/is NOT HIGH CONVICTION/.test(htmlRaw),
+     "the disclaimer still denies the deck's claims outright");
+  ok(/paper bot does not read it/.test(htmlRaw), "and denies the bot reads it");
+  const disc = /<p class="pm-disclaimer">[\s\S]*?<\/p>/.exec(htmlRaw);
+  const html = htmlRaw.replace(disc ? disc[0] : "", "");
+  for (const word of ["HIGH CONVICTION", "19 of 30", "paper book"])
+    ok(!html.includes(word), `momentum.html must not CLAIM "${word}"`);
+  for (const word of ["grade", "score_max", "HELD"])
+    ok(!new RegExp(`\\b${word}\\b`).test(MOM), `the card must not render ${word}`);
+
+  // The header states what the numbers were measured on.
+  ok(/last bar \$\{state\.data\.last_closed_bar\}/.test(MOM),
+     "the header shows the last CLOSED bar, not just a tooltip");
+  for (const bit of ["scanned", "gated"])
+    ok(MOM.includes(`${bit}\``) || MOM.includes(`${bit}\${`) || MOM.includes(` ${bit}`),
+       `the header counts ${bit}`);
+
+  // One href builder, so the symbol and the spark cannot diverge.
+  eq((MOM.match(/const href = /g) || []).length, 1, "one href, built once");
+  ok(/href="\$\{href\}"/.test(MOM), "and reused by both links");
+
+  // The renderer is market-agnostic: NASDAQ uses the same code path.
+  ok(/state\.market/.test(MOM) && !/if \(state\.market === "asx"\)/.test(MOM),
+     "one renderer for every market — no per-market branch");
+}
+
 console.log(`momentum: ${checks} checks passed`);
