@@ -1,6 +1,6 @@
-# THROWAWAY diagnostic (2026-09-23). Runs only on a push to its own branch,
-# never on main. GETs the public price relay (read-only) and commits the raw
-# bars to THIS branch so they can be analysed offline; nothing reaches main.
+# THROWAWAY diagnostic (2026-09-23 nap run). Runs only on a push to its own
+# branch, never on main. Read-only audit of the public site at 390x844; the
+# PASS/FAIL results and screenshots are committed to THIS branch only.
 name: diag ELS 4H (throwaway)
 on:
   push:
@@ -8,27 +8,26 @@ on:
 permissions:
   contents: write
 jobs:
-  fetch:
+  audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch the bars the Momentum chart requests (read-only GETs)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright + Chromium
         run: |
-          mkdir -p diag/data
-          get() {
-            curl -sS -m 60 -o "diag/data/$1" -w "$1 HTTP %{http_code} %{size_download}B\n" \
-              "https://googy-boys-scanner.pages.dev/api/price?$2" || echo "$1 curl failed"
-            sleep 2
-          }
-          get ELS_1h.json   "symbol=ELS.AX&range=2y&interval=1h"
-          get ELS_1d.json   "symbol=ELS.AX&range=25y&interval=1d"
-          get AAPL_1h.json  "symbol=AAPL&range=1mo&interval=1h"
-          ls -la diag/data
-      - name: Commit the fetched bars to this branch only
+          npm init -y > /dev/null 2>&1
+          npm install --no-save playwright > /dev/null 2>&1
+          npx playwright install --with-deps chromium > /dev/null 2>&1
+      - name: Audit production (read-only)
+        timeout-minutes: 5
+        run: node diag/nap_audit.js || true
+      - name: Commit results to this branch only
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add diag/data
-          git commit -q -m "diag: fetched bars $(date -u +%FT%TZ)" || { echo "nothing new"; exit 0; }
+          git add diag/audit
+          git commit -q -m "diag: nap audit results $(date -u +%FT%TZ)" || { echo "nothing new"; exit 0; }
           git push origin HEAD:diag-els-4h-2026-09-23
