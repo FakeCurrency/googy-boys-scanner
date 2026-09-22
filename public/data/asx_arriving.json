@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-22T16:55:37+10:00",
+  "generated_at": "2026-09-22T18:41:47+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "G11",
-      "name": "G11 Resources Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.22,
-      "turnover_avg20": 13566,
-      "turnover_today": 175105,
-      "rvol": 12.8,
-      "adv_usd": 13566.83,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "ADD",
       "name": "Adavale Resources Limited",
