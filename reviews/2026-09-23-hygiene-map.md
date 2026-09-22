@@ -69,7 +69,7 @@ Reference count across public js+html, `test/`, `tests/`, `phasemap/tests/`,
 | `fmtTurn` | app.js | decl only | **dead** |
 | `entryRelTargets` | chart.js | decl only | **dead** |
 | `fetchStockQuote` | chart.js | decl only | **dead** |
-| `makeLiveBoxDraggable` | chart.js | decl only | **dead** |
+| `makeLiveBoxDraggable` | chart.js | decl only | dead, **KEPT** — see §8 |
 | `inBatches` | journal.js | decl only | **dead** |
 | `MOM_FIRST_PAINT_BARS` | chart.js | decl only | **dead** — superseded by P1's `MOM_VIEW_MIN_BARS`; I orphaned it |
 | `syncPrefsUI` | app.js | decl only | **ALIVE — named IIFE**, runs on load |
@@ -87,4 +87,47 @@ runtime code (0).
 
 `vivek.py scan.py conviction.py spec.py phasemap/engine scanner/momentum/**
 scanner/broker/** vivek_bot* bot_rules.json journal/**` — **no edits planned**,
-not even comment deletions. All six deletions above are in `public/js`.
+not even comment deletions. Every deletion below is in `public/js` or
+`public/css`.
+
+## 8. PHASE 1 outcome
+
+A second pass counted declarations **per file** (comments stripped), because a
+name shared across files hides a dead copy (`isVivek`, `pct`, `YF_TICKER`).
+Every deletion is its own commit, pinned by `test/hygiene.test.js`; each pin
+was mutation-checked by adding the name back as a string (red), and a
+comment-only mention stays green.
+
+**Deleted.** chart.js: `MOM_FIRST_PAINT_BARS`, `entryRelTargets`,
+`fetchStockQuote`, `levTag`, `SIM_CRYPTO_MARGIN`/`SIM_CRYPTO_LEVERAGE`/
+`SIM_STOCK_SIZE`, `restURL` (a local in makeLive). app.js: `fmtTurn`,
+`VIEW_KEYS`. journal.js: `inBatches`, `fav`, `nowTime`, `tradeKey`, `$$`, and
+the live-quote chain `priceFor` → `cryptoPrice`/`stockPrice` → `fetchJSON` +
+journal.js's own `YF_TICKER`. phasemap-insights.js: `pct`. chart.css: the 13
+`.live-pos-box`/`.lpb-*` rules.
+
+**Kept because uncertain.**
+- `makeLiveBoxDraggable` (chart.js): no caller, but leaks.test.js pins its
+  `resize`/`restore` add/remove pair and counts its teardown. Removing it means
+  editing a fence test.
+- The chart.js cost model (`COMMISSION_BPS`, `SLIPPAGE_BPS`, `costsFor`,
+  `legCost` + the bot_rules.json fetch that fills them): `legCost` has no
+  caller, so the whole block is unread. But it carries the TOP100 #28 comment
+  on keeping one cost model, and deleting it drops a network request.
+- `isHighConviction` (chart.js): a 3-line wrapper with no caller. It sits in
+  the HC four-cell area, and tests pin the app.js copy by that name.
+- journal.js names tests still slice or stub: `costsFor`, `isVivek`, `today`,
+  `markStale`, `sizeOf`, `costR`, `drawMiniEquity`. None has a runtime caller.
+  **Finding:** journal_money.test.js asserts `/drawMiniEquity/` with the
+  message "the per-book equity curves must still be drawn". But
+  `drawEquity` draws those curves, and `drawMiniEquity` is the retired header
+  sparkline, so the pin checks the wrong function. journal.js ~1413 has a
+  comment making the same mix-up. Left for the owner. Fixing it means editing
+  a pin.
+- Named IIFEs `syncPrefsUI`, `stickyToolbar`, `purgeLegacyKeys` — alive.
+
+**Checked, nothing to delete.** momentum.css (the `is-bull`/`is-bear` rules are
+built as `"is-" + dir`). chart.css `s-*` (built as `s-${state}`). The nine e2e
+fixtures (each is served to a page as `/data/`, and they are hashed into the
+screenshot cache key). HTML pages (404.html is Cloudflare's not-found page and
+offline.html is sw.js's fallback).
