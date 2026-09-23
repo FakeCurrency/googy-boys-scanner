@@ -6,8 +6,10 @@
         published artifacts the rest of the site reads (slim per-market
         price/dir files + the paper bot book). No LLM, no new data source;
         as fresh as the latest scan every time the page opens.
-     2. CLAUDE'S NOTE — a dated, hand-written read (data/reco_note.json)
-        refreshed by the daily Claude session. Commentary only.
+     2. DAILY NOTE — a dated read (data/reco_note.json) auto-written each
+        day in CI (scripts/reco_note.py via reco_note.yml, author "auto");
+        a same-day hand-written Claude note is never overwritten and shows
+        as "Claude's note". Commentary only.
    Nothing here feeds the bot or the scanners — CLAUDE.md rules apply.
    ========================================================================= */
 (() => {
@@ -222,7 +224,7 @@
 
   // ── Lazy card enrichment (backlog #13+#14) ───────────────────────────────
   // The slim price files carry only grade+dir. At-level, multi-lens and sector
-  // live in the FULL scan JSON (1-2MB each), so we fetch those AFTER the base
+  // live in the FULL scan JSON (a few hundred KB each), so we fetch those AFTER the base
   // cards paint — the page is useful instantly and deepens a beat later.
   // Cached per market by the scan's generated_at so the 5-min re-render and
   // repeated loads don't refetch the same megabytes.
