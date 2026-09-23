@@ -59,9 +59,16 @@ jobs:
           echo "backtest rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
           [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
 
-      - name: Specs backtest (5y, ASX)
+      # Both markets the Specs lens scans (2026-09-23: NASDAQ joined when the R
+      # model landed -- the lens lists NASDAQ names daily and had no evidence
+      # file for them). Each writes its own report + public stats file.
+      - name: Specs backtests (5y, ASX + NASDAQ)
         continue-on-error: true
-        run: python -m scanner.spec_backtest --market asx --period 5y
+        run: |
+          set +e
+          python -m scanner.spec_backtest --market asx --period 5y
+          python -m scanner.spec_backtest --market nasdaq --period 5y
+          exit 0
 
       # The sample size is dispatchable (2026-09-20). TOP100 #58 recorded that
       # 60 names is a thin basis for the claim the deck makes off this file;
