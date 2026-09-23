@@ -280,5 +280,9 @@ def test_every_reader_fetches_it_lazily_never_at_page_load():
         # code: the Tier 3 "ask about code, read code" trap in miniature.
         at = src.index('"data/funnel_history.json"')
         head = src[:at]
-        assert head.count("function ") + head.count("=> {") > 0, (
+        # A function must OPEN between the file's IIFE and the fetch. Counting
+        # openers anywhere before it was vacuous: the IIFE's own "(() => {"
+        # satisfied it, so an eager fetch as the first statement passed.
+        iife = src.index("=> {")
+        assert max(head.rfind("function "), head.rfind("=> {")) > iife, (
             f"{name} appears to fetch the history at module scope")
