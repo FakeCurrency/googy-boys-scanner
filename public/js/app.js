@@ -182,6 +182,67 @@
              weekendNote: isWeekendIn(nowMs, tz) && weekdaysBetween(t, nowMs, tz) === 0 };
   };
 
+  // SESSION + 2h (2026-09-23). The weekday rule above answers "has a whole
+  // trading day gone by?" -- it cannot see a scan that stopped at 11:00 on a
+  // Wednesday, because nothing reads stale until Thursday. This is the
+  // intraday half: once a session has been open 2h there should be a scan
+  // from inside it, and once it has been closed 2h there should be one from
+  // after the close. Normal operation clears both with an hour to spare
+  // (first scan ~1h07 after the open, last one ~7-30 min after the close).
+  // Mirrors scanner/config.py VIVEK_JOURNAL_SESSION + VIVEK_DECK_SESSION_GRACE_H,
+  // held in step by tests/test_deck_session_stale.py; the zones are WEEKEND_TZ.
+  // Crypto has no session and keeps the wall-clock rule. Exchange holidays are
+  // not modelled: on one, "no scan since the open" is still literally true.
+  const SESSION_STALE = {"grace_h": 2, "asx": [10, 0, 16, 0], "nasdaq": [9, 30, 16, 0]};
+  // The instant a market-local wall time falls on. Two passes absorb a DST
+  // change between the guess and the answer; null on an unusable zone.
+  const zonedInstant = (y, mo, d, h, mi, tz) => {
+    try {
+      const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const offsetAt = (ms) => {
+        const p = {};
+        for (const part of fmt.formatToParts(new Date(ms))) p[part.type] = part.value;
+        return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - ms;
+      };
+      const guess = Date.UTC(y, mo - 1, d, h, mi);
+      return guess - offsetAt(guess - offsetAt(guess));
+    } catch (_) { return null; }
+  };
+  // { stale, ref, edge }: `ref` is the open or close the payload should be at
+  // or after, `edge` says which. An unreadable generated_at is stale.
+  const sessionStaleness = (generatedAt, market, now) => {
+    const none = { stale: false, ref: null, edge: null };
+    const sess = SESSION_STALE[market], tz = WEEKEND_TZ[market];
+    if (!Array.isArray(sess) || !tz) return none;
+    const nowMs = now == null ? Date.now() : now;
+    let ymd;
+    try {
+      ymd = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric",
+        month: "2-digit", day: "2-digit" }).format(new Date(nowMs)).split("-").map(Number);
+    } catch (_) { return none; }
+    const t = new Date(generatedAt).getTime();
+    const grace = SESSION_STALE.grace_h * 3600000;
+    for (let back = 0; back < 8; back++) {
+      const day = new Date(Date.UTC(ymd[0], ymd[1] - 1, ymd[2] - back));
+      if (day.getUTCDay() === 0 || day.getUTCDay() === 6) continue;
+      const [Y, M, D] = [day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate()];
+      const close = zonedInstant(Y, M, D, sess[2], sess[3], tz);
+      const open = zonedInstant(Y, M, D, sess[0], sess[1], tz);
+      if (close == null || open == null) return none;
+      // Newest deadline first: this close, this open, then the day before.
+      for (const [ref, edge] of [[close, "close"], [open, "open"]]) {
+        if (ref + grace <= nowMs) return { stale: !isFinite(t) || t < ref, ref, edge };
+      }
+    }
+    return none;
+  };
+  // The row chips' one verdict: a whole weekday missed, or the session rule.
+  const rowScanStale = (generatedAt, market, now) =>
+    scanStaleness(generatedAt, market, now).weekdays >= 1 ||
+    sessionStaleness(generatedAt, market, now).stale;
+
   // ---- debug mode ---------------------------------------------------------
   const isDebug = () =>
     new URLSearchParams(location.search).has("debug") ||
@@ -1342,7 +1403,7 @@
       el.textContent = `⟳ scanned ${txt}`;
       // Same weekday-aware rule as scanAge() — the re-stamp must not disagree
       // with the chip it is re-stamping (Lane A, 2026-08-16).
-      el.classList.toggle("stale", scanStaleness(g, state.market).weekdays >= 1);
+      el.classList.toggle("stale", rowScanStale(g, state.market));
     });
   }
 
@@ -1551,7 +1612,7 @@
       const mins = Math.max(0, Math.round((Date.now() - new Date(g).getTime()) / 60000));
       const txt = mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`;
       // Weekday-aware (Lane A): >24h is a weekend on Sat/Sun, not a fault.
-      const stale = scanStaleness(g, state.market).weekdays >= 1;
+      const stale = rowScanStale(g, state.market);
       return `<span class="vk-fresh${stale ? " stale" : ""}" title="When this setup was last scanned">⟳ scanned ${txt}</span>`;
     };
 
@@ -2101,9 +2162,16 @@
     const fresh = scanStaleness(d.generated_at, state.market);
     const tooOld = fresh.weekdays >= 2;
     const lowCov = typeof cov === "number" && cov < 80 && (d.universe_size || 0) > 50;
-    const warn = behind || tooOld || lowCov;
+    // Session + 2h: no scan from inside a session open 2h, or since a close 2h
+    // gone. Said in words with the Melbourne time of the open/close it missed.
+    const sess = sessionStaleness(d.generated_at, state.market);
+    const warn = behind || tooOld || lowCov || sess.stale;
     const bits = [];
     if (age) bits.push(`⟳ ${age}`);
+    if (sess.stale) {
+      const when = new Date(sess.ref).toISOString();
+      bits.push(`no scan since the ${sess.edge} (${window.PM ? PM.fmtMelb(when) : fmtTime(when, d.tz_label)})`);
+    }
     if (typeof cov === "number") {
       // Show how much of the coverage is fresh vs reused from the last-good cache.
       const cached = d.from_cache || 0;
@@ -2500,9 +2568,12 @@
     el.title = `Melbourne: ${melb}  ·  Market-local: ${fmtTime(d.generated_at, d.tz_label)}`;
     // Deck freshness dot (Wave 3): green = live · pulsing = updating a stale
     // paint · amber = last refresh failed (matches the title suffix).
+    // Amber too when the payload misses the session + 2h rule (renderFreshness
+    // says which open/close it missed).
     const dot = document.getElementById("deck-dot");
+    const late = sessionStaleness(d.generated_at, state.market).stale;
     if (dot) dot.className = "deck-dot" +
-      (state.staleView === "failed" ? " warn" : state.staleView ? " sync" : "");
+      (state.staleView === "failed" || late ? " warn" : state.staleView ? " sync" : "");
   }
 
   function applyPayload(d, stale = false) {

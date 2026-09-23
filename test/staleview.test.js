@@ -1498,10 +1498,125 @@ test("an unknown or unparseable scan time reads STALE, never fresh", () => {
 test("both freshness surfaces read the SAME verdict function", () => {
   const code = codeOnly(APP);
   assert.ok(/const tooOld = fresh\.weekdays >= 2;/.test(code), "the freshness box lost the weekday rule");
-  assert.ok(/const stale = scanStaleness\(g, state\.market\)\.weekdays >= 1;/.test(code),
+  // The chips read rowScanStale, which is this weekday rule OR the session +
+  // 2h rule (2026-09-23) -- and both chip sites read the same helper.
+  assert.ok(/const rowScanStale = \(generatedAt, market, now\) =>\s*scanStaleness\(generatedAt, market, now\)\.weekdays >= 1 \|\|/.test(code),
     "the row chip lost the weekday rule");
+  assert.ok(/const stale = rowScanStale\(g, state\.market\);/.test(code), "scanAge left the shared verdict");
+  assert.ok(/el\.classList\.toggle\("stale", rowScanStale\(g, state\.market\)\)/.test(code),
+    "the re-stamp left the shared verdict and can disagree with the chip");
   assert.ok(!/mins > 1440/.test(code), "the old pure wall-clock row rule is back");
   assert.ok(/market closed \(weekend\)/.test(APP), "the weekend explanation is gone");
+});
+
+// ---- session + 2h (2026-09-23) ---------------------------------------------
+// The weekday rule cannot see a scan that stopped at 11:00 on a Wednesday:
+// nothing reads stale until Thursday. The session rule marks the payload once
+// a session has been open 2h with no scan from inside it, or closed 2h with
+// no scan from after the close. The real functions run here.
+function bindSession(name) {
+  return new Function(`
+    const WEEKEND_TZ = ${appConst("WEEKEND_TZ")};
+    const isWeekendIn = ${appConst("isWeekendIn")};
+    const weekdaysBetween = ${appConst("weekdaysBetween")};
+    const scanStaleness = ${appConst("scanStaleness")};
+    const SESSION_STALE = ${appConst("SESSION_STALE")};
+    const zonedInstant = ${appConst("zonedInstant")};
+    const sessionStaleness = ${appConst("sessionStaleness")};
+    const rowScanStale = ${appConst("rowScanStale")};
+    return ${name};`)();
+}
+const Z = (s) => Date.parse(s);
+
+test("zonedInstant lands the market's wall clock in both halves of the DST year", () => {
+  const f = bindSession("zonedInstant");
+  assert.strictEqual(f(2026, 9, 23, 16, 0, "Australia/Sydney"), Z("2026-09-23T06:00:00Z"), "AEST");
+  assert.strictEqual(f(2026, 1, 14, 16, 0, "Australia/Sydney"), Z("2026-01-14T05:00:00Z"), "AEDT");
+  assert.strictEqual(f(2026, 9, 23, 16, 0, "America/New_York"), Z("2026-09-23T20:00:00Z"), "EDT");
+  assert.strictEqual(f(2026, 1, 14, 16, 0, "America/New_York"), Z("2026-01-14T21:00:00Z"), "EST");
+  // the switch days themselves: the offset changed overnight
+  assert.strictEqual(f(2026, 10, 4, 16, 0, "Australia/Sydney"), Z("2026-10-04T05:00:00Z"));
+  assert.strictEqual(f(2026, 3, 8, 16, 0, "America/New_York"), Z("2026-03-08T20:00:00Z"));
+  // The second pass: 01:00 on the morning Sydney springs forward. One pass
+  // reads the offset at the UTC guess (already AEDT) and lands an hour early.
+  assert.strictEqual(f(2026, 10, 4, 1, 0, "Australia/Sydney"), Z("2026-10-03T15:00:00Z"));
+  assert.strictEqual(f(2026, 9, 23, 10, 0, "Not/AZone"), null, "an unusable zone is null, never a guess");
+});
+
+test("today's recorded payloads read FRESH (2026-09-23 11:00Z)", () => {
+  const f = bindSession("sessionStaleness");
+  const now = Z("2026-09-23T11:00:00Z");
+  const asx = f("2026-09-23T19:33:29+10:00", "asx", now);
+  assert.strictEqual(asx.stale, false);
+  assert.strictEqual(asx.edge, "close");
+  assert.strictEqual(asx.ref, Z("2026-09-23T06:00:00Z"));
+  const nq = f("2026-09-23T05:28:37-04:00", "nasdaq", now);
+  assert.strictEqual(nq.stale, false, "07:00 New York: owes Tuesday's close, has it");
+  assert.strictEqual(nq.ref, Z("2026-09-22T20:00:00Z"));
+});
+
+test("a scan that stopped mid-session reads stale 2h after the close, not a day later", () => {
+  const f = bindSession("sessionStaleness");
+  const g = "2026-09-23T01:07:00Z";                              // Wed 11:07 Sydney
+  assert.strictEqual(f(g, "asx", Z("2026-09-23T03:00:00Z")).stale, false, "13:00: has a scan since the open");
+  assert.strictEqual(f(g, "asx", Z("2026-09-23T07:59:00Z")).stale, false, "17:59: still inside the grace");
+  const late = f(g, "asx", Z("2026-09-23T08:00:00Z"));
+  assert.strictEqual(late.stale, true, "18:00 Sydney: 2h after the close, no post-close scan");
+  assert.strictEqual(late.edge, "close");
+  // The weekday rule alone says fresh at that instant -- the gap this closes.
+  assert.strictEqual(bindSession("scanStaleness")(g, "asx", Z("2026-09-23T08:00:00Z")).weekdays, 0);
+  assert.strictEqual(bindSession("rowScanStale")(g, "asx", Z("2026-09-23T08:00:00Z")), true);
+});
+
+test("no scan since the open reads stale once the session is 2h old", () => {
+  const f = bindSession("sessionStaleness");
+  const g = "2026-09-22T06:30:00Z";                              // Tue 16:30 Sydney, post-close
+  assert.strictEqual(f(g, "asx", Z("2026-09-23T01:59:00Z")).stale, false, "11:59: inside the grace");
+  const v = f(g, "asx", Z("2026-09-23T02:00:00Z"));
+  assert.strictEqual(v.stale, true, "12:00: open 2h, nothing from today");
+  assert.strictEqual(v.edge, "open");
+  assert.strictEqual(v.ref, Z("2026-09-23T00:00:00Z"));
+});
+
+test("a Friday post-close scan stays fresh all weekend and until Monday's open + 2h", () => {
+  const f = bindSession("sessionStaleness");
+  const fri = "2026-09-25T06:35:00Z";                            // Fri 16:35 Sydney
+  for (const at of ["2026-09-26T03:00:00Z", "2026-09-27T12:00:00Z", "2026-09-28T01:59:00Z"])
+    assert.strictEqual(f(fri, "asx", Z(at)).stale, false, at);
+  assert.strictEqual(f(fri, "asx", Z("2026-09-28T02:00:00Z")).stale, true, "Mon 12:00 Sydney");
+});
+
+test("NASDAQ in both DST regimes: stale 2h after the 16:00 close without a post-close scan", () => {
+  const f = bindSession("sessionStaleness");
+  // EDT: close 20:00Z. Last scan 15:30 NY.
+  assert.strictEqual(f("2026-09-23T19:30:00Z", "nasdaq", Z("2026-09-23T21:59:00Z")).stale, false);
+  assert.strictEqual(f("2026-09-23T19:30:00Z", "nasdaq", Z("2026-09-23T22:00:00Z")).stale, true);
+  // EST: close 21:00Z.
+  assert.strictEqual(f("2026-01-14T20:30:00Z", "nasdaq", Z("2026-01-14T22:59:00Z")).stale, false);
+  assert.strictEqual(f("2026-01-14T20:30:00Z", "nasdaq", Z("2026-01-14T23:00:00Z")).stale, true);
+  // the 16:07 closing scan satisfies it
+  assert.strictEqual(f("2026-01-14T21:07:00Z", "nasdaq", Z("2026-01-15T03:00:00Z")).stale, false);
+});
+
+test("crypto and an unknown market never go session-stale; an unreadable stamp does", () => {
+  const f = bindSession("sessionStaleness");
+  assert.strictEqual(f("2026-01-01T00:00:00Z", "crypto", Z("2026-09-23T11:00:00Z")).stale, false,
+    "crypto keeps the wall-clock rule");
+  assert.strictEqual(f("2026-01-01T00:00:00Z", "mars", Z("2026-09-23T11:00:00Z")).stale, false);
+  for (const bad of [null, "", "not-a-date"])
+    assert.strictEqual(f(bad, "asx", Z("2026-09-23T11:00:00Z")).stale, true, `"${bad}" reads stale`);
+});
+
+test("the deck says it: box warns with the missed open/close, the dot turns amber", () => {
+  const code = codeOnly(APP);
+  assert.ok(/const sess = sessionStaleness\(d\.generated_at, state\.market\);/.test(code));
+  assert.ok(/const warn = behind \|\| tooOld \|\| lowCov \|\| sess\.stale;/.test(code),
+    "the freshness box ignores the session rule");
+  assert.ok(/no scan since the \$\{sess\.edge\}/.test(code), "the box no longer names what was missed");
+  assert.ok(/PM\.fmtMelb\(when\)/.test(code), "Melbourne on screen, the one timestamp convention");
+  assert.ok(/const late = sessionStaleness\(d\.generated_at, state\.market\)\.stale;/.test(code) &&
+            /state\.staleView === "failed" \|\| late \? " warn"/.test(code),
+    "the deck dot ignores the session rule");
 });
 
 // ---- fix 3: the first-visit update toast ---------------------------------
