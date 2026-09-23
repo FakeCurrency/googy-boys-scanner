@@ -3,8 +3,9 @@
    when the network is up.
 
    Strategy:
-     data/*.json + /api/*  → network-first (fresh data always wins; the last
+     data/*.json           → network-first (fresh data always wins; the last
                              good copy is the offline fallback)
+     /api/*                → not intercepted, never cached
      versioned assets ?v=  → cache-first (immutable: every edit bumps ?v=)
      fonts / icons / vendor→ cache-first
      HTML navigations      → network-first (deploys land immediately),
