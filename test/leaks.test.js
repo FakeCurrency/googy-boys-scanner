@@ -1,4 +1,5 @@
-/* Unbounded growth and unbounded retry (TOP100 #80, #81, #82, #83).
+/* Unbounded growth and unbounded retry (TOP100 #80, #81, #82; #83 went with
+ * gbs-sync.js on 2026-09-21 and is kept below as history).
  *
  * Four leaks that share one shape: something accumulates with nothing on the
  * other end of it. None of them announce themselves — a leaked interval, a
@@ -7,9 +8,9 @@
  *
  *   #80  Repeating timers with no `document.hidden` guard, and — the half that
  *        actually leaks — timers/listeners wired per RENDER on a page whose
- *        render() is re-entrant. Every timeframe button is a call site, so a
- *        chart left open through ten clicks was running ten copies of the same
- *        interval painting into nine detached nodes.
+ *        render() is re-entrant (each data-fallback load calls it again), so a
+ *        chart rendered ten times was running ten copies of the same interval
+ *        painting into nine detached nodes.
  *
  *   #81  `onLiveTick` pushed a handler into a module-level array that nothing
  *        ever removed, so one price tick fanned out to N copies of the same
@@ -90,10 +91,6 @@ const test = (name, fn) => {
   try { fn(); passed++; console.log("PASS  " + name); }
   catch (e) { console.error("FAIL  " + name + "\n      " + e.message); process.exitCode = 1; }
 };
-// The gbs-sync half is all promises. Registered here, run at the bottom, so the
-// output stays in a fixed order rather than interleaving with the sync tests.
-const deferred = [];
-const atest = (name, fn) => { deferred.push([name, fn]); };
 
 // ===========================================================================
 // #82 — the reconnect backs off, and the cap is a cap.
@@ -338,10 +335,4 @@ test("the clock interval is guarded AND catches up — one without the other is 
 //  and are unaffected.)
 
 // ---------------------------------------------------------------------------
-(async () => {
-  for (const [name, fn] of deferred) {
-    try { await fn(); passed++; console.log("PASS  " + name); }
-    catch (e) { console.error("FAIL  " + name + "\n      " + e.message); process.exitCode = 1; }
-  }
-  console.log(process.exitCode ? "\nSOME LEAK TESTS FAILED" : `\nALL ${passed} leak tests passed`);
-})();
+console.log(process.exitCode ? "\nSOME LEAK TESTS FAILED" : `\nALL ${passed} leak tests passed`);
