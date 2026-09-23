@@ -81,6 +81,12 @@ ok(!/\bep\b/.test(fnBody(code("js/chart.js"), "applyMomentumPlan")),
    "js/chart.js applyMomentumPlan: the unused `ep` local was deleted 2026-09-23 (P2 made the " +
    "rungs line series and dropped the %-label that read it)");
 
+// SWEEP (2026-09-23) -- unused parameters and locals, pinned inside the
+// function that held them (reviews/2026-09-23-sweep.md has the proof).
+ok(!/\brec\b/.test(fnBody(code("js/chart.js"), "momentumFallback")),
+   "js/chart.js momentumFallback: the unused `rec` parameter was deleted 2026-09-23 (the " +
+   "caller keeps its own `rec` for pmRec; the PhaseMap record never reached this function)");
+
 // `$$` cannot be pinned by name: the two characters legitimately occur in
 // `US$${...}` template text on the journal page. Pin the declaration instead.
 ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),
