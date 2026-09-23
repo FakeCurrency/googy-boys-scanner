@@ -387,30 +387,6 @@
     <div class="jr-eqtags"><span class="${pcls(endD)}">${dfmt(endD)}</span><span class="lg-r">${rfmt(endR)}</span></div>`;
   }
 
-  // #80: a compact cumulative-$ sparkline for the P&L headline — bot book only
-  // (the honest realised record). Just the $ line + a soft fill; no axis/tags.
-  function drawMiniEquity(elId, pts) {
-    const el = $("#" + elId);
-    if (!el) return false;
-    if (!pts || pts.length < 2) { el.innerHTML = ""; return false; }
-    const w = 240, h = 44, pad = 4;
-    const ds = pts.map((p) => p.d);
-    const mn = Math.min(0, ...ds), mx = Math.max(0, ...ds), rng = (mx - mn) || 1;
-    const y = (v) => h - pad - ((v - mn) / rng) * (h - 2 * pad);
-    const x = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad);
-    const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.d).toFixed(1)}`).join(" ");
-    const endD = ds[ds.length - 1];
-    const col = endD >= 0 ? "#3fb784" : "#d07070";
-    const area = `${pad},${y(0).toFixed(1)} ${line} ${x(pts.length - 1).toFixed(1)},${y(0).toFixed(1)}`;
-    const gid = elId + "-g";
-    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="jr-mini-eqsvg" role="img" aria-label="Bot book realised equity curve">
-      <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.20"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
-      <line x1="0" y1="${y(0).toFixed(1)}" x2="${w}" y2="${y(0).toFixed(1)}" stroke="#222a38" stroke-width="1" stroke-dasharray="2 4"/>
-      <polygon points="${area}" fill="url(#${gid})"/>
-      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
-    return true;
-  }
-
   // ── tables ────────────────────────────────────────────────────────────────
   const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
   // Full-word, dog-balls direction pill (owner 2026-07-10): a trade's

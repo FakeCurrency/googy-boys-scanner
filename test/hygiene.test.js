@@ -35,7 +35,7 @@ const GONE = {
   },
   "js/journal.js": {
     live: "function splitBot(",
-    dead: ["inBatches", "fav", "nowTime", "tradeKey", "priceFor", "cryptoPrice", "stockPrice", "fetchJSON", "YF_TICKER"],
+    dead: ["inBatches", "fav", "nowTime", "tradeKey", "priceFor", "cryptoPrice", "stockPrice", "fetchJSON", "YF_TICKER", "drawMiniEquity"],
   },
   "js/app.js": {
     live: "function isHighConviction(",
