@@ -246,6 +246,10 @@ ok(!/Star \(☆\)|★ watchlist/.test(code("js/app.js")),
    "js/app.js: the welcome tour tells the user to star names; stars were removed 2026-09-21");
 
 // VALIDATE (2026-09-23) -- same rule, second pass (reviews/2026-09-23-validate.md).
+ok(code("js/chart.js").includes("const hard = rec.zones.find("), "js/chart.js zone plan moved -- pin would be vacuous");
+ok(!/\b_zonePlan\b/.test(code("js/chart.js")),
+   "js/chart.js: d._zonePlan was set and never read (its reader, the Simulate buttons, went " +
+   "2026-09-21) and was deleted 2026-09-23");
 ok(code("js/app.js").includes('mode: "vivek",'), "js/app.js state moved -- pin would be vacuous");
 ok(!/\bview\s*:\s*"results"/.test(code("js/app.js")) && !/state\.view\b/.test(code("js/app.js")),
    "js/app.js: state.view was read by nothing once the watch view went (2026-09-21) and was " +
