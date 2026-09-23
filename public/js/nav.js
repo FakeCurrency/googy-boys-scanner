@@ -4,7 +4,7 @@
  * the dashboard) with a different link set on every page. This renders ONE
  * consistent nav into the `#site-nav` mount on each page:
  *
- *   • Desktop: pill row — SCAN · RECS · PHASEMAP · SPECS ⚡ ·
+ *   • Desktop: pill row — VIVEK 5.0 · RECS · PHASEMAP · SPECS ⚡ · MOMENTUM ·
  *     ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
  *     SYSTEM / HOW IT WORKS — see the MORE list below; AI BOT was REMOVED
  *     2026-09-17 with its whole scalp-era bot; TRACK and
@@ -154,7 +154,7 @@
       bar.setAttribute("aria-label", "Primary");
       const sheetActive = SHEET.some((it) => it.key === here);
       // #30: a 6th MORE tab opens a bottom sheet with every overflow
-      // destination — the only way to reach SPECS/ALERTS/NEWS/SYSTEM/
+      // destination — the only way to reach MOMENTUM/ALERTS/NEWS/SYSTEM/
       // HOW IT WORKS on a phone (the desktop pill row is hidden there).
       const moreTab =
         `<button class="site-tab site-tab-more${sheetActive ? " is-here" : ""}" type="button" aria-haspopup="dialog" aria-expanded="false">` +
@@ -177,8 +177,9 @@
 
   // #43: one-time "Add to Home Screen" nudge on phones. Uses the Chrome/
   // Android beforeinstallprompt when available, and an iOS Safari hint
-  // otherwise. Shown at most once ever (localStorage flag), never when
-  // already installed (standalone) or on desktop.
+  // otherwise. Shown on each phone page load until dismissed or accepted
+  // (localStorage flag), never when already installed (standalone) or on
+  // desktop.
   function a2hsNudge() {
     let dismissed = false;
     try { dismissed = localStorage.getItem("gbs:a2hs") === "done"; } catch (_) { return; }
@@ -264,9 +265,9 @@
     if (searchRow) searchRow.addEventListener("click", () => { close(); setTimeout(() => window.GBSPalette && window.GBSPalette.open(), 240); });
   }
 
-  // Live badge counts on the bottom tabs (backlog #29): the tradeable A+ count
-  // on SCAN and the bot's open-position count on JOURNAL — a glance-value the
-  // owner asked for. Lightweight: reads the same slim published files the rest
+  // Live badge count on the bottom tabs (backlog #29): the bot's open-position
+  // count on JOURNAL — a glance-value the owner asked for. (The SCAN A+ badge
+  // was retired 2026-08-13; the reason is kept below.) Lightweight: reads the same slim published files the rest
   // of the site uses, fails silent (no badge) if anything is unreachable, and
   // never blocks nav render.
   function setBadge(key, n) {
@@ -289,8 +290,8 @@
     // NAME regex (PM.isFundReit / FUND_KW_RE), <m>_prices.json ships no `name`
     // at all — only grade, grade_raw, dir, headline_tf — and the file that does
     // is 448 KB, which is not a badge's budget. The remaining options were a
-    // THIRD copy of the keyword list in a file loaded on every page (the exact
-    // drift hazard test/risk_defaults.test.js exists to punish) or leaving it
+    // THIRD copy of the keyword list in a file loaded on every page (a
+    // mirror-drift hazard) or leaving it
     // wrong. A badge that overstates opportunity by 85% is worse than no badge:
     // it is the app disagreeing with itself in the one place a glance lands.
     //
@@ -305,7 +306,8 @@
 
   // #91: one shared footer include — a consistent credit (data source +
   // refresh cadence) and disclaimer on every nav page. Pages that already ship
-  // their own <footer class="site-footer"> (dashboard / journal / bot) keep it;
+  // their own <footer class="site-footer"> (dashboard / journal / recs /
+  // system) keep it;
   // the lens & utility pages get this appended so the data source and the
   // disclaimer read identically everywhere.
   function renderFooter() {
@@ -345,7 +347,7 @@
   // One overlay on every nav page: type to filter COMMANDS (go-to-page, open
   // a market, page-registered actions) and to search the CURRENT SETUPS in
   // all three markets at once (indexed lazily from the slim *_prices.json
-  // files the tab badges already read — ~50KB total, usually cache-warm).
+  // files, fetched on the palette's first open — ~50KB total).
   // ⌘K / Ctrl-K opens it; the mobile MORE sheet gets a SEARCH row; ↑↓ move,
   // Enter runs, Esc closes. Pages add their own commands via
   // window.GBSPalette.register([{label, hint, run}]).
