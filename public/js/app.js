@@ -385,7 +385,7 @@
     const STEPS = [
       ["🧭", "Three markets, one scanner", "ASX, NASDAQ and Crypto — switch up top. Every name is graded on how price is REACTING at its 200-SMA."],
       ["🎯", "A+ is the shortlist", "The A+ / A / WATCH tabs filter by setup grade. A+ means every gate passed — that's the tab worth checking daily. Pills under the title filter further (at-level, multi-lens…)."],
-      ["📋", "Tap a row for the plan", "Every row expands into the full trade plan — entry, stop, targets with R:R — plus a chart. Star (☆) anything to keep it on that lens's ★ watchlist."],
+      ["📋", "Tap a row for the plan", "Every row expands into the full trade plan — entry, stop, targets with R:R — plus a chart."],
     ];
     let i = 0;
     const scrim = document.createElement("div");

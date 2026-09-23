@@ -239,6 +239,12 @@ ok(!/\baccent\b/.test(fnBody(code("js/journal.js"), "statCards")),
    "js/journal.js statCards: the unused `accent` parameter was deleted 2026-09-23 (its one " +
    "caller never passed it)");
 
+// VALIDATE (2026-09-23) -- the welcome tour must not send a new user to the
+// stars / watchlists removed 2026-09-21.
+ok(code("js/app.js").includes('"Tap a row for the plan"'), "js/app.js welcome tour moved -- pin would be vacuous");
+ok(!/Star \(☆\)|★ watchlist/.test(code("js/app.js")),
+   "js/app.js: the welcome tour tells the user to star names; stars were removed 2026-09-21");
+
 // VALIDATE (2026-09-23) -- same rule, second pass (reviews/2026-09-23-validate.md).
 ok(!/function renderTFSetups\(\s*d\s*,/.test(code("js/chart.js")) && /function renderTFSetups\(tfs,/.test(code("js/chart.js")),
    "js/chart.js renderTFSetups: the unused `d` parameter was deleted 2026-09-23 (the body reads " +
