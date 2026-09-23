@@ -1,6 +1,6 @@
 /* PHASEMAP tab — renders public/data/phasemap/<market>/latest.json.
    Read-only view of the nightly scan snapshot; no live queries.
-   Cards click through to phasemap-chart.html with every zone on the chart. */
+   Cards click through to chart.html (src=phasemap) with every zone on the chart. */
 (() => {
   "use strict";
 
