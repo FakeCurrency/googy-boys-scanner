@@ -1436,7 +1436,7 @@
     return out;
   }
 
-  function momentumFallback(SYM, mom, rec) {
+  function momentumFallback(SYM, mom) {
     const row = (mom && mom.row) || null;
     const mp = (mom && mom.params) || null;
     const assetType = market === "crypto" ? "crypto" : null;
@@ -4670,7 +4670,7 @@
     if (isMomentum) {
       Promise.all([momentumRow(baseSymbol), fetchPhaseMapRec()]).then(([mom, rec]) => {
         pmRec = rec;
-        momentumFallback(baseSymbol, mom, rec);
+        momentumFallback(baseSymbol, mom);
       });
       return;
     }
