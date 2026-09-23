@@ -129,16 +129,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: linear-gradient(90deg, var(--green), var(--teal) 40%, transparent 80%);
   pointer-events: none;
 }
-/* The quote sits in the MIDDLE of row 1 — between the clocks (left) and the
-   nav (owner 2026-07-05). It flex-grows to fill the gap and centres its text,
-   free to wrap to two lines. Room is made by shrinking the trailing nav pills
-   (.nav-minor) rather than dropping the quote to another row. */
-.topbar-quote {
-  flex: 1 1 auto; min-width: 0; text-align: center; padding: 0 16px;
-  font: 400 italic 11.5px/1.45 var(--sans); color: var(--text-2);
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-  overflow: hidden;
-}
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-sm);
@@ -377,7 +367,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .ema-dot i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 
 /* VIVEK entry-type filter chips — "200 SMA interaction" */
-.vk-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .vkf-label { font: 700 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
 .vkf-chip {
   appearance: none; cursor: pointer; border: 1px solid var(--border-2); background: var(--panel);
@@ -408,11 +397,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .vkf-highconv { border-color: rgba(255,196,77,.6); color: #ffc44d; }
 .vkf-highconv.is-active { background: #ffb020; border-color: #ffb020; color: #1a1205; }
 .vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }@media (max-width: 560px) { .vkf-legend { display: none; } }@media (max-width: 560px) {
-  /* Wrap the chips onto multiple rows so every filter — including the High
-     conviction / Triggered recently toggles on the right — is fully visible and
-     tappable. (Previously this was a horizontal scroll strip, which pushed those
-     toggles off-screen and ate taps as scroll gestures on phones.) */
-  .vk-filters { gap: 6px; flex-wrap: wrap; }
   .vkf-label { display: none; }
   .vkf-sep { display: none; }
 }
@@ -1089,10 +1073,6 @@ body.debug-mode .debug-panel {
      nav became a horizontal scroll strip on phones). */
   .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
-}@media (max-width: 1600px) {
-  /* below here the full-size nav + brand need the width — retire the quote
-     (it returns above 1600px where there's room for it to be legible) */
-  .topbar-quote { display: none; }
 }@media (max-width: 768px) {
   .topbar { padding: 10px 14px; gap: 8px; } /* legacy single-row pages */
   .brand h1 { font-size: 14px; }
@@ -1479,11 +1459,6 @@ body { letter-spacing: -0.012em; }
 }
 
 /* ═══════════════ dashboard bot-activity strip (what happened) ═════════════ */
-.bot-activity {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  background: var(--panel); border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md); padding: 9px 14px; margin: 0 0 14px;
-}
 .ba-item {
   display: inline-flex; align-items: center; gap: 6px;
   font: 600 12px/1 var(--sans); color: var(--text-2);
