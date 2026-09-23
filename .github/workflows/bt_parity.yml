@@ -1,0 +1,113 @@
+# THROWAWAY (2026-09-24): like-for-like R across the four lenses
+# (scripts/r_parity.py). Runs only on a push of bt/kick to its own branch,
+# never on main. Results are committed to THIS branch only (bt/out/*.json per
+# shard, then bt/RESULTS.md + bt/results.json).
+name: r parity (throwaway)
+on:
+  push:
+    branches: [r-parity-run-2026-09-24]
+    paths: ["bt/kick"]
+permissions:
+  contents: write
+jobs:
+  shard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {market: asx, shard: 0, of: 16}
+          - {market: asx, shard: 1, of: 16}
+          - {market: asx, shard: 2, of: 16}
+          - {market: asx, shard: 3, of: 16}
+          - {market: asx, shard: 4, of: 16}
+          - {market: asx, shard: 5, of: 16}
+          - {market: asx, shard: 6, of: 16}
+          - {market: asx, shard: 7, of: 16}
+          - {market: asx, shard: 8, of: 16}
+          - {market: asx, shard: 9, of: 16}
+          - {market: asx, shard: 10, of: 16}
+          - {market: asx, shard: 11, of: 16}
+          - {market: asx, shard: 12, of: 16}
+          - {market: asx, shard: 13, of: 16}
+          - {market: asx, shard: 14, of: 16}
+          - {market: asx, shard: 15, of: 16}
+          - {market: nasdaq, shard: 0, of: 12}
+          - {market: nasdaq, shard: 1, of: 12}
+          - {market: nasdaq, shard: 2, of: 12}
+          - {market: nasdaq, shard: 3, of: 12}
+          - {market: nasdaq, shard: 4, of: 12}
+          - {market: nasdaq, shard: 5, of: 12}
+          - {market: nasdaq, shard: 6, of: 12}
+          - {market: nasdaq, shard: 7, of: 12}
+          - {market: nasdaq, shard: 8, of: 12}
+          - {market: nasdaq, shard: 9, of: 12}
+          - {market: nasdaq, shard: 10, of: 12}
+          - {market: nasdaq, shard: 11, of: 12}
+          - {market: crypto, shard: 0, of: 1}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Replay the shard
+        run: |
+          set -eu
+          OUT="bt/out/${{ matrix.market }}-$(printf '%02d' ${{ matrix.shard }}).json"
+          python scripts/r_parity.py shard --market "${{ matrix.market }}" --shard "${{ matrix.shard }}" \
+            --of "${{ matrix.of }}" --period 5y --out "$OUT"
+          cp "$OUT" "$RUNNER_TEMP/"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+      - name: Commit the shard to this branch
+        run: |
+          set -u
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          F="$(basename "$OUT")"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            git fetch -q origin r-parity-run-2026-09-24
+            git reset -q --hard origin/r-parity-run-2026-09-24
+            mkdir -p bt/out
+            cp "$RUNNER_TEMP/$F" "$OUT"
+            git add -- "$OUT"
+            if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+            git commit -q -m "bt: shard $F"
+            if git push -q origin HEAD:r-parity-run-2026-09-24; then echo "pushed $F"; exit 0; fi
+            echo "push race - retry $i"; sleep $((i * 4))
+          done
+          echo "could not push $F"; exit 1
+  aggregate:
+    needs: shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: r-parity-run-2026-09-24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Aggregate and commit
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            git fetch -q origin r-parity-run-2026-09-24
+            git reset -q --hard origin/r-parity-run-2026-09-24
+            python scripts/r_parity.py report --in bt/out --out bt/RESULTS.md --json bt/results.json
+            git add -- bt/RESULTS.md
+            git add -- bt/results.json
+            git commit -q -m "bt: aggregate results" || { echo "nothing new"; exit 0; }
+            if git push -q origin HEAD:r-parity-run-2026-09-24; then echo pushed; exit 0; fi
+            sleep $((i * 4))
+          done
+          exit 1
