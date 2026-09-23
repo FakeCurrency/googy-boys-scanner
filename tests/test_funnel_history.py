@@ -223,7 +223,9 @@ def test_the_staging_lists_carry_the_artefact():
     crypto = (ROOT / ".github" / "workflows" / "crypto_bot.yml").read_text(encoding="utf-8")
     assert "public/data/funnel_history.json" in scan.split('SHARED="', 1)[1].split('"', 1)[0], \
         "scan.yml must stage the SHARED funnel history or non-staged runs revert it"
-    assert "public/data/funnel_history.json" in crypto, \
+    # The PATHS list itself, like SHARED above: the bare file also carries a
+    # YAML comment naming the path, which satisfied the old substring check.
+    assert "public/data/funnel_history.json" in crypto.split('PATHS="', 1)[1].split('"', 1)[0], \
         "crypto_bot.yml writes the crypto rows and must stage the file"
 
 
