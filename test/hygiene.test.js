@@ -91,6 +91,10 @@ ok(!/\baccent\b/.test(fnBody(code("js/journal.js"), "statCards")),
    "js/journal.js statCards: the unused `accent` parameter was deleted 2026-09-23 (its one " +
    "caller never passed it)");
 
+ok(!/\bisLong\b/.test(fnBody(code("js/journal.js"), "openRows")),
+   "js/journal.js openRows: the unused `isLong` row local was deleted 2026-09-23 (liveCells " +
+   "derives direction itself)");
+
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
 ok(code("js/sectors.js").includes("const SECTOR_INFO = {"), "js/sectors.js moved -- pin would be vacuous");
