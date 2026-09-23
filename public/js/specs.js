@@ -2,8 +2,8 @@
    Deck layout (backlog #19-20, owner 2026-07-22): the page now uses the SAME
    command-bar + pill + row-card language as the SCAN dashboard — grade rail
    rows that expand, filter pills with live counts (Multi-lens is a
-   click-to-filter, like SCAN), seg toolbar for grade/sort. Stars persist a
-   snapshot, so watchlisted names survive losing the setup. Logic unchanged. */
+   click-to-filter, like SCAN), seg toolbar for grade/sort. Logic unchanged.
+   (Stars and the watchlist view were removed 2026-09-21.) */
 (() => {
   "use strict";
 
@@ -91,7 +91,7 @@
 
   function visibleRows() {
     const q = state.q.trim().toUpperCase();
-    if (state.view === "watchlist") {   // removed 2026-09-21 — no-op for a stale saved view
+    if (state.view === "watchlist") {   // removed 2026-09-21 — unreachable: no tab or saved state selects it
       const wl = {};
       const out = [];
       for (const [sym, entry] of Object.entries(wl).sort()) {
