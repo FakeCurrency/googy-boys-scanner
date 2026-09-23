@@ -158,7 +158,7 @@ jobs:
         run: node test/staleview.test.js
       - name: Leak + backoff rules (TOP100 #80/#81/#82/#83 + sync honesty, 52)
         run: node test/leaks.test.js
-      - name: Derived-state + fault-scoping rules (TOP100 #84/#86/#88)
+      - name: Deferred layout read in the deck render path (TOP100 #86)
         run: node test/statekeep.test.js
       - name: Stalled-position decision surface (read-only, probe marks only)
         run: node test/stalled.test.js
