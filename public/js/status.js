@@ -513,8 +513,4 @@
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
   else mount();
-
-  // Test hook only — the suite slices these out of the file and runs them.
-  // Nothing on the page reads window.GBSStatus.
-  window.GBSStatus = { overall, uptime, bookState, cohort, mergeStamps, marketAges, triggerMix, agoText };
 })();
