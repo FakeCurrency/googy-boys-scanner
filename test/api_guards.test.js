@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-/* Guard-rail tests for the five state-touching Pages Functions —
- * functions/api/scan.js, close.js, heartbeat.js.
+/* Guard-rail tests for the three state-touching Pages Functions —
+ * functions/api/scan.js, close.js, heartbeat.js (plus health.js's HEAD answer).
+ * journal.js and tick.js were the other two until they went, 2026-09-21.
  *
  * WHY THIS FILE EXISTS (2026-07-29): three of these guards were verified wrong
  * the same day, and none of them had a single test.
@@ -42,7 +43,7 @@ const suite = (name) => console.log(`\n── ${name} ──`);
 
 const SRC = (f) => fs.readFileSync(path.join(__dirname, "..", "functions", "api", f), "utf8");
 
-// The three dispatch/sync endpoints import the REAL access-log helper
+// The two dispatch endpoints (close.js, scan.js) import the REAL access-log helper
 // (2026-08-20). Its source is prepended, exports stripped, so the wrapped
 // handlers run with the shipped logging code rather than a stub — the
 // logging path is part of what these guards now exercise.
@@ -293,7 +294,7 @@ const hbTests = async () => {
   // Both exports must be stripped. `onRequestGet` is a function DECLARATION, so
   // the vm puts it on the sandbox by itself; `onRequestHead` is a `const`, which
   // lives in a lexical environment the test can never reach — hence the
-  // globalThis form (same reason journal.js's loader uses it).
+  // globalThis form (same reason the scan.js / close.js loaders above use it).
   const load = (fetchImpl) => loadModule("heartbeat.js", {
     strip: [[/export async function onRequestGet/, "async function onRequestGet"],
             [/export const onRequestHead/, "globalThis.onRequestHead"]],

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Tests for the endpoint access log (functions/api/_access_log.js) and its
- * wiring into the three unauthenticated endpoints (close.js, scan.js,
- * journal.js) — 2026-08-20.
+ * wiring into the unauthenticated dispatch endpoints (close.js, scan.js) —
+ * 2026-08-20. (journal.js was the third until it went, 2026-09-21.)
  *
  * WHY THIS FILE EXISTS: after the 2026-08-20 bad-commit incident there was
  * nothing to read to answer "what else hit these endpoints in the last 24
@@ -9,7 +9,7 @@
  * it must never lose:
  *   1. A call gets logged — method/path/outcome/IP/country/UA reach KV.
  *   2. Logging is BEST-EFFORT — a KV failure must never block or change the
- *      underlying close/scan/journal response.
+ *      underlying close/scan response.
  *
  * Pattern follows test/api_guards.test.js: the REAL sources are read, the ESM
  * surface stripped, and the real helper prepended — no re-typed mirror.

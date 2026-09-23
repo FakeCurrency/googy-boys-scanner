@@ -1567,7 +1567,7 @@ test("deck and journal say the same words: 'A+ slots' and 'stalled'", () => {
   assert.ok(/stalled/.test(st));
 });
 
-// ---- fix 7/8: badge colour + HORIZON label -------------------------------
+// ---- fix 7/8: badge colour (the HORIZON label pin went 2026-09-20) -------
 test("the JOURNAL badge is INFORMATION (blue), not a standing alarm (red)", () => {
   // It carries the open-position count, which sits AT the cap by design — a
   // permanent red dot rendered a healthy full book as a fault on every page.
