@@ -1317,10 +1317,10 @@
       default_tf: "1D", level_lines: [], timeframes: {},
       _fallback: true, _vivek: false, _pm: true,
     };
-    // Zone-native sim plan (2026-07-03): a PhaseMap setup is paper-tradeable —
-    // entry at the current price, stop at the hard invalidation's outer edge,
-    // target at the first live target zone's mid. The Simulate buttons and
-    // their auto-close-at-stop/target machinery work exactly like VIVEK's.
+    // Zone-native plan (2026-07-03): entry at the current price, stop at the
+    // hard invalidation's outer edge, target at the first live target zone's
+    // mid — shown as the chart's entry / stop / target. (The Simulate buttons
+    // that paper-traded it went 2026-09-21.)
     if (rec && rec.zones && rec.zones.length && d.price != null) {
       const c = d.price;
       const hard = rec.zones.find((z) => z.id === "inv_hard");
@@ -1340,7 +1340,6 @@
           d.target = target;
           d.tp1 = target;
           d.rr = Math.round((rew / risk) * 100) / 100;
-          d._zonePlan = true;
         }
       }
     }
