@@ -333,7 +333,7 @@
     return pts;
   }
 
-  function statCards(host, s, accent) {
+  function statCards(host, s) {
     const cell = (label, val, cls) =>
       `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls || ""}">${val}</div></div>`;
     const equity = startCapital() + s.totalD;         // realised account value

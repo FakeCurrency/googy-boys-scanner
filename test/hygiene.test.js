@@ -87,6 +87,10 @@ ok(!/\brec\b/.test(fnBody(code("js/chart.js"), "momentumFallback")),
    "js/chart.js momentumFallback: the unused `rec` parameter was deleted 2026-09-23 (the " +
    "caller keeps its own `rec` for pmRec; the PhaseMap record never reached this function)");
 
+ok(!/\baccent\b/.test(fnBody(code("js/journal.js"), "statCards")),
+   "js/journal.js statCards: the unused `accent` parameter was deleted 2026-09-23 (its one " +
+   "caller never passed it)");
+
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
 ok(code("js/sectors.js").includes("const SECTOR_INFO = {"), "js/sectors.js moved -- pin would be vacuous");
