@@ -692,7 +692,6 @@
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th><th class="num">Now</th>
       ${sortTh("r", "R")}${sortTh("usd", "$")}${sortTh("opened", "Opened")}</tr>`;
     const rows = sortedOpen(list, side).map((t) => {
-      const isLong = t.direction !== "short";
       return `<tr data-tid="${esc(t.id)}" data-side="${side}">
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
