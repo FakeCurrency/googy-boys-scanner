@@ -141,11 +141,34 @@ async function finish() {
       metrics: ((document.getElementById("cf-metrics") || {}).innerText || "").replace(/\s+/g, " "),
       body: document.body.innerText, panes: document.querySelectorAll(".mom-pane").length }));
     rec(P, "SMA 10 / 20 / 43 in the legend", /SMA 10/.test(r.legend) && /SMA 20/.test(r.legend) && /SMA 43/.test(r.legend), r.legend.slice(0, 140));
-    rec(P, "5.0 footer (Setup + 200 SMA)", /Setup/i.test(r.metrics) && /200 SMA/.test(r.metrics), r.metrics.slice(0, 160));
+    // BHP may be off the scan: then chart.js renders the raw-chart GENERIC footer
+    // (ENTRY/STOP/TARGET/TRAIL/SCORE/RISK/R:R), which is the 5.0 footer family.
+    // What must never appear here is the Momentum PLAN strip.
+    rec(P, "5.0 footer family, not the Momentum PLAN strip", (/Setup/i.test(r.metrics) || /ENTRY/i.test(r.metrics)) && !/\bPLAN\b/i.test(r.metrics) && !/SIGNAL/i.test(r.metrics), r.metrics.slice(0, 160));
     rec(P, "no Pine caption, no Momentum panes", !/Pine template/.test(r.body) && r.panes === 0, `panes ${r.panes}`);
     rec(P, "no page error", errs.length === 0, errs.join(" ; ") || "none");
     await page.screenshot({ path: `${OUT}/bhp-5.png` });
     await ctx.close();
+  }
+
+  // ── a 5.0 chart for a name ON today's scan: the VIVEK footer proper ──
+  {
+    const P = "5.0 chart, on-scan name";
+    let sym = "";
+    try { const j = await (await fetch(BASE + "/data/asx_vivek.json", { cache: "no-store" })).json(); sym = ((j.results || []).find((x) => x.grade === "A+") || (j.results || [])[0] || {}).symbol || ""; } catch (_) {}
+    if (!sym) rec(P, "found an on-scan ASX name", false, "none");
+    else {
+      const { ctx, page, errs } = await open(`/chart.html?s=${encodeURIComponent(sym)}&m=asx`);
+      await page.waitForSelector("#tf-toggle .tf-btn[data-tf]", { timeout: 70000 }).catch(() => {});
+      await page.waitForTimeout(2000);
+      const r = await page.evaluate(() => ({ legend: ((document.getElementById("chart-legend") || {}).innerText || "").replace(/\s+/g, " "),
+        metrics: ((document.getElementById("cf-metrics") || {}).innerText || "").replace(/\s+/g, " "), panes: document.querySelectorAll(".mom-pane").length }));
+      rec(P, `${sym}: VIVEK footer (Setup + 200 SMA)`, /Setup/i.test(r.metrics) && /200 SMA/.test(r.metrics), r.metrics.slice(0, 160));
+      rec(P, `${sym}: SMA 10 / 20 / 43 legend, no Momentum panes`, /SMA 10/.test(r.legend) && /SMA 20/.test(r.legend) && /SMA 43/.test(r.legend) && r.panes === 0, r.legend.slice(0, 120));
+      rec(P, `${sym}: no page error`, errs.length === 0, errs.join(" ; ") || "none");
+      await page.screenshot({ path: `${OUT}/vivek-${sym}.png` });
+      await ctx.close();
+    }
   }
 
   // ── fail() / emptyState() keep src ──
