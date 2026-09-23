@@ -59,7 +59,7 @@
     return (highs[0] || up[0] || null);
   }
 
-  function macroCardHTML(key, m) {
+  function macroCardHTML(m) {
     const ev = nextEvent(m);
     const latest = m.latest_event;
     let html = "";
@@ -194,7 +194,7 @@
     return `
       <div class="col-head"><span class="col-flag">${isAsx ? "🇦🇺" : "🇺🇸"}</span><h3>${esc(m.label || (isAsx ? "ASX" : "US"))}</h3></div>
 
-      ${macroCardHTML(key, m)}
+      ${macroCardHTML(m)}
 
       <div class="sec-box overnight">
         <div class="sec-box-title">${summaryTitle}</div>
