@@ -103,11 +103,9 @@ vm.runInContext(
   + slice("function sortedOpen(list, side) {", "\n  }") + "\n"
   + "let painted = [];\n"
   + "function paintOpen(side) { painted.push(side); }\n"
-  + "function refreshLive() { painted.push('refresh'); }\n"
   + slice("function setOpenSort(key) {", "\n  }") + "\n"
   + "this.stats = stats; this.byExit = byExit; this.sizeOf = sizeOf;"
   + "this.bumpGen = () => { RULES_GEN++; }; this.gen = () => RULES_GEN;"
-  + "this.setScale = (s) => { SCALE = s; }; this.readScale = () => SCALE;"
   + "this.costR = costR;"
   + "this.openMetric = openMetric; this.sortedOpen = sortedOpen;"
   + "this.setOpenSort = setOpenSort; this.scanPrice = scanPrice;"
@@ -115,7 +113,7 @@ vm.runInContext(
   + "this.resetSort = () => { openSort = { key: 'opened', dir: -1 }; painted = []; };"
   + "this.painted = () => painted.slice();",
   ctx);
-const { stats, byExit, sizeOf, bumpGen, gen, setScale, readScale } = ctx;
+const { stats, byExit, sizeOf, bumpGen, gen } = ctx;
 const { openMetric, sortedOpen, setOpenSort, scanPrice, sortState, resetSort, painted } = ctx;
 const { costR } = ctx;
 
@@ -202,13 +200,21 @@ test("ASX dollars are converted before they enter the curve", () => {
 suite("#33 — the TP ladder comes from the engine");
 
 test("SCALE is mutable, because loadBotRules replaces it from bot_rules.json", () => {
-  // A `const` array of three literals is what the bug looked like. This asserts
-  // the shape that lets the published ladder win — if someone re-freezes it,
-  // adoption silently becomes a no-op and the drift warning never fires again.
-  setScale({ long: [0.3, 0.4, 0.2], short: [0.5, 0.25, 0.15] });
-  assert.deepEqual(readScale().long, [0.3, 0.4, 0.2],
-    "SCALE must be replaceable — a frozen literal makes adoption a silent no-op");
-  setScale({ long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] });
+  // A `const` array of three literals is what the bug looked like. The shipped
+  // shape is a const OBJECT whose per-side arrays loadBotRules overwrites in
+  // place; if someone freezes it or stops the in-place write, adoption silently
+  // becomes a no-op and the drift warning never fires again. (This used to
+  // reassign the harness's own `let SCALE`, which proved nothing about
+  // journal.js -- it now reads the shipped code.)
+  assert.ok(/const SCALE = \{ long: \[[^\]]+\], short: \[[^\]]+\] \};/.test(CODE),
+    "journal.js SCALE is no longer a per-side object of arrays");
+  assert.ok(!/Object\.freeze\(\s*SCALE/.test(CODE), "journal.js freezes SCALE, so adoption is a no-op");
+  assert.ok(/SCALE\[side\] = v\.slice\(\);/.test(CODE),
+    "loadBotRules no longer writes the published ladder into SCALE");
+  // and the write really lands on the shipped shape
+  const shipped = new Function(CODE.match(/const SCALE = \{[^;]+\};/)[0] + " return SCALE;")();
+  shipped.long = [0.3, 0.4, 0.2];
+  assert.deepEqual(shipped.long, [0.3, 0.4, 0.2], "the shipped SCALE rejected an in-place write");
 });
 
 test("journal.js adopts bot_rules.tp_scale and shouts when it differs", () => {
@@ -315,8 +321,8 @@ test("the bot side reads the numbers the scan already computed", () => {
 test("the me side derives from the scan price, because nothing on the row has it", () => {
   resetSort(); scanPrice.clear();
   const t = mePos({ symbol: "AAA" });
-  // Sorting off the RENDERED cell would sort the literal "—": at this point in
-  // the page's life refreshLive has not run and the row carries no R at all.
+  // Sorting off the RENDERED cell would sort the literal "—": a non-bot row
+  // carries no R at all, so openMetric has to derive it from the scan price.
   assert.equal(t.unreal_r, undefined);
   scanPrice.set("asx:AAA", 12);      // +2R on a 1-point risk
   const m = openMetric(t, "me");
