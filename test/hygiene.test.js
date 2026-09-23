@@ -91,6 +91,45 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
        `css/journal.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
 }
 
+// SWEEP (2026-09-23) -- styles.css rules for markup nothing creates any more:
+// the old two-row topbar (row1/row2, clocks, brand, nav, SET UPS title),
+// the stars/watchlist (t-star, starred, watched, tb-watch -- removed
+// 2026-09-21, with the star-pop keyframes), the retired VIVEK level rows and
+// checklist (vk-lvl*, vk-check*; the live ladder is vk-cell/vk-sl/entry/tp),
+// the retired EMA/tag detail blocks, and assorted orphans. Pinned as
+// SELECTORS; a comment may still name one.
+{
+  const css = code("css/styles.css");
+  ok(css.includes(".fpill.is-active {"), "css/styles.css moved -- pin would be vacuous");
+  const STYLES_CSS_GONE = [
+    "accent-green",
+    "ba-label",
+    "control-label",
+    "deck-npick",
+    "grade-A", "grade-Ap",
+    "liq-liquid", "liq-ok",
+    "nav-minor",
+    "olw-row",
+    "pm-topnav",
+    "pmx",
+    "rd-ema", "rd-ema-head", "rd-spread", "rd-tag",
+    "scan-switch",
+    "seccount",
+    "setups-title",
+    "sort-arrow",
+    "starred",
+    "t-star",
+    "tb-dim", "tb-watch",
+    "topbar-brand", "topbar-clocks", "topbar-clocks-left", "topbar-clocks-right", "topbar-nav", "topbar-row1", "topbar-row2",
+    "vk-check", "vk-check-ic", "vk-check-lbl", "vk-check-note", "vk-checklist", "vk-lvl", "vk-lvl-key", "vk-lvl-label", "vk-lvl-price", "vk-lvl-sub",
+    "watched",
+  ];
+  for (const c of STYLES_CSS_GONE)
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/styles.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
+  ok(!/@keyframes\s+star-pop\b/.test(css), "css/styles.css: star-pop animated only the deleted .t-star");
+}
+
 // STYLESHEET COMMENTS CLOSE (2026-09-23). A regex deletion on 2026-09-20
 // (5ac425b2a) glued two comment openers in chart.css onto the rule bodies
 // below them, so each comment ran on to the NEXT comment's "*/" -- silently
