@@ -222,9 +222,6 @@
   background: var(--orange-soft); border-radius: 6px;
   padding: 4px 8px; white-space: nowrap;
 }
-/* Solid, unmistakable colours: BUY green{ background: var(--green); color: #04130b; border: 1px solid var(--green); }
-.sim-status.live { color: var(--green); }
-.sim-status.neg  { color: var(--red); }
 
 /* ── measure tool (TradingView-style: % move + bar/time span) ── */
 .draw-btn.draw-measure.is-active { background: var(--blue); color: #fff; }
@@ -339,13 +336,7 @@
 .pm-zone-tip-row + .pm-zone-tip-row { margin-top: 4px; border-top: 1px solid #1c2230; padding-top: 4px; }
 .pm-zone-tip-src { display: block; color: #6d7889; font-size: 9.5px; }
 
-/* ── Wave 7: header star + market chip (#71), loading skeleton (#77){
-  appearance: none; border: none; background: none; cursor: pointer;
-  font-size: 20px; line-height: 1; color: var(--muted); padding: 0 2px;
-  transition: color .15s, transform .1s;
-}
-.ct-star.is-on { color: #ffb020; }
-
+/* ── Wave 7: market chip (#71), loading skeleton (#77), offline states (#78) ── */
 .ct-market {
   font: 700 10px/1 var(--sans); letter-spacing: .08em;
   color: var(--text-2); background: var(--fill);
