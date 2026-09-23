@@ -1,9 +1,9 @@
 /* ===========================================================================
-   VIVEK 5.0 — terminal theme
-   Dark-only, dense, pro-desk look: hairline borders instead of drop shadows,
-   JetBrains Mono for every number/ticker/label, sharp corners, fast
-   transform/opacity-only transitions. Same layout + class names as before —
-   only the skin changed, so all pages and JS keep working untouched.
+   VIVEK 5.0 — dark theme
+   Began as a dense terminal skin (hairline borders, JetBrains Mono labels,
+   sharp corners). The 2026-07-05 iOS REVAMP in :root below replaced it with
+   rounded corners, soft layered shadows and SF-style sans labels, and keeps
+   the terminal values in its comment for a revert.
    ===========================================================================
 
    ── BREAKPOINT SCALE (backlog #39) ──────────────────────────────────────
@@ -11,7 +11,8 @@
    fresh ad-hoc value tuned to one element:
 
      320px  — narrowest supported phone. Nothing may overflow here (the e2e
-              suite asserts it on every page). Design floor.
+              smoke asserts it on index, recommendations, phasemap, specs
+              and journal). Design floor.
      480px  — small phone → large phone / spark-drop boundary.
      680px  — THE phone⇄desktop line. Below it: bottom tab bar + MORE sheet,
               hidden pill nav, 16px inputs, card reflows, h-scroll strips.
@@ -1095,7 +1096,7 @@ body.debug-mode .debug-panel {
   .row-spark { width: 46px; height: 24px; }
   .tkr { font-size: 18px; }
   .rprice { font-size: 18px; }
-  /* .cname display:none removed (v2 #27) — names now wrap to their own line on phones; see the Wave-4 block at the end of this file. */
+  /* .cname display:none removed (v2 #27) — names now wrap to their own line on phones; see the "Wave 4 core (#27+#28+#33)" block further down. */
   /* tighter, quieter secondary badges so the ticker + price stay the focus */
   .badge { font-size: 9.5px; padding: 3px 7px; }
   .row-chips { gap: 4px; }
@@ -1189,7 +1190,7 @@ body.debug-mode .debug-panel {
 .nav-pills .howto-link { font-size: 12.5px; font-weight: 700; color: var(--text-2); }
 .nav-pills .howto-link:hover { color: var(--green); }
 /* mid-width safety: keep the bold pills but compact them where the row gets
-   tight (clocks are already hidden below 1560px) */
+   tight (the clocks stay until 880px, so they share this row) */
 @media (max-width: 1440px) {
   .nav-pills .howto-link { font-size: 11px; padding: 5px 8px; }
   .market-btn { font-size: 12.5px; padding: 7px 12px; }
@@ -1385,8 +1386,8 @@ body { letter-spacing: -0.012em; }
   .site-tab-ico { font-size: 18px; line-height: 1; position: relative; }
   .site-tab-lbl { font: 700 9px/1 var(--sans); letter-spacing: 0.04em; }
   .site-tab.is-here { color: var(--blue); }
-  /* #29: active tab gets a filled pill + a top accent so "where am I" reads
-     instantly; badge counts ride the icon. */
+  /* #29: active tab gets a blue label, a bolder weight and a top accent bar
+     so "where am I" reads instantly; badge counts ride the icon. */
   .site-tab.is-here .site-tab-lbl { font-weight: 800; }
   .site-tab.is-here::before {
     content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
@@ -1400,7 +1401,7 @@ body { letter-spacing: -0.012em; }
     border-radius: 999px; border: 1.5px solid var(--nav);
   }
   /* A CSS `display` overrides the HTML `hidden` attribute — restore it so the
-     count-less tabs (RECS/PHASEMAP/MY NAMES) don't show an empty dot. */
+     count-less tabs (SCAN/RECS/PHASEMAP/SPECS) don't show an empty dot. */
   .site-tab-badge[hidden] { display: none; }
   .site-tab[data-tabkey="index"] .site-tab-badge { background: var(--green); }
   /* JOURNAL badge is INFORMATION, not an alarm (Lane A, 2026-08-16). It carries
@@ -1577,7 +1578,7 @@ body { letter-spacing: -0.012em; }
   white-space: nowrap; font-variant-numeric: tabular-nums; text-align: left;
   letter-spacing: 0.01em;
 }
-/* CLS #1: the cells boot as "—" then become "18:51:09 MEL" — reserve widths
+/* CLS #1: the cells boot as "—" then become "MELBOURNE 18:51:09" — reserve widths
    so the tick-over doesn't nudge the header's right group. */
 .microclock .mc-major { display: inline-block; min-width: 118px; }
 .microclock .mc-minor { display: inline-block; min-width: 92px; }
@@ -1783,7 +1784,7 @@ body { letter-spacing: -0.012em; }
 .rec-sec-nm { font: 600 12px/1.2 var(--sans); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-sec-lean { font: 700 11px/1 var(--mono); white-space: nowrap; flex: 0 0 auto; }
 .rec-sec-lean.up { color: var(--green); } .rec-sec-lean.down { color: var(--red); } .rec-sec-lean.flat { color: var(--muted); }
-.rec-card-hd .rec-verdict { margin-left: auto; }   /* verdict stays right when a ★ badge is present */
+.rec-card-hd .rec-verdict { margin-left: auto; }   /* verdict stays right when a ⚠ stale chip is present */
 .rec-card-ft { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
 .rec-card-ft .rec-age { margin-top: 0; }
 .rec-open { font: 700 12px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
@@ -1825,7 +1826,7 @@ body { letter-spacing: -0.012em; }
 }
 
 /* ── Wave 3R (#1-3): ONE sticky filter toolbar ──────────────────────────────
-   Grades + ★ watch + VIVEK chips + cycling sort in a single line that pins
+   Views menu + grades + VIVEK chips + cycling sort in a single line that pins
    under the topbar (height measured into --topbar-h by app.js) and slims
    once the deck scrolls away. Replaces .view-tabs + .controls on the
    dashboard (both classes remain for specs.html). */
@@ -1961,15 +1962,16 @@ body { letter-spacing: -0.012em; }
 }
 .vk-chart-btn:hover { filter: brightness(1.12); }
 
-/* ── Wave 5 #47: FUND/REIT dimming (default on, ⚠ FUNDS chip toggles) ───── */
+/* ── Wave 5 #47: FUND/REIT dimming (default on, the deck's ⊘ products chip toggles) ── */
 .row-wrap.row-dim { opacity: 0.45; }
 .row-wrap.row-dim:hover, .row-wrap.row-dim.open { opacity: 1; }
 
 /* ── Wave 4 core (#27+#28+#33): phone rows + touch targets ──────────────────
    ≤680px: 44px grade rail; company name gets its OWN line under the ticker
    (was display:none); price + day-%% stay right-aligned; ≤480px drops the
-   spark but keeps the day-%%. Tap targets: 44px boxes on star/expand/copy,
-   invisible ±5px hit-area extensions on chips/pills/segs (iOS HIG). */
+   spark but keeps the day-%%. Tap targets: a 44px box on expand (the
+   debug-copy button is hidden here), invisible ±5px hit-area extensions on
+   chips/pills/segs (iOS HIG). */
 @media (max-width: 680px) {
   .row { grid-template-columns: 44px 1fr auto auto; }
   .row-grade { font-size: 12.5px; }
@@ -2004,15 +2006,16 @@ body { letter-spacing: -0.012em; }
 @media (max-width: 680px) {
   /* #37: a 16px floor on every keyboard-invoking input kills iOS's
      zoom-on-focus (which then never zooms back out). Beats the per-class
-     13-15px sizes (.pm-search / .mj-input / .jr-modal-input) via !important —
+     13-15px sizes (e.g. .pm-search) via !important —
      the one place it's the accepted fix. Range/checkbox/radio excluded. */
   input[type="text"], input[type="search"], input[type="number"],
   input[type="email"], input[type="tel"], input[type="password"],
   input:not([type]), textarea, select { font-size: 16px !important; }
 
   /* #35: safe-area insets — content clears the notch (portrait status bar +
-     landscape side cutout) and the home indicator. viewport-fit=cover is
-     already set in every page's <meta viewport>. */
+     landscape side cutout) and the home indicator. viewport-fit=cover is set
+     in most pages' <meta viewport>; about, journal and system omit it, so
+     env() resolves to 0 there. */
   .topbar {
     padding-top: max(11px, env(safe-area-inset-top, 0px));
     padding-left: max(14px, env(safe-area-inset-left, 0px));
@@ -2464,8 +2467,8 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 .vk-copy-btn { cursor: pointer; background: none; }
 
 /* ── TOOLBAR GROUPING (UI pass 2026-08-18) ────────────────────────────────
-   The filter row is thirteen chips in one undifferentiated line - grades,
-   watchlist, products, entry types, conviction, direction, sort - so finding
+   The filter row is one undifferentiated line of chips - grades, entry
+   types, conviction/recency, direction, sort - so finding
    the one you want is a scan of the whole row every time. They are already
    four distinct QUESTIONS; a hairline between the groups lets the eye jump
    straight to the right one. Pure separator: no chip moves, none is renamed,
@@ -2513,9 +2516,9 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 /* ── MOMENTUM — the one purple destination (2026-09-22) ───────────────────
  *
  * WHY THIS IS IN styles.css AND NOT momentum.css. The pill row renders on all
- * 13 pages via nav.js, but a per-page stylesheet is fetched only by its own
- * page. Put this in momentum.css and the pill is purple on momentum.html and
- * default grey on the other twelve — i.e. the wayfinding colour is missing
+ * 13 pages that load nav.js, but a per-page stylesheet is fetched only by its
+ * own page. Put this in momentum.css and the pill is purple on momentum.html
+ * and default grey on the other twelve — i.e. the wayfinding colour is missing
  * from every page you would navigate FROM, which is the only place it works.
  * Every other piece of cross-page nav chrome already lives here (.nav-back,
  * .site-tab[data-tabkey=…]).
@@ -2526,9 +2529,11 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
  * reverts in one delete. And the existing cascade actively fights back, so
  * each state needs its own specificity:
  *
- *   :1408  .nav-pills .howto-link               (0,2,0)  the base pill
- *   :1414  .nav-pills .howto-link:hover         (0,3,0)  sets color: var(--green)
- *   :1500  .nav-pills .howto-link.is-here       (0,3,0)  sets background: var(--blue)
+ *   .nav-pills .howto-link               (0,2,0)  the base pill
+ *   .nav-pills .howto-link:hover         (0,3,0)  sets color: var(--green)
+ *   .nav-pills .howto-link.is-here       (0,3,0)  sets background: var(--blue)
+ * (each is defined more than once above; line numbers are left out because
+ * they drift with every edit to this file)
  *
  * A rest-only rule at (0,3,0) would flicker GREEN on mouse-over, and an
  * is-here rule that does not exceed (0,3,0) would stay BLUE. Hence the
@@ -2537,8 +2542,8 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
  *
  * --purple is NOT redefined. It is byte-identical to --ema-144 and already
  * sits inside test/contrast.test.js's 3.0:1 gate; changing its value would
- * repaint a chart line, PhaseMap's fund tag, a journal exit chip and the SPECS
- * label in the insights diagram. The tint is a literal rgba at the house
+ * repaint PhaseMap's fund tag, the journal's new-position lens chip, the
+ * Momentum page's accent and the SPECS label in the insights diagram. The tint is a literal rgba at the house
  * strength (0.16, matching --blue-soft / --green-soft / --red-soft).
  *
  * KNOWN AND ACCEPTED: #fff on --purple measures 3.52:1, essentially the
@@ -2566,6 +2571,6 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 }
 /* Mobile reaches MOMENTUM through the MORE sheet rather than a bottom tab —
  * the tab grid is repeat(6, 1fr) and is full — so the sheet row carries the
- * same illuminate. (0,3,0) beats the key-agnostic .more-sheet-row.is-here at
- * :1613, which is (0,2,0) and blue. */
+ * same illuminate. (0,3,0) beats the key-agnostic .more-sheet-row.is-here in
+ * the MORE-sheet block, which is (0,2,0) and blue. */
 .more-sheet-row[href="momentum.html"].is-here { color: var(--purple); }
