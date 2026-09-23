@@ -6,17 +6,27 @@ name: Momentum scan
 # ONE MARKET PER RUN, AFTER THAT MARKET'S CLOSE. Spec 5.11 is explicit that a
 # daily screener must NOT run during market hours: a forming bar's RSI and EMA
 # move all session, so an intraday run produces a signal that may not exist at
-# the close. That inverts the usual in-job gate here -- the question is not "is
-# the market open" but "is the last bar the latest close", which the scanner
-# answers from the DATA (config.MAX_DATA_AGE_DAYS, measured in the market's own
-# calendar) rather than from the clock.
+# the close, and the screen does not drop a forming bar itself.
 #
-# THE CRON TIMES ARE CHOSEN TO CLEAR THE CLOSE IN BOTH HALVES OF THE DST YEAR,
-# which is the same lesson every ASX cron in this repo learned the hard way:
-#   ASX     16:00 Sydney   = 06:00 UTC under AEST, 05:00 under AEDT -> 06:30 UTC
-#   NASDAQ  16:00 New York = 21:00 UTC under EST,  20:00 under EDT  -> 21:30 UTC
-#   crypto  the daily bar closes at the UTC day boundary            -> 00:30 UTC
-# Never hard-code the offset you happen to be in.
+# WHICH MARKET IS DECIDED BY THE DATA, NOT BY WHICH CRON FIRED (2026-09-23).
+# This used to map three crons to three markets. On 2026-09-23 GitHub's
+# scheduler created almost no scheduled runs repo-wide between ~06:46 and
+# ~09:53 UTC, the 06:30 ASX event was never delivered, and a dropped cron
+# leaves no run and nothing to retry. So every wake-up now runs
+# scripts/momentum_due.py against the files AS COMMITTED ON MAIN: a market is
+# due when its generated_at predates the close it owes (local close + 30 min,
+# weekdays; crypto 00:30 UTC daily) AND its next session has not opened. The
+# newest-due market is screened; if nothing is due the run stops before
+# `pip install`. The DST arithmetic lives in the gate, in each market's own
+# timezone -- never hard-code the offset you happen to be in.
+#
+# THE WAKE-UPS, deliberately redundant because any one of them can be dropped:
+#   * the three original crons, unchanged, plus a backstop every three hours;
+#   * every completed morning_plays.yml run. Those are dispatched by the
+#     cron-job.org pinger every 30 minutes after each close (06:15-10:45 and
+#     20:15-23:45 UTC, Mon-Fri), i.e. by a scheduler that is NOT GitHub's,
+#     which is the only kind that kept firing on 2026-09-23.
+# A late or duplicate wake-up is harmless: the gate finds the file fresh.
 #
 # ITS OWN CONCURRENCY GROUP, and that is enforced, not merely advised: joining
 # `group: scan` would make this a member of the paper-book mutex, and
@@ -25,9 +35,14 @@ name: Momentum scan
 
 on:
   schedule:
-    - cron: "30 6 * * 1-5"    # ASX,    after the Sydney close (AEST and AEDT)
-    - cron: "30 21 * * 1-5"   # NASDAQ, after the New York close (EST and EDT)
-    - cron: "30 0 * * *"      # crypto, just past the UTC day boundary; 7 days
+    - cron: "30 6 * * 1-5"    # after the Sydney close (AEST and AEDT)
+    - cron: "30 21 * * 1-5"   # after the New York close (EST and EDT)
+    - cron: "30 0 * * *"      # just past the UTC day boundary; 7 days
+    - cron: "41 */3 * * *"    # backstop; odd minute, away from the :00 pile-up
+  workflow_run:
+    workflows: ["Morning plays (Discord)"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       market:
@@ -69,18 +84,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # THE GATE. A manual dispatch screens the market it names, no questions.
+      # Every automatic wake-up asks scripts/momentum_due.py instead, reading
+      # the files from a FRESH fetch of main -- a run that sat pending behind
+      # the previous one was created at an older SHA, and that older copy
+      # would call a market due that was published minutes ago. Stdlib only
+      # on the runner's own python3, so a no-op wake-up never installs pandas.
+      - name: Which market is due
+        id: due
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MARKET="${{ inputs.market }}"
+            echo "market=${MARKET:-asx}" >> "$GITHUB_OUTPUT"
+            echo "manual dispatch: ${MARKET:-asx} (no due check)"
+            exit 0
+          fi
+          git fetch --quiet --depth=1 origin main
+          STAMPS="$RUNNER_TEMP/momentum-on-main"
+          mkdir -p "$STAMPS"
+          for m in asx nasdaq crypto; do
+            git show "origin/main:public/data/momentum/$m.json" > "$STAMPS/$m.json" 2>/dev/null \
+              || rm -f "$STAMPS/$m.json"
+          done
+          echo "wake-up: ${{ github.event_name }}"
+          python3 scripts/momentum_due.py --dir "$STAMPS" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/setup-python@v5
+        if: steps.due.outputs.market != ''
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
+        if: steps.due.outputs.market != ''
         run: pip install -r requirements.txt
 
       # Its OWN cache namespace. Sharing `vivek-frames-` would mix a 3y window
       # with the scan's 5y one under the same keys, and a separate namespace is
       # one more thing that disappears cleanly when the lens does.
       - name: Restore frame cache
+        if: steps.due.outputs.market != ''
         uses: actions/cache@v4
         with:
           path: .cache/frames
@@ -90,19 +134,10 @@ jobs:
 
       - name: Screen the market
         id: scan
+        if: steps.due.outputs.market != ''
         run: |
           set -u
-          # Which market this firing is for. A scheduled run is identified by
-          # its own cron string -- the morning_plays pattern -- so the three
-          # schedules cannot be confused with each other and a manual dispatch
-          # can still pick any of them.
-          case "${{ github.event.schedule }}" in
-            "30 6 * * 1-5")  MARKET=asx ;;
-            "30 21 * * 1-5") MARKET=nasdaq ;;
-            "30 0 * * *")    MARKET=crypto ;;
-            *)               MARKET="${{ inputs.market }}" ;;
-          esac
-          MARKET="${MARKET:-asx}"
+          MARKET="${{ steps.due.outputs.market }}"
           echo "market=$MARKET" >> "$GITHUB_OUTPUT"
 
           ARGS="--market $MARKET"

@@ -335,3 +335,27 @@ FUND_NAME_KEYWORDS = ("REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
                       "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X")
 FUND_SECTOR_HINTS = ("reit", "real estate investment trust")
 NON_OPERATING_SECTORS = frozenset({"not applicable", "not applic", "n/a"})
+
+
+# ---------------------------------------------------------------------------
+# SCHEDULE -- when a market's published file is DUE for a refresh
+# ---------------------------------------------------------------------------
+# Read ONLY by scripts/momentum_due.py, the gate at the top of momentum.yml.
+# The screen never reads these, so they cannot change what it selects, and
+# RULESET_VERSION does not move for them (it traces a published file to the
+# RULES that made it, not to the clock that started the job).
+#
+# An equity market is due from (local close + PUBLISH_AFTER_CLOSE_MIN) on each
+# weekday until its NEXT session opens, and only if the committed file was
+# generated before that instant. The session hours are NOT restated here: the
+# gate reads scanner.config.VIVEK_JOURNAL_SESSION and each market's timezone,
+# so there is one table of sessions in the repo, not two.
+#
+# 30 minutes is the lag the original fixed crons (06:30 / 21:30 UTC) gave in
+# the winter half of the year; keeping it means the first due instant is never
+# earlier than it ever was. The ASX closing auction prints ~16:10-16:12.
+PUBLISH_AFTER_CLOSE_MIN: int = 30
+
+# Crypto has no close: its daily bar rolls at 00:00 UTC, and the original cron
+# fired at 00:30. That stays the due instant, seven days a week.
+CRYPTO_DUE_UTC: Tuple[int, int] = (0, 30)
