@@ -531,9 +531,9 @@
 #ct-sheet .cts-actions .tf-btn.is-active { background: var(--blue); color: #fff; }
 
 /* ── MOMENTUM caption (2026-09-22) ──────────────────────────────────────────
-   Pinned to the BOTTOM of the canvas, unlike .tf-notice at the top, because it
-   is standing context rather than a per-timeframe warning and must not compete
-   with one when both are on screen. Purple to match the lens's nav pill.
+   A chip in the header strip (.ct-chips -- see P6 below), because it is
+   standing context about the page rather than a per-timeframe warning.
+   Purple to match the lens's nav pill.
    The levels a Momentum chart draws are the Pine template's Auto plan (#22),
    not a 5.0 ladder, and five lines labelled ENTRY/SL/TP read as one. This
    says whose plan it is, permanently and without a dismiss control. */
