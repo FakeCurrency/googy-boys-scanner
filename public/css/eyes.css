@@ -35,7 +35,7 @@
 .ey-chip b { font-weight: 800; }
 .ey-n { font: 700 10px/1 var(--mono, var(--sans)); color: var(--muted); }
 
-/* A+ inside the alignment — the bot-tradeable subset, green-tagged. */
+/* A+ inside the alignment (the DISPLAYED grade; the bot buys grade_raw, A or A+), green-tagged. */
 .ey-chip.ey-ap { border-color: var(--green); }
 .ey-tag {
   font: 800 9.5px/1 var(--sans); font-style: normal; letter-spacing: 0.02em;
