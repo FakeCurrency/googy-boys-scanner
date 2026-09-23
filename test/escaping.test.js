@@ -150,7 +150,10 @@ for (const f of files) {
 {
   const src = fs.readFileSync(path.join(JS_DIR, "sectors.js"), "utf8");
   const esc = eval(`(${extractConst(src, "esc")})`); // eslint-disable-line no-eval
-  const line = (src.match(/^.*data-countdown="\$\{[^\n]*$/m) || [])[0];
+  // First CODE line carrying the attribute: sectors.js:38 has a comment that
+  // quotes the escaped form, and matching it let the pin pass on prose while
+  // the real template (sectors.js:73) could lose its esc() unnoticed.
+  const line = (src.match(/^(?!\s*(?:\/\/|\*)).*data-countdown="\$\{[^\n]*$/m) || [])[0];
   ok(line, "sectors.js no longer has the data-countdown attribute this pins");
   ok(/data-countdown="\$\{esc\(/.test(line),
     "sectors.js must escape the value it puts in data-countdown");
