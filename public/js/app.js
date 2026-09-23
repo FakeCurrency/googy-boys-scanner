@@ -1,8 +1,8 @@
 /* =========================================================================
    Vivek 5.0 — frontend logic
-   Renders the PULSE bar, stat cards, and the dense results table from
-   data/<market>.json. Handles market toggle, Results/Watch views, grade
-   sub-tabs, sorting, and a localStorage watchlist (stars).
+   Renders the deck (filter pills, the EYES strip, the bot strip) and the
+   dense results table from data/<market>_vivek.json. Handles the market
+   toggle, grade sub-tabs, filters and sorting.
    ========================================================================= */
 (() => {
   "use strict";
@@ -38,8 +38,8 @@
   // weeks gets walled by a welcome tour on every single visit.
   //
   // So the gate now also asks a second question — has this browser done anything
-  // only a user can do? Every key below requires a deliberate act (star a name,
-  // log a trade, save a view, change a control). `gbs:visit:<market>` is
+  // only a user can do? Every key below requires a deliberate act (save a view,
+  // change a control, use the size calculator, turn on alerts). `gbs:visit:<market>` is
   // DELIBERATELY ABSENT and must stay absent: it is written from the FIRST
   // payload of the FIRST session, so counting it would suppress the tour for
   // exactly the people it exists for.
@@ -237,9 +237,9 @@
   const state = {
     market: "asx",
     mode: "vivek",      // VIVEK (5.0) is the only scanner now
-    view: "results",    // results | watch
+    view: "results",    // unread since the watch view went 2026-09-21
     tab: "aplus",       // aplus | a | watch
-    sort: "score",      // score | price | rr | mcap | az
+    sort: "score",      // score | price | rr | mcap | az | sector
     sortDir: null,      // "asc" | "desc"; null = the sort's natural default
     data: null,
     dataKey: null,      // "<market>:<mode>" the on-screen data belongs to
@@ -819,8 +819,8 @@
       // The counterweight to the corrected counts above: say out loud how many
       // rows were set aside, so "96 A+" becoming "52 A+" reads as an
       // explanation rather than as names going missing. Informational, not a
-      // filter — the rows are still in the list (dimmed by default via the
-      // existing FUNDS DIMMED toggle), and this only reports what the grade
+      // filter — the rows are still in the list (dimmed by default; this ⊘
+      // chip is the toggle), and this only reports what the grade
       // counts no longer include.
       (c.products
         ? `<button class="deck-products" type="button" data-funddim aria-pressed="${state.dimFunds === false ? "false" : "true"}" title="${esc(c.products + " ETF / fund / REIT / LIC row(s) on this scan"
@@ -981,8 +981,9 @@
       `${"🎯".repeat(Math.min(cells.length, 3))} High conviction</span>`;
   }
   // Compact, scannable badges for the VIVEK list — what moved + why it
-  // matters. Returns an ARRAY; rowHtml caps the row at 3 chips + a "+N"
-  // overflow chip (UI Wave 1) — the expanded panel still shows everything.
+  // matters. Returns an ARRAY; rowChips caps the row at 3 chips + a "+N"
+  // overflow chip (UI Wave 1). The expanded VIVEK panel lists the scanner's
+  // own r.chips, not these client-side badges.
   function vkBadges(r) {
     if (state.mode !== "vivek") return [];
     const out = [];
@@ -1008,7 +1009,7 @@
 
   // Row chip strip capped at 3 + "+N" (UI Wave 1): warnings (FUND/REIT,
   // LOW R:R, WIDE STOP) always outrank decorative badges so the cap can never
-  // hide a risk flag. The full set stays in the expanded detail panel.
+  // hide a risk flag. Badges past the cap are counted in the "+N" chip.
   const CHIP_CAP = 3;
   // Day change % (backlog #7). Prefer a scan-provided field; fall back to the
   // spark's last two closes (≈ daily cadence) flagged as an estimate.
@@ -1253,8 +1254,8 @@
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
     const stagger = Math.min(i || 0, 12);
-    // Row view shows NO regular signal chips — only critical warnings below.
-    // All chips appear in the expanded detail panel via chipsBar().
+    // Row chips: the critical warnings below plus vkBadges, capped by
+    // rowChips(). The VIVEK detail panel lists the scanner's r.chips.
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
     const widestop = (r.stop_pct != null && r.stop_pct > 20)
       ? `<span class="chip warn">WIDE STOP (${r.stop_pct}%)</span>` : "";
@@ -1286,7 +1287,7 @@
 
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     // v2 #47: FUND/REIT rows dim (default on) — the bot never trades them and
-    // they crowd the A+ list. Toggled by the FUNDS DIMMED chip; hover/open restores.
+    // they crowd the A+ list. Toggled by the deck's ⊘ products chip; hover/open restores.
     const dimCls = (state.dimFunds !== false && isFundReit(r)) ? " row-dim" : "";
     // Sector-at-cap rows dim GENTLY (their own class, not the funds toggle —
     // a capped A+ is still a real setup, just not an available slot today).
@@ -1328,7 +1329,8 @@
   }
 
   // #53: re-stamp every open panel's "scanned Xm ago" chip so a long-open row
-  // can't silently age into reading as fresh. Same maths as scanAge() above.
+  // can't silently age into reading as fresh. Same maths as scanAge() in
+  // detailHtmlVivek below.
   function refreshScanAgeChips() {
     const g = state.data && state.data.generated_at;
     if (!g) return;
@@ -1980,8 +1982,8 @@
   // Backtest quality per trigger — populated at RUNTIME from the live artifact
   // (vivek_backtest_longonly.json → results.by_entry_type). Numbers are never
   // hardcoded here: until the fetch lands (or if it fails) chips read "no
-  // backtest data" with no tint. Tint = expectancy_r: >0.3 green, 0–0.3 amber,
-  // <0 red.
+  // backtest data" with no tint. Tint = expectancy_r: >= +0.10R green,
+  // 0–0.10R amber, <0 red (the bar moved from 0.3 on 2026-08-15, see below).
   const VK_ENTRY_Q = {
     reclaim: { tier: null, note: "no backtest data" },
     retest:  { tier: null, note: "no backtest data" },
@@ -2020,7 +2022,7 @@
   // data was produced by an older build than the frontend expects.
   // ── System-status pill (UX top-10 #2, 2026-07-26) ─────────────────────────
   // One glance instead of an email: reads the SAME /api/health heartbeat the
-  // uptime monitor and watchdog use (the published bot book's age off the live
+  // external uptime monitor and scan.yml's backstop use (the published bot book's age off the live
   // site — scanner, commit and deploy all had to work for it to be fresh) and
   // shows ● Systems go / ● Running late in the deck. Click for the detail
   // popover. Hides silently where the endpoint doesn't exist (local dev, CI
@@ -2391,9 +2393,9 @@
       return;
     }
     // Sticky grade-group headers (#48): shown when the list is in grade order
-    // (the default SCORE sort). Most useful on the multi-grade views — the
-    // WATCH tab (B+/WATCH) and the ★ watchlist (all grades mixed) — but a
-    // single labelled section header on a single-grade tab reads fine too.
+    // (the default SCORE sort). Most useful on the multi-grade WATCH tab
+    // (B+/WATCH), but a single labelled section header on a single-grade tab
+    // reads fine too.
     // UX-20 #18: the same header machinery now serves TWO groupings — grade
     // sections on the default SCORE sort, sector sections on the SECTOR sort.
     const groupKeyOf = state.sort === "score" ? (r) => r.grade
@@ -2445,14 +2447,15 @@
     // Entrance cascade on the FIRST paint only — later renders (filters,
     // sorts, pills) swap instantly, which reads as much snappier.
     if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
-    // #55: the other-lens strip lives at the end of the watch view — append it
-    // here (before the small-list early return, so short watchlists get it too).
+    // (#55's other-lens strip went with the watch view, 2026-09-21; only the
+    // sector-cap notice is appended here now.)
     if (renderList.length <= FIRST) { if (capNotice()) wrap.insertAdjacentHTML("beforeend", capNotice()); wireCapAll(wrap); return; }
     const token = _rowsToken;
     let i = FIRST;
     const step = () => {
       if (token !== _rowsToken || !wrap.isConnected) return;
-      // keep the other-lens strip last as rows stream in
+      // .olw was the other-lens strip (gone 2026-09-21); nothing creates it,
+      // so olw is always null and rows append at the end
       const olw = wrap.querySelector(".olw");
       const html = renderList.slice(i, i + BATCH).map((r, j) => rowOrGroup(r, i + j)).join("");
       if (olw) olw.insertAdjacentHTML("beforebegin", html);
@@ -2740,8 +2743,9 @@
       evts.sort((a, b2) => b2.t - a.t);
       const recent = evts.slice(0, 4);
       if (!recent.length) { box.hidden = true; return; }
-      // One summary line (UI Wave 1): open count · today's realised R (Melbourne
-      // day) · last action age. Click expands the event list; the 3-min
+      // One summary line: slots used / stalled / free, the market split,
+      // unrealized R and the rules-vs-you record. Click expands the event list
+      // (each event carries its own age); the 3-min
       // re-render keeps an expanded list expanded. Journal → link stays put.
       const wasOpen = !!box.querySelector(".ba-events:not([hidden])");
       // The scoreboard, made unavoidable (owner-ordered 2026-07-30): open
@@ -3247,8 +3251,8 @@
         .then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const [pm, sp] = await Promise.all([
         grab(`data/phasemap/${state.market}/latest.json`),
-        // No crypto Specs file exists (the lens never ran there) — the old mynames.js
-        // has guarded this identical fetch since it was written; this call and
+        // No crypto Specs file exists (the lens never ran there) — the (since
+        // removed) mynames.js guarded this identical fetch; this call and
         // phasemap-shared's were firing a live 404 on every CRYPTO visit.
         state.market !== "crypto" ? grab(`data/${state.market}_spec.json`) : null,
       ]);
@@ -3320,7 +3324,7 @@
     // Touch-slop guard (v2 #34): a scroll that starts on a row must never
     // expand it. Track finger travel and swallow the click that follows a drag.
     // Also hosts long-press detection (#45): hold ~480ms on a row without
-    // moving → a Chart/Star/Journal quick-action sheet, and the click that
+    // moving → a Chart/Journal quick-action sheet, and the click that
     // follows the release is swallowed so the row doesn't also expand.
     const rowsHost = $("#results");
     let _slop = 0, _sx = 0, _sy = 0, _lpT = null, _lpFired = false;
@@ -3344,7 +3348,7 @@
     rowsHost.addEventListener("touchend", cancelLongPress, { passive: true });
     rowsHost.addEventListener("touchcancel", cancelLongPress, { passive: true });
 
-    // Row interactions (delegated): star toggle, copy-debug, chart link, expand details.
+    // Row interactions (delegated): copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {
       if (_slop > 12) { _slop = 0; return; }   // drag, not a tap (v2 #34)
       if (_lpFired) { _lpFired = false; return; }   // long-press opened the sheet (#45)
@@ -3478,8 +3482,9 @@
     // london/china without hovering"). 2×2 grid: MEL/NY with seconds in the
     // left column, China/London HH:MM in the right; dates ride the tooltip.
     //
-    // TOP100 #80 — the ONE unguarded repeating timer on this page. Every other
-    // interval here already returns early on a hidden tab; this one ran four
+    // TOP100 #80 — an unguarded repeating timer. The bot-activity, freshness
+    // and status intervals return early on a hidden tab (the auto-refresh
+    // countdown and the hourly quote roll do not); this one ran four
     // Intl.DateTimeFormat passes plus five DOM writes every second regardless,
     // which in a backgrounded tab left open overnight is ~57,000 formatter runs
     // painting text nobody can see. (Browsers throttle background intervals to
@@ -3756,7 +3761,7 @@
   });
 
   // #60: one-time purge of legacy localStorage keys left by retired features —
-  // reclaims quota so the manual journal's save can never fail silently.
+  // reclaims quota for the keys still in use.
   (function purgeLegacyKeys() {
     try {
       if (localStorage.getItem("gbs:purged:v1")) return;
