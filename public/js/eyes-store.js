@@ -119,8 +119,6 @@
   }
 
   var EYES = {
-    SEEN_KEY: SEEN_KEY,
-    CHAIN_KEY: CHAIN_KEY,
     UNKNOWN: UNKNOWN,
     MAX_MARKS: MAX_MARKS,
 
