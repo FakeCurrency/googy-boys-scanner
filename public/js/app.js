@@ -95,7 +95,8 @@
   // be unit-tested with a mocked localStorage + clock (test/cache.test.js).
   // Thin aliases keep every call site unchanged; the behaviour is identical
   // (5-min TTL full cache, expired-payload stale paint, slim head cache under
-  // the 500KB journal-safety cap). The fallback keeps the dashboard working
+  // the 500KB per-entry cap that keeps a scan payload from crowding out the
+  // origin's other localStorage keys). The fallback keeps the dashboard working
   // (just uncached) if cache.js somehow fails to load.
   const _cache = (typeof window !== "undefined" && window.GBSCache) || {
     set() {}, get() { return null; }, getStale() { return null; },
@@ -259,8 +260,9 @@
   };
 
   // Sort direction. Each sort has a natural default (numeric -> descending,
-  // alphabetical -> ascending); clicking the already-active sort flips it. The
-  // active button shows a up/down arrow for the current direction.
+  // alphabetical -> ascending). The #sort-cycle label moves to the next sort
+  // (resetting to its default); the separate #sort-dir arrow flips the
+  // direction and shows it.
   const SORT_DEFAULT_DIR = { score: "desc", price: "desc", rr: "desc", mcap: "desc", az: "asc", sector: "asc" };
   const defaultDir = (sort) => SORT_DEFAULT_DIR[sort] || "desc";
   const sortDirOf  = () => state.sortDir || defaultDir(state.sort);
@@ -788,7 +790,8 @@
   // Replaces the 4 stat cards + at-level strip + confluence banner. A+/A are
   // shortcuts to the grade tabs; Multi-lens and At-level are FILTER TOGGLES
   // (the old banners' content, now one click away instead of two strips).
-  // Fund/REIT-excluded logic for the tradeable count is unchanged.
+  // Funds/REITs stay excluded from the A+/A counts and the top pick
+  // (deckCounts); the old "N tradeable" pill was retired 2026-08-16.
   function renderDeckPills(d) {
     const box = $("#deck-pills");
     if (!box) return;
@@ -1494,8 +1497,9 @@
     return parts.length ? `<div class="detail-meta">${parts.join("")}</div>` : "";
   }
 
-  // Render all signal chips for the detail panel — shows every chip, not just
-  // the 3 shown in the row card. Returns empty string if no chips.
+  // Render the scanner's r.chips for the legacy (non-VIVEK) detail panels. The
+  // row card never shows these; its chips are vkBadges + warnings (rowChips).
+  // Returns empty string if no chips.
   function chipsBar(r) {
     const all = r.chips || [];
     if (!all.length) return "";
@@ -1932,7 +1936,7 @@
     list = list.slice();
     const n = (v) => (v == null || isNaN(v) ? 0 : v);   // null-safe numeric key
     // Each branch sorts in its NATURAL default direction; flipping the direction
-    // (clicking the active sort again) just reverses the result.
+    // (the #sort-dir arrow) just reverses the result.
     if (s === "price") list.sort((a, b) => n(b.price) - n(a.price));
     else if (s === "rr") list.sort((a, b) => n(b.rr) - n(a.rr));
     else if (s === "mcap") list.sort((a, b) => mcapOf(b.symbol) - mcapOf(a.symbol));   // largest cap first
@@ -1961,8 +1965,9 @@
   // predicate the counts already use — rather than adding a second heuristic
   // that could drift away from it.
   //
-  // Direction-flip reverses the whole order deliberately: "worst first" should
-  // put the worst REAL name first too, not resurface products at the top.
+  // Direction-flip reverses the whole order, product tier included, so "worst
+  // first" lists each grade's products (lowest score first) ahead of its real
+  // names.
   const deckOrder = (n) => (a, b) =>
     (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) ||
     ((isFundReit(a) ? 1 : 0) - (isFundReit(b) ? 1 : 0)) ||
@@ -2020,8 +2025,9 @@
   // features. Turns amber when coverage is low, the scan is old, or the committed
   // data was produced by an older build than the frontend expects.
   // ── System-status pill (UX top-10 #2, 2026-07-26) ─────────────────────────
-  // One glance instead of an email: reads the SAME /api/health heartbeat the
-  // external uptime monitor and scan.yml's backstop use (the published bot book's age off the live
+  // One glance instead of an email: reads /api/health in its default mode — the
+  // same answer the external uptime monitor gets (scan.yml's backstop uses the
+  // per-market ?market= mode instead) — i.e. the published bot book's age off the live
   // site — scanner, commit and deploy all had to work for it to be fresh) and
   // shows ● Systems go / ● Running late in the deck. Click for the detail
   // popover. Hides silently where the endpoint doesn't exist (local dev, CI
@@ -2287,8 +2293,9 @@
     };
     const nRecent = all.filter(triggeredRecently).length;
     const nHigh = all.filter(isHighConviction).length;
-    // Longs/Shorts counts stay in sync with the OTHER active filters, so the
-    // numbers reflect what you'll actually see as you stack them.
+    // Longs/Shorts counts follow the entry-type, Triggered and High-conviction
+    // chips only. They count every grade and ignore the grade tab and the
+    // Multi-lens / At-level deck pills, so they can exceed what the list shows.
     let dirBase = all;
     if (state.vkEntry.size) dirBase = dirBase.filter((r) => (r.entry_types || []).some((t) => state.vkEntry.has(t)));
     if (state.vkRecent) dirBase = dirBase.filter(triggeredRecently);
@@ -2447,7 +2454,8 @@
     // sorts, pills) swap instantly, which reads as much snappier.
     if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
     // (#55's other-lens strip went with the watch view, 2026-09-21; only the
-    // sector-cap notice is appended here now.)
+    // #68 row-window notice — "Showing the top 300 of N … show all" — is
+    // appended here now.)
     if (renderList.length <= FIRST) { if (capNotice()) wrap.insertAdjacentHTML("beforeend", capNotice()); wireCapAll(wrap); return; }
     const token = _rowsToken;
     let i = FIRST;
@@ -2570,8 +2578,9 @@
     $("#results").innerHTML = Array.from({ length: 8 }, () => `<div class="skeleton"></div>`).join("");
   }
 
-  // The app is VIVEK-only; the retired pullback/reversal/spec/short/googy feeds
-  // are no longer produced or read.
+  // The deck's own table is VIVEK-only (always <market>_vivek.json); the retired
+  // pullback/reversal/short/googy feeds are gone. <market>_spec.json is the
+  // Specs lens now, read here only by search and confluence.
   const dataFile = (market /* , mode */) => `data/${market}_vivek.json`;
 
   // Schema the frontend expects. When committed data stamps an older version (a
@@ -3403,7 +3412,7 @@
     wrap.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
-  // ---- daily rotating quote + live clocks --------------------------------
+  // ---- hourly rotating quote + live clocks -------------------------------
   const TRADER_QUOTES = [
     ["The big money is not in the individual fluctuations but in the main movements.", "Jesse Livermore"],
     ["The market is never wrong — opinions often are.", "Jesse Livermore"],
