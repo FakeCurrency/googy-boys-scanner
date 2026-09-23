@@ -314,8 +314,11 @@ test("renderEyes is hooked into BOTH the confluence load and the market-switch r
   // One call paints it when lenses land; the other hides the stale strip the
   // moment the market changes — miss either and the strip lies about which
   // market it is describing (#79's lesson, one surface over).
-  const hooks = (SRC.match(/renderEyes\(\)/g) || []).length;
-  assert.ok(hooks >= 2, `expected >=2 renderEyes() call sites, found ${hooks}`);
+  // Pinned by POSITION, not by count: a count of "renderEyes()" also counts
+  // the declaration, a comment and the two click handlers, so it stayed >= 2
+  // with the confluence-load call deleted.
+  assert.ok(/state\.confl = c;[^}]*?renderEyes\(\)/.test(SRC),
+    "the confluence load no longer paints the strip");
   assert.ok(/state\.confl = null;\s*\n\s*renderEyes\(\)/.test(SRC),
     "the reset path no longer hides the strip");
 });
