@@ -242,9 +242,11 @@ const check = (ok, label) => {
     // holds today and name no symbol. An empty day still has to render the
     // heading.
     {
-      let n = 0;
+      let n = 0, sum = null;
       try {
-        n = (JSON.parse(fs.readFileSync(path.join(ROOT, "data", "momentum", "asx.json"), "utf8")).results || []).length;
+        const doc = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "momentum", "asx.json"), "utf8"));
+        n = (doc.results || []).length;
+        sum = doc.summary || null;
       } catch (_) { /* a missing file leaves n = 0: heading-only check */ }
       const pg = await newPage({ width: 390, height: 844 });
       await pg.goto(`${BASE}/momentum.html?m=asx`, { waitUntil: "domcontentloaded", timeout: 30000 });
@@ -254,8 +256,20 @@ const check = (ok, label) => {
         title: ((document.getElementById("mo-title") || {}).textContent || "").trim(),
         rows: document.querySelectorAll(".mo-row").length,
         hrefs: [...document.querySelectorAll("a.mo-sym")].map((a) => a.getAttribute("href")),
+        sub: ((document.getElementById("mo-sub") || {}).textContent || "").trim(),
+        cover: (() => { const c = document.getElementById("mo-cover"); return c && !c.hidden ? c.textContent.trim() : ""; })(),
       }));
       check(/^MOMENTUM · \d+ names?$/.test(r.title), `momentum page: heading renders ("${r.title}")`);
+      // Coverage in counts, read off the same committed file: the header must
+      // carry "<downloaded> of <universe> downloaded", and a partial file must
+      // say so in a sentence. Never a percentage.
+      if (sum && typeof sum.downloaded === "number" && typeof sum.universe === "number") {
+        const want = `${sum.downloaded.toLocaleString("en-AU")} of ${sum.universe.toLocaleString("en-AU")} downloaded`;
+        check(r.sub.includes(want), `momentum page: header shows "${want}" ("${r.sub}")`);
+        check(sum.downloaded < sum.universe ? /not the whole market/.test(r.cover) : r.cover === "",
+          `momentum page: coverage sentence matches the file ("${r.cover}")`);
+        check(!/%/.test(r.sub + r.cover), "momentum page: no percentage in the coverage");
+      }
       if (n > 0) {
         check(r.rows === n, `momentum page: ${r.rows} rows for the ${n} results in asx.json`);
         check(r.hrefs.length === r.rows && r.hrefs.every((h) => /[?&]s=/.test(h) && /src=momentum/.test(h) && !/[?&]symbol=/.test(h)),

@@ -38,6 +38,18 @@
   white-space: nowrap;
 }
 
+/* ---- partial coverage -------------------------------------------------- */
+/* One sentence under the deck line, only when the file screened fewer names
+   than the market lists. Amber like the deck's own .warn dot beside it, and
+   the same size as .deck-sub so it reads as part of the header, not a banner. */
+
+.mo-cover {
+  margin: 4px 0 0;
+  max-width: 62ch;
+  font: 500 12px/1.45 var(--sans);
+  color: var(--orange);
+}
+
 /* ---- a row ------------------------------------------------------------- */
 /* Same anatomy as the deck: a left marker, symbol + chips in the middle,
    price and a metric on the right. */
