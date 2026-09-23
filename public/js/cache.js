@@ -33,9 +33,10 @@
     var s = store(); if (!s) return;
     try {
       var payload = JSON.stringify({ ts: Date.now(), data: data });
-      // Size cap: full NASDAQ/ASX scans are 1-2MB each; three of them squeezed
-      // localStorage's ~5MB origin quota and could make the manual journal's
-      // save FAIL — a silently lost trade. Oversized scans skip the cache.
+      // Size cap: keep an oversized payload out of localStorage's ~5MB origin
+      // quota, where it would crowd out every other per-origin key. (The scan
+      // files were 1-2MB each before the 2026-07-31 payload split and are a
+      // few hundred KB now.) Oversized payloads skip the cache.
       if (payload.length > 500000) return;
       s.setItem(CACHE_PREFIX + key, payload);
     } catch (_) {}
