@@ -130,6 +130,20 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
   ok(!/@keyframes\s+star-pop\b/.test(css), "css/styles.css: star-pop animated only the deleted .t-star");
 }
 
+// SWEEP (2026-09-23) -- phasemap.css rules for markup nothing creates: the
+// old dense Specs rows (sp-row-main/grade/name/price/score/chev/detail,
+// sp-levels; specs.js now renders the deck's row classes), the watchlist
+// star and tab (removed with the stars), the old standalone PhaseMap chart
+// page (pm-chart-head/box/note, #pm-chart), pm-topnav and pm-more-btn.
+{
+  const css = code("css/phasemap.css");
+  ok(css.includes(".pm-chart-cue {"), "css/phasemap.css moved -- pin would be vacuous");
+  for (const c of ["is-on", "pm-chart-box", "pm-chart-head", "pm-chart-note", "pm-more-btn", "pm-star", "pm-tab-watchlist", "pm-topnav", "sp-chev", "sp-detail-chips", "sp-grade", "sp-levels", "sp-name", "sp-row-detail", "sp-row-main", "sp-row-price", "sp-row-score", "sp-stop", "sp-target"])
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/phasemap.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
+  ok(!/#pm-chart(?![\w-])/.test(css), "css/phasemap.css: no element carries id pm-chart (deleted 2026-09-23)");
+}
+
 // STYLESHEET COMMENTS CLOSE (2026-09-23). A regex deletion on 2026-09-20
 // (5ac425b2a) glued two comment openers in chart.css onto the rule bodies
 // below them, so each comment ran on to the NEXT comment's "*/" -- silently
