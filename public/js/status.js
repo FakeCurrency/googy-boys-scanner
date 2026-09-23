@@ -39,8 +39,8 @@
  *
  * What this control deliberately does NOT claim to know is listed on the sheet
  * itself, with the reason, rather than being quietly omitted: the healer is not
- * probeable read-only, the 5-minute stop-watcher commits nothing a browser can
- * read, and CI failures live in GitHub's API. "View latest failure" is a deep
+ * probeable read-only, and CI failures live in GitHub's API. (The 5-minute
+ * stop-watcher was listed here until it was removed, 2026-09-21.) "View latest failure" is a deep
  * link to the authoritative list rather than a number this file made up.
  */
 (() => {
@@ -54,8 +54,7 @@
   const CYCLE_TARGET = 30;     // the pre-registered close count for the cohort
   const REPO = "FakeCurrency/googy-boys-scanner";
   // Mirrors journal.js MECHANICAL_EXITS. test/status.test.js parses BOTH files
-  // and fails if they diverge, so this copy cannot drift silently — the same
-  // treatment risk_defaults.test.js gives the offline rules mirror.
+  // and fails if they diverge, so this copy cannot drift silently.
   const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
 
   const esc = (s) => String(s == null ? "" : s)
@@ -274,9 +273,10 @@
 
   const STATE = { sig: null, book: null, funnel: null, rules: null, health: null, loadedAt: 0 };
 
-  // The LIGHT's budget is one 150-byte request. /api/health answers the exact
-  // question the lamp asks (is a scan fresher than the alarm threshold), it is
-  // computed server-side off the published asset, and it is never cached.
+  // The LIGHT reads /api/health (a ~150-byte answer to the exact question the
+  // lamp asks — is a scan fresher than the alarm threshold — computed
+  // server-side and never cached) plus the bot book and bot_rules.json, for
+  // breaches, stalled rows and the cap.
   function loadLight() {
     return Promise.all([
       getJSON("/api/health"),
@@ -304,7 +304,8 @@
     });
   }
 
-  // The 33 KB funnel ledger is fetched ONLY when the sheet opens. It is the
+  // The funnel ledger (~120 KB, growing to 2,000 rows per market) is fetched
+  // ONLY when the sheet opens. It is the
   // uptime evidence and the per-market ages in one file, which is why the
   // sheet does not also call /api/health?market=<m> three times.
   function loadSheet() {
@@ -420,10 +421,9 @@
     h += row("Closes", `<b>${ch.closed}</b> of ${CYCLE_TARGET}`,
       ch.closed ? `${ch.byRules} by the rules · ${ch.byOwner} by you` : "readout at the pre-registered count");
     if (ch.closed && !ch.byRules) {
-      // Same sentence the journal's cycle strip uses, deliberately: two
-      // surfaces describing one cohort in two vocabularies reads as two
-      // findings. The journal is where the exits are listed; this is the
-      // one-line version of the same fact.
+      // Same sentence the journal's w3-1 strip uses, deliberately, so the two
+      // surfaces read alike. Note the cohorts differ since 2026-09-21: this
+      // line is the current hc4-1 cycle, the journal's strip lists w3-1 exits.
       h += `<p class="sys-flag">Every gated close so far is one you took by hand. Until the rules take an exit of their own, this sample measures your timing, not the ruleset's.</p>`;
     }
 
