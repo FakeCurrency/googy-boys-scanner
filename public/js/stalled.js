@@ -46,9 +46,10 @@
        the PUBLISHED book. A 202 is an accepted dispatch, not a landed close —
        that gap is where six closes went missing on 2026-08-07 — so the strip
        polls the same artifact the whole page reads and settles each row
-       individually. Entries the batch run skipped (say a time-stop beat us
-       to one) never leave the open book and honestly time out to
-       "check the book".
+       individually. An entry the batch run did not close stays in the open
+       book and honestly times out to "check the book"; one that was closed
+       another way first (say a time-stop beat us to it) has left the book
+       too, so it settles as closed like any landed close.
      * Still no localStorage, no sessionStorage, no KV, no second endpoint.
 
    test/stalled.test.js pins every clause above against the shipped source. */
@@ -60,8 +61,8 @@
 
   // ── the cohort ─────────────────────────────────────────────────────────────
   // The engine's mark is the whole definition. `status === "open"` is belt and
-  // braces (the probe only stamps open rows, and a close never carries the
-  // stamp forward), and a row that started moving again LOSES its stamp on the
+  // braces (the probe only stamps open rows; closed rows keep their old stamp
+  // but live in book.closed, which this never reads), and a row that started moving again LOSES its stamp on the
   // next scan — so this list is exactly the probe's current cohort, never a
   // memory of it.
   const stalledRows = (book) =>
@@ -112,7 +113,7 @@
 
   // ── the summary line ───────────────────────────────────────────────────────
   // Slots are the number that matters: the cap is global, so a full book
-  // declines every new A+ before a quality check runs, and the stalled rows
+  // declines every new setup that passed every quality check, and the stalled rows
   // are the reclaimable share of it. Risk is stated in both currencies the
   // book itself uses — combined R (comparable across the 2026-07-28 resize)
   // and dollars-at-risk as a share of equity.
@@ -200,7 +201,7 @@
   // picking arms a ROW (visibly, reversibly), and only the bar's confirm —
   // which states the count — sends. A single mis-click can pick, never close.
   const picked = new Map();            // "mkt:SYM" -> {sym, mkt, dir, px}
-  let inFlight = null;                 // null | { pending:Set<sym>, total, t0, timer }
+  let inFlight = null;                 // null | { pending:Set<sym>, total, t0 }
 
   const keyOf = (btn) => btn.dataset.mkt + ":" + btn.dataset.sym;
 
@@ -379,8 +380,10 @@
       .then((r) => r.json().catch(() => ({})).then((b) => ({ ok: r.ok, b })))
       .then(({ ok, b }) => {
         if (ok) { watchLanding(host); return; }
-        // Rejected batch: nothing was dispatched. Restore the picks so one fix
-        // (say, a rate-limit minute) doesn't cost the whole selection.
+        // Not accepted. A 4xx/502 means nothing was dispatched; a 504 timeout
+        // means the dispatch MAY have landed (close.js keeps its cooldown for
+        // that case). Restore the picks either way so one fix (say, a
+        // rate-limit minute) doesn't cost the whole selection.
         const flight = inFlight; inFlight = null;
         entries.forEach((e) => picked.set(e.mkt + ":" + e.sym, e));
         host.querySelectorAll("button.st-x").forEach((btn) => {

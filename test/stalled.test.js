@@ -279,7 +279,7 @@ test("'closed' is only claimed once the BOOK says so, never off the 202", () => 
   // A queued dispatch is not a landed close — that gap is exactly where the
   // six went missing, each one reporting success it never achieved. The batch
   // settles PER ROW: each symbol earns its ✓ by leaving the published book,
-  // and a symbol the run skipped honestly times out to "check the book".
+  // and a symbol the run did not close honestly times out to "check the book".
   assert.ok(/watchLanding\(host\)/.test(SRC));
   assert.ok(/landed \? "closed ✓"/.test(SRC));
   // In CODE (comments stripped), "closed ✓" may appear in three places, all
