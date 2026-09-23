@@ -22,7 +22,7 @@ import sys
 
 import pandas as pd
 
-from . import config, data, output, spec, universe
+from . import config, data, output, rmodel, spec, universe
 
 HORIZONS = (5, 10, 20)
 DEDUPE_BARS = 5          # one signal per fire-streak
@@ -32,7 +32,7 @@ REPORT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
                           "phasemap", "backtest", "reports")
 
 
-def replay_ticker(sym: str, df: pd.DataFrame) -> list[dict]:
+def replay_ticker(sym: str, df: pd.DataFrame, market: str = "asx") -> list[dict]:
     if "Date" not in df.columns:          # data.download frames use a DatetimeIndex
         df = df.reset_index()
         if "Date" not in df.columns:
@@ -45,6 +45,8 @@ def replay_ticker(sym: str, df: pd.DataFrame) -> list[dict]:
     close = df["Close"].to_numpy()
     high = df["High"].to_numpy()
     low = df["Low"].to_numpy()
+    opn = df["Open"].to_numpy()
+    days = [str(d)[:10] for d in df["Date"]]
     vol = pd.Series(df["Volume"].to_numpy())
     # cheap vectorised pre-gates so the full evaluate() only runs on candidates
     vol20 = vol.rolling(config.SPEC_VOL_LOOKBACK).mean().shift(1).to_numpy()
@@ -89,8 +91,60 @@ def replay_ticker(sym: str, df: pd.DataFrame) -> list[dict]:
                 outcome = "target"
                 break
         s["outcome"] = outcome
+        s.update(r_trade(s, i, days, opn, high, low, close, market))
         signals.append(s)
     return signals
+
+
+def costs_for(market: str) -> tuple:
+    slip = config.VIVEK_SLIPPAGE_BPS.get(market, config.VIVEK_SLIPPAGE_BPS["default"])
+    comm = config.VIVEK_COMMISSION_BPS.get(market, config.VIVEK_COMMISSION_BPS["default"])
+    return slip / 10_000.0, comm / 10_000.0
+
+
+def r_trade(s: dict, i: int, days, opn, high, low, close, market: str) -> dict:
+    """The R model (2026-09-23): the engine's own plan, traded and scored in R.
+
+    Entry at the signal close (as the race above), the engine's stop, and its
+    ONE target booked in full as a resting limit; the stop is a resting order
+    too (filled at the stop, or at the open of a bar that gapped through it)
+    and a bar that spans both is a stop. Anything still open after TRACK_BARS
+    -- the race's own horizon -- is closed at that bar's close ("time").
+    House costs through scanner/rmodel.py; a stop closer than the house
+    minimum is not a trade. The narrative's "then trail it" is NOT modelled:
+    the target is where the engine names the exit, so that is where R is
+    counted.
+    """
+    entry, stop = float(s["entry"]), float(s["stop"])
+    if i + 1 >= len(close):
+        return {"r": None, "r_skip": "signal on the last bar"}
+    if not (entry > 0 and stop < entry):
+        return {"r": None, "r_skip": "stop not below entry"}
+    if (entry - stop) / entry * 100.0 < config.VIVEK_BOT_MIN_STOP_PCT:
+        return {"r": None, "r_skip": "stop_too_tight"}
+    tr = rmodel.open_trade("long", entry, stop, [float(s["target"])], [1.0], s["date"])
+    if tr is None:
+        return {"r": None, "r_skip": "target at or below entry"}
+    bars = ((days[j], opn[j], high[j], low[j], close[j]) for j in range(i + 1, len(close)))
+    rmodel.simulate(bars, tr, costs=costs_for(market), stop_fill=rmodel.STOP_FILL_LEVEL,
+                    time_stop=TRACK_BARS)
+    return {"r": tr["realized_r"], "r_gross": tr["gross_r"], "r_cost": tr["cost_r"],
+            "r_risk": tr["risk"], "r_exit": tr["exit_reason"], "r_closed_by": tr.get("closed_by"),
+            "r_exit_date": tr.get("exit_date"), "r_bars": tr["bars"]}
+
+
+def summarise_r(sigs: list[dict], notional: float | None = None) -> dict:
+    """R won / lost / net over the signals that were tradeable plans."""
+    rows = [{"realized_r": s["r"], "entry": s["entry"], "risk": s["r_risk"],
+             "exit_reason": s["r_exit"], "closed_by": s.get("r_closed_by")}
+            for s in sigs if s.get("r") is not None]
+    out = rmodel.summarise(rows, notional)
+    skipped: dict = {}
+    for s in sigs:
+        if s.get("r") is None and s.get("r_skip"):
+            skipped[s["r_skip"]] = skipped.get(s["r_skip"], 0) + 1
+    out["skipped"] = skipped
+    return out
 
 
 def _mean(vals):
@@ -145,6 +199,31 @@ def write_report(market: str, sigs: list[dict], rnd: dict, universe_size: int,
         sub = [s for s in sigs if s["grade"] == g]
         if sub:
             lines.append(row(f"grade {g}", summarise(sub)))
+    r_all = summarise_r(sigs, config.LENS_BACKTEST_NOTIONAL)
+
+    def rrow(name, r):
+        if not r.get("trades"):
+            return f"| {name} | 0 | — | — | — | — | — | — |"
+        return (f"| {name} | {r['trades']} | {r['win_pct']}% | +{r['r_won']:.1f}R | "
+                f"{r['r_lost']:.1f}R | **{r['net_r']:+.1f}R** | {r['expectancy_r']:+.3f}R | "
+                f"${r.get('net_usd', 0):+,.0f} |")
+    lines += [
+        "",
+        "## R model — what trading the signals earned",
+        "",
+        "Entry at the signal close, the engine's stop, its one target booked in full "
+        f"(resting limit), stop gap-aware, closed at the close after {TRACK_BARS} bars "
+        "if neither; house costs; a stop under the house minimum is not a trade. "
+        f"Dollars at a flat ${config.LENS_BACKTEST_NOTIONAL:,.0f} per position.",
+        "",
+        "| cohort | trades | win | R won | R lost | net R | per trade | net $ |",
+        "|---|---|---|---|---|---|---|---|",
+        rrow("ALL SIGNALS", r_all),
+    ]
+    for g in ("A+", "A", "B"):
+        sub = [s for s in sigs if s["grade"] == g]
+        if sub:
+            lines.append(rrow(f"grade {g}", summarise_r(sub, config.LENS_BACKTEST_NOTIONAL)))
     lines += [
         "",
         "## Baseline",
@@ -203,7 +282,7 @@ def main(argv=None) -> int:
         if info is None or df is None or df.empty:
             continue
         try:
-            signals.extend(replay_ticker(info.get("symbol", yf_sym), df))
+            signals.extend(replay_ticker(info.get("symbol", yf_sym), df, args.market))
         except Exception:
             continue
     signals.sort(key=lambda s: (s["date"], s["symbol"]))
@@ -224,6 +303,13 @@ def main(argv=None) -> int:
         "grades": {g: summarise([s for s in signals if s["grade"] == g])
                    for g in ("A+", "A", "B") if any(s["grade"] == g for s in signals)},
         "baseline_random": rnd,
+        # additive (2026-09-23): the R model, see r_trade()
+        "r_model": {
+            "all": summarise_r(signals, config.LENS_BACKTEST_NOTIONAL),
+            "grades": {g: summarise_r([s for s in signals if s["grade"] == g],
+                                      config.LENS_BACKTEST_NOTIONAL)
+                       for g in ("A+", "A", "B") if any(s["grade"] == g for s in signals)},
+        },
     }
     # TOP100 #64 — was a plain open()+write, so a crash mid-write published a
     # truncated file. write_json keeps the utf-8 and the pinned LF this call
@@ -232,6 +318,10 @@ def main(argv=None) -> int:
                       indent=1, newline=True)
     print(f"signals: {len(signals)}  target-first: {top.get('target')}%  "
           f"stopped: {top.get('stop')}%  report: {path}")
+    r = pub["r_model"]["all"]
+    print(f"R model: {r['trades']} trades  win {r['win_pct']}%  R won {r['r_won']:+.1f}  "
+          f"R lost {r['r_lost']:+.1f}  net {r['net_r']:+.1f}R  ({r['expectancy_r']}R/trade)  "
+          f"${r.get('net_usd', 0):+,.0f} at ${config.LENS_BACKTEST_NOTIONAL:,.0f}/position")
     return 0
 
 

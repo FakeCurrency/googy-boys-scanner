@@ -92,6 +92,10 @@ class SignalRecorder:
             "n_targets": len(eng.targets),
             "illiquid": bool(math.isnan(turnover) or turnover < CONFIG.turnover_floor),
             "cents": close < 1.0,
+            # the hard invalidation band at the signal, for the R model
+            # (rmodel.py): the floor a close must break to kill the setup
+            "inv_low": round(float(eng.inv_hard.low), 12) if eng.inv_hard else None,
+            "inv_high": round(float(eng.inv_hard.high), 12) if eng.inv_hard else None,
             "t1_touched_bar": None, "t1_consumed_bar": None, "t2_consumed_bar": None,
             "stalled_bar": None, "dead_bar": None, "complete_bar": None,
             "end_index": None,
@@ -160,6 +164,9 @@ def run_ticker(ticker: str, df, market: str, volume_is_usd: bool = False) -> lis
     if len(df) < CONFIG.min_history_bars:
         return []
     ind = compute_indicators(df, volume_is_usd=volume_is_usd)
+    # Lazy, like phasemap/run.py's universe import: the R model reads the house
+    # cost table from `scanner`, and the engine package stays importable alone.
+    from phasemap.backtest.rmodel import score as r_score
     out = []
     for bull in (True, False):
         rec = SignalRecorder(ticker, ind, market)
@@ -167,6 +174,7 @@ def run_ticker(ticker: str, df, market: str, volume_is_usd: bool = False) -> lis
         eng.process()
         for sig in rec.signals:
             _finalize(sig, ind)
+            sig.update(r_score(sig, ind, market))
             out.append(sig)
     return out
 

@@ -61,6 +61,14 @@ def main(argv=None) -> int:
     if args.write_stats:
         print("stats:", write_stats(args.market, signals))
 
+    from phasemap.backtest.rmodel import summary as r_summary
+    from scanner.config import LENS_BACKTEST_NOTIONAL
+    r = r_summary(signals, LENS_BACKTEST_NOTIONAL)["long_graded"]
+    print(f"R model, long A+/A: {r['trades']} trades  win {r['win_pct']}%  "
+          f"R won {r['r_won']:+.1f}  R lost {r['r_lost']:+.1f}  net {r['net_r']:+.1f}R  "
+          f"({r['expectancy_r']}R/trade)  ${r.get('net_usd', 0):+,.0f} at "
+          f"${LENS_BACKTEST_NOTIONAL:,.0f}/position")
+
     graded = [s for s in signals if s["tier"] in ("A+", "A")]
     hit = sum(1 for s in graded if s.get("t1_hit"))
     print(json.dumps({"signals": len(signals), "graded": len(graded),
