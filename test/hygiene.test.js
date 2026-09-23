@@ -274,6 +274,13 @@ ok(!/const\s+pad\s*=\s*\(/.test(code("js/journal.js")),
        `js/eyes-store.js: EYES.${name} had no reader and was dropped from the export 2026-09-23`);
 }
 
+// status.js published window.GBSStatus as a "test hook", but its own comment
+// said nothing read it: status.test.js slices the eight functions out of the
+// source. The functions stay (status.js calls every one of them).
+ok(code("js/status.js").includes("const overall = "), "js/status.js moved -- pin would be vacuous");
+ok(!/\bGBSStatus\b/.test(code("js/status.js")),
+   "js/status.js: window.GBSStatus had no reader and was deleted 2026-09-23");
+
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
 ok(code("js/sectors.js").includes("const SECTOR_INFO = {"), "js/sectors.js moved -- pin would be vacuous");
