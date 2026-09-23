@@ -91,6 +91,28 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
        `css/journal.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
 }
 
+// STYLESHEET COMMENTS CLOSE (2026-09-23). A regex deletion on 2026-09-20
+// (5ac425b2a) glued two comment openers in chart.css onto the rule bodies
+// below them, so each comment ran on to the NEXT comment's "*/" -- silently
+// disabling the market chip, the loading skeleton, its shimmer keyframes and
+// the offline banner on production for three days. CSS reports no parse error
+// for this; the only trace is a "/*" nested inside a comment. So: every
+// comment in every stylesheet must close before another one opens.
+for (const f of fs.readdirSync(path.join(PUB, "css")).filter((x) => x.endsWith(".css"))) {
+  const src = fs.readFileSync(path.join(PUB, "css", f), "utf8");
+  for (const m of src.matchAll(/\/\*([\s\S]*?)\*\//g)) {
+    const line = src.slice(0, m.index).split("\n").length;
+    ok(!m[1].includes("/*"),
+       `css/${f}: the comment opened at line ${line} never closes before the next "/*" -- ` +
+       "every rule between them is silently commented out");
+  }
+}
+{
+  const css = code("css/chart.css");
+  for (const sel of [".ct-market {", ".chart-skeleton {", "@keyframes sk-shimmer", ".offline-banner {", ".chart-error.is-offline h2"])
+    ok(css.includes(sel), `css/chart.css: ${sel} must be live CSS, not swallowed by a comment`);
+}
+
 // Locals are pinned inside the function that held them: a two-letter name is
 // too common for a whole-file pin. The slice ends where the PARSER says the
 // declaration closes, not at a guessed brace.
