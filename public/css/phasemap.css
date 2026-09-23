@@ -436,8 +436,9 @@ body.pm-gloss-open { overflow: hidden; }
 
 /* ── Specs → VIVEK graduates (owner-ruled, 2026-07-31) ─────────────────────
    Report-only evidence strip on specs.html: names the discovery lens surfaced
-   first that later crossed into the published VIVEK scan. Hidden until the
-   registry (data/spec_graduation.json) has something to say. */
+   first that later crossed into the published VIVEK scan. Hidden only when
+   the registry (data/spec_graduation.json) is absent or unreadable; a market
+   with nothing recorded shows an honest "0 · none yet". */
 .spg {
   margin: 10px 0 2px; padding: 10px 14px;
   background: var(--panel); border: 1px solid var(--border-soft);
