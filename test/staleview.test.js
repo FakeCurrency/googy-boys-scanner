@@ -1332,8 +1332,13 @@ test("the ~15m-delayed chip is EQUITIES-ONLY — crypto quotes are real-time and
 
 test("the daily pulls CAPTURE metadata and the chip renders before the chart does", () => {
   const code = codeOnly(CHART);
-  const captures = (code.match(/"5y", "1d", true\)/g) || []).length;
-  assert.ok(captures >= 2, `both daily chart paths must capture honesty metadata (found ${captures})`);
+  // Stock and crypto separately: since the 25y deep-history change the stock
+  // daily pulls read DAILY_RANGE, so the old "5y" count saw crypto only and
+  // stayed green with every stock capture stripped.
+  const stock = (code.match(/DAILY_RANGE, "1d", true\)/g) || []).length;
+  const crypto = (code.match(/vivekCryptoBars\(SYM, "5y", "1d", true\)/g) || []).length;
+  assert.ok(stock >= 2 && crypto >= 2,
+    `both daily chart paths must capture honesty metadata (stock ${stock}, crypto ${crypto})`);
   assert.ok((code.match(/renderDataHonesty\(\);/g) || []).length >= 2,
     "both render paths must paint the chip");
   const html = fs.readFileSync(path.join(__dirname, "..", "public", "chart.html"), "utf8");
