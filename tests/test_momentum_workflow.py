@@ -231,8 +231,23 @@ def test_the_must_change_gate_names_the_canonical_path():
     commit = next(s for s in JOB["steps"] if s.get("name") == "Commit and push")
     body = commit["run"]
     assert "scripts/assert_staged.sh" in body
-    assert 'public/data/momentum/$MARKET.json' in body
+    assert 'bash scripts/assert_staged.sh "momentum $MARKET" "public/data/momentum/$FILE"' in body
+    assert 'FILE="${{ steps.scan.outputs.file }}"' in body
     assert "git add -- " in body, "one pathspec at a time"
+
+
+def test_the_file_is_the_screen_unless_a_human_asked_for_the_backtest():
+    """Two write targets, both in the lens's own directory, and the second is
+    reachable ONLY through the manual `backtest` input -- no cron, no
+    workflow_run wake-up can publish a backtest (or skip a screen for one)."""
+    body = next(s for s in JOB["steps"] if s.get("id") == "scan")["run"]
+    assert 'FILE="$MARKET.json"' in body
+    assert 'if [ "${{ inputs.backtest }}" = "true" ]; then' in body
+    assert 'FILE="${MARKET}_backtest.json"' in body
+    assert 'ARGS="$ARGS --backtest"' in body
+    files = set(re.findall(r'FILE="([^"$]*\$\{?MARKET\}?[^"]*)"', body))
+    assert files == {"$MARKET.json", "${MARKET}_backtest.json"}, files
+    assert ON["workflow_dispatch"]["inputs"]["backtest"]["default"] is False
 
 
 def test_the_workflow_writes_nothing_outside_the_lens_directory():
