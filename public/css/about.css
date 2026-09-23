@@ -19,10 +19,6 @@
 .doc-section p:last-child { margin-bottom: 0; }
 .doc-section strong { color: var(--text); }
 
-.ema-ladder { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
-.ema-ladder span { font: 700 17px/1 var(--mono); color: var(--green); }
-.ema-ladder span:nth-child(even) { color: var(--muted-2); font-weight: 400; }
-
 .chip-list, .def-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 13px; }
 .chip-list li, .def-list li { font-size: 14px; line-height: 1.5; color: var(--text-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .chip-list li em, .def-list li em { color: var(--muted); font-style: normal; font-weight: 600; margin-left: auto; font: 600 12px/1 var(--mono); }
