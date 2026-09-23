@@ -105,6 +105,8 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
   const css = code("css/styles.css");
   ok(css.includes(".fpill.is-active {"), "css/styles.css moved -- pin would be vacuous");
   const STYLES_CSS_GONE = [
+    // second pass: the retired track-record strip (2026-07-09) and PULSE (2026-07-20)
+    "track", "pulse",
     "accent-green",
     "ba-label",
     "control-label",
