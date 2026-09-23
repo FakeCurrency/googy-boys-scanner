@@ -347,7 +347,6 @@
   // so values are safe inside quoted attributes too).
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const up = (s) => esc(String(s == null ? "" : s).toUpperCase());
   // A NUMBER destined for an attribute that is read back with `+`. `esc` is the
   // wrong tool here: it would render a missing value as `""`, and `+""` is 0 —
   // a silent, plausible zero in a position-size calculation. This emits digits
@@ -1262,10 +1261,6 @@
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
-    const hasSectorCount = r.sector && r.sector_count > 1;
-    const sector = (r.sector && !hasSectorCount) ? `<span class="badge sector">${esc(r.sector)}</span>` : "";
-    const seccount = hasSectorCount
-      ? `<span class="badge seccount">${up(r.sector)} ×${r.sector_count}</span>` : "";
     const assetBadge = "";
     const rawMcap = mcapOf(r.symbol);
     const mcapTxt = fmtMcap(rawMcap);

@@ -39,7 +39,7 @@ const GONE = {
   },
   "js/app.js": {
     live: "function isHighConviction(",
-    dead: ["fmtTurn", "VIEW_KEYS", "HEAD_PREFIX", "HEAD_ROWS"],
+    dead: ["fmtTurn", "VIEW_KEYS", "HEAD_PREFIX", "HEAD_ROWS", "hasSectorCount", "seccount"],
   },
   "js/chart.js": {
     live: "function momentumViewStart(",
@@ -94,6 +94,13 @@ ok(!/\baccent\b/.test(fnBody(code("js/journal.js"), "statCards")),
 ok(!/\bisLong\b/.test(fnBody(code("js/journal.js"), "openRows")),
    "js/journal.js openRows: the unused `isLong` row local was deleted 2026-09-23 (liveCells " +
    "derives direction itself)");
+
+// rowHtml's unrendered sector badges. `sector` and `up` are too common to pin
+// by name (r.sector is live data; "up" is a class string), so pin the shapes.
+ok(!/(?:const|let|var)\s+sector\s*=/.test(fnBody(code("js/app.js"), "rowHtml")),
+   "js/app.js rowHtml: the unrendered `sector` badge local was deleted 2026-09-23");
+ok(!/(?:const|let|var)\s+up\s*=|\bup\s*\(/.test(code("js/app.js")),
+   "js/app.js: the up() helper (read only by the dead seccount badge) was deleted 2026-09-23");
 
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
