@@ -239,6 +239,12 @@ ok(!/\baccent\b/.test(fnBody(code("js/journal.js"), "statCards")),
    "js/journal.js statCards: the unused `accent` parameter was deleted 2026-09-23 (its one " +
    "caller never passed it)");
 
+// VALIDATE (2026-09-23) -- the journal has one book since 2026-09-21; no
+// rendered string may claim a second one.
+ok(code("js/journal.js").includes("function renderRDist("), "js/journal.js renderRDist moved -- pin would be vacuous");
+ok(!/both books/.test(code("js/journal.js")),
+   "js/journal.js: a rendered string says 'both books'; the Me book was removed 2026-09-21");
+
 // VALIDATE (2026-09-23) -- the welcome tour must not send a new user to the
 // stars / watchlists removed 2026-09-21.
 ok(code("js/app.js").includes('"Tap a row for the plan"'), "js/app.js welcome tour moved -- pin would be vacuous");
