@@ -1,7 +1,8 @@
 /* =========================================================================
-   Chart page — candlestick chart (lightweight-charts) showing the user's own
-   system (EMA/SMA + SuperTrend + entry/stop/target levels) on every timeframe.
-   Timeframe buttons (D / 3D / W / M / 3M) switch the data client-side.
+   Chart page — candlestick chart (lightweight-charts) with each lens's own
+   overlays (moving averages + entry/stop/target levels) on every timeframe.
+   Timeframe buttons (4H / D / 3D / W; 15M / 30M / 1H for live crypto) switch
+   the data client-side.
    ========================================================================= */
 (() => {
   "use strict";
@@ -26,9 +27,10 @@
    * comes back on the next request for everyone. Changing this constant back to
    * "5y" is the permanent version of the same thing.
    *
-   * CRYPTO IS DELIBERATELY LEFT AT 5y: its history is shallower anyway and its
-   * bars come from a different path (Binance klines cap at 1000), so deepening
-   * it would be a separate change with its own measurements. */
+   * CRYPTO IS DELIBERATELY LEFT AT 5y: its history is shallower anyway and it
+   * is fetched as a separate Yahoo <base>-USD series (vivekCryptoBars,
+   * src=yahoo), so deepening it would be a separate change with its own
+   * measurements. */
   const DAILY_RANGE = "25y";
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
@@ -41,13 +43,13 @@
   const TF_ORDER = ["1H", "4H", "1D", "3D", "1W", "1M", "3M"];
 
   // ── per-render teardown (TOP100 #80/#81) ──────────────────────────────────
-  // render() is RE-ENTRANT — eight call sites, and every timeframe button is
-  // one of them. Everything it wired was wired unconditionally and never
-  // removed: a 30s live-box refresh, a 20s stock quote poll, a window resize
+  // render() is RE-ENTRANT — every data-fallback load calls it (six call
+  // sites; the timeframe buttons go through applyTF, not render). Everything
+  // it wired was wired unconditionally and never removed: a 30s live-box refresh, a 20s stock quote poll, a window resize
   // handler, and two or three onLiveTick subscribers. Each render built a BRAND
   // NEW box element (document.createElement) and appended it, so after a
-  // session of clicking D/3D/W/M/3M the page held one orphaned interval, one
-  // orphaned resize listener and three orphaned tick subscribers PER CLICK,
+  // session of re-renders the page held one orphaned interval, one orphaned
+  // resize listener and three orphaned tick subscribers PER RENDER,
   // every one of them still doing full work — a lookup, a large HTML build, an
   // innerHTML write — against a node render() had already detached. Not a
   // slow leak of bytes; a growing pile of live work with no visible output.
@@ -233,7 +235,7 @@
 
   // ── live crypto data (Binance public API — keyless, CORS-ok, 24/7) ──────────
   // Every crypto-scalp coin trades as <SYMBOL>USDT on Binance, so we derive the
-  // pair generically (same as the journal) instead of hardcoding a list that
+  // pair generically instead of hardcoding a list that
   // silently drifts out of date. BINANCE_MAP is only for the rare symbol whose
   // Binance pair differs from <SYMBOL>USDT.
   const BINANCE_MAP = {};
@@ -296,11 +298,13 @@
       }
     } catch (_) { /* offline — fallbacks stand */ }
   })();
-  // Shared with the simulate buttons / live box so a buy/sell fills at the true
-  // live price and every dependent widget reacts on each tick.
+  // The live price, shared with its subscribers (initAlerts' price-alert lines)
+  // so they react on each tick. The Simulate buttons that also read it went
+  // 2026-09-21; makeLiveBoxDraggable is kept but nothing builds the box.
   const liveState = { price: null, listeners: [] };
-  // Every subscriber is registered from inside render() (initAlerts, the stock
-  // quote poll), so each one is scoped to the render that added it — otherwise
+  // Every subscriber is registered from inside render() (today only
+  // initAlerts; startStockLive publishes, it does not subscribe), so each one
+  // is scoped to the render that added it — otherwise
   // a price tick fans out to N copies of the same handler writing into N-1
   // detached boxes. Unsubscribing here rather than at the three call sites is
   // deliberate: a fourth caller added later inherits the teardown for free.
@@ -330,8 +334,8 @@
   })();
 
   // Yahoo Finance tickers for scalp index/commodity instruments — the scanner's
-  // internal symbol (NAS100, GOLD…) isn't what Yahoo uses. Shared shape with the
-  // journal's map so live (~15-min delayed) quotes resolve consistently.
+  // internal symbol (NAS100, GOLD…) isn't what Yahoo uses, so live (~15-min
+  // delayed) quotes resolve to the right Yahoo ticker.
   const YF_TICKER = {
     NAS100: "^NDX", US30: "^DJI", SPX500: "^GSPC", GER40: "^GDAXI", UK100: "^FTSE", JP225: "^N225",
     GOLD: "GC=F", SILVER: "SI=F", COPPER: "HG=F", PLATINUM: "PL=F", PALLADIUM: "PA=F",
@@ -1132,8 +1136,8 @@
 
   // ── VIVEK (5.0-style) chart — the 200 SMA reaction, not the scalp overlays ──
   // VIVEK has no per-ticker static chart files; it always renders live from daily
-  // history, drawing the 200 SMA (the level) + 50 SMA structure and the full
-  // Entry / SL / TP1 / TP2 / TP3 ladder as price lines.
+  // history, drawing the 10 / 20 / 43 SMAs, the 200 SMA (the level) and the
+  // full Entry / SL / TP1 / TP2 / TP3 ladder as price lines.
   function vivekFallback(SYM, meta) {
     const m = meta || {};
     // The VIVEK levels (grade/200-SMA/entry/SL/TP1-3) MUST come from the saved
@@ -1181,11 +1185,11 @@
     // chart never recomputes them. Daily and Weekly EACH carry their OWN Python
     // plan, so the levels genuinely change when you switch between them.
     //
-    // 4H has NO server-side plan, so it shows the Daily plan's levels as a clearly
-    // labelled reference (approx=true → no mismatched markers; the chart shows a
-    // prominent "4H uses Daily levels" notice in both the 2D and 3D views).
-    // NOTE: /api/price only whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/max
-    // and intervals incl. 1h/1d — keep fetches on whitelisted values.
+    // 4H uses the scan's own 4H plan when the row has one; on older payloads
+    // with no 4H plan it shows the Daily plan's levels as a clearly labelled
+    // reference (approx=true → no mismatched markers, plus an on-chart notice).
+    // NOTE: /api/price whitelists ranges 1d/5d/1mo/3mo/6mo/1y/2y/5y/10y/15y/
+    // 20y/25y/max and intervals incl. 1h/1d — keep fetches on whitelisted values.
     const direction = String(dir).toUpperCase() === "SHORT" ? "short" : "long";
     const plans = m.plans || {};
     const pyMarkers = m.markers || {};
@@ -1205,7 +1209,7 @@
       const tf = barsToVivekTF(bars);                 // candles + volume + SMAs (display)
       tf.levels = normalizePlan(planRaw);             // the plan (from Python)
       tf.markers = approx ? [] : adaptMarkers(pyMarkers[tfKey], bars, direction);
-      tf.approx = !!approx;                           // 4H reuses the Daily plan
+      tf.approx = !!approx;                           // true when this TF borrows the Daily plan
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
@@ -1946,8 +1950,8 @@
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
     const sc = (d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
-    // A "reference" TF borrows the Daily plan (no plan of its own) — that's 4H
-    // always, and 3D only on older data without a real 3-Day plan. Flagged via
+    // A "reference" TF borrows the Daily plan (no plan of its own) — 4H or 3D
+    // only on a row whose scan carries no real 4H / 3-Day plan. Flagged via
     // the TF block's `approx`, set when the chart built it.
     const isRef = !!((d.timeframes && d.timeframes[tfKey]) || {}).approx;
     const tfName = tfKey === "1W" ? "Weekly" : tfKey === "4H" ? "4H" : tfKey === "3D" ? "3-Day" : "Daily";
@@ -2135,8 +2139,9 @@
 
 
   // Poll a delayed live quote for a non-crypto instrument and push it into the
-  // header price + liveState (so the sim box, auto-close and entry P&L all react
-  // to a moving price instead of the static scan close). Shows a "~15m delayed"
+  // header price + liveState (so the price-alert lines react to a moving price
+  // instead of the static scan close). Crypto VIVEK charts poll Yahoo
+  // <base>-USD through the same function. Shows a "~15m delayed"
   // badge since Yahoo isn't real-time for stocks / futures.
   function startStockLive(d, SYM) {
     const cur      = d.currency_symbol || "";
@@ -2270,8 +2275,8 @@
 
   function render(d) {
     // FIRST line, before anything is wired: whatever the previous render left
-    // running is stopped here. render() is re-entrant (every timeframe button
-    // is a call site), so this is the only place the previous pass's intervals,
+    // running is stopped here. render() is re-entrant (each data-fallback load
+    // calls it), so this is the only place the previous pass's intervals,
     // listeners and tick subscribers can be reached — by the time the new box
     // node exists, the old one has already been orphaned.
     tearDownPreviousRender();
@@ -2279,8 +2284,9 @@
     const tfs = d.timeframes || {};
     const available = TF_ORDER.filter((k) => tfs[k]);
     if (!available.length) {
-      // Static JSON had no usable timeframes — try live history before failing
-      // (but don't loop if we're already rendering a live fallback).
+      // No usable timeframes. Every caller today is a live fallback (_fallback),
+      // so this fails; fallbackFromLive() is the guard for a non-fallback payload,
+      // which nothing builds since the static chart files went (2026-08-15).
       if (d._fallback) { fail("No chart data for this ticker yet."); }
       else { fallbackFromLive(); }
       return;
@@ -2530,7 +2536,8 @@
     }
     let vkFlashes = [], pmFlashes = [];
 
-    // One line series per indicator (the set is the same across timeframes).
+    // One line series per indicator of the first timeframe; applyTF grows the
+    // pool when another timeframe carries more lines and blanks the unused ones.
     const lineSeries = tfs[curTF].lines.map((l) => chart.addLineSeries({
       color: l.color, lineWidth: l.name === "SuperTrend" ? 1.5 : 2,
       priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
@@ -2855,8 +2862,8 @@
       d._activeTf = key;
     }
 
-    // VIVEK: per-timeframe trade levels (200 SMA · swing high/low · SL · Entry ·
-    // TP1/2/3), redrawn whenever the timeframe changes, plus the matching footer.
+    // VIVEK: per-timeframe trade levels (200 SMA · SL · Entry · TP1/2/3),
+    // redrawn whenever the timeframe changes, plus the matching footer.
     let vkHandles = [];
     function applyVivekLevels(key) {
       const lv = (tfs[key] || {}).levels;
@@ -2905,7 +2912,8 @@
         vkFlashes = ms.map((m) => ({ time: m.time, color: "rgba(77,163,255,0.10)" }));
         setFlashes([...vkFlashes, ...pmFlashes]);
       }
-      // Expose the active timeframe's plan so Simulate-Buy logs THIS TF's levels.
+      // Expose the active timeframe's plan so the size calc and the ⧉ Plan copy
+      // use THIS TF's levels.
       d._activeLevels = lv;
       d._activeTf = key;
       renderVivekFooter(d, lv, key);
@@ -2913,12 +2921,12 @@
       // two lines above just invalidated it. Recompute the OUTPUT LINE only:
       // calling wireSizeCalc again would rebuild host.innerHTML and destroy the
       // caret mid-keystroke of anyone typing their account size. Guarded because
-      // render() wires the sizer AFTER the first applyVivekLevels on some paths,
-      // and because a chart with no entry/stop hides the panel and never sets it.
+      // a chart with no entry/stop hides the panel and never sets the hook.
       if (typeof d._recalcMySize === "function") d._recalcMySize();
     }
 
-    // ── open-position context (entry marker + floating LIVE box) ──────────────
+    // ── open-position context (the manual entry marker is gone; no live box
+    //    is built — makeLiveBoxDraggable is kept but uncalled) ──────────────────
     const SYM    = (d.symbol || symbol).toUpperCase();
     const posDir = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
     // The ▶ ENTRY arrow marked YOUR open manual position's fill bar. The manual
@@ -3079,9 +3087,10 @@
       legend(tf);
       if (d._vivek) {
         applyVivekLevels(key);               // re-read trade levels for this timeframe
-        // Prominent notice on the reference timeframes (4H, 3D): their candles
-        // are real, but the trade levels are the Daily plan (no separate plan at
-        // those timeframes yet), so users aren't misled.
+        // Prominent notice on a reference timeframe (a 4H/3D view that borrowed
+        // the Daily plan because the row has no plan of its own): the candles
+        // are real, but the trade levels are the Daily plan's, so users aren't
+        // misled.
         if (tfNotice) {
           const isRef = (tfs[key] || {}).approx;
           if (isRef) {
@@ -3261,7 +3270,8 @@
         live.switchTo(b.dataset.tf);
       }));
     } else {
-      // Everything else → static multi-timeframe data from the scan JSON.
+      // Everything else → the multi-timeframe bars the fallback already loaded
+      // (live history; plans from the scan row).
       toggle.innerHTML = available.map((k) =>
         `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
       // Switch timeframe from a button OR a setup-strip chip, keeping both in sync.
@@ -3299,10 +3309,10 @@
       setTimeout(() => { planBtn.textContent = "⧉ Plan"; }, 1600);
     };
 
-    // ── Temporary drawing tools + measure + eraser ───────────────────────────
-    // Not persisted — purely for eyeballing structure while viewing. Points are
-    // anchored to chart coordinates (logical index + price) so they track pan/
-    // zoom; switching timeframe clears them (the data underneath changed).
+    // ── Drawing tools + measure + eraser ─────────────────────────────────────
+    // Saved per ticker + timeframe in localStorage (see "persistence" below).
+    // Points are anchored to chart coordinates so they track pan/zoom; a
+    // timeframe switch swaps in that timeframe's saved set.
     initDrawing();
     const alertsApi = initAlerts();   // UX-20 #4: tap-to-set price alert lines
     initReplay();                     // UX-20 #7: bar-by-bar setup replay
@@ -3335,7 +3345,7 @@
       el.appendChild(measureLabel);
 
       const ts = chart.timeScale();
-      let tool = "cursor";            // cursor | trend | hline | measure | erase
+      let tool = "cursor";            // cursor | trend | hline | alert | measure | erase
       let drawings = [];              // {type:'trend', a, b} | {type:'hline', price}
       let pending = null;             // first point of a trendline in progress
       let hover = null;               // live cursor point {x,y,logical,price}
@@ -3882,8 +3892,9 @@
 
     // ── UX-20 #8: relative-strength overlay ────────────────────────────────
     // ⚖ VS overlays a second instrument (market index / SPY / ETH / any
-    // ticker) as a dashed pink line REBASED to this chart's first visible
-    // close — divergence between the two lines IS the relative strength.
+    // ticker) as a dashed pink line REBASED to this timeframe's first bar that
+    // has compare data — divergence between the two lines IS the relative
+    // strength.
     // The chip states who's leading over the window; choice persists per
     // market and re-applies on every chart until removed.
     function initCompare() {
@@ -4321,7 +4332,8 @@
   // chart must state loudly what direction the position was TAKEN as, and
   // shout when the current read disagrees.
   // Mounted from boot() into the STATIC .chart-main container, so it shows
-  // on every render path (saved chart, VIVEK live fallback, PhaseMap-only).
+  // on every render path (held position, Momentum, VIVEK, PhaseMap-only,
+  // live fallback).
   async function wireBotPosBanner() {
     if (market === "scalp") return;
     const host = document.querySelector(".chart-main");
@@ -4365,7 +4377,7 @@
 
 
   // ── prev / next through the scanner result list ──────────────────────────────
-  // Lets you step down the same scan (e.g. all ASX reversals) without bouncing
+  // Lets you step down the same scan (e.g. all ASX VIVEK setups) without bouncing
   // back to the dashboard. Reads the scan-results JSON that backs this chart,
   // finds the current symbol's position, and wires the header arrows + ←/→ keys.
   async function wireScanNav() {
@@ -4460,7 +4472,7 @@
      * So the arrows walk the STRIP's order, not the 200-name deck, and every
      * name landed on is marked reviewed — arriving here IS reviewing it. The
      * order was saved by the deck when the chip was clicked (window.EYES), and
-     * it is scoped to this market and this scan: a stale chain is treated as no
+     * it is scoped to this market and today's trading day: a stale chain is treated as no
      * chain and the arrows fall back to the ordinary deck list below, because
      * stepping yesterday's order through today's data would walk names that are
      * no longer aligned.
