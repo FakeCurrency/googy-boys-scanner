@@ -247,6 +247,10 @@ ok(!/Star \(☆\)|★ watchlist/.test(code("js/app.js")),
 
 // VALIDATE (2026-09-23) -- same rule, second pass (reviews/2026-09-23-validate.md).
 ok(code("js/chart.js").includes("const hard = rec.zones.find("), "js/chart.js zone plan moved -- pin would be vacuous");
+ok(fnBody(code("js/chart.js"), "momentumFallback").includes("_momentum: true"), "momentumFallback moved -- pin would be vacuous");
+ok(!/\b_momRow\b|\b_momParams\b/.test(code("js/chart.js")),
+   "js/chart.js momentumFallback: d._momRow / d._momParams were set and never read, deleted " +
+   "2026-09-23 (the row and params are used directly inside momentumFallback)");
 ok(!/\b_zonePlan\b/.test(code("js/chart.js")),
    "js/chart.js: d._zonePlan was set and never read (its reader, the Simulate buttons, went " +
    "2026-09-21) and was deleted 2026-09-23");
