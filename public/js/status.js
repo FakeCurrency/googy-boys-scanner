@@ -13,7 +13,7 @@
  *     that mutates its subject is not a monitor. The healer's condition is
  *     instead DERIVED from the book age the healer itself reads, and the sheet
  *     says so rather than implying it probed.
- *   - It never touches /api/tick, /api/scan or /api/close, and it writes
+ *   - It never touches /api/scan or /api/close (or the removed /api/tick), and it writes
  *     nothing — no POST, no localStorage. There is deliberately not even a
  *     "last opened" flag: a read-only promise with one exception is a
  *     read-only promise nobody can check at a glance.
