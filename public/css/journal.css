@@ -79,7 +79,6 @@
 .g-c     { color: var(--grade-c); }
 .r-pos   { color: var(--green); }
 .r-neg   { color: var(--red); }
-.reason  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .jr-empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
@@ -94,7 +93,6 @@
    ══════════════════════════════════════════════════════════════════════════ */
 :root {
   --bot: #5b9cff;            /* Claude accent (blue) */
-  --me:  #b98bff;            /* Me accent (violet)   */
 }
 
 /* grade + direction + misc inline chips */
@@ -243,9 +241,6 @@
 .side .stat-value { font-size: 21px; margin-top: 5px; }
 .side .stats { margin-bottom: 10px; }
 
-/* ── same positions — you and Claude in the same trade, head to head ── */
-.both > .jr-section-title:first-child { margin-top: 6px; }
-
 /* ── 2 + 3 · Claude vs Me, side by side ── */
 .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; margin-bottom: 26px; }
 /* One book since 2026-09-21 (the manual side was removed), so the two-up grid
@@ -268,7 +263,6 @@
   padding: 7px 12px; border-radius: 8px;
 }
 .side-badge.bot { background: rgba(91,156,255,.12); color: var(--bot); }
-.side-badge.me  { background: rgba(185,139,255,.12); color: var(--me); }
 .side-note { font: 500 12px/1.4 var(--sans); color: var(--muted); }
 
 /* The per-section tables live in half-width columns — make them compact and
