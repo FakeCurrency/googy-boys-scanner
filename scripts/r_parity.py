@@ -68,7 +68,7 @@ from scanner.vivek_journal import costs_for  # noqa: E402
 
 log = logging.getLogger("r_parity")
 
-VERSION = 1
+VERSION = 2
 LENSES = ("vivek", "phasemap", "momentum", "specs")
 TITLE = {"vivek": "VIVEK 5.0", "phasemap": "PhaseMap", "momentum": "Momentum", "specs": "Specs"}
 WHAT = {"vivek": "armed A+/A plans, 1D/3D/1W",
@@ -141,7 +141,11 @@ def replay_vivek(df, market, u, *, long_only: bool, gated: collections.Counter,
         house, worst = rmodel.simulate_both(
             lambda j=j: ((days[k], o[k], h[k], l[k], c[k]) for k in range(j, n)),
             tr["direction"], tr["entry"], tr["initial_stop"], [tr["tp1"], tr["tp2"], tr["tp3"]],
-            tr["scale"], tr["entry_date"], costs=costs)
+            tr["scale"], tr["entry_date"], costs=costs,
+            # the engine already decided the trade was takeable, on the RAW open;
+            # re-deciding on the 8-dp entry refuses an open that sits within
+            # float noise of TP1 (seen on the runners: 2.9499999... vs 2.95)
+            chase_guard=False)
         if house is None or abs(worst["realized_r"] - tr["realized_r"]) > 1e-9 \
                 or worst["exit_date"] != tr["exit_date"]:
             check["mismatch"] += 1
@@ -267,6 +271,11 @@ def cmd_shard(a) -> int:
     else:
         from scanner.data import download
         frames = download(list(by_yf), period=a.period)
+        missed = [yf for yf in by_yf if frames.get(yf) is None or not len(frames[yf])]
+        if missed:                       # one more pass once a throttled source has cooled
+            time.sleep(a.retry_wait)
+            frames.update({k: v for k, v in download(missed, period=a.period).items()
+                           if v is not None and len(v)})
     frames = {k: v for k, v in frames.items() if v is not None and len(v)}
     doc = {"version": VERSION, "market": a.market, "shard": a.shard, "of": a.of,
            "period": a.period, "universe": len(uni), "shard_symbols": len(mine),
@@ -492,6 +501,7 @@ def main(argv=None) -> int:
     sh.add_argument("--limit", type=int, default=0)
     sh.add_argument("--symbols", default="")
     sh.add_argument("--frames-dir", default=None)
+    sh.add_argument("--retry-wait", type=float, default=60.0)
     rp = sub.add_parser("report")
     rp.add_argument("--in", dest="indir", required=True)
     rp.add_argument("--out", required=True)
