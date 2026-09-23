@@ -195,6 +195,26 @@ async function finish() {
     await ctx.close();
   }
 
+  // ── chart.css repair (sweep): the loader skeleton and offline banner are styled ──
+  {
+    const P = "chart.css restored rules";
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage(); const errs = [];
+    page.on("pageerror", (e) => errs.push(String(e).slice(0, 200)));
+    await page.route(/\/api\/price/, () => {});           // hold the bar fetch so the skeleton stays up
+    await page.goto(BASE + "/chart.html?s=AUB&m=asx", { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(2500);
+    const r = await page.evaluate(() => { const sk = document.getElementById("chart-skeleton"); const ob = document.getElementById("offline-banner");
+      return { sk: sk ? getComputedStyle(sk).position + "/" + getComputedStyle(sk).display : "none",
+               ob: ob ? getComputedStyle(ob).borderRadius : "none",
+               css: (document.querySelector('link[href*="css/chart.css"]') || {}).href || "" }; });
+    rec(P, "serves chart.css >= v50", /chart\.css\?v=(\d+)/.test(r.css) && +/chart\.css\?v=(\d+)/.exec(r.css)[1] >= 50, r.css.replace(BASE, ""));
+    rec(P, "loading skeleton is styled (absolute/flex)", r.sk === "absolute/flex", r.sk);
+    rec(P, "offline banner is styled (rounded)", r.ob === "10px", r.ob);
+    await page.screenshot({ path: `${OUT}/chart-loading.png` });
+    await ctx.close();
+  }
+
   // ── other pages load ──
   const PAGES = { journal: ["/journal.html", "#bot-open, .jr-table, #jr-bot, main"], alerts: ["/alerts.html", "main"], phasemap: ["/phasemap.html", "main"], specs: ["/specs.html", "main"] };
   for (const [k, [url, sel]] of Object.entries(PAGES)) {
