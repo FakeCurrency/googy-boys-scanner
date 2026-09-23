@@ -1,20 +1,20 @@
 {
- "base": "https://googy-boys-scanner.pages.dev",
- "at": "2026-09-23T03:21:36.538Z",
- "pass": 54,
+ "base": "https://sweep-2026-09-23.googy-boys-scanner.pages.dev",
+ "at": "2026-09-23T04:44:14.475Z",
+ "pass": 57,
  "fail": 0,
  "results": [
   {
    "page": "deploy",
    "check": "version.json served",
    "pass": true,
-   "detail": "2026.09.22-b7f1b35f"
+   "detail": "2026.09.23-7ef6fd5d"
   },
   {
    "page": "deck desk",
    "check": "deck title painted (not loading)",
    "pass": true,
-   "detail": "Last scanned: 51m ago"
+   "detail": "Last scanned: 25m ago"
   },
   {
    "page": "deck desk",
@@ -38,7 +38,7 @@
    "page": "deck phone",
    "check": "deck title painted (not loading)",
    "pass": true,
-   "detail": "Last scanned: 51m ago"
+   "detail": "Last scanned: 25m ago"
   },
   {
    "page": "deck phone",
@@ -140,7 +140,7 @@
    "page": "ELS momentum chart",
    "check": "serves chart.js >= v123",
    "pass": true,
-   "detail": "/js/chart.js?v=123"
+   "detail": "/js/chart.js?v=124"
   },
   {
    "page": "ELS momentum chart",
@@ -206,7 +206,7 @@
    "page": "ELS momentum chart",
    "check": "4H: chip is real history (> 187)",
    "pass": true,
-   "detail": "912 4H bars"
+   "detail": "913 4H bars"
   },
   {
    "page": "ELS momentum chart",
@@ -230,7 +230,7 @@
    "page": "BHP 5.0 chart",
    "check": "SMA 10 / 20 / 43 in the legend",
    "pass": true,
-   "detail": "SMA 10 A$60.977 SMA 20 A$62.511 SMA 43 A$62.013 SMA 200 A$54.716"
+   "detail": "SMA 10 A$60.966 SMA 20 A$62.505 SMA 43 A$62.010 SMA 200 A$54.716"
   },
   {
    "page": "BHP 5.0 chart",
@@ -260,7 +260,7 @@
    "page": "5.0 chart, on-scan name",
    "check": "AUB: SMA 10 / 20 / 43 legend, no Momentum panes",
    "pass": true,
-   "detail": "SMA 10 A$28.534 SMA 20 A$28.406 SMA 43 A$28.383 SMA 200 A$26.691 ● 200 SMA reaction ▲ entry trigger ▮ vol ≥1.5× ▮ rising"
+   "detail": "SMA 10 A$28.533 SMA 20 A$28.405 SMA 43 A$28.382 SMA 200 A$26.691 ● 200 SMA reaction ▲ entry trigger ▮ vol ≥1.5× ▮ rising"
   },
   {
    "page": "5.0 chart, on-scan name",
@@ -305,16 +305,34 @@
    "detail": "none"
   },
   {
+   "page": "chart.css restored rules",
+   "check": "serves chart.css >= v50",
+   "pass": true,
+   "detail": "/css/chart.css?v=50"
+  },
+  {
+   "page": "chart.css restored rules",
+   "check": "loading skeleton is styled (absolute/flex)",
+   "pass": true,
+   "detail": "absolute/flex"
+  },
+  {
+   "page": "chart.css restored rules",
+   "check": "offline banner is styled (rounded)",
+   "pass": true,
+   "detail": "10px"
+  },
+  {
    "page": "page journal",
    "check": "loads, has content, no page error",
    "pass": true,
-   "detail": "text 16586ch, still-loading false, overflow false; no errors"
+   "detail": "text 16587ch, still-loading false, overflow false; no errors"
   },
   {
    "page": "page alerts",
    "check": "loads, has content, no page error",
    "pass": true,
-   "detail": "text 3049ch, still-loading false, overflow false; no errors"
+   "detail": "text 3038ch, still-loading false, overflow false; no errors"
   },
   {
    "page": "page phasemap",
