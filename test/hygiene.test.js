@@ -260,6 +260,20 @@ ok(!/const\s+pad\s*=\s*\(/.test(code("js/journal.js")),
        `js/phasemap-shared.js: PM.${name} had no reader and was dropped from the export 2026-09-23`);
 }
 
+// window.EYES exported its two storage-key names, which nothing outside
+// eyes-store.js reads (app.js, chart.js and eyes.test.js use the methods).
+// The vars stay; the pin reads the EYES object literal only.
+{
+  const src = code("js/eyes-store.js");
+  const at = src.indexOf("var EYES = {");
+  ok(at > 0, "js/eyes-store.js moved -- pin would be vacuous");
+  const head = src.slice(at, src.indexOf("MAX_MARKS", at));
+  ok(head.includes("UNKNOWN"), "EYES object head not found -- pin would be vacuous");
+  for (const name of ["SEEN_KEY", "CHAIN_KEY"])
+    ok(!new RegExp(`\\b${name}\\s*:`).test(head),
+       `js/eyes-store.js: EYES.${name} had no reader and was dropped from the export 2026-09-23`);
+}
+
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
 ok(code("js/sectors.js").includes("const SECTOR_INFO = {"), "js/sectors.js moved -- pin would be vacuous");
