@@ -64,6 +64,33 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
      "css/chart.css: .live-pos-box / .lpb-* rules were proven dead and deleted 2026-09-23");
 }
 
+// SWEEP (2026-09-23) -- journal.css rules for the manual "Me" journal, which
+// was removed 2026-09-21: its modal, form, tabs, Claude-vs-Me scoreboard,
+// row action buttons, close preview, sync pill and the retired header
+// sparkline (drawMiniEquity's .jr-mini-eqsvg). No JS/HTML/data creates any of
+// these classes. Pinned as SELECTORS, so a comment may still name one.
+{
+  const css = code("css/journal.css");
+  ok(css.includes(".jr-close-all {"), "css/journal.css moved -- pin would be vacuous");
+  const JOURNAL_CSS_GONE = [
+    "both-win",
+    "bsep",
+    "cmp", "cmp-bot", "cmp-head", "cmp-k", "cmp-me", "cmp-row", "cmp-v", "cmp-vs",
+    "dir-chip",
+    "h-bot", "h-me",
+    "has-note",
+    "hl",
+    "jr-actions", "jr-chart-ico", "jr-chart-link", "jr-close-btn", "jr-close-preview", "jr-cp-label", "jr-cp-note", "jr-cp-row", "jr-cp-val", "jr-del-btn", "jr-equity", "jr-grade", "jr-hidden", "jr-modal-input", "jr-modal-row", "jr-note-btn", "jr-pnl-spark", "jr-pnl-track", "jr-pnl-track-label", "jr-pnl-track-val", "jr-price-tag", "jr-price-wrap", "jr-scoreboard", "jr-sync-pill", "jr-tab", "jr-tab-arrow", "jr-tab-crypto", "jr-tab-label", "jr-tab-mine", "jr-tab-short", "jr-tab-stocks", "jr-tabs", "jr-tf", "jr-mini-eqsvg",
+    "lead-bot", "lead-me",
+    "mj-actions", "mj-asset-active", "mj-asset-asx", "mj-asset-btn", "mj-asset-crypto", "mj-asset-nasdaq", "mj-asset-switch", "mj-btn-danger", "mj-close-btn", "mj-currency-wrap", "mj-del-btn", "mj-dir-active", "mj-dir-btn", "mj-dir-long", "mj-dir-short", "mj-dir-switch", "mj-field", "mj-form", "mj-full", "mj-hidden", "mj-label", "mj-leverage-row", "mj-modal", "mj-modal-head", "mj-modal-title", "mj-modal-x", "mj-overlay", "mj-preview", "mj-row", "mj-setting", "mj-settings", "mj-sync", "mj-sync-status",
+    "side-cta",
+    "w-bot", "w-me",
+  ];
+  for (const c of JOURNAL_CSS_GONE)
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/journal.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
+}
+
 // Locals are pinned inside the function that held them: a two-letter name is
 // too common for a whole-file pin. The slice ends where the PARSER says the
 // declaration closes, not at a guessed brace.
