@@ -10,7 +10,7 @@ One fill rule, one cost table, one notional, one minimum stop, applied to every 
 ## Coverage
 
 - **ASX**: 1,738 downloaded / 2,046 in the universe (84.9%); 150 funds/REITs excluded, 1,588 names replayed; shards 16/16.
-- **NASDAQ**: 119 downloaded / 1,428 in the universe (8.3%); 6 funds/REITs excluded, 113 names replayed; shards 1/12 -- MISSING shards [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11], so the missing names are not in any number below.
+- **NASDAQ**: 1,427 downloaded / 1,428 in the universe (99.9%); 54 funds/REITs excluded, 1,373 names replayed; shards 12/12.
 - **CRYPTO**: 61 downloaded / 86 in the universe (70.9%); 0 funds/REITs excluded, 61 names replayed; shards 1/1.
 
 Survivorship: every market is replayed on TODAY's universe, so names that delisted, were acquired or went to zero inside the window are missing, and every number below is flattered by that -- none of it is corrected for.
@@ -19,93 +19,93 @@ Survivorship: every market is replayed on TODAY's universe, so names that delist
 
 | lens | fill rule | net R | R/trade | win% | n | $ at $1k |
 |---|---|---|---|---|---|---|
-| VIVEK 5.0: armed A+/A plans, 1D/3D/1W | house | +739.2 | +0.095 | 51.4% | 7,797 | +$142,731 |
-| VIVEK 5.0: armed A+/A plans, 1D/3D/1W | worst print | -108.4 | -0.014 | 45.7% | 7,797 | +$13,548 |
-| PhaseMap: bullish A+/A signals | house | -293.1 | -0.055 | 40.9% | 5,281 | +$65,651 |
-| PhaseMap: bullish A+/A signals | worst print | -724.2 | -0.137 | 40.9% | 5,281 | +$18,118 |
-| Momentum: Rule A + Rule B longs | house | +563.1 | +0.084 | 51.1% | 6,666 | +$59,852 |
-| Momentum: Rule A + Rule B longs | worst print | -984.5 | -0.148 | 44.6% | 6,666 | -$39,541 |
-| Specs: every signal, A+/A/B | house | -646.9 | -0.072 | 41.6% | 9,018 | -$184,077 |
-| Specs: every signal, A+/A/B | worst print | -1,229.7 | -0.136 | 41.6% | 9,018 | -$290,488 |
+| VIVEK 5.0: armed A+/A plans, 1D/3D/1W | house | +2,761.2 | +0.145 | 53.4% | 19,046 | +$610,630 |
+| VIVEK 5.0: armed A+/A plans, 1D/3D/1W | worst print | +787.8 | +0.041 | 47.8% | 19,046 | +$338,677 |
+| PhaseMap: bullish A+/A signals | house | -214.8 | -0.024 | 46.1% | 8,811 | +$81,877 |
+| PhaseMap: bullish A+/A signals | worst print | -906.8 | -0.103 | 46.1% | 8,811 | +$11,061 |
+| Momentum: Rule A + Rule B longs | house | +2,171.1 | +0.114 | 52.4% | 18,989 | +$220,224 |
+| Momentum: Rule A + Rule B longs | worst print | -1,844.7 | -0.097 | 46.0% | 18,989 | -$46,929 |
+| Specs: every signal, A+/A/B | house | -647.5 | -0.072 | 41.6% | 9,024 | -$183,386 |
+| Specs: every signal, A+/A/B | worst print | -1,231.5 | -0.136 | 41.6% | 9,024 | -$289,932 |
 
 ## VIVEK 5.0 -- the splits that must stay visible (longs)
 
 | lens | fill rule | net R | R/trade | win% | n | $ at $1k |
 |---|---|---|---|---|---|---|
-| 5.0 1D | house | +216.8 | +0.056 | 50.4% | 3,891 | +$34,639 |
-| 5.0 1D | worst print | -310.2 | -0.080 | 43.8% | 3,891 | -$32,922 |
-| 5.0 3D | house | +315.9 | +0.126 | 53.2% | 2,500 | +$70,656 |
-| 5.0 3D | worst print | +87.8 | +0.035 | 47.5% | 2,500 | +$31,153 |
-| 5.0 1W | house | +206.5 | +0.147 | 50.9% | 1,406 | +$37,435 |
-| 5.0 1W | worst print | +114.0 | +0.081 | 47.7% | 1,406 | +$15,318 |
-| 5.0 all A+/A | house | +739.2 | +0.095 | 51.4% | 7,797 | +$142,731 |
-| 5.0 all A+/A | worst print | -108.4 | -0.014 | 45.7% | 7,797 | +$13,548 |
-| 5.0 high-conviction cells (any of the four) | house | +429.3 | +0.189 | 51.0% | 2,274 | +$85,832 |
-| 5.0 high-conviction cells (any of the four) | worst print | +271.6 | +0.119 | 47.5% | 2,274 | +$50,836 |
-| 5.0 not a high-conviction cell | house | +309.9 | +0.056 | 51.6% | 5,523 | +$56,899 |
-| 5.0 not a high-conviction cell | worst print | -379.9 | -0.069 | 45.0% | 5,523 | -$37,287 |
-| 5.0 cell: 1W reclaim | house | +97.2 | +0.156 | 47.1% | 622 | +$6,507 |
-| 5.0 cell: 1W reclaim | worst print | +64.5 | +0.104 | 45.0% | 622 | -$2,460 |
-| 5.0 cell: 1W break | house | +32.8 | +0.157 | 56.9% | 209 | +$13,665 |
-| 5.0 cell: 1W break | worst print | +24.4 | +0.117 | 52.2% | 209 | +$10,175 |
-| 5.0 cell: 3D reclaim | house | +262.9 | +0.226 | 50.2% | 1,161 | +$63,067 |
-| 5.0 cell: 3D reclaim | worst print | +170.6 | +0.147 | 47.7% | 1,161 | +$45,080 |
-| 5.0 cell: 1D break | house | +36.5 | +0.129 | 58.2% | 282 | +$2,593 |
-| 5.0 cell: 1D break | worst print | +12.1 | +0.043 | 48.6% | 282 | -$1,960 |
-| 5.0 bot rule (four cells, weekly/3d level) | house | +407.5 | +0.214 | 51.8% | 1,908 | +$87,789 |
-| 5.0 bot rule (four cells, weekly/3d level) | worst print | +271.6 | +0.142 | 48.1% | 1,908 | +$58,904 |
-| 5.0 grade A+ | house | +210.4 | +0.060 | 50.0% | 3,525 | +$27,101 |
-| 5.0 grade A+ | worst print | -161.8 | -0.046 | 44.0% | 3,525 | -$27,893 |
-| 5.0 grade A | house | +528.8 | +0.124 | 52.6% | 4,272 | +$115,630 |
-| 5.0 grade A | worst print | +53.4 | +0.013 | 47.1% | 4,272 | +$41,441 |
+| 5.0 1D | house | +907.2 | +0.093 | 51.7% | 9,722 | +$165,600 |
+| 5.0 1D | worst print | -332.8 | -0.034 | 45.4% | 9,722 | +$19,159 |
+| 5.0 3D | house | +1,077.9 | +0.178 | 55.4% | 6,048 | +$246,527 |
+| 5.0 3D | worst print | +549.5 | +0.091 | 49.7% | 6,048 | +$164,386 |
+| 5.0 1W | house | +776.2 | +0.237 | 54.7% | 3,276 | +$198,504 |
+| 5.0 1W | worst print | +571.2 | +0.174 | 51.6% | 3,276 | +$155,133 |
+| 5.0 all A+/A | house | +2,761.2 | +0.145 | 53.4% | 19,046 | +$610,630 |
+| 5.0 all A+/A | worst print | +787.8 | +0.041 | 47.8% | 19,046 | +$338,677 |
+| 5.0 high-conviction cells (any of the four) | house | +1,456.4 | +0.262 | 54.5% | 5,562 | +$365,563 |
+| 5.0 high-conviction cells (any of the four) | worst print | +1,107.3 | +0.199 | 51.9% | 5,562 | +$292,671 |
+| 5.0 not a high-conviction cell | house | +1,304.8 | +0.097 | 52.9% | 13,484 | +$245,068 |
+| 5.0 not a high-conviction cell | worst print | -319.4 | -0.024 | 46.2% | 13,484 | +$46,006 |
+| 5.0 cell: 1W reclaim | house | +485.3 | +0.308 | 53.0% | 1,577 | +$133,232 |
+| 5.0 cell: 1W reclaim | worst print | +412.6 | +0.262 | 52.0% | 1,577 | +$114,914 |
+| 5.0 cell: 1W break | house | +52.4 | +0.146 | 58.5% | 359 | +$23,185 |
+| 5.0 cell: 1W break | worst print | +36.4 | +0.101 | 54.3% | 359 | +$17,334 |
+| 5.0 cell: 3D reclaim | house | +830.1 | +0.271 | 53.6% | 3,058 | +$198,210 |
+| 5.0 cell: 3D reclaim | worst print | +614.6 | +0.201 | 51.6% | 3,058 | +$157,388 |
+| 5.0 cell: 1D break | house | +88.6 | +0.156 | 61.3% | 568 | +$10,935 |
+| 5.0 cell: 1D break | worst print | +43.7 | +0.077 | 51.4% | 568 | +$3,034 |
+| 5.0 bot rule (four cells, weekly/3d level) | house | +1,295.3 | +0.274 | 55.2% | 4,735 | +$327,747 |
+| 5.0 bot rule (four cells, weekly/3d level) | worst print | +1,002.0 | +0.212 | 52.6% | 4,735 | +$267,727 |
+| 5.0 grade A+ | house | +1,242.8 | +0.133 | 52.1% | 9,349 | +$268,537 |
+| 5.0 grade A+ | worst print | +281.1 | +0.030 | 46.7% | 9,349 | +$142,861 |
+| 5.0 grade A | house | +1,518.5 | +0.157 | 54.6% | 9,697 | +$342,093 |
+| 5.0 grade A | worst print | +506.7 | +0.052 | 48.9% | 9,697 | +$195,817 |
 
 ## Momentum -- Rule A vs Rule B by market (longs; live min_signal_score = 2)
 
 | lens | fill rule | net R | R/trade | win% | n | $ at $1k |
 |---|---|---|---|---|---|---|
-| Momentum Rule A ASX | house | +155.1 | +0.077 | 50.7% | 2,016 | +$15,170 |
-| Momentum Rule A ASX | worst print | -423.9 | -0.210 | 43.6% | 2,016 | -$13,716 |
-| Momentum Rule A NASDAQ | house | +38.4 | +0.082 | 50.5% | 469 | +$6,634 |
-| Momentum Rule A NASDAQ | worst print | -80.4 | -0.171 | 42.6% | 469 | +$464 |
+| Momentum Rule A ASX | house | +143.4 | +0.071 | 50.7% | 2,027 | +$14,575 |
+| Momentum Rule A ASX | worst print | -436.8 | -0.216 | 43.7% | 2,027 | -$14,387 |
+| Momentum Rule A NASDAQ | house | +761.7 | +0.134 | 52.6% | 5,670 | +$79,827 |
+| Momentum Rule A NASDAQ | worst print | -582.0 | -0.103 | 44.7% | 5,670 | +$4,136 |
 | Momentum Rule A CRYPTO | house | +37.5 | +0.090 | 51.0% | 416 | +$381 |
 | Momentum Rule A CRYPTO | worst print | -74.9 | -0.180 | 42.1% | 416 | -$7,140 |
-| Momentum Rule A all markets | house | +230.9 | +0.080 | 50.7% | 2,901 | +$22,185 |
-| Momentum Rule A all markets | worst print | -579.1 | -0.200 | 43.2% | 2,901 | -$20,393 |
-| Momentum Rule B ASX | house | +204.3 | +0.076 | 51.8% | 2,676 | +$23,903 |
-| Momentum Rule B ASX | worst print | -301.6 | -0.113 | 46.0% | 2,676 | -$13,936 |
-| Momentum Rule B NASDAQ | house | -13.7 | -0.022 | 48.0% | 617 | +$1,213 |
-| Momentum Rule B NASDAQ | worst print | -139.5 | -0.226 | 42.6% | 617 | -$8,645 |
+| Momentum Rule A all markets | house | +942.6 | +0.116 | 52.0% | 8,113 | +$94,782 |
+| Momentum Rule A all markets | worst print | -1,093.7 | -0.135 | 44.3% | 8,113 | -$17,391 |
+| Momentum Rule B ASX | house | +207.5 | +0.078 | 51.8% | 2,676 | +$24,028 |
+| Momentum Rule B ASX | worst print | -298.5 | -0.112 | 46.0% | 2,676 | -$13,814 |
+| Momentum Rule B NASDAQ | house | +879.6 | +0.114 | 53.1% | 7,728 | +$88,862 |
+| Momentum Rule B NASDAQ | worst print | -488.2 | -0.063 | 47.6% | 7,728 | -$19,157 |
 | Momentum Rule B CRYPTO | house | +141.5 | +0.300 | 53.2% | 472 | +$12,552 |
 | Momentum Rule B CRYPTO | worst print | +35.7 | +0.076 | 47.7% | 472 | +$3,433 |
-| Momentum Rule B all markets | house | +332.1 | +0.088 | 51.3% | 3,765 | +$37,668 |
-| Momentum Rule B all markets | worst print | -405.4 | -0.108 | 45.7% | 3,765 | -$19,148 |
+| Momentum Rule B all markets | house | +1,228.5 | +0.113 | 52.7% | 10,876 | +$125,442 |
+| Momentum Rule B all markets | worst print | -751.0 | -0.069 | 47.2% | 10,876 | -$29,538 |
 
 ## Every lens by market (longs)
 
 | lens | fill rule | net R | R/trade | win% | n | $ at $1k |
 |---|---|---|---|---|---|---|
-| VIVEK 5.0 ASX | house | +379.7 | +0.061 | 50.1% | 6,236 | +$57,718 |
-| VIVEK 5.0 ASX | worst print | -272.3 | -0.044 | 44.5% | 6,236 | -$38,241 |
-| VIVEK 5.0 NASDAQ | house | +158.6 | +0.168 | 56.0% | 945 | +$38,430 |
-| VIVEK 5.0 NASDAQ | worst print | +70.6 | +0.075 | 50.2% | 945 | +$26,992 |
-| VIVEK 5.0 CRYPTO | house | +200.9 | +0.326 | 57.5% | 616 | +$46,583 |
-| VIVEK 5.0 CRYPTO | worst print | +93.4 | +0.152 | 50.8% | 616 | +$24,797 |
-| PhaseMap ASX | house | -577.9 | -0.125 | 38.9% | 4,612 | -$81,594 |
-| PhaseMap ASX | worst print | -953.4 | -0.207 | 38.9% | 4,612 | -$122,757 |
-| PhaseMap NASDAQ | house | -5.0 | -0.015 | 53.7% | 324 | -$222 |
-| PhaseMap NASDAQ | worst print | -27.4 | -0.085 | 53.7% | 324 | -$2,667 |
+| VIVEK 5.0 ASX | house | +372.6 | +0.060 | 50.0% | 6,257 | +$56,532 |
+| VIVEK 5.0 ASX | worst print | -283.1 | -0.045 | 44.4% | 6,257 | -$39,617 |
+| VIVEK 5.0 NASDAQ | house | +2,187.8 | +0.180 | 54.9% | 12,171 | +$507,521 |
+| VIVEK 5.0 NASDAQ | worst print | +977.6 | +0.080 | 49.5% | 12,171 | +$353,502 |
+| VIVEK 5.0 CRYPTO | house | +200.9 | +0.325 | 57.3% | 618 | +$46,578 |
+| VIVEK 5.0 CRYPTO | worst print | +93.3 | +0.151 | 50.6% | 618 | +$24,792 |
+| PhaseMap ASX | house | -591.0 | -0.128 | 38.7% | 4,607 | -$82,842 |
+| PhaseMap ASX | worst print | -967.7 | -0.210 | 38.7% | 4,607 | -$124,141 |
+| PhaseMap NASDAQ | house | +86.4 | +0.022 | 54.0% | 3,859 | +$17,251 |
+| PhaseMap NASDAQ | worst print | -195.7 | -0.051 | 54.0% | 3,859 | -$8,339 |
 | PhaseMap CRYPTO | house | +289.8 | +0.840 | 56.5% | 345 | +$147,467 |
 | PhaseMap CRYPTO | worst print | +256.6 | +0.744 | 56.5% | 345 | +$143,542 |
-| Momentum ASX | house | +359.4 | +0.077 | 51.3% | 4,692 | +$39,073 |
-| Momentum ASX | worst print | -725.4 | -0.155 | 44.9% | 4,692 | -$27,652 |
-| Momentum NASDAQ | house | +24.8 | +0.023 | 49.1% | 1,086 | +$7,847 |
-| Momentum NASDAQ | worst print | -219.9 | -0.203 | 42.6% | 1,086 | -$8,181 |
+| Momentum ASX | house | +350.9 | +0.075 | 51.3% | 4,703 | +$38,602 |
+| Momentum ASX | worst print | -735.3 | -0.156 | 45.0% | 4,703 | -$28,201 |
+| Momentum NASDAQ | house | +1,641.3 | +0.123 | 52.8% | 13,398 | +$168,690 |
+| Momentum NASDAQ | worst print | -1,070.2 | -0.080 | 46.4% | 13,398 | -$15,020 |
 | Momentum CRYPTO | house | +179.0 | +0.202 | 52.1% | 888 | +$12,932 |
 | Momentum CRYPTO | worst print | -39.1 | -0.044 | 45.0% | 888 | -$3,708 |
-| Specs ASX | house | -643.4 | -0.071 | 41.6% | 9,013 | -$182,259 |
-| Specs ASX | worst print | -1,225.9 | -0.136 | 41.6% | 9,013 | -$288,488 |
-| Specs NASDAQ | house | -3.5 | -0.691 | 0.0% | 5 | -$1,819 |
-| Specs NASDAQ | worst print | -3.8 | -0.764 | 0.0% | 5 | -$2,000 |
+| Specs ASX | house | -647.7 | -0.072 | 41.6% | 9,014 | -$182,702 |
+| Specs ASX | worst print | -1,231.2 | -0.137 | 41.6% | 9,014 | -$289,046 |
+| Specs NASDAQ | house | +0.2 | +0.022 | 40.0% | 10 | -$684 |
+| Specs NASDAQ | worst print | -0.2 | -0.025 | 40.0% | 10 | -$886 |
 
 ## PhaseMap reference -- the engine's own close-only exits (longs)
 
@@ -113,24 +113,24 @@ The house rule stops a PhaseMap trade on the first print through the INVALIDATIO
 
 | lens | fill rule | net R | R/trade | win% | n | $ at $1k |
 |---|---|---|---|---|---|---|
-| PhaseMap (bullish A+/A) | engine close | -309.0 | -0.059 | 42.8% | 5,281 | +$67,574 |
+| PhaseMap (bullish A+/A) | engine close | -186.3 | -0.021 | 48.2% | 8,811 | +$88,370 |
 
 ## Appendix -- shorts (never in a headline number)
 
 | lens | fill rule | net R | R/trade | win% | n | $ at $1k |
 |---|---|---|---|---|---|---|
-| VIVEK 5.0 shorts | house | -338.1 | -0.074 | 52.3% | 4,550 | -$69,014 |
-| VIVEK 5.0 shorts | worst print | -877.9 | -0.193 | 49.3% | 4,550 | -$150,312 |
-| PhaseMap shorts | house | -538.9 | -0.104 | 48.4% | 5,192 | -$103,380 |
-| PhaseMap shorts | worst print | -5,230.7 | -1.007 | 48.4% | 5,192 | -$2,281,132 |
-| Momentum shorts | house | -866.1 | -0.108 | 47.9% | 8,011 | -$63,515 |
-| Momentum shorts | worst print | -2,784.1 | -0.348 | 46.0% | 8,011 | -$196,368 |
+| VIVEK 5.0 shorts | house | -1,455.9 | -0.124 | 50.6% | 11,727 | -$351,006 |
+| VIVEK 5.0 shorts | worst print | -2,874.4 | -0.245 | 47.4% | 11,727 | -$547,257 |
+| PhaseMap shorts | house | -978.2 | -0.108 | 48.7% | 9,084 | -$153,591 |
+| PhaseMap shorts | worst print | -6,100.8 | -0.672 | 48.7% | 9,084 | -$2,374,453 |
+| Momentum shorts | house | -3,180.8 | -0.138 | 46.7% | 23,000 | -$259,991 |
+| Momentum shorts | worst print | -8,472.7 | -0.368 | 45.0% | 23,000 | -$621,820 |
 
 Specs has no short side. 5.0 shorts come from a separate both-directions replay, because a short holds a timeframe slot a long would otherwise take; the headline 5.0 longs are the long-only replay, as the bot trades.
 
 ## Checks
 
-- 5.0 re-score: 17,790 engine trades (both 5.0 replays) re-scored from the fill bar; the worst-print column reproduced the engine's own realized_r on all but 14.
-- Refused by the 1% minimum stop: 5.0 7, PhaseMap 26, momentum 207, Specs 6.
-- Momentum signals removed by its own gates: {'turnover': 24043, 'price': 5114, 'non-operating listing': 361, 'no volume in the last': 359, 'stop_too_tight': 207, 'no price range in the last': 3}.
-- Still open at the end of the data (marked at the last close), longs: VIVEK 5.0 1,250, PhaseMap 57, Momentum 346, Specs 274.
+- 5.0 re-score: 44,039 engine trades (both 5.0 replays) re-scored from the fill bar; the worst-print column reproduced the engine's own realized_r on all but 0.
+- Refused by the 1% minimum stop: 5.0 15, PhaseMap 56, momentum 501, Specs 6.
+- Momentum signals removed by its own gates: {'turnover': 28629, 'price': 5266, 'non-operating listing': 1963, 'stop_too_tight': 501, 'no volume in the last': 375, 'no price range in the last': 3}.
+- Still open at the end of the data (marked at the last close), longs: VIVEK 5.0 3,124, PhaseMap 86, Momentum 984, Specs 274.
