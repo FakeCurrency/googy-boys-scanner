@@ -1,4 +1,5 @@
-/* PHASEMAP shared helpers — used by phasemap.js (list) and phasemap-chart.js.
+/* PHASEMAP shared helpers (window.PM) — loaded by index, recommendations,
+   phasemap, specs, momentum and chart (the PhaseMap chart lives in chart.js).
    Everything rendered comes straight from the scan snapshot — nothing freestyle. */
 window.PM = (() => {
   "use strict";
@@ -99,8 +100,10 @@ window.PM = (() => {
 
   const TIER_CLASS = { "A+": "pm-tier-aplus", A: "pm-tier-a", Watch: "pm-tier-watch" };
 
-  /* REIT / ETF / LIC / managed fund — mirrors chart.js isFundReit so the same
-     names get flagged on cards and charts alike. */
+  /* REIT / ETF / LIC / managed fund — the same keyword LIST as chart.js
+     isFundReit, but matched on word boundaries and overridden by the published
+     is_product flag (chart.js still matches substrings and ignores the flag,
+     so the two can disagree on a name like NETFLIX). */
   const FUND_NAME_KW = ["REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
     "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
   const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
@@ -307,8 +310,8 @@ window.PM = (() => {
       const side = String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long";
       if (!e[side].includes("VIVEK")) e[side].push("VIVEK");
       // name + sector + the published product flag + score ride along for
-      // DISPLAY (fund badge, product penalty, leg-strength tie-break on the
-      // Eyes strip) — the qualification rule reads none of this.
+      // DISPLAY (the Eyes strip filters products out and breaks ties on leg
+      // strength) — the qualification rule reads none of this.
       e.detail.vivek = { grade: r.grade, side, name: r.name, sector: r.sector,
                          is_product: r.is_product, score: r.score };
     });
@@ -352,8 +355,9 @@ window.PM = (() => {
     };
   }
 
-  /* Banner body shared by the dashboard and the lens pages: capped list of
-     aligned names, triples as pulsing beacons, links to the combined chart. */
+  /* Banner body for the PhaseMap page's multi-lens strip (its only caller):
+     capped list of aligned names, triples as pulsing beacons, links to the
+     combined chart. */
   function confluenceBannerHTML(rows, market, cap = 10) {
     if (!rows || !rows.length) return "";
     return `<span class="conf-banner-label">⨂ MULTI-LENS ALIGNMENT</span>` +
