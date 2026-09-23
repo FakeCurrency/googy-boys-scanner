@@ -245,6 +245,21 @@ ok(!/(?:const|let|var)\s+up\s*=|\bup\s*\(/.test(code("js/app.js")),
 ok(!/const\s+pad\s*=\s*\(/.test(code("js/journal.js")),
    "js/journal.js: the pad() helper (read only by the dead today()) was deleted 2026-09-23");
 
+// window.PM exported fmtPct, srcText and zoneLabel that no page, script or
+// test reads (app.js, chart.js and sectors.js each declare their OWN fmtPct).
+// The locals stay -- phasemap-shared.js still uses all three itself -- so the
+// pin reads the returned object only.
+{
+  const src = code("js/phasemap-shared.js");
+  const at = src.lastIndexOf("return {");
+  ok(at > 0 && src.includes("window.PM = "), "js/phasemap-shared.js moved -- pin would be vacuous");
+  const api = src.slice(at, src.indexOf("}", at));
+  ok(api.includes("esc") && api.includes("loadConfluence"), "PM export object not found -- pin would be vacuous");
+  for (const name of ["fmtPct", "srcText", "zoneLabel"])
+    ok(!new RegExp(`\\b${name}\\b`).test(api),
+       `js/phasemap-shared.js: PM.${name} had no reader and was dropped from the export 2026-09-23`);
+}
+
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
 ok(code("js/sectors.js").includes("const SECTOR_INFO = {"), "js/sectors.js moved -- pin would be vacuous");

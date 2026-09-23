@@ -462,7 +462,7 @@ window.PM = (() => {
       `Tap to retry</button>`;
   }
 
-  return { fmtPrice, fmtPct, fmtTurnover, esc, srcText, zoneLabel,
+  return { fmtPrice, fmtTurnover, esc,
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
            stepperHTML, whyHTML, glossaryHTML,
            isFundReit, toggleSpeak,
