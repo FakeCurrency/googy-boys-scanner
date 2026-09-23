@@ -100,7 +100,7 @@ eq(NAVL.PRIMARY.findIndex((x) => x.key === "momentum"),
 ok(/\[\.\.\.PRIMARY, \.\.\.MORE\]\.map/.test(NAV),
    "the palette must stay derived from PRIMARY+MORE");
 /* ...and that nothing made the new destination fetch a payload on every page
- * load. decorateTabBadges runs on all 12 nav pages. */
+ * load. decorateTabBadges runs on every nav page (13 today). */
 ok(!/setBadge\(\s*["']momentum["']/.test(NAV),
    "no per-page badge fetch for this lens");
 ok(!/momentum[^"']*\.json/.test(NAV),
@@ -214,11 +214,22 @@ function slice(name) {
 }
 
 (() => {
-  // Run the real emptyHTML against the real loadFailKind.
-  const loadFailKind = (err) => {
-    const m = /(\d{3})$/.exec(String((err && err.message) || "").trim());
-    return m && +m[1] === 404 ? "missing" : "unreachable";
-  };
+  // Run the real emptyHTML against the real loadFailKind: momentum.js
+  // destructures it from PM, so take it from the shipped phasemap-shared.js
+  // (evaluated in a bare sandbox, the way staleview.test.js does) rather than
+  // a re-typed copy that would drift in step with any bug in it.
+  const loadFailKind = (() => {
+    const sandbox = { window: {}, localStorage: { getItem: () => null, setItem: () => {} },
+      document: undefined, fetch: () => Promise.reject(new Error("no net in tests")),
+      console, JSON, Math, Date, String, Number, Array, Object, Promise, RegExp, parseFloat, parseInt };
+    sandbox.globalThis = sandbox;
+    const vm = require("vm");
+    vm.createContext(sandbox);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap-shared.js"), "utf8"), sandbox);
+    ok(sandbox.window.PM && typeof sandbox.window.PM.loadFailKind === "function",
+       "PM.loadFailKind is missing from phasemap-shared.js");
+    return sandbox.window.PM.loadFailKind;
+  })();
   const make = (state) => new Function(
     "state", "esc", "loadFailKind", "retryHTML",
     slice("emptyHTML") + "; return emptyHTML();")(
