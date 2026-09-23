@@ -1,8 +1,8 @@
 {
  "base": "https://googy-boys-scanner.pages.dev",
- "at": "2026-09-23T03:17:52.436Z",
- "pass": 50,
- "fail": 1,
+ "at": "2026-09-23T03:21:36.538Z",
+ "pass": 54,
+ "fail": 0,
  "results": [
   {
    "page": "deploy",
@@ -14,7 +14,7 @@
    "page": "deck desk",
    "check": "deck title painted (not loading)",
    "pass": true,
-   "detail": "Last scanned: 48m ago"
+   "detail": "Last scanned: 51m ago"
   },
   {
    "page": "deck desk",
@@ -38,7 +38,7 @@
    "page": "deck phone",
    "check": "deck title painted (not loading)",
    "pass": true,
-   "detail": "Last scanned: 48m ago"
+   "detail": "Last scanned: 51m ago"
   },
   {
    "page": "deck phone",
@@ -230,12 +230,12 @@
    "page": "BHP 5.0 chart",
    "check": "SMA 10 / 20 / 43 in the legend",
    "pass": true,
-   "detail": "SMA 10 A$60.971 SMA 20 A$62.508 SMA 43 A$62.012 SMA 200 A$54.716"
+   "detail": "SMA 10 A$60.977 SMA 20 A$62.511 SMA 43 A$62.013 SMA 200 A$54.716"
   },
   {
    "page": "BHP 5.0 chart",
-   "check": "5.0 footer (Setup + 200 SMA)",
-   "pass": false,
+   "check": "5.0 footer family, not the Momentum PLAN strip",
+   "pass": true,
    "detail": "ENTRY — STOP — TARGET — TRAIL after entry SCORE 0/0 RISK — R:R 0.00"
   },
   {
@@ -247,6 +247,24 @@
   {
    "page": "BHP 5.0 chart",
    "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "5.0 chart, on-scan name",
+   "check": "AUB: VIVEK footer (Setup + 200 SMA)",
+   "pass": true,
+   "detail": "SETUP WATCHING 200 SMA (D) A$26.699 ENTRY A$29.100 SL A$30.769 TP1 · 50% A$27.379 TP2 · 25% A$24.735 TP3 · 15% A$23.710 R:R → TP2 2.62 GRADE A+ · 10/10"
+  },
+  {
+   "page": "5.0 chart, on-scan name",
+   "check": "AUB: SMA 10 / 20 / 43 legend, no Momentum panes",
+   "pass": true,
+   "detail": "SMA 10 A$28.534 SMA 20 A$28.406 SMA 43 A$28.383 SMA 200 A$26.691 ● 200 SMA reaction ▲ entry trigger ▮ vol ≥1.5× ▮ rising"
+  },
+  {
+   "page": "5.0 chart, on-scan name",
+   "check": "AUB: no page error",
    "pass": true,
    "detail": "none"
   },
