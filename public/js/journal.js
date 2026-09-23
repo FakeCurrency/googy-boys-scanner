@@ -1489,7 +1489,7 @@
     const max = Math.max(...counts, 1);
     const avg = closed.reduce((s, t) => s + t.realized_r, 0) / closed.length;
     const sub = $("#jr-rdist-sub");
-    if (sub) sub.textContent = `${closed.length} closed · both books · avg ${rfmt(avg)}`;
+    if (sub) sub.textContent = `${closed.length} closed · bot book · avg ${rfmt(avg)}`;
     $("#jr-rdist-bars").innerHTML = BUCKETS.map((b, i) => {
       const h = counts[i] ? Math.max(6, Math.round((counts[i] / max) * 64)) : 2;
       return `<div class="jr-rd-col" title="${counts[i]} trade${counts[i] === 1 ? "" : "s"} closed ${b.lbl}">
