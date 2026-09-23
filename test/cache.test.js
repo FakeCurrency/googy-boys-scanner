@@ -106,7 +106,7 @@ test("getHead returns null for a missing key", () => {
   assert.strictEqual(C.getHead("k"), null);
 });
 
-// ---- 500KB safety cap (protects the manual journal's localStorage quota) -----
+// ---- 500KB safety cap (keeps oversized payloads out of the localStorage quota) --
 test("set skips an oversized payload (never evicts the journal)", () => {
   reset();
   const huge = { results: [{ blob: "x".repeat(600_000) }] };
