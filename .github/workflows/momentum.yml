@@ -66,6 +66,11 @@ on:
         default: false
         required: false
         type: boolean
+      backtest:
+        description: "Replay the lens over 5y and publish <market>_backtest.json instead of screening"
+        default: false
+        required: false
+        type: boolean
 
 permissions:
   contents: write
@@ -144,6 +149,14 @@ jobs:
           if [ -n "${{ inputs.mode }}" ]; then ARGS="$ARGS --mode ${{ inputs.mode }}"; fi
           if [ -n "${{ inputs.window }}" ]; then ARGS="$ARGS --window ${{ inputs.window }}"; fi
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          # A manual BACKTEST publishes the lens's second file, same directory,
+          # same gate and commit path; an automatic wake-up never sets this.
+          FILE="$MARKET.json"
+          if [ "${{ inputs.backtest }}" = "true" ]; then
+            ARGS="$ARGS --backtest"
+            FILE="${MARKET}_backtest.json"
+          fi
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
 
           # THREE OUTCOMES, AND THE EXIT CODE IS WHAT TELLS THEM APART.
           #   0  screened and published
@@ -177,6 +190,7 @@ jobs:
         run: |
           set -u
           MARKET="${{ steps.scan.outputs.market }}"
+          FILE="${{ steps.scan.outputs.file }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -184,7 +198,7 @@ jobs:
           # ALL-OR-NOTHING -- with one missing it exits 128 and stages NEITHER
           # -- so the repo bans the shape outright, and the loop form keeps
           # this honest if the list ever grows.
-          PATHS="public/data/momentum/$MARKET.json"
+          PATHS="public/data/momentum/$FILE"
           for p in $PATHS; do
             if [ -e "$p" ]; then
               git add -- "$p"
@@ -198,13 +212,13 @@ jobs:
           # which is the 2026-07-20 incident this gate exists for. The
           # deliberate no-publish path never gets here, so the gate is never
           # asked a question it cannot answer.
-          bash scripts/assert_staged.sh "momentum $MARKET" "public/data/momentum/$MARKET.json"
+          bash scripts/assert_staged.sh "momentum $MARKET" "public/data/momentum/$FILE"
 
           if git diff --cached --quiet; then
             echo "No data changes to commit."
             exit 0
           fi
-          git commit -m "data: momentum $MARKET $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git commit -m "data: momentum ${FILE%.json} $(date -u +'%Y-%m-%d %H:%M UTC')"
           SHA=$(git rev-parse HEAD)
 
           # Rebase-and-retry. Generated data is fully recomputed each run, so
@@ -221,7 +235,7 @@ jobs:
             done
             git add -A
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
-            git commit -m "data: momentum $MARKET $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "data: momentum ${FILE%.json} $(date -u +'%Y-%m-%d %H:%M UTC')"
             if git push origin HEAD:main; then
               echo "Pushed."
               exit 0

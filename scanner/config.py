@@ -301,6 +301,11 @@ VIVEK_JOURNAL_SESSION = {
 # SESSION_STALE; tests/test_deck_session_stale.py holds the two in step.
 VIVEK_DECK_SESSION_GRACE_H = 2
 
+# Lens backtests (2026-09-23): every lens replay reports its R alongside the
+# dollars a flat position of this size would have made -- the owner's reading
+# ("assume every position was 1k"). Dollars only: R never depends on it.
+LENS_BACKTEST_NOTIONAL = 1000.0
+
 # Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
 # GRADES (owner ruling 2026-09-21: "the paper bot should only take the highest
 # R and conviction plays so it needs to take what we're changing the high
