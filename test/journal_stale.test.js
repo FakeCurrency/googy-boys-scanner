@@ -184,7 +184,9 @@ test("the P&L headline counts them", () => {
 
 test("the badge has a style to render", () => {
   const css = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8");
-  assert.ok(css.includes(".jr-stale"), "journal.css has no .jr-stale rule");
+  // A RULE, not the name: journal.css:340 names .jr-stale in a comment, which
+  // kept the old includes() green with the rule itself deleted.
+  assert.ok(/^\.jr-stale\s*\{/m.test(css), "journal.css has no .jr-stale rule");
 });
 
 test("both assets were version-bumped on the page that loads them", () => {
