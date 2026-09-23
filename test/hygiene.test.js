@@ -246,6 +246,10 @@ ok(!/Star \(☆\)|★ watchlist/.test(code("js/app.js")),
    "js/app.js: the welcome tour tells the user to star names; stars were removed 2026-09-21");
 
 // VALIDATE (2026-09-23) -- same rule, second pass (reviews/2026-09-23-validate.md).
+ok(code("js/app.js").includes('mode: "vivek",'), "js/app.js state moved -- pin would be vacuous");
+ok(!/\bview\s*:\s*"results"/.test(code("js/app.js")) && !/state\.view\b/.test(code("js/app.js")),
+   "js/app.js: state.view was read by nothing once the watch view went (2026-09-21) and was " +
+   "deleted 2026-09-23; re-adding it needs a reader");
 ok(!/function renderTFSetups\(\s*d\s*,/.test(code("js/chart.js")) && /function renderTFSetups\(tfs,/.test(code("js/chart.js")),
    "js/chart.js renderTFSetups: the unused `d` parameter was deleted 2026-09-23 (the body reads " +
    "only tfs / pickTF / getCurTF; its one caller in render() keeps its own `d`)");

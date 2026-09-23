@@ -237,7 +237,6 @@
   const state = {
     market: "asx",
     mode: "vivek",      // VIVEK (5.0) is the only scanner now
-    view: "results",    // unread since the watch view went 2026-09-21
     tab: "aplus",       // aplus | a | watch
     sort: "score",      // score | price | rr | mcap | az | sector
     sortDir: null,      // "asc" | "desc"; null = the sort's natural default
