@@ -28,10 +28,48 @@ def test_a_t1_hit_is_a_winner_exited_on_the_engines_own_bar():
     assert s["realized_r"] > 0 and s["r_gross"] > s["realized_r"], "costs are charged"
 
 
-def test_a_death_is_a_close_through_the_floor_so_at_least_one_r():
+def test_a_death_under_the_three_fills():
+    """House: the floor is a resting stop, filled AT the floor (-1R before
+    costs). Worst print: the bar's low, so no better than house. Engine-native:
+    DEAD is a CLOSE beyond the floor, so at least -1R. House and worst exit on
+    the same bar."""
     s = one(synth.fixture6())
-    assert s["r_exit_reason"] == "stop" and s["r_exit_bar"] == s["dead_bar"]
-    assert s["r_gross"] <= -1.0, "DEAD is a CLOSE beyond the floor, never inside it"
+    assert s["r_exit_reason"] == s["r_exit_reason_worst"] == s["r_exit_reason_close"] == "stop"
+    assert s["r_gross"] == -1.0
+    assert s["r_gross_worst"] <= s["r_gross"]
+    assert s["r_gross_close"] <= -1.0 and s["r_exit_bar_close"] == s["dead_bar"]
+    assert s["r_exit_bar"] == s["r_exit_bar_worst"] <= s["dead_bar"]
+
+
+def test_a_wick_through_the_floor_stops_the_house_rule_but_not_the_engine():
+    """The one place the house rule is stricter than the spec ("wicks through
+    are a test only"): a bar that trades below the floor and closes back above
+    it. House and worst are stopped on that bar; the engine-native reading
+    rides on -- which is why it is published beside them as a reference."""
+    ind = type("I", (), {})()
+    ind.open = [10.0, 9.6, 9.8, 10.4]
+    ind.high = [10.1, 9.9, 10.5, 10.6]
+    ind.low = [9.9, 8.8, 9.7, 10.2]
+    ind.close = [10.0, 9.5, 10.3, 10.5]
+    import datetime
+    ind.dates = [datetime.date(2026, 1, d) for d in (5, 6, 7, 8)]
+    sig = {"signal_index": 0, "direction": "bullish", "inv_low": 9.0, "inv_high": 9.0,
+           "dead_bar": None, "t1_consumed_bar": None, "end_index": None}
+    out = rmodel.score(sig, ind, "asx")
+    assert out["r_exit_reason"] == "stop" and out["r_exit_bar"] == 1 and out["r_gross"] == -1.0
+    assert out["r_gross_worst"] == -1.2                    # the 8.8 wick
+    assert out["r_exit_reason_close"] == "eod" and out["r_gross_close"] == 0.5
+
+
+def test_a_gap_through_the_floor_fills_at_the_open():
+    ind = type("I", (), {})()
+    ind.open, ind.high, ind.low, ind.close = [10.0, 8.5], [10.1, 8.9], [9.9, 8.2], [10.0, 8.6]
+    import datetime
+    ind.dates = [datetime.date(2026, 1, 5), datetime.date(2026, 1, 6)]
+    sig = {"signal_index": 0, "direction": "bullish", "inv_low": 9.0,
+           "dead_bar": 1, "t1_consumed_bar": None, "end_index": None}
+    out = rmodel.score(sig, ind, "asx")
+    assert out["r_gross"] == -1.5 and out["r_gross_worst"] == -1.8 and out["r_gross_close"] == -1.4
 
 
 def test_a_stall_that_never_resolves_is_marked_at_the_end():
@@ -72,7 +110,11 @@ def test_the_report_and_public_stats_carry_it(tmp_path):
     sigs = run_ticker("TST", synth.fixture1(), "asx")
     md = open(write_report("asx", sigs, {"n": 0}, {"n": 0}, 1, "5y", out_dir=str(tmp_path))).read()
     assert "## R model" in md and "long A+/A (headline)" in md
+    assert "stop at the worst print" in md and "engine-native close exits" in md
     path = write_public_stats("asx", sigs, {"n": 0}, {"n": 0}, 1, "5y", out_dir=str(tmp_path))
     doc = json.load(open(path))
     assert doc["r_model"]["long_graded"]["trades"] == 1
+    assert doc["r_model"]["fill"] == "house"
+    assert doc["r_model"]["worst_print"]["long_graded"]["trades"] == 1
+    assert doc["r_model"]["engine_close"]["long_graded"]["trades"] == 1
     assert {"all", "cohorts", "stall", "baselines"} <= set(doc), "additive: nothing moved"

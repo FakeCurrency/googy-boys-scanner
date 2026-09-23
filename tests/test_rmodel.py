@@ -170,3 +170,54 @@ def test_it_imports_nothing_from_the_repo():
         elif isinstance(node, ast.ImportFrom):
             mods.add((node.module or "").split(".")[0] if node.level == 0 else ".")
     assert mods <= {"__future__", "math", "typing"}, mods
+
+
+def test_both_fills_score_the_same_trade_and_the_worst_print_is_never_better():
+    """simulate_both: ONE trade under the house fill and the 5.0 worst-print
+    fill. The exit bar, the exit reason and the bars held are identical by
+    construction (a stop is hit on the same bar under either rule); only the
+    stop's fill price differs, and the worst print can only cost more."""
+    rng = random.Random("both")
+    gapped = 0
+    for _ in range(300):
+        bars = _path(rng, rng.randint(3, 40), 50.0)
+        direction = rng.choice(["long", "short"])
+        plan = _plan(rng, bars[0][4], direction)
+        house, worst = rmodel.simulate_both(
+            lambda: iter(bars), direction, float(bars[0][1]), plan["stop"],
+            [plan["tp1"], plan["tp2"], plan["tp3"]], plan["scale"], bars[0][0],
+            costs=costs_for("asx"))
+        if house is None:
+            assert worst is None
+            continue
+        for k in ("exit_date", "exit_reason", "closed_by", "bars"):
+            assert house[k] == worst[k], k
+        assert [e["reason"] for e in house["exits"]] == [e["reason"] for e in worst["exits"]]
+        assert worst["gross_r"] <= house["gross_r"] + 1e-9
+        gapped += worst["gross_r"] < house["gross_r"] - 1e-9
+    assert gapped > 0, "the columns must actually differ somewhere"
+
+
+def test_the_worst_print_column_is_the_5_0_backtest():
+    """The second column IS the 5.0 evidence engine's fill: simulate_both's
+    worst leg reproduces vivek_backtest._manage_bar exactly."""
+    rng = random.Random("worst-is-5.0")
+    compared = 0
+    for _ in range(200):
+        bars = _path(rng, rng.randint(3, 40), rng.uniform(1, 100))
+        plan = _plan(rng, bars[0][4], "long")
+        want = _vivek(bars, plan, "long", "nasdaq")
+        _, got = rmodel.simulate_both(lambda: iter(bars), "long", float(bars[0][1]), plan["stop"],
+                                      [plan["tp1"], plan["tp2"], plan["tp3"]], plan["scale"],
+                                      bars[0][0], costs=costs_for("nasdaq"))
+        assert (want is None) == (got is None)
+        if want is None:
+            continue
+        compared += 1
+        assert got["realized_r"] == want["realized_r"] and got["exit_date"] == want["exit_date"]
+    assert compared > 100
+
+
+def test_the_house_rule_is_the_resting_stop():
+    assert rmodel.HOUSE_STOP_FILL == rmodel.STOP_FILL_LEVEL
+    assert rmodel.WORST_PRINT_FILL == rmodel.STOP_FILL_BAR

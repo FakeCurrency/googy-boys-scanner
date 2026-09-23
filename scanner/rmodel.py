@@ -42,6 +42,14 @@ STOP_FILL_LEVEL = "level"
 STOP_FILL_BAR = "bar"
 LIMIT_REASONS = ("tp",)          # exit reasons that filled as a resting limit
 
+# THE HOUSE RULE (owner, 2026-09-24: "one fill rule for all four lenses"): a
+# stop is a resting order, filled at the stop or at the open of a bar that
+# gapped through it. Every lens headline is scored with it; the 5.0 backtest's
+# worst-print fill is published beside it as the second column, so the gap
+# between the two conventions is visible rather than argued about.
+HOUSE_STOP_FILL = STOP_FILL_LEVEL
+WORST_PRINT_FILL = STOP_FILL_BAR
+
 
 def r_of(price: float, entry: float, risk: float, is_long: bool) -> float:
     return (price - entry) / risk if is_long else (entry - price) / risk
@@ -236,3 +244,25 @@ def summarise(trades: Sequence[dict], notional: Optional[float] = None) -> dict:
                     "usd_lost": round(sum(u for u in usd if u <= 0), 2),
                     "net_usd": round(sum(usd), 2)})
     return out
+
+
+def simulate_both(make_bars, direction: str, entry: float, stop: float,
+                  targets: Sequence[float], scale: Sequence[float], day: str = "", *,
+                  costs: Optional[tuple] = None, time_stop: Optional[int] = None,
+                  chase_guard: bool = True):
+    """(house, worst_print): ONE trade scored under both stop fills.
+
+    `make_bars()` must return a FRESH iterable of the same bars each call.
+    Exit TIMING is identical by construction -- a stop is hit on the same bar
+    under either rule (adverse extreme through the stop); only the price it
+    fills at differs -- so the two columns always describe the same set of
+    trades, and a lens that holds one trade at a time frees its slot on the
+    same bar under both. (None, None) when the plan is not takeable.
+    """
+    a = open_trade(direction, entry, stop, targets, scale, day, chase_guard)
+    b = open_trade(direction, entry, stop, targets, scale, day, chase_guard)
+    if a is None or b is None:
+        return None, None
+    simulate(make_bars(), a, costs=costs, stop_fill=HOUSE_STOP_FILL, time_stop=time_stop)
+    simulate(make_bars(), b, costs=costs, stop_fill=WORST_PRINT_FILL, time_stop=time_stop)
+    return a, b

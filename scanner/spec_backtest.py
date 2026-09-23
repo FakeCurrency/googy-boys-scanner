@@ -107,8 +107,9 @@ def r_trade(s: dict, i: int, days, opn, high, low, close, market: str) -> dict:
 
     Entry at the signal close (as the race above), the engine's stop, and its
     ONE target booked in full as a resting limit; the stop is a resting order
-    too (filled at the stop, or at the open of a bar that gapped through it)
-    and a bar that spans both is a stop. Anything still open after TRACK_BARS
+    too -- the house fill rule, filled at the stop or at the open of a bar that
+    gapped through it -- and a bar that spans both is a stop. `r_worst` scores
+    the same trade with the stop at the bar's worst print (the 5.0 fill). Anything still open after TRACK_BARS
     -- the race's own horizon -- is closed at that bar's close ("time").
     House costs through scanner/rmodel.py; a stop closer than the house
     minimum is not a trade. The narrative's "then trail it" is NOT modelled:
@@ -122,20 +123,24 @@ def r_trade(s: dict, i: int, days, opn, high, low, close, market: str) -> dict:
         return {"r": None, "r_skip": "stop not below entry"}
     if (entry - stop) / entry * 100.0 < config.VIVEK_BOT_MIN_STOP_PCT:
         return {"r": None, "r_skip": "stop_too_tight"}
-    tr = rmodel.open_trade("long", entry, stop, [float(s["target"])], [1.0], s["date"])
+    def make_bars():
+        return ((days[j], opn[j], high[j], low[j], close[j]) for j in range(i + 1, len(close)))
+    tr, worst = rmodel.simulate_both(make_bars, "long", entry, stop, [float(s["target"])], [1.0],
+                                     s["date"], costs=costs_for(market), time_stop=TRACK_BARS)
     if tr is None:
         return {"r": None, "r_skip": "target at or below entry"}
-    bars = ((days[j], opn[j], high[j], low[j], close[j]) for j in range(i + 1, len(close)))
-    rmodel.simulate(bars, tr, costs=costs_for(market), stop_fill=rmodel.STOP_FILL_LEVEL,
-                    time_stop=TRACK_BARS)
     return {"r": tr["realized_r"], "r_gross": tr["gross_r"], "r_cost": tr["cost_r"],
             "r_risk": tr["risk"], "r_exit": tr["exit_reason"], "r_closed_by": tr.get("closed_by"),
-            "r_exit_date": tr.get("exit_date"), "r_bars": tr["bars"]}
+            "r_exit_date": tr.get("exit_date"), "r_bars": tr["bars"],
+            # the same trade, stop filled at the bar's worst print (the 5.0 fill)
+            "r_worst": worst["realized_r"], "r_gross_worst": worst["gross_r"]}
 
 
-def summarise_r(sigs: list[dict], notional: float | None = None) -> dict:
-    """R won / lost / net over the signals that were tradeable plans."""
-    rows = [{"realized_r": s["r"], "entry": s["entry"], "risk": s["r_risk"],
+def summarise_r(sigs: list[dict], notional: float | None = None, fill: str = "house") -> dict:
+    """R won / lost / net over the signals that were tradeable plans.
+    `fill="worst_print"` scores the same trades with the 5.0 stop fill."""
+    key = {"house": "r", "worst_print": "r_worst"}[fill]
+    rows = [{"realized_r": s[key], "entry": s["entry"], "risk": s["r_risk"],
              "exit_reason": s["r_exit"], "closed_by": s.get("r_closed_by")}
             for s in sigs if s.get("r") is not None]
     out = rmodel.summarise(rows, notional)
@@ -219,6 +224,8 @@ def write_report(market: str, sigs: list[dict], rnd: dict, universe_size: int,
         "| cohort | trades | win | R won | R lost | net R | per trade | net $ |",
         "|---|---|---|---|---|---|---|---|",
         rrow("ALL SIGNALS", r_all),
+        rrow("ALL SIGNALS, stop at the worst print",
+             summarise_r(sigs, config.LENS_BACKTEST_NOTIONAL, "worst_print")),
     ]
     for g in ("A+", "A", "B"):
         sub = [s for s in sigs if s["grade"] == g]
@@ -305,7 +312,9 @@ def main(argv=None) -> int:
         "baseline_random": rnd,
         # additive (2026-09-23): the R model, see r_trade()
         "r_model": {
+            "fill": "house",
             "all": summarise_r(signals, config.LENS_BACKTEST_NOTIONAL),
+            "worst_print": summarise_r(signals, config.LENS_BACKTEST_NOTIONAL, "worst_print"),
             "grades": {g: summarise_r([s for s in signals if s["grade"] == g],
                                       config.LENS_BACKTEST_NOTIONAL)
                        for g in ("A+", "A", "B") if any(s["grade"] == g for s in signals)},

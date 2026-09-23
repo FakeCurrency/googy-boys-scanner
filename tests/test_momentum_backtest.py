@@ -124,6 +124,8 @@ def test_the_published_backtest_adds_up(tmp_path, monkeypatch):
     assert s["all"]["open_at_end"] == recount > 0
     assert payload["coverage"]["replayed"] == 12 and payload["bt_version"] == config.BT_VERSION
     assert payload["model"]["stop"]["fill"] == config.BT_STOP_FILL
+    w = payload["summary_worst_print"]["all"]
+    assert w["trades"] == s["all"]["trades"] and w["net_r"] <= s["all"]["net_r"]
     monkeypatch.setattr(R, "OUT_DIR", tmp_path)
     path = R.publish_backtest("asx", payload)
     assert path.name == "asx_backtest.json"
@@ -139,3 +141,19 @@ def test_the_cli_exits_3_on_no_data_and_never_publishes(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "backtest_market", lambda *a, **k: None)
     assert R.main(["--market", "asx", "--backtest"]) == 3
     assert list(tmp_path.iterdir()) == []
+
+
+def test_the_lens_is_scored_with_the_house_fill_and_publishes_the_second_column(tmp_path):
+    """One fill rule for every lens (2026-09-24): the momentum headline is the
+    house resting stop, and the SAME trades under the 5.0 worst-print fill ride
+    beside it -- never better, and never a different trade set."""
+    from scanner import rmodel
+    assert config.BT_STOP_FILL == rmodel.HOUSE_STOP_FILL
+    trades, _ = bt.replay_symbol(_frame("ELS"), "asx", symbol="ELS", name="Elsight Limited")
+    assert trades
+    assert all(t["realized_r_worst"] <= t["realized_r"] + 1e-9 for t in trades)
+    house, worst = bt.summarise(trades, 1000.0), bt.summarise(trades, 1000.0, fill="worst_print")
+    assert house["all"]["trades"] == worst["all"]["trades"]
+    assert worst["all"]["net_r"] <= house["all"]["net_r"]
+    with pytest.raises(ValueError):
+        bt.summarise(trades, 1000.0, fill="bar")
