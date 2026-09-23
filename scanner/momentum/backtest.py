@@ -132,13 +132,14 @@ def replay_symbol(frame: pd.DataFrame, market: str, *, symbol: str = "", name: A
             if abs(plan["entry"] - plan["stop"]) / plan["entry"] * 100.0 < config.BT_MIN_STOP_PCT:
                 gated["stop_too_tight"] = gated.get("stop_too_tight", 0) + 1
                 continue
-            tr = rmodel.open_trade(direction, plan["entry"], plan["stop"], plan["targets"],
-                                   config.BT_SCALE[direction], days[j])
+            def make_bars(j=j):
+                return ((days[k], o[k], h[k], l[k], c[k]) for k in range(j + 1, n))
+            tr, worst = rmodel.simulate_both(make_bars, direction, plan["entry"], plan["stop"],
+                                             plan["targets"], config.BT_SCALE[direction],
+                                             days[j], costs=costs)
             if tr is None:
                 continue
-            bars = ((days[k], o[k], h[k], l[k], c[k]) for k in range(j + 1, n))
-            rmodel.simulate(bars, tr, costs=costs, stop_fill=config.BT_STOP_FILL)
-            busy_until = j + tr["bars"]
+            busy_until = j + tr["bars"]              # identical under both fills
             score = None
             if rule == "B":
                 score = int(ev["bull_score" if direction == "long" else "bear_score"].iat[j])
@@ -151,13 +152,25 @@ def replay_symbol(frame: pd.DataFrame, market: str, *, symbol: str = "", name: A
                 "closed_by": tr.get("closed_by"),
                 "bars": tr["bars"], "gross_r": tr["gross_r"], "cost_r": tr["cost_r"],
                 "realized_r": tr["realized_r"], "mae_r": tr.get("mae_r"), "mfe_r": tr.get("mfe_r"),
+                # the same trade under the 5.0 backtest's worst-print stop fill
+                "gross_r_worst": worst["gross_r"], "cost_r_worst": worst["cost_r"],
+                "realized_r_worst": worst["realized_r"],
             })
     trades.sort(key=lambda t: (t["signal_date"], t["rule"], t["direction"]))
     return trades, gated
 
 
-def summarise(trades: Sequence[Dict[str, Any]], notional: Optional[float] = None) -> Dict[str, Any]:
-    """Headline + every rule x direction stream + exit mix, via rmodel.summarise."""
+def summarise(trades: Sequence[Dict[str, Any]], notional: Optional[float] = None,
+              fill: str = "house") -> Dict[str, Any]:
+    """Headline + every rule x direction stream + exit mix, via rmodel.summarise.
+
+    `fill="worst_print"` scores the SAME trades with the 5.0 backtest's stop
+    fill (realized_r_worst) -- the second column of a like-for-like table."""
+    if fill == "worst_print":
+        trades = [dict(t, realized_r=t["realized_r_worst"]) for t in trades]
+    elif fill != "house":
+        raise ValueError("fill must be 'house' or 'worst_print'")
+
     def s(sub):
         return rmodel.summarise(list(sub), notional)
     out: Dict[str, Any] = {"all": s(trades)}

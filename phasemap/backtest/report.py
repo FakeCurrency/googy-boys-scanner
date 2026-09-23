@@ -111,6 +111,8 @@ def r_section(signals: list) -> list:
         "| cohort | trades | win | R won | R lost | net R | per trade | PF | net $ |",
         "|---|---|---|---|---|---|---|---|---|",
         _r_row("**long A+/A (headline)**", r["long_graded"]),
+        _r_row("long A+/A, stop at the worst print", r["worst_print"]["long_graded"]),
+        _r_row("long A+/A, engine-native close exits", r["engine_close"]["long_graded"]),
         _r_row("long A+/A, liquid only", r["long_graded_liquid"]),
         _r_row("short A+/A", r["short_graded"]),
     ]

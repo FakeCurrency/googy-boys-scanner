@@ -408,7 +408,7 @@ BT_MIN_STOP_PCT: float = float(VIVEK_BOT_MIN_STOP_PCT)
 # A resting stop fills AT the stop (or at the open of a bar that gapped
 # through it) -- scanner/rmodel.STOP_FILL_LEVEL. The 5.0 backtest fills at the
 # bar's extreme, which is harsher than any real order; see rmodel's docstring.
-BT_STOP_FILL: str = "level"
+BT_STOP_FILL: str = "level"      # == scanner.rmodel.HOUSE_STOP_FILL (test-pinned)
 
 # Execution costs, basis points, the house table: slippage on the entry and
 # every market exit, commission on everything.
