@@ -1,19 +1,14 @@
-/* Paper-trade journal — Claude (bot) vs Me (manual), head to head.
+/* Paper-trade journal — Claude's paper book (data/vivek_bot_book.json),
+ * written server-side every scan and read-only here. (The manual "Me" book
+ * that sat beside it — localStorage + KV sync — was removed 2026-09-21.)
  *
- *  • Claude  = the autonomous bot's paper book  (data/vivek_bot_book.json),
- *              written server-side every scan. Read-only here.
- *  • Me      = the trades you take from the charts (the shared manual store,
- *              localStorage + optional cross-device sync). Sized + managed by
- *              the SAME VIVEK rules as the bot: a fixed $5,000 of notional per
- *              position out of a $150,000 book (30 slots), 5× stocks / 3×
- *              crypto leverage cap, scale at TP1/2/3, SL → BE at TP1 → locked
- *              structure at TP2, close on the stop. You pick the setup; the
- *              rules run the trade. $ P&L uses 1R = the $ risked — which under
- *              fixed sizing VARIES per trade with the stop distance, instead of
- *              being the same 0.35% of equity every time.
+ * The book is sized by the VIVEK bot rules: a fixed $5,000 of notional per
+ * position out of a $150,000 book (30 slots). $ P&L uses 1R = the $ risked —
+ * which under fixed sizing VARIES per trade with the stop distance, instead
+ * of being the same 0.35% of equity every time.
  *
- *  All R/$ and equity curves are computed at render time and refreshed against
- *  live prices, so both sides update as trades open and close.
+ *  All R/$ and equity curves are computed at render time from the book's
+ *  server-side marks, which every scan refreshes.
  */
 (() => {
   "use strict";
@@ -58,11 +53,13 @@
   };
   const round = (v, n) => +(+v).toFixed(n);
 
-  // SYMBOL → { grade, entry_type } from the live scans, used only as a fallback
-  // for older manual trades that were logged before grade/setup were captured.
+  // SYMBOL → { grade, entry_type, dir } from the live scans: the grade/setup
+  // fallback for rows that lack them, plus the direction flipChip compares
+  // against.
   const scanMeta = new Map();
-  // "market:SYMBOL" → last scan price. The scan refreshes this every run, so it's
-  // the reliable "Now" source for manual trades (no flaky live-quote fetch).
+  // "market:SYMBOL" → last scan price. Read only by openMetric's non-bot
+  // branch, which served the manual book (removed 2026-09-21); bot rows carry
+  // server-side marks.
   const scanPrice = new Map();
   // "market:SYMBOL" → how many sessions old that price is. SPARSE, mirroring the
   // scan's own `price_age`: a key is present ONLY when the mark is older than
@@ -238,10 +235,9 @@
   // fails toward the expensive side, which is visible and arguable rather than
   // flattering and invisible. vivek_journal.py:83-88 makes the same argument.
   //
-  // Latent when this landed: journal.js only ever writes tp1/tp2/tp3, stop and
-  // manual itself, and bot rows never reach here (splitBot returns the server's
-  // net numbers untouched). It goes live the first time a `time` or `eod` row
-  // arrives from a KV sync or a manual time-stop.
+  // Nothing on this page calls it since the manual journal (and its KV sync)
+  // was removed 2026-09-21 — bot rows arrive with the server's net numbers
+  // (splitBot). It stays as the tested JS mirror of vivek_journal._cost_r.
   function costR(t, slip, comm) {
     const entry = t.entry, risk = t.risk;
     if (!(risk > 0) || !entry) return 0;
@@ -256,11 +252,12 @@
   const rOf = (price, entry, risk, isLong) => (isLong ? (price - entry) : (entry - price)) / risk;
   const isVivek = (t) => t && t.stop != null && t.tp1 != null;
 
-  // ── auto-management of a manual position (mirror of vivek_journal._mark) ──────
+  // ── rules generation stamp ──
   //
   // Session-scoped generation stamp (TOP100 #26). loadBotRules() bumps it when
-  // bot_rules.json disagrees with the fallbacks, so anything derived from the
-  // old constants is known to be stale rather than silently kept.
+  // bot_rules.json disagrees with the fallbacks. Nothing reads it since the
+  // manual-row sizing cache it invalidated went 2026-09-21; journal_money.test
+  // still pins the bump.
   let RULES_GEN = 1;
 
 
@@ -395,8 +392,9 @@
   // Review chip — this position was flagged HEAVY when the bot took it
   // (server-side, scanner/broker/vivek_bot.review_flags; owner 2026-07-28:
   // "Flag this in the future so i can verify whether claude or I should take
-  // the position or not"). The review push is what arrives in time to act on;
-  // this is the same fact on the page, for the trade you are looking at.
+  // the position or not"). The review push goes through the NOTICE tier, which
+  // has had no channel since the 2026-08-27 Discord removal, so this chip is
+  // where the flag is actually seen.
   //
   // It renders on CLOSED rows too, on purpose. The flag records what was known
   // at ENTRY, and the only way to ever learn whether the threshold is set
@@ -456,9 +454,7 @@
   // direction, weeks apart) from the position actually sitting in this
   // journal. Pass the trade's own real entry/stop/targets/direction on the
   // link so the chart it opens shows what was actually taken, not a fresh
-  // guess. Both bot and manual rows carry entry/stop/tp1-3 (chart.js's own
-  // Buy/Sell simulator writes tp1-3 on every "Me" row too), so one helper
-  // covers both sides.
+  // guess. Bot rows carry entry/stop/tp1-3, so the helper passes them through.
   function heldPlanQS(t) {
     const n = (v) => (typeof v === "number" && isFinite(v)) ? v : null;
     const he = n(t.entry), hs = n(t.stop);
@@ -482,8 +478,7 @@
     return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
   }
 
-  // Now / Unreal-R / Unreal-$ cells (returned separately — some tables put other
-  // columns between Now and the R/$ pair).
+  // Now / Unreal-R / Unreal-$ cells (returned as parts; liveCells joins them).
   //  • Positions are marked to market by the scan SERVER-SIDE every run
   //    (unreal_r / unreal_usd live in the book JSON), so render those straight
   //    away — reliable, refreshed each scan, no client fetch.
@@ -547,9 +542,6 @@
   // opened most recently, which is the one most likely to still need a
   // decision — under a sort you chose weeks ago and no longer remember.
   //
-  // SHARED by both books on purpose. They are two halves of one comparison,
-  // rendered side by side; sorting Claude's book but not yours makes the
-  // comparison harder, which is the only reason the layout is side by side.
   const OPEN_SORT_KEYS = ["opened", "r", "usd"];
   const OPEN_SORT_LABELS = { opened: "Newest", r: "R", usd: "$" };
   const OPEN_SORT_TIPS = {
@@ -648,9 +640,8 @@
     }
   }
 
-  // Per-section (Claude / Me) tables sit in half-width side-by-side columns, so
-  // they carry only the per-side essentials — the full-width combined tables in
-  // the comparison overview above show entry/stop/targets/timestamps in full.
+  // The book's open-positions table: the essentials per row (the comparison
+  // overview that showed the full detail went 2026-09-21).
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
     // Sortable columns carry data-osort and are picked up by the same delegated
@@ -704,8 +695,9 @@
   // The bot book is meant to be evidence about the FROZEN RULES. It is not,
   // and has not been for two weeks: on the live book 21 of 40 closes carry
   // exit_reason "manual", i.e. the owner clicked Close. Every aggregate on this
-  // page — win rate, expectancy, the equity curve, max drawdown, the edge
-  // tracker, the deck's "record 14W-26L" line — sums all forty as one series.
+  // page — win rate, expectancy, the equity curve, max drawdown — sums all forty
+  // as one series. (The deck's record line has printed rules and you
+  // separately since 2026-08-19.)
   // The two halves do not resemble each other: the rules produced -6.97R over
   // 19 trades, the owner's closes +0.16R over 21. Read as one number they
   // cancel into a shrug.
@@ -1016,8 +1008,8 @@
   const W3_TAG = "w3-1";
   const W3_TARGET = 30;
 
-  // Who took the exit. MECHANICAL_EXITS is the same list deciderSplit uses one
-  // screen down, so the strip and the closed-table caption can never disagree
+  // Who took the exit. MECHANICAL_EXITS is the same list deciderSplit uses
+  // (defined above), so the strip and the closed-table caption can never disagree
   // about a row; an ABSENT exit_reason counts as a human act for the reason
   // stated there — a row with no recorded mechanism was not closed by one.
   function w3Rows(d) {
@@ -1145,16 +1137,17 @@
   // This is the table that eventually says which setups ACTUALLY make money
   // forward — the backtest's answer (weekly reclaim best) checked against real
   // closed trades. Cells need ~20 trades before the numbers mean anything.
-  // Bot and manual trades are aggregated in SEPARATE sections (🤖 / ✏️) so the
-  // bot's evidence is never contaminated by manual discretion.
+  // Bot book only (the ✏️ manual section went 2026-09-21). NOTE: the
+  // #edge-tracker host left journal.html on 2026-09-21 with the comparison
+  // overview, so renderEdgeTracker() returns before drawing.
   const TRACKER_SIDES = () => [["🤖 Claude", state.bot.closed]];
 
   // ── Edge headline card (UX top-10 #8, 2026-07-26) ─────────────────────────
-  // The edge tracker's single most important row, surfaced ABOVE the fold:
-  // the best-performing setup cell across BOTH books (min 4 closed trades so
-  // one lucky fill can't crown itself), plus a caution line when a cell with
-  // 4+ trades is bleeding. Same aggregation the folded tracker uses — one
-  // number, zero new data.
+  // The edge tracker's single most important row: the best-performing setup
+  // cell in the bot book (min 4 closed trades so one lucky fill can't crown
+  // itself), plus a caution line when a cell with 4+ trades is bleeding. Same
+  // aggregation as renderEdgeTracker — one number, zero new data. Lives in the
+  // Performance fold.
   function renderEdgeCard() {
     const box = $("#jr-edge-card");
     if (!box) return;
@@ -1228,9 +1221,9 @@
   }
 
   // ── Lens tracker: same idea as the edge tracker, but split by which LENS
-  // produced the trade (chart.js stamps `lens` on every sim trade since
-  // 2026-07-05; vivek_run stamps bot trades since 2026-07-20; older trades
-  // group under "untagged"). Bot vs Me aggregated separately, like above.
+  // produced the trade (vivek_run stamps bot trades since 2026-07-20; older
+  // trades group under "untagged"). Bot book only. NOTE: its #lens-tracker
+  // host also left journal.html on 2026-09-21, so this returns before drawing.
   function renderLensTracker() {
     const host = $("#lens-tracker");
     if (!host) return;
@@ -1270,8 +1263,8 @@
       <tbody>${sides.map(([l, list]) => section(l, list)).join("")}</tbody></table>`;
   }
 
-  // ── NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05): one small box per
-  // side at the top of the page — every position opened in the last 7 days,
+  // ── NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05): one small box for the
+  // bot book at the top of the page — every position opened in the last 7 days,
   // newest first, so the daily check-in is a single glance.
   const NEW_POS_WINDOW_MS = 7 * 24 * 3.6e6;
   function renderNewPositions() {
@@ -1344,7 +1337,7 @@
   }
 
   // UX-20 #11 (supersedes #84's rolling bot digest): WEEK REVIEW — calendar
-  // weeks (Mon–Sun, local), BOTH books, with ‹ › paging back through history
+  // weeks (Mon–Sun, local), the bot book, with ‹ › paging back through history
   // and a per-day dot strip. The ritual it enables: every Friday, page the
   // last few weeks and watch net R by week — the only trend that matters.
   let wkOffset = 0;   // 0 = this week, 1 = last week, …
@@ -1479,7 +1472,7 @@
     box.hidden = false;
   }
 
-  // UX-20 #10: R-distribution histogram — every closed trade from both books
+  // UX-20 #10: R-distribution histogram — every closed bot-book trade
   // bucketed by realised R. Pure CSS bars; hidden until 5 closes exist.
   function renderRDist() {
     const box = $("#jr-rdist");
@@ -1829,8 +1822,8 @@
     // anyone who read it inside that window. bot_rules.json is a small
     // same-origin file that is almost always warm, so wait for it. The wait is
     // CAPPED so a slow or dead network degrades to the old behaviour — paint
-    // the fallbacks now, correct them when the rules land (RULES_GEN makes that
-    // repaint real) — rather than holding a blank page on a flaky connection.
+    // the fallbacks now, correct them when the rules land (the second
+    // renderAll() below) — rather than holding a blank page on a flaky connection.
     const rules = loadBotRules();
     await Promise.race([rules, new Promise((r) => setTimeout(r, 1500))]);
     renderAll();                 // paint with whatever constants are in hand
