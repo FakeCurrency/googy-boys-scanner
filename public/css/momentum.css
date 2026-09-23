@@ -10,8 +10,9 @@
  * PURPLE IS BORROWED, NOT INVENTED. --purple (#bf5af2) already exists in
  * styles.css's iOS system palette, is byte-identical to --ema-144, and is
  * already inside test/contrast.test.js's 3.0:1 gate. It is NOT redefined here:
- * changing its value would silently repaint a chart line, PhaseMap's fund tag,
- * a journal exit chip and the SPECS label in the insights diagram. The soft
+ * changing its value would silently repaint PhaseMap's fund tag, the
+ * journal's new-position lens chip, the MOMENTUM nav pill and the SPECS label
+ * in the insights diagram. The soft
  * tint is written as a literal rgba at the house strength (0.16, the same as
  * --blue-soft / --green-soft / --red-soft / --orange-soft) rather than added
  * to :root, which also keeps it invisible to that gate — whose regex requires
@@ -60,8 +61,8 @@
 }
 
 /* The rail is the lens's signature: purple by default, tinted by direction
-   where there is one. A conflict keeps the neutral purple on purpose — it has
-   no single direction and colouring it either way would be the collapse this
+   where there is one. A conflict gets its own green-to-red rail — it has no
+   single direction, and colouring it either way would be the collapse this
    page exists to avoid. */
 .mo-rail { align-self: stretch; background: var(--mo-accent); }
 .mo-row.is-bull .mo-rail { background: var(--green); }
