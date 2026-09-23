@@ -770,7 +770,8 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   {
     const fb = CHART.slice(CHART.indexOf("function momentumFallback("),
                            CHART.indexOf("// ── Held-plan chart"));
-    ok(/bucketBars\(intraday, 4 \* 3600\)/.test(fb), "4H is bucketed from hourly bars");
+    ok(/const h4 = sess \? sessionBars\(intraday, sess, 240\) : bucketBars\(intraday, 4 \* 3600\);/.test(fb),
+       "4H is built from hourly bars: 240-minute exchange-session groups, UTC 4h buckets only for crypto");
     ok(/d\.timeframes\["4H"\] = build\(h4\)/.test(fb),
        "and goes through the same builder — never a Daily borrow");
     ok(!/makeTF\(h4|approx/.test(fb),
