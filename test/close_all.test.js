@@ -241,13 +241,13 @@ test("the delegated click handler routes the one surviving button", () => {
 test("paintOpen renders the control, so it survives every re-paint", () => {
   // The open table is re-rendered on a 3-minute timer; a button injected once
   // outside paintOpen would vanish on the next refresh.
-  const paint = between("function paintOpen(side) {", "\n  // Per-section");
+  const paint = between("function paintOpen(side) {", "\n  function openRows(");
   assert.match(paint, /close-all/);
   assert.match(paint, /closeAllControl/);
 });
 
 test("the in-flight button is disabled, so a second click cannot race the first", () => {
-  const paint = between("function paintOpen(side) {", "\n  // Per-section");
+  const paint = between("function paintOpen(side) {", "\n  function openRows(");
   assert.match(paint, /closeAllBusy/);
   assert.match(paint, /disabled/);
 });
