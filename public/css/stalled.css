@@ -82,7 +82,7 @@
   }
   .st-row > .st-x { background: var(--card, #12151c); }
 
-  /* THE ONLY WRITE PATH IN THE APPLICATION, and it shipped at ~22px tall
+  /* A WRITE PATH (it closes real book positions), and it shipped at ~22px tall
      (2026-08-13). journal.css already fixed this class of miss for the SORT
      buttons one file over — "measured at 390px before this rule: 23x21px,
      which is a miss waiting to happen" — and the button that books a real
@@ -106,11 +106,12 @@
 .st-chart:hover, .st-chart:focus-visible { border-bottom-color: currentColor; }
 .st-chart:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 3px; }
 
-/* CLOSE — the one write path on this surface, and it is styled to be found
-   deliberately rather than caught with a stray click: muted until hover, and
-   it never carries the red of the `time-stop due` chip beside it until it is
-   actually armed. Sized to hold "Confirm $123.45" without the grid reflowing
-   mid-decision, which would move the button under a finger already coming
+/* CLOSE — the per-row pick button (the write itself goes through the Close
+   bar's one confirm, .st-go below). Styled to be found deliberately rather
+   than caught with a stray click: muted until hover, and never the red of the
+   `time-stop due` chip beside it. The min-width holds the grid still while
+   the label changes (Close → ✓ picked → queued… → closed ✓ / check the
+   book), which would otherwise move the button under a finger already coming
    down on it. */
 .st-x {
   justify-self: start; min-width: 96px; text-align: center;
