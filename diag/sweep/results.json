@@ -1,0 +1,314 @@
+{
+ "base": "https://googy-boys-scanner.pages.dev",
+ "at": "2026-09-23T03:17:52.436Z",
+ "pass": 50,
+ "fail": 1,
+ "results": [
+  {
+   "page": "deploy",
+   "check": "version.json served",
+   "pass": true,
+   "detail": "2026.09.22-b7f1b35f"
+  },
+  {
+   "page": "deck desk",
+   "check": "deck title painted (not loading)",
+   "pass": true,
+   "detail": "Last scanned: 48m ago"
+  },
+  {
+   "page": "deck desk",
+   "check": "filter pills (.fpill) >= 3",
+   "pass": true,
+   "detail": "5"
+  },
+  {
+   "page": "deck desk",
+   "check": "A+ cards present",
+   "pass": true,
+   "detail": "70 A+ of 70 rows"
+  },
+  {
+   "page": "deck desk",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "deck phone",
+   "check": "deck title painted (not loading)",
+   "pass": true,
+   "detail": "Last scanned: 48m ago"
+  },
+  {
+   "page": "deck phone",
+   "check": "filter pills (.fpill) >= 3",
+   "pass": true,
+   "detail": "5"
+  },
+  {
+   "page": "deck phone",
+   "check": "A+ cards present",
+   "pass": true,
+   "detail": "70 A+ of 70 rows"
+  },
+  {
+   "page": "deck phone",
+   "check": "no horizontal overflow",
+   "pass": true,
+   "detail": "false"
+  },
+  {
+   "page": "deck phone",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "momentum asx",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "momentum asx",
+   "check": "header: title + scanned/gated/last bar",
+   "pass": true,
+   "detail": "MOMENTUM · 4 names || mode A · 1-bar window · 298 scanned · 867 gated · last bar 2026-09-22"
+  },
+  {
+   "page": "momentum asx",
+   "check": "pills are .fpill with <b> count, no .deck-pill",
+   "pass": true,
+   "detail": "ALL 4 | RULE A 4 | RULE B 0 | BULL 4 | BEAR 0 (radius 999px)"
+  },
+  {
+   "page": "momentum asx",
+   "check": "cards = header count",
+   "pass": true,
+   "detail": "header 4, .mo-row 4"
+  },
+  {
+   "page": "momentum asx",
+   "check": "every card link ?s=...&src=momentum, never ?symbol=",
+   "pass": true,
+   "detail": "4 links, e.g. chart.html?s=ELS&m=asx&src=momentum"
+  },
+  {
+   "page": "momentum asx",
+   "check": "no horizontal overflow",
+   "pass": true,
+   "detail": "false"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "header: title + scanned/gated/last bar",
+   "pass": true,
+   "detail": "MOMENTUM · 42 names || mode A · 1-bar window · 1160 scanned · 268 gated · last bar 2026-09-22"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "pills are .fpill with <b> count, no .deck-pill",
+   "pass": true,
+   "detail": "ALL 42 | RULE A 42 | RULE B 0 | BULL 23 | BEAR 19 (radius 999px)"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "cards = header count",
+   "pass": true,
+   "detail": "header 42, .mo-row 42"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "every card link ?s=...&src=momentum, never ?symbol=",
+   "pass": true,
+   "detail": "42 links, e.g. chart.html?s=OKTA&m=nasdaq&src=momentum"
+  },
+  {
+   "page": "momentum nasdaq",
+   "check": "no horizontal overflow",
+   "pass": true,
+   "detail": "false"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "serves chart.js >= v123",
+   "pass": true,
+   "detail": "/js/chart.js?v=123"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: SHORT",
+   "pass": true,
+   "detail": "PLAN SHORT ENTRY A$5.880 SL A$6.762 TP1 A$4.998 TP2 A$4.116 "
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: 5.88/6.76/4.998/4.116/3.234 +-0.01",
+   "pass": true,
+   "detail": "{\"e\":5.88,\"sl\":6.762,\"t1\":4.998,\"t2\":4.116,\"t3\":3.234}"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: 3 panes (price + MACD + RSI)",
+   "pass": true,
+   "detail": "2 oscillator panes"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: bars chip",
+   "pass": true,
+   "detail": "2354 daily bars"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: no SCORE 0/8",
+   "pass": true,
+   "detail": "PLAN SHORT ENTRY A$5.880 SL A$6.762 TP1 A$4.998 TP2 A$4.116 TP3 A$3.234 R:R 3.00 TF 1D SIGNAL 42b ago · score 2 · stop cut to 15%"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "D: no PhaseMap without ?pm=1",
+   "pass": true,
+   "detail": "pm strip false"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "back-link -> momentum.html",
+   "pass": true,
+   "detail": "momentum.html"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: 6.46/7.384 +-0.01 (TV 6.46/7.39 +-0.02)",
+   "pass": true,
+   "detail": "{\"e\":6.46,\"sl\":7.384,\"t1\":5.536,\"t2\":4.612,\"t3\":3.689}"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: not Daily's numbers glued on",
+   "pass": true,
+   "detail": "4H 6.46 vs D 5.88"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: 3 panes",
+   "pass": true,
+   "detail": "2"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: chip is real history (> 187)",
+   "pass": true,
+   "detail": "912 4H bars"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "4H: no SCORE 0/8",
+   "pass": true,
+   "detail": "ok"
+  },
+  {
+   "page": "ELS momentum chart",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "ELS momentum chart ?pm=1",
+   "check": "loads with the plan, no page error",
+   "pass": true,
+   "detail": "pm strip false; no errors"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "SMA 10 / 20 / 43 in the legend",
+   "pass": true,
+   "detail": "SMA 10 A$60.971 SMA 20 A$62.508 SMA 43 A$62.012 SMA 200 A$54.716"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "5.0 footer (Setup + 200 SMA)",
+   "pass": false,
+   "detail": "ENTRY — STOP — TARGET — TRAIL after entry SCORE 0/0 RISK — R:R 0.00"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "no Pine caption, no Momentum panes",
+   "pass": true,
+   "detail": "panes 0"
+  },
+  {
+   "page": "BHP 5.0 chart",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "chart empty state src=momentum",
+   "check": "back-link -> momentum.html",
+   "pass": true,
+   "detail": "momentum.html"
+  },
+  {
+   "page": "chart empty state src=momentum",
+   "check": "search keeps src=momentum",
+   "pass": true,
+   "detail": "/chart?m=asx&s=ELS&src=momentum"
+  },
+  {
+   "page": "chart empty state src=momentum",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "chart fail() src=momentum",
+   "check": "bogus symbol reaches fail()",
+   "pass": true,
+   "detail": "Chart unavailable"
+  },
+  {
+   "page": "chart fail() src=momentum",
+   "check": "fail() back-link -> momentum.html",
+   "pass": true,
+   "detail": "momentum.html"
+  },
+  {
+   "page": "chart fail() src=momentum",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "page journal",
+   "check": "loads, has content, no page error",
+   "pass": true,
+   "detail": "text 16586ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "page alerts",
+   "check": "loads, has content, no page error",
+   "pass": true,
+   "detail": "text 3049ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "page phasemap",
+   "check": "loads, has content, no page error",
+   "pass": true,
+   "detail": "text 69291ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "page specs",
+   "check": "loads, has content, no page error",
+   "pass": true,
+   "detail": "text 8690ch, still-loading false, overflow false; no errors"
+  }
+ ]
+}
