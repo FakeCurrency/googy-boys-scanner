@@ -242,6 +242,18 @@ const vrefs = (html) => [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)].m
     await ctx.close();
   }
 
+  // ── journal R-distribution caption (V8: "both books" -> "bot book") ──
+  {
+    const P = "journal R-dist caption";
+    const { ctx, page, errs } = await open("/journal", "desk");
+    await page.waitForSelector("#jr-rdist-sub", { timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(3000);
+    const t = await page.evaluate(() => (document.getElementById("jr-rdist-sub") || {}).textContent || "");
+    rec(P, "caption names the bot book, never 'both books'", !/both books/.test(t) && (/bot book/.test(t) || t === ""), t || "(section hidden)");
+    rec(P, "no page error", errs.length === 0, errs.join(" ; ") || "none");
+    await ctx.close();
+  }
+
   // ── other pages load ──
   const PAGES = { "/journal": "#bot-open, .jr-table, #jr-bot, main", "/alerts": "main", "/phasemap": "main", "/specs": "main", "/recommendations": ".rec-card" };
   for (const [url, sel] of Object.entries(PAGES)) {
