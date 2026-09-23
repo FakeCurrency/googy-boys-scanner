@@ -1373,8 +1373,9 @@
 
   // ── MOMENTUM chart (2026-09-22) ────────────────────────────────────────────
   // Candles + the lens's own 20/50/200 + the Rule A divergence marked where it
-  // was SEEN and where it became KNOWABLE. PhaseMap zones still ride along when
-  // the ticker has a record (render() draws them from pmRec regardless of mode).
+  // was SEEN and where it became KNOWABLE. PhaseMap zones are OPT-IN here: only
+  // ?pm=1 fetches the record (fetchPhaseMapRec), and render() then draws them
+  // from pmRec as it does for any mode.
   //
   // THE LEVELS ARE THE PINE TEMPLATE'S AUTO PLAN, NOT A 5.0 LADDER (#22).
   // The spec calls the scored cross and the divergence screen *attention
@@ -1987,8 +1988,8 @@
     }
   }
 
-  // The Auto box as a metric strip: direction, the five levels, the R each one
-  // sits at, and how old the signal is. `age` is the honest half -- the box is
+  // The Auto box as a metric strip: direction, the five levels, the fixed
+  // 3.00 R:R, the timeframe, and how old the signal is. `age` is the honest half -- the box is
   // drawn from a cross that may be 50 bars back, and a reader who cannot see
   // that will read a stale plan as a live one.
   function renderMomentumFooter(d, tfKey) {
@@ -2377,10 +2378,10 @@
     }
 
     // ── MOMENTUM sub-panes (2026-09-22): MACD and RSI, the two panes the
-    // owner's TradingView layout carries beside the price. Built with the same
-    // priceScaleId + scaleMargins banding as the squeeze histogram above, so
-    // the price is squeezed into the top and each pane owns a strip. Momentum
-    // only -- a 5.0 chart adds no series and keeps its scale margins.
+    // owner's TradingView layout carries beside the price. Each is its OWN
+    // lightweight-charts instance under the price chart, time-synced to it
+    // (see THREE REAL PANES below). Momentum only -- a 5.0 chart adds no
+    // series and keeps its scale margins.
     let macdHistS = null, macdLineS = null, macdSigS = null, rsiS = null, rsiSigS = null;
     let subCharts = [];
     if (d._momentum) {
@@ -2763,7 +2764,8 @@
     // MOMENTUM: the Pine template's AUTO trade box. Same five lines the owner's
     // TradingView layout draws (Entry / SL / TP1-3), from Final_Top_Script.pine's
     // own maths -- NOT from vivek.py, which is a different system and is not
-    // consulted here. Redrawn per timeframe; only 1D carries a plan.
+    // consulted here. Redrawn per timeframe, and every timeframe (4H included)
+    // carries its OWN plan, recomputed on its own bars by momentumFallback's build().
     let momHandles = [];
     // The two shaded zones the template draws: entry->stop in red, entry->TP3
     // in the direction colour. Baseline series with a PRICE baseline, the same
@@ -3058,9 +3060,10 @@
         candle.setMarkers(em ? [...marks, em] : marks);
       }
       chart.timeScale().fitContent();
-      // MOMENTUM Daily first paint. Runs AFTER fitContent so the fallback is
-      // the shared behaviour: too few bars to window (a young listing) and the
-      // chart simply fits what it has rather than padding empty history.
+      // MOMENTUM first paint, on EVERY timeframe (P1). Runs AFTER fitContent
+      // so the fallback is the shared behaviour: too few bars to window (a
+      // young listing) and the chart simply fits what it has rather than
+      // padding empty history.
       let momView = null;
       if (d._momentum) {
         const cs = (tfs[key] || {}).candles || [];
@@ -3162,8 +3165,10 @@
         // Rule A marks for THIS timeframe (only 1D carries any) PLUS the scored
         // cross labels the template writes on price: "+3 Bullish" / "-2 Bearish",
         // signed so the direction reads without the word. Runs before
-        // applyPmZones, which re-composes them with the sweep/displacement
-        // arrows when ?pm=1 brought a PhaseMap record along.
+        // applyPmZones. Caveat, recorded in reviews/2026-09-23-sweep.md: when
+        // ?pm=1 brings a PhaseMap record with a sweep/displacement,
+        // applyPmZones re-seeds from tfs[key].markers (Rule A marks only) and
+        // so drops these cross labels on that timeframe.
         const base = ((tfs[key] || {}).markers || []).slice();
         const cs = (tfs[key] || {}).candles || [];
         // P5 LABEL DIET. Every cross in five years carried a text label, so the
@@ -4665,8 +4670,9 @@
     //   1. live VIVEK plan  -> full ladder chart (+ zones overlay if any)
     //   2. PhaseMap setup   -> zones-as-ladder chart
     //   3. neither          -> plain candles + SMAs, always renders
-    // MOMENTUM: its own payload, its own stack, no 5.0 ladder. Fetched
-    // alongside the PhaseMap record so zones still ride along (requirement 1).
+    // MOMENTUM: its own payload, its own stack, and the Pine template's Auto
+    // box in place of the 5.0 ladder. The PhaseMap fetch runs alongside but
+    // returns null unless ?pm=1 (fetchPhaseMapRec), so zones are opt-in.
     if (isMomentum) {
       Promise.all([momentumRow(baseSymbol), fetchPhaseMapRec()]).then(([mom, rec]) => {
         pmRec = rec;

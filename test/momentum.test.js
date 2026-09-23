@@ -599,7 +599,8 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
  * The Daily pull is 25y and the stitcher really serves it
  * (deep_history.test.js pins targetBars("25y","1d") >= 6300), so fitContent()
  * on a long-listed name squeezes 6,000+ bars into the canvas. The lens screens
- * recent structure, so first paint windows to the last ~750 sessions. The full
+ * recent structure, so first paint windows to the live move on every timeframe
+ * (P1, below -- it replaced the original ~750-session Daily window). The full
  * series stays loaded -- this is a VIEW, not a fetch cap, and the test below
  * asserts the data is never truncated.
  */
@@ -762,7 +763,8 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   }
 
   // 4H — where the owner actually trades this template. Built from hourly
-  // history bucketed to 4H, exactly as the 5.0 chart does it, and put through
+  // history grouped into 4H on the exchange session (sessionBars; UTC
+  // bucketBars only for crypto, as the 5.0 chart does it), and put through
   // the SAME builder: his 4H reads Entry 6.46 / SL 7.39 against the Daily's
   // 5.88 / 6.76, so a borrowed Daily box would be wrong by more than a dollar.
   {
