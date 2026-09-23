@@ -40,7 +40,7 @@
 .ct-fundwarn { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--red);
   background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
   padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
-/* real-money position sizer under the sim actions */
+/* real-money position sizer under the chart actions */
 .cf-mysize { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin-top: 8px; font: 500 12px/1.4 var(--sans); color: var(--muted); }
 .cf-mysize .ms-label { font-weight: 800; letter-spacing: .03em; }
@@ -115,7 +115,8 @@
 /* the canvas overlay sits on top of the chart; pointer-events toggled in JS */
 .draw-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 
-/* prominent 4H notice — pinned over the candles, shown only on the 4H tab */
+/* prominent reference-timeframe notice — pinned over the candles, shown on a
+   4H or 3D view that borrows the Daily plan (the row has no plan of its own) */
 .tf-notice {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
   z-index: 9; max-width: calc(100% - 28px); text-align: center;
