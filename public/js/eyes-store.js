@@ -15,7 +15,7 @@
  * files), and a chart marking a name under a key the deck does not read would
  * look like it worked and do nothing.
  *
- * DISMISSED UNTIL IT CHANGES — the rule, and the third attempt at it.
+ * DISMISSED UNTIL IT CHANGES — the rule, and the fourth attempt at it.
  *   v1 (2026-09-20) keyed the reviewed set to the scan's generated_at. ASX
  *      re-scans hourly, so every refresh wiped the list and names the owner had
  *      just worked through came back within the hour.
