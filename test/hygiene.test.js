@@ -237,6 +237,11 @@ ok(!/\baccent\b/.test(fnBody(code("js/journal.js"), "statCards")),
    "js/journal.js statCards: the unused `accent` parameter was deleted 2026-09-23 (its one " +
    "caller never passed it)");
 
+// VALIDATE (2026-09-23) -- same rule, second pass (reviews/2026-09-23-validate.md).
+ok(!/function renderTFSetups\(\s*d\s*,/.test(code("js/chart.js")) && /function renderTFSetups\(tfs,/.test(code("js/chart.js")),
+   "js/chart.js renderTFSetups: the unused `d` parameter was deleted 2026-09-23 (the body reads " +
+   "only tfs / pickTF / getCurTF; its one caller in render() keeps its own `d`)");
+
 ok(!/\bisLong\b/.test(fnBody(code("js/journal.js"), "openRows")),
    "js/journal.js openRows: the unused `isLong` row local was deleted 2026-09-23 (liveCells " +
    "derives direction itself)");

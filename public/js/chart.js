@@ -2191,7 +2191,7 @@
   // same per-TF plans the chart already holds; clicking a chip jumps to that TF.
   const TFS_MIN_RR = 1.5;
   const TFS_NEAR_PCT = 1.5;   // price within 1.5% of the 200-SMA line = "approaching"
-  function renderTFSetups(d, tfs, pickTF, getCurTF) {
+  function renderTFSetups(tfs, pickTF, getCurTF) {
     const order = ["4H", "1D", "3D", "1W"];
     const items = order.filter((k) => tfs[k] && tfs[k].levels).map((k) => {
       const lv = tfs[k].levels;
@@ -3273,7 +3273,7 @@
       // VIVEK: a read-only "setups across timeframes" decision strip that surfaces
       // which TF(s) have a live setup for this ticker (armed / entry / R:R / MTF
       // confluence) and lets you jump straight to one.
-      if (d._vivek) tfSetups = renderTFSetups(d, tfs, selectTF, () => curTF);
+      if (d._vivek) tfSetups = renderTFSetups(tfs, selectTF, () => curTF);
       toggle.querySelectorAll(".tf-btn").forEach((b) =>
         b.addEventListener("click", () => selectTF(b.dataset.tf)));
       applyTF(curTF);
