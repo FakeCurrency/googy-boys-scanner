@@ -107,7 +107,7 @@ test("getHead returns null for a missing key", () => {
 });
 
 // ---- 500KB safety cap (keeps oversized payloads out of the localStorage quota) --
-test("set skips an oversized payload (never evicts the journal)", () => {
+test("set skips an oversized payload (keeps it out of the localStorage quota)", () => {
   reset();
   const huge = { results: [{ blob: "x".repeat(600_000) }] };
   C.set("big", huge);

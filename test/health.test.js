@@ -135,7 +135,7 @@ const tests = [
     assert.ok(/generated_at/.test(body.error), body.error);
   }),
 
-  test("max_h stays clamped to 1..48 with a 4h default", async () => {
+  test("max_h outside 1..48 falls back to the 4h default", async () => {
     const fresh = { "/data/asx_prices.json": { generated_at: hoursAgo(3) } };
     assert.equal((await call("?market=asx", fresh)).body.max_h, 4);
     assert.equal((await call("?market=asx&max_h=0.1", fresh)).body.max_h, 4);

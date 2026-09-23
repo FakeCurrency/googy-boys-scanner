@@ -284,7 +284,7 @@ const scanTests = async () => {
 // helped. /api/heartbeat is the uncorrelated leg: an EXTERNAL monitor pings it
 // and it dispatches a scan when one is overdue.
 //
-// It lives in this file rather than its own because it is the fifth
+// It lives in this file rather than its own because it is a
 // state-touching Pages Function and it inherits scan.js's refund contract
 // verbatim — the two belong where they can be read against each other.
 
@@ -437,7 +437,7 @@ const hbTests = async () => {
     assert.equal(seen, "1", "a concurrent probe mid-dispatch must already see the cooldown");
   });
 
-  await test("stale_min is clamped to 15..720 with a 90-minute default", async () => {
+  await test("stale_min outside 15..720 falls back to the 90-minute default", async () => {
     const H = load(ghFetchStub(204));
     const env = () => envFor(FRESH, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: fakeKV() });
     const at = async (qs) => (await (await call(H, env(), qs)).json()).stale_min;
