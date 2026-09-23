@@ -156,6 +156,7 @@ def test_the_table_is_lens_by_fill_with_dollars_at_one_thousand():
     assert "| lens | fill rule | net R | R/trade | win% | n | $ at $1k |" in md
     assert res["headline"]["specs"]["house"]["usd"] == 200.0          # 2R x 1000 x 1/10
     assert res["headline"]["specs"]["worst print"]["usd"] == -100.0
+    assert "Median stop distance, longs: " in md and "Specs 10.0%" in md
     assert "| house |" in md and "| worst print |" in md
 
 
@@ -179,6 +180,8 @@ def test_the_splits_the_owner_asked_to_keep_visible():
         assert f"| 5.0 {tf} | house |" in md
     assert "| 5.0 high-conviction cells (any of the four) | house |" in md
     assert "| 5.0 all A+/A | worst print |" in md
+    assert "| 5.0 bot rule, stop <= 25% (as the bot takes it) | house |" in md
+    assert "| 5.0 bot rule as taken, ASX | worst print |" in md
     for cell in conviction.cell_names():
         assert f"| 5.0 cell: {cell} | house |" in md
     for r in ("Rule A", "Rule B"):

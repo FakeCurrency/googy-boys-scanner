@@ -366,6 +366,11 @@ def coverage_line(market: str, c: dict) -> str:
     return line + "."
 
 
+def _median_stop(ts: list) -> str:
+    d = sorted(100.0 * float(t["k"]) / float(t["e"]) for t in ts if t["e"])
+    return f"{d[len(d) // 2]:.1f}%" if d else "--"
+
+
 def _bps() -> str:
     return "; ".join(f"{m.upper()} slippage {config.VIVEK_SLIPPAGE_BPS[m]:g} + commission "
                      f"{config.VIVEK_COMMISSION_BPS[m]:g}" for m in ("asx", "nasdaq", "crypto"))
@@ -400,6 +405,9 @@ def build_report(shards: list, verdict: str = "") -> tuple[str, dict]:
          f"- Costs: the house table, basis points per side -- {_bps()}. $ at ${NOTIONAL:,.0f} a trade = R x "
          f"{NOTIONAL:,.0f} x risk / entry. Minimum stop {MIN_STOP:g}% of entry: a closer stop "
          "is not a trade in any lens.",
+         "- $ weights each trade by its stop width (a 20% stop at +1R makes $200, a 5% stop "
+         "$50), so a lens or market with wide stops can show $ and R with different signs; "
+         "R/trade is the like-for-like number.",
          f"- Window: {', '.join(periods)} of daily bars; trades entered {span}. Universe: "
          "today's, less the bot's fund/REIT exclusion, identically for all four lenses.",
          "", "## Coverage", ""]
@@ -419,8 +427,15 @@ def build_report(shards: list, verdict: str = "") -> tuple[str, dict]:
     for cell in conviction.cell_names():
         L += _pair(f"5.0 cell: {cell}", [t for t in vl if t.get("cell") == cell])
     L += _pair("5.0 bot rule (four cells, weekly/3d level)", bot_rule)
+    taken = [t for t in bot_rule if 100.0 * t["k"] / t["e"] <= config.VIVEK_BOT_MAX_STOP_PCT]
+    L += _pair(f"5.0 bot rule, stop <= {config.VIVEK_BOT_MAX_STOP_PCT:g}% (as the bot takes it)", taken)
+    for m in markets:
+        L += _pair(f"5.0 bot rule as taken, {m.upper()}", [t for t in taken if t["m"] == m])
     for g in ("A+", "A"):
         L += _pair(f"5.0 grade {g}", [t for t in vl if t["cohort"] == g])
+    L += ["", "The bot's other gates -- minimum price, liquidity/ADV, the 3-per-sector cap and "
+          "the 30-position book -- are not simulated, so the as-taken rows are the rule's trade "
+          "set before those gates, not a replay of the book."]
 
     ml = by(longs, "momentum")
     L += ["", f"## Momentum -- Rule A vs Rule B by market (longs; live min_signal_score "
@@ -460,10 +475,14 @@ def build_report(shards: list, verdict: str = "") -> tuple[str, dict]:
           f"PhaseMap {gated['phasemap'].get('stop_too_tight', 0):,}, momentum "
           f"{gated['momentum'].get('stop_too_tight', 0):,}, Specs "
           f"{gated['specs'].get('stop_too_tight', 0):,}.",
+          "- Median stop distance, longs: "
+          + ", ".join(f"{TITLE[k]} {_median_stop(by(longs, k))}" for k in LENSES)
+          + " -- the tighter the stop, the more R a fill convention moves.",
           f"- Momentum signals removed by its own gates: "
           f"{dict(sorted(gated['momentum'].items(), key=lambda kv: -kv[1]))}.",
           "- Still open at the end of the data (marked at the last close), longs: "
-          + ", ".join(f"{TITLE[k]} {stats(by(longs, k))['open_at_end']:,}" for k in LENSES) + "."]
+          + ", ".join(f"{TITLE[k]} {stats(by(longs, k))['open_at_end']:,} of "
+                      f"{len(by(longs, k)):,}" for k in LENSES) + "."]
     if verdict.strip():
         L += ["", "## What the paper bot should keep taking, and what it should not", "",
               verdict.strip()]
