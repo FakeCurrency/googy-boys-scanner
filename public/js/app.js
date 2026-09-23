@@ -100,7 +100,6 @@
   const _cache = (typeof window !== "undefined" && window.GBSCache) || {
     set() {}, get() { return null; }, getStale() { return null; },
     setHead() {}, getHead() { return null; }, ageMs() { return Infinity; },
-    HEAD_PREFIX: "gbs:cache:head:", HEAD_ROWS: 60,
   };
   const cacheSet      = (k, d) => _cache.set(k, d);
   const cacheGet      = (k)    => _cache.get(k);
@@ -181,8 +180,6 @@
     return { hours, weekdays: weekdaysBetween(t, nowMs, tz),
              weekendNote: isWeekendIn(nowMs, tz) && weekdaysBetween(t, nowMs, tz) === 0 };
   };
-  const HEAD_PREFIX   = _cache.HEAD_PREFIX;
-  const HEAD_ROWS     = _cache.HEAD_ROWS;
 
   // ---- debug mode ---------------------------------------------------------
   const isDebug = () =>

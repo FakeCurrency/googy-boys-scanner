@@ -39,7 +39,7 @@ const GONE = {
   },
   "js/app.js": {
     live: "function isHighConviction(",
-    dead: ["fmtTurn", "VIEW_KEYS"],
+    dead: ["fmtTurn", "VIEW_KEYS", "HEAD_PREFIX", "HEAD_ROWS"],
   },
   "js/chart.js": {
     live: "function momentumViewStart(",
