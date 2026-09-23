@@ -294,6 +294,12 @@ VIVEK_JOURNAL_SESSION = {
     "nasdaq": (9, 30, 16, 0),
     "crypto": None,
 }
+# Deck freshness, session + N hours (2026-09-23): the 5.0 deck marks a payload
+# stale once a session has been open this long with no scan from inside it, or
+# closed this long with no scan from after the close. DISPLAY ONLY -- nothing
+# in scanner/ or broker/ reads it. app.js mirrors it and the table above as
+# SESSION_STALE; tests/test_deck_session_stale.py holds the two in step.
+VIVEK_DECK_SESSION_GRACE_H = 2
 
 # Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
 # GRADES (owner ruling 2026-09-21: "the paper bot should only take the highest
