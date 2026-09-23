@@ -242,6 +242,10 @@ ok(!/function renderTFSetups\(\s*d\s*,/.test(code("js/chart.js")) && /function r
    "js/chart.js renderTFSetups: the unused `d` parameter was deleted 2026-09-23 (the body reads " +
    "only tfs / pickTF / getCurTF; its one caller in render() keeps its own `d`)");
 
+ok(!/\bkey\b/.test(fnBody(code("js/sectors.js"), "macroCardHTML")),
+   "js/sectors.js macroCardHTML: the unused `key` parameter was deleted 2026-09-23 (the card " +
+   "reads only the macro block m; columnHTML keeps its own key for the news id)");
+
 ok(!/\bisLong\b/.test(fnBody(code("js/journal.js"), "openRows")),
    "js/journal.js openRows: the unused `isLong` row local was deleted 2026-09-23 (liveCells " +
    "derives direction itself)");
