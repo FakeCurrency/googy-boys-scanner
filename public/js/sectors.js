@@ -34,7 +34,7 @@
     XLC: ["Comms & media", "META, GOOGL, NFLX"],
   };
 
-  // TOP100 #75. This covered [&<>] only, while `renderMacro` interpolates
+  // TOP100 #75. This covered [&<>] only, while `macroCardHTML` interpolates
   // straight into a double-quoted attribute (`data-countdown="${esc(ev.when)}"`)
   // — a `"` in that value closed the attribute and everything after it was
   // parsed as markup. Now the same five characters every other page escapes.
@@ -304,11 +304,11 @@
       render(d);
     })
     .catch(() => {
-      // A rejected fetch here is a CONNECTION failure, not missing data (the
-      // no-data case resolves with an empty payload above). Say so —
-      // "no sector data yet" told people to wait for a scan that had already
-      // happened (2026-07-29). A reload retries; calendar & news are separate
-      // fetches and still load.
+      // Everything lands here: a network failure, a non-OK status (the 404/5xx
+      // throw above) or a bad JSON body. The copy says "connection problem"
+      // for all of them rather than "no sector data yet", which told people
+      // to wait for a scan that had already happened (2026-07-29). A reload
+      // retries; calendar & news are separate fetches and still load.
       document.getElementById("sec-sub").textContent =
         "Couldn't reach sector data (connection problem) — reload to retry; calendar & news still load below.";
       render({ markets: { asx: {}, us: {} } });
