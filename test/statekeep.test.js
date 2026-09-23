@@ -1,35 +1,22 @@
-/* Five pieces of front-end state that were being thrown away, recomputed, or
- * read at the wrong moment (TOP100 #84–#88).
- *
- * They look like five unrelated files. They are one failure shape: something
- * that should have been HELD was not, or something that was held went STALE,
- * and in every case the page carried on drawing a plausible number.
- *
- *   #84  `updateClosePreview` runs on every `input` event in the exit-price
- *        field and did a full localStorage read + JSON.parse + normalize() of
- *        the whole journal, per character, to find one row. Typing "1234.56"
- *        did it seven times. The memo is keyed on a GENERATION counter, not on
- *        the id alone, because a sync pull or a cross-tab write landing while
- *        the modal is open must invalidate it — a stale preview is a worse bug
- *        than a slow one.
- *
- *   #85  (risk_manager.js — removed with the AI BOT page, 2026-09-17)
+/* Front-end state that was being thrown away, recomputed, or read at the
+ * wrong moment (TOP100 #84–#88). ONE of the five items still has code to pin.
  *
  *   #86  `ensureActiveVisible()` read `scrollWidth` / `getBoundingClientRect()`
  *        synchronously from inside render, forcing a layout mid-render, twice
- *        per click. Now deferred to a frame and coalesced.
+ *        per click. Now deferred to a frame and coalesced. Pinned below.
  *
- *   #87  (bot.js — removed with the AI BOT page, 2026-09-17)
+ * The other four left with the code they guarded, so nothing here tests them:
+ *   #84  the close-modal row memo (`updateClosePreview`) -- the modal went with
+ *        the manual journal, 2026-09-21
+ *   #85  risk_manager.js -- removed with the AI BOT page, 2026-09-17
+ *   #87  bot.js -- removed with the AI BOT page, 2026-09-17
+ *   #88  horizon.js + regime.js renderer-fault scoping -- removed with the
+ *        HORIZON / REGIME surfaces, 2026-09-20
  *
- *   #88  The `.catch()` sat AFTER `.then(mount)`, so a renderer that threw was
- *        handled by the branch whose job is "the JSON isn't there yet" — and
- *        since mount draws the panel first, a strip that threw on one bad row
- *        hid a panel that had rendered perfectly.
- *
- * Everything below is sliced out of the SHIPPED files and executed. Nothing is
+ * Everything below is sliced out of the SHIPPED file and executed. Nothing is
  * re-typed into a fixture: a fixture drifts in step with the bug it is meant to
- * catch, and four of these five items are invisible to a `grep`-shaped test
- * because the broken version and the fixed version look almost identical.
+ * catch, and the broken and fixed versions of #86 look almost identical to a
+ * `grep`-shaped test.
  */
 "use strict";
 const assert = require("assert");
@@ -49,7 +36,6 @@ const codeOnly = (src) =>
     return !(t.startsWith("//") || t.startsWith("/*") || t.startsWith("*"));
   }).join("\n");
 
-const JOURNAL_SRC = codeOnly(fs.readFileSync(P("journal.js"), "utf8"));
 const APP_SRC = codeOnly(fs.readFileSync(P("app.js"), "utf8"));
 
 // ---------------------------------------------------------------------------
