@@ -1,5 +1,6 @@
-/* ALERTS page — the multi-lens alignment log (push pings scroll away;
-   this page doesn't). Reads public/data/phasemap/alert_history.json.
+/* ALERTS page — the multi-lens alignment log, the durable record of every
+   alignment (push delivery was removed 2026-08-27, so this page is the only
+   place they show). Reads public/data/phasemap/alert_history.json.
    2026-07-10: market filter + collapsible day groups (the log grew fast —
    ~27 alignments/day — so only the newest day starts expanded). */
 (() => {
