@@ -4,7 +4,6 @@
    hawkish/dovish read on the latest high-impact print. */
 (() => {
   "use strict";
-  const dark = () => window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   // What each sector is, in plain words, with a few example tickers.
   const SECTOR_INFO = {
