@@ -129,43 +129,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: linear-gradient(90deg, var(--green), var(--teal) 40%, transparent 80%);
   pointer-events: none;
 }
-/* two-row variant (index.html) */
-.topbar:has(.topbar-row1) { flex-direction: column; gap: 0; padding: 0; }
-.topbar-row1 {
-  display: flex; align-items: center; gap: 14px; position: relative;
-  padding: 9px 20px; width: 100%;
-}
-.topbar-row2 {
-  display: flex; align-items: center; gap: 10px;
-  padding: 5px 20px 6px; width: 100%;
-  border-top: 0.5px solid var(--separator);
-}
-/* "SET UPS" label — sits cleanly to the left of the scan-type tabs, not inside
-   the tab group. A quiet, premium section title with a hairline divider. */
-.setups-title {
-  font: 800 12px/1 var(--sans);
-  letter-spacing: 0.16em;
-  color: var(--text-2);
-  text-transform: uppercase;
-  padding-right: 12px;
-  margin-right: 2px;
-  border-right: 1.5px solid var(--separator);
-  flex-shrink: 0;
-  white-space: nowrap;
-}@media (max-width: 560px) {
-  .setups-title { display: none; }   /* reclaim space for tabs on small screens */
-}
-/* city clocks — all four now sit on the LEFT of row 1 (owner 2026-07-05),
-   stacked in a single column: MELBOURNE · NEW YORK · CHINA · LONDON. Narrow
-   (~280px) so the row fits clocks + quote + nav + brand down to ~1760px. */
-.topbar-clocks { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
-.topbar-clocks-left { gap: 3px; }
-.topbar-clocks-right { text-align: right; }
-/* brand — inline in row 1 (clocks · brand · quote · nav · clocks) */
-.topbar-brand {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  flex-shrink: 0;
-}
 /* The quote sits in the MIDDLE of row 1 — between the clocks (left) and the
    nav (owner 2026-07-05). It flex-grows to fill the gap and centres its text,
    free to wrap to two lines. Room is made by shrinking the trailing nav pills
@@ -176,14 +139,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden;
 }
-/* market-switch + nav-link pills — right of the quote, left of the brand. */
-.topbar-nav {
-  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
-}
-/* VIVEK 5.0 wordmark now sits at the far RIGHT of row 1 (owner 2026-07-05). */
-.topbar-brand { align-items: flex-end; }
-/* push search/reload to the right in row 2 */
-.topbar-row2 .search-trigger { margin-left: auto; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
   display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-sm);
@@ -193,14 +148,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .brand-text { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1; }
 .brand h1 { margin: 0; font: 700 14px/1 var(--mono); letter-spacing: 0.05em; color: var(--text); }
 .brand-sub { font: 600 8.5px/1 var(--mono); letter-spacing: 0.26em; text-transform: uppercase; color: var(--green); }
-
-/* Dashboard header brand — bigger + bolder, with the BETA SCANNER subtitle. */
-.topbar-brand .brand { gap: 13px; }
-.topbar-brand .brand-mark { width: 44px; height: 44px; border-radius: 8px; }
-.topbar-brand .brand-mark svg { width: 26px; height: 26px; }
-.topbar-brand .brand h1 { font-size: 23px; letter-spacing: 0.03em; }
-.topbar-brand .brand-sub { font-size: 10px; letter-spacing: 0.34em; margin-top: 3px; }
-
 .market-switch { display: inline-flex; gap: 2px; padding: 2px; background: var(--fill-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .market-btn {
   appearance: none; border: 0; cursor: pointer; background: transparent;
@@ -254,21 +201,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* the level ladder — SL · Entry · TP1/2/3, each a clear row */
 .vk-ladder { display: flex; flex-direction: column; gap: 1px; border-radius: var(--radius-md); overflow: hidden; background: var(--separator); margin-bottom: 18px; }
-.vk-lvl {
-  display: grid; grid-template-columns: 52px 1fr auto auto; align-items: baseline; gap: 14px;
-  padding: 16px 18px; background: var(--panel);
-}
-.vk-lvl-key { font: 700 10px/1 var(--mono); letter-spacing: 0.06em; padding: 4px 7px; border-radius: 3px; text-align: center; }
-.vk-lvl-label { font: 500 12px/1 var(--mono); color: var(--text-2); }
-.vk-lvl-price { font: 700 19px/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.vk-lvl-sub { font: 500 11px/1.3 var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-.vk-lvl.vk-sl    { background: color-mix(in srgb, var(--red) 5%, var(--panel)); }
-.vk-lvl.vk-sl    .vk-lvl-key { background: var(--red-soft); color: var(--red); }
-.vk-lvl.vk-sl    .vk-lvl-price { color: var(--red); }
-.vk-lvl.vk-entry { background: color-mix(in srgb, var(--blue) 5%, var(--panel)); }
-.vk-lvl.vk-entry .vk-lvl-key { background: var(--blue-soft); color: var(--blue); }
-.vk-lvl.vk-tp    .vk-lvl-key { background: var(--green-soft); color: var(--green); }
-.vk-lvl.vk-tp    .vk-lvl-price { color: var(--green); }
 .vk-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 
 /* freshness chip in the hero */
@@ -278,19 +210,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* 5.0 trade checklist — mechanical criteria, pass/fail at a glance */
 .vk-checklist-wrap { margin-bottom: 18px; }
 .vk-section-lbl { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-.vk-checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--separator); border-radius: var(--radius-md); overflow: hidden; }
-.vk-check { display: flex; align-items: center; gap: 9px; padding: 12px 14px; background: var(--panel); }
-.vk-check-ic { flex: 0 0 18px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 800 11px/1 var(--sans); }
-.vk-check.ok .vk-check-ic { background: var(--green-soft); color: var(--green); }
-.vk-check.no .vk-check-ic { background: var(--red-soft); color: var(--red); }
-.vk-check-lbl { font: 700 13px/1.2 var(--sans); color: var(--text); }
-.vk-check-note { margin-left: auto; font: 500 11.5px/1.2 var(--sans); color: var(--muted); text-align: right; }
 .vk-plan-note { margin-top: 10px; font: 500 12px/1.5 var(--sans); color: var(--text-2); padding: 11px 13px; background: var(--fill); border-radius: var(--radius-sm); }@media (max-width: 560px) {
   .vk-detail { padding: 4px 14px 32px; }
   .vk-hero { grid-template-columns: 88px 1fr; }
-  .vk-lvl { grid-template-columns: 44px 1fr auto; }
-  .vk-checklist { grid-template-columns: 1fr; }
-  .vk-lvl-sub { grid-column: 2 / -1; text-align: left; }
 }
 
 .howto-link {
@@ -430,7 +352,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .stat-card:last-child { border-right: 0; }
 .stat-label { font: 600 10px/1 var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
 .stat-value { font: 700 26px/1.15 var(--mono); letter-spacing: -0.02em; margin-top: 11px; color: var(--text); }
-.accent-green { color: var(--green); } .accent-orange { color: var(--orange); }
+.accent-orange { color: var(--orange); }
 
 /* ================================================================= view tabs */
 .view-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
@@ -448,7 +370,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* ================================================================== controls */
 .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .control-group { display: inline-flex; align-items: center; }
-.control-label { display: none; }
 .seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--fill-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .seg-btn {
   appearance: none; border: 0; cursor: pointer; background: transparent;
@@ -460,9 +381,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .seg-btn:not(.is-active):hover { color: var(--text-2); }
 .seg-count { font: 600 9.5px/1 var(--mono); background: var(--fill-2); border: 1px solid var(--border); color: var(--muted); padding: 2px 5px; border-radius: 3px; }
 .seg-btn.is-active .seg-count { background: var(--green-soft); border-color: rgba(47,208,127,0.35); color: var(--green); }
-
-/* Sort direction arrow on the active sort button. */
-.sort-arrow { font-size: 0.92em; font-weight: 700; opacity: 0.95; }
 
 /* ================================================================ EMA legend */
 .ema-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: transparent; border-radius: 0; padding: 0 0 12px; margin-bottom: 12px; box-shadow: none; border-bottom: 1px solid var(--border); min-height: 24px; /* CLS #1: reserved pre-data */ }
@@ -606,9 +524,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .badge.dir.long  { color: var(--green); background: var(--green-soft); }
 .badge.dir.short { color: var(--red);   background: var(--red-soft); }
 .badge.sector { color: var(--text-2); background: var(--fill); }
-.badge.liq-liquid { color: var(--green); background: var(--green-soft); }
-.badge.liq-ok { color: var(--muted); background: var(--fill); }
-.badge.seccount { color: var(--orange); background: var(--orange-soft); }
 .badge.mcap       { color: var(--text-2); background: var(--fill); font-weight: 700; }
 .badge.mcap-small { color: var(--orange); background: var(--orange-soft); font-weight: 700; }
 .badge.mcap-hot   { color: var(--red);    background: var(--red-soft);    font-weight: 700; }
@@ -687,7 +602,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .rk-rr.low { border-color: rgba(255,91,91,0.3); }
 .rk-rr.low { background: var(--red-soft); color: var(--red); }
-.t-star.starred { color: var(--orange); }
 
 .row-copy-debug {
   appearance: none; border: 0; background: transparent; cursor: pointer;
@@ -848,7 +762,6 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   border-radius: var(--radius-md);
   border-left: 3px solid var(--grade-color, var(--blue));
 }
-.rd-tag { font: 700 11.5px/1 var(--sans); letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
 .rd-analysis p { margin: 0; font: 400 16px/1.7 var(--sans); color: var(--text-2); }
 .rd-k { font: 700 12px/1 var(--sans); letter-spacing: 0.06em; color: var(--muted); }
 
@@ -970,9 +883,6 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .rd-vol-note { font: 500 12px/1 var(--sans); color: var(--muted); margin-left: auto; }
 
 /* EMA section */
-.rd-ema { padding: 14px 16px; margin-bottom: 10px; background: var(--fill-2); border-radius: var(--radius-md); }
-.rd-ema-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.rd-ema-head .rd-spread { margin-left: auto; font: 500 12px/1 var(--sans); color: var(--muted); }
 .rd-ladder { display: flex; align-items: center; gap: 8px; padding: 16px 0 12px; }
 .el-ema { font: 700 15px/1 var(--sans); }
 .el-gt { color: var(--muted-2); }
@@ -1191,40 +1101,16 @@ body.debug-mode .debug-panel {
      nav became a horizontal scroll strip on phones). */
   .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
-}@media (max-width: 1760px) {
-  /* Row 1 holds clocks + quote + nav + brand. The single-column clock stack
-     is ~280px, so it fits down to ~1760px; below this it's dropped first and
-     the quote keeps its room; brand · quote · nav stay. */
-  .topbar-clocks { display: none; }
 }@media (max-width: 1600px) {
   /* below here the full-size nav + brand need the width — retire the quote
      (it returns above 1600px where there's room for it to be legible) */
   .topbar-quote { display: none; }
-}@media (max-width: 560px) {
-  /* keep the bigger brand prominent but sized to fit a phone next to the tabs */
-  .topbar-brand .brand-mark { width: 38px; height: 38px; border-radius: 10px; }
-  .topbar-brand .brand-mark svg { width: 23px; height: 23px; }
-  .topbar-brand .brand h1 { font-size: 21px; }
-  .topbar-brand .brand-sub { font-size: 9.5px; letter-spacing: 0.28em; }
 }@media (max-width: 768px) {
-  .topbar-row1 { padding: 9px 12px; gap: 10px; }
-  .topbar-row2 { padding: 6px 12px 7px; }
   .topbar { padding: 10px 14px; gap: 8px; } /* legacy single-row pages */
   .brand h1 { font-size: 14px; }
   .refresh-timer { display: none; }
-  /* Keep every nav link reachable on mobile: scroll the row horizontally
-     instead of hiding all but the last link (which buried Journal / News). */
-  .topbar-nav {
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; -ms-overflow-style: none;
-    margin-left: 0; flex: 1; justify-content: flex-start;
-  }
-  .topbar-nav::-webkit-scrollbar { display: none; }
   .howto-link { padding: 8px 6px; }            /* taller tap target */
   .market-btn { padding: 8px 14px; }           /* taller tap target */
-  /* Scan-type row scrolls as one strip; buttons keep their size + tap area. */
-  .topbar-row2 { overflow-x: auto; scrollbar-width: none; }
-  .topbar-row2::-webkit-scrollbar { display: none; }
   .scan-btn { padding: 8px 13px; }
   .stats { grid-template-columns: repeat(2,1fr); }
   .stat-card:nth-child(2) { border-right: 0; }
@@ -1275,8 +1161,6 @@ body.debug-mode .debug-panel {
   .rd-analysis { padding: 14px 16px; }
   .detail-meta { margin: -2px 0 16px; }
 }@media (max-width: 480px) {
-  .topbar-row1 { flex-wrap: wrap; padding: 8px 12px; }
-  .topbar-row2 { padding: 4px 12px 5px; overflow-x: auto; }
   .topbar { flex-wrap: wrap; } /* legacy single-row pages */
   .reload-btn .reload-label { display: none; }
   .reload-btn { padding: 0 10px; }
@@ -1293,7 +1177,6 @@ body.debug-mode .debug-panel {
   .dh-grade-val { font-size: 34px; }
   .dh-grade-block { padding: 16px 8px; }
 }
-.grade-Ap { color: var(--grade-aplus); } .grade-A { color: var(--grade-a); }
 
 /* ═══ Multi-lens confluence — when VIVEK + PhaseMap + Specs line up, it must
    stick out. 2-lens = loud chip; 3-lens = pulsing beacon. (2026-07-02) ═══ */
@@ -1338,13 +1221,6 @@ body.debug-mode .debug-panel {
 /* the nav pills have their own more-specific rule — override at same depth */
 .nav-pills .howto-link { font-size: 12.5px; font-weight: 700; color: var(--text-2); }
 .nav-pills .howto-link:hover { color: var(--green); }
-.pm-topnav .howto-link { font-size: 12.5px; font-weight: 700; }
-/* secondary pills (DEBUG · HOW IT WORKS · AI BOT) shrunk to buy the header
-   quote room in row 1 (owner 2026-07-05). Higher specificity so it wins over
-   both the base rule above and the 1440px compaction below. */
-.nav-pills .howto-link.nav-minor {
-  font-size: 10px; font-weight: 600; padding: 5px 7px; letter-spacing: 0.05em;
-}
 /* mid-width safety: keep the bold pills but compact them where the row gets
    tight (clocks are already hidden below 1560px) */
 @media (max-width: 1440px) {
@@ -1366,20 +1242,18 @@ body.debug-mode .debug-panel {
   backdrop-filter: blur(22px) saturate(1.8);
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
-.topbar-row2 { border-top: 1px solid rgba(255,255,255,0.06); }
 
 /* app-icon style brand tile: gradient superellipse, white glyph */
-.brand-mark, .topbar-brand .brand-mark {
+.brand-mark {
   background: linear-gradient(140deg, #34d15e 0%, #0aa9b8 55%, #0a84ff 120%);
   color: #fff; border: 0; border-radius: 27%;
   box-shadow: 0 3px 10px rgba(10,132,255,0.30), 0 1px 2px rgba(0,0,0,0.4);
 }
 .brand h1 { font-family: var(--sans); font-weight: 800; letter-spacing: -0.02em; }
-.topbar-brand .brand h1 { letter-spacing: -0.02em; }
 .brand-sub { font-family: var(--sans); }
 
 /* ---- iOS segmented controls (market switch · scan types · sorts) ---- */
-.market-switch, .scan-switch, .seg {
+.market-switch, .seg {
   background: rgba(255,255,255,0.07); border: 0; border-radius: 12px; padding: 3px;
 }
 .market-btn, .scan-btn, .seg-btn {
@@ -1414,8 +1288,6 @@ body.debug-mode .debug-panel {
 .nav-pills .howto-link:hover {
   color: var(--green); border-color: rgba(48,209,88,0.45); background: var(--green-soft);
 }
-.nav-pills .howto-link.nav-minor { font-size: 10.5px; font-weight: 600; padding: 6px 10px; }
-.pm-topnav .howto-link { font-family: var(--sans); }
 .howto-link { font-family: var(--sans); letter-spacing: 0.02em; }
 
 /* ---- row-2 controls: filled pill buttons (iOS prominent / tinted) ---- */
@@ -1472,7 +1344,7 @@ body.debug-mode .debug-panel {
 .row-wrap:hover { transform: translateY(-2px); }
 
 /* ---- badges & chips: tinted rounded-full capsules ---- */
-.badge, .rbadge, .chip, .vk-tf-chip, .vk-fresh, .vk-lvl-key, .vk-grade-score {
+.badge, .rbadge, .chip, .vk-tf-chip, .vk-fresh, .vk-grade-score {
   border-radius: 999px; font-family: var(--sans); letter-spacing: 0.03em;
 }
 .badge { font-size: 10px; font-weight: 700; padding: 4px 9px; }
@@ -1624,7 +1496,6 @@ body { letter-spacing: -0.012em; }
   background: var(--panel); border: 1px solid var(--border-soft);
   border-radius: var(--radius-md); padding: 9px 14px; margin: 0 0 14px;
 }
-.ba-label { font: 800 10px/1 var(--sans); letter-spacing: 0.1em; color: var(--muted); }
 .ba-item {
   display: inline-flex; align-items: center; gap: 6px;
   font: 600 12px/1 var(--sans); color: var(--text-2);
@@ -1654,10 +1525,6 @@ body { letter-spacing: -0.012em; }
 }
 .jr-topsum .pos { color: var(--green); } .jr-topsum .neg { color: var(--red); }
 .jr-topsum .ts-who { font: 700 10px/1 var(--sans); color: var(--muted); letter-spacing: .04em; }@media (max-width: 720px) { .jr-topsum { gap: 8px; font-size: 11px; } }
-
-/* Phase Map cross-badge on scanner rows — the same name is live over there. */
-.rbadge.pmx { color: var(--teal); background: rgba(48,176,199,0.13);
-  border-color: color-mix(in srgb, var(--teal) 32%, transparent); }
 
 /* ═══════════════════ UI WAVE 1 (2026-07-22) — speed + readability ═════════
    Appended overrides, same pattern as the iOS pass above. */
@@ -1829,9 +1696,8 @@ body { letter-spacing: -0.012em; }
 .fpill.t { color: var(--teal); background: rgba(100,210,255,0.12); border-color: rgba(100,210,255,0.3); }
 .fpill.top { color: var(--orange); }
 .fpill.is-active { outline: 2px solid currentColor; outline-offset: -1px; font-weight: 800; }
-.deck-npick { font: 600 11.5px/1 var(--sans); color: var(--muted-2); white-space: nowrap; }
-/* Products set aside from the A+/A counts (2026-08-13). Quieter than
-   .deck-npick on purpose: it explains a subtraction, it is not a target. */
+/* Products set aside from the A+/A counts (2026-08-13). Quiet on
+   purpose: it explains a subtraction, it is not a target. */
 .deck-products {
   font: 600 11.5px/1 var(--sans); color: var(--muted-2); white-space: nowrap;
   opacity: .82; cursor: help;
@@ -1960,7 +1826,6 @@ body { letter-spacing: -0.012em; }
 .rec-card-ft .rec-age { margin-top: 0; }
 .rec-open { font: 700 12px/1 var(--sans); color: var(--blue); text-decoration: none; white-space: nowrap; }
 .rec-open:hover { text-decoration: underline; }
-.rec-mv.watched { border-color: rgba(255,159,10,0.45); background: var(--orange-soft); }
 
 /* ── Wave R #12: note archive fold ──────────────────────────────────────── */
 .rec-archive {
@@ -2039,13 +1904,12 @@ body { letter-spacing: -0.012em; }
 /* Slim variant on scroll (#3): tighter paddings + smaller type, counts stay. */
 .toolbar.is-slim { padding: 4px 0 5px; }
 .toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip { font-size: 11px; padding: 4px 8px; }
-.toolbar.is-slim .tb-watch { padding: 4px 10px; }
 .toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { font-size: 11px; padding: 4px 9px; }
 /* The slim (scrolled) state shrank the controls below the 40px tap floor the
    full-size toolbar already guarantees — precisely when a phone user is
    scrolling with a thumb over them. Floor them; the slim look keeps the
    smaller type, the hit area does not shrink with it. */
-.toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip, .toolbar.is-slim .tb-watch,
+.toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip,
 .toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { min-height: 40px; }@media (max-width: 680px) {
   /* Mobile keeps the ONE-LINE horizontally-scrolling strip (thumb design):
      nowrap + natural width so the strip scrolls instead of squashing. */
@@ -2138,7 +2002,6 @@ body { letter-spacing: -0.012em; }
 /* ── Wave 5 #47: FUND/REIT dimming (default on, ⚠ FUNDS chip toggles) ───── */
 .row-wrap.row-dim { opacity: 0.45; }
 .row-wrap.row-dim:hover, .row-wrap.row-dim.open { opacity: 1; }
-.tb-dim.is-active { color: var(--orange); }
 
 /* ── Wave 4 core (#27+#28+#33): phone rows + touch targets ──────────────────
    ≤680px: 44px grade rail; company name gets its OWN line under the ticker
@@ -2157,11 +2020,11 @@ body { letter-spacing: -0.012em; }
   }
   /* Debug-copy is a desktop tool — its 44px box starved the ticker line. */
   .row-copy-debug { display: none; }
-  .t-star, .row-expand {
+  .row-expand {
     min-width: 38px; min-height: 44px; position: relative;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .t-star::after, .row-expand::after { content: ""; position: absolute; inset: -3px; }
+  .row-expand::after { content: ""; position: absolute; inset: -3px; }
   .row-right { gap: 0; }
   .row-price { min-width: 62px; }
   .row-kpis { min-width: 44px; }
@@ -2204,10 +2067,6 @@ body { letter-spacing: -0.012em; }
   /* Full-screen overlays must clear the notch too. */
   .search-overlay { padding-top: env(safe-area-inset-top, 0px); }
 }
-
-/* ── Wave 4 #44: star tap micro-animation ───────────────────────────────── */
-@keyframes star-pop { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
-.t-star.pop { animation: star-pop .32s cubic-bezier(.2,.8,.3,1.4); }@media (prefers-reduced-motion: reduce) { .t-star.pop { animation: none; } }
 
 /* ── Wave 4 #45: long-press quick-action sheet ──────────────────────────── */
 .qa-scrim {
@@ -2257,7 +2116,7 @@ body { letter-spacing: -0.012em; }
    as desktop and h-scroll (done earlier); this gives their controls proper
    >=40px touch height on phones per the iOS HIG. */
 @media (max-width: 680px) {
-  #toolbar .seg-btn, #toolbar .vkf-chip, #toolbar .tb-watch,
+  #toolbar .seg-btn, #toolbar .vkf-chip,
   #toolbar .tb-sort-label, #toolbar .tb-sort-dir {
     min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
   }
@@ -2291,7 +2150,6 @@ body { letter-spacing: -0.012em; }
   font: 600 11px/1 var(--sans); padding: 8px 12px; border-radius: 999px;
 }
 .dp-copy:hover { color: var(--text-2); border-color: var(--border-2); }
-.olw-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ── Wave 6 #58: skip render work for off-screen rows ───────────────────────
    content-visibility:auto lets the browser skip layout+paint for rows outside
@@ -2307,10 +2165,7 @@ body { letter-spacing: -0.012em; }
 .row-cap-all { appearance: none; border: 1px solid var(--blue); background: transparent; color: var(--blue);
   font: 700 12.5px/1 var(--sans); padding: 8px 14px; border-radius: 999px; cursor: pointer; }
 .row-cap-all:hover { background: var(--blue); color: #fff; }
-
-/* ── Wave 6 #65: sprite icon fills (star fill toggles via .starred) ──────── */
-.t-star svg { fill: none; stroke: currentColor; stroke-width: 2; }
-.t-star.starred svg { fill: currentColor; }
+/* ── Wave 6 #65: sprite icon fills ─────────────────────────────────────── */
 .row-expand svg { fill: none; stroke: currentColor; stroke-width: 2.2; }
 
 /* ── UX top-10 #2: system-status pill + popover ──────────────────────────── */
@@ -2431,7 +2286,6 @@ body { letter-spacing: -0.012em; }
   #toolbar .seg-btn { padding: 6px 9px; }
   .tb-line { gap: 5px; }
   #toolbar #vk-filters { gap: 5px; }
-  .tb-watch { padding: 7px 10px; }
   .tb-sort-label { min-width: 54px; }
 }
 
@@ -2654,14 +2508,12 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
    four distinct QUESTIONS; a hairline between the groups lets the eye jump
    straight to the right one. Pure separator: no chip moves, none is renamed,
    nothing is hidden, and every existing handler is untouched. */
-.tb-line > .tb-watch:first-of-type,
 .tb-line > .tb-chips,
 .tb-line > .tb-sort {
   position: relative;
   margin-left: 12px;
   padding-left: 12px;
 }
-.tb-line > .tb-watch:first-of-type::before,
 .tb-line > .tb-chips::before,
 .tb-line > .tb-sort::before {
   content: ""; position: absolute; left: 0; top: 50%;
@@ -2704,7 +2556,7 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
  * default grey on the other twelve — i.e. the wayfinding colour is missing
  * from every page you would navigate FROM, which is the only place it works.
  * Every other piece of cross-page nav chrome already lives here (.nav-back,
- * .pm-topnav .howto-link, .site-tab[data-tabkey=…]).
+ * .site-tab[data-tabkey=…]).
  *
  * WHY EVERY SELECTOR CARRIES [href="momentum.html"]. Two reasons. It keeps
  * nav.js's RENDER path byte-untouched — only its data arrays changed — so the
