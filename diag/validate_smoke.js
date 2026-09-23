@@ -66,7 +66,18 @@ const vrefs = (html) => [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)].m
       moColor: (() => { const a = document.querySelector('.nav-pills .howto-link[href="momentum.html"]'); return a ? getComputedStyle(a).borderTopColor + " / " + getComputedStyle(a).backgroundColor : ""; })(),
       tabs: [...document.querySelectorAll(".site-tabs a.site-tab")].map((a) => a.dataset.tabkey),
       more: !!document.querySelector(".site-tabs .site-tab-more"),
+      fresh: (() => { const b = document.getElementById("scan-fresh"); return b ? `${b.className} :: ${b.textContent.trim()}` : ""; })(),
+      dot: (document.getElementById("deck-dot") || {}).className || "",
     }));
+    // session + 2h (scan-honesty): the served ASX payload is judged by the
+    // shipped rule; the box and the dot must agree with each other.
+    {
+      let gen = "";
+      try { gen = JSON.parse((await getText(BASE + "/data/asx_vivek.json")).text).generated_at || ""; } catch (_) {}
+      const said = /no scan since the (open|close)/.test(r.fresh);
+      rec(P, "freshness: box and dot agree on session + 2h", said ? /warn/.test(r.fresh) && /warn/.test(r.dot) : true,
+        `payload ${gen} || ${r.fresh} || dot ${r.dot}`);
+    }
     rec(P, "deck title painted (not loading)", r.title && !/Loading latest scan/.test(r.title), r.title.slice(0, 80));
     rec(P, "filter pills (.fpill) >= 3", r.pills >= 3, r.pills);
     rec(P, "A+ cards present", r.aplus > 0, `${r.aplus} A+ of ${r.rows} rows`);
@@ -98,8 +109,8 @@ const vrefs = (html) => [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)].m
   // ── /momentum (default ASX) + /momentum?m=nasdaq ──
   for (const [url, m] of [["/momentum", "asx"], ["/momentum?m=nasdaq", "nasdaq"]]) {
     const P = url;
-    let want = NaN;
-    try { want = (JSON.parse((await getText(`${BASE}/data/momentum/${m}.json`)).text).results || []).length; } catch (_) {}
+    let want = NaN, sum = null;
+    try { const doc = JSON.parse((await getText(`${BASE}/data/momentum/${m}.json`)).text); want = (doc.results || []).length; sum = doc.summary || null; } catch (_) {}
     const { ctx, page, errs } = await open(url, "phone");
     await page.waitForFunction(() => !/loading/i.test((document.getElementById("mo-title") || {}).textContent || "loading"), null, { timeout: 45000 }).catch(() => {});
     await page.waitForTimeout(1500);
@@ -112,8 +123,18 @@ const vrefs = (html) => [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)].m
       fpillB: document.querySelectorAll(".fpill b").length,
       deckPill: document.querySelectorAll(".deck-pill").length,
       over: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      cover: (() => { const c = document.getElementById("mo-cover"); return c ? (c.hidden ? "" : c.textContent.trim()) : null; })(),
+      dot: (document.getElementById("mo-dot") || {}).className || "",
     }));
     const n = num(/MOMENTUM · (\d+)/, r.title);
+    if (sum && typeof sum.downloaded === "number" && typeof sum.universe === "number") {
+      const want2 = `${sum.downloaded.toLocaleString("en-AU")} of ${sum.universe.toLocaleString("en-AU")} downloaded`;
+      const partial = sum.downloaded < sum.universe;
+      rec(P, `coverage in the header: "${want2}"`, r.sub.includes(want2) && !/%/.test(r.sub), r.sub);
+      rec(P, partial ? "partial: one sentence + amber dot" : "full: no sentence, no amber",
+        partial ? (/not the whole market\.$/.test(r.cover || "") && /warn/.test(r.dot)) : (r.cover === "" && !/warn/.test(r.dot)),
+        `${r.dot} || ${r.cover}`);
+    }
     rec(P, "no page error", errs.length === 0, errs.join(" ; ") || "none");
     rec(P, "header: title + scanned/gated/last bar", /MOMENTUM ·/.test(r.title) && /scanned/.test(r.sub) && /gated/.test(r.sub) && /last bar \d{4}-\d{2}-\d{2}/.test(r.sub), `${r.title} || ${r.sub}`);
     rec(P, `rows == served ${m}.json results`, Number.isFinite(want) && r.rows === want && n === want, `header ${n}, .mo-row ${r.rows}, json ${want}`);

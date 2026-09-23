@@ -24,7 +24,9 @@ jobs:
           npx playwright install --with-deps chromium > /dev/null 2>&1
       - name: Compare against the branch the preview serves
         run: |
-          if grep -q "validate-2026-09-23-v8" diag/base.txt 2>/dev/null; then
+          if grep -q "scan-honesty-2026-09-23" diag/base.txt 2>/dev/null; then
+            git fetch -q origin scan-honesty-2026-09-23
+          elif grep -q "validate-2026-09-23-v8" diag/base.txt 2>/dev/null; then
             git fetch -q origin validate-2026-09-23-v8
           elif grep -q "validate-2026-09-23" diag/base.txt 2>/dev/null; then
             git fetch -q origin validate-2026-09-23
