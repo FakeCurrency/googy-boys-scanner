@@ -33,7 +33,7 @@
    guard firing is the machine working — see the states matrix in status.js. */
 .sysdot[data-level="red"] .sysdot-lamp { animation: sysPulse 1.4s ease-in-out infinite; }
 @keyframes sysPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-/* Screen-reader sentence — the two-letter label alone is not a status. */
+/* Screen-reader sentence — the one-word label (OK / CHECK / DOWN) alone is not a status. */
 .sysdot-sr { position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; }
 /* PHONES GET THE DOT, NOT THE WORD, AT 30px — every number here was measured,
