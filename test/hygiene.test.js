@@ -143,7 +143,7 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
 {
   const css = code("css/phasemap.css");
   ok(css.includes(".pm-chart-cue {"), "css/phasemap.css moved -- pin would be vacuous");
-  for (const c of ["is-on", "pm-chart-box", "pm-chart-head", "pm-chart-note", "pm-more-btn", "pm-star", "pm-tab-watchlist", "pm-topnav", "sp-chev", "sp-detail-chips", "sp-grade", "sp-levels", "sp-name", "sp-row-detail", "sp-row-main", "sp-row-price", "sp-row-score", "sp-stop", "sp-target"])
+  for (const c of ["is-on", "pm-chart-box", "pm-chart-head", "pm-chart-note", "pm-more-btn", "pm-star", "pm-tab-watchlist", "pm-topnav", "sp-chev", "sp-detail-chips", "sp-grade", "sp-levels", "sp-name", "sp-row-detail", "sp-row-main", "sp-row-price", "sp-row-score", "sp-stop", "sp-target", "sp-list"])
     ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
        `css/phasemap.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
   ok(!/#pm-chart(?![\w-])/.test(css), "css/phasemap.css: no element carries id pm-chart (deleted 2026-09-23)");
