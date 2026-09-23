@@ -100,9 +100,9 @@
       <table class="sys-t">
         <tr><th>Data</th><th>Source</th><th>Freshness</th></tr>
         <tr><td>Historical bars (all scans, all lenses)</td><td><code>yfinance</code> (Yahoo Finance), pinned version, downloaded in GitHub Actions</td><td>~15&nbsp;min delayed; daily/weekly bars</td></tr>
-        <tr><td>Live crypto prices (chart, journal, watcher)</td><td>Binance public API (<code>&lt;SYM&gt;USDT</code>), Yahoo <code>&lt;SYM&gt;-USD</code> fallback</td><td>Real-time</td></tr>
-        <tr><td>Live stock quotes (chart, journal, watcher)</td><td>Yahoo via the <code>/api/quote</code> Cloudflare proxy (query1→query2 fallback)</td><td>~15&nbsp;min delayed</td></tr>
-        <tr><td>Journal “Now” prices (manual side)</td><td>Scan price snapshot first (<code>prices</code> map in <code>&lt;market&gt;_vivek.json</code> — the whole universe, every scan), live quote only as fallback</td><td>Refreshed each scan</td></tr>
+        <tr><td>Live crypto prices (chart)</td><td>Binance public API (<code>&lt;SYM&gt;USDT</code>), Yahoo <code>&lt;SYM&gt;-USD</code> fallback</td><td>Real-time</td></tr>
+        <tr><td>Live stock quotes (chart)</td><td>Yahoo via the <code>/api/quote</code> Cloudflare proxy (query1→query2 fallback)</td><td>~15&nbsp;min delayed</td></tr>
+        <tr><td>Journal marks</td><td>The bot book is marked to market server-side on every scan (<code>unreal_r</code> / <code>unreal_usd</code> in <code>vivek_bot_book.json</code>)</td><td>Refreshed each scan</td></tr>
         <tr><td>Universes</td><td>ASX full list (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100 + extras; bundled CSVs in <code>data_universe/</code> as fallback</td><td>Rebuilt per scan</td></tr>
         <tr><td>Market caps / sectors</td><td>Yahoo fundamentals, persistent cache (<code>market_caps.json</code>)</td><td>Best-effort, fills over runs</td></tr>
           </table>
@@ -117,15 +117,13 @@
       <h2>2 · What runs when <span class="who">(GitHub Actions cron, UTC — best-effort ±few min)</span></h2>
       <table class="sys-t">
         <tr><th>Job</th><th>When</th><th>Does</th></tr>
-        <tr><td>Stock scans + bot</td><td>ASX hourly 00:00–05:00 + 06:30 close · NASDAQ 13:30 open, hourly 14:00–20:00, 21:00 close (weekdays)</td><td>Scan all markets, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
-        <tr><td>Crypto bot</td><td>Hourly, 24/7</td><td>Crypto scan + bot book</td></tr>
-        <tr><td>Weekend crypto sweep</td><td>6-hourly Sat/Sun</td><td>Keeps crypto data fresh when stock scans sleep</td></tr>
-        <tr><td>Stop/target watcher</td><td><strong>Every 5 min, 24/7</strong></td><td>Cloud-side: applies the full VIVEK scale-out rules to your manual positions (TP partials, SL trailing, honest stop fills) — works with no page open</td></tr>
+        <tr><td>Stock scans + bot</td><td>Market hours only, weekdays, in each market’s own calendar: ASX ~hourly 11:07→16:30 Sydney · NASDAQ ~hourly 10:37→16:07 New York (plus a closing backstop)</td><td>Scan one stock market per run, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
+        <tr><td>Crypto bot</td><td>:22 and :52 every hour, 24/7 (:52 skips when the scan is fresh)</td><td>Crypto scan + the crypto slice of the bot book</td></tr>
         <tr><td>PhaseMap nightly</td><td>08:30 UTC daily</td><td>PhaseMap states for all markets + per-symbol chart data</td></tr>
-        <tr><td>Kill-switch check</td><td>:15/:45 each session hour</td><td>Daily-loss flatten check (legacy journal)</td></tr>
+        <tr><td>Kill-switch check</td><td>:15 and :45, 24/7</td><td>Loss check on the bot book per market, open positions re-priced with live quotes</td></tr>
         <tr><td>Weekly lens backtests</td><td>Sun 08:00 UTC</td><td>Refreshes <code>vivek_backtest.json</code> (canonical, both directions)</td></tr>
         <tr><td>VIVEK long-only backtest</td><td>1st of month, 08:00 UTC</td><td>Refreshes <code>vivek_backtest_longonly.json</code> — the bot-relevant evidence</td></tr>
-        <tr><td>Tests</td><td>Every push</td><td>~290 Python + JS tests gate all code</td></tr>
+        <tr><td>Tests</td><td>Every push</td><td>The pytest suite + every JS suite in <code>test.yml</code> gate all code</td></tr>
       </table>
     </section>
 
@@ -157,8 +155,8 @@
       <h2>4 · Grading</h2>
       <table class="sys-t">
         <tr><th>Grade</th><th>Meaning</th><th>Gates</th></tr>
-        <tr><td><span class="pill-g">A+</span></td><td>Top tier — the only grade the bot trades</td><td>Must be ARMED (a trigger actually fired) + clean structure + R:R ≥ minimum</td></tr>
-        <tr><td><span class="pill-a">A</span></td><td>Tradeable manually; ~breakeven in the backtest</td><td>ARMED required</td></tr>
+        <tr><td><span class="pill-g">A+</span></td><td>Top tier — the bot trades it inside the four HIGH-CONVICTION cells</td><td>Must be ARMED (a trigger actually fired) + clean structure + R:R ≥ minimum</td></tr>
+        <tr><td><span class="pill-a">A</span></td><td>Also traded by the bot inside the four cells since 2026-09-21 (same edge as A+ there, see §5)</td><td>ARMED required</td></tr>
         <tr><td><span class="pill-b">B+</span></td><td>Watching — near the level, no trigger yet</td><td>Un-armed setups cap here</td></tr>
         <tr><td><span class="pill-w">WATCH</span></td><td>Informational</td><td>—</td></tr>
       </table>
@@ -206,7 +204,7 @@
 
     <!-- ═══════════════ 6 · SIZING & COSTS ═══════════════ -->
     <section class="sys" id="sizing">
-      <h2>6 · Sizing &amp; cost model <span class="who">(identical for bot, manual journal, cloud watcher)</span></h2>
+      <h2>6 · Sizing &amp; cost model <span class="who">(the paper bot book)</span></h2>
       <ul>
         <li><strong>Book:</strong> ONE pool of <span class="rule" data-r="account_equity">$150,000</span> across all
           three markets (was $10,000 per market → $30,000; changed 2026-07-28 with fixed sizing). Any market can hold
@@ -238,14 +236,14 @@
 
     <!-- ═══════════════ 7 · TRADE MANAGEMENT ═══════════════ -->
     <section class="sys" id="mgmt">
-      <h2>7 · Trade management ladder <span class="who">(the same rules run the bot, your manual trades, and the 24/7 watcher)</span></h2>
+      <h2>7 · Trade management ladder <span class="who">(the rules that run the paper bot book)</span></h2>
       <table class="sys-t">
         <tr><th>Event</th><th>Action (long)</th></tr>
         <tr><td><strong>TP1</strong> hit</td><td>Book 25% at the level · stop → <strong>break-even</strong></td></tr>
         <tr><td><strong>TP2</strong> hit</td><td>Book 50% · stop → <strong>TP1</strong> (locked structure)</td></tr>
         <tr><td><strong>TP3</strong> hit</td><td>Book 15% · remainder runs with the trailed stop</td></tr>
         <tr><td><strong>Stop</strong> hit</td><td>Close the remainder. Exit reason: <code>stop</code> (no TP hit) · <code>trail</code> (TP1+ hit) · <code>target</code> (TP3 hit)</td></tr>
-        <tr><td>Chased manual entry</td><td>A TP already <em>behind</em> your entry never books (valid-target guard); chart warns before a chased Buy and recuts TP1-3 as fresh R-multiples from your actual entry</td></tr>
+        <tr><td>Chased entry</td><td>No position opens when the fill price is already at or beyond TP1, or on the wrong side of the stop (the don’t-chase guard)</td></tr>
       </table>
       <p>Stops only ever move <em>in the trade’s favour</em>. Shorts mirror with 50/25/15 scaling.</p>
     </section>
@@ -268,15 +266,14 @@
       <table class="sys-t">
         <tr><th>File</th><th>Written by</th><th>Read by</th></tr>
         <tr><td><code>data/&lt;m&gt;_vivek.json</code></td><td>Scan (Actions)</td><td>Dashboard, chart, journal (incl. whole-universe <code>prices</code> map)</td></tr>
-        <tr><td><code>data/vivek_bot_book.json</code></td><td>Bot runner each scan (server-marked unreal R/$)</td><td>Journal “Claude” side, dashboard activity strip</td></tr>
-        <tr><td><code>data/bot_rules.json</code></td><td>Every scan, from <code>scanner/config.py</code></td><td>Bot page, this page (live values, drift-warning)</td></tr>
+        <tr><td><code>data/vivek_bot_book.json</code></td><td>Bot runner each scan (server-marked unreal R/$)</td><td>Journal, dashboard activity strip, status lamp</td></tr>
+        <tr><td><code>data/bot_rules.json</code></td><td>Every scan, from <code>scanner/config.py</code></td><td>Dashboard, chart, journal, status lamp, this page (live values, drift-warning)</td></tr>
         <tr><td><code>data/phasemap/&lt;m&gt;/latest.json</code> (+dated, charts/, stats/)</td><td>PhaseMap nightly</td><td>PhaseMap pages, confluence</td></tr>
         <tr><td><code>data/&lt;m&gt;_spec.json</code> + <code>spec_charts/</code></td><td>Specs scan</td><td>SPECS page, confluence</td></tr>
-        <tr><td>Your manual trades + watchlists</td><td><strong>Your browser</strong> (localStorage) → optional Cloudflare KV sync (private code)</td><td>Journal “Me” side, chart position box, the lens ★ watchlists; the 5-min cloud watcher manages open trades in KV</td></tr>
         <tr><td><code>data/vivek_backtest*.json</code></td><td>Weekly lens backtest · monthly long-only backtest</td><td>Insights / evidence pages</td></tr>
       </table>
-      <p class="sys-note">Cloud writes are budgeted (max 400/day/device) and only fire on real user actions —
-        rule-computed changes (scale-outs, auto-closes) save locally and re-derive on every device.</p>
+      <p class="sys-note">The manual journal, the lens ★ watchlists and their Cloudflare KV sync were removed
+        2026-09-21; the paper bot book is the only journal.</p>
     </section>
 
     <!-- ═══════════════ 9 · SAFETY ═══════════════ -->
@@ -285,7 +282,7 @@
       <ul>
         <li><strong>Paper only.</strong> No real orders anywhere. Live execution requires — all together — per-market
           <code>MODE="live"</code> + <code>VIVEK_LIVE_CONFIRMED=True</code> + a wired, reviewed broker layer. None exist today.</li>
-        <li><strong>Daily-loss guard</strong> per market (above) + a separate kill-switch workflow for the legacy journal.</li>
+        <li><strong>Daily-loss guard</strong> per market (above) + the half-hourly kill-switch workflow, which re-checks the bot book’s losses per market against live quotes.</li>
         <li><strong>Schema gate:</strong> every scan verifies the published JSON carries the current schema version — code/data drift fails the workflow instead of silently hiding features.</li>
         <li><strong>Atomic writes</strong> (temp + rename) + corrupt-file quarantine on every journal/book load.</li>
         <li><strong>Config-first:</strong> every threshold lives in <code>scanner/config.py</code> / <code>phasemap/config.py</code>; bot constants republished to <code>bot_rules.json</code> each scan and drift-checked in the UI.</li>
@@ -321,7 +318,7 @@
     <section class="sys" id="limits">
       <h2>11 · Known limitations (read before trusting any number)</h2>
       <ul>
-        <li><strong>~15-min delayed data</strong>; the bot marks positions hourly at scans (manual trades: every 5 min via the watcher). Real gaps can and do blow through stops — losses beyond −1R are recorded honestly.</li>
+        <li><strong>~15-min delayed data</strong>; the bot marks positions at each scan. Real gaps can and do blow through stops — losses beyond −1R are recorded honestly.</li>
         <li><strong>Survivorship bias</strong> in backtests (current index membership). Discount NASDAQ cells hardest.</li>
         <li><strong>Paper ≠ broker:</strong> the model prices commission + slippage but not CFD spread or overnight financing (~7–8%/yr on notional at CMC) — your real P&amp;L will lag the paper book.</li>
         <li><strong>Cron is best-effort:</strong> scans can run minutes late; weekday crons don’t know market holidays.</li>
