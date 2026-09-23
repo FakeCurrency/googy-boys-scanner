@@ -171,6 +171,15 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
        `css/status.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
 }
 
+// SWEEP (2026-09-23) -- css/about.css: the EMA-ladder illustration about.html no longer has.
+{
+  const css = code("css/about.css");
+  ok(css.includes(".doc-section"), "css/about.css moved -- pin would be vacuous");
+  for (const c of ["ema-ladder"])
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/about.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
+}
+
 // STYLESHEET COMMENTS CLOSE (2026-09-23). A regex deletion on 2026-09-20
 // (5ac425b2a) glued two comment openers in chart.css onto the rule bodies
 // below them, so each comment ran on to the NEXT comment's "*/" -- silently
