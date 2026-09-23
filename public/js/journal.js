@@ -67,16 +67,18 @@
   //
   // Why this exists: a scan back-fills any ticker Yahoo dropped from the
   // last-good frame cache, and that cached close is published into `prices`
-  // looking exactly like a live one. Every open position on this page is marked
-  // off that map — so a name Yahoo has not returned in a week was drawing a
-  // week-old close as its current price, computing an unrealised R off it, and
-  // showing nothing at all to say so. The number is not wrong so much as it is
+  // looking exactly like a live one. The bot's server-side marks come off the
+  // same merged frames that feed that map — so a name Yahoo has not returned in
+  // a week was drawing a week-old close as its current price, computing an
+  // unrealised R off it, and showing nothing at all to say so. The number is not wrong so much as it is
   // not what it claims to be, and that is the failure worth surfacing.
   const scanAge = new Map();
   const ageOf = (key) => scanAge.get(key) || 0;
   const staleWord = (d) => `${d} session${d === 1 ? "" : "s"}`;
-  // Applied to a rendered "Now" cell. Both branches always run: a cell that has
-  // gone FRESH again must lose the badge, or the badge decays into decoration.
+  // For a rendered "Now" cell. No caller on the page since the live-quote
+  // chain went (2026-09-21) — the bot branch builds the class inline — but it
+  // is the helper journal_stale.test pins. Both branches always run: a cell
+  // that has gone FRESH again must lose the badge, or it decays into decoration.
   function markStale(cell, days) {
     if (!cell) return;
     cell.classList.toggle("jr-stale", days > 0);
@@ -133,8 +135,10 @@
         }
       }
       // The exit ladder (TOP100 #33). These three fractions decide how much of
-      // a position each TP books, so they are the multiplier on every scaled R
-      // this page reports — and they were a hand-typed copy of
+      // a position each TP books. The page used them for the manual book's R;
+      // since that went (2026-09-21) nothing here reads SCALE — every R shown is
+      // the server's — so it is adopted and drift-logged only (journal_money
+      // pins that it can be replaced). They were a hand-typed copy of
       // scanner/config.py VIVEK_TP_SCALE_LONG/SHORT that nothing compared. A
       // trade already carries its own `scale` from the day it was taken
       // so adopting a new ladder only ever affects positions opened from here
@@ -160,7 +164,7 @@
       }
       if (Object.keys(drift).length) {
         console.warn("[journal] sizing fallbacks drifted from bot_rules.json (scanner/config.py) — live values now in effect:", drift);
-        RULES_GEN++;  // invalidate anything derived from the old constants
+        RULES_GEN++;  // no reader since 2026-09-21; journal_money.test pins the bump
       }
     } catch (_) { /* offline — fallbacks stand */ }
   }
@@ -263,7 +267,7 @@
 
   // FX honesty: ASX positions are priced in A$ while NASDAQ/crypto are US$.
   // Every $ AGGREGATE on this page converts ASX P&L to US$ at the scan's
-  // published AUD/USD rate (data/fx.json) so the head-to-head totals stop
+  // published AUD/USD rate (data/fx.json) so the book's totals stop
   // mixing currencies at face value (~50% overstatement of ASX P&L).
   let FX_AUDUSD = 0.66;                       // fallback until fx.json loads
   const fxOf = (t) => ((t.market || t.asset_type) === "asx" ? FX_AUDUSD : 1);
@@ -296,8 +300,8 @@
   // ── stats + equity ────────────────────────────────────────────────────────
   // A drawdown is a property of the ORDER trades closed in, not of the set
   // (TOP100 #30). `closed` arrives in whatever order the store appended it —
-  // for the bot book that is market-by-market, so every NASDAQ trade of the
-  // year lands before the first ASX one — and max drawdown was being measured
+  // for the bot book that is market-by-market, so every ASX trade of the
+  // year lands before the first NASDAQ one (then crypto) — and max drawdown was being measured
   // by walking that arbitrary permutation, while the equity chart directly
   // beside it sorted by exit time. The two numbers described different curves.
   // Both now walk THIS order, so they cannot disagree again.
@@ -388,7 +392,6 @@
   // AT-ENTRY direction must be unmissable, because the scan's read can flip
   // after entry and the chart may show the opposite setup today.
   const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "▼ SHORT" : "▲ LONG"}</span>`;
-  // Warn chip when the CURRENT scan reads the opposite way to an open trade.
   // Review chip — this position was flagged HEAVY when the bot took it
   // (server-side, scanner/broker/vivek_bot.review_flags; owner 2026-07-28:
   // "Flag this in the future so i can verify whether claude or I should take
@@ -413,6 +416,7 @@
       : "Flagged heavy at entry — a big share of the daily loss guard in one name";
     return `<span class="jr-review" title="${esc(title)}">⚑ ${esc(share)}</span>`;
   };
+  // Warn chip when the CURRENT scan reads the opposite way to an open trade.
   const flipChip = (t) => {
     if (t.status === "closed") return "";
     const now = (scanMeta.get(symKey(t)) || {}).dir;
@@ -423,7 +427,9 @@
   };
   // Grade + setup type: the bot logs these; manual trades now do too. For trades
   // taken before that, fall back to the live scan's grade/trigger for the symbol
-  // so older rows aren't blank (scanMeta is filled from *_vivek.json at load).
+  // so older rows aren't blank. (scanMeta is filled from the slim
+  // <mkt>_prices.json, which carries grade + dir only; the entry trigger is
+  // only there on the full *_vivek.json fallback path.)
   const symKey = (t) => String((t && t.symbol) || "").toUpperCase();
   const gradeOf = (t) => t.grade || (scanMeta.get(symKey(t)) || {}).grade || null;
   const entryTypeOf = (t) => t.entry_type || (scanMeta.get(symKey(t)) || {}).entry_type || null;
@@ -491,8 +497,8 @@
       const ur = t.unreal_r, ud = t.unreal_usd != null ? t.unreal_usd * fxOf(t) : null;
       // The bot side is marked SERVER-SIDE, but off the same merged frames the
       // price map comes from — so it inherits the same fossil risk and earns the
-      // same badge (TOP100 #24). Built as attributes here rather than via
-      // markStale because this branch returns HTML, not a live cell.
+      // same badge (TOP100 #24). The class and title are set inline here
+      // (markStale acts on a live cell; this branch returns HTML).
       const d = ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
       const cls = "num jr-now" + (d > 0 ? " jr-stale" : "");
       // batch-100 item 24: distance to the REAL stop rides the Now cell —
@@ -552,9 +558,10 @@
   let openSort = { key: "opened", dir: -1 };   // dir -1 = best/newest at the top
 
   // The two numbers a row can be sorted by — ONE resolver, so the order can
-  // never disagree with the cells it is ordering. (It took a `side` argument
-  // while a second, client-priced book existed; the manual journal was removed
-  // 2026-09-21 and the bot book arrives already marked.)
+  // never disagree with the cells it is ordering. It still takes `side`: the
+  // non-bot branch below priced the manual book off scanPrice, and is
+  // unreachable from the page since that book went (paintOpen is only called
+  // with "bot") — kept because journal_money.test exercises it.
   //
   // Returns null, never 0, when a value cannot be resolved. An unpriced row is
   // UNKNOWN, not flat, and sorting it as flat drops it into the middle of the
@@ -1004,7 +1011,8 @@
   // below the fold of its own strip. The one thing it must never become is a
   // nudge to cut more positions by hand — that would make the surface CAUSE
   // the confound it exists to report. Renders nothing when no row carries a
-  // cycle stamp (pre-cycle books, fixtures, the manual side).
+  // w3-1 stamp (pre-cycle books, and rows opened after w3-1 ended, which
+  // carry hc4-1).
   const W3_TAG = "w3-1";
   const W3_TARGET = 30;
 
@@ -1303,7 +1311,7 @@
 
   // ── OPEN POSITIONS P&L headline (owner 2026-07-22): the total $ up/down on
   // current positions, before anything else on the page. Marked from the book
-  // JSON (last scan / kill-switch pricing). All US$ per the page convention
+  // JSON (the last scan's server-side marks). All US$ per the page convention
   // (fx-note).
   function renderPnlHeadline() {
     const box = $("#jr-pnl");
@@ -1508,8 +1516,9 @@
 
   // counts index: 0 = <=-2R, 1 = -2..-1, 2 = -1..0, 3 = 0..1, 4 = 1..2, 5 = 2..3, 6 = >3R
   // Phrasing tracks the buckets exactly — bucket 1 is "at or just past -1R"
-  // (it spans -2R..-1R inclusive), NOT "inside the stop", or this caption would
-  // contradict the exit-quality panel's past-the-stop count sitting above it.
+  // (it spans just past -2R up to and including -1R), NOT "inside the stop", or
+  // this caption would contradict the exit-quality panel's past-the-stop count
+  // directly below it.
   function rdistNote(counts, n) {
     const deepLoss = counts[0], nearStop = counts[1], insideStop = counts[2];
     const losses = deepLoss + nearStop + insideStop;
@@ -1620,8 +1629,10 @@
     }
   }
 
-  // Pull per-symbol grade/trigger (fallback) + the scan's last price (the Now
-  // source for manual trades) from the live scans. Re-runnable: prices overwrite.
+  // Pull per-symbol grade/dir (the grade-column fallback and flipChip's
+  // direction) and the stale-age map scanAge from the live scans. scanPrice is
+  // still filled but only openMetric's unreachable non-bot branch reads it.
+  // Re-runnable: prices overwrite.
   async function loadScanMeta() {
     // Prefer the SLIM per-market companion (2026-07-20, perf): ~5% the size of
     // the full scan files this page used to download (~3MB across markets)
@@ -1666,9 +1677,9 @@
           if (row.price != null) scanPrice.set(mkt + ":" + sym, +row.price);
         }
         // Universe-wide last-close snapshot — covers held names that are no longer
-        // a current setup (so any open position can be priced from the scan).
-        // The full file has no `price_age` map, but its SETUP rows have carried
-        // `data_age_days` all along, so the badge still works for those; the
+        // a current setup. The full file DOES carry a top-level `price_age` (the
+        // slim file copies it), but this fallback reads the SETUP rows'
+        // `data_age_days` instead, so the badge works for those and the
         // universe-wide extras fall back to unknown, which renders as fresh.
         // This is the pre-deploy fallback path only — the slim file above is
         // what every real run reads.
