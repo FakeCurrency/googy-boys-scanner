@@ -326,18 +326,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .vkf-note { font: 600 11.5px/1 var(--sans); color: var(--muted-2); }
 
-/* ================================================== VIVEK paper track record */
-.track {
-  margin: 4px 0 18px; padding: 14px 16px; border-radius: 14px;
-  background: var(--panel); border: 1px solid var(--border);
-}
-
-/* ======================================================================= PULSE */
-.pulse {
-  display: flex; align-items: stretch; border-radius: var(--radius);
-  background: var(--panel); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow);
-}
-
 /* ===================================================================== stats */
 .stats {
   display: grid; grid-template-columns: repeat(4,1fr); gap: 0;
