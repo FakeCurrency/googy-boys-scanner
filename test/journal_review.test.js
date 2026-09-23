@@ -9,7 +9,7 @@
 
    It runs the REAL function, sliced out of the shipped file at load time rather
    than re-typed here. journal.js is one big IIFE with no export surface, and the
-   house pattern in test/unit.test.js is to mirror the maths in the test — which
+   old house pattern (test/unit.test.js, deleted 2026-09-21) mirrored the maths — which
    is fine for arithmetic that would fail loudly, and wrong for this: a mirrored
    copy of a chip renderer drifts silently, and a chip that silently stops
    rendering is indistinguishable from a position that was never flagged. So the

@@ -54,7 +54,8 @@
  *
  * Budgets, measured over three consecutive fixture-pinned runs (2026-07-28:
  * transfer 1.850 / 1.861 / 1.861 MB, CLS 0.123 / 0.123 / 0.123):
- *   total transfer weight    < 2.5 MB   (~34% headroom over the 1.86MB baseline)
+ *   total transfer weight    < 1.7 MB   (re-cut after the payload split -- see
+ *                                        TRANSFER_BUDGET_MB below; was 2.5 MB)
  *   cumulative-layout-shift  < 0.50     (unchanged -- see note)
  *   live /data/ payload      INFO, ::warning:: past 7.0MB, NEVER fails
  *   interactive (TTI)        INFO only (runner-variable)

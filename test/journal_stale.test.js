@@ -111,8 +111,7 @@ test("a fresh mark is left completely alone", () => {
 });
 
 test("THE ONE THAT MATTERS: a name that comes back loses its badge", () => {
-  // refreshLive repaints every 20s and loadScanMeta re-pulls every 3 minutes,
-  // against cells that persist. If markStale only ever ADDED the badge, the
+  // loadScanMeta re-pulls every 3 minutes, against cells that persist. If markStale only ever ADDED the badge, the
   // first stale run would mark a cell permanently — and a badge that never
   // clears is worse than no badge at all, because it trains you to read past
   // the ones that are real. Both branches of the toggle always run.

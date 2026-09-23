@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-/* The journal's money arithmetic — TOP100 Tier 2 (#25, #26, #30, #33).
+/* The journal's money arithmetic — TOP100 Tier 2 (#30, #33; #25 and #26 went
+   with the manual journal, 2026-09-21 — their history is kept below).
 
    Four fixes, one theme: every one of them was a number the page reported with
    full confidence that was quietly measuring something other than what its
@@ -91,7 +92,7 @@ vm.runInContext(
   + slice("const byExit = (closed) =>", ";\n") + "\n"
   + slice("function stats(closed, openN) {", "\n  }") + "\n"
   // ── the open-positions sort (2026-08-07) ──
-  // paintOpen / refreshLive are the DOM half and are stubbed; everything that
+  // paintOpen is the DOM half and is stubbed; everything that
   // DECIDES an order is real code lifted out of the shipped file.
   + slice("const scanPrice = new Map()", ";\n") + "\n"
   + slice("function openedMs(t) {", "\n  }") + "\n"
@@ -288,8 +289,11 @@ test("the JS deny-list is spelled the same way as the Python's", () => {
 // suite rather than a view suite of their own.
 suite("open sort — the two books do not carry the same numbers");
 
-// A manual (Me) position: no unreal_r, no unreal_usd. Those cells are painted
-// by refreshLive AFTER render, so the sort has to re-derive them itself.
+// A non-bot row: no unreal_r, no unreal_usd, so openMetric's non-bot branch
+// re-derives them from the scan price. (That branch served the manual "Me"
+// book, removed 2026-09-21; journal.js now only ever passes side "bot", so
+// these pins exercise code the page no longer reaches -- listed in
+// reviews/2026-09-23-validate.md rather than deleted here.)
 const mePos = (over) => Object.assign({
   id: "x", market: "asx", direction: "long", status: "open",
   entry: 10, stop: 9, risk: 1, risk_stop: 9, risk_usd: 500,
@@ -408,9 +412,9 @@ test("ties break by newest, so the order cannot jitter between renders", () => {
 });
 
 test("sortedOpen does not mutate the caller's array", () => {
-  // Same house rule byExit is held to above: state.bot.open / state.me.open are
-  // the LIVE books, and reordering them reorders every other surface that reads
-  // them — silently, and only for whoever clicked.
+  // Same house rule byExit is held to above: state.bot.open is the LIVE book,
+  // and reordering it reorders every other surface that reads it — silently,
+  // and only for whoever clicked.
   resetSort(); const b = book(); const before = ids(b);
   setOpenSort("usd");
   sortedOpen(b, "me");

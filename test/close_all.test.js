@@ -5,7 +5,7 @@
    also all trades Claude has taken — i want a button for each."
 
    This is the most destructive control on the journal page: one click can close a
-   whole book. So this file is mostly about what the two handlers REFUSE to do —
+   whole book. So this file is mostly about what the handler REFUSES to do —
    the same emphasis as tests/test_resize_book_notional.py, for the same reason.
 
    It runs the REAL handlers, sliced out of the shipped file at load time rather
