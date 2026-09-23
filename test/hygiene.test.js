@@ -144,6 +144,15 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
   ok(!/#pm-chart(?![\w-])/.test(css), "css/phasemap.css: no element carries id pm-chart (deleted 2026-09-23)");
 }
 
+// SWEEP (2026-09-23) -- css/sectors.css: the per-sector table the NEWS page no longer draws.
+{
+  const css = code("css/sectors.css");
+  ok(css.includes(".sec-up {"), "css/sectors.css moved -- pin would be vacuous");
+  for (const c of ["sec-table-wrap", "sec-table", "sec-sym", "sec-name", "sec-bar"])
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/sectors.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
+}
+
 // STYLESHEET COMMENTS CLOSE (2026-09-23). A regex deletion on 2026-09-20
 // (5ac425b2a) glued two comment openers in chart.css onto the rule bodies
 // below them, so each comment ran on to the NEXT comment's "*/" -- silently
