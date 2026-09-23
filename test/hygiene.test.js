@@ -85,10 +85,13 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
     "mj-actions", "mj-asset-active", "mj-asset-asx", "mj-asset-btn", "mj-asset-crypto", "mj-asset-nasdaq", "mj-asset-switch", "mj-btn-danger", "mj-close-btn", "mj-currency-wrap", "mj-del-btn", "mj-dir-active", "mj-dir-btn", "mj-dir-long", "mj-dir-short", "mj-dir-switch", "mj-field", "mj-form", "mj-full", "mj-hidden", "mj-label", "mj-leverage-row", "mj-modal", "mj-modal-head", "mj-modal-title", "mj-modal-x", "mj-overlay", "mj-preview", "mj-row", "mj-setting", "mj-settings", "mj-sync", "mj-sync-status",
     "side-cta",
     "w-bot", "w-me",
+    // second pass: common-word classes the literal scan could not see
+    "reason", "both", "me",
   ];
   for (const c of JOURNAL_CSS_GONE)
     ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
        `css/journal.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
+  ok(!/--me\s*:/.test(css), "css/journal.css: --me coloured only the Me side's badge (deleted 2026-09-23)");
 }
 
 // SWEEP (2026-09-23) -- styles.css rules for markup nothing creates any more:
