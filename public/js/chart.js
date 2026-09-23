@@ -1479,7 +1479,7 @@
         : `${MOM_CAPTION} ${String(SYM).toUpperCase()} is not on the latest ` +
           `${MARKET_LABEL[market] || market} momentum scan — showing the raw chart with the lens's own moving averages.`,
       default_tf: "1D", level_lines: [], timeframes: {},
-      _fallback: true, _vivek: false, _momentum: true, _momRow: row, _momParams: mp,
+      _fallback: true, _vivek: false, _momentum: true,
     };
     const liveDaily = () => (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "5y", "1d", true)
