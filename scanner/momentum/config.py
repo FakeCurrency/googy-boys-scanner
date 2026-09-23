@@ -19,12 +19,17 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace as _dc_replace
 from typing import Any, Dict, Tuple
 
-# The ONLY thing this lens borrows from the shared config: the measured
-# product-name patterns spec 5.6 says to reuse rather than retype. `scanner.config`
-# is a pure-constants module, so this costs no import weight and removing the
-# lens leaves it untouched.
+# What this lens borrows from the shared config: the measured product-name
+# patterns spec 5.6 says to reuse rather than retype, and -- for the BACKTEST
+# block at the end of this file only -- the house trade ladder and cost table,
+# so a momentum R is the same currency as a 5.0 R. `scanner.config` is a
+# pure-constants module, so this costs no import weight and removing the lens
+# leaves it untouched.
 from scanner.config import MARKETS as MARKETS_META  # noqa: F401
 from scanner.config import PRODUCT_NAME_PATTERNS  # noqa: F401
+from scanner.config import (LENS_BACKTEST_NOTIONAL, VIVEK_BOT_MIN_STOP_PCT,  # noqa: F401
+                            VIVEK_COMMISSION_BPS, VIVEK_SLIPPAGE_BPS,
+                            VIVEK_TP_SCALE_LONG, VIVEK_TP_SCALE_SHORT)
 
 RULESET_VERSION = "1.0.0"   # 1.0.0: first cut. Rule A (RSI divergence off
 #                             strict pivots) + Rule B (scored 20/50 cross),
@@ -359,3 +364,62 @@ PUBLISH_AFTER_CLOSE_MIN: int = 30
 # Crypto has no close: its daily bar rolls at 00:00 UTC, and the original cron
 # fired at 00:30. That stays the due instant, seven days a week.
 CRYPTO_DUE_UTC: Tuple[int, int] = (0, 30)
+
+
+# ---------------------------------------------------------------------------
+# BACKTEST -- the replay and its R model (2026-09-23)
+# ---------------------------------------------------------------------------
+# Read by backtest.py and `run.py --backtest` only. The screen never reads a
+# BT_* value, so none of this changes what the screen selects and
+# RULESET_VERSION does not move for it; BT_VERSION traces a published
+# backtest file to the R model that scored it.
+BT_VERSION: str = "1.0.0"
+
+# Five years: the live screen reads 3y (DATA_PERIOD) because it only needs the
+# LAST bar to be well seeded; a replay needs every bar it scores to be, and it
+# skips the first `warn_bars` of each series for exactly that reason.
+BT_PERIOD: str = "5y"
+
+# THE PLAN IS THE OWNER'S PINE TEMPLATE'S "Auto trade box", as chart.js
+# momentumPlan ports it (TV_PLAN) -- the same box the chart draws, so a
+# backtested trade has the levels the owner would have seen:
+#   entry  the signal bar's close
+#   stop   the 5-bar swing extreme padded by 0.25 ATR, capped at 15% of entry
+#   TPs    1R / 2R / 3R, never below 5% of entry
+BT_SWING_BARS: int = 5
+BT_ATR_PAD: float = 0.25
+BT_MAX_STOP_PCT: float = 15.0
+BT_R_LADDER: Tuple[float, ...] = (1.0, 2.0, 3.0)
+BT_TP_FLOOR: float = 0.05
+
+# MANAGEMENT IS THE 5.0 HOUSE LADDER, reused rather than retyped: book 25/50/15
+# at TP1/2/3 (shorts 50/25/15), stop to break-even at TP1, to TP1 at TP2, 10%
+# runner. The Pine template draws levels but manages nothing, so borrowing the
+# ladder is what makes a momentum R comparable with a 5.0 R.
+BT_SCALE: Dict[str, Tuple[float, ...]] = {
+    "long": tuple(VIVEK_TP_SCALE_LONG), "short": tuple(VIVEK_TP_SCALE_SHORT)}
+
+# A box whose stop sits closer than this % of entry is NOT a trade: on a
+# pegged or cash-like listing the stop lands inside the spread and the costs
+# alone come to -20R (measured: AAA, a cash ETF, 0.007% stop). The house
+# number the bot already refuses on ("stop_too_tight"), reused not retyped.
+BT_MIN_STOP_PCT: float = float(VIVEK_BOT_MIN_STOP_PCT)
+
+# A resting stop fills AT the stop (or at the open of a bar that gapped
+# through it) -- scanner/rmodel.STOP_FILL_LEVEL. The 5.0 backtest fills at the
+# bar's extreme, which is harsher than any real order; see rmodel's docstring.
+BT_STOP_FILL: str = "level"
+
+# Execution costs, basis points, the house table: slippage on the entry and
+# every market exit, commission on everything.
+BT_SLIPPAGE_BPS: Dict[str, float] = dict(VIVEK_SLIPPAGE_BPS)
+BT_COMMISSION_BPS: Dict[str, float] = dict(VIVEK_COMMISSION_BPS)
+
+# The flat position the owner asked the book to be read at (2026-09-23:
+# "assume every position was 1k") -- one shared number across the lens
+# backtests. Dollars only; R does not depend on it.
+BT_NOTIONAL: float = float(LENS_BACKTEST_NOTIONAL)
+
+# How many of the most recent closed trades the published file carries, so a
+# number can be traced to trades without shipping thousands of rows.
+BT_RECENT_TRADES: int = 100

@@ -86,6 +86,43 @@ def _fmt_row(name, s):
             f"| {f(s.get('avg_bars_to_t1'))} | {f(s.get('mae'), 'r')} |")
 
 
+def _r_row(name: str, s: dict) -> str:
+    if not s or not s.get("trades"):
+        return f"| {name} | 0 | — | — | — | — | — | — | — |"
+    usd = s.get("net_usd")
+    return (f"| {name} | {s['trades']} | {s['win_pct']}% | +{s['r_won']:.1f}R | "
+            f"{s['r_lost']:.1f}R | **{s['net_r']:+.1f}R** | {s['expectancy_r']:+.3f}R | "
+            f"{s['profit_factor'] if s['profit_factor'] is not None else '—'} | "
+            f"{'—' if usd is None else f'${usd:+,.0f}'} |")
+
+
+def r_section(signals: list) -> list:
+    """The R model (rmodel.py) as a markdown table: what trading the signals
+    earned, engine-native exits, house costs, $ at the shared flat notional."""
+    from phasemap.backtest.rmodel import summary
+    from scanner.config import LENS_BACKTEST_NOTIONAL
+    r = summary(signals, LENS_BACKTEST_NOTIONAL)
+    out = [
+        "## R model — what trading the signals earned",
+        "",
+        r["definition"][0].upper() + r["definition"][1:] + ". "
+        f"Dollars at a flat ${LENS_BACKTEST_NOTIONAL:,.0f} per position.",
+        "",
+        "| cohort | trades | win | R won | R lost | net R | per trade | PF | net $ |",
+        "|---|---|---|---|---|---|---|---|---|",
+        _r_row("**long A+/A (headline)**", r["long_graded"]),
+        _r_row("long A+/A, liquid only", r["long_graded_liquid"]),
+        _r_row("short A+/A", r["short_graded"]),
+    ]
+    for k, v in r["by_tier"].items():
+        out.append(_r_row(k.replace("_", " "), v))
+    for k, v in r["by_exit"].items():
+        out.append(_r_row(f"exit: {k}", v))
+    if r["skipped"]:
+        out += ["", "Not traded: " + ", ".join(f"{k} {v}" for k, v in sorted(r["skipped"].items()))]
+    return out + [""]
+
+
 def write_report(market: str, signals: list, rnd: dict, bh: dict,
                  universe_size: int, period: str, out_dir: str = None) -> str:
     out_dir = out_dir or os.path.join(os.path.dirname(__file__), "reports")
@@ -117,6 +154,9 @@ def write_report(market: str, signals: list, rnd: dict, bh: dict,
         lines.append(_fmt_row(name, s))
     lines += [
         "",
+    ]
+    lines += r_section(signals)
+    lines += [
         "## Baselines (same tickers, same window)",
         f"- Random entry ({rnd['n']} samples, seeded): "
         + " · ".join(f"fwd {h}: " + ("—" if rnd.get(f'fwd_{h}') is None
@@ -144,13 +184,19 @@ def write_report(market: str, signals: list, rnd: dict, bh: dict,
     return path
 
 
+def _r_summary(signals: list) -> dict:
+    from phasemap.backtest.rmodel import summary
+    from scanner.config import LENS_BACKTEST_NOTIONAL
+    return summary(signals, LENS_BACKTEST_NOTIONAL)
+
+
 def write_public_stats(market: str, signals: list, rnd: dict, bh: dict,
-                       universe_size: int, period: str) -> str:
+                       universe_size: int, period: str, out_dir: str = None) -> str:
     """Machine-readable cohorts for the Insights page (public/data/...), so
     the site's findings track the LATEST replay instead of rotting. Written
     on every backtest run; the weekly CI keeps it fresh."""
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    out_dir = os.path.join(root, "public", "data", "phasemap", "stats")
+    out_dir = out_dir or os.path.join(root, "public", "data", "phasemap", "stats")
     os.makedirs(out_dir, exist_ok=True)
     payload = {
         "market": market.upper(),
@@ -163,6 +209,8 @@ def write_public_stats(market: str, signals: list, rnd: dict, bh: dict,
         "cohorts": cohorts(signals),
         "stall": stall_summary(signals),
         "baselines": {"random": rnd, "buy_hold": bh},
+        # additive (2026-09-23): the R model, see rmodel.py
+        "r_model": _r_summary(signals),
     }
     path = os.path.join(out_dir, f"{market}.json")
     tmp = path + ".tmp"

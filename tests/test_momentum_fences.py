@@ -82,9 +82,14 @@ PHASEMAP = ROOT / "phasemap"
 #   scanner.universe    the ticker lists
 #   scanner.scanerrors  the shared per-symbol error reporter, so a name that
 #                       throws every night is visible rather than silent
+#   scanner.rmodel      (2026-09-23) the shared R ledger the backtest scores
+#                       trades with, so a momentum R is the same currency as a
+#                       5.0 R. It is PURE and imports nothing from the repo --
+#                       tests/test_rmodel.py pins that -- so it cannot reach
+#                       the bot, a grade table or a published file.
 ALLOWED_SCANNER_IMPORTS = frozenset({
     "scanner.config", "scanner.data", "scanner.output",
-    "scanner.universe", "scanner.scanerrors",
+    "scanner.universe", "scanner.scanerrors", "scanner.rmodel",
 })
 
 # The lens's own module path / config prefix / artefact names -- the tokens
@@ -478,6 +483,12 @@ def test_the_lens_publishes_only_into_its_own_directory():
         p = run.out_path(market)
         assert p.parent == run.OUT_DIR, p
         assert p.relative_to(ROOT).as_posix() == f"public/data/momentum/{market}.json"
+        # the backtest (2026-09-23) is the second and last target, same dir
+        b = run.backtest_path(market)
+        assert b.parent == run.OUT_DIR, b
+        assert b.relative_to(ROOT).as_posix() == f"public/data/momentum/{market}_backtest.json"
+    writers = {n for n in dir(run) if n.endswith("_path") and callable(getattr(run, n))}
+    assert writers == {"out_path", "backtest_path"}, writers
 
 
 def test_the_runner_names_no_other_published_artefact():
