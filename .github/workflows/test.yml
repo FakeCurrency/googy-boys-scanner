@@ -117,7 +117,7 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: pytest (scanner risk/breaker/journal/pretrade + phasemap)
+      - name: pytest (tests/ + phasemap/tests)
         run: python -m pytest -q
 
   javascript:
@@ -142,7 +142,7 @@ jobs:
         run: node test/heartbeat.test.js
       - name: Journal review-chip tests (heavy-position flag)
         run: node test/journal_review.test.js
-      - name: Journal close-all tests (both books, fail-closed)
+      - name: Journal close-all tests (bot book, fail-closed)
         run: node test/close_all.test.js
       - name: Deep chart history tests (stitched windows, reverse switch)
         run: node test/deep_history.test.js
@@ -150,13 +150,13 @@ jobs:
         run: node test/system_backtest.test.js
       - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
         run: node test/journal_stale.test.js
-      - name: Journal money-path tests (TOP100 #25/#26/#30/#33, 22)
+      - name: Journal money-path tests (TOP100 #30/#33/#74, open sort, exit evidence)
         run: node test/journal_money.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
         run: node test/escaping.test.js
-      - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip + funnel-trend + v5-split rules (TOP100 #78/#79, 42)
+      - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip + funnel-trend + v5-split rules (TOP100 #78/#79)
         run: node test/staleview.test.js
-      - name: Leak + backoff rules (TOP100 #80/#81/#82/#83 + sync honesty, 52)
+      - name: Leak + backoff rules (TOP100 #80/#81/#82)
         run: node test/leaks.test.js
       - name: Deferred layout read in the deck render path (TOP100 #86)
         run: node test/statekeep.test.js
@@ -170,17 +170,18 @@ jobs:
       # every push in ~50ms rather than behind a Playwright install.
       - name: Screenshot baseline-provenance sentinel (out of band, 14)
         run: node test/screenshot_sentinel.test.js
-      # The four state-touching Pages Functions' guard rails (out of band,
-      # 2026-07-29): journal sync limiter can't lock out its own polling, the
-      # scan/close cooldowns refund on a failed dispatch, and the tick watcher
-      # prices crypto as <base>-USD (a bare base is a same-named EQUITY).
-      - name: API guard rails (journal limiter / dispatch refunds / tick pricing, 17)
+      # The state-touching Pages Functions' guard rails (out of band,
+      # 2026-07-29): the scan/close cooldowns refund on a failed dispatch, a
+      # close batch rides one dispatch, and the heartbeat healer heals when
+      # overdue without paging on success. (The journal sync limiter and the
+      # tick watcher were tested here until they went, 2026-09-21.)
+      - name: API guard rails (dispatch refunds / close batch / heartbeat self-heal)
         run: node test/api_guards.test.js
-      # Endpoint access log (2026-08-20): the three unauthenticated endpoints
-      # write who-called-me envelopes to KV for incident diagnosis. Two pinned
-      # properties: a call gets logged, and a KV failure never blocks the
-      # underlying close/scan/journal action.
-      - name: Access log (logged calls / best-effort / coalesced polling, 13)
+      # Endpoint access log (2026-08-20): the unauthenticated dispatch
+      # endpoints (close, scan) write who-called-me envelopes to KV for
+      # incident diagnosis. Two pinned properties: a call gets logged, and a
+      # KV failure never blocks the underlying close/scan action.
+      - name: Access log (logged calls / best-effort / no coalescing)
         run: node test/access_log.test.js
       # External trigger for the plays digest (2026-09-10): GitHub's cron ran
       # the ASX slot hours late / not at all, so a real-time pinger now kicks
@@ -192,7 +193,7 @@ jobs:
       # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
       # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
       # so the display can never disagree with what actually blocks a trade.
-      - name: Sector-cap marking (bucket parity / chip rules / wiring, 14)
+      - name: Sector-cap marking (bucket parity / chip rules / wiring)
         run: node test/sector_cap.test.js
       # STATUS control (2026-08-19, Session 1). The lamp is the only surface
       # that claims the system is healthy, so two of its promises are gated
@@ -201,7 +202,7 @@ jobs:
       # is polled), and its uptime figure is clamped to the span of the ledger
       # it is derived from instead of counting the dark before the ledger
       # existed as healthy.
-      - name: Status control (read-only promise / uptime clamp / states matrix, 48)
+      - name: Status control (read-only promise / uptime clamp / states matrix)
         run: node test/status.test.js
       # MOMENTUM (2026-09-22). The lens is report-only, so what is gated here is
       # the nav contract and the page's honest failures rather than any signal:
@@ -212,7 +213,7 @@ jobs:
       # and a dead connection produce DIFFERENT sentences; and every Rule A row
       # carries both the bar the scanner could know on and the bar TradingView
       # draws the label on, which are five apart and mean different things.
-      - name: Momentum lens (nav contract, purple scoping, row evidence, 82)
+      - name: Momentum lens (nav contract, purple scoping, row evidence)
         run: node test/momentum.test.js
       # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
       # reference, comments stripped) and deleted stay deleted: each pin fails
