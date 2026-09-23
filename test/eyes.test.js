@@ -213,8 +213,9 @@ test("the chip title states the PhaseMap leg it ranked on", () => {
 test("leg-strength: VIVEK score breaks the last tie inside a grade band", () => {
   // Session C (2026-08-19): a 10/10 A+ dual and a 9/10 A+ dual with equal PM
   // legs used to sort alphabetically. The score is the finest grain of the
-  // VIVEK leg the payload carries; it decides only after count, product,
-  // grade band and PM leg quality — the qualification rule reads none of it.
+  // VIVEK leg the payload carries; it decides only after count, grade band
+  // and PM leg quality (products are filtered out before ranking since
+  // 2026-09-21) — the qualification rule reads none of it.
   const rows = [
     mkq("AAA", "A+", "SWEPT", "Watch", { score: 9 }),
     mkq("ZZZ", "A+", "SWEPT", "Watch", { score: 10 }),
@@ -324,10 +325,8 @@ test("renderEyes is hooked into BOTH the confluence load and the market-switch r
 });
 
 // ─────────────────────────────── summary ─────────────────────────────────────
-// ── product ranking penalty (owner-ordered 2026-08-13) ──────────────────────
-// The chip already SAID fund. A marker the eye skips is not a ranking, so a
-// bond ETF could still lead the strip that exists to answer "what needs my
-// eyes". Products now sort below operating companies at equal lens count.
+// (The product ranking penalty, owner-ordered 2026-08-13, went on 2026-09-21:
+//  products are now filtered off the strip before ranking — see above.)
 suite("dismissed until it CHANGES (owner, 2026-09-21)");
 
 /* "how many times am i going to have to see the same shit again and again?"

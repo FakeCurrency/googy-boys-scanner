@@ -3,9 +3,10 @@
 
    A scan back-fills any ticker Yahoo dropped this run from the last-good frame
    cache, and that cached close is published into `prices` looking exactly like
-   a live one. Every open position on the journal page is marked off that map —
-   so a name Yahoo had not returned in a week was drawing a week-old close as
-   its current price, computing an unrealised R off it, and showing nothing at
+   a live one. The bot's server-side marks come off the same merged frames, so
+   they inherit the risk (only the AGE reaches the page, via the published
+   price_age map) — a name Yahoo had not returned in a week was drawing a
+   week-old close as its current price, computing an unrealised R off it, and showing nothing at
    all to say so. The number was not so much wrong as not what it claimed to be.
 
    scanner/data.py refuses a frame past FRAME_CACHE_MAX_AGE_DAYS outright
@@ -111,8 +112,10 @@ test("a fresh mark is left completely alone", () => {
 });
 
 test("THE ONE THAT MATTERS: a name that comes back loses its badge", () => {
-  // loadScanMeta re-pulls every 3 minutes, against cells that persist. If markStale only ever ADDED the badge, the
-  // first stale run would mark a cell permanently — and a badge that never
+  // markStale has had no page caller since 2026-09-21 (the bot Now cell
+  // re-derives its class from ageOf() on each render, and loadScanMeta's
+  // scanAge.delete is what clears it); the helper is kept and pinned. If it
+  // only ever ADDED the badge, the first stale run would mark a cell permanently — and a badge that never
   // clears is worse than no badge at all, because it trains you to read past
   // the ones that are real. Both branches of the toggle always run.
   const c = cell();
@@ -124,7 +127,7 @@ test("THE ONE THAT MATTERS: a name that comes back loses its badge", () => {
 });
 
 test("markStale is a no-op on a cell that is not there", () => {
-  // paint() walks rows that may have been re-rendered out from under it.
+  // Kept for any future caller: a row may be re-rendered out from under it.
   assert.doesNotThrow(() => markStale(null, 3));
   assert.doesNotThrow(() => markStale(undefined, 0));
 });

@@ -934,7 +934,7 @@ test("the mobile SCAN badge no longer publishes an uncorrected A+ count", () => 
   assert.ok(/setBadge\("journal"/.test(NAV), "the journal badge was removed by mistake");
 });
 
-test("the only write path in the app clears a 44px tap target on mobile", () => {
+test("the stalled strip's write controls clear a 44px tap target on mobile", () => {
   // .st-x books a real position against the track record and shipped at ~22px,
   // one file over from journal.css's own "23x21px is a miss waiting to happen".
   const st = css("stalled.css");
@@ -1722,8 +1722,7 @@ test("MECHANICAL_EXITS is IDENTICAL in app.js, journal.js and status.js", () => 
   // Three surfaces now classify the same field. A list that drifts in one of
   // them silently re-blends the split in exactly one place, which is worse
   // than never having split it — the two surfaces would disagree and neither
-  // would say which was right. Same treatment risk_defaults.test.js gives the
-  // offline rules mirror.
+  // would say which was right.
   const grab = (f) => {
     const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", f), "utf8");
     const m = /MECHANICAL_EXITS\s*=\s*(\[[^\]]*\])/.exec(src);
