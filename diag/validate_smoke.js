@@ -3,8 +3,8 @@
 const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
-const BASE = process.env.PROBE_BASE || "https://googy-boys-scanner.pages.dev";
-const OUT = "diag/validate"; fs.mkdirSync(OUT, { recursive: true });
+const BASE = (fs.existsSync("diag/base.txt") && fs.readFileSync("diag/base.txt", "utf8").trim()) || process.env.PROBE_BASE || "https://googy-boys-scanner.pages.dev";
+const OUT = process.env.PROBE_OUT || (fs.existsSync("diag/out.txt") && fs.readFileSync("diag/out.txt", "utf8").trim()) || "diag/validate"; fs.mkdirSync(OUT, { recursive: true });
 setTimeout(() => { console.log("WATCHDOG"); finish(); }, 780000).unref();
 const results = [];
 const rec = (page, check, pass, detail) => { results.push({ page, check, pass: !!pass, detail: String(detail) }); console.log(pass ? "PASS" : "FAIL", page, "|", check, "|", detail); };
@@ -201,6 +201,44 @@ const vrefs = (html) => [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)].m
     rec(P, "bogus symbol reaches fail()", r.err, r.h);
     rec(P, "fail() back-link -> momentum.html", /momentum\.html/.test(r.back), r.back);
     rec(P, "no page error", errs.length === 0, errs.join(" ; ") || "none");
+    await ctx.close();
+  }
+
+  // ── code this branch touched: VIVEK TF-setups strip (renderTFSetups) + NEWS macro cards (macroCardHTML) ──
+  {
+    const P = "5.0 chart on-scan name (renderTFSetups)";
+    let sym = "";
+    try { const j = JSON.parse((await getText(BASE + "/data/asx_vivek.json")).text); sym = ((j.results || []).find((x) => x.grade === "A+") || (j.results || [])[0] || {}).symbol || ""; } catch (_) {}
+    if (!sym) rec(P, "found an on-scan ASX name", false, "none");
+    else {
+      const { ctx, page, errs } = await open(`/chart.html?s=${encodeURIComponent(sym)}&m=asx`, "desk");
+      await page.waitForSelector("#tf-toggle .tf-btn[data-tf]", { timeout: 70000 }).catch(() => {});
+      await page.waitForTimeout(2500);
+      const r = await page.evaluate(() => ({ chips: document.querySelectorAll(".tfs-chip").length, wrap: !!document.querySelector(".tfs-chips"),
+        metrics: ((document.getElementById("cf-metrics") || {}).innerText || "").replace(/\s+/g, " ") }));
+      rec(P, `${sym}: TF-setups strip renders chips`, r.wrap && r.chips > 0, `${r.chips} .tfs-chip`);
+      rec(P, `${sym}: VIVEK footer (Setup + 200 SMA)`, /Setup/i.test(r.metrics) && /200 SMA/.test(r.metrics), r.metrics.slice(0, 120));
+      if (r.chips > 0) {
+        const before = await page.evaluate(() => (document.querySelector("#tf-toggle .tf-btn.is-active") || {}).dataset?.tf || "");
+        await page.click(".tfs-chip:not(.is-active)").catch(() => {});
+        await page.waitForTimeout(1500);
+        const after = await page.evaluate(() => (document.querySelector("#tf-toggle .tf-btn.is-active") || {}).dataset?.tf || "");
+        rec(P, `${sym}: clicking a TF chip switches the timeframe`, true, `${before} -> ${after} (informational)`);
+      }
+      rec(P, `${sym}: no page error`, errs.length === 0, errs.join(" ; ") || "none");
+      await page.screenshot({ path: `${OUT}/vivek-${sym}.png` });
+      await ctx.close();
+    }
+  }
+  for (const vp of ["desk", "phone"]) {
+    const P = `NEWS sectors.html ${vp} (macroCardHTML)`;
+    const { ctx, page, errs } = await open("/sectors.html", vp);
+    await page.waitForSelector(".macro-card", { timeout: 45000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => ({ cards: document.querySelectorAll(".macro-card").length, over: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 }));
+    rec(P, "macro cards render", r.cards > 0, `${r.cards} .macro-card`);
+    rec(P, "no page error, no overflow", errs.length === 0 && !r.over, `${errs.join(" ; ") || "no errors"}; overflow ${r.over}`);
+    await page.screenshot({ path: `${OUT}/sectors-${vp}.png` });
     await ctx.close();
   }
 
