@@ -87,6 +87,13 @@ ok(!/\brec\b/.test(fnBody(code("js/chart.js"), "momentumFallback")),
    "js/chart.js momentumFallback: the unused `rec` parameter was deleted 2026-09-23 (the " +
    "caller keeps its own `rec` for pmRec; the PhaseMap record never reached this function)");
 
+// `dark` cannot be pinned by name: sectors.js legitimately writes the string
+// "dark" as the TradingView widget theme. Pin the helper's shape instead.
+ok(code("js/sectors.js").includes("const SECTOR_INFO = {"), "js/sectors.js moved -- pin would be vacuous");
+ok(!/(?:const|let|var)\s+dark\s*=|function\s+dark\s*\(|\bdark\s*\(\s*\)/.test(code("js/sectors.js")),
+   "js/sectors.js: the unused dark() prefers-color-scheme helper was deleted 2026-09-23 " +
+   "(the site is dark-only; nothing called it)");
+
 // `$$` cannot be pinned by name: the two characters legitimately occur in
 // `US$${...}` template text on the journal page. Pin the declaration instead.
 ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),
