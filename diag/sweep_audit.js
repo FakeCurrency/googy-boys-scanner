@@ -28,7 +28,7 @@ async function finish() {
   // served build vs this branch's HTML
   try {
     const r = await (await fetch(BASE + "/version.json", { cache: "no-store" })).json();
-    rec("deploy", "version.json served", !!r.version, r.version);
+    rec("deploy", "version.json served is the merged sweep stamp", r.version === "2026.09.23-7ef6fd5d", r.version);
   } catch (e) { rec("deploy", "version.json served", false, e); }
 
   // ── / 5.0 deck ──
