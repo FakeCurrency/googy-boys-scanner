@@ -164,7 +164,7 @@
       ? `last closed bar ${state.data.last_closed_bar}` : "";
   }
 
-  // The deck's own pill (app.js renderDeck): .fpill, count in <b>, and
+  // The deck's own pill (app.js renderDeckPills): .fpill, count in <b>, and
   // aria-pressed so the on/off state reaches assistive tech, not just colour.
   // It used to render .deck-pill / .deck-pill-n, which no stylesheet defines:
   // browser-default grey buttons reading "ALL4", "RULE A4".
