@@ -89,7 +89,7 @@
 .jr-note-tag { cursor: help; }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Claude vs Me — three-section layout (v11 redesign)
+   Claude's paper book — single-book layout (the Me side went 2026-09-21)
    ══════════════════════════════════════════════════════════════════════════ */
 :root {
   --bot: #5b9cff;            /* Claude accent (blue) */
@@ -137,8 +137,9 @@
  * past. It reports who took each gated exit, and the one thing it must never
  * read as is an instruction to take more of them by hand — a surface that
  * nudged the owner into manual closes would manufacture the exact confound it
- * exists to disclose. So: no button, no accent fill, no red, list folded shut
- * by default, and the only coloured text is the R column, which is a fact.
+ * exists to disclose. So: no button, no accent fill, list folded shut by
+ * default, and colour only where it states a fact — the counts, the
+ * rules-side label, the amber zero-rules note and the R column (green/red).
  */
 .jr-w3 {
   font: 600 11.5px/1.5 var(--sans); color: var(--muted);
@@ -241,7 +242,7 @@
 .side .stat-value { font-size: 21px; margin-top: 5px; }
 .side .stats { margin-bottom: 10px; }
 
-/* ── 2 + 3 · Claude vs Me, side by side ── */
+/* ── 2 + 3 · the book's section (.sides-one below: a single column since 2026-09-21) ── */
 .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; margin-bottom: 26px; }
 /* One book since 2026-09-21 (the manual side was removed), so the two-up grid
    would leave half the row empty on a wide screen. Capped rather than full
@@ -265,13 +266,13 @@
 .side-badge.bot { background: rgba(91,156,255,.12); color: var(--bot); }
 .side-note { font: 500 12px/1.4 var(--sans); color: var(--muted); }
 
-/* The per-section tables live in half-width columns — make them compact and
-   drop the timeframe chip so each side reads on one screen without scrolling
-   sideways. The full-detail tables are the combined ones in the overview. */
+/* The book's tables are made compact so they read on one screen without
+   scrolling sideways. */
 .side .jr-table th { padding: 9px 8px; font-size: 9.5px; letter-spacing: .3px; }
 .side .jr-table td { padding: 9px 8px; font-size: 11.5px; }
 
-/* Stack the two sides on narrower screens (the tables are wide). */
+/* Single column on narrower screens (a no-op for .sides-one, which is
+   already one column; kept for the base .sides grid). */
 @media (max-width: 1100px) { .sides { grid-template-columns: 1fr; } }
 
 /* ═══ NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05) — the daily-glance
@@ -400,8 +401,8 @@ details.jr-fold.jr-fold-quiet > summary {
 }
 
 /* ── Wave 4 #46/#38: kill the journal's phone-width overflow ─────────────────
-   The Bot/Me comparison sides sit in a grid; without min-width:0 the grid
-   items refuse to shrink below their wide tables' intrinsic width, so the
+   The book's section sits in a grid; without min-width:0 the grid item
+   refuses to shrink below its wide tables' intrinsic width, so the
    table's own overflow-x scroll never engages and the whole page overflows
    at 320-390px. min-width:0 lets the columns fit the viewport and the tables
    scroll WITHIN their card. */
@@ -570,9 +571,9 @@ details.jr-fold.jr-fold-quiet > summary {
 }
 
 /* ── CLOSE ALL (2026-09-17) ───────────────────────────────────────────────────
-   One per side, sharing the "Open positions" header line with the sort chips, so
-   it borrows .jr-osort-b's geometry exactly — a taller or fatter control there
-   would reflow the header on both sides of the page. What it does NOT borrow is
+   One button (one book since 2026-09-21), sharing the "Open positions" header
+   line with the sort chips, so it borrows .jr-osort-b's geometry exactly — a
+   taller or fatter control there would reflow that header. What it does NOT borrow is
    the colour: this is the only control in the journal that can close a whole
    book in one act, so it takes the danger idiom the manual journal's delete button
    used (var(--red) text on a var(--red-soft) border, hover tightens to solid --red)
