@@ -1,0 +1,560 @@
+{
+ "base": "https://scan-honesty-2026-09-23.googy-boys-scanner.pages.dev",
+ "at": "2026-09-23T11:28:00.971Z",
+ "pass": 92,
+ "fail": 0,
+ "results": [
+  {
+   "page": "deploy",
+   "check": "served version.json == repo version.json",
+   "pass": true,
+   "detail": "served 2026.09.23-b5de13f0 / repo 2026.09.23-b5de13f0"
+  },
+  {
+   "page": "deploy",
+   "check": "404.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "6 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "about.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "8 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "alerts.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "9 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "chart.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "8 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "index.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "12 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "journal.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "11 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "momentum.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "10 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "offline.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "0 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "phasemap-insights.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "9 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "phasemap-legend.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "8 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "phasemap.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "10 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "recommendations.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "9 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "sectors.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "9 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "specs.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "10 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "system.html: served ?v= refs == repo",
+   "pass": true,
+   "detail": "7 refs"
+  },
+  {
+   "page": "deploy",
+   "check": "sw.js CACHE served == repo",
+   "pass": true,
+   "detail": "served vivek5-v8 / repo vivek5-v8"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "freshness: box and dot agree on session + 2h",
+   "pass": true,
+   "detail": "payload 2026-09-23T21:17:21+10:00 || scan-fresh :: ⟳ 9m ago  ·  85% coverage (1142 fresh · 607 cached)  ·  schema v5 || dot deck-dot"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "deck title painted (not loading)",
+   "pass": true,
+   "detail": "Last scanned: 9m ago"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "filter pills (.fpill) >= 3",
+   "pass": true,
+   "detail": "5"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "A+ cards present",
+   "pass": true,
+   "detail": "72 A+ of 72 rows"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "nav: MOMENTUM pill straight after SPECS",
+   "pass": true,
+   "detail": "VIVEK 5.0 · RECS · PHASEMAP · SPECS ⚡ · MOMENTUM · ALERTS · JOURNAL · MORE ▾"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "nav: MOMENTUM pill is purple (--purple rgb 191,90,242 border + fill)",
+   "pass": true,
+   "detail": "rgba(191, 90, 242, 0.45) / rgba(191, 90, 242, 0.16)"
+  },
+  {
+   "page": "/ deck desk",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "freshness: box and dot agree on session + 2h",
+   "pass": true,
+   "detail": "payload 2026-09-23T21:17:21+10:00 || scan-fresh :: ⟳ 9m ago  ·  85% coverage (1142 fresh · 607 cached)  ·  schema v5 || dot deck-dot"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "deck title painted (not loading)",
+   "pass": true,
+   "detail": "Last scanned: 9m ago"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "filter pills (.fpill) >= 3",
+   "pass": true,
+   "detail": "5"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "A+ cards present",
+   "pass": true,
+   "detail": "72 A+ of 72 rows"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "nav: TABS === 5 (+ MORE), momentum off-tab",
+   "pass": true,
+   "detail": "index,recommendations,phasemap,specs,journal + MORE true"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "no horizontal overflow",
+   "pass": true,
+   "detail": "false"
+  },
+  {
+   "page": "/ deck phone",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "/ phone MORE sheet",
+   "check": "MORE sheet lists momentum.html",
+   "pass": true,
+   "detail": ",momentum.html,alerts.html,sectors.html,system.html,about.html"
+  },
+  {
+   "page": "/ phone MORE sheet",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "/momentum",
+   "check": "coverage in the header: \"1,165 of 2,047 downloaded\"",
+   "pass": true,
+   "detail": "mode A · 1-bar window · 1,165 of 2,047 downloaded · 298 scanned · 867 gated · last bar 2026-09-22"
+  },
+  {
+   "page": "/momentum",
+   "check": "partial: one sentence + amber dot",
+   "pass": true,
+   "detail": "deck-dot is-partial warn || 882 of 2,047 names returned no daily bars and the frame cache was cold (0 reused), so there was no earlier copy to fall back on — this screen covers 1,165 names, not the whole market."
+  },
+  {
+   "page": "/momentum",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "/momentum",
+   "check": "header: title + scanned/gated/last bar",
+   "pass": true,
+   "detail": "MOMENTUM · 4 names || mode A · 1-bar window · 1,165 of 2,047 downloaded · 298 scanned · 867 gated · last bar 2026-09-22"
+  },
+  {
+   "page": "/momentum",
+   "check": "rows == served asx.json results",
+   "pass": true,
+   "detail": "header 4, .mo-row 4, json 4"
+  },
+  {
+   "page": "/momentum",
+   "check": "pills are .fpill with <b> count, no .deck-pill",
+   "pass": true,
+   "detail": "ALL 4 | RULE A 4 | RULE B 0 | BULL 4 | BEAR 0"
+  },
+  {
+   "page": "/momentum",
+   "check": "every row ?s=...&src=momentum, never ?symbol=",
+   "pass": true,
+   "detail": "4 links, e.g. chart.html?s=ELS&m=asx&src=momentum"
+  },
+  {
+   "page": "/momentum",
+   "check": "no horizontal overflow",
+   "pass": true,
+   "detail": "false"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "coverage in the header: \"1,428 of 1,428 downloaded\"",
+   "pass": true,
+   "detail": "mode A · 1-bar window · 1,428 of 1,428 downloaded · 1160 scanned · 268 gated · last bar 2026-09-22"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "full: no sentence, no amber",
+   "pass": true,
+   "detail": "deck-dot is-fresh || "
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "header: title + scanned/gated/last bar",
+   "pass": true,
+   "detail": "MOMENTUM · 42 names || mode A · 1-bar window · 1,428 of 1,428 downloaded · 1160 scanned · 268 gated · last bar 2026-09-22"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "rows == served nasdaq.json results",
+   "pass": true,
+   "detail": "header 42, .mo-row 42, json 42"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "pills are .fpill with <b> count, no .deck-pill",
+   "pass": true,
+   "detail": "ALL 42 | RULE A 42 | RULE B 0 | BULL 23 | BEAR 19"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "every row ?s=...&src=momentum, never ?symbol=",
+   "pass": true,
+   "detail": "42 links, e.g. chart.html?s=OKTA&m=nasdaq&src=momentum"
+  },
+  {
+   "page": "/momentum?m=nasdaq",
+   "check": "no horizontal overflow",
+   "pass": true,
+   "detail": "false"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "D: SHORT",
+   "pass": true,
+   "detail": "PLAN SHORT ENTRY A$5.880 SL A$6.762 TP1 A$4.998 TP2 A$4.116 TP3 A$3.234 R:R 3.00"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "D: 5.88/6.76/4.998/4.116/3.234 +-0.01",
+   "pass": true,
+   "detail": "{\"e\":5.88,\"sl\":6.762,\"t1\":4.998,\"t2\":4.116,\"t3\":3.234}"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "D: price + MACD + RSI panes",
+   "pass": true,
+   "detail": "2 oscillator panes"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "D: bars chip",
+   "pass": true,
+   "detail": "2354 daily bars"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "D: no SCORE 0/8",
+   "pass": true,
+   "detail": "ok"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "D: no PhaseMap without ?pm=1",
+   "pass": true,
+   "detail": "pm strip false"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "back-link -> momentum.html",
+   "pass": true,
+   "detail": "momentum.html"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "4H: ~6.46 / ~7.38 (+-0.01)",
+   "pass": true,
+   "detail": "{\"e\":6.46,\"sl\":7.384,\"t1\":5.536,\"t2\":4.612,\"t3\":3.689}"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "4H: not Daily's numbers copied on",
+   "pass": true,
+   "detail": "4H 6.46/7.384 vs D 5.88/6.762"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "4H: price + MACD + RSI panes",
+   "pass": true,
+   "detail": "2"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "4H: chip is real history (> 187)",
+   "pass": true,
+   "detail": "914 4H bars"
+  },
+  {
+   "page": "chart ELS src=momentum",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "chart BHP no src",
+   "check": "SMA 10 / 20 / 43 in the legend",
+   "pass": true,
+   "detail": "SMA 10 A$60.968 SMA 20 A$62.506 SMA 43 A$62.011 SMA 200 A$54.716"
+  },
+  {
+   "page": "chart BHP no src",
+   "check": "5.0 footer family, not the Momentum PLAN strip",
+   "pass": true,
+   "detail": "ENTRY — STOP — TARGET — TRAIL after entry SCORE 0/0 RISK — R:R 0.00"
+  },
+  {
+   "page": "chart BHP no src",
+   "check": "no Pine caption, no Momentum panes",
+   "pass": true,
+   "detail": "panes 0"
+  },
+  {
+   "page": "chart BHP no src",
+   "check": "back-link is not momentum.html",
+   "pass": true,
+   "detail": "index.html"
+  },
+  {
+   "page": "chart BHP no src",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "chart emptyState src=momentum",
+   "check": "back-link -> momentum.html",
+   "pass": true,
+   "detail": "momentum.html"
+  },
+  {
+   "page": "chart emptyState src=momentum",
+   "check": "search keeps src=momentum and uses ?s=",
+   "pass": true,
+   "detail": "/chart?m=asx&s=ELS&src=momentum"
+  },
+  {
+   "page": "chart emptyState src=momentum",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "chart fail() src=momentum",
+   "check": "bogus symbol reaches fail()",
+   "pass": true,
+   "detail": "Chart unavailable"
+  },
+  {
+   "page": "chart fail() src=momentum",
+   "check": "fail() back-link -> momentum.html",
+   "pass": true,
+   "detail": "momentum.html"
+  },
+  {
+   "page": "chart fail() src=momentum",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "5.0 chart on-scan name (renderTFSetups)",
+   "check": "CIP: TF-setups strip renders chips",
+   "pass": true,
+   "detail": "4 .tfs-chip"
+  },
+  {
+   "page": "5.0 chart on-scan name (renderTFSetups)",
+   "check": "CIP: VIVEK footer (Setup + 200 SMA)",
+   "pass": true,
+   "detail": "SETUP WATCHING 200 SMA (D) A$3.016 ENTRY A$2.840 SL A$3.067 TP1 · 50% A$2.499 TP2 · 25% A$2.158 TP3 · 15% A$1.704 R:R → "
+  },
+  {
+   "page": "5.0 chart on-scan name (renderTFSetups)",
+   "check": "CIP: clicking a TF chip switches the timeframe",
+   "pass": true,
+   "detail": "1D -> 4H (informational)"
+  },
+  {
+   "page": "5.0 chart on-scan name (renderTFSetups)",
+   "check": "CIP: no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "NEWS sectors.html desk (macroCardHTML)",
+   "check": "macro cards render",
+   "pass": true,
+   "detail": "2 .macro-card"
+  },
+  {
+   "page": "NEWS sectors.html desk (macroCardHTML)",
+   "check": "no page error, no overflow",
+   "pass": true,
+   "detail": "no errors; overflow false"
+  },
+  {
+   "page": "NEWS sectors.html phone (macroCardHTML)",
+   "check": "macro cards render",
+   "pass": true,
+   "detail": "2 .macro-card"
+  },
+  {
+   "page": "NEWS sectors.html phone (macroCardHTML)",
+   "check": "no page error, no overflow",
+   "pass": true,
+   "detail": "no errors; overflow false"
+  },
+  {
+   "page": "journal R-dist caption",
+   "check": "caption names the bot book, never 'both books'",
+   "pass": true,
+   "detail": "104 closed · bot book · avg -0.07R"
+  },
+  {
+   "page": "journal R-dist caption",
+   "check": "no page error",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "page": "/journal desk",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "#bot-open, .jr-table, #jr-bot, main x4, text 5960ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/journal phone",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "#bot-open, .jr-table, #jr-bot, main x4, text 16584ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/alerts desk",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "main x1, text 3429ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/alerts phone",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "main x1, text 3490ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/phasemap desk",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "main x1, text 75853ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/phasemap phone",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "main x1, text 69291ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/specs desk",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "main x1, text 9994ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/specs phone",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": "main x1, text 8690ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/recommendations desk",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": ".rec-card x5, text 2252ch, still-loading false, overflow false; no errors"
+  },
+  {
+   "page": "/recommendations phone",
+   "check": "loads, has content, no page error, no overflow",
+   "pass": true,
+   "detail": ".rec-card x5, text 2243ch, still-loading false, overflow false; no errors"
+  }
+ ]
+}
