@@ -467,7 +467,11 @@ def test_no_page_renders_a_dollar_figure_off_a_BACKTEST_artefact():
     """
     root = pathlib.Path(bt.__file__).resolve().parents[1]
     client = sorted((root / "public" / "js").glob("*.js")) + sorted((root / "public").glob("*.html"))
-    consumers = [p for p in client if "vivek_backtest" in p.read_text(encoding="utf-8")]
+    # Files that FETCH an artefact, as the docstring promises -- a bare
+    # "vivek_backtest" also matched journal.js (the live-book page) through a
+    # comment, which is the unrelated false red this scoping exists to avoid.
+    consumers = [p for p in client
+                 if re.search(r"data/vivek_backtest\w*\.json", p.read_text(encoding="utf-8"))]
     assert consumers, "no client file fetches a backtest artefact -- re-point this test"
 
     banned = ("total_usd", "max_dd_usd", "params.equity")
