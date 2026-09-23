@@ -1063,6 +1063,48 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
     ok(MOM.includes(`${bit}\``) || MOM.includes(`${bit}\${`) || MOM.includes(` ${bit}`),
        `the header counts ${bit}`);
 
+  // COVERAGE (2026-09-23): the header carries the denominator, in counts.
+  // The first scheduled ASX file screened 1,165 of 2,047 names on a cold
+  // cache while the header read "298 scanned · 867 gated" -- a whole market,
+  // to anyone who did not add the two up and know the listing count.
+  {
+    const coverage = new Function(slice("coverage") + "; return coverage;")();
+    const asx = coverage({ universe: 2047, downloaded: 1165, scanned: 298, skipped_gates: 867,
+                           cache: { fresh: 1165, reused: 0, merged: 1165, universe: 2047 } });
+    eq(asx.line, "1,165 of 2,047 downloaded", "ASX: downloaded of universe, in counts");
+    ok(asx.partial, "ASX 1,165/2,047 is partial");
+    ok(/^882 of 2,047 names returned no daily bars/.test(asx.note), `the gap is counted: ${asx.note}`);
+    ok(/cold \(0 reused\)/.test(asx.note), "a cold cache is named as the reason nothing filled it");
+    ok(/not the whole market\.$/.test(asx.note), "and it says in words that this is not the whole book");
+    eq((asx.note.match(/\. /g) || []).length, 0, "one sentence");
+
+    const nq = coverage({ universe: 1428, downloaded: 1428, cache: { reused: 0 } });
+    eq(nq.line, "1,428 of 1,428 downloaded", "a full download still shows its denominator");
+    ok(!nq.partial && nq.note === "", "and gets no sentence and no amber dot");
+
+    const warm = coverage({ universe: 2047, downloaded: 1900, cache: { reused: 40 } });
+    ok(/even after 40 were filled from the frame cache/.test(warm.note), warm.note);
+    ok(!/cold/.test(warm.note), "a warm cache is not called cold");
+
+    const unknown = coverage({ universe: 2047, downloaded: 2000 });
+    ok(/does not say whether the frame cache filled any/.test(unknown.note),
+       "no cache block: says it does not know, never assumes cold");
+
+    eq(coverage({ downloaded: 60 }).line, "60 downloaded", "no universe: no invented ratio");
+    ok(coverage({}).line === null && !coverage({}).partial, "no counts: nothing claimed");
+    ok(coverage(undefined).line === null, "no summary at all is survivable");
+
+    for (const c of [asx, nq, warm, unknown])
+      ok(!/%/.test(c.line + c.note), "never a percentage (no fake 100%)");
+  }
+  ok(/const cov = coverage\(s\)/.test(MOM) && /\.\.\.\(cov\.line \? \[cov\.line\] : \[\]\)/.test(MOM),
+     "renderHead puts the coverage line into the header");
+  ok(/cov\.partial \? "deck-dot is-partial warn"/.test(MOM), "a partial file turns the dot amber");
+  ok(/"deck-dot is-stale warn"/.test(MOM),
+     "no data turns the dot amber too (is-stale has no CSS; it was green)");
+  ok(/<p class="mo-cover" id="mo-cover" hidden><\/p>/.test(htmlRaw),
+     "momentum.html carries the coverage sentence slot, hidden by default");
+
   // One href builder, so the symbol and the spark cannot diverge.
   eq((MOM.match(/const href = /g) || []).length, 1, "one href, built once");
   ok(/href="\$\{href\}"/.test(MOM), "and reused by both links");

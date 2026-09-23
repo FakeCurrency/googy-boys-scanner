@@ -125,11 +125,39 @@
 
   /* ---- chrome ---------------------------------------------------------- */
 
+  // COVERAGE, in counts and never as a percentage. The first scheduled ASX
+  // file screened 1,165 of 2,047 names -- Yahoo returned nothing for 882 and
+  // the frame cache was cold, so nothing filled the gap -- while the header
+  // said "298 scanned · 867 gated", which reads as the whole market. `line`
+  // puts the denominator in the header; `note` is one sentence, only when
+  // names are missing; `partial` turns the dot amber. A summary without a
+  // universe count shows the download count alone rather than a guessed ratio.
+  function coverage(s) {
+    const n = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+    const fmt = (v) => v.toLocaleString("en-AU");
+    const got = n(s && s.downloaded);
+    const all = n(s && s.universe);
+    if (got == null) return { line: null, note: "", partial: false };
+    if (all == null) return { line: `${fmt(got)} downloaded`, note: "", partial: false };
+    const line = `${fmt(got)} of ${fmt(all)} downloaded`;
+    const missing = all - got;
+    if (missing <= 0) return { line, note: "", partial: false };
+    const reused = n(s.cache && s.cache.reused);
+    const why = reused === 0
+      ? "and the frame cache was cold (0 reused), so there was no earlier copy to fall back on"
+      : reused == null ? "and the file does not say whether the frame cache filled any"
+        : `even after ${fmt(reused)} were filled from the frame cache`;
+    const note = `${fmt(missing)} of ${fmt(all)} names returned no daily bars ${why}` +
+      ` — this screen covers ${fmt(got)} names, not the whole market.`;
+    return { line, note, partial: true };
+  }
+
   function renderHead() {
     const s = (state.data && state.data.summary) || {};
     const title = $("mo-title");
     const sub = $("mo-sub");
     const dot = $("mo-dot");
+    const cover = $("mo-cover");
     if (state.loading) {
       title.textContent = "MOMENTUM · loading…";
       dot.className = "deck-dot";
@@ -137,21 +165,25 @@
     }
     if (!state.data) {
       title.textContent = "MOMENTUM · no data";
-      dot.className = "deck-dot is-stale";
+      dot.className = "deck-dot is-stale warn";
       sub.textContent = "RSI divergence and scored 20/50 crosses · report only";
+      if (cover) { cover.textContent = ""; cover.hidden = true; }
       return;
     }
     const n = ((state.data.results) || []).length;
     title.textContent = `MOMENTUM · ${n} ${n === 1 ? "name" : "names"}`;
-    dot.className = "deck-dot is-fresh";
+    const cov = coverage(s);
+    dot.className = cov.partial ? "deck-dot is-partial warn" : "deck-dot is-fresh";
     const mode = String(state.data.mode || "A");
     const win = (state.data.params && state.data.params.div_fresh_bars) || 1;
     const bits = [
       `mode ${mode}`,
       `${win}-bar window`,
+      ...(cov.line ? [cov.line] : []),
       `${s.scanned == null ? "?" : s.scanned} scanned`,
       `${s.skipped_gates == null ? "?" : s.skipped_gates} gated`,
     ];
+    if (cover) { cover.textContent = cov.note; cover.hidden = !cov.note; }
     if (s.errors) bits.push(`${s.errors} errored`);
     // The last CLOSED bar, visible rather than hidden in a title attribute:
     // it is the date every number on this page was measured on.
