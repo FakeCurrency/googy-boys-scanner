@@ -280,8 +280,6 @@
   }
 
   // ── time helpers ──────────────────────────────────────────────────────────
-  const pad = (n) => String(n).padStart(2, "0");
-  const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   function openedMs(t) {
     const ms = Date.parse(t.opened_at || `${t.entry_date || ""}T${t.entry_time || "10:00"}`);
     return isNaN(ms) ? null : ms;

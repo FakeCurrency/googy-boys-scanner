@@ -35,7 +35,7 @@ const GONE = {
   },
   "js/journal.js": {
     live: "function splitBot(",
-    dead: ["inBatches", "fav", "nowTime", "tradeKey", "priceFor", "cryptoPrice", "stockPrice", "fetchJSON", "YF_TICKER", "drawMiniEquity"],
+    dead: ["inBatches", "fav", "nowTime", "tradeKey", "priceFor", "cryptoPrice", "stockPrice", "fetchJSON", "YF_TICKER", "drawMiniEquity", "today"],
   },
   "js/app.js": {
     live: "function isHighConviction(",
@@ -101,6 +101,11 @@ ok(!/(?:const|let|var)\s+sector\s*=/.test(fnBody(code("js/app.js"), "rowHtml")),
    "js/app.js rowHtml: the unrendered `sector` badge local was deleted 2026-09-23");
 ok(!/(?:const|let|var)\s+up\s*=|\bup\s*\(/.test(code("js/app.js")),
    "js/app.js: the up() helper (read only by the dead seccount badge) was deleted 2026-09-23");
+
+// journal.js's IIFE-level pad() fed only today(); drawEquity keeps its own
+// numeric `pad` local, so pin the helper's shape, not the name.
+ok(!/const\s+pad\s*=\s*\(/.test(code("js/journal.js")),
+   "js/journal.js: the pad() helper (read only by the dead today()) was deleted 2026-09-23");
 
 // `dark` cannot be pinned by name: sectors.js legitimately writes the string
 // "dark" as the TradingView widget theme. Pin the helper's shape instead.
