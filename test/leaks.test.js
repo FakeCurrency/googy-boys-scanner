@@ -300,8 +300,8 @@ test("every per-render timer and window listener is registered for teardown", ()
   // own; that box went with the manual journal on 2026-09-21.
   const regs = (CHART.match(/onRenderTeardown\(/g) || []).length;
   assert.ok(regs >= 4,
-    `only ${regs} teardown registrations — the live interval, the socket, the drag sweep, the ` +
-    `duration timer and the tick unsubscribe are the floor, not the target`);
+    `only ${regs} teardown registrations — the live interval, the socket, the drag sweep and ` +
+    `the tick unsubscribe are the floor, not the target`);
   // The drag helper is the one that leaks onto WINDOW, which outlives the box.
   assert.ok(/window\.addEventListener\("resize", restore\)/.test(CHART));
   assert.ok(/window\.removeEventListener\("resize", restore\)/.test(CHART),
