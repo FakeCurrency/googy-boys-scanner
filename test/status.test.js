@@ -494,6 +494,15 @@ test("an all-outside-window ledger reads null — a mix of nothing is not a mix"
   assert.equal(triggerMix(f, NOW_TM, 7), null);
 });
 
+test("the sheet does not describe the stop watcher (removed 2026-09-21)", () => {
+  // stop_watcher.yml and /api/tick went with the manual journal. A "not visible
+  // from here" note describing it as running every 5 min told the owner a
+  // component existed that does not.
+  assert.ok(!/<b>Stop watcher<\/b>/i.test(CODE) && !/runs every 5 min/i.test(CODE),
+    "the status sheet describes the removed stop watcher again");
+  assert.ok(/<b>Healer<\/b>/.test(CODE), "the 'not visible from here' block moved -- pin would be vacuous");
+});
+
 test("the sheet names what a self-heal IS when one shows up", () => {
   assert.ok(SRC.includes("self-heal = the cron missed"),
     "the heartbeat count must carry its meaning — a bare number reads as noise");

@@ -429,7 +429,6 @@
 
     h += `<h3 class="sys-h">Not visible from here</h3>`;
     h += `<p class="sys-note"><b>Healer</b> — /api/heartbeat dispatches a scan when the book is overdue, so probing it would move what it measures. Its condition is the ${HEAL_STALE_MIN}m mark above; whether it actually fired is only in the Actions log.</p>`;
-    h += `<p class="sys-note"><b>Stop watcher</b> — runs every 5 min in Actions and commits nothing, so a browser has no read-only view of its freshness. Making it visible needs a committed heartbeat or a KV stamp; neither exists yet.</p>`;
     h += `<p class="sys-note"><b>CI failures</b> — live in GitHub's API, not in any published file. The link below is the authoritative list rather than a count made up here.</p>`;
     h += `<div class="sys-acts">` +
       `<a class="sys-act" href="https://github.com/${REPO}/actions?query=is%3Afailure" target="_blank" rel="noopener">View latest failure ↗</a>` +
