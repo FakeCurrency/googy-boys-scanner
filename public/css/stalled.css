@@ -50,9 +50,6 @@
 }
 .st-row.st-due .st-call { color: var(--red); border-color: var(--red); }
 
-.st-foot { font: 500 11.5px/1.5 var(--sans); color: var(--muted-2); margin: 10px 0 0; }
-.st-foot b { color: var(--muted); }
-
 /* Wide content scrolls inside its own container — the page body must never
    scroll horizontally (repo rule; the 390px journal screenshot is a gate). */
 .st-rows { overflow-x: auto; }
@@ -84,7 +81,6 @@
     padding-left: 10px; box-shadow: -10px 0 10px -6px rgba(0,0,0,.55);
   }
   .st-row > .st-x { background: var(--card, #12151c); }
-  .st-row > .st-x.st-arm { background: var(--red); }
 
   /* THE ONLY WRITE PATH IN THE APPLICATION, and it shipped at ~22px tall
      (2026-08-13). journal.css already fixed this class of miss for the SORT
@@ -127,11 +123,6 @@
 .st-x:hover:not(:disabled) { color: var(--fg); border-color: var(--muted); }
 .st-x:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
-/* Armed: the only state that is red, because it is the only state where the
-   next click sends. */
-.st-x.st-arm {
-  color: #fff; background: var(--red); border-color: var(--red);
-}
 .st-x.st-sent { color: var(--green); border-color: var(--green); background: transparent; }
 .st-x.st-fail { color: var(--red); border-color: var(--red); background: transparent; }
 .st-x:disabled { cursor: default; opacity: .85; }
