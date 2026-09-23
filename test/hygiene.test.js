@@ -136,6 +136,8 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
     ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
        `css/styles.css: .${c} styled markup nothing creates and was deleted 2026-09-23`);
   ok(!/@keyframes\s+star-pop\b/.test(css), "css/styles.css: star-pop animated only the deleted .t-star");
+  ok(!/--bg-grad\s*:/.test(css),
+     "css/styles.css: --bg-grad had no var() reader anywhere and was deleted 2026-09-23 (validate)");
 }
 
 // SWEEP (2026-09-23) -- phasemap.css rules for markup nothing creates: the
