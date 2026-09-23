@@ -107,6 +107,9 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
   const STYLES_CSS_GONE = [
     // second pass: the retired track-record strip (2026-07-09) and PULSE (2026-07-20)
     "track", "pulse",
+    // third pass: ids the markup uses, never classes (#vk-filters is .tb-chips,
+    // #bot-activity is .deck-bot, and no element carries topbar-quote at all)
+    "topbar-quote", "vk-filters", "bot-activity",
     "accent-green",
     "ba-label",
     "control-label",
