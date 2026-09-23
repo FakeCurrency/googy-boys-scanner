@@ -95,6 +95,39 @@ def test_the_evidence_engine_is_restored_even_when_it_throws(monkeypatch):
     assert vbt._snapshot is orig
 
 
+def test_an_open_in_float_noise_of_tp1_is_still_re_scored(monkeypatch):
+    """Found on the runners: Yahoo's open 9.9999999999 sits below TP1 10.0, so
+    the engine takes the trade, while the 8-dp entry reads 10.0 and a second
+    chase guard would refuse it. The engine decides takeability; the re-score
+    must reproduce every trade it took."""
+    import pandas as pd
+    from scanner.vivek_journal import costs_for as cf
+    idx = pd.to_datetime(["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08"])
+    df = pd.DataFrame({"Open": [9.8, 10.0 - 1e-10, 10.1, 10.3], "High": [9.9, 10.2, 10.6, 10.4],
+                       "Low": [9.7, 9.95, 10.0, 9.9], "Close": [9.85, 10.1, 10.5, 10.0],
+                       "Volume": [1e6] * 4}, index=idx)
+    plan = {"stop": 9.0, "tp1": 10.0, "tp2": 11.0, "tp3": 12.0,
+            "scale": list(config.VIVEK_TP_SCALE_LONG)}
+    row = {"symbol": "X", "dir": "LONG", "grade": "A", "level_tf": "weekly"}
+
+    def fake_replay(frame, market, *a, **k):
+        tr = vbt._snapshot(row, "1W", plan, market, float(frame["Open"].iat[1]), "2026-01-06")
+        assert tr is not None, "the engine takes it"
+        for j in range(1, len(frame)):
+            vbt._manage_bar(tr, float(frame["High"].iat[j]), float(frame["Low"].iat[j]),
+                            float(frame["Close"].iat[j]), idx[j].date().isoformat(), cf(market),
+                            is_last=(j == len(frame) - 1))
+            if tr["status"] == "closed":
+                break
+        return [tr]
+    monkeypatch.setattr(vbt, "replay_symbol", fake_replay)
+    check = rp.collections.Counter()
+    out = rp.replay_vivek(df, "asx", {"symbol": "X"}, long_only=True,
+                          gated=rp.collections.Counter(), check=check)
+    assert check == {"compared": 1} and len(out) == 1
+    assert out[0]["w"] <= out[0]["r"] + 1e-9
+
+
 def _t(lens, d, r, w=None, m="asx", **kw):
     return dict({"lens": lens, "m": m, "s": "X", "dir": d, "cohort": "A", "d": "2024-01-02",
                  "e": 10.0, "k": 1.0, "r": r, "w": r if w is None else w, "c": r, "cb": "stop"}, **kw)
@@ -180,3 +213,29 @@ def test_the_script_writes_only_the_paths_it_is_handed():
               ("atomic_write", "write_text", "write_json", "open")]
     assert len(writes) == 3 and all(ast.unparse(w.args[0]).startswith("pathlib.Path(a.")
                                     for w in writes), [ast.unparse(w) for w in writes]
+
+
+def test_a_name_the_first_download_pass_missed_gets_one_more_try(monkeypatch, tmp_path):
+    """29 shards hit Yahoo at once and a throttled batch comes back empty; one
+    more pass after a pause recovers what it can, and the shard's coverage
+    counts what actually arrived."""
+    import json
+    import scanner.data
+    import scanner.universe
+    row = {"symbol": "CBA", "yf": "CBA.AX", "name": "Commonwealth Bank", "sector": ""}
+    frame = rp._load_frames(HIST, [row])
+    if not frame:
+        pytest.skip("no committed CBA history")
+    calls = []
+
+    def fake_download(tickers, period=None, **k):
+        calls.append(list(tickers))
+        return {} if len(calls) == 1 else dict(frame)
+    monkeypatch.setattr(scanner.universe, "load_universe", lambda m, full=True: [row])
+    monkeypatch.setattr(scanner.data, "download", fake_download)
+    out = tmp_path / "asx-00.json"
+    assert rp.main(["shard", "--market", "asx", "--out", str(out), "--retry-wait", "0"]) == 0
+    doc = json.loads(out.read_text(encoding="utf-8"))
+    assert calls == [["CBA.AX"], ["CBA.AX"]]
+    assert doc["downloaded"] == 1 and doc["universe"] == 1 and doc["version"] == rp.VERSION
+    assert doc["vivek_check"].get("mismatch", 0) == 0
