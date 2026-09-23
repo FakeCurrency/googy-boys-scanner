@@ -259,7 +259,10 @@ def test_the_nightly_stages_the_artefact_and_the_retry_reapplies_it():
 
 def test_the_specs_page_reads_it_and_only_the_specs_page():
     sp = (ROOT / "public" / "js" / "specs.js").read_text(encoding="utf-8")
-    assert "data/spec_graduation.json" in sp
+    # The FETCH, not the name: specs.js:177 cites the file in a comment, which
+    # satisfied a bare substring check with the fetch itself removed.
+    assert re.search(r'fetch\w*\(\s*"data/spec_graduation\.json"', sp), \
+        "specs.js no longer fetches data/spec_graduation.json"
     others = [p.name for p in sorted(ROOT.glob("public/js/*.js"))
               if p.name != "specs.js" and "spec_graduation" in p.read_text(encoding="utf-8")]
     assert others == [], f"only the SPECS page renders the graduation watch: {others}"
