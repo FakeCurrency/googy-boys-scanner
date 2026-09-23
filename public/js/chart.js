@@ -2721,7 +2721,8 @@
       if (!(tfs[key] || {}).levels && !(tfs[key] || {}).squeeze_dots &&
           typeof candle.setMarkers === "function") {
         // Seeded from the timeframe's own markers rather than []: a Momentum
-        // chart sets Rule A marks with NO levels, which is exactly the branch
+        // chart sets Rule A marks with no `levels` field (its Auto plan box is
+        // drawn by applyMomentumPlan, not from `levels`), which is exactly the branch
         // this block owns, and a bare [] would drop them the moment a ticker
         // also had a PhaseMap record. Behaviour-preserving elsewhere -- every
         // other path sets `markers` only alongside `levels`, which this block
@@ -3201,9 +3202,10 @@
       className: "tf-notice", hidden: true,
     }) : null;
     if (tfNotice) { el.style.position = "relative"; el.appendChild(tfNotice); }
-    // MOMENTUM caption — always on, never dismissible. A chart with markers and
-    // moving averages and no levels looks like a plan whose lines have not
-    // loaded yet; this says, on the canvas, that there are none to load.
+    // MOMENTUM caption — always on, never dismissible. The box on this chart is
+    // the Pine template's Auto plan (momentumPlan, run per timeframe), not a
+    // 5.0 plan, and a reader cannot tell the two apart from the lines alone;
+    // this says whose plan it is on every chart.
     // textContent, not innerHTML: it is a fixed string but the habit is the
     // point (escaping.test.js pins the family).
     // P6: the caption lives in the HEADER strip, not as a chip floating over
