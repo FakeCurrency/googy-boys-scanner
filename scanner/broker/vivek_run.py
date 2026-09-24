@@ -623,7 +623,9 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
                         level_tf: str | None = None) -> dict | None:
     """Build a paper book position from a decide() plan, filling at the current
     intraday price with the journal's don't-chase guard. Carries entry_type +
-    label + timeframe + grade + sector end-to-end. Returns None to not-chase.
+    label + timeframe + grade + sector end-to-end. Returns None to not-chase,
+    and None when the stop sits wider than VIVEK_BOT_MAX_STOP_PCT from the
+    FILL (see below).
 
     ``level_tf`` is AUDIT-ONLY (which 200-SMA produced the signal: weekly/3d/h4).
     It never gates entry, sizing, or management — stamped so the n≥30 ruling can
@@ -650,6 +652,21 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     snap = _snapshot(row, tf, jplan, market, entry_price, day)
     if snap is None:
         return None
+    # THE STOP CAP, RE-READ AT THE FILL (owner, 2026-09-24 --
+    # reviews/2026-09-24-bot-vs-cells.md). evaluate_setup tests
+    # VIVEK_BOT_MAX_STOP_PCT against the plan's entry, the signal close; the
+    # book fills later at a live quote, and a fill that moved away from the
+    # close can carry a stop wider than the cap (CVLT 26.6%, SMCI 26.3%,
+    # BNB 25.04% were booked that way). Same cap, same `>`, measured where the
+    # money goes in. ENTRY ONLY: held positions never pass through here.
+    cap = float(getattr(config, "VIVEK_BOT_MAX_STOP_PCT", 0) or 0)
+    fill = float(snap["entry"])
+    if cap > 0 and fill > 0:
+        fill_pct = abs(fill - float(plan["stop"])) / fill * 100.0
+        if fill_pct > cap:
+            log.info("SKIP  %-8s [wide_stop_at_fill] stop %.2f%% from the fill %g > max %g%%",
+                     plan["symbol"], fill_pct, fill, cap)
+            return None
     # Bolt the bot-specific sizing + the auditable entry-type label onto the
     # position so the book records exactly what the bot decided.
     snap["entry_type_label"] = plan["entry_type_label"]
