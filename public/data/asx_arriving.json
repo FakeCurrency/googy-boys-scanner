@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-25T04:52:32+10:00",
+  "generated_at": "2026-09-25T08:33:17+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "PLT",
+      "name": "Plenti Group Limited",
+      "sector": "Financial Services",
+      "dir": "LONG",
+      "price": 0.755,
+      "turnover_avg20": 73389,
+      "turnover_today": 763666,
+      "rvol": 10.5,
+      "adv_usd": 73389.6,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "ACQ",
       "name": "Acorn Capital Investment Fund Limited",
@@ -31,19 +44,6 @@
       "turnover_today": 294217,
       "rvol": 3.5,
       "adv_usd": 89731.34,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "PEC",
-      "name": "Perpetual Resources Limited",
-      "sector": "Materials",
-      "dir": "LONG",
-      "price": 0.015,
-      "turnover_avg20": 28126,
-      "turnover_today": 119908,
-      "rvol": 3.9,
-      "adv_usd": 28126.75,
       "fund": false,
       "is_product": false
     },
