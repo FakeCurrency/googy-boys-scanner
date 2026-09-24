@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-24T16:47:10+10:00",
+  "generated_at": "2026-09-24T18:31:59+10:00",
   "tz_label": "AEST",
   "markets": {
     "asx": {
@@ -127,15 +127,6 @@
       "top_movers": {
         "winners": [
           {
-            "symbol": "NST",
-            "name": "Northern Star Resources Ltd",
-            "sector": "Materials",
-            "last": 22.8,
-            "pct": 3.97,
-            "mcap": 32485556224,
-            "tier": "mega"
-          },
-          {
             "symbol": "BSL",
             "name": "Bluescope Steel Limited",
             "sector": "Materials",
@@ -172,6 +163,15 @@
             "tier": "mega"
           },
           {
+            "symbol": "RIO",
+            "name": "Rio Tinto Limited",
+            "sector": "Materials",
+            "last": 167.61,
+            "pct": 0.79,
+            "mcap": 267347623936,
+            "tier": "mega"
+          },
+          {
             "symbol": "MYR",
             "name": "Myer Holdings Limited",
             "sector": "Consumer Discretionary Distribution & Retail",
@@ -190,21 +190,21 @@
             "tier": "small"
           },
           {
+            "symbol": "MGH",
+            "name": "Maas Group Holdings Limited",
+            "sector": "Capital Goods",
+            "last": 6.94,
+            "pct": 7.93,
+            "mcap": 1792213120,
+            "tier": "small"
+          },
+          {
             "symbol": "BCI",
             "name": "Bci Minerals Limited",
             "sector": "Materials",
             "last": 0.64,
             "pct": 7.56,
             "mcap": 1175031936,
-            "tier": "small"
-          },
-          {
-            "symbol": "MGH",
-            "name": "Maas Group Holdings Limited",
-            "sector": "Capital Goods",
-            "last": 6.91,
-            "pct": 7.47,
-            "mcap": 1792213120,
             "tier": "small"
           },
           {
@@ -218,6 +218,15 @@
           }
         ],
         "losers": [
+          {
+            "symbol": "PLS",
+            "name": "Pls Group Limited",
+            "sector": "Materials",
+            "last": 3.94,
+            "pct": -5.74,
+            "mcap": 15892454400,
+            "tier": "mega"
+          },
           {
             "symbol": "ORG",
             "name": "Origin Energy Limited",
@@ -237,30 +246,21 @@
             "tier": "mega"
           },
           {
-            "symbol": "NWS",
-            "name": "News Corporation..",
-            "sector": "Media & Entertainment",
-            "last": 44.35,
-            "pct": -2.31,
-            "mcap": 24701483008,
+            "symbol": "NST",
+            "name": "Northern Star Resources Ltd",
+            "sector": "Materials",
+            "last": 22.27,
+            "pct": -2.32,
+            "mcap": 32485556224,
             "tier": "mega"
           },
           {
-            "symbol": "QAN",
-            "name": "Qantas Airways Limited",
-            "sector": "Transportation",
-            "last": 8.94,
-            "pct": -2.13,
-            "mcap": 14042488832,
-            "tier": "mega"
-          },
-          {
-            "symbol": "GMG",
-            "name": "Goodman Group",
-            "sector": "Equity Real Estate Investment Trusts (REITs)",
-            "last": 26.2,
-            "pct": -2.13,
-            "mcap": 56649584640,
+            "symbol": "NXG",
+            "name": "Nexgen Energy (Canada) Ltd",
+            "sector": "Energy",
+            "last": 13.57,
+            "pct": -2.3,
+            "mcap": 10266215424,
             "tier": "mega"
           },
           {
@@ -336,6 +336,14 @@
           "spike": 6.3
         },
         {
+          "symbol": "NAB",
+          "name": "National Australia Bank Limited",
+          "sector": "Banks",
+          "pct": -1.32,
+          "turnover": 139042068,
+          "spike": 0.7
+        },
+        {
           "symbol": "ALD",
           "name": "Ampol Limited",
           "sector": "Energy",
@@ -344,25 +352,17 @@
           "spike": 1.7
         },
         {
-          "symbol": "ANZ",
-          "name": "Anz Group Holdings Limited",
-          "sector": "Banks",
-          "pct": -1.06,
-          "turnover": 106853481,
-          "spike": 0.6
-        },
-        {
-          "symbol": "WES",
-          "name": "Wesfarmers Limited",
-          "sector": "Consumer Discretionary Distribution & Retail",
-          "pct": 0.11,
-          "turnover": 106539011,
+          "symbol": "MQG",
+          "name": "Macquarie Group Limited",
+          "sector": "Financial Services",
+          "pct": 0.08,
+          "turnover": 121128016,
           "spike": 0.7
         }
       ],
-      "rotation_detail": "Technology Hardware & Equipment led the session (avg +1.9% across its big names): ELS +5.7%, DDR +0.5%, CDA -0.6%. Telecommunication Services was the weakest (avg -4.0%): TUA -23.4%, SLC -3.0%, SPK -0.9%.",
-      "eli5": "The ASX market went down a bit today (-0.7%). Energy companies did the best, and Gold companies did the worst. The biggest winner was NST (up 4.0%), and the biggest faller was ORG (down 3.1%).",
-      "enriched_at": "2026-09-24T06:47:10+00:00"
+      "rotation_detail": "Technology Hardware & Equipment led the session (avg +1.9% across its big names): ELS +5.7%, DDR +0.5%, CDA -0.6%. Telecommunication Services was the weakest (avg -3.7%): TUA -23.4%, SPK -0.9%, CNU -0.9%.",
+      "eli5": "The ASX market went down a bit today (-0.7%). Energy companies did the best, and Gold companies did the worst. The biggest winner was BSL (up 2.3%), and the biggest faller was PLS (down 5.7%).",
+      "enriched_at": "2026-09-24T08:32:00+00:00"
     },
     "us": {
       "label": "US",
@@ -398,9 +398,9 @@
         {
           "symbol": "VIX",
           "name": "VIX",
-          "last": 15.18,
-          "chg": 0.31,
-          "chg_pct": 2.08
+          "last": 16.18,
+          "chg": 1.0,
+          "chg_pct": 6.59
         },
         {
           "symbol": "US10Y",
@@ -489,7 +489,7 @@
           "chg_pct": -1.91
         }
       ],
-      "summary": "S&P 500 -0.8%; Nasdaq -0.7%; Dow Jones -1.0%; Russell 2000 -1.3%. VIX 15.18 (+2.1%) \u00b7 10Y 5.11% (+3.0%). Breadth 5 up / 6 down across sectors \u2014 Materials led (+1.1%), Utilities lagged (-2.2%). Tone reads risk-on (cyclicals leading) \u2014 cyclicals -0.2% vs defensives -0.9%. See the calendar & news below for the events behind it.",
+      "summary": "S&P 500 -0.8%; Nasdaq -0.7%; Dow Jones -1.0%; Russell 2000 -1.3%. VIX 16.18 (+6.6%) \u00b7 10Y 5.11% (+3.0%). Breadth 5 up / 6 down across sectors \u2014 Materials led (+1.1%), Utilities lagged (-2.2%). Tone reads risk-on (cyclicals leading) \u2014 cyclicals -0.2% vs defensives -0.9%. See the calendar & news below for the events behind it.",
       "rotation": "Money rotated INTO XLB (+1.1%), XLE (+1.0%), XLP (+0.6%) and OUT OF XLU (-2.2%), XLC (-1.9%), XLRE (-1.8%). Cyclicals/growth leading \u2014 appetite for risk.",
       "upcoming": [
         {
@@ -759,7 +759,7 @@
       ],
       "rotation_detail": "Standout names: OKTA +7.3%, ILMN +6.9%, AEIS +6.3%, MPWR +6.1%. Weakest: ABNB -10.3%, GEN -10.0%, PAYX -9.2%.",
       "eli5": "The US market went down a bit today (-0.8%). Materials companies did the best, and Utilities companies did the worst. The biggest winner was OKTA (up 7.3%), and the biggest faller was ABNB (down 10.3%).",
-      "enriched_at": "2026-09-24T06:40:33+00:00"
+      "enriched_at": "2026-09-24T08:23:25+00:00"
     }
   }
 }
