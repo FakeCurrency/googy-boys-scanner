@@ -223,7 +223,7 @@ def predicates_block() -> str:
         "level_tf_missing = dropped",
         f"max_stop_pct     = {config.VIVEK_BOT_MAX_STOP_PCT:g}",
         f"min_stop_pct     = {config.VIVEK_BOT_MIN_STOP_PCT:g}",
-        "stop_basis       = plan entry",
+        "stop_basis       = plan entry, then fill",
         f"min_rr           = {config.VIVEK_BOT_MIN_RR:g}",
         f"exclude_funds    = {config.VIVEK_BOT_EXCLUDE_FUNDS}",
         f"max_per_sector   = {config.VIVEK_BOT_MAX_PER_SECTOR}",

@@ -102,31 +102,35 @@ def test_the_level_gate_and_a_missing_level_is_dropped():
     assert [r["level_tf"] for r in kept] == ["weekly", "3d"] and dropped == 3
 
 
-def test_the_stop_band_is_read_off_the_plan_entry():
+def test_the_stop_band_is_read_off_the_plan_entry_then_the_fill():
     b = _block()
     assert float(b["max_stop_pct"]) == config.VIVEK_BOT_MAX_STOP_PCT
     assert float(b["min_stop_pct"]) == config.VIVEK_BOT_MIN_STOP_PCT
-    assert b["stop_basis"] == "plan entry"
+    assert b["stop_basis"] == "plan entry, then fill"
     cap = config.VIVEK_BOT_MAX_STOP_PCT
     assert vb.evaluate_setup(_row(stop=100.0 - (cap - 1)))["take"] is True
     assert vb.evaluate_setup(_row(stop=100.0 - (cap + 1)))["code"] == "wide_stop"
 
 
-def test_the_fill_is_not_re_checked_against_the_cap_today():
-    """The finding in the note: a fill that moved away from the signal close is
-    booked even when its stop is now wider than the cap. If the section-5 patch
-    is applied this goes red -- regenerate the note (stop_basis becomes the
-    fill) in the same PR."""
-    cap = config.VIVEK_BOT_MAX_STOP_PCT
-    stop = 100.0 - (cap - 2)                           # inside the cap at the plan entry
-    fill = stop / (1 - (cap + 2) / 100.0)              # outside it at the fill
-    plan = {"symbol": "X", "name": "X", "sector": "", "direction": "long", "grade": "A+",
+def _ticket(stop, fill):
+    return {"symbol": "X", "name": "X", "sector": "", "direction": "long", "grade": "A+",
             "entry_type": "reclaim", "entry_type_label": "x", "timeframe": "1W",
             "entry": 100.0, "stop": stop, "tp1": fill * 1.3, "tp2": fill * 1.6, "tp3": fill * 2,
             "scale": [0.25, 0.5, 0.15], "trigger_bar": None, "leverage_target": 5.0,
             "units": 1.0, "notional": 5000.0, "leverage": 1.0, "risk_pct": 0.1, "risk_usd": 1.0}
-    pos = vr._ticket_to_position({"plan": plan}, fill, "nasdaq", "2026-09-24")
-    assert pos is not None and pos["risk"] / pos["entry"] * 100 > cap
+
+
+def test_the_cap_is_re_read_at_the_fill():
+    """The finding in the note, closed by section 5's first patch (applied
+    2026-09-24): a plan inside the cap at the signal close whose fill moved
+    far enough to put the stop outside it is not booked."""
+    cap = config.VIVEK_BOT_MAX_STOP_PCT
+    stop = 100.0 - (cap - 2)                           # inside the cap at the plan entry
+    wide = stop / (1 - (cap + 2) / 100.0)              # outside it at the fill
+    assert vr._ticket_to_position({"plan": _ticket(stop, wide)}, wide, "nasdaq", "2026-09-24") is None
+    near = stop / (1 - (cap - 1) / 100.0)              # moved, still inside
+    pos = vr._ticket_to_position({"plan": _ticket(stop, near)}, near, "nasdaq", "2026-09-24")
+    assert pos is not None and pos["risk"] / pos["entry"] * 100 <= cap
 
 
 def test_the_other_gate_constants():

@@ -2292,6 +2292,21 @@ longer the retired trio; `system.html`'s rulebook and `vivek_parity` /
 off, level gate standing, retired names gone, every deck-HC row is
 bot-takeable and every non-cell is not).
 
+### BOT HONESTY — the stop cap at the fill, the grade as taken (2026-09-24, owner: "change the rule")
+
+`reviews/2026-09-24-bot-vs-cells.md` checked the live gate against the four-cell
+sleeve PR #42 measured and found two gaps; both are closed. (1) **The 25% stop cap
+is re-read at the FILL** (`vivek_run._ticket_to_position`, logged
+`[wide_stop_at_fill]`): `evaluate_setup` tests `VIVEK_BOT_MAX_STOP_PCT` off the
+plan entry (the signal close), and a live fill that moved away from it had booked
+CVLT 26.6% / SMCI 26.3% / BNB 25.04%. Same cap, same `>`. ENTRY ONLY — those three
+stay open and are managed as before; do not "fix" that by closing them. (2)
+**`plan_trade` records `decision["grade"]`** (grade_raw, A or A+) instead of a
+hard-coded `"A+"`, which had booked every A take since 2026-09-21 as A+ (7 open rows
+at the time). A label: no takeability moves. Not added, owner's call: a
+same-issuer cap (FWONA + FWONK are one company). Pins: `tests/test_bot_honesty.py`
+and the note's predicate block (`tests/test_bot_vs_cells.py`).
+
 ## MY JOURNAL — THE "ME" SIDE REMOVED ENTIRELY (2026-09-21)
 
 Owner: *"I want to get rid of the entire 'MY JOURNAL' page ... I no longer am

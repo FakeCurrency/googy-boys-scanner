@@ -403,7 +403,10 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
         "timeframe": tf,                              # Rule 3 — recorded per trade
         "entry_type": decision["entry_type"],         # Rule 2 — labelled per trade
         "entry_type_label": decision["entry_type_label"],
-        "grade": "A+",
+        # The grade the gate read (grade_raw: A+ or A). It said "A+" on every
+        # ticket until 2026-09-24, so an A take was booked as A+ from the day A
+        # became takeable (2026-09-21). A label only: nothing reads it to decide.
+        "grade": decision["grade"],
         "entry": entry, "stop": stop,
         "tp1": tps[0], "tp2": tps[1], "tp3": tps[2],
         "tp_plan": [
@@ -418,9 +421,9 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
     # only marks the ones worth the owner's eye before they are taken.
     ticket["review"] = review_flags(ticket)
     marks = "".join(f"  [{f['code']}]" for f in ticket["review"])
-    log.info("PLAN  %-8s A+ %-5s %s · %s · entry %g SL %g · %g units  $%.0f notional  "
+    log.info("PLAN  %-8s %-2s %-5s %s · %s · entry %g SL %g · %g units  $%.0f notional  "
              "risk $%.2f (%.2f%%)  lev %.1fx%s%s",
-             ticket["symbol"], direction, tf, ticket["entry_type"], entry, stop,
+             ticket["symbol"], ticket["grade"], direction, tf, ticket["entry_type"], entry, stop,
              ticket["units"], ticket["notional"], ticket["risk_usd"], ticket["risk_pct"],
              ticket["leverage"], "  [lev-capped]" if ticket["leverage_capped"] else "",
              marks)
