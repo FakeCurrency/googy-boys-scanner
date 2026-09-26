@@ -1318,3 +1318,58 @@ MORNING_PLAYS_STALE_H = 20.0
 # digest. Empty = omit the link (a dead link is worse than none). The owner
 # can set their Cloudflare Pages URL here.
 MORNING_PLAYS_APP_URL = ""
+
+
+# ---------------------------------------------------------------------------
+# VPS RUNNER (2026-09-26) — constants for `scanner/vps` (the systemd job
+# runner that replaces GitHub Actions on the owner's box) and for the Node
+# API adapter's typed /api/dispatch. deploy/DESIGN.md is the contract; nothing
+# under scanner/broker/ reads any of these. Config-first rule: every tunable
+# the runner or the adapter needs lives here, never inline in a unit file.
+# ---------------------------------------------------------------------------
+# Where the runner keeps spool/locks/ledger/summaries when VIVEK_STATE_DIR is
+# unset (tests and a bare local run). The box sets /opt/vivek5/state.
+VPS_STATE_DIR_DEFAULT = ".vps-state"
+# How long a job may WAIT for its lock family before giving up — separate
+# from the step timeout, because a close arriving mid-scan must queue behind
+# a 40-80 minute ASX run rather than fail.
+VPS_LOCK_WAIT_S = {"scan": 7200, "heavy": 3600, "default": 600}
+# Publish loop: fetch/reset/re-apply/commit/push attempts on a push race.
+VPS_PUBLISH_MAX_ATTEMPTS = 5
+# Ledger-mode watchdog: free space under the checkout below this is CRITICAL.
+VPS_DISK_MIN_GB = 3.0
+# Spool hygiene (deploy/DESIGN.md §3.5): a dispatch file larger than this is
+# refused unread; more pending files than this makes /api/dispatch answer 429.
+VPS_SPOOL_MAX_BYTES = 16 * 1024
+VPS_SPOOL_MAX_PENDING = 20
+# /api/dispatch abuse guard, mirrored from the Cloudflare Functions' KV rules
+# (scan.js 5 min / 40 a day, close.js 60 a day) — the VPS enforces its own
+# copy because a direct caller bypasses the Functions entirely.
+VPS_DISPATCH_COOLDOWN_S = 300
+VPS_DISPATCH_DAILY_CAPS = {"scan.yml": 40, "close_position.yml": 60,
+                           "morning_plays.yml": 12}
+# crypto_bot.yml's :52 backstop threshold, transcribed: "fresh" when the
+# crypto scan's generated_at is under 65 minutes old. On the VPS the source
+# is the LOCAL public/data/crypto_vivek.json, not the deployed site.
+VPS_CRYPTO_BACKSTOP_FRESH_S = 3900
+# The GitHub workflows cutover.sh disables (13 scheduled + the two manual
+# BOOK WRITERS reachable from a browser / a Claude session) and rollback.sh
+# re-enables. Any workflow missing from this list is a second writer.
+VPS_WORKFLOWS_TO_DISABLE = (
+    "alert_returns.yml", "backup_book.yml", "confluence.yml", "crypto_bot.yml",
+    "evidence_brief.yml", "kill_switch.yml", "lens_backtest.yml", "momentum.yml",
+    "morning_plays.yml", "phasemap.yml", "reco_note.yml", "scan.yml",
+    "vivek_backtest.yml",
+    "close_position.yml", "dispatch_scan.yml",
+)
+# Jobs that write the paper book: they refuse to run while state/HALT exists
+# (a non-VPS data commit landed upstream) and they share the `scan` lock.
+VPS_BOOK_WRITER_JOBS = ("scan.yml", "crypto_bot.yml", "close_position.yml")
+# The git identity the VPS publishes under. The email MUST already be in
+# scripts/commit_sentinel.py ALLOWED_EMAILS (its test pins the set to
+# identities observed on main), which is why the default is the owner's
+# GitHub noreply address rather than a new one; the NAME is what
+# distinguishes a VPS commit from the owner's own pushes for the
+# second-writer check.
+VPS_GIT_AUTHOR_NAME = "vivek5-vps"
+VPS_GIT_AUTHOR_EMAIL_DEFAULT = "294004674+FakeCurrency@users.noreply.github.com"
