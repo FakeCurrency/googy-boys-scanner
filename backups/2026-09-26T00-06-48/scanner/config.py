@@ -8,24 +8,8 @@ Reconstructed from the original app's "How it works" methodology — tune freely
 from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
-# Fibonacci EMA ladder (daily close)
-# ---------------------------------------------------------------------------
-EMA_PERIODS = [8, 13, 21, 34, 55, 89, 144]
-
-# ---------------------------------------------------------------------------
 # Signal point weights — the grade is simply the sum of the points scored.
 # ---------------------------------------------------------------------------
-POINTS = {
-    "alignment": 3,     # full bullish EMA stack
-    "pullback": 3,      # price pulled back to a core EMA
-    "confluence": 3,    # several EMAs clustered at one price zone
-    "compression": 2,   # EMAs bunched tightly
-    "weekly": 1,        # higher-timeframe (weekly) uptrend confirmation
-    "volume": 1,        # volume expansion vs recent average
-    "adx": 1,           # ADX > threshold — market is actually trending, not ranging
-    "rsi_pullback": 1,  # RSI(21) in 38–62 zone — healthy dip, not washed out
-}
-SCORE_MAX = sum(POINTS.values())   # 15
 
 # Grade cut-offs on total points (checked high -> low). Max possible = 13.
 GRADE_CUTOFFS = [
@@ -37,18 +21,7 @@ GRADE_CUTOFFS = [
 
 # Grades considered "tradeable" vs "watch only" (drives counters / tabs)
 TRADEABLE_GRADES = {"A+", "A"}
-WATCH_GRADES = {"B", "C"}
 
-# Score at/above which a row's sparkline+trend bar paints green (else blue) on the
-# site. Per scan type because each has a different max score. Pure cosmetics.
-TREND_THRESHOLDS = {
-    "pullback": 10,
-    "reversal": 11,
-    "spec": 8,
-    "short": 10,
-    "scalp": 8,
-    "googy": 9,
-}
 
 # Reward-to-risk below this is flagged with a red "LOW R:R" chip.
 LOW_RR_THRESHOLD = 1.5
@@ -67,23 +40,9 @@ LIQUID_TIER = {"asx": 1_000_000, "nasdaq": 20_000_000, "crypto": 100_000_000}
 # ---------------------------------------------------------------------------
 # Signal thresholds
 # ---------------------------------------------------------------------------
-PULLBACK_EMAS = [21, 34, 55]   # "core" EMAs price pulls back to (34/55 emphasised)
-PULLBACK_TOL = 0.025           # within 2.5% of a core EMA counts as a pullback
-COMPRESSION_TOL = 0.06         # (max EMA - min EMA) / price <= 6% => compressed
-CONFLUENCE_BAND = 0.02         # an EMA within 2% of price counts toward confluence
-CONFLUENCE_MIN = 3             # >= 3 EMAs clustered near price => confluence
 VOLUME_MULT = 1.4              # latest volume >= 1.4x its recent average
-VOLUME_LOOKBACK = 20
 LIQUIDITY_LOOKBACK = 20        # bars used for the average-turnover liquidity test
 
-# ADX — trend-strength chip
-ADX_PERIOD = 14
-ADX_TREND_MIN = 25             # ADX above this = trending (chip fires)
-
-# RSI(21) pullback quality chip
-RSI_PERIOD = 21                # Fibonacci period — more stable than 14 on daily bars
-RSI_PULLBACK_LOW = 38          # RSI must be above this (not washed out / capitulation)
-RSI_PULLBACK_HIGH = 62         # RSI must be below this (still has room to run)
 
 # ---------------------------------------------------------------------------
 # Entry / stop / target levels
@@ -95,9 +54,6 @@ PIVOT_WINDOW = 3              # bars each side that define a pivot high
 ATR_PERIOD = 14
 SUPERTREND_MULT = 3.0         # ATR multiplier for the Phase-2 trailing stop
 
-# Weekly (higher-timeframe) trend confirmation
-WEEKLY_FAST = 10
-WEEKLY_SLOW = 20
 
 # Per-row sparkline: how many recent daily closes to send to the UI
 SPARK_BARS = 30
@@ -117,7 +73,6 @@ MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across al
 # REVERSALS scanner — early trend-reversal / base-breakout setups.
 # Uses the user's own indicators: SMA 9/26/43/200, RSI 14 (+ its MA), Vol 20.
 # ---------------------------------------------------------------------------
-REV_SMAS = [9, 26, 43, 200]
 REV_RSI_PERIOD = 14
 REV_RSI_MA = 14                # SMA of RSI (the yellow RSI line on the charts)
 REV_VOL_LOOKBACK = 20          # Vol-20 average
@@ -130,7 +85,6 @@ REV_POINTS = {
     "breakout": 2,    # closing above the base high / descending resistance
     "rsi": 2,         # RSI turning up through its MA
 }
-REV_SCORE_MAX = sum(REV_POINTS.values())   # 14
 REV_GRADE_CUTOFFS = [("A+", 11), ("A", 9), ("B", 6), ("C", 4)]
 
 # Thresholds
@@ -155,7 +109,6 @@ REV_STOP_FALLBACK_PCT = 0.95   # fallback stop = entry * this when swing low is 
 # Volume spike + base + breakout are MANDATORY gates; the grade then reflects
 # how strong the spike and breakout are. Reuses the SMA 9/26/43/200 + RSI 14.
 # ---------------------------------------------------------------------------
-SPEC_SMAS = [9, 26, 43, 200]
 SPEC_VOL_LOOKBACK = 20         # Vol-20 average baseline
 SPEC_VOL_RECENT = 5           # the spike must have happened within this many bars
 SPEC_VOL_SPIKE = 3.0          # mandatory: a recent day >= 3x the 20-day avg volume
@@ -168,53 +121,12 @@ SPEC_CROSS_LOOKBACK = 12      # fresh 9-over-26 cross within this many bars (bon
 SPEC_SLOPE_BARS = 5           # bars used to judge the 9-SMA is curling up
 SPEC_RSI_BAND = (45, 85)      # specs can run hot — wider band than reversals
 SPEC_MAX_EXT = 0.60           # skip if already >60% above the 9-SMA (too late / chased)
-SPEC_STOP_LOOKBACK = 10       # recent swing low for the stop
 SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
 
 SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
-# Short scanner quality gates (hard filters — fail any one = skip the stock)
-SHORT_DOWNTREND_BARS = 15     # price must have been below EMA 144 for this many bars (no recent dips)
-SHORT_RESISTANCE_TOL = 0.005  # price may be up to 0.5% above resistance EMA and still count as a touch
-SHORT_STOP_FALLBACK_PCT = 0.03  # fallback stop = entry * (1 + this) when swing high is below entry
-SHORT_EMA_ALIGN_BARS = 10     # EMA 8 must have been below EMA 21 for this many bars
-SHORT_BOUNCE_VOL_WINDOW = 8   # bars to compare up-day vs down-day volume on the bounce
 
 SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
-
-# ---------------------------------------------------------------------------
-# GOOGY scanner — consolidation breakout setups.
-# Finds price breaking above the highest high of the last N bars, confirmed by
-# momentum (RSI > 50) and at least one SMA trend filter. More tolerant of low
-# liquidity than the Pullback/Reversal scanners — surfaces aggressive breakouts
-# that may not qualify for the tighter screens. No price cap, no beaten-down gate.
-# ---------------------------------------------------------------------------
-GOOGY_BREAKOUT_LOOKBACK  = 25  # bars to define the consolidation range (mandatory gate)
-GOOGY_FRESH_LOOKBACK     = 5   # range high must have been set within last N bars (Rule 1)
-GOOGY_NOT_EXTENDED_PCT   = 0.10 # price no more than 10% above range high (Rule 2)
-GOOGY_VOL_LOOKBACK       = 20  # bars for the volume average baseline
-GOOGY_VOL_MULT           = 1.8 # volume ≥ 1.8× avg — mandatory gate (Rule 4)
-GOOGY_VOL_STRONG         = 2.5 # volume > 2.5× avg = strong volume bonus
-GOOGY_VOL_SURGE          = 4.0 # volume > 4× avg = surge bonus
-GOOGY_RSI_PERIOD         = 14  # RSI / ATR / ADX period
-GOOGY_RSI_MIN            = 50  # RSI must be above this AND price > SMA20 (Rule 5)
-GOOGY_SMA_FAST           = 20  # fast SMA — mandatory trend filter (Rule 5)
-GOOGY_SMA_SLOW           = 50  # slow SMA — display only (above → bonus point)
-GOOGY_COMPRESS_LOOKBACK  = 15  # bars ago to compare ATR for compression check (Rule 3)
-GOOGY_ADX_MIN            = 18  # ADX must exceed this to score the strength bonus (Rule 6)
-GOOGY_ADX_RISING_BARS    = 5   # ADX rising over last N bars = rising confirmation
-GOOGY_RANGE_TIGHT_PCT    = 0.20 # tight range: (high-low)/high < 20% → quality bonus
-GOOGY_RANGE_MIN_BARS     = 10  # minimum bars of consolidation for quality bonus
-GOOGY_STOP_LOOKBACK      = 20  # bars to find the recent swing low for the stop
-GOOGY_STOP_BUFFER        = 0.01 # place stop 1% below the swing low
-GOOGY_STOP_FALLBACK_PCT  = 0.93 # fallback stop = entry * this when swing low >= entry
-GOOGY_MIN_HISTORY        = 80  # minimum bars needed (increased to support ATR lookback)
-# Turnover below this gets a LOW LIQUIDITY warning chip (but still shows up)
-GOOGY_LOW_LIQ_TURNOVER = {"asx": 200_000, "nasdaq": 500_000, "crypto": 1_000_000}
-# Hard minimum — below this, skip entirely (basically zero-activity tickers)
-GOOGY_MIN_TURNOVER = {"asx": 5_000, "nasdaq": 10_000, "crypto": 50_000}
-GOOGY_SCORE_MAX = 12
-GOOGY_GRADE_CUTOFFS = [("A+", 9), ("A", 7), ("B", 4), ("C", 2)]
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
@@ -243,21 +155,32 @@ VIVEK_SCHEMA_VERSION   = 5
 # THE LITE-PLAN DRIFT-PIN (owner clarification, 2026-07-31 ruling): the exact
 # per-timeframe plan fields the SUMMARY keeps, named so they cannot drift.
 # Every list-path consumer reads ONLY these:
-#   app.js  isHighConviction()  -> armed, entry_trigger, structural_tps
+#   app.js  convictionCells()   -> armed, entry_trigger (every TF the rule reads)
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
-# recs.js, mynames.js, journal.js, phasemap-shared.js, confluence_alert.py,
-# marketcaps/sectorcache/breadth/regime read ROW-level fields only — no plans.
+# recs.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
 # test/staleview.test.js proves isHighConviction passes on a lite-only plan.
+# (structural_tps stays in the tuple for the row chips; the conviction rule
+# stopped reading it on 2026-09-20 — see scanner/conviction.py.)
 VIVEK_SUMMARY_PLAN_FIELDS = ("armed", "entry_trigger", "structural_tps",
                              "level_tf", "direction")
 VIVEK_DETAIL_ROW_FIELDS   = ("plans", "detail", "analysis", "markers")
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
+# How many tradeable coins the crypto universe holds, by market-cap rank
+# (owner, 2026-09-21: "see if you can branch into the top 200 coins rather
+# than the current selection"). Honest expectation, measured at 100: of 101
+# names in the universe only 69 had Yahoo data under "<SYM>-USD", and the
+# $100M crypto liquidity floor (LIQUID_TIER) cuts more of the tail. Doubling
+# the rank depth should scan ~110-130, not 200 — the bottom of the top 200 is
+# thin alt territory where a paper fill is the most fictional, and the
+# liquidity gate is what keeps it honest.
+CRYPTO_UNIVERSE_SIZE   = 200
 # Coins pinned into the crypto universe regardless of market-cap rank
 # (2026-07-02, the FLASH gap: not in CoinGecko's top-100 -> invisible to
 # every scanner). Add symbols here to guarantee coverage; Yahoo-less coins
@@ -317,8 +240,30 @@ VIVEK_BREAK_VOL_MULT   = 1.5       # a structure break needs >= this x average v
 VIVEK_TRIGGER_PRIORITY = ["reclaim", "retest", "break"]   # first match wins
 VIVEK_MIN_TF_BARS      = 30        # min bars to build a per-timeframe plan (e.g. Weekly)
 
-# 5.0 execution rules (used by the autonomous bot + dashboard)
-VIVEK_RISK_PCT_DEFAULT = 0.25      # % of equity risked per trade (0.25–0.5 range)
+# ── 4H PLANS (owner, 2026-09-19) ─────────────────────────────────────────────
+# "I need to see genuine set ups forming on d and weekly 3d and then if i toggle
+# down i want to see a genuine set up on the 4hr."
+#
+# Until now the chart's 4H toggle borrowed the DAILY plan and said so in a
+# tooltip, because the scan downloads daily bars only and never built a 4H plan.
+# The engine still uses the Daily 200 SMA as its "h4" LEVEL in evaluate() -- that
+# one is signal path (it feeds scoring and grading) and is deliberately NOT
+# touched here. This block is the DISPLAY half: a real 4H plan, from real 4H
+# bars, published as its own timeframe like 3D and 1W.
+#
+# Measured 2026-09-19 on a runner before building it: Yahoo serves 2 full years
+# of 1h bars (~3,500), which buckets to ~1,200 4H bars -- six times the 200 a
+# 200-period average needs -- at 0.18s a symbol, so the whole published row set
+# costs about a minute of scan time.
+VIVEK_H4_PLANS         = True      # build a real 4H plan for published rows
+VIVEK_H4_PERIOD        = "2y"      # Yahoo's intraday ceiling is ~730 days
+VIVEK_H4_INTERVAL      = "1h"      # bucketed to 4H locally (Yahoo has no 4h)
+VIVEK_H4_BUCKET_HOURS  = 4
+# Cap the extra download so a huge result set cannot stretch a scheduled scan.
+# Rows beyond this simply keep today's behaviour (the chart falls back to the
+# Daily plan and labels it), which is a degrade, never a failure.
+VIVEK_H4_MAX_SYMBOLS   = 400
+
 VIVEK_RISK_PCT_MAX     = 0.5
 VIVEK_MAX_LEVERAGE     = 5         # hard cap; 2.5–3× preferred
 VIVEK_TP_SCALE_LONG    = [0.25, 0.50, 0.15]   # book at TP1 / TP2 / TP3 (10% runner left)
@@ -349,9 +294,27 @@ VIVEK_JOURNAL_SESSION = {
     "nasdaq": (9, 30, 16, 0),
     "crypto": None,
 }
+# Deck freshness, session + N hours (2026-09-23): the 5.0 deck marks a payload
+# stale once a session has been open this long with no scan from inside it, or
+# closed this long with no scan from after the close. DISPLAY ONLY -- nothing
+# in scanner/ or broker/ reads it. app.js mirrors it and the table above as
+# SESSION_STALE; tests/test_deck_session_stale.py holds the two in step.
+VIVEK_DECK_SESSION_GRACE_H = 2
+
+# Lens backtests (2026-09-23): every lens replay reports its R alongside the
+# dollars a flat position of this size would have made -- the owner's reading
+# ("assume every position was 1k"). Dollars only: R never depends on it.
+LENS_BACKTEST_NOTIONAL = 1000.0
 
 # Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
-VIVEK_BOT_MIN_GRADE    = "A+"      # A+ ONLY — never A / B+ / WATCH
+# GRADES (owner ruling 2026-09-21: "the paper bot should only take the highest
+# R and conviction plays so it needs to take what we're changing the high
+# conviction list [to]"). A+ AND A, matching the deck's HIGH CONVICTION rule.
+# Evidence (600-name long-only replay): HC cells at A/A+ +0.212R n=2403 PF 1.47
+# vs A+ only +0.216R n=1423 — the same edge per trade, on 70% more trades.
+# Compare the rule it replaces: A+ / 1W>3D>1D / no retest = +0.094R n=2718.
+# Read against grade_raw (unsmoothed), never the displayed grade.
+VIVEK_BOT_GRADES       = ("A+", "A")
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
 # Skip non-operating vehicles (REITs / ETFs / LICs / managed funds) — they hug
 # their 200 SMA so they over-produce reactions, but aren't what we want the bot
@@ -368,7 +331,7 @@ VIVEK_BOT_EXCLUDE_FUNDS = True
 # THE FENCE, stated where the patterns live: scan.py publishes the flag for the
 # UI to dim/mark/rank with. NOTHING in scanner/broker/ may read `is_product` or
 # this constant — the bot's fund test is _is_fund_or_reit and it stays
-# byte-untouched, because changing what the bot may take mid-w3-1 is a rule
+# byte-untouched, because changing what the bot may take mid-cycle is a rule
 # change by stealth. tests/test_product_flag.py greps the broker tree and goes
 # red on the first reference.
 #
@@ -393,10 +356,19 @@ PRODUCT_NAME_PATTERNS = (
     r"\bWARRANTS?\b",
     r"\bRIGHTS? \(",       # listing-class "Rights (…)" lines, not names containing Rights
 )
-# Favour the strongest trigger: the walk-forward backtest showed "retest" is
-# flat-to-negative while "reclaim" carries the edge, so the bot skips these
-# entry types. Selection-only; the scanner still shows them. Empty list = take all.
-VIVEK_BOT_SKIP_ENTRY_TYPES = ["retest"]
+# ENTRY CELLS (owner ruling 2026-09-21): the bot trades a plan ONLY when its
+# (timeframe, trigger) is one of the deck's four HIGH CONVICTION cells, walked
+# in this order and taking the FIRST armed, complete plan that sits in a cell:
+#   1W reclaim +0.299R n=691 · 1W break +0.161R n=122 ·
+#   3D reclaim +0.196R n=1309 · 1D break +0.091R n=281   (long-only replay)
+# A 1W plan whose trigger is a retest no longer blocks the row — the walk
+# falls through to the 3D / 1D plan. Retest is in no cell (worst trigger on
+# every timeframe). This table MUST equal scanner/conviction.py HC_CELLS —
+# tests/test_bot_alignment.py pins it — so the bot and the badge agree about
+# what is worth taking; the bot deliberately does NOT import that module
+# (its ruleset stays its own, and the fence in test_conviction.py stays).
+# The level gate below (VIVEK_BOT_LEVEL_TF_ALLOW) still applies on top.
+VIVEK_BOT_ENTRY_CELLS = {"1W": ("reclaim", "break"), "3D": ("reclaim",), "1D": ("break",)}
 # W3-ONLY LEVEL GATE (owner-signed 2026-08-02, pre-registered cycle "w3-1").
 # The bot considers only candidate rows whose headline plan level_tf is in this
 # tuple. Evidence: three disjoint pre-registered samples (IS / OOS / C3) each
@@ -413,8 +385,11 @@ VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
 # cycle runs (the sizing_mode precedent: nothing reads it to decide anything;
 # it exists so pre-gate and in-cycle cohorts never blur in later reads).
 # Empty string = no active cycle, no stamp.
-VIVEK_BOT_CYCLE_TAG = "w3-1"
-VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
+# 2026-09-21: cycle "w3-1" (A+ only, 1W>3D>1D, no retest) ENDED when the
+# entry rules were aligned to the four conviction cells; rows it opened keep
+# their tag (the journal's w3-1 evidence strip still reads them). New rows
+# carry "hc4-1": grades A/A+, VIVEK_BOT_ENTRY_CELLS, same level gate.
+VIVEK_BOT_CYCLE_TAG = "hc4-1"
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # LONG-ONLY: the walk-forward backtest showed the short side loses ~0.5R per
@@ -579,88 +554,10 @@ VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
 VIVEK_BOT_MAX_PER_SECTOR = 3
 
-# ── SECTOR BREADTH / HORIZON (2026-07-28, scanner/sectorbreadth.py) ───────────
-# REPORT-ONLY. None of these change which trades get taken; they decide what the
-# rotation surface can see and remember. Written after the July post-mortem, in
-# which an entire sector ran for four weeks while the only published sector
-# number (a RAW setup count, dominated by how many names each sector lists) said
-# nothing, and the book sat at its ceiling for 20 straight sessions unable to
-# act even if it had.
-SECTOR_BREADTH_ENABLED   = True
-#  • MIN_NAMES: a sector with fewer listed names than this is computed but never
-#    RANKED. Participation rate on a 3-name sector is 0% or 33% and would top
-#    every leaderboard on noise alone.
-SECTOR_BREADTH_MIN_NAMES = 15
-#  • TOP_N: how many sectors count as "leading" for the unheld-leaders alarm.
-SECTOR_BREADTH_TOP_N     = 3
-#  • HISTORY_MAX: rows kept in data/sector_history.json (one per market per DAY,
-#    ~2 markets x 250 sessions = a year at 500). This file is the ONLY long
-#    sector memory in the system — the 7-day PhaseMap archive was too short to
-#    reconstruct the July rotation after the fact — so keep it generous.
-SECTOR_BREADTH_HISTORY_MAX = 2000
-#  • PUBLISH_DAYS: how much of that history is republished for the page to plot.
-SECTOR_BREADTH_PUBLISH_DAYS = 180
-#  • RUN_ALERT: sessions a top-N sector may lead on breadth with NOTHING held
-#    before the surface stops describing it and starts shouting. One day is a
-#    coincidence and the page should stay calm; a run this long is a rotation
-#    being missed in progress, which is the whole reason this module exists.
-#    July ran nineteen. Report-only -- it changes the volume, never the trades.
-SECTOR_BREADTH_RUN_ALERT = 5
-#  • RUN_ALERT_PUSH: also push that run alarm through the NOTICE tier
-#    (config.ALERT_CHANNELS; Discord until the 2026-08-27 removal, currently
-#    no live channel) instead of only colouring the page. A
-#    surface you have to open to be warned by is a surface that warns you after
-#    you already looked, which in July was never. Rate-limited through
-#    journal/alert_state.json so a 19-session run pings once, not nineteen times.
-SECTOR_BREADTH_RUN_ALERT_PUSH = True
-#  • RUN_ALERT_REPEAT_DAYS: re-ping an already-alerted sector only after this
-#    many days. 0 = never repeat while the run continues.
-SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS = 7
-
-# ── REGIME / RELATIVE STRENGTH (2026-07-28, scanner/regime.py) ────────────────
-# REPORT-ONLY, same as breadth above: nothing here reaches decide(). This block
-# is the OTHER half of the July post-mortem. Breadth answers "which sector is
-# setting up today"; this answers "is the market actually as bad as the index
-# says, and who is beating it" — the two things the owner could feel but could
-# not read anywhere. Every number below is arithmetic on daily closes, so the
-# full history recomputes on each run: no state file, no backfill, correct on
-# the first execution and able to describe JUNE.
-REGIME_ENABLED = True
-#  • DAYS: published sessions per market (~6 months). Long enough that a run
-#    that started in June is visible in full; the cost is only JSON size.
-REGIME_DAYS = 126
-#  • RET_WINDOWS: (fast, slow) return lookbacks in sessions, ~1 and ~3 months.
-#    The fast one is what "consumer discretionaries ran for a month" means.
-REGIME_RET_WINDOWS = (21, 63)
-#  • HL_WINDOW: lookback for new-highs-minus-new-lows.
-REGIME_HL_WINDOW = 20
-#  • FAST_SMA: the shorter participation line. The slow one is deliberately
-#    VIVEK_SMA (200) — the engine's OWN level — so "above the average" on this
-#    page means the same thing it means in a setup.
-REGIME_FAST_SMA = 50
-#  • TOP_N: how many sectors count as leading on relative strength, and the
-#    membership the rs_streak counter tests against.
-REGIME_TOP_N = 3
-#  • BENCHMARK: the cap-weighted index per market, used ONLY to state the
-#    divergence between it and the equal-weight median name. Markets absent
-#    from this map are skipped entirely (crypto has no sectors to rank).
-#    The relative-strength maths never uses it — the benchmark for rs21/rs63 is
-#    the market's own median name, which is survivorship-consistent with the
-#    numerator and cannot fail to download.
-REGIME_BENCHMARK = {"asx": "^AXJO", "nasdaq": "^IXIC"}
-#  • RISK_ON/RISK_OFF_ABOVE200: the two cut points of the three-way state read
-#    (BROAD / MIXED / NARROW). Coarse on purpose — a count of names above a
-#    moving average does not support a finer scale than thirds.
-REGIME_RISK_ON_ABOVE200 = 0.55
-REGIME_RISK_OFF_ABOVE200 = 0.35
-#  • DIVERGENCE_MIN: how far the median name and the index must part before the
-#    page says so. Below this they are the same story told twice.
-REGIME_DIVERGENCE_MIN = 0.02
-#  • MIN_DAY_COVERAGE: a date on which fewer than this share of the market's
-#    best-covered session has a bar is a pseudo-session (a mis-dated bar, a
-#    half day, a foreign holiday) and is dropped rather than published as a day
-#    the market vanished.
-REGIME_MIN_DAY_COVERAGE = 0.5
+# HORIZON (sector breadth) and REGIME (relative strength) were REMOVED ENTIRELY
+# on 2026-09-20 (owner: "get rid of it entirely, rip out the guts of it"). The
+# SECTOR_BREADTH_* / REGIME_* blocks that lived here are gone with the engines;
+# the bot's 3-per-sector correlation cap above is unrelated and stays.
 
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
@@ -726,7 +623,6 @@ VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"
 # typical $250–$500 loss is ~9–18R, versus $300 against $35 (8.6R) before.
 VIVEK_BOT_ACCOUNT_EQUITY = 150_000  # book size; scales the loss guards, NOT position size
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
-VIVEK_BOT_RECONCILE      = True    # reconcile broker fills (Phase 3; no-op while paper)
 
 # WHICH BROKER ACTUALLY HOLDS EACH MARKET'S POSITIONS (2026-07-28).
 # kill_switch.run_standalone checks the bot book PER MARKET — three separate
@@ -753,25 +649,12 @@ VIVEK_KILL_SWITCH_BROKERS = {
     "crypto": ("bybit",),     # Bybit USDT perps
 }
 
-# HOW FAR BEFORE A POSITION WAS OPENED A CLOSED-PNL RECORD MAY STILL BE ITS EXIT.
-# bybit_reconcile matches a vanished position against the account's last 50
-# closed-PnL records; without a time floor, re-entering a symbol you have traded
-# before resolves the NEW position against the PREVIOUS trade's record. The floor
-# is the position's own `opened_ts` (the scan's generated_at, i.e. strictly
-# before the order was placed) minus this many minutes of tolerance for clock
-# skew between the GitHub runner and the exchange. Generous on purpose: too much
-# tolerance re-admits only records from the same few minutes, while too little
-# refuses to close a position that really did close. 0 = exact floor, no
-# tolerance. Records Bybit did not date, and pre-2026 rows with no `opened_ts`,
-# bypass the filter entirely rather than becoming uncloseable.
-BYBIT_RECONCILE_SKEW_MIN = 5.0
 
 # ---------------------------------------------------------------------------
 # MOVERS — biggest winners/losers on the NEWS page, split by company size so
 # you can read big-money rotation (mega) AND discovery (small caps) separately.
 # ---------------------------------------------------------------------------
 MOVER_PER_TIER = 5            # up to this many MEGA + this many SMALL per side
-MOVER_TARGET_PER_SIDE = 10    # aim for ~this many names per side (mega+small)
 MOVER_MEGA_CAP_USD = 10e9     # market cap >= $10B counts as a "mega" company
 # Fallback when a name's market cap isn't cached: tier by 20-day average dollar
 # volume (mega names trade vastly more $ than small caps). Per-market floors.
@@ -784,7 +667,6 @@ SCALP_BROKERAGE_EACH_WAY = 20   # per-leg brokerage (CFD style)
 SCALP_POSITION_SIZE = 1_000     # margin per trade
 SCALP_LEVERAGE = 5              # 5× leverage → $5,000 notional per trade
 SCALP_MAX_TRADES_PER_DAY = 5    # max A-grade alerts shown per scan
-SCALP_STARTING_CAPITAL = 20_000 # starting account size (for display)
 SCALP_MAX_DAILY_LOSS = 500      # daily stop-loss limit (for display)
 # Pessimistic fill model: slippage applied on top of brokerage (one-way, as fraction of price).
 # Captures the gap between the last 1h close (scan price) and the next bar open.
@@ -826,70 +708,14 @@ SCALP_CORRELATION_GROUPS = {
 }
 
 # ---------------------------------------------------------------------------
-# Version tracking — bump SCANNER_VERSION on breaking engine or config changes
-# so every scan output and health.json record carries the exact logic version.
-# ---------------------------------------------------------------------------
-SCANNER_VERSION = "7.0.0"   # <major>.<phase>.<patch>
-
-# ---------------------------------------------------------------------------
 # Phase 5: Risk Management — portfolio-level limits
 # ---------------------------------------------------------------------------
-# Note: SCALP_STARTING_CAPITAL (20_000) is used as the account baseline for
-# drawdown and heat calculations. Override ACCOUNT_OVERRIDE_USD to use a
-# different value if the live account size differs from the starting capital.
-ACCOUNT_OVERRIDE_USD      = 0       # 0 = use SCALP_STARTING_CAPITAL; set to real balance to override
 
 PORTFOLIO_HEAT_LIMIT      = 0.07    # max 7% of account at risk at any time across all open positions
-MAX_DRAWDOWN_PAUSE        = 0.12    # pause new trades when drawdown from equity peak reaches 12%
-MAX_DRAWDOWN_CLOSE        = 0.15    # close all positions when drawdown from peak reaches 15%
-DRAWDOWN_HALVE_SIZE_AT    = 0.08    # apply 0.5× size multiplier once drawdown exceeds 8%
-SECTOR_EXPOSURE_CAP       = 0.40    # max 40% of account in any single sector/theme
-MAX_OPEN_POSITIONS        = 10      # hard cap on total concurrent open positions
 
 # Phase 5: Circuit Breakers
 CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades (matches JS engine)
-ANOMALY_PAUSE_ON_TRIGGER  = True    # block new orders when anomaly detector fires
 
-# HTF bias filter — Weekly + 3D must not oppose trade direction
-HTF_BIAS_REQUIRED         = True    # enforce bias alignment before placing any order
-
-# Phase 5: Live Execution Safeguards
-SLIPPAGE_WARN_PCT         = 0.003   # warn (but allow) when expected slippage > 0.3%
-SLIPPAGE_REJECT_PCT       = 0.01    # block order when expected slippage > 1%
-ORDER_SIZE_MIN_USD        = 10      # minimum order notional value — below this is a data error
-ORDER_SIZE_MAX_USD        = 5_000   # maximum order notional value — fat-finger guard
-
-# Phase 5: Environment guard — MUST be explicitly set to enable live capital.
-# Set env var BYBIT_LIVE_CONFIRMED=true as a GitHub Secret alongside BYBIT_API_KEY.
-# Without this, the system falls back to dry-run if BYBIT_TESTNET=false is detected.
-REQUIRE_LIVE_CONFIRMED    = True    # set to False only in automated testing
-
-# ---------------------------------------------------------------------------
-# Phase 6: Live Deployment Protocol
-# ---------------------------------------------------------------------------
-# Stage controls how the system behaves during the gradual capital ramp-up.
-#   1 = Structured Testnet Validation  (testnet only, no real capital)
-#   2 = Live vs Expected Fill Analysis (testnet, full slippage tracking enabled)
-#   3 = Small Live Capital Deployment  (live, reduced position sizes)
-#   4 = Gradual Capital Scaling        (live, milestone-driven capital increases)
-#   5 = Post-Trade Review & Refinement (live, full normal parameters)
-LIVE_DEPLOYMENT_STAGE = 1           # advance manually after each stage's exit criteria are met
-
-# Stage 3 — small live capital: position sizes are scaled down
-LIVE_STAGE3_CAPITAL_MAX_USD  = 8_000   # never fund the live account above this during Stage 3
-LIVE_STAGE3_POSITION_MULT    = 0.35    # 35% of normal calculated size (30–50% range; conservative)
-LIVE_STAGE3_RISK_PCT_MAX     = 0.005   # enforced: effective risk per trade capped at 0.5% of account in Stage 3
-
-# Stage 4 — scaling milestones (all require profitable weeks + controlled drawdown)
-LIVE_STAGE4_L1_MIN_WEEKS     = 4       # Level 1 unlock: 4+ profitable completed weeks
-LIVE_STAGE4_L1_MAX_DD        = 0.05    # Level 1 unlock: drawdown must be < 5%
-LIVE_STAGE4_L1_BUMP          = 0.375   # capital increase (midpoint of 25–50% range)
-LIVE_STAGE4_L2_MIN_WEEKS     = 4       # Level 2 unlock: another 4+ profitable weeks
-LIVE_STAGE4_L2_MAX_DD        = 0.06    # Level 2 unlock: drawdown must be < 6%
-LIVE_STAGE4_L2_BUMP          = 0.375   # capital increase (midpoint of 25–50% range)
-
-# Stage 2 — fill analysis: minimum trades before weekly slippage averages are meaningful
-FILL_ANALYSIS_MIN_TRADES     = 5       # skip weekly averages if fewer than this many filled trades
 
 # ---------------------------------------------------------------------------
 # Phase 7: Advanced Monitoring & Alerting
@@ -908,12 +734,6 @@ ALERT_SEVERITY = {
     "daily_report":    "INFO",
     "health":          "WARNING",
     "info":            "INFO",
-    # HORIZON's sustained-run alarm (2026-07-28, scanner/sectorbreadth.notify).
-    # Its own tier because neither existing one fits: INFO is silent, and the
-    # module is REPORT-ONLY, so calling a rotation a WARNING would put it beside
-    # order rejections and circuit breakers in the same feed and at the same
-    # volume. Nothing is wrong when this fires -- something is HAPPENING.
-    "sector_run":      "NOTICE",
     # A position was opened carrying a review flag (2026-07-28, owner: "Flag
     # this in the future so i can verify whether claude or I should take the
     # position or not"). Same tier and the same reason: the trade passed every
@@ -986,13 +806,9 @@ ALERT_RATE_LIMITS = {
     "daily_report":    82800,    # max 1 per 23h
     "weekly_report":   518400,   # max 1 per 6 days
     "health":          3600,     # max 1 per hour
-    # 0 = the router never suppresses this one; sectorbreadth.notify owns the
-    # dedupe entirely (per market AND per sector, memory in the history file).
-    # A limit here would be per EVENT TYPE, so the first market to fire would
-    # silence the second — and scan.yml runs the markets sequentially inside a
-    # single job, which makes that the normal case rather than an edge one.
-    "sector_run":      0,
-    # 0 for the same per-EVENT-TYPE reason, plus a sharper one: this fires only
+    # 0 = the router never suppresses this one (per-EVENT-TYPE limits would let
+    # the first market to fire silence the second — scan.yml runs the markets
+    # sequentially inside a single job). Plus a sharper reason: this fires only
     # when a flagged position was actually OPENED, which is inherently one-shot
     # -- a position is opened once and never again -- so there is no storm to
     # limit. What a limit WOULD do is silently drop the second flagged open of a
@@ -1090,75 +906,49 @@ WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
 # LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
 # GitHub already emails failures; the watchdog only covers SILENT problems.
+# MARKET SCAN WINDOWS (owner, 2026-09-21) — the canonical session table.
+# (market -> (tz, first-scan minute-of-day, last-scan minute-of-day), market-local,
+# weekdays only.) First scan is one hour after the open; the tail runs past the
+# close so the closing auction is captured and the Discord plays digest has a
+# post-close scan to gate on.
+#
+# THE MIRROR: scan.yml's gate job checks out nothing (contents: read, by
+# design), so it cannot import this — it carries the same numbers inline and
+# tests/test_scan_windows.py parses them back out and fails if the two drift.
+MARKET_SCAN_WINDOWS = {
+    "asx":    ("Australia/Sydney",  11 * 60,      16 * 60 + 45),
+    "nasdaq": ("America/New_York",  10 * 60 + 30, 16 * 60 + 45),
+}
+
 WATCHDOG_RUNS = {
     "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
     "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
-    "scan.yml":        {"max_age_h": 24.0, "severity": "WARNING"},
+    # SESSION-AWARE (2026-09-21). scan.yml stopped running outside market
+    # hours, so wall-clock age alarms every weekend: Friday's last scan to
+    # Monday's first is ~52h, and a long weekend is ~75h. Raising the limit
+    # past that would make a genuine weekday outage invisible for three days.
+    # `session_aware` measures only the hours a market was actually OPEN, which
+    # accrue at ~11h/day on weekdays and not at all at the weekend — so 12h is
+    # about one missed session, and a quiet Sunday is correctly silent.
+    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True},
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
-    # The Turtle lens (2026-08-21). WARNING rather than CRITICAL on purpose:
-    # a stale Turtle file costs a day of breakout signals on a REPORT-ONLY
-    # surface, and the page shows its own generated_at, so a missed night is
-    # visible to the reader without an alarm ringing about it.
-    "turtle.yml":      {"max_age_h": 26.0, "severity": "WARNING"},
-    # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
-    # It commits nothing, which is exactly why it needs an entry here: every
-    # other watchdog target is caught by its output going stale, and this one
-    # has no output. This entry now answers exactly ONE question -- "is the
-    # 5-minute cron still firing at all?" -- because the workflow deliberately
-    # exits 0 on a 503 (see stop_watcher.yml and WATCHDOG_TICK_URL below), so a
-    # green run no longer implies a healthy endpoint. Endpoint HEALTH is
-    # probe_endpoints()'s job; schedule health is this one's. CRITICAL because
-    # while the cron is dead no paper stop or target is evaluated unless a
-    # chart page happens to be open.
-    "stop_watcher.yml": {"max_age_h": 1.0, "severity": "CRITICAL"},
 }
 
-# Cloud stop/target watcher endpoint (functions/api/tick.js), probed directly by
-# watchdog.probe_endpoints (2026-07-28). Committed files cannot vouch for this
-# service: it writes nothing to the repo, so the ONLY way to know it works is to
-# ask it.
-#
-# PROBED UNAUTHENTICATED, ON PURPOSE. tick.js validates its own configuration
-# and then the caller's credential BEFORE it touches KV or evaluates a single
-# position, so an anonymous GET can never fire a stop, close a trade or read a
-# journal. Never add the real TICK_SECRET here to "probe it properly" -- that
-# would make the monitor run an extra unscheduled tick every 30 minutes, i.e.
-# the monitor would start moving the thing it is monitoring.
-#
-# The three answers, and why the middle one is the healthy one:
-#   503 -> TICK_SECRET (or JOURNAL_KV) missing in Cloudflare. The watcher has
-#          never been switched on; paper stops/targets only fire while a chart
-#          page is open. WARNING: a setup gap the owner closes in Cloudflare.
-#   401 -> configured, and correctly refusing an anonymous caller. HEALTHY --
-#          this is the response a working deployment gives this probe, so no
-#          finding is raised.
-#   200 -> it ran for a caller with no secret at all. The endpoint is WIDE OPEN
-#          and anyone who knows the URL can walk every synced journal. CRITICAL,
-#          and a security finding rather than a freshness one.
-WATCHDOG_TICK_URL = "https://googy-boys-scanner.pages.dev/api/tick"
-WATCHDOG_TICK_ENABLED = True
+# THE CLOUD STOP/TARGET WATCHER IS GONE (2026-09-21). functions/api/tick.js
+# and stop_watcher.yml existed solely to close MANUAL paper positions inside
+# Cloudflare KV; the manual journal was removed with the rest of the "Me" side,
+# so there was nothing left for them to watch. The bot book has never used them
+# — it is marked and stop-checked by the scan and by kill_switch.yml.
 
-# Phase 7: Health check thresholds
-HEALTH_SCAN_STALE_WARN_H = 2    # warn if health.json is older than this many hours
-HEALTH_SCAN_STALE_CRIT_H = 4    # critical if older than this
-HEALTH_LOG_SIZE_WARN_MB  = 50   # warn if any log file exceeds this size (MB)
-HEALTH_LOG_SIZE_CRIT_MB  = 200  # critical if any log file exceeds this size (MB)
-
-# Phase 7: Expectancy tracking
-EXPECTANCY_MIN_TRADES = 20      # minimum sample before expectancy estimate is reliable
 
 # ---------------------------------------------------------------------------
 # Phase 8: Enhanced Monitoring & Alerting
 # ---------------------------------------------------------------------------
 
-# Strategy degradation anomaly thresholds (used by anomaly.check_strategy_degradation)
-ANOMALY_WIN_RATE_WINDOW    = 20    # rolling trade window for degradation checks
-ANOMALY_WIN_RATE_DROP      = 15.0  # alert if rolling WR drops > 15 pp vs all-time
-ANOMALY_EXPECTANCY_DROP    = 0.3   # alert if rolling E drops > 0.3R vs all-time expectancy
 
 # Weekly report rate-limit bucket (separate from daily_report so each has its own cadence)
 ALERT_RATE_LIMITS_EXTRA: dict = {
@@ -1201,40 +991,10 @@ CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this m
 SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
 
 # ---------------------------------------------------------------------------
-# Phase 9: Capital Scaling Framework
-# ---------------------------------------------------------------------------
-
-# Hard cap on total capital under live management.  If the total notional
-# of open positions reaches this value, new orders are blocked.  Set to 0
-# to disable the cap entirely.
-MAX_MANAGED_CAPITAL_USD  = 50_000   # USD; 0 = disabled
-
-# If current scaling_advisor level >= this value, log a prominent warning
-# reminding the operator to manually increase the funded capital before
-# continuing.  Set to 0 to keep the advisor fully advisory (no blocking).
-SCALING_ADVISORY_WARN_LEVEL = 1     # warn from Level 1 onward
-
-# ---------------------------------------------------------------------------
-# Bybit broker — crypto futures execution
-# ---------------------------------------------------------------------------
-# BYBIT_TESTNET env var controls endpoint (default "true" = safe/testnet).
-# Set BYBIT_TESTNET=false in GitHub Secrets only when ready for real capital.
-BYBIT_MIN_QTY_USD = 5.0        # skip signals where notional qty < $5 (Bybit min order)
-BYBIT_ORDER_TYPE  = "Limit"    # "Limit" recommended; "Market" for instant fill
-
-# ATR-based position sizing: risk a fixed dollar amount per trade (stop-distance method).
-# qty = SCALP_RISK_PER_TRADE / |entry - stop|
-# With SCALP_ATR_STOP_MULT=1.5, a $100 risk on a 2% stop → qty controls $5,000 notional
-# implicitly — but sizing now adjusts to volatility rather than fixing notional.
-SCALP_RISK_PER_TRADE = 100     # USD to risk per trade (loss if stopped out before brokerage)
-
-# ---------------------------------------------------------------------------
 # Data quality
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
 DATA_DAILY_BARS = 252         # bars the daily scanners see (tail-slice of VIVEK's deep download = 1y, unchanged behaviour)
-CHART_PERIOD = "10y"          # extended history fetched for result tickers only (powers weekly/monthly chart TFs)
-MIN_HISTORY = 160             # need at least this many bars to evaluate a stock
 DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
 SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
 # HOW OLD A CACHED FRAME MAY BE AND STILL COUNT AS DATA (2026-07-28, TOP100 #24).
@@ -1268,22 +1028,10 @@ DATA_HEAVY_COOLDOWN = 25      # seconds to let Yahoo recover once heavy throttli
 DATA_RECOVERY_COOLDOWN = 20   # cooldown before the single recovery sweep re-tries failed tickers
 
 # ---------------------------------------------------------------------------
-# Market regime classification
-# ---------------------------------------------------------------------------
-REGIME_ADX_THRESHOLD    = 25    # ADX > 25 → "trending"; ≤ 25 → "ranging"
-REGIME_RANGING_RISK_MULT = 0.5  # scale position size to this fraction in ranging markets
-REGIME_RANGING_SKIP      = False # True = skip signals entirely in ranging; False = reduce size
-
-# ---------------------------------------------------------------------------
 # Execution robustness
 # ---------------------------------------------------------------------------
 ORDER_RETRY_ATTEMPTS     = 3    # retry Bybit API calls this many times on failure
 ORDER_RETRY_BACKOFF_BASE = 2    # base seconds for exponential backoff (2s, 4s, 8s…)
-
-# ---------------------------------------------------------------------------
-# News/event calendar filter
-# ---------------------------------------------------------------------------
-EVENT_BLACKOUT_ENABLED   = True  # skip new orders on high-impact economic event days
 
 # ---------------------------------------------------------------------------
 # Scan error visibility (TOP100 #60/#66/#67)
@@ -1327,7 +1075,7 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # cuts both ways: every ASX scan of the morning session ran dry and nothing
 # said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
 # scan.yml's SHARED staging list, so it survives the Actions container — the
-# same lesson as sectorbreadth's ping memory), resets on the first successful
+# same container-death lesson as scan_health), resets on the first successful
 # publish, and pushes a NOTICE ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"
@@ -1466,553 +1214,7 @@ SECTOR_MOVER_MIN_DVOL_DEFAULT = 1_000_000
 # ---------------------------------------------------------------------------
 # Feeds — YouTube channels + AI narrative (feeds.py / feeds_run.py)
 # ---------------------------------------------------------------------------
-# Each entry: name (display), handle (YouTube @handle, no @), channel_id
-# (leave "" to auto-resolve on first run — feeds.py will populate it).
-YOUTUBE_CHANNELS = [
-    {"name": "Camel Finance", "handle": "CamelFinance", "channel_id": ""},
-]
 
-# How many recent videos to pull per channel (RSS returns the latest 15 max).
-FEEDS_MAX_VIDEOS = 8
-
-# Max tokens for the Claude narrative (~400 words is plenty).
-FEEDS_NARRATIVE_MAX_TOKENS = 600
-
-# Model used for narrative generation (Haiku = cheapest/fastest).
-FEEDS_NARRATIVE_MODEL = "claude-haiku-4-5-20251001"
-
-# X/Twitter accounts preserved on the feeds page below the YouTube section.
-X_ACCOUNTS = [
-    {"handle": "omzcharts",       "name": "Omz"},
-    {"handle": "CKCapitalxx",     "name": "CK Capital"},
-    {"handle": "DazzaBABA",       "name": "R08"},
-    {"handle": "Ruycorto",        "name": "Rui"},
-    {"handle": "ChifoiCristian",  "name": "Cristian Chifoi"},
-    {"handle": "_0_Trading",      "name": "5.0 INVERTED.BULL"},
-    {"handle": "BollingerBanter", "name": "Bollinger Banter"},
-    {"handle": "jakestrading18",  "name": "Jakestrading"},
-    {"handle": "aleabitoreddit",  "name": "Serenity"},
-    {"handle": "SailorManCrypto", "name": "Popeye"},
-    {"handle": "kevinxu",         "name": "Kevin Xu"},
-    {"handle": "TheBigBerbowski", "name": "The Big Berbowski"},
-    {"handle": "BULLOFBRITAIN",   "name": "Bull of Britain"},
-    {"handle": "PhotonBull",      "name": "Photon Bull"},
-    {"handle": "babyfolio",       "name": "babyfolio"},
-    {"handle": "mkfilko",         "name": "leki"},
-    {"handle": "retail_mourinho", "name": "Retail Mourinho"},
-    {"handle": "wolfgangkasper",  "name": "Wolf Capital"},
-    {"handle": "Guv999",          "name": "Guv"},
-]
-
-# ---------------------------------------------------------------------------
-# TURTLE — the fourth lens (turtle.py / turtle_run.py), added 2026-08-21
-# ---------------------------------------------------------------------------
-# The Richard Dennis / William Eckhardt 1983 breakout system, implemented from
-# the Original Turtle Trading Rules rather than from the popular simplification
-# (see the TURTLE section in CLAUDE.md for the two rules the short version
-# drops and why they matter). REPORT-ONLY: nothing under scanner/broker/ may
-# import this lens, and a test fails the push if it ever does. The numbers
-# below are the ORIGINAL ones — they are not tuned, and retuning them makes
-# this something other than the Turtle system, which is the one thing this
-# lens exists to state exactly.
-
-# N — the Turtles' volatility unit. The original rules define
-#   True Range = max(H-L, H-PDC, PDC-L)
-#   N = (19 * PDN + TR) / 20
-# which is Wilder smoothing at period 20, i.e. exactly indicators.atr(df, 20).
-# The lens CALLS that function rather than re-deriving the recurrence, so the
-# repo has one true-range implementation and cannot drift into two.
-TURTLE_N_PERIOD = 20
-
-# Entry channels (Donchian breakouts), measured on the bars STRICTLY BEFORE
-# the signal bar — a channel that includes today's own high can never be
-# broken by today's own high, which is the classic look-ahead in this system.
-TURTLE_S1_ENTRY = 20      # System 1: the 20-day breakout (filtered, see below)
-TURTLE_S2_ENTRY = 55      # System 2: the 55-day breakout (never filtered)
-
-# Exit channels. A System 1 position exits on the 10-day low, a System 2
-# position on the 20-day low (mirrored for shorts). The system that ENTERED
-# owns the exit — a position opened on the 55-day breakout does not exit on
-# the 10-day low just because that level arrives first.
-TURTLE_S1_EXIT = 10
-TURTLE_S2_EXIT = 20
-
-# The stop: 2N from the entry of the MOST RECENT unit, applied to the whole
-# position. Adding a unit therefore tightens the stop on every unit already
-# held (see TURTLE_PYRAMID_STEP_N).
-TURTLE_STOP_N = 2.0
-
-# Pyramiding: add one unit for every 1/2 N the price moves in your favour,
-# measured from the last unit's fill, to a maximum of TURTLE_MAX_UNITS total
-# (i.e. the initial unit plus three adds).
-TURTLE_PYRAMID_STEP_N = 0.5
-TURTLE_MAX_UNITS = 4
-
-# Unit size: Unit = (TURTLE_RISK_PCT * Account) / (N * DollarsPerPoint).
-# For a share, DollarsPerPoint is 1 by construction (a $1 move on one share is
-# $1), so a unit is (1% of account) / N shares. One unit moving 1N is
-# therefore exactly 1% of the account, which is the link that makes every
-# other number here express itself in equity terms.
-#
-# What a FULL four-unit position actually risks, computed rather than
-# asserted (tests/test_turtle.py pins it): entries sit at 0, +1/2N, +1N,
-# +3/2N above the breakout and the single shared stop ends 2N under the last
-# one, i.e. 1/2N BELOW the breakout. The four units lose 1/2N, 1N, 3/2N and
-# 2N = 5N total = 5% of the account. Left on their own 2N stops they would
-# lose 8N = 8%. Halving that is the entire purpose of the 1/2N stop raise,
-# and it is the rule retail implementations most often drop.
-TURTLE_RISK_PCT = 0.01
-
-# The correlation ceilings, in units. The Turtles traded a diversified futures
-# portfolio and these limits are what kept 4-unit positions from becoming one
-# giant bet on a single theme. This repo has no correlation matrix, so the
-# lens reports them against SECTOR as a stated approximation — see the page.
-TURTLE_MAX_UNITS_CLOSE_CORR = 6     # closely correlated markets
-TURTLE_MAX_UNITS_LOOSE_CORR = 10    # loosely correlated markets
-TURTLE_MAX_UNITS_DIRECTION = 12     # total units long, or total short
-
-# The drawdown rule, and it compounds: for every TURTLE_DRAWDOWN_STEP_PCT the
-# account is down from its peak, cut the equity you SIZE FROM by
-# TURTLE_DRAWDOWN_CUT_PCT. A 20% drawdown therefore sizes off 0.8 * 0.8 = 64%
-# of the real account, not 60%.
-TURTLE_DRAWDOWN_STEP_PCT = 10.0
-TURTLE_DRAWDOWN_CUT_PCT = 20.0
-
-# The documented alternative stop ("Whipsaw"): a quarter of the risk at a
-# quarter of the distance. Reported by the lens for comparison; it is not the
-# default, because 2N is what the rules specify.
-TURTLE_WHIPSAW_RISK_PCT = 0.005
-TURTLE_WHIPSAW_STOP_N = 0.5
-
-# The account the published unit sizes are computed against. Display only —
-# the page lets you type your own and recomputes in the browser. It is
-# deliberately NOT VIVEK_BOT_ACCOUNT_EQUITY: the Turtle lens must never read
-# or imply anything about the live paper book.
-TURTLE_ACCOUNT_EQUITY = 5_000.0
-
-# Shorts are part of the original system (every rule mirrors). The lens
-# COMPUTES both sides and publishes them; whether the deck displays shorts
-# prominently is a display question the edge research already has opinions
-# about (EDGE_RESEARCH_2026-08-20 section 7).
-TURTLE_ALLOW_SHORTS = True
-
-# Minimum daily bars before a name is evaluated at all. The 55-day channel
-# plus a 20-period Wilder N plus enough history for the System 1 filter to
-# have seen a prior breakout: 250 sessions is about a year and is the point
-# below which the filter state is guesswork rather than history.
-TURTLE_MIN_BARS = 250
-
-# Liquidity floors, per market key. A Donchian breakout on a name that trades
-# $12,000 a day is a real breakout and an unfillable one; the lens would be
-# lying by omission if it listed those without a gate.
-TURTLE_MIN_PRICE = {"asx": 0.10, "nasdaq": 1.00, "crypto": 0.0}
-TURTLE_MIN_DVOL = {"asx": 250_000.0, "nasdaq": 1_000_000.0, "crypto": 1_000_000.0}
-TURTLE_DVOL_LOOKBACK = 20
-
-# How close to a breakout level a flat name must be to be published as
-# "approaching" rather than dropped. The scan is a daily file; a name 0.4%
-# under its 55-day high today is the one you want to have seen yesterday.
-TURTLE_APPROACH_PCT = 3.0
-
-# One in-run SECOND CHANCE for a market that failed, after this cooldown
-# (2026-09-01 — turtle runs #64 and #88, both the same shape). The dominant
-# failure class is Yahoo throttling gutting one market's batch below the
-# coverage floor, and a throttle window routinely clears in minutes — but the
-# runner's only retries were the per-batch ones (seconds apart, inside the
-# same window), so the run went red, emailed the owner, and then healed
-# untouched on the next cron hours later. Now the runner sleeps this long and
-# re-scans just the failed market(s) once; a retry that still fails keeps the
-# red run and the email, so the coverage floor's alarm is not softened — only
-# its false-positive rate on transient throttling. 0 = off.
-TURTLE_THROTTLE_RETRY_COOLDOWN_S = 180.0
-
-# Round-trip trading cost charged to every replayed trade, in basis points
-# PER SIDE of notional. A trend-following system takes a great many small
-# losses, so cost is not a rounding error on the result -- it is a material
-# part of it, and a backtest that omits it is quoting a number nobody could
-# have earned. 15 bps a side covers retail brokerage plus roughly half a
-# spread on a liquid name; it is deliberately not tuned to make any market
-# look good. Every trade publishes `gross_r` beside the net `r` and
-# `cost_r`, so the size of the haircut is always visible rather than baked in.
-# Set to 0 to reproduce a frictionless replay.
-TURTLE_COST_BPS = 15.0
-
-# THE FUTURES SLEEVE -- the vehicle the system was actually designed for.
-#
-# The Turtles traded roughly twenty LIQUID, UNCORRELATED futures across
-# currencies, rates, metals, energy, softs and indices, and diversification
-# across genuinely different markets is the MECHANISM that makes the
-# expectancy positive, not a garnish on top of it. A hundred NASDAQ names is
-# one tech factor wearing a hundred tickers; a 2,212-name ASX list is one
-# resources-and-banks tape. Running this lens on equities and calling the
-# result "Turtle" tests something the system never claimed.
-#
-# So the lens gets a fourth market. Same frozen rules, same engine, no tuning
-# -- the only thing that changes is what it is pointed at.
-#
-# `dpp` is DOLLARS PER POINT for the full-size contract and it is the single
-# most important number here: unit size is (1% x equity) / (N x dpp), so
-# getting it wrong misprices every position. `micro` names the CME micro where
-# one exists, with `micro_dpp` its multiplier -- that is what decides whether
-# a small account can hold one unit at all, and the honest answer for most of
-# these at $5,000 is that it cannot.
-#
-# Data comes from the continuous front-month series (yfinance "=F"). Those are
-# back-adjusted rolls, not a tradeable instrument: good enough for channel and
-# N arithmetic, wrong for exact fills. Said on the page rather than hidden.
-# The grains and meats the Turtles deliberately EXCLUDED are excluded here
-# too -- Dennis was at exchange position limits in grains for his own account.
-#
-# EVERY ROW CARRIES ITS SOURCE. `dpp` is the one number here that silently
-# misprices everything downstream if it is wrong -- unit size, stop distance
-# and the pyramid step all divide by it -- and it is not checkable by looking
-# at it, because a plausible wrong multiplier looks exactly like a right one.
-# So each entry states the exchange contract size and the quote convention it
-# was derived from. Exchange is CME Group (CME/CBOT/NYMEX/COMEX) except the
-# four softs, which are ICE Futures U.S. The rule for a cents-quoted contract
-# is dpp = contract size / 100, because one "point" on those tapes is one cent.
-# Do not edit a number here without editing the comment beside it, and do not
-# edit the comment to match a number.
-TURTLE_FUTURES = [
-    # --- currencies (the Turtles' biggest 1980s winners) ---
-    # CME Euro FX: 125,000 EUR, quoted USD per EUR -> $125,000 per 1.00.
-    # Micro M6E is one tenth: 12,500 EUR.
-    {"symbol": "6E", "yf": "6E=F", "name": "Euro FX", "group": "currency",
-     "dpp": 125_000, "micro": "M6E", "micro_dpp": 12_500},
-    # CME Japanese Yen: 12,500,000 JPY, quoted USD per yen -> $12,500,000 per
-    # 1.00. Yahoo prints this tape at ~0.0068, so the multiplier is large and
-    # correct rather than a typo.
-    {"symbol": "6J", "yf": "6J=F", "name": "Japanese Yen", "group": "currency",
-     "dpp": 12_500_000, "micro": "", "micro_dpp": 0},
-    # CME British Pound: 62,500 GBP, quoted USD per GBP. Micro M6B: 6,250.
-    {"symbol": "6B", "yf": "6B=F", "name": "British Pound", "group": "currency",
-     "dpp": 62_500, "micro": "M6B", "micro_dpp": 6_250},
-    # CME Australian Dollar: 100,000 AUD, quoted USD per AUD. Micro M6A: 10,000.
-    {"symbol": "6A", "yf": "6A=F", "name": "Australian Dollar", "group": "currency",
-     "dpp": 100_000, "micro": "M6A", "micro_dpp": 10_000},
-    # CME Canadian Dollar: 100,000 CAD, quoted USD per CAD.
-    {"symbol": "6C", "yf": "6C=F", "name": "Canadian Dollar", "group": "currency",
-     "dpp": 100_000, "micro": "", "micro_dpp": 0},
-    # CME Swiss Franc: 125,000 CHF, quoted USD per CHF.
-    {"symbol": "6S", "yf": "6S=F", "name": "Swiss Franc", "group": "currency",
-     "dpp": 125_000, "micro": "", "micro_dpp": 0},
-    # --- rates ---
-    # CBOT 30-Year T-Bond: $100,000 face, quoted in points of par, so one
-    # full point (1% of face) is $1,000. Yahoo prints the decimalised handle.
-    {"symbol": "ZB", "yf": "ZB=F", "name": "30-Year T-Bond", "group": "rates",
-     "dpp": 1_000, "micro": "", "micro_dpp": 0},
-    # CBOT 10-Year T-Note: $100,000 face, points of par -> $1,000 a point.
-    # NO MICRO. CME's "Micro 10-Year Yield" is not a fraction of ZN -- it is a
-    # different instrument that trades YIELD at $10 a basis point, so listing
-    # it here would misprice every rates unit. An honest empty field beats a
-    # plausible wrong one.
-    {"symbol": "ZN", "yf": "ZN=F", "name": "10-Year T-Note", "group": "rates",
-     "dpp": 1_000, "micro": "", "micro_dpp": 0},
-    # --- metals ---
-    # COMEX Gold: 100 troy oz, quoted USD per oz -> $100 per $1. MGC: 10 oz.
-    {"symbol": "GC", "yf": "GC=F", "name": "Gold", "group": "metals",
-     "dpp": 100, "micro": "MGC", "micro_dpp": 10},
-    # COMEX Silver: 5,000 troy oz, quoted USD per oz -> $5,000 per $1.
-    # Micro Silver (SIL) is 1,000 oz -> $1,000. Note SIL is a fifth, not a
-    # tenth: the metals micros are not a uniform ratio.
-    {"symbol": "SI", "yf": "SI=F", "name": "Silver", "group": "metals",
-     "dpp": 5_000, "micro": "SIL", "micro_dpp": 1_000},
-    # COMEX Copper: 25,000 lb, quoted USD per lb -> $25,000 per $1. This tape
-    # is quoted in DOLLARS per pound (~4.50), not cents, so the /100 rule that
-    # governs the softs below does not apply. MHG: 2,500 lb.
-    {"symbol": "HG", "yf": "HG=F", "name": "Copper", "group": "metals",
-     "dpp": 25_000, "micro": "MHG", "micro_dpp": 2_500},
-    # --- energy ---
-    # NYMEX WTI Crude: 1,000 barrels, quoted USD per barrel. MCL: 100 bbl.
-    {"symbol": "CL", "yf": "CL=F", "name": "Crude Oil (WTI)", "group": "energy",
-     "dpp": 1_000, "micro": "MCL", "micro_dpp": 100},
-    # NYMEX Heating Oil (ULSD): 42,000 US gallons, quoted USD per gallon.
-    {"symbol": "HO", "yf": "HO=F", "name": "Heating Oil", "group": "energy",
-     "dpp": 42_000, "micro": "", "micro_dpp": 0},
-    # NYMEX RBOB Gasoline: 42,000 US gallons, quoted USD per gallon.
-    {"symbol": "RB", "yf": "RB=F", "name": "RBOB Gasoline", "group": "energy",
-     "dpp": 42_000, "micro": "", "micro_dpp": 0},
-    # NYMEX Henry Hub Natural Gas: 10,000 MMBtu, quoted USD per MMBtu.
-    # Micro MNG: 2,500 MMBtu -> a quarter, again not a tenth.
-    {"symbol": "NG", "yf": "NG=F", "name": "Natural Gas", "group": "energy",
-     "dpp": 10_000, "micro": "MNG", "micro_dpp": 2_500},
-    # --- softs (the Turtles traded these; grains and meats they did NOT) ---
-        # ICE Coffee C: 37,500 lb per contract, quoted in CENTS per lb on KC=F --
-    # so one "point" on the tape is one cent, and dpp = 37,500 / 100 = 375,
-    # the same size/100 rule as SB and CT below. (Corrected 2026-08-22. The
-    # prior 37,500 traced to a 2026-08-21 audit whose reference table did not
-    # contain KC at all -- the "affirmation" was vacuous -- and it overstated
-    # dpp 100x, so KC units computed 100x too SMALL and coffee could never
-    # trade; the page printed one_contract_risk_pct at 100x as the visible
-    # artefact. Conservative in both states: at $5,000 a single KC contract
-    # does not fit either way.)
-    {"symbol": "KC", "yf": "KC=F", "name": "Coffee", "group": "softs",
-     "dpp": 375, "micro": "", "micro_dpp": 0},
-    # ICE Cocoa: 10 metric tons, quoted USD per metric ton -> $10 per $1.
-    # Dollar-quoted, so the /100 cents rule does not apply.
-    {"symbol": "CC", "yf": "CC=F", "name": "Cocoa", "group": "softs",
-     "dpp": 10, "micro": "", "micro_dpp": 0},
-    # ICE Sugar No. 11: 112,000 lb, quoted US cents per pound -> $1,120 a cent.
-    {"symbol": "SB", "yf": "SB=F", "name": "Sugar No. 11", "group": "softs",
-     "dpp": 1_120, "micro": "", "micro_dpp": 0},
-    # ICE Cotton No. 2: 50,000 lb, quoted US cents per pound -> $500 a cent.
-    {"symbol": "CT", "yf": "CT=F", "name": "Cotton", "group": "softs",
-     "dpp": 500, "micro": "", "micro_dpp": 0},
-    # --- indices (not a 1983 Turtle market at this size, but it is the one
-    #     a small account can actually reach, so it is carried and labelled) ---
-    # CME E-mini S&P 500: $50 x index. Micro MES: $5 x index.
-    {"symbol": "ES", "yf": "ES=F", "name": "S&P 500", "group": "index",
-     "dpp": 50, "micro": "MES", "micro_dpp": 5},
-    # CME E-mini Nasdaq-100: $20 x index. Micro MNQ: $2 x index.
-    {"symbol": "NQ", "yf": "NQ=F", "name": "Nasdaq 100", "group": "index",
-     "dpp": 20, "micro": "MNQ", "micro_dpp": 2},
-    # --- added 2026-09-02, owner ask: "US30, NAS100, GOLD, COPPER, SILVER --
-    #     effectively every future CMC's CFDs allow".
-    #
-    # FOUR OF THE FIVE HE NAMED WERE ALREADY HERE (NAS100=NQ, GOLD=GC,
-    # SILVER=SI, COPPER=HG). They did not read as available because the fit
-    # table refuses them: a Turtle unit at $5,000 is a FRACTION of one
-    # contract, so the sleeve says "0.628 contracts - refused" and a reader
-    # reasonably concludes the instrument is missing. What was genuinely
-    # absent is the Dow, plus the four below that round out the same asset
-    # groups on tapes CMC also quotes. The CFD sizing block (cfd_sizing) is
-    # the other half of that answer: same tape, a vehicle that sizes
-    # fractionally, and a verdict that is readable rather than a refusal.
-    #
-    # SAFETY NOTE on these five dpp values: the CFD lens uses dpp = 1 by
-    # construction (one unit = one dollar per point), so an error in the
-    # exchange multipliers below can only misprice the FUTURES fit verdict --
-    # which already refuses every row at this equity -- and cannot reach the
-    # CFD unit. That is why they were safe to add before a spec file exists.
-    # CBOT E-mini Dow: $5 x index. Micro MYM: $0.50 x index. THE ONE THE
-    # OWNER NAMED THAT WAS ACTUALLY MISSING.
-    {"symbol": "YM", "yf": "YM=F", "name": "Dow 30", "group": "index",
-     "dpp": 5, "micro": "MYM", "micro_dpp": 0.5},
-    # CME E-mini Russell 2000: $50 x index. Micro M2K: $5 x index.
-    {"symbol": "RTY", "yf": "RTY=F", "name": "Russell 2000", "group": "index",
-     "dpp": 50, "micro": "M2K", "micro_dpp": 5},
-    # ICE Brent Crude (Yahoo BZ=F is the Last Day Financial contract):
-    # 1,000 barrels, quoted USD per barrel -> $1,000 per $1. The second
-    # energy benchmark; it and WTI are the same bucket, not two bets.
-    {"symbol": "BZ", "yf": "BZ=F", "name": "Brent Crude", "group": "energy",
-     "dpp": 1_000, "micro": "", "micro_dpp": 0},
-    # NYMEX Platinum: 50 troy oz, quoted USD per oz -> $50 per $1.
-    {"symbol": "PL", "yf": "PL=F", "name": "Platinum", "group": "metals",
-     "dpp": 50, "micro": "", "micro_dpp": 0},
-    # NYMEX Palladium: 100 troy oz, quoted USD per oz -> $100 per $1.
-    {"symbol": "PA", "yf": "PA=F", "name": "Palladium", "group": "metals",
-     "dpp": 100, "micro": "", "micro_dpp": 0},
-]
-
-# THE CFD SIZING LENS (2026-09-02, owner ask). The same tapes as the futures
-# sleeve above, read through the vehicle he can actually reach: a CMC CFD.
-#
-# WHY THIS IS A LENS AND NOT A BOOK. A CFD differs from an exchange future on
-# every axis the forward book models -- fractional sizing, broker margin
-# rather than exchange IM, a close-out that can PRECEDE the 2N stop, and daily
-# financing on full notional -- and every one of those numbers is a fact from
-# CMC's product library and PDS, not an estimate. This repo already refuses to
-# invent exchange initial margin (TURTLE_FUTURES_MARGIN_FILE); inventing a
-# broker's margin rate, minimum trade size and funding rate would be the same
-# error with more decimals. So what ships here is the half that needs NO
-# broker data at all, and it is the half that answers the question:
-#
-#   units = (TURTLE_RISK_PCT x equity) / N        -- with dpp = 1
-#
-# THE POINT OF dpp = 1: a CFD unit is quoted as CURRENCY PER POINT, so setting
-# dollars-per-point to 1 makes `units` mean "dollars of exposure per point of
-# price", which is VEHICLE-INDEPENDENT and correct whatever CMC's own unit
-# turns out to be. The owner reads "Value of 1 point" off the CMC order ticket
-# and divides. If CMC's unit is $1/point (the convention every source points
-# at, though only one primary source was found for it), the number transfers
-# 1:1. Nothing downstream has to trust an unverified multiplier.
-TURTLE_CFD_DPP = 1.0
-
-# Broker minimum trade size and step. UNKNOWN, and it is THE number that
-# decides whether this project exists: at $5,000 the Turtle unit on the Dow,
-# the Nasdaq, the S&P and gold is a FRACTION of one $1/point unit (measured
-# 2026-09-02: NQ 0.096, GC 0.628, ES 0.670), so a 1.0-unit floor refuses
-# exactly the instruments the owner asked for and the fractional vehicle
-# solves nothing for them. A 0.1 floor takes gold, the S&P and the Dow and
-# still refuses the Nasdaq. The sleeve therefore publishes the verdict at
-# BOTH floors rather than picking one, and says which it used. Replace with
-# the real per-instrument figure when the spec file lands.
-TURTLE_CFD_MIN_UNITS = (1.0, 0.1)
-
-# Annual holding (financing) rate charged on FULL NOTIONAL, not on the
-# borrowed part -- 20:1 margin does not mean you finance a twentieth.
-#
-# THIS IS A STATED ASSUMPTION, NOT A MEASURED RATE, and it is labelled as one
-# everywhere it surfaces. CMC charges a benchmark plus a spread and the pair
-# moves; the owner's own statement is the only authority. It is here at all
-# because financing is not a rounding error on a system that holds winners for
-# months, and a sleeve that omitted it would quote a number nobody could earn:
-#
-#   carry over D days, in R = 0.5 x (P/N) x r x D/365
-#
-# which depends only on the volatility ratio, so it PUNISHES QUIET MARKETS
-# hardest -- the ones a trend follower most wants to hold. Measured on the
-# live tape at 8%: crude 0.16R over 60 days, the S&P 0.67R, the Nasdaq 0.37R.
-# An index position that has to clear two thirds of an R before it breaks even
-# on carry is a materially different trade from the futures one it replaces.
-TURTLE_CFD_FINANCING_PCT_ASSUMED = 8.0
-
-# ASIC's retail leverage caps by asset class (Product Intervention Order,
-# Instrument 2020/986, in force 2021-03-29, extended by 2022/259). These are
-# REGULATORY CEILINGS on what any Australian retail CFD issuer may offer --
-# CMC may require MORE margin than this and never less, so using the cap
-# computes the MOST leveraged (worst) case, which is the honest direction for
-# a risk read. Recorded as the owner's jurisdiction, flagged as needing
-# confirmation against his own account's classification (retail vs wholesale
-# changes them entirely).
-#
-# The number that matters is not the leverage, it is where the broker's
-# close-out sits relative to the 2N stop: on posted-margin exhaustion the
-# close-out distance is P/L, so the Turtle stop only binds while
-# N/P < 1/(2L). At 20:1 that is N/P < 2.5%. ABOVE that line leverage has
-# silently replaced the exit rule, and the row says so.
-TURTLE_CFD_ASIC_LEVERAGE = {
-    "index": 20.0,      # major stock index CFDs
-    "metals": 20.0,     # gold is 20:1; the other metals are 10:1 (see below)
-    "currency": 30.0,   # major FX pairs
-    "energy": 10.0,     # commodities other than gold
-    "softs": 10.0,
-    "rates": 10.0,
-}
-# Gold is the only metal ASIC puts in the 20:1 band; silver, copper, platinum
-# and palladium are "commodities other than gold" at 10:1. Keyed per symbol
-# so the group default above cannot quietly over-leverage them.
-TURTLE_CFD_LEVERAGE_OVERRIDE = {"SI": 10.0, "HG": 10.0, "PL": 10.0, "PA": 10.0}
-
-# ROLL-GAP DETECTION for the futures sleeve. Continuous front-month "=F"
-# series are BACK-ADJUSTED, so the roll from one contract month to the next
-# lands inside the price history as a step that looks like a real overnight
-# move. It is not one -- nobody could have traded it -- and Wilder's true
-# range counts it in full.
-#
-# Measured on a simulated quarterly-rolling tape: a roll inflates N by
-# 13-22% ON THE BAR AFTER IT, which is precisely the bar a position opened
-# that day is sized and stopped from. A 22% inflated N means a stop 22% too
-# wide and a unit 22% too small. Diluted across the 20-bar window the
-# steady-state distortion is around 1%, so this is a spike problem, not a
-# level problem.
-#
-# A bar is FLAGGED when its overnight gap exceeds this multiple of its own
-# range. On the simulated tape that separated cleanly: 3.78x at roll bars
-# against 0.28x typical, catching 7 of 7 rolls and nothing else.
-#
-# DETECTION AND DISCLOSURE ONLY. The true-range formula is NOT touched --
-# that is frozen detection law, and silently winsorising TR to make a number
-# look better is exactly the move this lens exists to refuse. The proper fix
-# is real roll dates, which this repo does not have; until then the page says
-# which rows are affected.
-TURTLE_ROLL_GAP_RATIO = 3.0
-
-# THE FORWARD PAPER BOOK (turtle_book.py). Completely separate from the
-# VIVEK paper bot: own file, own equity, own slot pool, own sizing. The
-# five-year replay cannot answer "does this work" -- its universe is today's
-# listed names, so it was selected on outcomes the system could not have
-# known -- and waiting will not make it answerable. A forward book starts
-# flat, takes only what fires from the day it starts, and pays costs.
-TURTLE_BOOK_EQUITY = 5_000.0
-
-# Cash constraint, as a percentage of realised equity. 100 = no leverage.
-# The replay has NO equivalent and that is a real gap in it: crypto's median
-# unit is ~30% of a $5,000 account, so a four-unit position is ~119% of the
-# book -- impossible without margin, and the replay records it anyway. A
-# forward book without this would inherit the flaw it exists to escape.
-TURTLE_BOOK_MAX_NOTIONAL_PCT = 100.0
-
-# THE CRYPTO 5x SLEEVE (2026-08-22, owner-ordered) -- the only vehicle a
-# $5,000 account can run the UNCHANGED 1%/N Turtle unit in without rounding
-# up into extra risk. Day one of the cash book proved the constraint: a
-# crypto unit costs 25-31% of the sleeve in CASH, so the book saturated at
-# 3-4 units and 37 signals died as `cash` skips -- a binding constraint the
-# original rules never had, because the Turtles' leverage came from futures
-# margin. This sleeve is the perp analogue of that margin, stated as such:
-#
-#   posted margin  = notional / leverage         (NOT Dennis's futures IM)
-#   unit           = (1% x equity) / N           (the formula does not move)
-#   refuse         if posted > equity - sum(posted of opens)   -> no_margin
-#   liquidate      if adverse MTM <= -posted                   -> liquidation
-#   margin_mode    isolated: each position's posted stands alone
-#
-# It is a NEW forward series (journal/turtle_book.crypto5x.json) beside the
-# cash crypto book, never a restatement of it -- cash's -16% day one is
-# evidence about the cash vehicle and stays exactly as recorded. Same frozen
-# law throughout: daily bars (the 4-hour cron is a SCAN CADENCE, not a
-# 4-hour Donchian), 15 bps a side, crypto = ONE correlated bucket, 4/6/12
-# unit ceilings, compounding drawdown step-down. ASX and NASDAQ stay cash at
-# leverage 1: nothing here touches them.
-TURTLE_5X = {
-    "market": "crypto5x",
-    "leverage": 5.0,
-    "fractional": True,          # coins split; futures contracts do not
-    "cost_bps": TURTLE_COST_BPS, # deliberately the same 15 bps -- a cheaper
-                                 # cost model for the levered book would make
-                                 # the two series incomparable
-    "margin_mode": "isolated",
-}
-
-# Yahoo symbol collisions in the crypto universe. universe._fetch_crypto maps
-# CoinGecko tickers naively to "<SYM>-USD", and on Yahoo several of those
-# tickers belong to DIFFERENT, dead tokens -- so the scan has been reading
-# Apricot where it meant Aptos. The real coins live under Yahoo's suffixed
-# ids. THE CASH UNIVERSE IS DELIBERATELY NOT CHANGED by this map: the cash
-# crypto book is a running experiment and editing its universe mid-flight
-# changes which trades it takes. The 5x sleeve (and only it) applies these
-# overrides, displays the plain symbol, and rejects any row whose last close
-# is not a positive number.
-TURTLE_5X_YF_OVERRIDES = {
-    "APT": "APT21794-USD",   # Aptos      -- bare APT-USD is Apricot
-    "ARB": "ARB11841-USD",   # Arbitrum   -- bare ARB-USD is ARbit
-    "SUI": "SUI20947-USD",   # Sui        -- bare SUI-USD is Salmonation
-    "UNI": "UNI7083-USD",    # Uniswap    -- bare UNI-USD is UNICORN
-    "TON": "TON11419-USD",   # Toncoin    -- bare TON-USD is TON-Token
-}
-
-# Where REAL futures margin data would live, if and when the owner supplies
-# it: {"as_of": ..., "source": ..., "contracts": {"MES": {"initial": ...,
-# "maintenance": ...}, ...}}. THE FILE DOES NOT EXIST AND MUST NOT BE
-# INVENTED -- margin requirements are exchange facts, not estimates. While it
-# is absent the forward book refuses every new futures open with
-# `no_margin_file` (turtle_book._futures_gates), which is the honest state:
-# a futures book with made-up margin is a backtest wearing a book's clothes.
-TURTLE_FUTURES_MARGIN_FILE = "data/futures_margins.json"
-
-# Minimum share of a market's universe that must come back with usable bars
-# before the scan is allowed to publish. Below this the run RAISES and leaves
-# the previous file in place.
-#
-# The 2026-08-21 incident is why: a scheduled run got 5 of 101 crypto names
-# back from Yahoo, evaluated one, and published `errors: 0`. Every watchdog in
-# this repo checks file AGE, so a fresh file holding one name looked exactly
-# like a healthy one. 60% is deliberately loose - Yahoo routinely drops a few
-# percent and the recovery sweep usually reclaims them - so anything that
-# trips this is a real outage, not a bad afternoon.
-TURTLE_MIN_COVERAGE_PCT = 60.0
-
-# A 60% SHARE is calibrated for a 2,000-name directory, where losing 40% is a
-# mass outage. On the 21-contract futures sleeve the same arithmetic is
-# absurd: 8 contracts missing is 62% coverage - "above the floor" - and
-# publishes a sleeve with whole asset groups absent as if it were whole. So a
-# small universe gets an ABSOLUTE ceiling on missing names instead: at or
-# under TURTLE_SMALL_UNIVERSE_MAX names, MORE than
-# TURTLE_SMALL_UNIVERSE_MAX_MISSING unpriced names refuses to publish and
-# leaves yesterday's file standing (the share floor still applies too - the
-# tighter rule wins). Two missing of 21 (90.5%) still publishes, because one
-# permanently broken Yahoo symbol must not hold the whole sleeve hostage
-# forever - but every missing name is NAMED in the payload rather than merely
-# counted, because on a fixed 21-row table each absence is an asset group,
-# not a rounding error. Equity universes are untouched: they stay on the
-# 60% share above.
-TURTLE_SMALL_UNIVERSE_MAX = 30
-TURTLE_SMALL_UNIVERSE_MAX_MISSING = 2
-
-# Rows published per market. The full ASX universe throws off far more
-# breakouts than a page can show; ranking is by proximity to the level and
-# then by liquidity, and the payload states how many were dropped.
-TURTLE_MAX_ROWS = 400
 
 # ---------------------------------------------------------------------------
 # MORNING PLAYS — the daily Discord digest of HIGH-CONVICTION VIVEK 5.0 setups
@@ -2053,8 +1255,35 @@ MORNING_PLAYS_TZ = "Australia/Melbourne"
 # is what stops the slot's OTHER DST superset cron from double-sending. `minute`
 # is only the intended send time shown in the message; the gate keys on `hour`.
 MORNING_PLAYS_SLOTS = {
-    "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # ~30 min after the 16:00 ASX close
-    "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # ~30 min after the US close
+    "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # FLOOR: never before 16:30 Melbourne
+    "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # FLOOR: never before 06:30 Melbourne
+}
+# THE POST-CLOSE DATA GATE (2026-09-11). The slot floor above is a wall-clock
+# floor; this is the gate that actually decides. A slot sends only once the scan
+# it reads was GENERATED at/after the gating market's most recent weekday session
+# close -- the 2026-09-11 06:35 US digest ran on time and read a 1:43pm New York
+# MID-SESSION scan (the post-close scan committed at 07:06 Melbourne), so it
+# missed the three names that set up in the last hours of trade and posted
+# "nothing new". Keyed on the payload's own `generated_at` in the market's own
+# zone, so DST on either side is irrelevant. Before the gate passes the run is a
+# silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
+# cron-job.org jobs are a ladder of attempts every 30 min after the close, and
+# the first post-close one sends (the per-day marker silences the rest).
+#   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
+#                            is pre-close. scan.yml's 05:07 UTC cron generates
+#                            ~16:0x-16:28 AEST; its 06:37 UTC closing cron ~17:4x.
+#   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
+#                            16:00:xx. NOT 16:15: scan.yml's LAST NASDAQ cron is
+#                            21:07 UTC, which is 16:07 New York under EST, so a
+#                            later gate would refuse every winter session's only
+#                            post-close scan and the US digest would never send
+#                            Nov-Mar. Under EDT the 20:07 UTC hourly (16:07 NY)
+#                            passes too and the digest lands an hour earlier.
+# crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
+# gate reads (`<market>_vivek.json`'s generated_at).
+MORNING_PLAYS_SLOT_GATE = {
+    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
+    "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.
