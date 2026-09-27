@@ -217,8 +217,8 @@ CLEAN_TOKEN = "vpsdispatchtoken-FAKE-000004"
 def test_vps_dispatch_posts_the_design_body_with_a_bearer_token(monkeypatch):
     seen = {}
 
-    def fake_call(method, url, headers=None, body=None, raw_body=None):
-        seen.update(method=method, url=url, headers=headers, body=body, raw=raw_body)
+    def fake_call(method, url, headers=None, body=None, raw_body=None, follow_redirects=True):
+        seen.update(method=method, url=url, headers=headers, body=body, raw=raw_body, follow=follow_redirects)
         return 202, {"ok": True, "id": "20260927T010000Z-1a2b3c4d"}
 
     monkeypatch.setattr(ops, "call", fake_call)
@@ -231,6 +231,50 @@ def test_vps_dispatch_posts_the_design_body_with_a_bearer_token(monkeypatch):
     assert seen["headers"] == {"Authorization": "Bearer " + CLEAN_TOKEN}
     assert seen["body"] == {"workflow": "scan.yml", "inputs": {"market": "asx", "reason": "manual"}}
     assert seen["raw"] is None
+    assert seen["follow"] is False, "the bearer must never ride a redirect"
+
+
+def test_the_vps_client_never_forwards_the_bearer_across_a_redirect():
+    """Security review: urllib copies Authorization onto a 30x target of ANY
+    host; follow_redirects=False answers the 3xx itself (a real local server
+    pair, no network)."""
+    import http.server
+    import threading
+    got = {}
+
+    class Target(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            got["auth"] = self.headers.get("Authorization")
+            self.send_response(202)
+            self.end_headers()
+
+        do_GET = do_POST                              # urllib turns a POST 302 into a GET
+
+        def log_message(self, *a):
+            pass
+    target = http.server.HTTPServer(("127.0.0.1", 0), Target)
+
+    class Bouncer(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{target.server_port}/steal")
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+    bouncer = http.server.HTTPServer(("127.0.0.1", 0), Bouncer)
+    threads = [threading.Thread(target=srv.serve_forever, daemon=True) for srv in (target, bouncer)]
+    [t.start() for t in threads]
+    try:
+        url = f"http://127.0.0.1:{bouncer.server_port}/api/dispatch"
+        status, _ = ops.call("POST", url, {"Authorization": "Bearer SECRET"}, {"workflow": "scan.yml"},
+                             follow_redirects=False)
+        assert status == 302 and "auth" not in got, "the redirect target never saw the request"
+        status, _ = ops.call("POST", url, {"Authorization": "Bearer SECRET"}, {"workflow": "scan.yml"})
+        assert got.get("auth") == "Bearer SECRET", "control: urllib's default DOES forward it"
+    finally:
+        target.shutdown()
+        bouncer.shutdown()
 
 
 def test_vps_dispatch_reads_both_secrets_through_config_clean_secret():
@@ -243,7 +287,7 @@ def test_vps_dispatch_reads_both_secrets_through_config_clean_secret():
 
 def test_vps_dispatch_defaults_inputs_to_an_empty_object(monkeypatch):
     seen = {}
-    monkeypatch.setattr(ops, "call", lambda m, u, headers=None, body=None, raw_body=None:
+    monkeypatch.setattr(ops, "call", lambda m, u, headers=None, body=None, raw_body=None, follow_redirects=True:
                         seen.update(body=body) or (202, {"ok": True}))
     ops.run("vps-dispatch", {"workflow": "momentum.yml"}, env=VPS_ENV)
     assert seen["body"] == {"workflow": "momentum.yml", "inputs": {}}
@@ -286,7 +330,7 @@ def test_vps_dispatch_refuses_a_malformed_request_before_reading_a_secret(monkey
 def test_vps_dispatch_output_never_carries_the_token_or_the_host(monkeypatch, capsys):
     """The adapter may echo what it was sent; the log is public. Status code
     and a redacted body only: no token, no URL, not even the hostname."""
-    def leaky_call(method, url, headers=None, body=None, raw_body=None):
+    def leaky_call(method, url, headers=None, body=None, raw_body=None, **_kw):
         return 401, {"ok": False, "error": f"bad token {CLEAN_TOKEN} for {url}",
                      "host": "vps.example-owner.net"}
     monkeypatch.setattr(ops, "call", leaky_call)

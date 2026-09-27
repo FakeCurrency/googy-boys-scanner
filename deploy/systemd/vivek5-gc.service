@@ -2,7 +2,7 @@
 # /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
 # copy in the checkout and re-run `install.sh --units`.
 [Unit]
-Description=Vivek 5.0 weekly git gc of both clones under the exclusive repo lock (DESIGN section 4)
+Description=Vivek 5.0 weekly git gc of both clones (repo lock shared, publish clone bounded; DESIGN section 4)
 Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
 OnFailure=vivek5-failed@%n.service
 
@@ -11,15 +11,26 @@ Type=oneshot
 User=vivek5
 WorkingDirectory=/opt/vivek5/app
 EnvironmentFile=/etc/vivek5/jobs.env
+# The box's own zone is left alone (other services on it depend on it,
+# M6 C1); the engine's two naive local-date calls get UTC from here.
+Environment=TZ=UTC
 ExecStart=/opt/vivek5/app/deploy/bin/gc.sh
 TimeoutStartSec=120min
 KillMode=mixed
 LogRateLimitIntervalSec=0
+# COEXISTENCE (M6 C8): a multi-GB repack is the heaviest thing this box does
+# all week, and the owner's LIVE trading bot wins every contention: lowest CPU
+# share, idle I/O class, and a soft 1G memory ceiling (throttled, never
+# OOM-killed; gc.sh also bounds git's delta window at 256m). It holds the repo
+# lock only SHARED, so yielding never stalls a job behind it.
 Nice=10
+CPUWeight=20
 IOSchedulingClass=idle
+MemoryHigh=1G
 # Hardening (DESIGN section 4): the job may write only its three trees.
 ProtectSystem=strict
 ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectProc=invisible
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes

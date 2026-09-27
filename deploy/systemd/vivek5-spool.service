@@ -15,6 +15,9 @@ Type=oneshot
 User=vivek5
 WorkingDirectory=/opt/vivek5/app
 EnvironmentFile=/etc/vivek5/jobs.env
+# The box's own zone is left alone (other services on it depend on it,
+# M6 C1); the engine's two naive local-date calls get UTC from here.
+Environment=TZ=UTC
 ExecStart=/opt/vivek5/venv/bin/python -m scanner.vps drain-spool
 # A drain may run several queued jobs back to back, each waiting on the book
 # lock (2 h budget) before its own timeout (scan.yml 2 h); the runner bounds
@@ -22,9 +25,22 @@ ExecStart=/opt/vivek5/venv/bin/python -m scanner.vps drain-spool
 TimeoutStartSec=8h
 KillMode=mixed
 LogRateLimitIntervalSec=0
+# COEXISTENCE (M6 C8): this box also runs the owner's LIVE trading bot, and
+# it wins every contention. A heavy job yields CPU (Nice=10, and CPUWeight=20
+# against everyone else's default 100), yields disk I/O (lowest priority in
+# its class) and is THROTTLED above 1G -- MemoryHigh is a soft ceiling: the
+# kernel reclaims and slows the job, it never kills it. Deliberately NO
+# MemoryMax: an OOM kill mid-publish is worse than a slow scan. If
+# `preflight.sh --measure` shows the ASX scan well above 1G, raise MemoryHigh.
+Nice=10
+CPUWeight=20
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+MemoryHigh=1G
 # Hardening (DESIGN section 4): the job may write only its three trees.
 ProtectSystem=strict
 ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectProc=invisible
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes

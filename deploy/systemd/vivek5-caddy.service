@@ -1,0 +1,55 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 6.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+#
+# OUR Caddy, not the machine's (M6 C3): a pinned, checksum-verified release
+# binary in /opt/vivek5/caddy, run by its own user with its own config and
+# data dirs. The distro/cloudsmith `caddy` package and `caddy.service` are
+# never installed, started, reloaded or reconfigured by this kit -- the box
+# may already use them for something else. If :80/:443 are already taken,
+# preflight FAILS and cutover refuses (deploy/bin/ports.sh); nothing here
+# ever stops another process to free a port.
+[Unit]
+Description=Vivek 5.0 front door: Caddy (TLS) for the API adapter (DESIGN section 6)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=notify
+User=vivek5-caddy
+Group=vivek5-caddy
+# VIVEK_DOMAIN (+ the Phase 2 basic-auth user/hash). systemd reads the raw
+# value -- no shell expansion -- so a bcrypt `$2a$14$...` hash is safe here.
+EnvironmentFile=/etc/vivek5/caddy.env
+Environment=TZ=UTC
+# Certificates and autosave live under /opt/vivek5/caddy, never the system
+# caddy's /var/lib/caddy.
+Environment=XDG_DATA_HOME=/opt/vivek5/caddy/data
+Environment=XDG_CONFIG_HOME=/opt/vivek5/caddy/config
+# (no --environ: it would print the basic-auth hash into the journal)
+ExecStart=/opt/vivek5/caddy/caddy run --adapter caddyfile --config /etc/vivek5/Caddyfile
+ExecReload=/opt/vivek5/caddy/caddy reload --adapter caddyfile --config /etc/vivek5/Caddyfile --force
+TimeoutStopSec=5s
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+LogRateLimitIntervalSec=0
+# Bind :80/:443 without root: the one capability, and nothing else.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ProtectSystem=strict
+ReadWritePaths=/opt/vivek5/caddy/data /opt/vivek5/caddy/config
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectProc=invisible
+
+[Install]
+# `enable` (cutover step 1, never install.sh) must make it survive a REBOOT:
+# without an [Install] section `systemctl enable --now` only started it, and
+# after the next reboot the timers ran while the dispatch endpoint and the
+# TLS front door stayed dead (2026-09-27 host review).
+WantedBy=multi-user.target

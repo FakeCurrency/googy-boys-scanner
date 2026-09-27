@@ -284,7 +284,7 @@ def test_phasemap_collects_a_missing_market_and_still_pushes_the_healthy_ones(wo
     job = J.JOBS["phasemap.yml"]
     write(w.home, "public/data/phasemap/nasdaq/latest.json", '{"run_date": "2026-09-29"}\n')
     write(w.home, "public/data/phasemap/crypto/latest.json", '{"run_date": "2026-09-29"}\n')
-    res = w.publish(job, J.parse_args(job, {}), {"specs_ok": False, "captures": {}})
+    res = w.publish(job, J.parse_args(job, {"reason": "cron"}), {"specs_ok": False, "captures": {}})
     assert res.status == "pushed" and res.exit_code == 1, res.lines
     assert json.loads(origin_file(w.origin, "public/data/phasemap/nasdaq/latest.json"))["run_date"] == "2026-09-29"
     assert any("ASSERT-STAGED FAILED (phasemap asx)" in ln for ln in res.lines)
@@ -499,3 +499,129 @@ def test_publish_paths_scope_and_data_roots(world):
     assert P.read_skip_marker(world.home) == ["nasdaq", "crypto"]
     assert P.close_roster({"batch": json.dumps([{"symbol": f"S{i}"} for i in range(12)])}).endswith("S8 S9 ...")
     assert P.close_roster({"symbol": "FPH", "direction": "long", "price": "12.34"}) == "FPH long @ 12.34"
+
+
+# ── 2026-09-27 review fixes ──────────────────────────────────────────────────
+
+def test_a_stale_index_lock_in_the_publish_clone_self_heals(world):
+    """Book review K1: a SIGKILLed git (KillMode=mixed / OOM) left
+    .git/index.lock; every later `reset --hard` failed with 'File exists'
+    until a human removed it. The exclusive publish flock means no other
+    runner git process is in the clone, so the attempt clears it and pushes."""
+    w = world
+    (w.clone / ".git" / "index.lock").write_text("")
+    ref_lock = w.clone / ".git" / "refs" / "remotes" / "origin" / "main.lock"
+    ref_lock.parent.mkdir(parents=True, exist_ok=True)
+    ref_lock.write_text("")
+    job, args, ctx = reco(w)
+    res = w.publish(job, args, ctx)
+    assert res.status == "pushed", res.lines
+    assert any("removed stale .git/index.lock" in ln for ln in res.lines)
+    assert any("refs/remotes/origin/main.lock" in ln for ln in res.lines)
+    assert not (w.clone / ".git" / "index.lock").exists() and not ref_lock.exists()
+
+
+def test_no_publish_head_fails_closed_unless_bootstrapping(world, monkeypatch):
+    w = world
+    (w.state / "publish_head").unlink()
+    job, args, ctx = reco(w)
+    res = w.publish(job, args, ctx)
+    assert res.status == "halted" and res.exit_code == 4 and origin_log(w.origin) == ["seed"]
+    assert w.alerts[-1][0] == "CRITICAL" and "publish_head" in w.alerts[-1][1]
+    assert not (w.state / "HALT").exists(), "a missing head is not a second writer"
+    monkeypatch.setenv("VIVEK_BOOTSTRAP", "1")
+    res = w.publish(job, args, ctx)
+    assert res.status == "pushed" and (w.state / "publish_head").read_text().strip() == res.sha
+
+
+def test_accept_upstream_and_clear_halt_wait_for_running_jobs_and_report_what_they_overwrote(world):
+    """Book review K5: both verbs took no lock and mirrored data roots (with
+    delete) under jobs that were still running while HALT was set."""
+    from scanner.vps import locks as L
+    w = world
+    commit_in(w.other, {"journal/vivek_bot_book.asx.json": '{"market": "asx", "closed_by": "hand"}\n'},
+              "journal: manual close", ident=BOT)
+    job, args, ctx = reco(w)
+    assert w.publish(job, args, ctx).status == "halted"
+    running = L.Lock(L.lock_path(w.state, "repo"), shared=True)       # a job mid-run
+    assert running.try_acquire()
+    with pytest.raises(L.LockTimeout):
+        P.accept_upstream(state_dir=w.state, clone=w.clone, home=w.home, lock_wait_s=0.2)
+    with pytest.raises(L.LockTimeout):
+        P.clear_halt(state_dir=w.state, clone=w.clone, lock_wait_s=0.2)
+    assert (w.state / "HALT").exists(), "nothing happened while the job held the repo"
+    running.release()
+    write(w.home, "journal/vivek_bot_book.asx.json", '{"market": "asx", "v": "vps"}\n')
+    logged = []
+    synced = P.accept_upstream(state_dir=w.state, clone=w.clone, home=w.home, log=logged.append)
+    assert "journal/vivek_bot_book.asx.json" in synced and not (w.state / "HALT").exists()
+    assert any(ln.startswith("accept-upstream: journal/vivek_bot_book.asx.json: 1 file(s) overwritten")
+               for ln in logged), logged
+    # while the verb held its locks, a job could take neither repo nor publish
+    for name in ("repo", "publish"):
+        probe = L.Lock(L.lock_path(w.state, name))
+        assert probe.try_acquire(), f"{name} released after the verb"
+        probe.release()
+
+
+def test_root_diff_names_overwrites_and_deletions(tmp_path):
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    write(src, "a.json", "new")
+    write(src, "same.json", "x")
+    write(dst, "a.json", "old")
+    write(dst, "same.json", "x")
+    write(dst, "gone.json", "bye")
+    changed, removed = P.root_diff(src, dst)
+    assert changed == ["a.json"] and removed == ["gone.json"]
+    assert P.root_diff(src / "a.json", dst / "a.json") == (["a.json"], [])
+
+
+def test_an_operator_single_market_phasemap_run_is_graded_like_workflow_dispatch(world):
+    """Parity minor: phasemap.yml's commit step branches on GITHUB_EVENT_NAME.
+    A bare `run phasemap.yml market=asx` used to default reason=cron and hit
+    the three hard-collect asserts (red, alerted) where GitHub only warns.
+    Now the default is manual (one soft check); the TIMER passes reason=cron."""
+    w = world
+    job = J.JOBS["phasemap.yml"]
+    args = J.parse_args(job, {"market": "asx"})
+    assert args["reason"] == "manual" and not J.is_scheduled(job, args)
+    checks, _ = P.plan_checks(job, args, {"specs_ok": True}, w.home, lambda m: None)
+    assert [c.mode for c in checks] == ["soft"]
+    write(w.home, "public/data/phasemap/asx/latest.json", '{"run_date": "2026-09-29"}\n')
+    res = w.publish(job, args, {"specs_ok": True, "captures": {}})
+    assert res.status == "pushed" and res.exit_code == 0, res.lines
+    timer = J.parse_args(job, {"reason": "cron"})
+    assert [c.mode for c in P.plan_checks(job, timer, {"specs_ok": False}, w.home, lambda m: None)[0]] == ["collect"] * 3
+    conf = J.JOBS["confluence.yml"]
+    assert J.parse_args(conf, {})["reason"] == "manual" and J.parse_args(conf, {"reason": "cron"})["reason"] == "cron"
+
+
+def test_every_published_and_book_file_is_0644_not_mkstemps_0600(tmp_path, monkeypatch):
+    """Security review BLOCKER 2: atomic_write went through NamedTemporaryFile
+    (mkstemp, 0600) + os.replace, so after the first job write the book was
+    owner-only -- the API adapter (another user) then refused EVERY bot close
+    with 503 'book unreadable', and Phase 2's Caddy could not serve /data.
+    Exercised through the REAL book writer, under systemd's default umask."""
+    import stat as _stat
+    from scanner.broker import vivek_run as VR
+    from scanner.journal_common import atomic_write
+    from scanner.output import write_json
+    old = os.umask(0o022)
+    try:
+        (tmp_path / "journal").mkdir()
+        (tmp_path / "public" / "data").mkdir(parents=True)
+        monkeypatch.setattr(VR, "BOOK_DIR", tmp_path / "journal")
+        monkeypatch.setattr(VR, "BOOK_FILE", tmp_path / "journal" / "vivek_bot_book.json")
+        monkeypatch.setattr(VR, "PUBLIC_FILE", tmp_path / "public" / "data" / "vivek_bot_book.json")
+        monkeypatch.setattr(VR, "UNASSIGNED_FILE", tmp_path / "journal" / "vivek_bot_book.unassigned.json")
+        VR._write_combined()
+        for f in (VR.BOOK_FILE, VR.PUBLIC_FILE):
+            assert _stat.S_IMODE(f.stat().st_mode) == 0o644, (f, oct(f.stat().st_mode))
+        write_json(tmp_path / "p.json", {"a": 1})
+        atomic_write(tmp_path / "j.json", "{}")
+        assert _stat.S_IMODE((tmp_path / "p.json").stat().st_mode) == 0o644
+        assert _stat.S_IMODE((tmp_path / "j.json").stat().st_mode) == 0o644
+        LG.record("scan.yml", status="ok", exit_code=0, path=tmp_path / "runs.json")
+        assert _stat.S_IMODE((tmp_path / "runs.json").stat().st_mode) == 0o640, "the ledger: runner + group only"
+    finally:
+        os.umask(old)

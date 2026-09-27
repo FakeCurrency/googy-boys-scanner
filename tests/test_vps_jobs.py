@@ -252,7 +252,12 @@ def test_operator_only_args_are_dropped_by_the_drainer_and_kept_for_operators():
     op = J.parse_args(scan, {"market": "asx", "extra": "--limit 3", "reason": "manual"})
     assert op["extra"] == "--limit 3"
     api = J.parse_args(scan, {"market": "asx", "extra": "--limit 3", "reason": "manual"}, operator=False)
-    assert api["extra"] == ""
+    assert "extra" not in api, "a non-operator run carries no operator-only key, not even its default (M4)"
+    for name in ("morning_plays.yml", "momentum.yml", "phasemap.yml", "kill_switch.yml"):
+        job = J.JOBS[name]
+        typed = J.parse_args(job, {}, operator=False)
+        assert not set(typed) & set(job.operator_only_args), (name, typed)
+        assert set(J.parse_args(job, {})) >= set(job.operator_only_args), f"{name}: the CLI still gets defaults"
     with pytest.raises(J.ArgError):
         J.parse_args(scan, {"market": "asx", "bogus": "1"})
     with pytest.raises(J.ArgError):
@@ -271,7 +276,9 @@ def test_reason_defaults_from_the_slot_the_timer_passes():
     cb = J.JOBS["crypto_bot.yml"]
     assert J.parse_args(cb, {"slot": "backstop"})["reason"] == "cron"
     assert J.parse_args(cb, {})["reason"] == "manual"
-    assert J.is_scheduled(J.JOBS["phasemap.yml"], J.parse_args(J.JOBS["phasemap.yml"], {}))
+    assert not J.is_scheduled(J.JOBS["phasemap.yml"], J.parse_args(J.JOBS["phasemap.yml"], {})), \
+        "an operator run is workflow_dispatch parity; the timer passes reason=cron"
+    assert J.is_scheduled(J.JOBS["phasemap.yml"], J.parse_args(J.JOBS["phasemap.yml"], {"reason": "cron"}))
     assert J.is_scheduled(J.JOBS["reco_note.yml"], {})
     assert not J.is_scheduled(J.JOBS["close_position.yml"], J.parse_args(
         J.JOBS["close_position.yml"], {"symbol": "abc", "market": "asx", "price": "1.5"}))
@@ -361,34 +368,56 @@ class TestScanGate:
         r = G.scan_gate("asx", "hourly", now=dt.datetime(2026, 9, 26, 3, tzinfo=UTC), home=tmp_path)
         assert r.due and r.market == "all" and "fail open" in (r.warning or "")
 
-    @pytest.mark.parametrize("slot", ["close", "backstop"])
-    def test_close_slot_runs_only_after_16_00_and_only_until_a_post_close_scan_lands(self, tmp_path, slot):
+    def test_the_close_slot_runs_unconditionally_inside_the_closing_window(self, tmp_path):
+        """Parity review P1: scan.yml's `30 5,6` closing cron runs whatever
+        landed before it. The 16:07 hourly ASX scan stamps generated_at AFTER
+        its download (16:1x-16:2x most days), so the post-close rule silently
+        dropped the owner-mandated 16:30 scan. Inside 16:00..window-end the
+        close slot is DUE, full stop."""
         home = tmp_path
         prices = home / "public" / "data" / "asx_prices.json"
         tue = (2026, 9, 29)
-        assert not G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 15, 59), home=home)
-        assert G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 16, 30), home=home), "no file: due"
-        _write(prices, {"generated_at": _at("Australia/Sydney", *tue, 16, 7).isoformat()})
-        assert G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 16, 30), home=home), \
-            "the 16:07 hourly scan is NOT post-close (16:12)"
-        _write(prices, {"generated_at": _at("Australia/Sydney", *tue, 16, 31).isoformat()})
-        assert not G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 17, 15), home=home), \
-            "a post-close scan landed: the backstop skips"
-        # no upper bound: a reboot-late fire at 21:00 still runs when nothing landed
-        _write(prices, {"generated_at": _at("Australia/Sydney", *tue, 16, 7).isoformat()})
-        assert G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 21, 0), home=home)
-        assert not G.scan_gate("asx", slot, now=_at("Australia/Sydney", 2026, 10, 3, 16, 30), home=home), "Saturday"
-        _write(prices, {"generated_at": "garbage"})
-        assert G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 16, 30), home=home), "unreadable: fail open"
+        assert not G.scan_gate("asx", "close", now=_at("Australia/Sydney", *tue, 15, 59), home=home)
+        assert G.scan_gate("asx", "close", now=_at("Australia/Sydney", *tue, 16, 30), home=home), "no file: due"
+        _write(prices, {"generated_at": _at("Australia/Sydney", *tue, 16, 25).isoformat()})   # the 16:07 hourly, post-download
+        r = G.scan_gate("asx", "close", now=_at("Australia/Sydney", *tue, 16, 30), home=home)
+        assert r.due and "unconditionally" in r.why, "a 16:25 stamp from the 16:07 hourly must NOT suppress the 16:30 close"
+        assert G.scan_gate("asx", "close", now=_at("Australia/Sydney", *tue, 16, 45), home=home), "the window end is inclusive"
+        assert not G.scan_gate("asx", "close", now=_at("Australia/Sydney", 2026, 10, 3, 16, 30), home=home), "Saturday"
+        # NASDAQ: 16:07 New York is inside its window too (the ONLY post-close scan in winter)
+        _write(home / "public" / "data" / "nasdaq_prices.json",
+               {"generated_at": _at("America/New_York", *tue, 16, 5).isoformat()})
+        assert G.scan_gate("nasdaq", "close", now=_at("America/New_York", *tue, 16, 7), home=home)
 
-    def test_the_close_rule_uses_the_digest_gate_times_from_config(self, tmp_path):
+    def test_a_late_close_and_the_backstop_skip_once_a_post_close_scan_landed(self, tmp_path):
+        """Past the window's end (a reboot-late Persistent= fire) the close
+        slot falls through to the backstop's rule: run only if no post-close
+        scan exists yet. No upper bound."""
+        home = tmp_path
+        prices = home / "public" / "data" / "asx_prices.json"
+        tue = (2026, 9, 29)
+        _write(prices, {"generated_at": _at("Australia/Sydney", *tue, 16, 7).isoformat()})   # pre-auction stamp
+        for slot in ("close", "backstop"):
+            assert G.scan_gate("asx", slot, now=_at("Australia/Sydney", *tue, 21, 0), home=home), \
+                f"{slot}: a reboot-late fire with no post-close scan still runs"
+        _write(prices, {"generated_at": _at("Australia/Sydney", *tue, 16, 52).isoformat()})
+        assert not G.scan_gate("asx", "backstop", now=_at("Australia/Sydney", *tue, 17, 15), home=home), \
+            "a 17:15 backstop after a 16:5x post-close stamp skips"
+        assert not G.scan_gate("asx", "close", now=_at("Australia/Sydney", *tue, 21, 0), home=home), \
+            "a late close after a post-close stamp skips"
+        assert not G.scan_gate("asx", "backstop", now=_at("Australia/Sydney", *tue, 15, 59), home=home)
+        assert not G.scan_gate("asx", "backstop", now=_at("Australia/Sydney", 2026, 10, 3, 17, 15), home=home), "Saturday"
+        _write(prices, {"generated_at": "garbage"})
+        assert G.scan_gate("asx", "backstop", now=_at("Australia/Sydney", *tue, 17, 15), home=home), "unreadable: fail open"
+
+    def test_the_backstop_rule_uses_the_digest_gate_times_from_config(self, tmp_path):
         # NASDAQ's post-close stamp is 16:05 New York (config.MORNING_PLAYS_SLOT_GATE['us'])
         tue = (2026, 9, 29)
         prices = tmp_path / "public" / "data" / "nasdaq_prices.json"
         _write(prices, {"generated_at": _at("America/New_York", *tue, 16, 4).isoformat()})
-        assert G.scan_gate("nasdaq", "close", now=_at("America/New_York", *tue, 16, 7), home=tmp_path)
+        assert G.scan_gate("nasdaq", "backstop", now=_at("America/New_York", *tue, 17, 15), home=tmp_path)
         _write(prices, {"generated_at": _at("America/New_York", *tue, 16, 5).isoformat()})
-        assert not G.scan_gate("nasdaq", "close", now=_at("America/New_York", *tue, 16, 7), home=tmp_path)
+        assert not G.scan_gate("nasdaq", "backstop", now=_at("America/New_York", *tue, 17, 15), home=tmp_path)
         assert config.MORNING_PLAYS_SLOT_GATE["us"]["minute"] == 5
 
 
@@ -457,6 +486,106 @@ class TestOtherGates:
         assert G.momentum_gate("asx", home=tmp_path, state_dir=state, run=run).market == "asx"
         assert not list((state / "tmp").glob("momentum-on-main-*")), "the temp dir is cleaned up"
 
+    def test_momentum_gate_fetch_survives_no_network_via_patched_subprocess(self, tmp_path, monkeypatch):
+        """M5: the gate's `git fetch origin main` is kept (momentum_due reads
+        MAIN's stamps by design) but an offline box must skip it cleanly:
+        warn and read the last fetched origin/main. Patched at
+        subprocess.run, the gate's default runner."""
+        calls = []
+
+        def fake_run(argv, **kw):
+            calls.append((list(argv), kw))
+            if argv[:2] == ["git", "fetch"]:
+                raise subprocess.TimeoutExpired(argv, kw.get("timeout"))
+            if argv[:2] == ["git", "show"]:
+                return subprocess.CompletedProcess(argv, 0, json.dumps({"generated_at": "2026-09-01T00:00:00Z"}), "")
+            if str(argv[1]).endswith("momentum_due.py"):
+                pathlib.Path(kw["env"]["GITHUB_OUTPUT"]).write_text("market=asx\n")
+                return subprocess.CompletedProcess(argv, 0, "picked: asx", "")
+            raise AssertionError(argv)
+        monkeypatch.setattr(G.subprocess, "run", fake_run)
+        r = G.momentum_gate(None, home=tmp_path, state_dir=tmp_path / "s", python="PY")
+        assert r.due and r.market == "asx", "the last fetched ref still decides"
+        assert r.warning and "timed out" in r.warning and "last fetched" in r.warning
+        fetch_argv, fetch_kw = calls[0]
+        assert fetch_argv == ["git", "fetch", "--quiet", "origin", "main"], "a plain fetch: never --depth"
+        assert fetch_kw["timeout"] == config.VPS_MOMENTUM_FETCH_TIMEOUT_S
+        assert fetch_kw["env"]["GIT_TERMINAL_PROMPT"] == "0"
+        assert [c[0][:2] for c in calls].count(["git", "show"]) == 3
+        # a non-zero fetch (DNS down, auth) is the same warning, not a failure
+        calls.clear()
+
+        def refused(argv, **kw):
+            if argv[:2] == ["git", "fetch"]:
+                calls.append((list(argv), kw))
+                return subprocess.CompletedProcess(argv, 128, "", "fatal: unable to access")
+            return fake_run(argv, **kw)
+        monkeypatch.setattr(G.subprocess, "run", refused)
+        r = G.momentum_gate(None, home=tmp_path, state_dir=tmp_path / "s", python="PY")
+        assert r.due and "offline" in (r.warning or "")
+        assert any(argv[:2] == ["git", "fetch"] for argv, _ in calls)
+        for argv, _ in calls:
+            assert not any(tok.startswith("--depth") for tok in argv), argv
+
+    def test_momentum_gate_fetch_waits_for_update_sh_and_skips_when_the_repo_is_busy(self, tmp_path, monkeypatch):
+        state = tmp_path / "s"
+        busy = L.Lock(L.lock_path(state, "repo"))              # update.sh / gc.sh hold it EXCLUSIVE
+        assert busy.try_acquire()
+        monkeypatch.setattr(config, "VPS_MOMENTUM_FETCH_LOCK_WAIT_S", 0.2)
+        seen = []
+
+        def run(argv, **kw):
+            seen.append(argv[:2])
+            if str(argv[1]).endswith("momentum_due.py"):
+                pathlib.Path(kw["env"]["GITHUB_OUTPUT"]).write_text("market=\n")
+                return subprocess.CompletedProcess(argv, 0, "picked: nothing due", "")
+            return subprocess.CompletedProcess(argv, 0, "{}", "")
+        r = G.momentum_gate(None, home=tmp_path, state_dir=state, run=run, python="PY")
+        busy.release()
+        assert ["git", "fetch"] not in seen, "never fetch while update.sh/gc.sh hold the checkout"
+        assert "repo lock is busy" in (r.warning or "") and not r.due
+
+    def test_momentum_gate_never_makes_the_full_working_clone_shallow(self, tmp_path):
+        """Parity P2 / book K3: `git fetch --depth=1` (transcribed from a
+        runner whose checkout was already shallow) converted the box's FULL
+        clone to a shallow one on every fire, hiding foreign data commits
+        from update.sh's second-writer scan. Real git, real clone."""
+        env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@e", GIT_COMMITTER_NAME="t",
+                   GIT_COMMITTER_EMAIL="t@e", GIT_CONFIG_NOSYSTEM="1")
+
+        def g(cwd, *a):
+            r = subprocess.run(["git", *a], cwd=str(cwd), env=env, capture_output=True, text=True)
+            assert r.returncode == 0, r.stderr
+            return r.stdout.strip()
+        origin, seed, app = tmp_path / "origin.git", tmp_path / "seed", tmp_path / "app"
+        g(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+        g(tmp_path, "init", "-q", "-b", "main", str(seed))
+        for i in range(3):
+            _write(seed / "public" / "data" / "momentum" / "asx.json", {"generated_at": f"2026-09-0{i + 1}T00:00:00Z"})
+            g(seed, "add", "-A")
+            g(seed, "commit", "-q", "-m", f"c{i}")
+        g(seed, "remote", "add", "origin", str(origin))
+        g(seed, "push", "-q", "origin", "main")
+        g(tmp_path, "clone", "-q", str(origin), str(app))
+        _write(seed / "public" / "data" / "momentum" / "nasdaq.json", {"generated_at": "2026-09-04T00:00:00Z"})
+        g(seed, "add", "-A")
+        g(seed, "commit", "-q", "-m", "c3")
+        g(seed, "push", "-q", "origin", "main")
+        shown = {}
+
+        def run(argv, **kw):
+            if str(argv[1]).endswith("momentum_due.py"):
+                shown["files"] = sorted(p.name for p in pathlib.Path(argv[3]).glob("*.json"))
+                pathlib.Path(kw["env"]["GITHUB_OUTPUT"]).write_text("market=nasdaq\n")
+                return subprocess.CompletedProcess(argv, 0, "picked: nasdaq", "")
+            return subprocess.run(argv, **{**kw, "env": {**kw.get("env", env), **env}})
+        r = G.momentum_gate(None, home=app, state_dir=tmp_path / "state", run=run, python="PY")
+        assert r.due and r.market == "nasdaq" and r.warning is None
+        assert shown["files"] == ["asx.json", "nasdaq.json"], "the fetch refreshed origin/main"
+        assert not (app / ".git" / "shallow").exists(), "the working clone must stay FULL"
+        assert g(app, "rev-parse", "--is-shallow-repository") == "false"
+        assert g(app, "rev-list", "--count", "origin/main") == "4"
+
     def test_a_crashing_momentum_gate_is_a_failure_not_a_skip(self, tmp_path):
         def run(argv, **kw):
             if argv[1:2] and str(argv[1]).endswith("momentum_due.py"):
@@ -468,10 +597,10 @@ class TestOtherGates:
 
 # ── locks ─────────────────────────────────────────────────────────────────────
 
-def test_locks_are_taken_in_order_repo_shared_then_family_then_own(tmp_path):
+def test_locks_are_taken_in_order_family_then_own_then_repo_shared(tmp_path):
     ls = L.LockSet(tmp_path, J.JOBS["crypto_bot.yml"].locks)
-    assert ls.names == ["repo", "scan", "crypto_bot"]
-    assert ls.order[0].shared and not ls.order[1].shared
+    assert ls.names == ["scan", "crypto_bot", "repo"]
+    assert ls.order[-1].shared and not ls.order[0].shared
     waited = ls.acquire(5)
     assert waited < 1 and all(lk.held for lk in ls.order)
     # a second job on the same family cannot take it; repo shared is still fine
@@ -480,7 +609,7 @@ def test_locks_are_taken_in_order_repo_shared_then_family_then_own(tmp_path):
     reader = L.Lock(L.lock_path(tmp_path, "repo"), shared=True)
     assert reader.try_acquire()
     reader.release()
-    # update.sh's exclusive repo lock is refused while a job holds it shared
+    # update.sh's exclusive repo lock is refused while a job RUNS (holds it shared)
     excl = L.Lock(L.lock_path(tmp_path, "repo"))
     assert not excl.try_acquire()
     ls.release()
@@ -488,16 +617,37 @@ def test_locks_are_taken_in_order_repo_shared_then_family_then_own(tmp_path):
     excl.release()
 
 
-def test_lock_wait_is_its_own_budget_and_releases_everything_on_timeout(tmp_path):
-    holder = L.Lock(L.lock_path(tmp_path, "scan"))
+def test_a_job_queued_on_its_family_does_not_pin_the_repo_lock(tmp_path):
+    """Book review K4: with repo taken FIRST, a crypto run queued behind a
+    40-80 min ASX scan held repo shared for its whole wait, so update.sh saw
+    the repo busy all session and raised a false 'job may be hung' alarm."""
+    holder = L.Lock(L.lock_path(tmp_path, "scan"))          # the running ASX scan's family lock
     assert holder.try_acquire()
+    queued = L.LockSet(tmp_path, J.JOBS["crypto_bot.yml"].locks)
+    t = {"now": 0.0}
+    seen = {}
+
+    def sleep(s):
+        excl = L.Lock(L.lock_path(tmp_path, "repo"))
+        seen.setdefault("repo_free_while_queued", excl.try_acquire())
+        excl.release()
+        t["now"] += s
+    with pytest.raises(L.LockTimeout):
+        queued.acquire(3, clock=lambda: t["now"], sleep=sleep)
+    assert seen["repo_free_while_queued"] is True, "a QUEUED job must not hold repo"
+    holder.release()
+
+
+def test_lock_wait_is_its_own_budget_and_releases_everything_on_timeout(tmp_path):
+    repo_holder = L.Lock(L.lock_path(tmp_path, "repo"))      # update.sh mid-sync (exclusive)
+    assert repo_holder.try_acquire()
     t = {"now": 0.0}
     ls = L.LockSet(tmp_path, ("scan", "confluence"))
     with pytest.raises(L.LockTimeout) as ei:
         ls.acquire(30, clock=lambda: t["now"], sleep=lambda s: t.__setitem__("now", t["now"] + s))
-    assert ei.value.waited_s >= 30 and ei.value.name == "scan"
-    assert not ls.order[0].held, "repo (taken first) was released on the timeout"
-    holder.release()
+    assert ei.value.waited_s >= 30 and ei.value.name == "repo"
+    assert not ls.order[0].held and not ls.order[1].held, "scan + confluence (taken first) were released"
+    repo_holder.release()
     assert ls.acquire(1, clock=lambda: t["now"], sleep=lambda s: None) == 0
     ls.release()
 
@@ -576,6 +726,19 @@ def test_redaction_strips_credentials_and_last_line_is_the_last_nonblank():
     assert LG.redact("Authorization: Bearer abc.def") == "Authorization: Bearer ***"
     assert LG.redact("ssh://git:pw@host/x") == "ssh://***@host/x"
     assert LG.redact("api_key=SECRET rest") == "api_key=*** rest"
+    # the credential shapes this box actually carries (security review minor)
+    cases = {
+        "POST https://api.telegram.org/bot123456789:AAH-xy_z/sendMessage": "https://api.telegram.org/bot***/sendMessage",
+        "https://discord.com/api/webhooks/1234/abc-DEF_9": "https://discord.com/api/webhooks/1234/***",
+        "GBS_SMTP_PASS=hunter2": "GBS_SMTP_PASS=***",
+        "GET /api/morning_plays?slot=asx&key=mp-secret-123": "GET /api/morning_plays?slot=asx&key=***",
+        "token ghp_abcDEF123 and github_pat_11ABC_def": "token ghp_*** and github_pat_***",
+        "Authorization: token ghp_x": "Authorization: token ***",
+    }
+    for raw, want in cases.items():
+        got = LG.redact(raw)
+        assert "hunter2" not in got and "mp-secret" not in got and "AAH-xy" not in got and "abc-DEF" not in got, got
+        assert got.endswith(want) or got == want, (raw, got)
     assert LG.last_line_of("a\nb\n\n   \n") == "b"
     assert LG.last_line_of("") == ""
 
@@ -674,9 +837,78 @@ def test_drain_matrix(tmp_path):
     assert failed[broken.name] == "JSONDecodeError", "parse errors record the exception TYPE only"
     assert failed[big.name] == "oversize"
     assert (state / "spool" / "failed" / big.name).read_text().startswith('{"x"'), "refused unread, moved intact"
-    assert report.skipped == [(link.name, "not a regular file")] and link.is_symlink(), "symlinks are left alone"
-    assert ignored.exists() and partial.exists(), "non-matching names and .tmp partials are never touched"
+    # a symlink over a pending name is never followed; it and a hand-dropped
+    # *.json are renamed .stuck so the .path unit's *.json glob goes false
+    stuck = dict(report.stuck)
+    assert stuck[link.name] == "not a regular file" and (state / "spool" / (link.name + ".stuck")).is_symlink()
+    assert stuck[ignored.name] == "not a dispatch file name" and (state / "spool" / (ignored.name + ".stuck")).exists()
+    assert partial.exists(), ".tmp partials are never touched"
     assert not (state / "spool" / ok.name).exists()
+    assert not [n for n in os.listdir(state / "spool") if n.endswith(".json")], \
+        "no *.json dirent survives a drain (PathExistsGlob + StartLimitIntervalSec=0 would loop)"
+    probs = dict(report.problems)
+    assert set(probs) == {unknown.name, broken.name, big.name, link.name, ignored.name}, probs
+    assert report.needs_operator
+
+
+def test_a_halted_or_lock_timed_out_dispatch_is_parked_and_requeued_not_lost(tmp_path):
+    """Book review K2: a spooled close that met HALT (exit 4) or gave up
+    waiting for the scan lock (exit 5) went to failed/ and was never retried
+    -- after a 202 to the browser."""
+    state = tmp_path
+    close = {"workflow": "close_position.yml", "source": "api/close",
+             "inputs": {"symbol": "BHP", "market": "asx", "price": 45.1, "journal_type": "bot"}}
+    halted = _spool(state, close, name="20260927T000010Z-55555555.json")
+    waited = _spool(state, {**close, "inputs": {**close["inputs"], "symbol": "CBA"}}, name="20260927T000011Z-66666666.json")
+    codes = {"BHP": 4, "CBA": 5}
+    report = S.drain(lambda job, args, src: codes[args["symbol"]], state_dir=state)
+    assert report.halted == [(halted.name, "close_position.yml")] and report.retry == [(waited.name, "close_position.yml")]
+    assert (state / "spool" / (halted.name + ".halted")).exists() and (state / "spool" / (waited.name + ".retry")).exists()
+    assert not report.failed and not report.needs_operator, "a parked dispatch is not a lost one"
+    assert not [n for n in os.listdir(state / "spool") if n.endswith(".json")], "neither re-fires the .path glob"
+    # the next drain re-queues the .retry (and only it: HALT is still set)
+    ran = []
+    report = S.drain(lambda job, args, src: ran.append(args["symbol"]) or 0, state_dir=state)
+    assert ran == ["CBA"] and report.requeued == [waited.name] and (state / "spool" / "done" / waited.name).exists()
+    assert (state / "spool" / (halted.name + ".halted")).exists()
+    # accept-upstream / clear-halt re-queue the .halted one
+    assert S.requeue(state) == [halted.name] and (state / "spool" / halted.name).exists()
+    S.drain(lambda job, args, src: ran.append(args["symbol"]) or 0, state_dir=state)
+    assert ran == ["CBA", "BHP"]
+
+
+def test_drain_refuses_a_symlinked_done_dir_and_never_follows_a_pending_symlink(tmp_path):
+    state = tmp_path
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (state / "spool").mkdir(parents=True)
+    (state / "spool" / "done").symlink_to(elsewhere, target_is_directory=True)
+    p = _spool(state, {"workflow": "momentum.yml", "inputs": {}}, name="20260926T000001Z-aaaaaaaa.json")
+    report = S.drain(lambda *a: 0, state_dir=state)
+    assert not list(elsewhere.iterdir()), "nothing lands through a planted done/ symlink"
+    assert report.stuck and (state / "spool" / (p.name + ".stuck")).exists()
+    # a pending name that is a symlink to a real dispatch is never opened
+    secret = tmp_path / "outside.json"
+    secret.write_text(json.dumps({"workflow": "momentum.yml", "inputs": {}}))
+    (state / "spool" / "done").unlink()
+    link = state / "spool" / "20260926T000002Z-bbbbbbbb.json"
+    link.symlink_to(secret)
+    ran = []
+    S.drain(lambda *a: ran.append(a) or 0, state_dir=state)
+    assert ran == [] and (state / "spool" / (link.name + ".stuck")).is_symlink()
+
+
+def test_drain_spool_exits_nonzero_with_a_spool_row_when_a_202_could_not_run(rt):
+    """Security review B1: an unreadable / refused spool file was moved to
+    failed/ and drain-spool exited 0 -- after the adapter answered 202."""
+    _spool(rt.state, {"workflow": "scan.yml", "inputs": {"market": "nyse"}}, name="20260927T000001Z-aaaaaaaa.json")
+    assert cli.cmd_drain(rt) == 1
+    row = _row(rt, "spool")
+    assert row["last_status"] == "failed" and "refused" in row["last_line"] and "aaaaaaaa" in row["last_line"]
+    # a clean drain (a job that ran, even red) does not fail the drainer: run_job alerts for it
+    _spool(rt.state, {"workflow": "momentum.yml", "inputs": {}}, name="20260927T000002Z-bbbbbbbb.json")
+    rt.fake.when(lambda a: True, cli.Exec(0, ""))
+    assert cli.cmd_drain(rt) == 0
 
 
 def test_a_file_that_cannot_be_moved_is_renamed_stuck(tmp_path):
@@ -777,19 +1009,39 @@ def test_scan_hourly_outside_the_window_is_a_skip_with_a_ledger_row_and_no_steps
     assert row["last_status"] == "skipped" and row["last_exit"] == 3 and "Outside" in row["last_line"]
 
 
-def test_the_close_slot_is_rechecked_after_the_lock(rt):
-    tue = _at("Australia/Sydney", 2026, 9, 29, 16, 30)
-    rt.now = lambda: tue
+def test_the_backstop_is_rechecked_after_the_lock_at_its_fire_time(rt):
+    fire = _at("Australia/Sydney", 2026, 9, 29, 17, 15)
+    rt.now = lambda: fire
     prices = rt.home / "public" / "data" / "asx_prices.json"
     real_acquire = L.LockSet.acquire
 
     def landed_while_waiting(self, *a, **k):
-        _write(prices, {"generated_at": tue.isoformat()})     # another writer finished the close scan
+        _write(prices, {"generated_at": _at("Australia/Sydney", 2026, 9, 29, 16, 50).isoformat()})
         return real_acquire(self, *a, **k)
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(L.LockSet, "acquire", landed_while_waiting)
-        assert cli.run_job("scan.yml", ["market=asx", "slot=close", "reason=cron"], rt) == 3
+        assert cli.run_job("scan.yml", ["market=asx", "slot=backstop", "reason=cron"], rt) == 3
     assert rt.fake.calls == [] and _row(rt)["last_status"] == "skipped"
+
+
+def test_a_16_30_close_queued_behind_the_16_07_scan_still_runs(rt):
+    """The hourly scan publishes a 16:25 stamp while the close waits for the
+    scan lock, and the wait runs past the window's end: the re-check uses the
+    FIRE-time instant (16:30, inside the window), so the close still runs."""
+    fire = _at("Australia/Sydney", 2026, 9, 29, 16, 30)
+    clock = {"now": fire}
+    rt.now = lambda: clock["now"]
+    prices = rt.home / "public" / "data" / "asx_prices.json"
+    real_acquire = L.LockSet.acquire
+
+    def hourly_finished_while_waiting(self, *a, **k):
+        _write(prices, {"generated_at": _at("Australia/Sydney", 2026, 9, 29, 16, 25).isoformat()})
+        clock["now"] = _at("Australia/Sydney", 2026, 9, 29, 16, 58)          # waited past 16:45
+        return real_acquire(self, *a, **k)
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(L.LockSet, "acquire", hourly_finished_while_waiting)
+        assert cli.run_job("scan.yml", ["market=asx", "slot=close", "reason=cron"], rt) == 0
+    assert rt.fake.find("scanner.run") and _row(rt)["last_status"] == "ok"
 
 
 def test_crypto_backstop_skips_on_a_fresh_local_scan_and_the_watchdog_follows_the_publish(rt):
@@ -915,6 +1167,33 @@ def test_morning_plays_maps_the_slot_and_chains_a_momentum_dispatch(rt, monkeypa
     assert len(S.pending(rt.state)) == 5, "the chain fires on every completion, failed ones included"
 
 
+def test_a_spooled_morning_plays_run_carries_no_operator_key_and_maps_the_slot_alone(rt, monkeypatch):
+    """M4: the integrator saw `force: 'true'` on a spooled morning_plays run.
+    Any source other than the CLI gets no force/extra/args/dry_run at all --
+    even when the caller passes operator=True -- and the slot alone decides."""
+    for kw in ({"operator": False, "source": "spool"}, {"operator": True, "source": "api/morning_plays"}):
+        rt.fake.calls.clear()
+        assert cli.run_job("morning_plays.yml", {"slot": "us"}, rt, **kw) == 0
+        assert rt.fake.argvs()[0] == ["PY", "scripts/morning_plays.py", "--slot", "us"]
+        last = _row(rt, "morning_plays.yml")["last_args"]
+        assert last == {"slot": "us", "redeliver": "false"}, last
+        assert "force" not in last and "dry_run" not in last
+    # a (hypothetical) non-CLI run with a blank slot never force-sends
+    rt.fake.calls.clear()
+    assert cli.run_job("morning_plays.yml", {}, rt, operator=False, source="spool") == 0
+    assert not rt.fake.find("morning_plays.py"), "no slot + no operator force = nothing sent"
+    # the operator at the CLI keeps the blank-slot force default
+    rt.fake.calls.clear()
+    assert cli.run_job("morning_plays.yml", [], rt) == 0
+    assert rt.fake.argvs()[0][-1] == "--force"
+    # and a spooled scan never reaches the operator's `extra`
+    rt.fake.calls.clear()
+    assert cli.run_job("scan.yml", {"market": "asx", "reason": "manual", "slot": "manual"}, rt,
+                       operator=False, source="api/scan") == 0
+    assert rt.fake.find("scanner.run")[0]["argv"] == ["PY", "-m", "scanner.run", "--market", "asx"]
+    assert "extra" not in _row(rt)["last_args"]
+
+
 def test_backup_backstop_skip_still_runs_verify(rt):
     (rt.home / "backups" / (rt.now().strftime("%Y-%m-%d") + "T01-00-00")).mkdir(parents=True)
     assert cli.run_job("backup_book.yml", ["slot=backstop"], rt) == 3
@@ -1004,8 +1283,9 @@ def test_a_lock_timeout_is_a_failed_row_not_a_hang(rt):
     holder = L.Lock(L.lock_path(rt.state, "scan"))
     (rt.state / "locks").mkdir(parents=True, exist_ok=True)
     assert holder.try_acquire()
-    assert cli.run_job("confluence.yml", [], rt) == 1
-    assert "lock" in _row(rt, "confluence.yml")["last_line"] and rt.fake.calls == []
+    assert cli.run_job("confluence.yml", [], rt) == 5, "a lock-WAIT timeout is exit 5 (the drainer re-queues it)"
+    row = _row(rt, "confluence.yml")
+    assert "lock" in row["last_line"] and rt.fake.calls == [] and row["last_status"] == "failed"
     holder.release()
 
 
@@ -1019,6 +1299,25 @@ def test_spool_driven_failures_alert_and_operator_runs_do_not(rt):
     alerts.clear()
     assert cli.run_job("scan.yml", ["market=asx"], rt) == 1
     assert alerts == [], "an operator at the CLI sees the failure; the OnFailure hook alerts for units"
+
+
+def test_a_spooled_close_that_cannot_run_is_named_in_full_in_the_alert(rt):
+    """Book review K2: the alert for a halted spooled close said only
+    'HALT present' -- no symbol, market or price -- so a 202'd close that
+    never ran could not be reconstructed from the alert."""
+    alerts = []
+    rt.notify = lambda sev, title, details="": alerts.append((sev, title, details)) or []
+    rt.state.mkdir(parents=True, exist_ok=True)
+    (rt.state / "HALT").write_text("{}")
+    batch = json.dumps([{"symbol": "BHP", "market": "asx", "direction": "long", "price": "45.1"},
+                        {"symbol": "BTC", "market": "crypto", "direction": "long", "price": "60500"}])
+    args = {"symbol": "BHP+1", "direction": "long", "market": "asx", "price": "45.1", "exit_date": "",
+            "journal_type": "bot", "batch": batch}
+    assert cli.run_job("close_position.yml", args, rt, operator=False, source="api/close") == 4
+    sev, title, details = alerts[-1]
+    assert sev == "CRITICAL" and "close_position.yml halted (api/close) - BHP+1 asx" in title
+    assert "BHP asx long @ 45.1" in details and "BTC crypto long @ 60500" in details
+    assert ".halted" in details and "accept-upstream" in details
 
 
 def test_publish_disabled_records_a_green_row_and_a_halt_result_records_halted(rt, monkeypatch):
@@ -1050,6 +1349,7 @@ def test_alert_logs_to_alerts_log_and_uses_the_watchdog_channel_path(tmp_path, m
     assert "CRITICAL second writer | sent=telegram" in log and "(host: vps-test" in sent[0][1]
     N.alert("WARNING", "quiet", state_dir=tmp_path, dispatch=lambda s, t: [])
     assert "sent=NONE" in (tmp_path / "alerts.log").read_text()
+    assert (tmp_path / "alerts.log").stat().st_mode & 0o777 == 0o600, "the API user shares the state group"
     import scanner.watchdog as wd
     assert N._dispatch_default.__module__ == N.__name__ and callable(wd._dispatch)
 
@@ -1097,9 +1397,11 @@ def test_the_cli_verbs_exist_and_list_runs_in_this_checkout():
     assert "14 jobs" in out.stdout
     helptext = subprocess.run([sys.executable, "-m", "scanner.vps", "--help"], cwd=str(ROOT),
                               capture_output=True, text=True, timeout=60).stdout
-    for verb in ("run", "gate", "drain-spool", "notify-failure", "ledger", "list", "accept-upstream", "clear-halt",
-                 "data-roots"):
+    for verb in ("run", "gate", "drain-spool", "notify-failure", "ledger", "ledger-note", "list", "accept-upstream",
+                 "clear-halt", "data-roots"):
         assert verb in helptext
+    assert "momentum.yml" in helptext and "git fetch origin main" in helptext, \
+        "M5: the gate verb's help says momentum's gate fetches (by design) and skips offline"
     roots = subprocess.run([sys.executable, "-m", "scanner.vps", "data-roots"], cwd=str(ROOT),
                            capture_output=True, text=True, timeout=60).stdout.split()
     assert roots == list(J.data_roots()) and "journal/vivek_bot_book.json" in roots, \

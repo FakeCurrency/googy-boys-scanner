@@ -13,18 +13,23 @@ Type=oneshot
 User=vivek5
 WorkingDirectory=/opt/vivek5/app
 EnvironmentFile=/etc/vivek5/jobs.env
+# The box's own zone is left alone (other services on it depend on it,
+# M6 C1); the engine's two naive local-date calls get UTC from here.
+Environment=TZ=UTC
 ExecStart=/opt/vivek5/app/deploy/bin/update.sh
 TimeoutStartSec=30min
 KillMode=mixed
 LogRateLimitIntervalSec=0
-# DELIBERATE EXCEPTION to the job hardening set: update.sh runs
-# `sudo systemctl restart vivek5-api.service` (the ONE command
-# /etc/sudoers.d/vivek5 grants besides `reload caddy`) when functions/ or
-# deploy/api/ change, and sudo is a setuid binary that NoNewPrivileges=yes
-# would refuse; it also re-installs the venv on a requirements.txt change, so
-# /opt/vivek5/venv must be writable here and nowhere else. ProtectSystem=full
-# still keeps /usr, /boot and /etc read-only. tests/test_vps_deploy.py pins
-# that this is the only service without NoNewPrivileges=yes.
-ProtectSystem=full
+# The full job hardening set, NoNewPrivileges=yes included: the API restart
+# after a functions/ or deploy/api/ change is a REQUEST (update.sh writes
+# state/api-restart; the root vivek5-api-restart.path acts on it), not a
+# sudo call -- sudo is setuid and NoNewPrivileges forbids it, which is the
+# point. The one extra writable tree is the venv: update.sh re-installs it
+# when requirements.txt changes, and no other unit may write it.
+ProtectSystem=strict
+ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ReadWritePaths=/opt/vivek5/venv
+ProtectProc=invisible
 ProtectHome=yes
 PrivateTmp=yes
+NoNewPrivileges=yes

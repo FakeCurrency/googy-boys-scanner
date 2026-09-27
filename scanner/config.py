@@ -773,7 +773,11 @@ ALERT_SEVERITY = {
 
 # Set False to silence all Telegram sends without touching secrets.
 # Flip back to True when the bot is ready to go live again.
-TELEGRAM_ENABLED = False
+# VPS (2026-09-27): the owner's box switches Telegram on from its own
+# /etc/vivek5/jobs.env (VIVEK_TELEGRAM_ENABLED=1) so the VPS can alert through
+# Telegram without this repo-wide default changing what GitHub Actions does.
+# Default stays OFF everywhere the variable is absent.
+TELEGRAM_ENABLED = __import__("os").environ.get("VIVEK_TELEGRAM_ENABLED", "").strip() == "1"
 
 # Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
 # by owner ruling — "get rid of the discord aspect, I will work on
@@ -1334,6 +1338,14 @@ VPS_STATE_DIR_DEFAULT = ".vps-state"
 # from the step timeout, because a close arriving mid-scan must queue behind
 # a 40-80 minute ASX run rather than fail.
 VPS_LOCK_WAIT_S = {"scan": 7200, "heavy": 3600, "default": 600}
+# systemd's TimeoutStartSec= on every job unit = the workflow's
+# timeout-minutes + the family's lock wait + THIS margin (minutes). The
+# runner's own budget covers the lock wait and the steps; the fire-time gate
+# (momentum's bounded fetch) and the publish step sit outside it, so without a
+# margin systemd could SIGKILL a job mid-push before the runner's own timeout
+# failed it cleanly (ledger row written, locks released). Pinned in
+# tests/test_vps_deploy.py against every unit file.
+VPS_UNIT_TIMEOUT_MARGIN_MIN = 15
 # Publish loop: fetch/reset/re-apply/commit/push attempts on a push race.
 VPS_PUBLISH_MAX_ATTEMPTS = 5
 # Ledger-mode watchdog: free space under the checkout below this is CRITICAL.
@@ -1351,11 +1363,33 @@ VPS_WATCHDOG_FAILED_CRITICAL = ("kill_switch.yml", "backup_book.yml",
 VPS_SPOOL_MAX_BYTES = 16 * 1024
 VPS_SPOOL_MAX_PENDING = 20
 # /api/dispatch abuse guard, mirrored from the Cloudflare Functions' KV rules
-# (scan.js 5 min / 40 a day, close.js 60 a day) — the VPS enforces its own
-# copy because a direct caller bypasses the Functions entirely.
-VPS_DISPATCH_COOLDOWN_S = 300
+# — the VPS enforces its own copy because a direct caller bypasses the
+# Functions entirely. The cooldown is PER WORKFLOW and matches each Function
+# exactly (scan.js expirationTtl 300 s, close.js 60 s, morning_plays.js 300 s):
+# a second close-all inside 60 s is refused, a deliberate one a minute later
+# is not (a single 300 s value made the VPS stricter than the button).
+VPS_DISPATCH_COOLDOWN_S = {"scan.yml": 300, "close_position.yml": 60,
+                           "morning_plays.yml": 300}
+# /api/dispatch refuses to run (503 "not configured") on a DISPATCH_TOKEN
+# shorter than this or equal to the template's CHANGE_ME: a hand-made api.env
+# must not open a public, guessable endpoint (install.sh generates 64 hex).
+VPS_DISPATCH_TOKEN_MIN_CHARS = 32
 VPS_DISPATCH_DAILY_CAPS = {"scan.yml": 40, "close_position.yml": 60,
                            "morning_plays.yml": 12}
+# accept-upstream / clear-halt take the repo lock EXCLUSIVE (then the publish
+# lock) before touching either tree, waiting at most this long for running
+# jobs to finish -- they must never mirror data roots under a job that is
+# mid-write, nor reset the publish clone under a publish (2026-09-27 review).
+VPS_OPERATOR_LOCK_WAIT_S = 3 * 3600
+# momentum.yml's gate reads the momentum stamps from origin/main (by design:
+# momentum_due decides from what is PUBLISHED), so it runs `git fetch origin
+# main` in the working checkout -- never `--depth` (that silently converted
+# the full clone to a shallow one and blinded update.sh's second-writer scan;
+# 2026-09-27 review). The fetch is bounded by this timeout and taken under the
+# repo lock (shared, waiting at most the second number); offline or busy ->
+# a warning and the last fetched origin/main is read instead.
+VPS_MOMENTUM_FETCH_TIMEOUT_S = 120
+VPS_MOMENTUM_FETCH_LOCK_WAIT_S = 60
 # crypto_bot.yml's :52 backstop threshold, transcribed: "fresh" when the
 # crypto scan's generated_at is under 65 minutes old. On the VPS the source
 # is the LOCAL public/data/crypto_vivek.json, not the deployed site.

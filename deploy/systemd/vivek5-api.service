@@ -20,15 +20,49 @@ User=vivek5-api
 SupplementaryGroups=vivek5-spool
 WorkingDirectory=/opt/vivek5/app
 EnvironmentFile=/etc/vivek5/api.env
-ExecStart=/usr/bin/node /opt/vivek5/app/deploy/api/server.mjs
+# The box's own zone is left alone (other services on it depend on it,
+# M6 C1); the adapter's day counters are UTC either way.
+Environment=TZ=UTC
+# OUR Node, vendored by install.sh into /opt/vivek5/node (pinned Node 22 LTS,
+# checksum-verified): the system node -- if the box has one for something
+# else -- is never installed, replaced or used (M6 C2).
+ExecStart=/opt/vivek5/node/bin/node /opt/vivek5/app/deploy/api/server.mjs
 Restart=on-failure
 RestartSec=5
 MemoryMax=512M
 LogRateLimitIntervalSec=0
+# Spool files and kv.json are created 0660: the runner (another user) reads
+# the spool through the shared group vivek5-spool (security review BLOCKER).
+UMask=0007
 ProtectSystem=strict
-# The namespace grants state/; POSIX modes are the real control there
-# (state 2750 vivek5:vivek5-spool, spool/ 2770, kv.json 0660 vivek5-api).
-ReadWritePaths=/opt/vivek5/state
+# POSIX modes do the fine-grained control (state 2750 vivek5:vivek5-spool,
+# spool/ 3770, kv.json 0660 vivek5-api); the namespace grants only the two
+# paths the adapter writes. kv.json is rewritten in place (state/ itself is
+# read-only for this user -- shims.mjs falls back on EACCES/EROFS). The `-`
+# keeps a missing kv.json from blocking the unit's start (a single-file bind
+# mount of a missing path is fatal); install.sh creates it, preflight checks it.
+ReadWritePaths=/opt/vivek5/state/spool -/opt/vivek5/state/kv.json
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes
+# Hardening beyond the job set (security review: `systemd-analyze security`
+# read 8.3 EXPOSED). ProtectProc/ProcSubset hide every other process's argv
+# and environment from the one internet-facing process. SystemCallFilter is
+# deliberately NOT set: libuv's io_uring use under Node 22 is not covered by
+# a filter this kit can test before the box exists.
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+
+[Install]
+# `enable` (cutover step 1, never install.sh) must make it survive a REBOOT:
+# without an [Install] section `systemctl enable --now` only started it, and
+# after the next reboot the timers ran while the dispatch endpoint and the
+# TLS front door stayed dead (2026-09-27 host review).
+WantedBy=multi-user.target

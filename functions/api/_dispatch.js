@@ -69,6 +69,9 @@ export async function dispatchWorkflow({ token, repo, workflow, ref, inputs, ref
     url = target;
     okStatus = 202;
     init = {
+      // Never follow a redirect with the bearer attached: a 3xx is simply a
+      // non-202 status (refunded) -- the https check above covers hop one only.
+      redirect: "manual",
       method: "POST",
       headers: {
         Authorization: `Bearer ${dispatchToken || ""}`,

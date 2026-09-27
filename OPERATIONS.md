@@ -1,5 +1,10 @@
 # Vivek 5.0 — Operations Runbook
 
+> **If the system runs on the VPS, [`deploy/README.md`](deploy/README.md) is the runbook.**
+> After cutover (2026-09-27 kit) the scheduled jobs run on the owner's server under systemd,
+> not on GitHub Actions: health, logs, manual scans and closes, HALT and rollback are all
+> described there. The commands below still apply to a local checkout.
+
 Last updated: 2026-07-21 (bottom-half runbooks rewritten for the bot-book era — the previous versions described the retired scalp system)
 
 ---

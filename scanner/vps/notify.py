@@ -17,6 +17,7 @@ not get to write one (an ImportError or an OOM kill leaves no row).
 from __future__ import annotations
 
 import datetime as dt
+import os
 import pathlib
 import shutil
 import subprocess
@@ -57,7 +58,10 @@ def alert(severity: str, title: str, details: str = "", *, state_dir: pathlib.Pa
     line = f"{iso(now or utcnow())} {severity} {title} | sent={','.join(sent) or 'NONE'}"
     try:
         state.mkdir(parents=True, exist_ok=True)
-        with open(state / "alerts.log", "a", encoding="utf-8") as fh:
+        # 0600: a (redacted) journal tail lands here, and group vivek5-spool
+        # includes the internet-facing API user -- the runner alone reads it
+        fd = os.open(state / "alerts.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        with open(fd, "a", encoding="utf-8") as fh:
             fh.write(line + "\n")
             for ln in text.splitlines()[1:-1]:
                 fh.write("    " + ln + "\n")

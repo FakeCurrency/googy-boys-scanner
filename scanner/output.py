@@ -109,7 +109,8 @@ def dumps(payload, *, indent: int | None = 2, separators: tuple | None = None,
 
 def write_json(path: str | pathlib.Path, payload, *, indent: int | None = 2,
                separators: tuple | None = None, sort_keys: bool = False,
-               ensure_ascii: bool = True, newline: bool = False) -> pathlib.Path:
+               ensure_ascii: bool = True, newline: bool = False,
+               mode: int | None = 0o644) -> pathlib.Path:
     """Publish ``payload`` to ``path`` atomically, with non-finite floats nulled.
 
     ``newline`` appends a trailing "\\n" — some existing files have one and some
@@ -117,11 +118,14 @@ def write_json(path: str | pathlib.Path, payload, *, indent: int | None = 2,
     fix with a zero-byte diff on every published artefact. (It is a *content*
     trailing newline; the LF-vs-CRLF pinning is the ``newline="\\n"`` handed to
     ``atomic_write`` below, which is a different thing wearing the same word.)
+
+    ``mode`` = the file's permission bits (default 0o644, see
+    ``journal_common.atomic_write``: on the VPS a second user reads these).
     """
     path = pathlib.Path(path)
     text = dumps(payload, indent=indent, separators=separators, sort_keys=sort_keys,
                  ensure_ascii=ensure_ascii)
-    atomic_write(path, text + "\n" if newline else text, newline="\n")
+    atomic_write(path, text + "\n" if newline else text, newline="\n", mode=mode)
     return path
 
 

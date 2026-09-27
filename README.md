@@ -111,6 +111,8 @@ tests/ · test/        Python suites · JS suites
 is the 60-second daily check. [`CLAUDE.md`](CLAUDE.md) carries the working rules for
 anyone — human or agent — changing this repo.
 
+Running it on your own server (a VPS) instead of GitHub Actions: [`deploy/README.md`](deploy/README.md) is that runbook.
+
 Two endpoints exist because GitHub's cron is best-effort and every in-repo backstop
 is itself a cron, so a scheduler outage takes the backstops with it:
 

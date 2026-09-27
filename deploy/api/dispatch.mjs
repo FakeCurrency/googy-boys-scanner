@@ -12,12 +12,15 @@
  * the kv shim because a direct caller bypasses the Functions' KV rules, and a
  * spool-depth cap stops a flood from wedging the .path unit.
  *
- * Status matrix (test/vps_api.test.js): 503 no DISPATCH_TOKEN (never open) ·
- * 401 bad/missing bearer · 413 body over the cap · 400 unknown workflow/key/
- * bad value (nothing written) · 422 close sanity (names the mark) · 429
- * cooldown / daily cap / spool depth · 202 {ok:true,id}.
+ * Status matrix (test/vps_api.test.js): 503 no / placeholder / short
+ * DISPATCH_TOKEN (never open) · 401 bad/missing bearer · 413 body over the
+ * cap · 400 unknown workflow/key/bad value (nothing written) · 422 close
+ * sanity (names the mark) · 429 cooldown / daily cap / spool depth · 202
+ * {ok:true,id}. server.mjs calls preAuthDispatch() BEFORE it reads a single
+ * body byte, so an unauthenticated caller cannot make the adapter buffer
+ * anything (security review: 450 x 1 MiB bodies crossed MemoryMax=512M).
  *
- * PARITY LITERALS. The five constants below are JSON literals that
+ * PARITY LITERALS. The six constants below are JSON literals that
  * tests/test_vps_api_parity.py parses OUT OF THIS FILE and compares to
  * scanner/config.py (the conviction.py pattern) -- keep them on one line each,
  * valid JSON on the right-hand side, and change config first.
@@ -30,8 +33,10 @@ import { cleanSecret } from "./shims.mjs";
 
 // config.VIVEK_MARK_SANITY_PCT -- the per-market band a close price may sit from last_mark
 export const MARK_SANITY_PCT = {"asx": 0.35, "nasdaq": 0.35, "crypto": 0.60};
-// config.VPS_DISPATCH_COOLDOWN_S -- seconds between two dispatches of one workflow+scope
-export const DISPATCH_COOLDOWN_S = 300;
+// config.VPS_DISPATCH_COOLDOWN_S -- seconds between two dispatches of one workflow+scope, per workflow (= each Function's own TTL)
+export const DISPATCH_COOLDOWN_S = {"scan.yml": 300, "close_position.yml": 60, "morning_plays.yml": 300};
+// config.VPS_DISPATCH_TOKEN_MIN_CHARS -- a shorter DISPATCH_TOKEN (or the template's CHANGE_ME) keeps the endpoint closed
+export const DISPATCH_TOKEN_MIN_CHARS = 32;
 // config.VPS_DISPATCH_DAILY_CAPS -- dispatches per workflow per UTC day
 export const DISPATCH_DAILY_CAPS = {"scan.yml": 40, "close_position.yml": 60, "morning_plays.yml": 12};
 // config.VPS_SPOOL_MAX_PENDING -- more pending spool files than this answers 429
@@ -39,7 +44,8 @@ export const SPOOL_MAX_PENDING = 20;
 // config.VPS_SPOOL_MAX_BYTES -- request body cap here, file size cap in the drainer
 export const SPOOL_MAX_BYTES = 16384;
 
-/* /api/vps answers 503 when one of these has last_status "failed" -- the
+/* /api/vps answers 503 when one of these has last_status "failed" OR
+ * "halted" (a halted book writer is not writing the book either) -- the
  * design's CRITICAL set (section 3.6): the loss guard, the backup, and the two
  * book writers. Deliberately the DESIGN's list, not config.WATCHDOG_RUNS
  * severities (there scan/crypto are WARNING because of session-aware ageing;
@@ -237,6 +243,12 @@ export function writeSpool(stateDir, { workflow, inputs, source }, now = new Dat
   };
   const tmpPath = path.join(tmp, `${id}.json`);
   fs.writeFileSync(tmpPath, JSON.stringify(body) + "\n", { mode: 0o660 });
+  // `mode` above is filtered by the process umask (systemd's default 0022 ->
+  // 0640), and the runner reads this file as a DIFFERENT user through the
+  // shared group vivek5-spool: set the bits explicitly, before the rename, so
+  // the drainer can always read what the adapter answered 202 for (security
+  // review BLOCKER: every dispatch was silently discarded).
+  fs.chmodSync(tmpPath, 0o660);
   fs.renameSync(tmpPath, path.join(spool, `${id}.json`));
   return id;
 }
@@ -256,16 +268,38 @@ const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 
+/* Why the configured token cannot be used, or null when it can. */
+export function tokenProblem(raw) {
+  const t = cleanSecret(raw);
+  if (!t) return "is not set";
+  if (t === "CHANGE_ME") return "is still the template placeholder CHANGE_ME";
+  if (t.length < DISPATCH_TOKEN_MIN_CHARS) return `is shorter than ${DISPATCH_TOKEN_MIN_CHARS} characters`;
+  return null;
+}
+
+/* The auth half of /api/dispatch, from the HEADERS alone: a Response (503 /
+ * 401) to send without reading the body, or null to proceed. */
+export function preAuthDispatch(authorization, env) {
+  const problem = tokenProblem(env && env.DISPATCH_TOKEN);
+  if (problem) {
+    return json(503, { ok: false, configured: false, message: `DISPATCH_TOKEN ${problem} on the VPS - /api/dispatch is disabled.` });
+  }
+  if (!bearerMatches(authorization, cleanSecret(env.DISPATCH_TOKEN))) {
+    return json(401, { ok: false, message: "Unauthorized." });
+  }
+  return null;
+}
+
+/* Human wording for a cooldown window: "60 seconds", "5 minutes". */
+export function cooldownWords(seconds) {
+  return seconds >= 120 && seconds % 60 === 0 ? `${seconds / 60} minutes` : `${seconds} seconds`;
+}
+
 /* POST /api/dispatch. `ctx` = { env, kv, stateDir, bookPath, clock }. */
 export async function handleDispatch(request, ctx) {
   if (request.method !== "POST") return json(404, { ok: false, error: "Not Found" });
-  const expected = cleanSecret(ctx.env && ctx.env.DISPATCH_TOKEN);
-  if (!expected) {
-    return json(503, { ok: false, configured: false, message: "DISPATCH_TOKEN is not set on the VPS - /api/dispatch is disabled." });
-  }
-  if (!bearerMatches(request.headers.get("Authorization"), expected)) {
-    return json(401, { ok: false, message: "Unauthorized." });
-  }
+  const denied = preAuthDispatch(request.headers.get("Authorization"), ctx.env || {});
+  if (denied) return denied;
   let text;
   try { text = await request.text(); } catch (_) { return json(400, { ok: false, message: "Unreadable body." }); }
   if (Buffer.byteLength(text, "utf8") > SPOOL_MAX_BYTES) {
@@ -293,8 +327,9 @@ export async function handleDispatch(request, ctx) {
   const now = new Date(ctx.clock ? ctx.clock() : Date.now());
   const cdKey = `vps:dispatch:cooldown:${v.workflow}:${v.scope}`;
   const dayKey = `vps:dispatch:day:${v.workflow}:${now.toISOString().slice(0, 10)}`;
+  const cooldown = DISPATCH_COOLDOWN_S[v.workflow];
   if (await kv.get(cdKey)) {
-    return json(429, { ok: false, message: `${v.workflow} for ${v.scope} was dispatched in the last ${Math.round(DISPATCH_COOLDOWN_S / 60)} minutes - it is queued or running.` });
+    return json(429, { ok: false, message: `${v.workflow} for ${v.scope} was dispatched in the last ${cooldownWords(cooldown)} - it is queued or running.` });
   }
   const used = parseInt((await kv.get(dayKey)) || "0", 10) || 0;
   const cap = DISPATCH_DAILY_CAPS[v.workflow];
@@ -305,7 +340,7 @@ export async function handleDispatch(request, ctx) {
   if (depth > SPOOL_MAX_PENDING) {
     return json(429, { ok: false, message: `${depth} dispatches are already waiting on the VPS (cap ${SPOOL_MAX_PENDING}) - the runner is behind; try later.` });
   }
-  await kv.put(cdKey, "1", { expirationTtl: DISPATCH_COOLDOWN_S });
+  await kv.put(cdKey, "1", { expirationTtl: cooldown });
   await kv.put(dayKey, String(used + 1), { expirationTtl: DAY_TTL_S });
   let id;
   try {
@@ -323,17 +358,27 @@ const VPS_ROW_FIELDS = ["last_status", "last_start", "last_end", "last_exit", "l
                         "waited_s", "pushed", "host"];
 
 /* GET /api/vps -> {ok, halted, failed, jobs, checked_at} from runs.json; 503
- * when state/HALT exists or a CRITICAL job's last run failed. Rows are
- * projected to status/timestamps only (no last_line, no args): this route is
- * open in Phase 1. */
+ * when state/HALT exists or a CRITICAL job's last run failed or halted. Rows
+ * are projected to status/timestamps only (no last_line, no args): this route
+ * is open in Phase 1. ONLY a missing ledger (ENOENT: nothing has run yet)
+ * reads as "no jobs"; a ledger that exists but cannot be read or parsed is
+ * a 503 -- the 0600 runs.json made this route permanently green while the
+ * kill switch was failing (security review S1). */
 export async function handleVps(request, ctx) {
   if (request.method !== "GET" && request.method !== "HEAD") return json(404, { ok: false, error: "Not Found" });
   const ledgerPath = ctx.ledgerPath || path.join(ctx.stateDir, "runs.json");
+  const checked = new Date(ctx.clock ? ctx.clock() : Date.now()).toISOString().replace(/\.\d{3}Z$/, "Z");
   let ledger = {};
   try {
     const doc = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
-    if (doc && typeof doc === "object" && !Array.isArray(doc)) ledger = doc;
-  } catch (_) { /* no ledger yet -> no jobs */ }
+    if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("not an object");
+    ledger = doc;
+  } catch (e) {
+    if (!e || e.code !== "ENOENT") {
+      const why = (e && e.code) || (e instanceof SyntaxError ? "unparseable" : "unreadable");
+      return json(503, { ok: false, error: "ledger unreadable", reason: why, halted: fs.existsSync(path.join(ctx.stateDir, "HALT")), failed: [], jobs: {}, checked_at: checked });
+    }
+  }
   const jobs = {};
   for (const [k, row] of Object.entries(ledger)) {
     if (!row || typeof row !== "object") continue;
@@ -342,8 +387,7 @@ export async function handleVps(request, ctx) {
     jobs[k] = out;
   }
   const halted = fs.existsSync(path.join(ctx.stateDir, "HALT"));
-  const failed = CRITICAL_JOBS.filter((j) => jobs[j] && jobs[j].last_status === "failed");
+  const failed = CRITICAL_JOBS.filter((j) => jobs[j] && (jobs[j].last_status === "failed" || jobs[j].last_status === "halted"));
   const ok = !halted && failed.length === 0;
-  const checked = new Date(ctx.clock ? ctx.clock() : Date.now()).toISOString().replace(/\.\d{3}Z$/, "Z");
   return json(ok ? 200 : 503, { ok, halted, failed, jobs, checked_at: checked });
 }

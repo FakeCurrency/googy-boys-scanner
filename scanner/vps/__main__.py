@@ -1,23 +1,34 @@
 """``python -m scanner.vps`` -- the CLI verbs and the runner order (DESIGN 3.1).
 
     run <job> [key=value ...]   preflight -> gate -> locks -> steps -> publish -> ledger
-    gate <job> [key=value ...]  exit 0 due / 3 not due (prints why); no side effects
-    drain-spool                 execute queued dispatches (oldest first)
+    gate <job> [key=value ...]  exit 0 due / 3 not due (prints why); no locks, no side
+                                effects -- EXCEPT momentum.yml: its gate runs
+                                `git fetch origin main` in the working checkout
+                                (momentum_due reads main's published stamps by
+                                design; never --depth, under the repo lock, and
+                                skipped with a warning when offline)
+    drain-spool                 execute queued dispatches (oldest first); exits 1
+                                when a dispatch was refused/unreadable/stuck
     notify-failure <unit>       OnFailure= hook: alert + state/alerts.log + ledger
     ledger [--json]             print runs.json
+    ledger-note <key> <status> <exit> [line ...]
+                                write one section-3.6 row (update.sh / gc.sh use it;
+                                same lock, same shape as the runner's rows)
     list [--json]               print the JOBS table
     accept-upstream             clear HALT: sync data roots FROM origin/main into the checkout
     clear-halt                  clear HALT without syncing (operator fixed it by hand)
     data-roots                  print the data roots (deploy/bin/update.sh reads them)
 
-``run`` exit codes: 0 ok, 3 skipped-by-gate, 4 halted, 1 failure. The ledger
-row is written on EVERY path out of ``run``, including a crash in the runner.
+``run`` exit codes: 0 ok, 3 skipped-by-gate, 4 halted, 5 gave up waiting for
+a lock, 1 failure. The ledger row is written on EVERY path out of ``run``,
+including a crash in the runner.
 
 Runner order inside ``run``: (1) refuse if state/HALT exists and the job is a
-book writer; (2) evaluate the gate AT FIRE TIME; (3) locks -- ``repo`` shared,
-family, own -- with the lock wait budgeted separately from the step timeout;
-(4) re-check the gate for slots that define it (a post-close scan may have
-landed while waiting); (5) delete ``.scan-skipped`` for scan-family jobs;
+book writer; (2) evaluate the gate AT FIRE TIME; (3) locks -- family, own,
+then ``repo`` shared -- with the lock wait budgeted separately from the step
+timeout; (4) re-check the gate for slots that define it, at the SAME fire-time
+instant with fresh data (a post-close scan may have landed while waiting);
+(5) delete ``.scan-skipped`` for scan-family jobs;
 (6) steps, fail-fast unless continue_on_error, output streamed to the journal
 unchanged; (7) publish where the workflow committed; (8) the ledger row.
 
@@ -26,6 +37,8 @@ Steps run with cwd = the working checkout, ``GITHUB_STEP_SUMMARY`` pointing at
 ``GITHUB_SHA`` = the checkout's HEAD and ``GITHUB_EVENT_NAME`` = schedule /
 workflow_dispatch from the job's reason. Secrets reach a step only through
 its transcribed ``env_pass`` allow-list (kill_switch alone sees broker keys).
+A run whose source is not the CLI (the spool drainer, the momentum chain)
+never carries an operator-only key -- not even its default (DESIGN 3.1).
 """
 from __future__ import annotations
 
@@ -44,7 +57,8 @@ from typing import Callable
 
 from scanner import config
 
-from . import (emit, ensure_state_dirs, home as _home, host_label, iso, ledger_path as _ledger_path,
+from . import (EXIT_FAIL, EXIT_HALTED, EXIT_LOCK_TIMEOUT, EXIT_OK, EXIT_SKIPPED, emit,
+               ensure_state_dirs, home as _home, host_label, iso, ledger_path as _ledger_path,
                publish_dir as _publish_dir, python_bin, state_dir as _state_dir, utcnow)
 from . import gate as G
 from . import jobs as J
@@ -56,7 +70,6 @@ from . import spool as S
 
 SECRET_PREFIXES = ("BYBIT_", "ALPACA_", "TELEGRAM_", "GBS_", "DISCORD_", "GH_", "DISPATCH_",
                    "CRONJOB_", "CLOUDFLARE_", "MORNING_PLAYS_TRIGGER")
-EXIT_OK, EXIT_FAIL, EXIT_SKIPPED, EXIT_HALTED = 0, 1, 3, 4
 
 
 class StepFailed(RuntimeError):
@@ -384,10 +397,13 @@ class _Runner:
         a = self.args
         argv = expand_argv(step.argv, self.rt, self.args, self.ctx)
         if a.get("slot"):
+            # the slot alone decides (a spooled run carries no `force` at all)
             argv += ["--slot", a["slot"]]
             if a.get("redeliver") == "true":
                 argv.append("--redeliver")
-        elif a.get("force", "true") != "false":
+        elif a.get("force") == "true":
+            # operator-only: a blank slot + force (its default AT THE CLI) sends
+            # every market now and writes no state; a non-CLI run never gets here
             argv.append("--force")
         else:
             emit(step.extra.get("noop_msg", "nothing to do"))
@@ -455,10 +471,43 @@ def _ledger_args(args: dict) -> dict:
     return out
 
 
+def close_detail(args: dict) -> str:
+    """Every close in a close_position run, one per line -- enough to re-issue
+    it by hand from the alert alone (a spooled close that never ran is the one
+    loss the book cannot see; 2026-09-27 book review)."""
+    batch = args.get("batch") or ""
+    if batch:
+        try:
+            rows = [f"{e.get('symbol', '?')} {e.get('market', '?')} {e.get('direction', 'long')} @ {e.get('price', '?')}"
+                    for e in json.loads(batch)]
+        except (ValueError, TypeError, AttributeError):
+            rows = ["<unparseable batch>"]
+        return "\n".join(rows)
+    return (f"{args.get('symbol', '?')} {args.get('market', '?')} {args.get('direction', '')} "
+            f"@ {args.get('price', '?')} (journal_type={args.get('journal_type', '?')}"
+            + (f", exit_date={args['exit_date']}" if args.get("exit_date") else "") + ")")
+
+
+def _failure_details(job: J.Job, args: dict, status: str, exit_code: int, last_line: str) -> str:
+    lines = [last_line, "args: " + json.dumps(_ledger_args(args), sort_keys=True)]
+    if job.name == "close_position.yml":
+        lines += ["close(s) NOT booked:", close_detail(args)]
+    if status == "halted":
+        lines.append("the dispatch is parked in state/spool as <name>.halted and re-runs after "
+                     "`python -m scanner.vps accept-upstream` or `clear-halt`")
+    elif exit_code == EXIT_LOCK_TIMEOUT:
+        lines.append("the dispatch is parked in state/spool as <name>.retry and re-runs on the next "
+                     "drain (`sudo systemctl start vivek5-spool.service` to force one)")
+    return "\n".join(lines)
+
+
 def run_job(name: str, kv, rt: Runtime | None = None, *, operator: bool = True,
             source: str = "cli") -> int:
     rt = rt or Runtime.from_env()
     job = J.get(name)
+    # Only an operator at the CLI may set (or default) an operator-only key;
+    # a spooled / chained run gets none of them, not even a default (M4).
+    operator = operator and source == "cli"
     args = J.parse_args(job, kv if isinstance(kv, dict) else J.parse_kv(kv), operator=operator)
     started = rt.now()
     ensure_state_dirs(rt.state)
@@ -485,9 +534,10 @@ def run_job(name: str, kv, rt: Runtime | None = None, *, operator: bool = True,
             status, exit_code = "halted", EXIT_HALTED
             return exit_code
         # (2) gate at fire time
-        gres = G.evaluate(job, args, now=rt.now(), home=rt.home, state_dir=rt.state,
+        fire_now = rt.now()
+        gres = G.evaluate(job, args, now=fire_now, home=rt.home, state_dir=rt.state,
                           ledger_file=rt.ledger_file, run=rt.run, python=rt.python)
-        emit(G.describe(gres, rt.now()))
+        emit(G.describe(gres, fire_now))
         if gres.warning:
             emit(gres.warning)
         if gres.market:
@@ -496,13 +546,16 @@ def run_job(name: str, kv, rt: Runtime | None = None, *, operator: bool = True,
         if gate_skipped and job.gate_mode == "job":
             status, exit_code, last_line = "skipped", EXIT_SKIPPED, gres.why
             return exit_code
-        # (3) locks: repo shared -> family -> own
+        # (3) locks: family -> own -> repo shared
         lockset = L.LockSet(rt.state, job.locks)
         waited = lockset.acquire(job.lock_wait_s, sleep=rt.sleep, clock=rt.clock)
         emit(f"locks {lockset.names} acquired after {waited:.0f}s")
-        # (4) re-check for slots that define it
+        # (4) re-check for slots that define it: the SAME fire-time instant,
+        # fresh data -- "did the thing this slot waits for land while I
+        # waited?", never "is it still inside the window now?" (a 16:30 close
+        # queued behind the 16:07 scan must not lose its slot to the wait)
         if args.get("slot") in job.recheck:
-            again = G.evaluate(job, args, now=rt.now(), home=rt.home, state_dir=rt.state,
+            again = G.evaluate(job, args, now=fire_now, home=rt.home, state_dir=rt.state,
                                ledger_file=rt.ledger_file, run=rt.run, python=rt.python)
             if not again.due:
                 emit("re-check after the lock: " + again.why)
@@ -550,7 +603,7 @@ def run_job(name: str, kv, rt: Runtime | None = None, *, operator: bool = True,
         emit(f"::error::{job.name}: {e}" + (f" - {e.last_line}" if e.last_line else ""))
         return exit_code
     except L.LockTimeout as e:
-        status, exit_code, last_line = "failed", EXIT_FAIL, str(e)
+        status, exit_code, last_line = "failed", EXIT_LOCK_TIMEOUT, str(e)
         emit(f"::error::{job.name}: {e}")
         return exit_code
     except G.GateError as e:
@@ -576,8 +629,11 @@ def run_job(name: str, kv, rt: Runtime | None = None, *, operator: bool = True,
         except Exception as e:                                   # noqa: BLE001
             emit(f"::error::ledger write failed: {type(e).__name__}: {e}")
         if status in ("failed", "halted") and source != "cli":
-            rt.alert("CRITICAL" if job.book_writer else "WARNING",
-                     f"{job.name} {status} ({source})", last_line)
+            title = f"{job.name} {status} ({source})"
+            if job.name == "close_position.yml":
+                title += f" - {args.get('symbol', '?')} {args.get('market', '')}".rstrip()
+            rt.alert("CRITICAL" if job.book_writer else "WARNING", title,
+                     _failure_details(job, args, status, exit_code, last_line))
         emit(f"=== {job.name} {status} exit={exit_code} in "
              f"{(ended - started).total_seconds():.0f}s (waited {waited:.0f}s for locks)")
 
@@ -628,26 +684,83 @@ def cmd_ledger(rt: Runtime, as_json: bool = False) -> int:
 
 
 def cmd_drain(rt: Runtime) -> int:
+    """Drain the spool. Exit 1 when a dispatch could not even be attempted
+    (refused, unreadable, oversize, stuck): the adapter already answered 202,
+    so without this the loss was silent (2026-09-27 security review B1). The
+    `spool` ledger row + the unit's OnFailure hook carry the alert. A job that
+    RAN and failed alerts from run_job itself and does not fail the drain."""
+    started = rt.now()
     report = S.drain(lambda name, args, source: run_job(name, args, rt, operator=False, source=source),
                      state_dir=rt.state)
     emit(f"drain-spool: ran {len(report.ran)}, done {len(report.done)}, failed {len(report.failed)}, "
-         f"stuck {len(report.stuck)}, left {len(report.skipped)}")
+         f"halted {len(report.halted)}, retry {len(report.retry)}, stuck {len(report.stuck)}, "
+         f"left {len(report.skipped)}")
+    if not report.needs_operator:
+        return EXIT_OK
+    seen, items = set(), []
+    for name, why in list(report.problems) + list(report.stuck):
+        if (name, why) not in seen:
+            seen.add((name, why))
+            items.append(f"{name}: {why}")
+    line = f"{len(items)} dispatch(es) could not be executed: " + "; ".join(items)
+    emit("::error::drain-spool: " + line)
+    try:
+        LG.record("spool", status="failed", exit_code=EXIT_FAIL, args={}, started=started, ended=rt.now(),
+                  last_line=line, host=rt.host, path=rt.ledger_file)
+    except Exception as e:                                       # noqa: BLE001
+        emit(f"::error::ledger write failed: {type(e).__name__}: {e}")
+    return EXIT_FAIL
+
+
+def cmd_ledger_note(rt: Runtime, key: str, status: str, exit_code: str, words, started: str | None) -> int:
+    """One section-3.6 row for a host script (update.sh, gc.sh): the same
+    ledger.record, the same locks/ledger.lock, the same multi-field shape as
+    a job row -- the shell scripts no longer carry a mirror of it."""
+    if status not in LG.STATUSES:
+        emit(f"error: status must be one of {'|'.join(LG.STATUSES)}")
+        return 2
+    try:
+        code = int(exit_code)
+    except ValueError:
+        emit(f"error: exit code {exit_code!r} is not an integer")
+        return 2
+    line = " ".join(words or ())
+    now = rt.now()
+    LG.record(key, status=status, exit_code=code, args={}, started=started or now, ended=now,
+              last_line=line, host=rt.host, path=rt.ledger_file)
     return 0
+
+
+def _requeue_parked(rt: Runtime) -> None:
+    names = S.requeue(rt.state)
+    if names:
+        emit(f"re-queued {len(names)} parked dispatch(es): {' '.join(names)}")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m scanner.vps", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="verb", required=True)
-    for verb in ("run", "gate"):
-        p = sub.add_parser(verb)
-        p.add_argument("job")
-        p.add_argument("kv", nargs="*", help="key=value job arguments")
+    p = sub.add_parser("run", help="run a job now: gate -> locks -> steps -> publish -> ledger")
+    p.add_argument("job")
+    p.add_argument("kv", nargs="*", help="key=value job arguments")
+    p = sub.add_parser("gate", help="exit 0 due / 3 not due; no locks and no side effects EXCEPT "
+                                    "momentum.yml, whose gate runs `git fetch origin main` in the "
+                                    "working checkout (momentum_due reads main's stamps by design; "
+                                    "skipped with a warning when offline)")
+    p.add_argument("job")
+    p.add_argument("kv", nargs="*", help="key=value job arguments")
     sub.add_parser("drain-spool")
     p = sub.add_parser("notify-failure")
     p.add_argument("unit")
     p = sub.add_parser("ledger")
     p.add_argument("--json", action="store_true")
+    p = sub.add_parser("ledger-note", help="write one ledger row for a host script (update.sh, gc.sh)")
+    p.add_argument("--started", default=None, help="ISO start stamp (default: now)")
+    p.add_argument("key")
+    p.add_argument("status", help="|".join(LG.STATUSES))
+    p.add_argument("exit_code")
+    p.add_argument("line", nargs=argparse.REMAINDER, help="the one-line summary")
     p = sub.add_parser("list")
     p.add_argument("--json", action="store_true")
     sub.add_parser("accept-upstream")
@@ -673,17 +786,24 @@ def main(argv=None) -> int:
             return N.notify_failure(ns.unit, state_dir=rt.state, ledger_file=rt.ledger_file)
         if ns.verb == "ledger":
             return cmd_ledger(rt, ns.json)
+        if ns.verb == "ledger-note":
+            return cmd_ledger_note(rt, ns.key, ns.status, ns.exit_code, ns.line, ns.started)
         if ns.verb == "accept-upstream":
             synced = P.accept_upstream(state_dir=rt.state, clone=rt.publish, home=rt.home, run=rt.run)
             emit(f"accept-upstream: synced {len(synced)} data root(s) from origin/main; HALT cleared")
+            _requeue_parked(rt)
             return 0
         if ns.verb == "clear-halt":
             sha = P.clear_halt(state_dir=rt.state, clone=rt.publish, run=rt.run)
             emit(f"clear-halt: HALT removed; publish_head = {sha[:9]}")
+            _requeue_parked(rt)
             return 0
     except (J.ArgError, KeyError) as e:
         emit(f"error: {e}")
         return 2
+    except L.LockTimeout as e:
+        emit(f"error: {e} - a job is still running; retry when it finishes")
+        return EXIT_LOCK_TIMEOUT
     return 2
 
 

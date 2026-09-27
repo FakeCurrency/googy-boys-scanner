@@ -25,7 +25,8 @@ def utc_now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def atomic_write(path: pathlib.Path, payload: str, *, newline: str | None = None) -> None:
+def atomic_write(path: pathlib.Path, payload: str, *, newline: str | None = None,
+                 mode: int | None = 0o644) -> None:
     """Write payload to path atomically via a temp file + rename (POSIX-safe).
 
     Guarantees the destination is never left half-written on a crash: the data
@@ -37,6 +38,16 @@ def atomic_write(path: pathlib.Path, payload: str, *, newline: str | None = None
     "\\n" to pin LF regardless of platform; scanner/output.py does, because the
     files it publishes are committed to git and a local Windows run would
     otherwise re-write every published artefact with CRLF and diff the lot.
+
+    `mode` is applied to the temp file BEFORE the rename (default 0o644).
+    NamedTemporaryFile is mkstemp underneath, which creates 0600, and
+    os.replace keeps the temp file's mode -- so without this every journal,
+    book and published data file became owner-only after its first write.
+    On the VPS that was a blocker (2026-09-27 security review): the API
+    adapter runs as a second user and must read journal/vivek_bot_book.json
+    to sanity-check a close, and Phase 2's Caddy must read public/data.
+    Everything written here is committed to a public repo anyway. Pass a
+    narrower mode (e.g. 0o640) for state files; None keeps mkstemp's 0600.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -45,6 +56,8 @@ def atomic_write(path: pathlib.Path, payload: str, *, newline: str | None = None
     ) as f:
         f.write(payload)
         tmp = f.name
+        if mode is not None and hasattr(os, "fchmod"):   # POSIX; Windows keeps its ACLs
+            os.fchmod(f.fileno(), mode)
     os.replace(tmp, path)
 
 

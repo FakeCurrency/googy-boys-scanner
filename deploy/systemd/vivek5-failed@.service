@@ -11,14 +11,20 @@ Type=oneshot
 User=vivek5
 WorkingDirectory=/opt/vivek5/app
 EnvironmentFile=/etc/vivek5/jobs.env
-# `journalctl -u %i -n 30` inside needs vivek5 in the systemd-journal group
-# (install.sh adds it).
+# The box's own zone is left alone (other services on it depend on it,
+# M6 C1); the engine's two naive local-date calls get UTC from here.
+Environment=TZ=UTC
+# `journalctl -u %i -n 30` inside needs the systemd-journal group -- granted
+# to THIS unit only, never to vivek5 globally (a scan job parsing third-party
+# data has no business reading the whole system journal; security review).
+SupplementaryGroups=systemd-journal
 ExecStart=/opt/vivek5/venv/bin/python -m scanner.vps notify-failure %i
 TimeoutStartSec=5min
 KillMode=mixed
 # Hardening (DESIGN section 4): the job may write only its three trees.
 ProtectSystem=strict
 ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectProc=invisible
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes

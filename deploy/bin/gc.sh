@@ -3,75 +3,93 @@
 #
 # gc.auto is 0 on the box (install.sh), because an automatic repack of a
 # multi-GB pack triggered by an ordinary data commit would run on a 1-2 vCPU
-# box while a job holds the book lock. This timer does it on Sunday 03:00 UTC
-# under the EXCLUSIVE repo lock (the same file every job holds SHARED, and
-# update.sh takes exclusive), single-threaded so it never starves a scan that
-# starts while it runs. Non-blocking: a busy repo means "skip, try next week".
+# box while a job holds the book lock. This timer does it on Sunday 03:00 UTC,
+# single-threaded with a bounded delta window, from a unit that yields CPU,
+# I/O and memory to the owner's live trading bot (M6 C8).
+#
+# LOCKS -- gc must never stall a JOB (2026-09-27 ops review): it used to hold
+# the repo lock EXCLUSIVE for the whole multi-GB repack, and every job takes
+# that lock SHARED with a bounded wait -- the kill switch (every 30 min, 10-min
+# budget) failed with a lock timeout, a CRITICAL page, every Sunday a repack
+# ran long. Now:
+#   * repo lock SHARED (waits up to $repo_wait s): compatible with every running job;
+#     it still excludes update.sh and accept-upstream/clear-halt, the only
+#     things that move the working checkout's HEAD/index. A concurrent
+#     momentum-gate fetch is safe beside a gc (its objects are younger than
+#     --prune; a pack written during the repack is kept).
+#   * the publish clone additionally under the `publish` lock EXCLUSIVE (the
+#     lock every publish takes, with a 10-min budget), and its gc is BOUNDED
+#     (timeout, $pub_bound s) so a publish queued behind it never times out; a
+#     gc killed by the bound leaves only temporary packs the next gc removes.
+#   * busy (update.sh / an operator verb holds repo EXCLUSIVE) -> skip, retry
+#     next week; ledger `skipped`.
 set -euo pipefail
 
 vivek_home="${VIVEK_HOME:-/opt/vivek5/app}"
 publish="${VIVEK_PUBLISH:-/opt/vivek5/publish}"
 state_dir="${VIVEK_STATE_DIR:-/opt/vivek5/state}"
-ledger="${VIVEK_RUNS_LEDGER:-$state_dir/runs.json}"
 started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# Lock waits and the publish-clone bound, in seconds. The defaults are the
+# design (the env names exist so the tests can exercise the busy paths without
+# waiting minutes; nothing on the box sets them). pub_wait + pub_bound stay
+# under the 600 s every publish waits for the publish lock
+# (config.VPS_LOCK_WAIT_S["default"]), so a publish queued behind gc never
+# times out.
+repo_wait="${VIVEK_GC_REPO_WAIT_S:-60}"
+pub_wait="${VIVEK_GC_PUBLISH_WAIT_S:-150}"
+pub_bound="${VIVEK_GC_PUBLISH_BOUND_S:-420}"
 
-ledger_row() {  # <status> <exit-code> <one line>
-  python3 - "$ledger" "gc" "$1" "$2" "$3" "$started" "$(dirname "$ledger")/locks/ledger.lock" <<'PY' || true
-import datetime as dt, fcntl, json, os, sys, tempfile
-path, key, status, code, line, started, lockf = sys.argv[1:8]
-now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-os.makedirs(os.path.dirname(lockf) or ".", exist_ok=True)
-with open(lockf, "a+") as lk:
-    fcntl.flock(lk, fcntl.LOCK_EX)
-    try:
-        with open(path) as fh:
-            book = json.load(fh)
-        if not isinstance(book, dict):
-            book = {}
-    except (OSError, ValueError):
-        book = {}
-    row = dict(book.get(key) or {})
-    row.update({"last_start": started, "last_end": now, "last_status": status,
-                "last_exit": int(code), "last_args": {}, "last_line": line[:300],
-                "host": "vps"})
-    if status == "ok":
-        row["last_success_at"] = now
-        row["consecutive_failures"] = 0
-    elif status == "skipped":
-        row["last_skip_at"] = now
-    else:
-        row["last_failure_at"] = now
-        row["consecutive_failures"] = int(row.get("consecutive_failures") or 0) + 1
-    book[key] = row
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".", prefix=".runs.", suffix=".tmp")
-    with os.fdopen(fd, "w") as fh:
-        json.dump(book, fh, indent=2, sort_keys=True)
-        fh.write("\n")
-    os.replace(tmp, path)
-PY
+py="${VIVEK_VENV:-/opt/vivek5/venv}/bin/python"
+[ -x "$py" ] || py="$(command -v python3)"
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+
+ledger_row() {  # <status> <exit-code> <one line>  -- the runner's own writer (M3)
+  ( cd "$repo_root" && "$py" -m scanner.vps ledger-note --started "$started" gc "$1" "$2" "$3" ) || true
 }
 
 mkdir -p "$state_dir/locks"
 exec 9>"$state_dir/locks/repo.lock"
-if ! flock -x -n 9; then
-  echo "gc: a job holds the repo lock - skipping this week"
+if ! flock -s -w "$repo_wait" 9; then
+  echo "gc: the repo lock is held EXCLUSIVE (update.sh or an operator verb) - skipping this week"
   ledger_row skipped 0 "skipped busy"
   exit 0
 fi
 
+gc_clone() {  # <clone> [timeout-seconds]
+  local cmd=(git -C "$1" -c pack.threads=1 -c pack.windowMemory=256m gc --prune=2.weeks.ago)
+  if [ -n "${2:-}" ]; then timeout "$2" "${cmd[@]}"; else "${cmd[@]}"; fi
+}
+
 rc=0
-for clone in "$vivek_home" "$publish"; do
-  if [ ! -d "$clone/.git" ]; then
-    echo "gc: $clone is not a git clone - skipped"
-    continue
+notes=""
+if [ -d "$vivek_home/.git" ]; then
+  echo "gc: $vivek_home (working checkout, repo lock shared)"
+  if ! gc_clone "$vivek_home"; then echo "gc: FAILED in $vivek_home"; rc=1; notes="$notes app-failed"; fi
+else
+  echo "gc: $vivek_home is not a git clone - skipped"
+fi
+
+if [ -d "$publish/.git" ]; then
+  exec 8>"$state_dir/locks/publish.lock"
+  if flock -x -w "$pub_wait" 8; then
+    echo "gc: $publish (publish clone, publish lock exclusive, bounded at ${pub_bound}s)"
+    prc=0
+    gc_clone "$publish" "$pub_bound" || prc=$?
+    flock -u 8
+    if [ "$prc" -eq 124 ]; then
+      echo "gc: the publish clone's gc hit its ${pub_bound}s bound (killed; only temporary packs are left) - run it by hand at a quiet time: sudo -u vivek5 git -C $publish gc"
+      rc=1; notes="$notes publish-timed-out"
+    elif [ "$prc" -ne 0 ]; then
+      echo "gc: FAILED in $publish"; rc=1; notes="$notes publish-failed"
+    fi
+  else
+    echo "gc: a publish holds the publish lock - the publish clone is skipped this week"
+    notes="$notes publish-skipped-busy"
   fi
-  echo "gc: $clone"
-  if ! git -C "$clone" -c pack.threads=1 gc --prune=2.weeks.ago; then
-    echo "gc: FAILED in $clone"
-    rc=1
-  fi
-done
+  exec 8>&-
+else
+  echo "gc: $publish is not a git clone - skipped"
+fi
 
 # State hygiene: the runner leaves one summary file per run in state/summaries
 # (GITHUB_STEP_SUMMARY parity) and drain-spool parks every dispatch in
@@ -85,8 +103,8 @@ for d in "$state_dir/summaries" "$state_dir/spool/done" "$state_dir/spool/failed
 done
 
 if [ "$rc" -eq 0 ]; then
-  ledger_row ok 0 "gc ok (both clones)"
+  ledger_row ok 0 "gc ok${notes:+ (${notes# })}"
 else
-  ledger_row failed "$rc" "git gc failed - see journal"
+  ledger_row failed "$rc" "git gc failed (${notes# }) - see journal"
 fi
 exit "$rc"

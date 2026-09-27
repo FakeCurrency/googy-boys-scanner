@@ -68,7 +68,9 @@ export function makeKV({ file, clock = () => Date.now() } = {}) {
         fs.renameSync(tmp, file);
         return;
       } catch (e) {
-        if (!e || (e.code !== "EACCES" && e.code !== "EPERM")) throw e;
+        // EACCES/EPERM: state/ is 2750 (group read-only); EROFS: the API unit's
+        // ProtectSystem=strict leaves only spool/ and kv.json itself writable.
+        if (!e || (e.code !== "EACCES" && e.code !== "EPERM" && e.code !== "EROFS")) throw e;
         try { fs.unlinkSync(tmp); } catch (_) { /* never created */ }
         inPlace = true;
         console.error(`[kv] ${path.dirname(file)} is not writable by this user; falling back to in-place writes of ${path.basename(file)}`);

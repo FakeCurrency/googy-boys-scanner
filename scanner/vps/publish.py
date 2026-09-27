@@ -23,10 +23,21 @@ Directory pathspecs are mirrored in Python (``rsync -a --delete`` semantics:
 copy2 every file, delete what the source no longer has) so the runner does
 not depend on rsync being installed. ``VIVEK_GIT_PUBLISH=0`` makes the whole
 step a no-op that still reports "disabled" to the ledger.
+
+Self-healing (2026-09-27 book review): every attempt starts by removing stale
+git lock files from the clone (``index.lock``, ``HEAD.lock``, ref locks ...)
+-- safe because the exclusive ``publish`` flock guarantees no other runner git
+process is in the clone, and a SIGKILLed git (KillMode=mixed, OOM) otherwise
+left ``index.lock`` behind and failed every later publish until a human
+removed it. No ``state/publish_head`` = fail CLOSED (halted, nothing pushed)
+unless ``VIVEK_BOOTSTRAP=1``: without it the second-writer check cannot run.
+``accept_upstream`` / ``clear_halt`` take ``repo`` EXCLUSIVE and then
+``publish`` before touching either tree, and report what they overwrote.
 """
 from __future__ import annotations
 
 import datetime as dt
+import filecmp
 import json
 import os
 import pathlib
@@ -43,7 +54,7 @@ from . import (emit, git_identity, home as _home, iso, publish_dir as _publish_d
 from . import jobs as _jobs
 from . import ledger as _ledger
 from . import notify as _notify
-from .locks import Lock, lock_path
+from .locks import Lock, LockTimeout, lock_path
 
 _REJECTED = ("rejected", "non-fast-forward", "fetch first", "failed to push some refs",
              "cannot lock ref", "stale info")
@@ -177,6 +188,32 @@ def close_roster(args: dict) -> str:
             syms = ["?"]
         return f"x{len(syms)} - " + " ".join(syms[:10]) + (" ..." if len(syms) > 10 else "")
     return f"{args.get('symbol', '')} {args.get('direction', '')} @ {args.get('price', '')}"
+
+
+# Files a git process holds while writing; left behind when it is SIGKILLed.
+GIT_LOCK_FILES = ("index.lock", "HEAD.lock", "ORIG_HEAD.lock", "FETCH_HEAD.lock", "packed-refs.lock",
+                  "shallow.lock", "config.lock")
+
+
+def clear_stale_git_locks(repo: pathlib.Path, log=emit) -> list[str]:
+    """Remove git lock files a killed git left in ``repo``. Call ONLY while
+    holding the lock that excludes every other git process in that repo."""
+    gitdir = pathlib.Path(repo) / ".git"
+    found = [gitdir / n for n in GIT_LOCK_FILES]
+    refs = gitdir / "refs"
+    if refs.is_dir():
+        found += sorted(refs.rglob("*.lock"))
+    removed = []
+    for f in found:
+        try:
+            if f.is_file() and not f.is_symlink():
+                f.unlink()
+                rel = f.relative_to(gitdir).as_posix()
+                removed.append(rel)
+                log(f"publish: removed stale .git/{rel} in {repo} (a git process was killed mid-write)")
+        except OSError as e:
+            log(f"publish: could not remove stale .git/{f.name} ({type(e).__name__})")
+    return removed
 
 
 # -- which paths, which checks -------------------------------------------------
@@ -375,6 +412,7 @@ def publish(job: _jobs.Job, args: dict, ctx: dict, *, home: pathlib.Path | None 
         for attempt in range(1, max_attempts + 1):
             gate_failed = 0
             try:
+                clear_stale_git_locks(clone, log)
                 _git(clone, "fetch", "origin", "main", env=env, run=run)
                 _git(clone, "reset", "-q", "--hard", "origin/main", run=run)
                 _git(clone, "clean", "-fdq", run=run)
@@ -395,7 +433,16 @@ def publish(job: _jobs.Job, args: dict, ctx: dict, *, home: pathlib.Path | None 
                                f"(sync FROM origin) or `clear-halt` (fixed by hand).")
                         return PublishResult("halted", 4, None, "second writer", lines)
                 elif not since:
-                    log("publish: no state/publish_head yet - second-writer check skipped this once")
+                    if os.environ.get("VIVEK_BOOTSTRAP", "").strip() == "1":
+                        log("publish: no state/publish_head - VIVEK_BOOTSTRAP=1: second-writer check "
+                            "skipped this once")
+                    else:
+                        why = ("no state/publish_head: the second-writer check cannot run, so nothing is "
+                               "pushed (fail-closed). Seed it with `python -m scanner.vps clear-halt` once "
+                               "this box is the ONLY writer (cutover.sh does this at step 5).")
+                        log("publish: " + why)
+                        notify("CRITICAL", f"{job.name}: publish refused - no publish_head", why)
+                        return PublishResult("halted", 4, None, "no publish_head", lines)
 
                 # 3. re-apply this run's copies, one pathspec per add
                 rebuild = rebuild_wanted(job, args)
@@ -466,10 +513,7 @@ def publish(job: _jobs.Job, args: dict, ctx: dict, *, home: pathlib.Path | None 
                 pushed = _git(clone, "push", "origin", "HEAD:main", check=False, env=env, run=run)
                 if pushed.returncode == 0:
                     head_file.parent.mkdir(parents=True, exist_ok=True)
-                    tmp = head_file.with_suffix(".tmp")
-                    with open(tmp, "w", encoding="utf-8") as fh:
-                        fh.write(sha + "\n")
-                    os.replace(tmp, head_file)
+                    _write_publish_head(state, sha)
                     log(f"Pushed. {sha[:9]} {msg}")
                     if gate_failed:
                         log(job.publish.must_change.get("tripped_error", "must-change gate tripped"))
@@ -509,17 +553,44 @@ def origin_head(clone: pathlib.Path, run=subprocess.run) -> str:
     return _git(clone, "rev-parse", "origin/main", run=run).stdout.strip()
 
 
-def clear_halt(*, state_dir=None, clone=None, run=subprocess.run) -> str:
-    """Remove state/HALT and move publish_head to origin/main so the same
-    commits are not re-detected on the next publish."""
-    state = pathlib.Path(state_dir) if state_dir else _state_dir()
-    clone = pathlib.Path(clone) if clone else _publish_dir()
-    sha = origin_head(clone, run=run)
+def operator_locks(state: pathlib.Path, *, wait_s: float | None = None, log=emit) -> list[Lock]:
+    """``repo`` EXCLUSIVE then ``publish``, for accept-upstream / clear-halt.
+
+    While HALT is set the book writers refuse, but phasemap, the edge
+    pipeline, backups and momentum still RUN and reach their publish step, so
+    an operator verb must wait for them rather than mirror data roots under a
+    job that is mid-write or reset the publish clone under a publish."""
+    wait = float(config.VPS_OPERATOR_LOCK_WAIT_S if wait_s is None else wait_s)
+    repo = Lock(lock_path(state, "repo"))
+    if not repo.try_acquire():
+        log(f"waiting for running job(s) to release the repo lock (up to {wait / 60:.0f} min; "
+            "`systemctl list-units 'vivek5-*'` shows them) ...")
+        repo.acquire(wait)
+    pub = Lock(lock_path(state, "publish"))
+    try:
+        pub.acquire(wait)
+    except LockTimeout:
+        repo.release()
+        raise
+    return [pub, repo]
+
+
+def _release(locks: list[Lock]) -> None:
+    for lk in locks:
+        lk.release()
+
+
+def _write_publish_head(state: pathlib.Path, sha: str) -> None:
     head_file = state / "publish_head"
     tmp = head_file.with_suffix(".tmp")
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(sha + "\n")
     os.replace(tmp, head_file)
+
+
+def _clear_halt_locked(state: pathlib.Path, clone: pathlib.Path, run) -> str:
+    sha = origin_head(clone, run=run)
+    _write_publish_head(state, sha)
     try:
         (state / "HALT").unlink()
     except FileNotFoundError:
@@ -527,18 +598,67 @@ def clear_halt(*, state_dir=None, clone=None, run=subprocess.run) -> str:
     return sha
 
 
-def accept_upstream(*, state_dir=None, clone=None, home=None, run=subprocess.run) -> list[str]:
-    """Sync every data root FROM origin/main into the working checkout, then clear HALT."""
+def clear_halt(*, state_dir=None, clone=None, run=subprocess.run, lock_wait_s: float | None = None) -> str:
+    """Remove state/HALT and move publish_head to origin/main so the same
+    commits are not re-detected on the next publish. Holds repo EX + publish."""
+    state = pathlib.Path(state_dir) if state_dir else _state_dir()
+    clone = pathlib.Path(clone) if clone else _publish_dir()
+    locks = operator_locks(state, wait_s=lock_wait_s)
+    try:
+        clear_stale_git_locks(clone)
+        return _clear_halt_locked(state, clone, run)
+    finally:
+        _release(locks)
+
+
+def root_diff(src: pathlib.Path, dst: pathlib.Path) -> tuple[list[str], list[str]]:
+    """(overwritten_or_added, removed) if ``src`` were mirrored onto ``dst``."""
+    changed, removed = [], []
+    if src.is_file():
+        if not dst.is_file() or not filecmp.cmp(src, dst, shallow=False):
+            changed.append(dst.name)
+        return changed, removed
+    if not src.is_dir():
+        return changed, removed
+    for root, _dirs, files in os.walk(src):
+        rel = pathlib.Path(root).relative_to(src)
+        for f in files:
+            d = dst / rel / f
+            if not d.is_file() or not filecmp.cmp(pathlib.Path(root) / f, d, shallow=False):
+                changed.append((rel / f).as_posix())
+    if dst.is_dir():
+        for root, _dirs, files in os.walk(dst):
+            rel = pathlib.Path(root).relative_to(dst)
+            for f in files:
+                if not (src / rel / f).exists():
+                    removed.append((rel / f).as_posix())
+    return changed, removed
+
+
+def accept_upstream(*, state_dir=None, clone=None, home=None, run=subprocess.run, log=emit,
+                    lock_wait_s: float | None = None) -> list[str]:
+    """Sync every data root FROM origin/main into the working checkout, then clear HALT.
+    Holds repo EX + publish for the whole operation; prints what it overwrote."""
     state = pathlib.Path(state_dir) if state_dir else _state_dir()
     clone = pathlib.Path(clone) if clone else _publish_dir()
     home = pathlib.Path(home) if home else _home()
-    env = _git_env()
-    _git(clone, "fetch", "origin", "main", env=env, run=run)
-    _git(clone, "reset", "-q", "--hard", "origin/main", run=run)
-    _git(clone, "clean", "-fdq", run=run)
-    synced = []
-    for rel in _jobs.data_roots():
-        if copy_in(clone, home, rel):
-            synced.append(rel)
-    clear_halt(state_dir=state, clone=clone, run=run)
-    return synced
+    locks = operator_locks(state, wait_s=lock_wait_s, log=log)
+    try:
+        clear_stale_git_locks(clone, log)
+        env = _git_env()
+        _git(clone, "fetch", "origin", "main", env=env, run=run)
+        _git(clone, "reset", "-q", "--hard", "origin/main", run=run)
+        _git(clone, "clean", "-fdq", run=run)
+        synced = []
+        for rel in _jobs.data_roots():
+            changed, removed = root_diff(clone / rel, home / rel)
+            if copy_in(clone, home, rel):
+                synced.append(rel)
+                if changed or removed:
+                    head = ", ".join((changed + removed)[:5]) + (" ..." if len(changed) + len(removed) > 5 else "")
+                    log(f"accept-upstream: {rel}: {len(changed)} file(s) overwritten/added, "
+                        f"{len(removed)} removed ({head})")
+        _clear_halt_locked(state, clone, run)
+        return synced
+    finally:
+        _release(locks)

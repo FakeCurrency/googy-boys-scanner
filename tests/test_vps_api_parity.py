@@ -1,9 +1,9 @@
 """deploy/api -- the numbers the VPS adapter enforces are config.py's, not a re-typing.
 
 The adapter is JavaScript and cannot import scanner/config.py, so
-deploy/api/dispatch.mjs carries five JSON literals (the mark-sanity band, the
-dispatch cooldown, the per-workflow daily caps, the spool pending cap and the
-body cap) and this file parses them OUT OF THE SHIPPED FILE and compares them
+deploy/api/dispatch.mjs carries six JSON literals (the mark-sanity band, the
+per-workflow dispatch cooldown, the per-workflow daily caps, the spool pending
+cap, the body cap and the token-length floor) and this file parses them OUT OF THE SHIPPED FILE and compares them
 to config -- the conviction.py pattern (tests/test_conviction.py), so a retune
 in config that is not mirrored fails the push instead of drifting silently.
 
@@ -38,14 +38,29 @@ def _literal(name: str):
     return json.loads(m.group(1))
 
 
-# -- the five parity literals --------------------------------------------------
+# -- the six parity literals --------------------------------------------------
 
 def test_the_mark_sanity_band_is_configs():
     assert _literal("MARK_SANITY_PCT") == config.VIVEK_MARK_SANITY_PCT
 
 
-def test_the_dispatch_cooldown_is_configs():
-    assert _literal("DISPATCH_COOLDOWN_S") == config.VPS_DISPATCH_COOLDOWN_S
+def test_the_dispatch_cooldown_is_configs_per_workflow_and_matches_each_functions_ttl():
+    """M2: the adapter's cooldown mirrors the Functions EXACTLY, per workflow:
+    scan.js 300 s, close.js 60 s, morning_plays.js 300 s (one 300 s value made
+    the VPS refuse a deliberate second close-all the Function would allow)."""
+    cd = _literal("DISPATCH_COOLDOWN_S")
+    assert cd == config.VPS_DISPATCH_COOLDOWN_S
+    assert cd == {"scan.yml": 300, "close_position.yml": 60, "morning_plays.yml": 300}
+    assert set(cd) == set(_literal("DISPATCH_DAILY_CAPS")), "every dispatchable workflow has a cooldown"
+    for fn, wf in (("scan.js", "scan.yml"), ("close.js", "close_position.yml"), ("morning_plays.js", "morning_plays.yml")):
+        m = re.search(r'put\(cdKey, "1", \{ expirationTtl: (\d+) \}\)', (FUNCTIONS / fn).read_text(encoding="utf-8"))
+        assert m and int(m.group(1)) == cd[wf], (fn, m and m.group(1), cd[wf])
+    src = DISPATCH.read_text(encoding="utf-8")
+    assert "expirationTtl: cooldown" in src and "DISPATCH_COOLDOWN_S[v.workflow]" in src
+
+
+def test_the_token_floor_is_configs():
+    assert _literal("DISPATCH_TOKEN_MIN_CHARS") == config.VPS_DISPATCH_TOKEN_MIN_CHARS == 32
 
 
 def test_the_daily_caps_are_configs():

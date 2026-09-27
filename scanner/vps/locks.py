@@ -4,15 +4,28 @@ Every lock is a file under ``<state>/locks/<name>.lock`` held with
 ``fcntl.flock`` for the life of the process (the OS releases it on crash, so a
 killed job can never wedge the box). Acquisition is ORDERED, always:
 
-    repo (shared)  ->  family lock (scan | heavy, exclusive)  ->  own name (exclusive)
+    family lock (scan | heavy, exclusive)  ->  own name (exclusive)  ->  repo (shared)
 
-so two jobs can never deadlock on each other. The WAIT for a lock is a
+so two jobs can never deadlock on each other. ``repo`` is taken LAST on
+purpose (2026-09-27 book review): a job QUEUED behind a 40-80 minute ASX scan
+used to hold ``repo`` shared for its whole wait, which pinned the lock from
+11:07 to ~17:00 and made update.sh raise a false "a job may be hung" alarm
+five times a session. Now only RUNNING jobs hold ``repo``. The holders of
+``repo`` EXCLUSIVE (update.sh non-blocking; accept-upstream / clear-halt
+blocking) hold no family/own lock (gc.sh holds it only SHARED, plus a bounded
+``publish`` for the publish clone), and ``publish`` is only ever
+taken by a job that already holds ``repo`` shared or by an operator verb that
+holds ``repo`` exclusive, so the order stays deadlock-free. The WAIT for a lock is a
 separate budget from the step timeout (``Job.lock_wait_s`` vs ``Job.timeout_s``):
 a close arriving mid-scan queues behind a 40-80 minute ASX run instead of
 failing, and the ledger row records how long it waited (``waited_s``).
 
-``update.sh`` / ``gc.sh`` take ``repo`` EXCLUSIVE and non-blocking; the publish
-step takes ``publish`` exclusive for the publish alone (publish.py).
+``update.sh`` takes ``repo`` EXCLUSIVE and non-blocking; ``gc.sh`` takes it
+SHARED (so a repack never stalls a job) and ``publish`` exclusive, bounded, for
+the publish clone's pass; the publish step takes ``publish`` exclusive for the
+publish alone (publish.py). Every lock fd here is close-on-exec and every
+step child is spawned with close_fds, so a SIGKILLed runner releases all of
+its locks even while a step child outlives it (tests/test_vps_deploy.py).
 """
 from __future__ import annotations
 
@@ -79,19 +92,19 @@ def lock_path(state_dir: pathlib.Path, name: str) -> pathlib.Path:
 
 
 class LockSet:
-    """Ordered acquisition of ``repo`` (shared) then the job's locks (exclusive)."""
+    """Ordered acquisition of the job's locks (exclusive), then ``repo`` (shared)."""
 
     def __init__(self, state_dir: pathlib.Path, names, *, repo_shared: bool = True):
         self.state_dir = pathlib.Path(state_dir)
-        self.order: list[Lock] = [Lock(lock_path(self.state_dir, "repo"), shared=repo_shared)]
-        self.order += [Lock(lock_path(self.state_dir, n)) for n in names]
+        self.order: list[Lock] = [Lock(lock_path(self.state_dir, n)) for n in names]
+        self.order.append(Lock(lock_path(self.state_dir, "repo"), shared=repo_shared))
         self.waited_s = 0.0
 
     def acquire(self, wait_s: float, **kw) -> float:
         """Acquire every lock in order within ONE shared wait budget.
 
         On a timeout every lock already taken is released, so a job that gave
-        up waiting for ``scan`` never keeps ``repo`` pinned for update.sh.
+        up waiting never keeps its family lock (or ``repo``) pinned.
         """
         remaining = float(wait_s)
         total = 0.0

@@ -332,6 +332,30 @@ async function post(url, body, { token = TOKEN, headers = {} } = {}) {
     assert.equal((await realFetch(U2 + "/api/dispatch")).status, 404);
     assert.equal(spoolFiles(T2.state).length, n0, "no 401 ever spools");
   });
+  await test("a placeholder or short DISPATCH_TOKEN keeps the endpoint CLOSED (503), even with a matching bearer", async () => {
+    for (const weak of ["CHANGE_ME", "short-token", "x".repeat(D.DISPATCH_TOKEN_MIN_CHARS - 1)]) {
+      const TW = makeTree("weak-" + weak.length);
+      const PW = await S.createServer({ phase: 1, stateDir: TW.state, publicDir: TW.pub, bookPath: TW.book, clock, env: { DISPATCH_TOKEN: weak }, log: () => {} });
+      const UW = await PW.listen(0);
+      const r = await post(UW + "/api/dispatch", { workflow: "scan.yml", inputs: { market: "asx" } }, { token: weak });
+      assert.equal(r.status, 503, weak); assert.equal(r.j.configured, false);
+      assert.equal(spoolFiles(TW.state).length, 0, weak);
+      await PW.close();
+    }
+    assert.equal(D.tokenProblem("x".repeat(D.DISPATCH_TOKEN_MIN_CHARS)), null);
+    assert.equal(D.DISPATCH_TOKEN_MIN_CHARS, 32);
+  });
+  await test("an unauthenticated body is never read: 401 from the headers alone, even for 1 MiB", async () => {
+    const huge = JSON.stringify({ workflow: "scan.yml", inputs: { market: "asx" }, pad: "z".repeat(1024 * 1024) });
+    const r = await post(U2 + "/api/dispatch", huge, { token: "wrong" });
+    assert.equal(r.status, 401);
+    const noTok = await post(U0 + "/api/dispatch", huge);
+    assert.equal(noTok.status, 503);
+    assert.equal(S.MAX_BODY_BYTES, 64 * 1024, "the general body cap is 64 KiB, not 1 MiB");
+    const srv = fs.readFileSync(path.join(REPO, "deploy", "api", "server.mjs"), "utf8");
+    assert.ok(srv.indexOf("preAuthDispatch(req.headers.authorization") < srv.indexOf("await readBody(req, cap)"),
+      "auth is checked before the body is read");
+  });
   await test("the token is trimmed like every pasted credential (BOM + newline tolerated)", () => {
     assert.equal(D.bearerMatches(`Bearer ${TOKEN}`, X.cleanSecret(`﻿${TOKEN}\n`)), true);
     assert.equal(D.bearerMatches(`Bearer ${TOKEN}x`, TOKEN), false);
@@ -480,6 +504,7 @@ async function post(url, body, { token = TOKEN, headers = {} } = {}) {
   suite("dispatch.mjs -- the spool file");
   await test("shape: exactly {id, received_at, workflow, inputs, source}; name = id; no .tmp leftover", async () => {
     advance(6 * 60 * 1000);
+    process.umask(0o022);                                    // systemd's default for a service
     const n0 = spoolFiles(T2.state).length;
     const r = await post(U2 + "/api/dispatch", { workflow: "morning_plays.yml", inputs: { slot: "US" } });
     assert.equal(r.status, 202, JSON.stringify(r.j));
@@ -498,6 +523,8 @@ async function post(url, body, { token = TOKEN, headers = {} } = {}) {
     assert.equal(f.received_at.replace(/[-:]/g, ""), f.id.slice(0, 16));
     assert.deepEqual(f, { id: f.id, received_at: f.received_at, workflow: "morning_plays.yml", inputs: { slot: "us" }, source: "api/morning_plays" });
     assert.deepEqual(fs.readdirSync(path.join(T2.state, "spool", ".tmp")), [], "temp+rename leaves nothing behind");
+    assert.equal(fs.statSync(path.join(T2.state, "spool", name)).mode & 0o777, 0o660,
+      "0660 whatever the umask: the RUNNER reads it through group vivek5-spool (security review BLOCKER)");
     for (const d of ["done", "failed"]) assert.ok(!fs.existsSync(path.join(T2.state, "spool", d)) || fs.readdirSync(path.join(T2.state, "spool", d)).length === 0);
   });
   await test("scan.yml defaults reason=manual and stamps source api/scan; reason=heartbeat stamps api/heartbeat; values are trimmed/lower-cased", async () => {
@@ -513,23 +540,41 @@ async function post(url, body, { token = TOKEN, headers = {} } = {}) {
   });
 
   suite("dispatch.mjs -- cooldown, daily caps, spool depth (429)");
-  await test("a second dispatch of the same workflow+scope inside the cooldown -> 429; another scope -> 202; after the window -> 202", async () => {
+  await test("the cooldown is per workflow and mirrors each Function's own TTL (scan.js 300 s, close.js 60 s, morning_plays.js 300 s)", () => {
+    assert.deepEqual(D.DISPATCH_COOLDOWN_S, { "scan.yml": 300, "close_position.yml": 60, "morning_plays.yml": 300 });
+    for (const [fn, wf] of [["scan.js", "scan.yml"], ["close.js", "close_position.yml"], ["morning_plays.js", "morning_plays.yml"]]) {
+      const m = fs.readFileSync(FN(fn), "utf8").match(/put\(cdKey, "1", \{ expirationTtl: (\d+) \}\)/);
+      assert.ok(m, fn); assert.equal(Number(m[1]), D.DISPATCH_COOLDOWN_S[wf], fn);
+    }
+    assert.equal(D.cooldownWords(300), "5 minutes"); assert.equal(D.cooldownWords(60), "60 seconds");
+  });
+  await test("a second scan of the same market inside 5 minutes -> 429; another scope -> 202; after the window -> 202", async () => {
     advance(6 * 60 * 1000);
     assert.equal((await post(U2 + "/api/dispatch", { workflow: "scan.yml", inputs: { market: "asx" } })).status, 202);
     const r = await post(U2 + "/api/dispatch", { workflow: "scan.yml", inputs: { market: "asx" } });
-    assert.equal(r.status, 429); assert.ok(r.j.message.includes("scan.yml for asx"));
+    assert.equal(r.status, 429); assert.ok(r.j.message.includes("scan.yml for asx") && r.j.message.includes("5 minutes"), r.j.message);
     assert.equal((await post(U2 + "/api/dispatch", { workflow: "scan.yml", inputs: { market: "crypto" } })).status, 202);
-    advance(D.DISPATCH_COOLDOWN_S * 1000 - 1000);
+    advance(D.DISPATCH_COOLDOWN_S["scan.yml"] * 1000 - 1000);
     assert.equal((await post(U2 + "/api/dispatch", { workflow: "scan.yml", inputs: { market: "asx" } })).status, 429);
     advance(2000);
     assert.equal((await post(U2 + "/api/dispatch", { workflow: "scan.yml", inputs: { market: "asx" } })).status, 202);
   });
-  await test("close cooldown is per symbol (and one bucket for batches)", async () => {
+  await test("close cooldown is per symbol (and one bucket for batches): a second close-all inside 60 s is refused, one inside 5 min is not", async () => {
     advance(6 * 60 * 1000);
     const one = { workflow: "close_position.yml", inputs: { symbol: "NIC", market: "asx", price: "0.8", journal_type: "bot" } };
     assert.equal((await post(U2 + "/api/dispatch", one)).status, 202);
     assert.equal((await post(U2 + "/api/dispatch", one)).status, 429);
     assert.equal((await post(U2 + "/api/dispatch", { workflow: "close_position.yml", inputs: { symbol: "MSFT", market: "nasdaq", price: "401", journal_type: "bot" } })).status, 202);
+    const all = { workflow: "close_position.yml", inputs: { journal_type: "bot", closes: [{ symbol: "NIC", market: "asx", price: 0.8 }, { symbol: "BTC", market: "crypto", price: 60500 }] } };
+    advance(61 * 1000);
+    assert.equal((await post(U2 + "/api/dispatch", all)).status, 202, "close-all");
+    const again = await post(U2 + "/api/dispatch", all);
+    assert.equal(again.status, 429, "a second close-all inside 60 s");
+    assert.ok(again.j.message.includes("60 seconds"), again.j.message);
+    advance(59 * 1000);
+    assert.equal((await post(U2 + "/api/dispatch", all)).status, 429, "still inside 60 s");
+    advance(2 * 1000);
+    assert.equal((await post(U2 + "/api/dispatch", all)).status, 202, "61 s later -- well inside 5 min -- a close-all is accepted again");
   });
   await test("daily cap per workflow (seeded kv.json) -> 429 while other workflows still dispatch", async () => {
     const TC = makeTree("cap");
@@ -598,6 +643,35 @@ async function post(url, body, { token = TOKEN, headers = {} } = {}) {
     assert.deepEqual(D.CRITICAL_JOBS, ["kill_switch.yml", "backup_book.yml", "scan.yml", "crypto_bot.yml"]);
     await PV.close();
   });
+  await test("a CRITICAL job whose last run HALTED counts like a failure -> 503 (M1); a halted non-critical job does not", async () => {
+    const TV = makeTree("vps-halted");
+    const PV = await S.createServer({ phase: 1, stateDir: TV.state, publicDir: TV.pub, bookPath: TV.book, clock, env: { DISPATCH_TOKEN: TOKEN }, log: () => {} });
+    const UV = await PV.listen(0);
+    const ledger = { "crypto_bot.yml": { last_status: "halted", last_halt_at: "2026-09-27T00:22:00Z" }, "reco_note.yml": { last_status: "halted" } };
+    fs.writeFileSync(path.join(TV.state, "runs.json"), JSON.stringify(ledger));
+    let r = await realFetch(UV + "/api/vps"); let j = await r.json();
+    assert.equal(r.status, 503); assert.deepEqual(j.failed, ["crypto_bot.yml"]); assert.equal(j.ok, false);
+    ledger["crypto_bot.yml"].last_status = "ok";
+    fs.writeFileSync(path.join(TV.state, "runs.json"), JSON.stringify(ledger));
+    r = await realFetch(UV + "/api/vps");
+    assert.equal(r.status, 200, "reco_note halted is not CRITICAL");
+    await PV.close();
+  });
+  await test("a ledger that EXISTS but cannot be read or parsed is 503 'ledger unreadable', never 'no jobs' (S1)", async () => {
+    const TV = makeTree("vps-unreadable");
+    const PV = await S.createServer({ phase: 1, stateDir: TV.state, publicDir: TV.pub, bookPath: TV.book, clock, env: { DISPATCH_TOKEN: TOKEN }, log: () => {} });
+    const UV = await PV.listen(0);
+    fs.writeFileSync(path.join(TV.state, "runs.json"), "{truncated");
+    let r = await realFetch(UV + "/api/vps"); let j = await r.json();
+    assert.equal(r.status, 503); assert.equal(j.error, "ledger unreadable"); assert.equal(j.ok, false);
+    fs.rmSync(path.join(TV.state, "runs.json"));
+    fs.mkdirSync(path.join(TV.state, "runs.json"));          // EISDIR stands in for EACCES (tests run as root)
+    r = await realFetch(UV + "/api/vps"); j = await r.json();
+    assert.equal(r.status, 503); assert.equal(j.reason, "EISDIR");
+    fs.rmdirSync(path.join(TV.state, "runs.json"));
+    assert.equal((await realFetch(UV + "/api/vps")).status, 200, "ENOENT alone means nothing has run yet");
+    await PV.close();
+  });
 
   // ═══════════ 8. _dispatch.js (vm-loaded, house pattern) ═══════════
   suite("_dispatch.js -- the D4 transport, loaded the way heartbeat.test.js loads it");
@@ -641,6 +715,11 @@ async function post(url, body, { token = TOKEN, headers = {} } = {}) {
     assert.deepEqual(plain(JSON.parse(f.seen[0].init.body)), { workflow: "scan.yml", inputs: { market: "asx" } });
     assert.ok(!JSON.stringify(f.seen[0]).includes("GH"), "no GitHub token on the VPS wire");
     assert.ok(!("ref" in JSON.parse(f.seen[0].init.body)));
+    assert.equal(f.seen[0].init.redirect, "manual", "the bearer never rides a redirect");
+    let refunds2 = 0;
+    const bounced = await loadDispatch(recorder(302))({ workflow: "scan.yml", inputs: {}, dispatchUrl: "https://vps.example/api/dispatch",
+      dispatchToken: "VPS", refund: async () => { refunds2++; } });
+    assert.deepEqual(plain(bounced), { ok: false, status: 302 }); assert.equal(refunds2, 1, "a 3xx is a definite failure");
   });
   await test("204 from the adapter is NOT success (it answers 202); other statuses refund; the refund rule is unchanged", async () => {
     let refunds = 0; const refund = async () => { refunds++; };

@@ -35,12 +35,25 @@ from .locks import Lock, lock_path
 
 STATUSES = ("ok", "failed", "skipped", "halted")
 
+# Credential shapes this box actually carries (2026-09-27 security review:
+# the journal tail notify_failure attaches, and state/alerts.log, reach
+# Telegram/email and a second local user). Order matters: the specific
+# shapes run before the generic key=value rule.
 _REDACT = (
     (re.compile(r"(https?://)[^/\s@]+@"), r"\1***@"),
     (re.compile(r"(ssh://)[^/\s@]+@"), r"\1***@"),
+    (re.compile(r"(/bot)\d+:[\w-]+"), r"\1***"),                                   # Telegram bot URL
+    (re.compile(r"(discord(?:app)?\.com/api/webhooks/\d+/)[\w-]+", re.I), r"\1***"),  # Discord webhook
+    (re.compile(r"(Authorization:\s*\w+)\s+\S+", re.I), r"\1 ***"),
     (re.compile(r"(Bearer)\s+\S+", re.I), r"\1 ***"),
-    (re.compile(r"(token|secret|password|passwd|api[_-]?key)(\s*[=:]\s*)\S+", re.I), r"\1\2***"),
+    (re.compile(r"([?&](?:key|token|secret|api_token)=)[^&\s]+", re.I), r"\1***"),
+    (re.compile(r"\b(gh[pousr]_|github_pat_)[A-Za-z0-9_]+"), r"\1***"),
+    (re.compile(r"(token|secret|pass\w*|pwd|api[_-]?key)(\s*[=:]\s*)\S+", re.I), r"\1\2***"),
 )
+# runs.json: the runner and group vivek5-spool (the API adapter's /api/vps)
+# read it; nobody else (security review S1 -- mkstemp's 0600 made /api/vps
+# report "no jobs, all green" while kill_switch had failed).
+LEDGER_MODE = 0o640
 
 
 def redact(text: str) -> str:
@@ -118,7 +131,7 @@ def record(key: str, *, status: str, exit_code: int, args: dict | None = None,
         if extra:
             row.update(extra)
         doc[key] = row
-        write_json(p, doc, indent=2, sort_keys=True, newline=True)
+        write_json(p, doc, indent=2, sort_keys=True, newline=True, mode=LEDGER_MODE)
     finally:
         lock.release()
     return row
@@ -135,7 +148,7 @@ def annotate(key: str, extra: dict, path: pathlib.Path | None = None) -> dict:
         row = dict(doc.get(key) or {})
         row.update(extra)
         doc[key] = row
-        write_json(p, doc, indent=2, sort_keys=True, newline=True)
+        write_json(p, doc, indent=2, sort_keys=True, newline=True, mode=LEDGER_MODE)
     finally:
         lock.release()
     return row

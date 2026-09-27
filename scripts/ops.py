@@ -136,9 +136,21 @@ def redact(text, env=None, extra=()):
 # HTTP
 # --------------------------------------------------------------------------
 
-def call(method, url, headers=None, body=None, raw_body=None):
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """urllib copies Authorization onto a 30x target of ANY host/scheme; the
+    VPS client must never do that (a 3xx comes back as its own status)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def call(method, url, headers=None, body=None, raw_body=None, follow_redirects=True):
     """One request. Returns (status, parsed_json_or_text). Never raises on an
-    HTTP status -- the caller decides what a 4xx means."""
+    HTTP status -- the caller decides what a 4xx means. follow_redirects=False
+    answers a 3xx with its own status instead of re-sending the headers."""
     data = None
     hdrs = {"User-Agent": UA, "Accept": "application/json"}
     hdrs.update(headers or {})
@@ -148,8 +160,9 @@ def call(method, url, headers=None, body=None, raw_body=None):
         data = json.dumps(body).encode("utf-8")
         hdrs.setdefault("Content-Type", "application/json")
     req = urllib.request.Request(url, data=data, method=method, headers=hdrs)
+    opener = urllib.request.urlopen if follow_redirects else _NO_REDIRECT_OPENER.open
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+        with opener(req, timeout=TIMEOUT_S) as resp:
             status = resp.status
             payload = resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
@@ -332,7 +345,7 @@ def do_vps(action, args, env):
     # validator -- an unknown workflow or key comes back as a 400 that main()
     # prints, redacted, which beats a second copy of its table here.
     body = {"workflow": workflow.strip(), "inputs": inputs}
-    return call("POST", url, {"Authorization": f"Bearer {token}"}, body)
+    return call("POST", url, {"Authorization": f"Bearer {token}"}, body, follow_redirects=False)
 
 
 # --------------------------------------------------------------------------

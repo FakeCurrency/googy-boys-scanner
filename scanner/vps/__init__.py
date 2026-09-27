@@ -96,6 +96,11 @@ def iso(t: dt.datetime) -> str:
     return t.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# ``run`` exit codes (DESIGN 3.1). 5 is a lock-WAIT timeout, kept apart from a
+# plain failure so the spool drainer can re-queue the dispatch (a close that
+# waited 2 h behind a hung scan must not be lost -- 2026-09-27 book review).
+EXIT_OK, EXIT_FAIL, EXIT_SKIPPED, EXIT_HALTED, EXIT_LOCK_TIMEOUT = 0, 1, 3, 4, 5
+
 STATE_SUBDIRS = ("spool", "spool/.tmp", "spool/done", "spool/failed",
                  "locks", "summaries", "tmp", "home", "cache")
 

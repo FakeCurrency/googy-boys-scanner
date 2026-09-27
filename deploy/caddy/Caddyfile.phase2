@@ -7,13 +7,27 @@
 #
 # Requires Caddy >= 2.8 (`basic_auth` and `handle_errors <status>` are 2.8
 # directives -- D9; Ubuntu's apt caddy 2.6.2 rejects this file). Environment
-# placeholders come from /etc/caddy/vivek5.env (install.sh writes the
-# template, the caddy.service drop-in loads it):
+# placeholders come from /etc/vivek5/caddy.env (install.sh writes the
+# template, vivek5-caddy.service loads it with systemd's EnvironmentFile=,
+# which does NOT shell-expand -- so paste the bcrypt hash raw):
 #   VIVEK_DOMAIN          the hostname (certificate is automatic)
 #   VIVEK_API_BASIC_USER  login for POST /api/scan and /api/close
-#   VIVEK_API_BASIC_HASH  `caddy hash-password` output (bcrypt) for it
+#   VIVEK_API_BASIC_HASH  `/opt/vivek5/caddy/caddy hash-password` output (bcrypt)
 #
-# Validate with: caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
+# Installed as /etc/vivek5/Caddyfile (--phase 2), served by OUR Caddy
+# (vivek5-caddy.service) -- never the distro caddy or caddy.service.
+# Validate with:
+#   /opt/vivek5/caddy/caddy validate --adapter caddyfile --config /etc/vivek5/Caddyfile --envfile /etc/vivek5/caddy.env
+
+{
+	# Caddy's admin API on a unix socket inside OUR 0700 data dir, never the
+	# default localhost:2019 (M6 C4, 2026-09-27 host review): 2019 is where a
+	# distro/other Caddy on this box already listens -- ours would then fail
+	# to start -- and a TCP admin port lets ANY local process (a job, the
+	# trading bots) rewrite the routes or read the basic-auth hash.
+	# `caddy reload` (ExecReload) finds the socket in this same config.
+	admin unix//opt/vivek5/caddy/data/admin.sock
+}
 
 {$VIVEK_DOMAIN} {
 	root * /opt/vivek5/app/public
@@ -41,6 +55,10 @@
 	}
 
 	handle /api/* {
+		# No Function takes more than a few KB (a 30-entry batch close is ~3 KB).
+		request_body {
+			max_size 64KB
+		}
 		reverse_proxy 127.0.0.1:8787 {
 			header_up X-Forwarded-For {http.request.remote.host}
 		}

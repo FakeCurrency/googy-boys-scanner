@@ -222,9 +222,13 @@ def parse_kv(pairs) -> dict:
 def parse_args(job: Job, given: dict, *, operator: bool = True) -> dict:
     """Validate ``given`` against the job's arg spec and fill defaults.
 
-    ``operator=False`` (the spool drainer) DROPS operator-only keys silently,
-    which is the DESIGN 3.1 rule: an API caller can never reach ``extra``,
-    ``force`` or ``dry_run``. Unknown keys are refused either way.
+    ``operator=False`` (the spool drainer, the momentum chain -- any source
+    other than the CLI) OMITS operator-only keys from the result entirely:
+    not the caller's value and NOT THE DEFAULT either (DESIGN 3.1). A
+    spooled morning_plays run used to come out with ``force: 'true'`` (the
+    default), which was harmless only because its slot branch never read
+    it; a key that is absent cannot be misread by the next handler.
+    Unknown keys are refused either way.
     """
     spec = job.args
     unknown = sorted(set(given) - set(spec))
@@ -232,7 +236,9 @@ def parse_args(job: Job, given: dict, *, operator: bool = True) -> dict:
         raise ArgError(f"{job.name}: unknown arg(s) {unknown}; accepts {sorted(spec)}")
     out = {}
     for key, rule in spec.items():
-        if key in given and (operator or not rule.get("operator_only")):
+        if rule.get("operator_only") and not operator:
+            continue
+        if key in given:
             val = str(given[key])
         elif rule.get("required"):
             raise ArgError(f"{job.name}: {key} is required")

@@ -261,6 +261,10 @@
     [
      "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
      "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ],
+    [
+     "cron `37 14,15 * * 1-5` second NASDAQ fire (11:37 New York under EDT)",
+     "normalised: vivek5-scan@nasdaq.timer fires 10:37 then 11..15:07 New York in BOTH DST regimes -- the documented seven NASDAQ scans (10:37 -> 16:07). Under EDT GitHub delivered 11:37 instead of 11:07; same count, one scan 30 minutes earlier for eight months of the year (2026-09-27 parity review)"
     ]
    ]
   },
@@ -576,7 +580,8 @@
       "cron",
       "manual"
      ],
-     "default": "cron"
+     "default": "manual",
+     "help": "workflow_dispatch parity: an operator run is 'manual' (soft must-change branch); the timer unit passes reason=cron for the schedule branch"
     },
     "args": {
      "operator_only": true,
@@ -756,7 +761,8 @@
       "cron",
       "manual"
      ],
-     "default": "cron"
+     "default": "manual",
+     "help": "workflow_dispatch parity: an operator run is 'manual' (soft must-change branch); the timer unit passes reason=cron for the schedule branch"
     }
    },
    "steps": [

@@ -1,0 +1,31 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md sections 3.7 and 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+#
+# THE ONE ROOT UNIT IN THE KIT, and deliberately the smallest thing that can
+# be root: one fixed command on one vivek5-* unit, no argument taken from the
+# request, nothing read from the vivek5-writable flag file (it is only the
+# trigger -- its contents are a note for a human), no environment file, no
+# working directory in a tree a job can write. It replaces a sudoers grant:
+# update.sh runs with NoNewPrivileges=yes, so sudo (setuid) could never have
+# worked from it, and granting sudo to the jobs user was the wider door.
+# try-restart restarts vivek5-api.service ONLY if it is running: before
+# cutover and after rollback a request is a no-op, never a start (M6 C7).
+[Unit]
+Description=Vivek 5.0: restart the API adapter after update.sh synced new functions/ or deploy/api/ code
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/
+Environment=TZ=UTC
+ExecStart=/usr/bin/systemctl --no-ask-password try-restart vivek5-api.service
+TimeoutStartSec=5min
+KillMode=mixed
+LogRateLimitIntervalSec=0
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectProc=invisible

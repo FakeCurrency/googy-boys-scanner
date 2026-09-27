@@ -98,7 +98,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 
 | Workflow | Schedule | Does |
 |---|---|---|
-| dispatch_scan.yml | on push to itself or `.github/scan-kick` | turns a PUSH into a real `workflow_dispatch` of scan.yml (`market=all`). **The only way a cloud Claude session can trigger a scan** — these sessions can push but cannot reach api.github.com or POST to /api/scan. Touch `.github/scan-kick`, push, done. `permissions: actions: write`; GITHUB_TOKEN-created dispatches DO start runs (the documented exception to the no-recursive-workflows guard) |
+| dispatch_scan.yml | on push to itself or `.github/scan-kick` | turns a PUSH into a real `workflow_dispatch` of scan.yml (`market=all`). **The only way a cloud Claude session can trigger a scan** — these sessions can push but cannot reach api.github.com or POST to /api/scan. Touch `.github/scan-kick`, push, done. `permissions: actions: write`; GITHUB_TOKEN-created dispatches DO start runs (the documented exception to the no-recursive-workflows guard). **AFTER VPS CUTOVER (2026-09-27) THIS IS HISTORY:** `cutover.sh` disables dispatch_scan.yml and `vars.VPS_ACTIVE=1` guards its job, so touching `.github/scan-kick` does nothing; a cloud session starts a scan with `ops.yml` `action=vps-dispatch` (see VPS below). Never re-enable it |
 | test.yml | every push/PR | pytest + 15 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — **and since 2026-07-28 that rule is a GATE, not a convention** (`test_screenshot_determinism.py::test_every_javascript_suite_has_a_step_in_the_workflow` fails the push instead of letting the suite pass locally and never run) — the newest is `screenshot_sentinel.test.js`. New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) |
 | scan.yml | **MARKET HOURS ONLY (2026-09-21)** — the crons are a deliberate SUPERSET and the gate job asks the tz database, in the market's own calendar, whether now is inside that market's window (`config.MARKET_SCAN_WINDOWS`: ASX 11:00–16:45 Sydney, NASDAQ 10:30–16:45 New York, weekdays). One STOCK market per run, never `all`, never crypto, nothing outside a session. Delivers 7 ASX scans 11:07→16:30 and 7 NASDAQ 10:37→16:07 local, IDENTICALLY in all four DST regimes. `:47` closing backstops per market | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52`, EVERY hour, EVERY day (2026-09-21 — the weekday window-ownership gate is GONE; it only existed because scan.yml used to scan crypto too). `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
@@ -492,6 +492,135 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
   so the watchdog was mute for exactly as long as the inbox was flooded.
 
 ---
+
+## VPS -- the scanner runs on the owner's box (2026-09-27)
+
+Owner: *"I believe I'm ready to push the googy scanner to my VPS server."* And, while it was
+being built: *"ICT LIVE is trading my REAL money; I can't afford for things to be broken."*
+The kit is `deploy/` + `scanner/vps/` + one extra transport in `functions/api/_dispatch.js`.
+**`deploy/README.md` is the owner's runbook (written for a trader, jargon explained);
+`deploy/DESIGN.md` is the contract, and its section 11 records every place the build
+deviates from it.** Until the owner runs `cutover.sh`, NONE of this is live: GitHub Actions
+is still the writer and every rule elsewhere in this file stands. Tell the two worlds apart
+by `main`'s data commits: `github-actions[bot]` = before cutover, `vivek5-vps@<host>` = after.
+
+- **The decision (DESIGN D1-D11).** systemd timers + a Python 3.12 venv on Ubuntu 24.04 (no
+  Docker, no bespoke scheduler). **Git publishing STAYS ON:** the box commits and pushes data
+  to `main` exactly as Actions did (identity `vivek5-vps@<hostname>` + the owner's noreply
+  email, already in `commit_sentinel.py`'s allow-list; the sentinel warns once on the new
+  name, expected), so Cloudflare Pages keeps deploying the site unchanged (**Phase 1**).
+  **Phase 2** = the box also serves the site (its own Caddy + the UNCHANGED Pages Functions
+  under a Node adapter, basic auth on /api/scan and /api/close). **Recommended host: a SECOND
+  small Binary Lane server (Option A).** The owner's existing box also runs ICT LIVE (real
+  money) and ICT DEMO; sharing it (Option B) is allowed only at 4 GB and under the
+  coexistence rules C1-C12 (DESIGN section 10): no timezone / ufw / journald / swap changes,
+  private checksum-pinned Node 22 + Caddy 2.10 under /opt/vivek5 with its own
+  `vivek5-caddy.service`, nothing starts at install, heavy units `Nice=10` / `CPUWeight=20` /
+  lowest I/O / soft `MemoryHigh=1G`, and every unit-changing `systemctl` goes through
+  `v5ctl`, which refuses any name that is not `vivek5-*`. Never propose a change to this kit
+  that touches a non-`vivek5-*` process, the clock, the firewall or the journal.
+- **Layout.** `/opt/vivek5/app` = the WORKING checkout (jobs run and write here; it NEVER
+  commits; tracked data files are dirty by design; always a FULL clone -- nothing fetches
+  `--depth`). `/opt/vivek5/publish` = the ONLY clone that commits and pushes (whole-file
+  re-apply of each job's paths onto a fresh `origin/main`, never a git merge of JSON).
+  `/opt/vivek5/state` = `runs.json` (the ledger), `spool/`, `locks/`, `kv.json`,
+  `publish_head`, `HALT`, `alerts.log`. `/etc/vivek5/{jobs,api,caddy}.env` + `Caddyfile` +
+  `deploy_key` + `known_hosts` (GitHub fingerprints pinned). Root scripts run from the
+  root-owned copy `/usr/local/lib/vivek5/bin`, install.sh from a root-owned clone
+  `/usr/local/src/vivek5`; all of them REFUSE to run as root from a path a non-root user can
+  write. Users `vivek5` (jobs), `vivek5-api` (adapter), `vivek5-caddy`; group `vivek5-spool`
+  holds BOTH vivek5 and vivek5-api (with only one of them in it, every dispatch the adapter
+  answered 202 for was silently unreadable -- a review blocker, now preflight-checked).
+- **The three interfaces (change DESIGN first, then code).** (1) The CLI
+  `python -m scanner.vps run|gate|drain-spool|notify-failure|ledger|ledger-note|list|accept-upstream|clear-halt|data-roots`;
+  `run` exits 0 ok / 3 skipped / 4 halted / 5 lock-wait timeout / 1 failed, and writes a
+  ledger row on EVERY path out. On the box it needs `jobs.env`: the operator form is the
+  README's `v5` helper (`systemd-run -p User=vivek5 -p EnvironmentFile=/etc/vivek5/jobs.env ...`);
+  a bare `python -m scanner.vps ledger` reads `<checkout>/.vps-state`, the wrong place.
+  (2) The spool: `/api/dispatch` (bearer `DISPATCH_TOKEN` checked from the headers before any
+  body byte, the Functions' own validators, a close must be OPEN in the book and inside
+  `VIVEK_MARK_SANITY_PCT` of its `last_mark`, per-workflow cooldowns + daily caps mirrored
+  from `config.VPS_DISPATCH_*`) writes `state/spool/*.json`; `vivek5-spool.path` drains it; a
+  close that cannot run is parked (`.halted` / `.retry`), never lost. (3) The ledger: with
+  `VIVEK_RUNS_LEDGER` set, `scanner/watchdog.py` runs in LEDGER MODE (a failed job row is a
+  finding, `disk_low` under `VPS_DISK_MIN_GB`); `/api/vps` exposes it read-only and answers
+  503 on HALT, on a failed/halted scan, crypto_bot, kill_switch or backup_book, or on an
+  unreadable ledger (the owner's UptimeRobot watches it).
+- **The JOBS table is `scanner/vps/workflows.json`,** TRANSCRIBED from the 14 workflows the
+  box runs (scan, crypto_bot, kill_switch, phasemap, confluence, reco_note, backup_book,
+  alert_returns, evidence_brief, lens_backtest, vivek_backtest, morning_plays, momentum,
+  close_position), every Actions-only step recorded under `dropped` with its reason. **The box
+  runs the transcription, not the YAML:** a workflow change that must also happen on the box
+  is a `workflows.json` change in the same commit (engine and script code is shared and needs
+  nothing). The workflow literals live in the JSON on purpose: repo-wide fence tests grep
+  `scanner/**/*.py` for artefact names.
+- **ONE WRITER, enforced three ways (D5): the 30-position cap is global, and two writers is
+  the one failure that cannot be undone.** (1) Cutover disables 15 workflows
+  (`config.VPS_WORKFLOWS_TO_DISABLE`: the 13 scheduled + `close_position.yml` +
+  `dispatch_scan.yml`) and drains in-flight runs. (2) `vars.VPS_ACTIVE=1` turns the jobs of
+  scan / crypto_bot / close_position / dispatch_scan into no-ops even if someone re-enables
+  them (`tests/test_vps_active_guard.py`). (3) **HALT:** before every publish, and in the
+  5-minute `update.sh`, any commit since `state/publish_head` that touches a DATA ROOT
+  (`python -m scanner.vps data-roots`: the books under `journal/`, `public/data/**`, `data/**`,
+  `backups/`, the PhaseMap backtest outputs) and is not the box's identity writes
+  `state/HALT`, alerts CRITICAL and pushes nothing; the book writers refuse to run until the
+  owner runs `accept-upstream` (take GitHub's data) or `clear-halt` (keep the box's). A
+  missing `publish_head` is fail-closed too (`VIVEK_BOOTSTRAP=1` is the one escape).
+- **What a cloud Claude session may and may NOT do after cutover.**
+  - **Start a scan / close / plays digest ONLY via `ops.yml` `action=vps-dispatch`**, e.g.
+    `args={"workflow":"scan.yml","inputs":{"market":"asx"}}` (needs the `VPS_DISPATCH_URL` +
+    `VPS_DISPATCH_TOKEN` secrets; 202 = queued, 422 names a refused close, 429 a cooldown).
+    `dispatch_scan.yml` and `.github/scan-kick` are DISABLED and guarded; touching the kick
+    does nothing.
+  - **NEVER re-enable a disabled workflow** (not to "re-register a schedule", not to test
+    one). The four guarded ones would no-op; the other eleven would be a second writer and
+    HALT the box.
+  - **NEVER edit data files on `main`.** That includes a hand-written
+    `public/data/reco_note.json`: the reco_note row's "never overwrites a same-day
+    hand-written note" is pre-cutover behaviour, and after cutover a hand note HALTs the book
+    until the owner runs `accept-upstream` (narrowing that is his call). Code, tests and docs
+    are fine: `update.sh` syncs non-data paths into the working checkout within 5 minutes
+    (pip on a `requirements.txt` change; the API restarts through the root-owned
+    `vivek5-api-restart.path`, never sudo; a `deploy/systemd|caddy|bin` change only raises a
+    WARNING, because the owner must re-run `install.sh --units` from the root-owned clone).
+  - You cannot see the box's ledger or journal. `https://<VIVEK_DOMAIN>/api/vps` is open and
+    read-only if your proxy reaches it; otherwise ask the owner for `v5 ledger`.
+  - Never ask the owner to paste a token into a chat. `cutover.sh` / `rollback.sh` prompt for
+    theirs with hidden input and are his to run, in his own SSH window. A Claude session ON
+    the box (Remote Control, README section 5) has the standing instruction "Follow
+    deploy/README.md. Do not run cutover.sh until preflight is green and I have read its
+    output. Never stop, restart or edit the ICT bots."
+- **Alerts on the box.** GitHub's red-run email is gone for the disabled workflows; the box
+  alerts through `watchdog._dispatch` (Telegram for WARNING and CRITICAL, email for CRITICAL;
+  Binary Lane blocks mail ports) and always appends `state/alerts.log`; a failed unit's
+  `OnFailure=vivek5-failed@` hook attaches its last 30 journal lines. **`config.TELEGRAM_ENABLED`
+  reads `VIVEK_TELEGRAM_ENABLED` (default off)**: the box's jobs.env sets it to `1`, so the VPS can
+  alert through Telegram while GitHub Actions (which never sets it) keeps Telegram silent. Without
+  it preflight's D8 alert-channel check FAILS (bypass only with `VIVEK_ACCEPT_NO_ALERT_CHANNEL=1`).
+- **Broker keys stay BLANK on the box.** `BYBIT_*` / `ALPACA_*` in `/etc/vivek5/jobs.env` arm
+  the kill switch's ACCOUNT-WIDE flatten (Tier 1 #17), and the owner's live bot trades real
+  money. Never suggest filling them.
+- **The pins.** `tests/test_vps_jobs.py` (exactly the 14 workflows; gates incl. the 16:30 close
+  slot and the 17:15 backstops; locks family -> own -> repo shared; ledger; spool and drainer
+  incl. `.halted` / `.retry` / `.stuck`; operator-only args dropped for non-CLI runs; HALT
+  refusal). `tests/test_vps_publish.py` (whole-file re-apply, second-writer HALT, fail-closed
+  `publish_head`, stale git locks self-heal, published files 0644, accept-upstream /
+  clear-halt). `tests/test_vps_deploy.py` (units and timers incl. a day-by-day DST walk to
+  2027-04-30, `systemd-analyze verify` per instance, `bash -n`, no `set -x`, no env file ever
+  sourced, tokens never on argv, the root-path refusal, C1-C12, `v5ctl`, the api-restart hook
+  as the only root unit, GitHub host-key fingerprints, Caddyfiles validated when `CADDY_BIN`
+  >= 2.8). It scans EVERY file under `deploy/`, the README included: never write
+  `set-timezone`, `/etc/caddy` or a bare `caddy.service` anywhere in `deploy/`.
+  `test/vps_api.test.js` (registered in test.yml: adapter routes, the `/api/dispatch`
+  503/401/400/413/422/429/202 matrix, `/api/vps`, the `_dispatch.js` DISPATCH_URL
+  transport). `tests/test_vps_api_parity.py` (dispatch.mjs's JSON literals == `config.VPS_*`
+  and each Function's own TTL). `tests/test_vps_active_guard.py`. `tests/test_watchdog.py`
+  (ledger mode). `tests/test_ops.py` (vps-dispatch: https only, no redirects, redacted).
+- **Not done, each the owner's call (DESIGN sections 9 and 11):** stopping data commits to git
+  (repo ~2.4 GB, ~0.7 GB/month); `status.js` reading the ledger instead of linking to GitHub
+  Actions; a Cloudflare Tunnel instead of an open 443; narrowing HALT so a hand-written reco
+  note does not halt; skipping non-book jobs while HALTed; a `SystemCallFilter` on the API
+  unit.
 
 ## Journals & track record — IMPORTANT
 
@@ -2519,6 +2648,16 @@ either, safe to delete from GitHub + Cloudflare),
 `CLOUDFLARE_ACCOUNT_ID` — GitHub Actions secrets read ONLY by ops.yml; set
 them once and Claude can create/edit cron-job.org jobs and Cloudflare Pages
 env vars itself via `workflow_dispatch` (see the ops.yml row).
+**VPS (2026-09-27, see VPS above; live only after the owner runs cutover):** GitHub Actions secrets
+`VPS_DISPATCH_URL` (`https://<VIVEK_DOMAIN>/api/dispatch`, https only) + `VPS_DISPATCH_TOKEN`
+(= the box's `DISPATCH_TOKEN`) -- read ONLY by `ops.yml` `action=vps-dispatch`. On the box:
+`/etc/vivek5/api.env` holds `DISPATCH_TOKEN` (64 hex, generated by install.sh; cutover step 2 copies it
+into Cloudflare Pages as `DISPATCH_TOKEN` beside `DISPATCH_URL`) and the optional
+`MORNING_PLAYS_TRIGGER_SECRET`; `/etc/vivek5/jobs.env` holds the job secrets (`TELEGRAM_*`, `GBS_SMTP_*`,
+`DISCORD_MORNING_WEBHOOK_URL`; `BYBIT_*`/`ALPACA_*` deliberately BLANK); `/etc/vivek5/caddy.env` the Phase 2
+basic-auth hash. **`GH_DISPATCH_TOKEN` is DELETED from Cloudflare by cutover step 2** (rollback: the owner
+restores it from his own copy). `GH_ADMIN_TOKEN` (fine-grained, Actions + Variables write) is prompted by
+cutover/rollback, never stored, and deleted by the owner straight after.
 **Pending owner:** `MORNING_PLAYS_TRIGGER_SECRET` (arms `/api/morning_plays`,
 the on-time external trigger for the plays digest — see MORNING PLAYS),
 `DISCORD_MORNING_WEBHOOK_URL` (SET 2026-09-08 — deliveries prove it; switches on the morning

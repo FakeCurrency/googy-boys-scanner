@@ -31,13 +31,17 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { makeKV, makeAssets, installCaches, makeWaitUntil } from "./shims.mjs";
-import { handleDispatch, handleVps } from "./dispatch.mjs";
+import { handleDispatch, handleVps, preAuthDispatch, tokenProblem, SPOOL_MAX_BYTES } from "./dispatch.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
 export const DEFAULT_FUNCTIONS_DIR = path.join(REPO, "functions", "api");
 export const ADAPTER_ROUTES = ["/api/dispatch", "/api/vps"];
-export const MAX_BODY_BYTES = 1024 * 1024;
+// The largest real Function body (a 30-entry batch close) is ~3 KB; 64 KiB is
+// generous and bounds what any caller can make this process buffer. Caddy
+// caps it at the edge too (request_body max_size). /api/dispatch reads at
+// most SPOOL_MAX_BYTES, and only AFTER its bearer checked out.
+export const MAX_BODY_BYTES = 64 * 1024;
 
 // Hop-by-hop and framing headers that must not be copied onto the inner
 // Request (undici recomputes framing; Host is the URL), plus the two
@@ -152,6 +156,9 @@ export async function createServer(options = {}) {
   const fnEnv = { ...env, JOURNAL_KV: kv, ASSETS: assets };
   const dispatchCtx = { env, kv, stateDir, bookPath, ledgerPath, clock };
 
+  const weak = tokenProblem(env.DISPATCH_TOKEN);
+  if (weak) console.error(`[api] DISPATCH_TOKEN ${weak}: /api/dispatch answers 503 until api.env carries a real token (openssl rand -hex 32)`);
+
   // PORT unset/blank -> 8787; an explicit PORT=0 means an ephemeral port (tests).
   let boundPort = env.PORT === undefined || String(env.PORT).trim() === "" ? 8787 : Number(env.PORT);
   if (!Number.isInteger(boundPort) || boundPort < 0 || boundPort > 65535) throw new Error(`PORT=${env.PORT} is not a port`);
@@ -185,7 +192,22 @@ export async function createServer(options = {}) {
     let status = 500;
     try {
       if (!rawUrl.startsWith("/")) throw Object.assign(new Error("bad request-target"), { httpStatus: 400 });
-      const body = await readBody(req, MAX_BODY_BYTES);
+      let cap = MAX_BODY_BYTES;
+      if (pathname === "/api/dispatch" && method === "POST") {
+        // Auth from the headers FIRST: an unauthenticated caller never gets a
+        // single body byte buffered (security review: 1 MiB x 450 idle
+        // connections crossed MemoryMax=512M before any check ran).
+        const denied = preAuthDispatch(req.headers.authorization, env);
+        if (denied) {
+          status = denied.status;
+          res.setHeader("Connection", "close");
+          res.once("finish", () => req.destroy());
+          await sendResponse(res, denied, false);
+          return;
+        }
+        cap = SPOOL_MAX_BYTES;
+      }
+      const body = await readBody(req, cap);
       const peer = req.socket && req.socket.remoteAddress;
       const ip = clientIp({ peer, xff: req.headers["x-forwarded-for"], trustProxy });
       const headers = new Headers();

@@ -1,0 +1,20 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md sections 3.7 and 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0: watch for update.sh's API-restart request (DESIGN 3.7)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+
+[Path]
+# update.sh (User=vivek5, NoNewPrivileges=yes) cannot run sudo -- a setuid
+# binary is exactly what NoNewPrivileges forbids -- so it writes this file
+# when functions/ or deploy/api/ changed, and PID 1 (root) starts the
+# restart service below. PathChanged= fires on the write (close-after-write,
+# create, attribute change) and never on the file merely existing, so
+# enabling this unit at cutover does not restart anything by itself, and a
+# request that lands while a restart is running re-triggers once after it.
+PathChanged=/opt/vivek5/state/api-restart
+Unit=vivek5-api-restart.service
+
+[Install]
+WantedBy=multi-user.target
