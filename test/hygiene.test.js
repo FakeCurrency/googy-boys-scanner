@@ -331,6 +331,22 @@ ok(!/(?:const|let|var)\s+dark\s*=|function\s+dark\s*\(|\bdark\s*\(\s*\)/.test(co
    "js/sectors.js: the unused dark() prefers-color-scheme helper was deleted 2026-09-23 " +
    "(the site is dark-only; nothing called it)");
 
+// NEWS page trim (2026-09-27, owner: "I don't need it") -- the Explain-like-
+// I'm-5 box, the Biggest volume list, the Indices cards and the US top-stories
+// widget came off sectors.html. The producer stopped writing eli5/top_volume
+// (tests/test_sectors_carry.py pins that half); these keep the page half gone.
+{
+  const js = code("js/sectors.js");
+  ok(js.includes("function moversHTML("), "js/sectors.js moved -- pin would be vacuous");
+  for (const s of ["volumeHTML", "indicesHTML", "fmtNum", "newsBlock", "top_volume", "eli5", "tv-news", "embed-widget-timeline"])
+    ok(!js.includes(s), `js/sectors.js: ${s} rendered a NEWS-page section removed 2026-09-27`);
+  const css = code("css/sectors.css");
+  ok(css.includes(".mv-col {"), "css/sectors.css moved -- pin would be vacuous");
+  for (const c of ["eli5", "sec-indices", "idx-card", "idx-sym", "idx-last", "idx-chg", "vol-col", "vol-turn", "vol-spike", "sec-muted"])
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/sectors.css: .${c} styled a NEWS-page section removed 2026-09-27`);
+}
+
 // `$$` cannot be pinned by name: the two characters legitimately occur in
 // `US$${...}` template text on the journal page. Pin the declaration instead.
 ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),

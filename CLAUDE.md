@@ -2235,6 +2235,13 @@ entries), the backfill (`scripts/backfill_sector_history.py` +
 strip pins in `staleview.test.js`). **`sectors.html` STAYS** — it is the
 NEWS & MARKETS page (`js/sectors.js`, movers, calendar) with its own
 content; only the two panels came off it, and the NEWS nav tab is untouched.
+**NEWS page trimmed again 2026-09-27** (owner: "I don't need it"): the
+Explain-like-I'm-5 box, Biggest volume, the Indices cards and the US
+top-stories TradingView widget are gone; `scanner/sectors.py` no longer
+writes `eli5`/`top_volume` (both left `ENRICHED_KEYS`). `indices` is still
+FETCHED because `_read` builds the "What happened" sentence from it — it is
+just no longer drawn as cards. Pins: `test/hygiene.test.js`,
+`tests/test_sectors_carry.py`. Do not re-add them.
 **The bot's 3-per-sector correlation cap (`sector_map.json` / `sectorcache`)
 is unrelated and stays** — it is a signal path, not a report surface.
 `alert_returns._breadth_series()` now returns `{}` so `breadth200` stays

@@ -17,7 +17,6 @@
 .sec-box { background: var(--panel); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 12px; }
 .sec-box.overnight { border-left: 5px solid var(--blue); }
 .sec-box.rotation { border-left: 5px solid var(--orange); }
-.sec-box.eli5 { border-left: 5px solid var(--green); background: var(--panel-2, var(--panel)); }
 .sec-box-title { font: 700 13.5px/1 var(--sans); color: var(--text); margin-bottom: 10px; }
 .sec-box-text { font: 500 15px/1.6 var(--sans); color: var(--text-2); margin: 0; }
 .rot-detail { display: block; margin-top: 8px; font-weight: 600; color: var(--text); }
@@ -42,13 +41,6 @@
 .mv-pct { font: 700 13px/1 var(--sans); }
 .mv-empty { padding: 12px 14px; color: var(--muted); font-size: 13px; }
 
-/* indices */
-.sec-indices { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-.idx-card { background: var(--panel); border-radius: var(--radius-md); padding: 12px 14px; box-shadow: var(--shadow); }
-.idx-sym { font: 700 11px/1.2 var(--sans); color: var(--muted); letter-spacing: 0.02em; }
-.idx-last { font: 700 17px/1.1 var(--sans); color: var(--text); margin: 7px 0 4px; letter-spacing: -0.3px; }
-.idx-chg { font: 600 12px/1 var(--sans); }
-
 /* up / down figures */
 .sec-up { color: var(--green); }
 .sec-down { color: var(--red); }
@@ -65,8 +57,6 @@
 .upc-impact.medium { color: var(--orange); background: var(--orange-soft); }
 .upc-fp { font: 500 11.5px/1 var(--sans); color: var(--muted); width: 100%; }
 .upc-empty { font-size: 13px; color: var(--muted); padding: 12px 0; list-style: none; }
-
-.sec-muted { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
 
 /* ---- macro cards (next event countdown + latest result) ---- */
 .macro-card { background: var(--panel); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 12px; border-left: 5px solid var(--blue); }
@@ -101,16 +91,8 @@
 .sec-sbar { height: 5px; border-radius: 3px; background: var(--fill); margin-top: 6px; overflow: hidden; }
 .sec-sbar i { display: block; height: 100%; margin-left: auto; }
 
-/* ---- biggest volume rows ---- */
-.vol-col { background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.mv-item.vol { grid-template-columns: auto 1fr auto auto auto; gap: 10px; }
-.vol-turn { font: 700 12.5px/1 var(--sans); color: var(--text); font-variant-numeric: tabular-nums; }
-.vol-spike { font: 600 11px/1 var(--sans); color: var(--muted); }
-.vol-spike.hot { color: var(--orange); font-weight: 800; }
-.mv-head.vol { color: var(--blue); }
-
-/* live widgets */
-/* #131722 = TradingView's own dark-theme body colour — the widgets paint it
+/* live widget (economic calendar) */
+/* #131722 = TradingView's own dark-theme body colour — the widget paints it
    (isTransparent:false), so the host matches it to avoid light seams. */
 .tv-host { height: 420px; background: #131722; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .tv-host .tradingview-widget-container { height: 100%; }

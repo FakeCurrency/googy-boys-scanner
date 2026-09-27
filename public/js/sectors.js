@@ -1,7 +1,9 @@
 /* Markets & Sectors — single page, ASX (left) + US (right) side by side.
-   Renders public/data/sectors.json with sector explanations, biggest movers &
-   volume, a live "next market-moving event" countdown and a data-derived
-   hawkish/dovish read on the latest high-impact print. */
+   Renders public/data/sectors.json with sector explanations, biggest movers,
+   a live "next market-moving event" countdown and a data-derived
+   hawkish/dovish read on the latest high-impact print. (Explain-like-I'm-5,
+   biggest volume, the index cards and the US top-stories widget were removed
+   2026-09-27, owner: "I don't need it".) */
 (() => {
   "use strict";
 
@@ -40,8 +42,6 @@
   // parsed as markup. Now the same five characters every other page escapes.
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const fmtNum = (v) => v == null ? "—"
-    : v.toLocaleString(undefined, { minimumFractionDigits: Math.abs(v) >= 1000 ? 1 : 2, maximumFractionDigits: Math.abs(v) >= 1000 ? 1 : 2 });
   const fmtPct = (v) => v == null ? "" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
   const cls = (v) => (v >= 0 ? "sec-up" : "sec-down");
   const fmtMoney = (v) => {
@@ -144,29 +144,6 @@
     </div>`;
   }
 
-  // ---- biggest volume (most $ traded + how unusual) -----------------------
-  function volumeHTML(tv) {
-    if (!tv || !tv.length) return "";
-    const rows = tv.map((m) => `
-      <li class="mv-item vol">
-        <span class="mv-sym">${esc(m.symbol)}</span>
-        <span class="mv-name">${esc(m.name)}${m.sector ? ` · ${esc(m.sector)}` : ""}</span>
-        <span class="vol-turn">${fmtMoney(m.turnover)}</span>
-        <span class="vol-spike ${m.spike >= 2 ? "hot" : ""}">${m.spike ? m.spike.toFixed(1) + "× avg" : ""}</span>
-        <span class="mv-pct ${cls(m.pct)}">${fmtPct(m.pct)}</span>
-      </li>`).join("");
-    return `<div class="mv-col vol-col"><div class="mv-head vol">📊 Biggest volume (most traded today)</div><ul class="mv-list">${rows}</ul></div>`;
-  }
-
-  function indicesHTML(list) {
-    return `<div class="sec-indices">` + (list || []).map((i) => `
-      <div class="idx-card">
-        <div class="idx-sym">${esc(i.name)} · ${esc(i.symbol)}</div>
-        <div class="idx-last">${fmtNum(i.last)}</div>
-        <div class="idx-chg ${cls(i.chg_pct)}">${fmtPct(i.chg_pct)}</div>
-      </div>`).join("") + `</div>`;
-  }
-
   function upcomingHTML(upc) {
     if (!upc || !upc.length) {
       return '<li class="upc-empty">No high-impact events flagged in the next few days — ' +
@@ -188,9 +165,6 @@
     const isAsx = key === "asx";
     const summaryTitle = isAsx ? "What happened (last ASX session)" : "What happened overnight (US session)";
     const rotation = (esc(m.rotation) || "—") + (m.rotation_detail ? ` <span class="rot-detail">${esc(m.rotation_detail)}</span>` : "");
-    const newsBlock = isAsx ? "" : `
-      <div class="sec-sub-title">📰 US market-moving news (Fed, macro, top stories)</div>
-      <div class="tv-host" id="tv-news-${key}"></div>`;
     return `
       <div class="col-head"><span class="col-flag">${isAsx ? "🇦🇺" : "🇺🇸"}</span><h3>${esc(m.label || (isAsx ? "ASX" : "US"))}</h3></div>
 
@@ -206,19 +180,8 @@
         <p class="sec-box-text">${rotation}</p>
       </div>
 
-      <div class="sec-box eli5">
-        <div class="sec-box-title">🧒 Explain like I'm 5</div>
-        <p class="sec-box-text">${esc(m.eli5 || m.summary) || "No summary yet — will populate after the next scan."}</p>
-      </div>
-
       <div class="sec-sub-title">Biggest winners &amp; losers</div>
       ${moversHTML(m.top_movers)}
-
-      <div class="sec-sub-title">Biggest volume</div>
-      ${volumeHTML(m.top_volume) || '<p class="sec-muted">No volume data yet.</p>'}
-
-      <div class="sec-sub-title">Indices</div>
-      ${indicesHTML(m.indices)}
 
       <div class="sec-sub-title">Sectors — what each one is</div>
       ${sectorsHTML(m.sectors)}
@@ -227,8 +190,7 @@
       <div class="sec-upcoming"><ul class="upc-list">${upcomingHTML(m.upcoming)}</ul></div>
 
       <div class="sec-sub-title">Economic calendar</div>
-      <div class="tv-host" id="tv-calendar-${key}"></div>
-      ${newsBlock}`;
+      <div class="tv-host" id="tv-calendar-${key}"></div>`;
   }
 
   function mountWidget(hostId, src, config) {
@@ -253,13 +215,6 @@
       colorTheme: theme, isTransparent: false, locale: "en",
       countryFilter: country, importanceFilter: "0,1", width: "100%", height: "100%",
     });
-    // US only: broad top-stories feed (Fed / macro / market-sensitive), not single-symbol.
-    if (key === "us") {
-      mountWidget("tv-news-us", "https://s3.tradingview.com/external-embedding/embed-widget-timeline.js", {
-        feedMode: "all_symbols", isTransparent: false, displayMode: "regular",
-        colorTheme: theme, locale: "en", width: "100%", height: "100%",
-      });
-    }
   }
 
   // ---- live countdown ticker ---------------------------------------------
@@ -299,7 +254,7 @@
       try {
         const dt = new Date(d.generated_at);
         document.getElementById("sec-sub").textContent =
-          `Read updated ${dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}, ${dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} ${d.tz_label || ""} · calendar, news & countdown are live`;
+          `Read updated ${dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}, ${dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} ${d.tz_label || ""} · calendar & countdown are live`;
       } catch (_) {}
       render(d);
     })
@@ -308,9 +263,9 @@
       // throw above) or a bad JSON body. The copy says "connection problem"
       // for all of them rather than "no sector data yet", which told people
       // to wait for a scan that had already happened (2026-07-29). A reload
-      // retries; calendar & news are separate fetches and still load.
+      // retries; the calendar is a separate fetch and still loads.
       document.getElementById("sec-sub").textContent =
-        "Couldn't reach sector data (connection problem) — reload to retry; calendar & news still load below.";
+        "Couldn't reach sector data (connection problem) — reload to retry; the calendar still loads below.";
       render({ markets: { asx: {}, us: {} } });
     });
 })();

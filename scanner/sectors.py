@@ -106,7 +106,7 @@ def _read(label, sectors, indices):
                f"({worst['chg_pct']:+.1f}%). Tone reads "
                f"{'risk-on (cyclicals leading)' if risk_on else 'risk-off / defensive'} "
                f"— cyclicals {cyc_avg:+.1f}% vs defensives {dfn_avg:+.1f}%. "
-               "See the calendar & news below for the events behind it.")
+               "See the calendar below for the events behind it.")
     leaders = ", ".join(f"{s['symbol']} ({s['chg_pct']:+.1f}%)" for s in ranked[:3])
     laggards = ", ".join(f"{s['symbol']} ({s['chg_pct']:+.1f}%)" for s in ranked[-3:][::-1])
     rotation = (f"Money rotated INTO {leaders} and OUT OF {laggards}. "
@@ -163,8 +163,11 @@ def _split_movers(rows, market_key):
 
 
 def enrich(m, frames, universe, min_dollar_vol, market_key=None):
-    """Add stock-level depth to a market read: biggest winners/losers, a deeper
-    sector-rotation line (which stocks drove it), and an 'explain like I'm 5' note.
+    """Add stock-level depth to a market read: biggest winners/losers and a
+    deeper sector-rotation line (which stocks drove it). (The 'explain like I'm
+    5' note and the biggest-volume list were removed 2026-09-27 with their
+    boxes on the NEWS page; ``indices`` stays because ``_read`` builds the
+    "what happened" summary from it.)
 
     Computed from the scan's already-downloaded daily frames so it costs no extra
     network. ``frames`` is {yf_ticker: OHLCV DataFrame}; ``universe`` carries the
@@ -184,10 +187,6 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
                 continue
             pct = (last / prev - 1) * 100
             dvol = float((close * vol).tail(20).mean())
-            vol_today = float(vol.iloc[-1])
-            vol20 = float(vol.tail(21).iloc[:-1].mean())
-            spike = vol_today / vol20 if vol20 > 0 else 0.0
-            turnover_today = last * vol_today
         except Exception:
             continue
         # keep it to real, liquid names and drop obvious data glitches
@@ -197,20 +196,12 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
                      "sector": (u.get("sector") or "").strip(),
                      "last": round(last, 2 if last >= 1 else 4),
                      "pct": round(pct, 2),
-                     "turnover": round(turnover_today),
-                     "dvol": round(dvol),
-                     "spike": round(spike, 1)})
+                     "dvol": round(dvol)})
 
     rows.sort(key=lambda r: r["pct"], reverse=True)
     m["top_movers"] = _split_movers(rows, market_key)
     winners = m["top_movers"]["winners"]
     losers  = m["top_movers"]["losers"]
-
-    # biggest volume = most $ traded today, with how unusual that volume is (× avg)
-    by_vol = sorted(rows, key=lambda r: r["turnover"], reverse=True)[:6]
-    m["top_volume"] = [{"symbol": r["symbol"], "name": r["name"], "sector": r["sector"],
-                        "pct": r["pct"], "turnover": r["turnover"], "spike": r["spike"]}
-                       for r in by_vol]
 
     # deeper rotation: group the liquid names by GICS sector (ASX has it), find
     # the leading & lagging sector and name the actual stocks driving each.
@@ -246,28 +237,6 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
     if detail:
         m["rotation_detail"] = detail
 
-    # "Explain like I'm 5" — the same read in plain words.
-    idx = {i["symbol"]: i for i in m.get("indices", [])}
-    head = idx.get("XJO" if m.get("label") == "ASX" else "SPX")
-    if head:
-        d = head["chg_pct"]
-        dirw = "went up a bit" if d > 0.1 else "went down a bit" if d < -0.1 else "barely moved"
-        head_txt = f"The {m.get('label', 'market')} market {dirw} today ({d:+.1f}%)."
-    else:
-        head_txt = f"Here's the {m.get('label', 'market')} market in simple words."
-    secs = sorted(m.get("sectors", []), key=lambda s: s["chg_pct"], reverse=True)
-    parts = [head_txt]
-    if secs:
-        parts.append(f"{secs[0]['name']} companies did the best, and "
-                     f"{secs[-1]['name']} companies did the worst.")
-    if winners:
-        w = winners[0]
-        msg = f"The biggest winner was {w['symbol']} (up {w['pct']:.1f}%)"
-        if losers:
-            l = losers[0]
-            msg += f", and the biggest faller was {l['symbol']} (down {abs(l['pct']):.1f}%)"
-        parts.append(msg + ".")
-    m["eli5"] = " ".join(parts)
     m["enriched_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     return m
 
@@ -275,8 +244,7 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
 # Everything enrich() computes from a scan's downloaded frames. A run that did
 # not scan a market CANNOT recompute these, so it must carry the last published
 # values forward instead of publishing the market without them.
-ENRICHED_KEYS = ("top_movers", "top_volume", "rotation_detail", "eli5",
-                 "enriched_at")
+ENRICHED_KEYS = ("top_movers", "rotation_detail", "enriched_at")
 
 
 def carry_forward(sec: dict, prev: dict) -> int:
@@ -285,8 +253,8 @@ def carry_forward(sec: dict, prev: dict) -> int:
 
     fetch() rebuilds the whole dict from scratch every run, so a crypto-only run
     (crypto_bot.yml, hourly 24/7) used to publish ASX and US with these keys
-    simply GONE - the sectors page fell back to "No summary yet" and "No volume
-    data yet" until the next equity scan rebuilt them, which is most of the day.
+    simply GONE - the sectors page lost its movers and rotation detail until
+    the next equity scan rebuilt them, which is most of the day.
     Carrying the last values forward is not a fudge: outside market hours the
     previous session's movers ARE the current answer, and enriched_at rides
     along so the age is always auditable.
