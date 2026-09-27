@@ -1,0 +1,1894 @@
+{
+ "schema": 1,
+ "source": "transcribed 2026-09-26 from .github/workflows/*.yml via the session's workflow maps",
+ "jobs": {
+  "scan.yml": {
+   "display": "Scheduled scan",
+   "family": "scan",
+   "book_writer": true,
+   "scan_family": true,
+   "slots": [
+    "hourly",
+    "close",
+    "backstop",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "hourly",
+    "close",
+    "backstop"
+   ],
+   "timeout_s": 7200,
+   "gate": "scan",
+   "recheck": [
+    "close",
+    "backstop"
+   ],
+   "args": {
+    "market": {
+     "choices": [
+      "asx",
+      "nasdaq",
+      "crypto",
+      "all"
+     ],
+     "default": "all"
+    },
+    "slot": {
+     "choices": [
+      "hourly",
+      "close",
+      "backstop",
+      "manual"
+     ],
+     "default": "manual"
+    },
+    "reason": {
+     "choices": [
+      "cron",
+      "manual",
+      "heartbeat"
+     ],
+     "default_by_slot": true
+    },
+    "extra": {
+     "operator_only": true,
+     "default": "",
+     "help": "word-split onto every scanner.run call (the workflow's $ARGS)"
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Refresh market-cap cache",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.marketcaps"
+     ],
+     "continue_on_error": true
+    },
+    {
+     "kind": "cmd",
+     "name": "Refresh sector cache",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.sectorcache"
+     ],
+     "continue_on_error": true,
+     "warn_on_fail": "::warning::sector cache refresh FAILED - data/sector_map.json did not advance this run. It is a SIGNAL PATH (REFINEMENTS #38): rows with no sector are exempt from the 3-per-sector cap, so the cap binds LESS than intended until coverage refills. Check summary.sector_coverage in the scan output - expect ~1.0."
+    },
+    {
+     "kind": "markets",
+     "name": "Run market scans (small markets first, then ASX uncontended)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.run",
+      "--market",
+      "{market}",
+      "{extra}"
+     ],
+     "order_all": [
+      "nasdaq",
+      "crypto",
+      "asx"
+     ],
+     "require_ok": [
+      "asx",
+      "nasdaq"
+     ],
+     "sets_scanned": true,
+     "env_pass": [
+      "GBS_SMTP_HOST",
+      "GBS_SMTP_PORT",
+      "GBS_SMTP_USER",
+      "GBS_SMTP_PASS",
+      "GBS_ALERT_TO",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID"
+     ],
+     "env_ctx": {
+      "SCAN_TRIGGER": "scan_trigger",
+      "ARGS": "extra"
+     }
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify VIVEK data schema",
+     "argv": [
+      "python",
+      "-"
+     ],
+     "stdin": "import json, glob, os, sys\nfrom scanner import config\nwant = config.VIVEK_SCHEMA_VERSION\n# Gate ONLY the files this run rewrote (2026-07-20 fix): a partial\n# run (single-market dispatch / weekend crypto-only) used to be\n# judged on sibling files still at the PREVIOUS schema version -\n# the v3->v4 bump failed the first crypto-only run exactly this\n# way. Full cycles still verify all three.\nmarket = os.environ.get(\"SCANNED_MARKET\", \"all\")\nfiles = (sorted(glob.glob(\"public/data/*_vivek.json\")) if market == \"all\"\n         else [f\"public/data/{market}_vivek.json\"])\nbad = []\nfor f in files:\n    try:\n        doc = json.load(open(f))\n    except Exception as e:\n        bad.append(f\"{f}: unreadable ({e})\"); continue\n    if doc.get(\"schema_version\") != want:\n        bad.append(f\"{f}: schema_version {doc.get('schema_version')} != expected {want}\")\n        continue\n    # v5 PAIRING CHECK (payload diet): the detail sidecar must\n    # exist, parse, match the version AND carry the summary's\n    # generated_at - a run that pushes one file and loses the\n    # other fails HERE, not as a deck whose expand can't load.\n    det = f.replace(\"_vivek.json\", \"_vivek_detail.json\")\n    try:\n        dd = json.load(open(det))\n    except Exception as e:\n        bad.append(f\"{det}: unreadable ({e})\"); continue\n    if dd.get(\"schema_version\") != want:\n        bad.append(f\"{det}: schema_version {dd.get('schema_version')} != expected {want}\")\n    elif dd.get(\"generated_at\") != doc.get(\"generated_at\"):\n        bad.append(f\"{det}: generated_at {dd.get('generated_at')} != summary {doc.get('generated_at')}\")\nif bad:\n    print(\"SCHEMA GATE FAILED:\"); [print(\" -\", b) for b in bad]; sys.exit(1)\nprint(f\"schema gate OK - {len(files)} pair(s) at v{want} (scope: {market})\")\n",
+     "env_ctx": {
+      "SCANNED_MARKET": "scanned_market"
+     }
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify book integrity",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.broker.vivek_run",
+      "--verify"
+     ]
+    },
+    {
+     "kind": "cmd",
+     "name": "Confluence alert engine (ALERTS log + state)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.confluence_alert"
+     ],
+     "continue_on_error": true
+    },
+    {
+     "kind": "publish",
+     "name": "Commit & push fresh data"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "public/data/sectors.json",
+     "public/data/fx.json",
+     "public/data/bot_rules.json",
+     "public/data/vivek_bot_book.json",
+     "public/data/market_caps.json",
+     "public/data/sector_map.json",
+     "data/sector_map.json",
+     "data/scan_health.json",
+     "public/data/phasemap/alert_history.json",
+     "journal/vivek_bot_book.json",
+     "journal/vivek_bot_book.unassigned.json",
+     "journal/confluence_state.json",
+     "data/market_caps.json",
+     "public/data/funnel_history.json",
+     "data/history"
+    ],
+    "paths_per_market": [
+     "public/data/{m}_vivek.json",
+     "public/data/{m}_vivek_detail.json",
+     "public/data/{m}_prices.json",
+     "public/data/{m}_arriving.json",
+     "journal/vivek_bot_book.{m}.json",
+     "data/universe_cache/{m}.json"
+    ],
+    "rebuild_combined": true,
+    "message": "data: scan {utc} UTC",
+    "nothing_msg": "No data changes to commit.",
+    "must_change": {
+     "policy": "scan",
+     "skipped_warn": "::warning::{m}: no data downloaded and no cache to fall back on - scan deliberately published nothing, so {m} data is UNCHANGED from the previous run. Not a staging failure.",
+     "per_market": [
+      [
+       "scan output [{m}]",
+       "public/data/{m}_vivek.json"
+      ],
+      [
+       "bot book [{m}]",
+       "journal/vivek_bot_book.{m}.json"
+      ]
+     ],
+     "crypto_soft_warn": [
+      "::warning::crypto scan output not staged - best-effort leg of a full cycle",
+      "::warning::crypto book not staged - best-effort leg of a full cycle"
+     ],
+     "all_skipped_warn": "::warning::every market this cycle ({mk}) published nothing - the bot layer never ran, so the combined books are unchanged too. Not a staging failure.",
+     "combined": [
+      [
+       "combined book (journal)",
+       "journal/vivek_bot_book.json"
+      ],
+      [
+       "combined book (public twin)",
+       "public/data/vivek_bot_book.json"
+      ]
+     ],
+     "manual": [
+      "scan output (manual)",
+      [
+       "journal/vivek_bot_book.json"
+      ],
+      "::warning::book not staged (manual run - dry-run or test args?)"
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "actions/cache@v4 (.cache/frames, key vivek-frames-*)",
+     "the frame cache simply persists in the checkout's gitignored .cache/ directory"
+    ],
+    [
+     "gate job + needs:/if: split, $GITHUB_OUTPUT run=/market_override=",
+     "one process gates then runs; the market override travels in-process (gate.scan_gate)"
+    ],
+    [
+     ":47 backstop health probe of https://googy-boys-scanner.pages.dev/api/health",
+     "replaced by the close-slot rule on the LOCAL public/data/<market>_prices.json generated_at (post-close stamp), fail-open"
+    ],
+    [
+     "echo SCANNED_MARKET >> $GITHUB_ENV",
+     "carried in-process to the schema gate and the publish step"
+    ],
+    [
+     "(DISABLED) Update paper-trade journal",
+     "commented out in the YAML; never a live step"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "crypto_bot.yml": {
+   "display": "Crypto bot (24/7 paper)",
+   "family": "scan",
+   "book_writer": true,
+   "scan_family": true,
+   "slots": [
+    "hourly",
+    "backstop",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "hourly",
+    "backstop"
+   ],
+   "timeout_s": 2700,
+   "gate": "crypto",
+   "args": {
+    "slot": {
+     "choices": [
+      "hourly",
+      "backstop",
+      "manual"
+     ],
+     "default": "manual"
+    },
+    "reason": {
+     "choices": [
+      "cron",
+      "manual"
+     ],
+     "default_by_slot": true
+    },
+    "extra": {
+     "operator_only": true,
+     "default": ""
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Run crypto scan + paper bot",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.run",
+      "--market",
+      "crypto",
+      "{extra}"
+     ],
+     "env_pass": [
+      "GBS_SMTP_HOST",
+      "GBS_SMTP_PORT",
+      "GBS_SMTP_USER",
+      "GBS_SMTP_PASS",
+      "GBS_ALERT_TO",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID"
+     ],
+     "env_ctx": {
+      "SCAN_TRIGGER": "scan_trigger",
+      "ARGS": "extra"
+     }
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify VIVEK data schema (crypto)",
+     "argv": [
+      "python",
+      "-"
+     ],
+     "stdin": "import json, sys\nfrom scanner import config\nwant = config.VIVEK_SCHEMA_VERSION\nf = \"public/data/crypto_vivek.json\"\ndoc = json.load(open(f))\nif doc.get(\"schema_version\") != want:\n    print(f\"SCHEMA GATE FAILED: {f}: schema_version {doc.get('schema_version')} != expected {want}\"); sys.exit(1)\n# v5 PAIRING CHECK (payload diet): the detail sidecar must exist,\n# parse, match the version AND carry the summary's generated_at -\n# a run that pushes one file and loses the other fails HERE, not\n# as a deck whose row-expand can never load.\ndet = f.replace(\"_vivek.json\", \"_vivek_detail.json\")\ntry:\n    dd = json.load(open(det))\nexcept Exception as e:\n    print(f\"SCHEMA GATE FAILED: {det}: unreadable ({e})\"); sys.exit(1)\nif dd.get(\"schema_version\") != want:\n    print(f\"SCHEMA GATE FAILED: {det}: schema_version {dd.get('schema_version')} != expected {want}\"); sys.exit(1)\nif dd.get(\"generated_at\") != doc.get(\"generated_at\"):\n    print(f\"SCHEMA GATE FAILED: {det}: generated_at {dd.get('generated_at')} != summary {doc.get('generated_at')}\"); sys.exit(1)\nprint(f\"schema gate OK - {f} + detail sidecar paired at v{want}\")\n"
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify book integrity",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.broker.vivek_run",
+      "--verify"
+     ]
+    },
+    {
+     "kind": "publish",
+     "name": "Commit & push fresh data"
+    },
+    {
+     "kind": "cmd",
+     "name": "Freshness watchdog",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.watchdog"
+     ],
+     "env_pass": [
+      "GBS_SMTP_HOST",
+      "GBS_SMTP_PORT",
+      "GBS_SMTP_USER",
+      "GBS_SMTP_PASS",
+      "GBS_ALERT_TO",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID"
+     ],
+     "env_set": {
+      "WATCHDOG_HOST": "crypto_bot"
+     }
+    }
+   ],
+   "publish": {
+    "paths": [
+     "public/data/crypto_vivek.json",
+     "public/data/crypto_vivek_detail.json",
+     "public/data/crypto_prices.json",
+     "public/data/sectors.json",
+     "public/data/fx.json",
+     "public/data/bot_rules.json",
+     "public/data/vivek_bot_book.json",
+     "journal/vivek_bot_book.json",
+     "journal/vivek_bot_book.crypto.json",
+     "journal/vivek_bot_book.unassigned.json",
+     "data/universe_cache/crypto.json",
+     "data/scan_health.json",
+     "public/data/funnel_history.json"
+    ],
+    "rebuild_combined": true,
+    "message": "data: crypto bot {utc} UTC",
+    "nothing_msg": "No data changes to commit.",
+    "must_change": {
+     "policy": "event_branch",
+     "scheduled": [
+      "crypto output",
+      [
+       "journal/vivek_bot_book.json"
+      ]
+     ],
+     "manual": [
+      "crypto output (manual)",
+      [
+       "journal/vivek_bot_book.json"
+      ],
+      "::warning::book not staged (manual run - dry-run or test args?)"
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "actions/cache@v4 (.cache/frames) and (.cache/watchdog_state.json)",
+     "both files persist in the checkout's gitignored .cache/; one box, one file, no cache dance"
+    ],
+    [
+     "gate job :52 probe of https://googy-boys-scanner.pages.dev/data/crypto_vivek.json",
+     "gate.crypto_gate reads the LOCAL public/data/crypto_vivek.json with the same 3900 s rule and the same fail-open"
+    ],
+    [
+     "GITHUB_TOKEN for the watchdog's api.github.com run-history probes",
+     "the watchdog's ledger mode (VIVEK_RUNS_LEDGER, C4) replaces the Actions API"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "kill_switch.yml": {
+   "display": "Kill switch (loss guard)",
+   "family": null,
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 900,
+   "gate": null,
+   "args": {
+    "dry_run": {
+     "operator_only": true,
+     "choices": [
+      "true",
+      "false"
+     ],
+     "default": "false",
+     "help": "the timer is ARMED (no flag); only an explicit dry_run=true adds --dry-run"
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Run kill-switch check",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.broker.kill_switch",
+      "{dry_run_flag}"
+     ],
+     "env_pass": [
+      "BYBIT_API_KEY",
+      "BYBIT_API_SECRET",
+      "BYBIT_TESTNET",
+      "ALPACA_API_KEY",
+      "ALPACA_SECRET_KEY",
+      "GBS_SMTP_HOST",
+      "GBS_SMTP_PORT",
+      "GBS_SMTP_USER",
+      "GBS_SMTP_PASS",
+      "GBS_ALERT_TO",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID"
+     ]
+    },
+    {
+     "kind": "cmd",
+     "name": "Freshness watchdog",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.watchdog"
+     ],
+     "env_pass": [
+      "GBS_SMTP_HOST",
+      "GBS_SMTP_PORT",
+      "GBS_SMTP_USER",
+      "GBS_SMTP_PASS",
+      "GBS_ALERT_TO",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID"
+     ],
+     "env_set": {
+      "WATCHDOG_HOST": "kill_switch"
+     }
+    }
+   ],
+   "publish": null,
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "actions/cache@v4 (.cache/watchdog_state.json)",
+     "persists in the checkout's .cache/"
+    ],
+    [
+     "GITHUB_TOKEN for the watchdog",
+     "ledger mode replaces the Actions API"
+    ],
+    [
+     "workflow_dispatch input dry_run default \"true\"",
+     "the CLI default is ARMED like the schedule; an operator passes dry_run=true explicitly"
+    ]
+   ]
+  },
+  "phasemap.yml": {
+   "display": "PhaseMap + Specs (nightly)",
+   "family": "heavy",
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 7200,
+   "gate": null,
+   "args": {
+    "market": {
+     "choices": [
+      "all",
+      "asx",
+      "nasdaq",
+      "crypto"
+     ],
+     "default": "all"
+    },
+    "reason": {
+     "choices": [
+      "cron",
+      "manual"
+     ],
+     "default": "cron"
+    },
+    "args": {
+     "operator_only": true,
+     "default": "",
+     "help": "word-split onto every phasemap.run call"
+    }
+   },
+   "steps": [
+    {
+     "kind": "markets",
+     "name": "Run PhaseMap scans",
+     "argv": [
+      "python",
+      "-m",
+      "phasemap.run",
+      "--market",
+      "{market}",
+      "{args}"
+     ],
+     "order_all": [
+      "nasdaq",
+      "crypto",
+      "asx"
+     ],
+     "parallel": [
+      "nasdaq",
+      "crypto"
+     ],
+     "require_ok": [
+      "asx",
+      "nasdaq"
+     ],
+     "market_arg": "market"
+    },
+    {
+     "kind": "cmd",
+     "name": "Run Specs scan",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.spec_run",
+      "--market",
+      "all"
+     ],
+     "continue_on_error": true,
+     "sets_flag": "specs_ok",
+     "warn_on_fail": "::warning::Specs scan FAILED - public/data/{asx,nasdaq}_spec.json are STALE. scanner/confluence_alert.py reads them with no freshness check, so tonight's confluence banners and @here pings may count a Specs leg that is days old. PhaseMap published normally."
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify PhaseMap snapshots",
+     "argv": [
+      "python",
+      "-"
+     ],
+     "stdin": "import json, glob, os, sys\nfrom phasemap.config import RULESET_VERSION\nfrom phasemap.output.writer import validate_published\nfiles = glob.glob(\"public/data/phasemap/*/latest.json\")\nif not files:\n    print(\"SCHEMA GATE FAILED: no snapshots written\"); sys.exit(1)\nbad = []\nfor f in files:\n    try:\n        slim = json.load(open(f, encoding=\"utf-8\"))\n        nf = os.path.join(os.path.dirname(f), \"narrations.json\")\n        narr = json.load(open(nf, encoding=\"utf-8\")) if os.path.exists(nf) else None\n        validate_published(slim, narr)\n        if slim[\"ruleset_version\"] != RULESET_VERSION:\n            bad.append(f\"{f}: ruleset {slim['ruleset_version']} != {RULESET_VERSION}\")\n    except Exception as e:\n        bad.append(f\"{f}: {e}\")\nif bad:\n    print(\"SCHEMA GATE FAILED:\"); [print(\" -\", b) for b in bad]; sys.exit(1)\nprint(f\"schema gate OK - {len(files)} published snapshots at ruleset v{RULESET_VERSION}\")\n"
+    },
+    {
+     "kind": "publish",
+     "name": "Commit & push fresh data"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "public/data/phasemap/asx",
+     "public/data/phasemap/nasdaq",
+     "public/data/phasemap/crypto",
+     "public/data/phasemap/charts",
+     "public/data/asx_spec.json",
+     "public/data/nasdaq_spec.json",
+     "public/data/spec_charts",
+     "public/data/spec_graduation.json"
+    ],
+    "rebuild_combined": false,
+    "message": "data: phasemap {utc} UTC",
+    "nothing_msg": "No data changes to commit.",
+    "must_change": {
+     "policy": "collect",
+     "scheduled": [
+      [
+       "phasemap asx",
+       [
+        "public/data/phasemap/asx/latest.json"
+       ]
+      ],
+      [
+       "phasemap nasdaq",
+       [
+        "public/data/phasemap/nasdaq/latest.json"
+       ]
+      ],
+      [
+       "phasemap crypto",
+       [
+        "public/data/phasemap/crypto/latest.json"
+       ]
+      ]
+     ],
+     "scheduled_if_flag": {
+      "flag": "specs_ok",
+      "checks": [
+       [
+        "specs asx",
+        [
+         "public/data/asx_spec.json"
+        ]
+       ],
+       [
+        "specs nasdaq",
+        [
+         "public/data/nasdaq_spec.json"
+        ]
+       ]
+      ],
+      "else_warn": "::warning::Specs reported failure - skipping its must-change gate. The spec files on the site are last night's or older, and confluence_alert reads them with no freshness check."
+     },
+     "manual": [
+      "phasemap (manual)",
+      [
+       "public/data/phasemap/asx/latest.json",
+       "public/data/phasemap/nasdaq/latest.json",
+       "public/data/phasemap/crypto/latest.json"
+      ],
+      "::warning::no latest.json staged (manual run)"
+     ],
+     "tripped_error": "::error::a must-change gate tripped (see ASSERT-STAGED above) - the healthy markets were committed, this run is red for the starved one"
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "echo ok=true|false >> $GITHUB_OUTPUT (specs step) -> SPECS_OK env",
+     "the specs outcome travels in-process (ctx flag specs_ok)"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "confluence.yml": {
+   "display": "Confluence alert (post-nightly)",
+   "family": "scan",
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 600,
+   "gate": null,
+   "args": {
+    "reason": {
+     "choices": [
+      "cron",
+      "manual"
+     ],
+     "default": "cron"
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Confluence alert engine (ALERTS log + state)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.confluence_alert"
+     ]
+    },
+    {
+     "kind": "publish",
+     "name": "Commit state (surgical - the two confluence files only)"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "journal/confluence_state.json",
+     "public/data/phasemap/alert_history.json"
+    ],
+    "rebuild_combined": false,
+    "message": "data: confluence {utc} UTC",
+    "nothing_msg": "No state changes to commit.",
+    "must_change": {
+     "policy": "none",
+     "note": "deliberately NO assert_staged (test-pinned in the YAML): a quiet night is the normal outcome; the YAML's inverse gate (changed-but-unstaged = error) cannot arise in the publish clone because every existing listed path is copied in and staged"
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "if ! git diff --quiet -- $PATHS ... exit 1 (changed but did not stage)",
+     "structurally impossible in the publish clone: every listed path that exists in the working checkout is copied and staged"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "reco_note.yml": {
+   "display": "Recommendations note (daily auto)",
+   "family": null,
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 600,
+   "gate": null,
+   "args": {},
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Generate the daily note",
+     "argv": [
+      "python3",
+      "scripts/reco_note.py"
+     ],
+     "capture": "reco"
+    },
+    {
+     "kind": "publish",
+     "name": "Commit & push (surgical - the note file only)"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "public/data/reco_note.json"
+    ],
+    "rebuild_combined": false,
+    "message": "data: recommendations note {date}",
+    "nothing_msg": "Nothing new vs main.",
+    "must_change": {
+     "policy": "sentinel_then_hard",
+     "sentinels": [
+      [
+       "reco",
+       "RECO_NOTE_UNCHANGED"
+      ]
+     ],
+     "sentinel_msg": "Hand-written Claude note for today stands - nothing to commit.",
+     "hard": [
+      [
+       "reco note",
+       [
+        "public/data/reco_note.json"
+       ]
+      ]
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "/tmp/reco_out.txt tee capture",
+     "the runner captures the step's stdout+stderr in-process for the sentinel grep"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "backup_book.yml": {
+   "display": "Backup book (nightly snapshot)",
+   "family": null,
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "primary",
+    "backstop",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "primary",
+    "backstop"
+   ],
+   "timeout_s": 600,
+   "gate": "backup",
+   "gate_mode": "steps",
+   "args": {
+    "slot": {
+     "choices": [
+      "primary",
+      "backstop",
+      "manual"
+     ],
+     "default": "manual"
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Create timestamped backup",
+     "argv": [
+      "python3",
+      "scripts/backup_journal.py",
+      "backup"
+     ],
+     "gated": true
+    },
+    {
+     "kind": "offbox_copy",
+     "name": "Off-box copy (VIVEK_BACKUP_TARGET, replaces the run artifact)",
+     "gated": true
+    },
+    {
+     "kind": "publish",
+     "name": "Commit backup (surgical - only the new backups/ dir)",
+     "gated": true
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify the snapshot contains the track record",
+     "argv": [
+      "python3",
+      "scripts/backup_journal.py",
+      "verify"
+     ]
+    }
+   ],
+   "publish": {
+    "paths": [
+     "backups"
+    ],
+    "rebuild_combined": false,
+    "message": "backup: journal state {utc} UTC",
+    "nothing_msg": "Nothing to back up.",
+    "must_change": {
+     "policy": "hard",
+     "hard": [
+      [
+       "book backup",
+       [
+        "backups"
+       ]
+      ]
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/upload-artifact@v4 book-backups-<run_id> (90-day off-tree copy)",
+     "no Actions artifact store on the box; the optional VIVEK_BACKUP_TARGET step copies backups/ off-box and FAILS the job when the copy fails (DESIGN 3.8)"
+    ],
+    [
+     "gate step echo run=... >> $GITHUB_OUTPUT",
+     "gate.backup_gate answers the same ls-backups question in-process; verify still runs on a skipped backstop"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "alert_returns.yml": {
+   "display": "Alert forward returns (edge pipeline)",
+   "family": "heavy",
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "primary",
+    "backstop",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "primary",
+    "backstop"
+   ],
+   "timeout_s": 1200,
+   "gate": "ledger_today",
+   "args": {
+    "slot": {
+     "choices": [
+      "primary",
+      "backstop",
+      "manual"
+     ],
+     "default": "manual"
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Ingest + stamp forward returns",
+     "argv": [
+      "python",
+      "scripts/alert_returns.py"
+     ],
+     "capture": "ar"
+    },
+    {
+     "kind": "cmd",
+     "name": "Build the A+ roster baseline",
+     "argv": [
+      "python",
+      "scripts/edge_rosters.py"
+     ],
+     "capture": "er"
+    },
+    {
+     "kind": "cmd",
+     "name": "Book stress report",
+     "argv": [
+      "python",
+      "scripts/book_stress.py"
+     ],
+     "capture": "bs"
+    },
+    {
+     "kind": "cmd",
+     "name": "Edge report to step summary",
+     "argv": [
+      "python",
+      "scripts/alert_edge_report.py"
+     ],
+     "capture": "report",
+     "to_summary": true
+    },
+    {
+     "kind": "cmd",
+     "name": "Edge summary artefact",
+     "argv": [
+      "python",
+      "scripts/edge_summary.py"
+     ],
+     "capture": "es"
+    },
+    {
+     "kind": "publish",
+     "name": "Commit & push (surgical - the edge artefacts only)"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "data/alert_forward_returns.json",
+     "data/edge_rosters.json",
+     "public/data/book_stress.json",
+     "public/data/edge_summary.json"
+    ],
+    "required_paths": [
+     "data/alert_forward_returns.json"
+    ],
+    "rebuild_combined": false,
+    "message": "data: edge ledgers {date}",
+    "nothing_msg": "Nothing new vs main.",
+    "must_change": {
+     "policy": "sentinels_all_then_anyof",
+     "sentinels": [
+      [
+       "ar",
+       "ALERT_RETURNS_UNCHANGED"
+      ],
+      [
+       "er",
+       "EDGE_ROSTERS_UNCHANGED"
+      ],
+      [
+       "bs",
+       "BOOK_STRESS_UNCHANGED"
+      ],
+      [
+       "es",
+       "EDGE_SUMMARY_UNCHANGED"
+      ]
+     ],
+     "sentinel_msg": "Nothing new in any artefact - nothing to commit.",
+     "hard": [
+      [
+       "edge ledgers",
+       [
+        "data/alert_forward_returns.json",
+        "data/edge_rosters.json",
+        "public/data/book_stress.json",
+        "public/data/edge_summary.json"
+       ]
+      ]
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "Backstop freshness gate: curl api.github.com .../runs?event=schedule&status=success&created=>=today",
+     "gate.ledger_today_gate asks the local ledger for a scheduled success today (fail-open)"
+    ],
+    [
+     "/tmp/*_out.txt tee captures",
+     "captured in-process for the four-sentinel AND rule"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "evidence_brief.yml": {
+   "display": "Evidence brief (morning)",
+   "family": null,
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 600,
+   "gate": null,
+   "args": {},
+   "steps": [
+    {
+     "kind": "brief",
+     "name": "Build the brief",
+     "argv": [
+      "python",
+      "scripts/evidence_brief.py"
+     ],
+     "ok_exit_codes": [
+      0,
+      1
+     ],
+     "crash_error": "::error::evidence_brief.py crashed (rc={rc})"
+    }
+   ],
+   "publish": null,
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "brief.txt / brief.err written into CWD",
+     "written under state/summaries/ so the checkout never gains untracked stragglers"
+    ],
+    [
+     "$GITHUB_STEP_SUMMARY delivery",
+     "the brief goes to the per-run summary file and the journal (no other reader exists on the box)"
+    ]
+   ]
+  },
+  "lens_backtest.yml": {
+   "display": "Lens backtests (weekly)",
+   "family": "heavy",
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 21000,
+   "gate": null,
+   "args": {
+    "vivek_limit": {
+     "default": "60"
+    },
+    "vivek_period": {
+     "default": "5y"
+    }
+   },
+   "steps": [
+    {
+     "kind": "group",
+     "name": "PhaseMap backtests (5y, all markets)",
+     "cmds": [
+      {
+       "tag": "nasdaq",
+       "argv": [
+        "python",
+        "-m",
+        "phasemap.backtest",
+        "--market",
+        "nasdaq",
+        "--period",
+        "5y",
+        "--write-stats"
+       ]
+      },
+      {
+       "tag": "crypto",
+       "argv": [
+        "python",
+        "-m",
+        "phasemap.backtest",
+        "--market",
+        "crypto",
+        "--period",
+        "5y",
+        "--write-stats"
+       ]
+      },
+      {
+       "tag": "asx",
+       "argv": [
+        "python",
+        "-m",
+        "phasemap.backtest",
+        "--market",
+        "asx",
+        "--period",
+        "5y",
+        "--write-stats"
+       ]
+      }
+     ],
+     "require_ok": [
+      "asx",
+      "nasdaq"
+     ]
+    },
+    {
+     "kind": "group",
+     "name": "Specs backtests (5y, ASX + NASDAQ)",
+     "cmds": [
+      {
+       "tag": "asx",
+       "argv": [
+        "python",
+        "-m",
+        "scanner.spec_backtest",
+        "--market",
+        "asx",
+        "--period",
+        "5y"
+       ]
+      },
+      {
+       "tag": "nasdaq",
+       "argv": [
+        "python",
+        "-m",
+        "scanner.spec_backtest",
+        "--market",
+        "nasdaq",
+        "--period",
+        "5y"
+       ]
+      }
+     ],
+     "ignore_rc": true,
+     "continue_on_error": true
+    },
+    {
+     "kind": "cmd",
+     "name": "VIVEK walk-forward backtest (all markets)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.vivek_backtest",
+      "--market",
+      "all",
+      "--limit",
+      "{vivek_limit}",
+      "--period",
+      "{vivek_period}"
+     ],
+     "continue_on_error": true
+    },
+    {
+     "kind": "publish",
+     "name": "Commit & push refreshed proof records"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "phasemap/backtest/reports",
+     "phasemap/backtest/stats",
+     "public/data/phasemap/stats",
+     "public/data/vivek_backtest.json"
+    ],
+    "rebuild_combined": false,
+    "message": "data: weekly lens backtests {date}",
+    "nothing_msg": "No changes to commit.",
+    "must_change": {
+     "policy": "none",
+     "note": "no assert_staged in the YAML: an empty index is a green no-op"
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "vivek_backtest.yml": {
+   "display": "VIVEK long-only backtest (monthly)",
+   "family": "heavy",
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 5400,
+   "gate": null,
+   "args": {
+    "limit": {
+     "default": "60"
+    },
+    "period": {
+     "default": "10y"
+    }
+   },
+   "steps": [
+    {
+     "kind": "cmd",
+     "name": "Stream backtest: nasdaq (partial)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.vivek_backtest",
+      "--market",
+      "nasdaq",
+      "--limit",
+      "{limit}",
+      "--period",
+      "{period}",
+      "--long-only",
+      "--out",
+      "public/data/vivek_backtest_longonly.json",
+      "--merge",
+      "--status",
+      "partial"
+     ]
+    },
+    {
+     "kind": "publish",
+     "name": "commit_push nasdaq",
+     "leg": "nasdaq"
+    },
+    {
+     "kind": "cmd",
+     "name": "Stream backtest: asx (partial)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.vivek_backtest",
+      "--market",
+      "asx",
+      "--limit",
+      "{limit}",
+      "--period",
+      "{period}",
+      "--long-only",
+      "--out",
+      "public/data/vivek_backtest_longonly.json",
+      "--merge",
+      "--status",
+      "partial"
+     ]
+    },
+    {
+     "kind": "publish",
+     "name": "commit_push asx",
+     "leg": "asx"
+    },
+    {
+     "kind": "cmd",
+     "name": "Stream backtest: crypto (complete)",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.vivek_backtest",
+      "--market",
+      "crypto",
+      "--limit",
+      "{limit}",
+      "--period",
+      "{period}",
+      "--long-only",
+      "--out",
+      "public/data/vivek_backtest_longonly.json",
+      "--merge",
+      "--status",
+      "complete"
+     ]
+    },
+    {
+     "kind": "publish",
+     "name": "commit_push crypto",
+     "leg": "crypto"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "public/data/vivek_backtest_longonly.json"
+    ],
+    "rebuild_combined": false,
+    "message": "data: VIVEK backtest (long-only) [{leg}] {utc} UTC",
+    "nothing_msg": "no change",
+    "must_change": {
+     "policy": "none",
+     "note": "commit_push treats an empty index as 'no change' (green); a failed push aborts the remaining markets"
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "morning_plays.yml": {
+   "display": "Morning plays (Discord)",
+   "family": null,
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "asx",
+    "us",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "asx",
+    "us"
+   ],
+   "timeout_s": 600,
+   "gate": null,
+   "args": {
+    "slot": {
+     "choices": [
+      "asx",
+      "us",
+      ""
+     ],
+     "default": ""
+    },
+    "redeliver": {
+     "choices": [
+      "true",
+      "false"
+     ],
+     "default": "false"
+    },
+    "force": {
+     "operator_only": true,
+     "choices": [
+      "true",
+      "false"
+     ],
+     "default": "true",
+     "help": "only when slot is blank: send ALL markets now (writes no state)"
+    },
+    "dry_run": {
+     "operator_only": true,
+     "choices": [
+      "true",
+      "false"
+     ],
+     "default": "false"
+    }
+   },
+   "steps": [
+    {
+     "kind": "morning_plays",
+     "name": "Post the morning digest",
+     "argv": [
+      "python3",
+      "scripts/morning_plays.py"
+     ],
+     "env_pass": [
+      "DISCORD_MORNING_WEBHOOK_URL"
+     ],
+     "noop_msg": "morning_plays: dispatch with no slot and force=false - nothing to do."
+    },
+    {
+     "kind": "spool_momentum",
+     "name": "Chain momentum (workflow_run equivalent)",
+     "always": true
+    }
+   ],
+   "publish": null,
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "actions/cache@v4 (.cache/morning_plays_sent.json)",
+     "persists in the checkout's .cache/"
+    ],
+    [
+     "EVENT/FORCE/SLOT_INPUT/REDELIVER/SCHEDULE env indirection",
+     "folded into explicit job args slot/redeliver/force/dry_run; the timer passes slot=asx|us"
+    ],
+    [
+     "Step summary (/tmp/mp.txt)",
+     "the script's output reaches the journal directly"
+    ]
+   ]
+  },
+  "momentum.yml": {
+   "display": "Momentum lens",
+   "family": "heavy",
+   "book_writer": false,
+   "scan_family": false,
+   "slots": [
+    "scheduled",
+    "manual"
+   ],
+   "scheduled_slots": [
+    "scheduled"
+   ],
+   "timeout_s": 5400,
+   "gate": "momentum",
+   "args": {
+    "market": {
+     "choices": [
+      "asx",
+      "nasdaq",
+      "crypto",
+      ""
+     ],
+     "default": "",
+     "help": "manual dispatch: screen this market with NO due check; blank = momentum_due decides"
+    },
+    "mode": {
+     "operator_only": true,
+     "choices": [
+      "A",
+      "B",
+      "C",
+      ""
+     ],
+     "default": ""
+    },
+    "window": {
+     "operator_only": true,
+     "default": ""
+    },
+    "dry_run": {
+     "operator_only": true,
+     "choices": [
+      "true",
+      "false"
+     ],
+     "default": "false"
+    },
+    "backtest": {
+     "operator_only": true,
+     "choices": [
+      "true",
+      "false"
+     ],
+     "default": "false"
+    }
+   },
+   "steps": [
+    {
+     "kind": "momentum_screen",
+     "name": "Screen the market",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.momentum.run",
+      "--market",
+      "{market}"
+     ],
+     "nodata_warn": "::warning::momentum {market} published nothing - the download came back empty and the previous file was kept. This is a REPORTED DECISION, not a fault; the watchdog for it is the next run.",
+     "fail_error": "::error::momentum {market} failed with exit {rc}"
+    },
+    {
+     "kind": "publish",
+     "name": "Commit and push",
+     "when": "momentum_published"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "public/data/momentum/{file}"
+    ],
+    "rebuild_combined": false,
+    "message": "data: momentum {file_stem} {utc} UTC",
+    "nothing_msg": "No data changes to commit.",
+    "must_change": {
+     "policy": "hard",
+     "hard": [
+      [
+       "momentum {market}",
+       [
+        "public/data/momentum/{file}"
+       ]
+      ]
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "actions/cache@v4 (.cache/frames, key momentum-frames-*)",
+     "the momentum-<market>.pkl.gz files share the checkout's .cache/frames with the scan's <market>.pkl.gz (distinct names)"
+    ],
+    [
+     "workflow_run on 'Morning plays (Discord)'",
+     "the morning_plays job spools a momentum dispatch at its end (spool.write_spool)"
+    ],
+    [
+     "$RUNNER_TEMP/momentum-on-main",
+     "a temp dir under state/tmp"
+    ],
+    [
+     "steps.due/steps.scan outputs (market/file/published)",
+     "carried in-process"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "push retry loop: git fetch / git reset --hard origin/main / re-checkout $SHA / git add -A",
+     "reproduced SEMANTICALLY by publish.py in the dedicated publish clone (D6): this run's listed paths win, siblings' newer copies are kept, one pathspec per add, never in the working checkout"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  },
+  "close_position.yml": {
+   "display": "Close position (manual)",
+   "family": "scan",
+   "book_writer": true,
+   "scan_family": false,
+   "slots": [
+    "manual"
+   ],
+   "scheduled_slots": [],
+   "timeout_s": 1200,
+   "gate": null,
+   "args": {
+    "symbol": {
+     "required": true,
+     "pattern": "^[A-Z0-9.\\-]{1,15}(\\+[0-9]+)?$",
+     "upper": true,
+     "help": "a batch dispatch carries close.js display form SYM+N"
+    },
+    "direction": {
+     "choices": [
+      "long",
+      "short"
+     ],
+     "default": "long"
+    },
+    "market": {
+     "choices": [
+      "asx",
+      "nasdaq",
+      "crypto",
+      "scalp",
+      ""
+     ],
+     "default": ""
+    },
+    "price": {
+     "required": true,
+     "positive_number": true
+    },
+    "exit_date": {
+     "default": "",
+     "pattern": "^(\\d{4}-\\d{2}-\\d{2})?$"
+    },
+    "journal_type": {
+     "choices": [
+      "bot",
+      "swing",
+      "scalp"
+     ],
+     "default": "bot"
+    },
+    "batch": {
+     "default": "",
+     "help": "JSON array text of {symbol, market, direction, price}; reaches the CLI as env VIVEK_CLOSE_BATCH, never argv"
+    }
+   },
+   "steps": [
+    {
+     "kind": "close",
+     "name": "Close position in journal"
+    },
+    {
+     "kind": "cmd",
+     "name": "Verify book integrity",
+     "argv": [
+      "python",
+      "-m",
+      "scanner.broker.vivek_run",
+      "--verify"
+     ]
+    },
+    {
+     "kind": "publish",
+     "name": "Commit updated journal"
+    }
+   ],
+   "publish": {
+    "paths": [
+     "journal/vivek_bot_book.json",
+     "journal/vivek_bot_book.asx.json",
+     "journal/vivek_bot_book.nasdaq.json",
+     "journal/vivek_bot_book.crypto.json",
+     "journal/vivek_bot_book.unassigned.json",
+     "public/data/vivek_bot_book.json",
+     "journal/journal.json",
+     "journal/scalp_journal.json",
+     "public/data/journal.json",
+     "public/data/scalp_journal.json"
+    ],
+    "rebuild_combined": "bot_only",
+    "message": "journal: manual close {roster}",
+    "nothing_msg": "Nothing to commit (position not found or already closed).",
+    "must_change": {
+     "policy": "close",
+     "bot": [
+      "bot close",
+      [
+       "journal/vivek_bot_book.asx.json",
+       "journal/vivek_bot_book.nasdaq.json",
+       "journal/vivek_bot_book.crypto.json",
+       "journal/vivek_bot_book.json"
+      ]
+     ]
+    }
+   },
+   "dropped": [
+    [
+     "actions/checkout@v4",
+     "Actions-only: the VPS runs in the persistent working checkout /opt/vivek5/app"
+    ],
+    [
+     "actions/setup-python@v5",
+     "Actions-only: the venv at VIVEK_VENV is python 3.12 with requirements.txt pinned"
+    ],
+    [
+     "pip install -r requirements.txt",
+     "Actions-only: installed once by install.sh; update.sh re-installs when requirements.txt changes"
+    ],
+    [
+     "redispatch job (gh run view/list, gh workflow run, attempt cap 3)",
+     "a flock BLOCKS instead of evicting, so a queued close cannot be cancelled; push exhaustion is a loud ledger 'failed' instead of a re-dispatch"
+    ],
+    [
+     "echo push_exhausted=true >> $GITHUB_OUTPUT",
+     "the ledger row records the failure"
+    ],
+    [
+     "git pull --rebase / --rebuild-combined / git commit --amend loop",
+     "publish.py rebuilds the combined book inside the publish clone after integrating origin/main, then commits once"
+    ],
+    [
+     "git config user.name/user.email github-actions[bot]",
+     "the VPS commits under GIT_AUTHOR_NAME/EMAIL (config.VPS_GIT_AUTHOR_*); the bot identity is the second-writer signature"
+    ],
+    [
+     "::warning:: / ::error:: annotations and $GITHUB_STEP_SUMMARY plumbing",
+     "journald sees the same text as plain lines; GITHUB_STEP_SUMMARY is a per-run file under state/summaries/"
+    ]
+   ]
+  }
+ }
+}

@@ -302,7 +302,13 @@ def test_there_is_DELIBERATELY_no_watchdog_entry():
     "WARNING"}` beside phasemap's and DELETE THIS TEST in the same commit.
     """
     cfg = (ROOT / "scanner" / "config.py").read_text(encoding="utf-8")
-    assert '"momentum.yml"' not in cfg, (
+    # The pin is scoped to the WATCHDOG_RUNS block itself (2026-09-27): the
+    # workflow's name legitimately appears elsewhere in config.py now -- the
+    # VPS cutover list (VPS_WORKFLOWS_TO_DISABLE) names every scheduled
+    # workflow, and a cutover list is not a watchdog entry.
+    m = re.search(r"^WATCHDOG_RUNS = \{.*?^\}", cfg, re.S | re.M)
+    assert m, "WATCHDOG_RUNS block not found in scanner/config.py"
+    assert '"momentum.yml"' not in m.group(0), (
         "a WATCHDOG_RUNS entry now exists - that is a fine change, but this "
         "test records its previous absence as deliberate and should be "
         "deleted in the same commit")

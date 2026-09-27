@@ -1,0 +1,20 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0 dispatch spool watcher (DESIGN 3.5)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+
+[Path]
+# DESIGN 3.5 says DirectoryNotEmpty=, but systemd counts the spool's own
+# `done/` and `failed/` sub-directories as entries (dir_is_empty ignores only
+# dot-files), so that trigger would be permanently true and the drainer would
+# spin. A glob on the dispatch files themselves is the same event without the
+# loop: the adapter's `.tmp/` partials and the `done/`/`failed/` moves never
+# match, a file the runner renamed to `.stuck` stops matching, and a file that
+# arrives while a drain is running re-triggers the moment that drain exits.
+PathExistsGlob=/opt/vivek5/state/spool/*.json
+Unit=vivek5-spool.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,35 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+
+[Unit]
+Description=Vivek 5.0 daily auto-written commentary (reco_note.yml)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+After=network-online.target
+Wants=network-online.target
+# A failed run is a FINDING, never silence: the hook runs
+# `python -m scanner.vps notify-failure <this unit>` (DESIGN D8).
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=oneshot
+User=vivek5
+WorkingDirectory=/opt/vivek5/app
+# NO leading '-': a missing env file must fail the unit, not run the
+# kill switch with no alert secrets (kill_switch.yml's 2026-07-28 lesson).
+EnvironmentFile=/etc/vivek5/jobs.env
+ExecStart=/opt/vivek5/app/deploy/bin/job.sh reco_note.yml
+# 10 min = the workflow's timeout-minutes, PLUS the 'default' lock
+# family's wait budget (10 min, config.VPS_LOCK_WAIT_S): the runner queues
+# on the book/heavy lock instead of being evicted like an Actions run, and
+# that wait must not count against the job's own hang detector.
+TimeoutStartSec=20min
+KillMode=mixed
+# journald must not drop lines from a 2,000-ticker burst.
+LogRateLimitIntervalSec=0
+# Hardening (DESIGN section 4): the job may write only its three trees.
+ProtectSystem=strict
+ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

@@ -1,0 +1,68 @@
+# Vivek 5.0 -- Caddyfile PHASE 2 (deploy/DESIGN.md 6).
+#
+# The box serves the whole site: static files from the working checkout's
+# public/ with the SAME header rules as public/_headers, and every Pages
+# Function through the Node adapter on loopback. Cloudflare Pages may stay up
+# as a mirror; DNS decides which origin visitors reach.
+#
+# Requires Caddy >= 2.8 (`basic_auth` and `handle_errors <status>` are 2.8
+# directives -- D9; Ubuntu's apt caddy 2.6.2 rejects this file). Environment
+# placeholders come from /etc/caddy/vivek5.env (install.sh writes the
+# template, the caddy.service drop-in loads it):
+#   VIVEK_DOMAIN          the hostname (certificate is automatic)
+#   VIVEK_API_BASIC_USER  login for POST /api/scan and /api/close
+#   VIVEK_API_BASIC_HASH  `caddy hash-password` output (bcrypt) for it
+#
+# Validate with: caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
+
+{$VIVEK_DOMAIN} {
+	root * /opt/vivek5/app/public
+	encode zstd gzip
+
+	# --- public/_headers parity (Cloudflare applied these to static assets
+	# only; Function responses set their own Cache-Control, so /api/* is
+	# left untouched). More-specific path wins, as on Pages.
+	@static not path /api/*
+	header @static X-Content-Type-Options nosniff
+	header @static Cache-Control "public, max-age=0, must-revalidate"
+	@versioned path /js/* /css/*
+	header @versioned Cache-Control "public, max-age=86400"
+
+	# --- /api/scan and /api/close are unauthenticated WRITES to the track
+	# record (a browser button calls them, so no shared secret can protect
+	# them). Cloudflare Access was never configured; on this origin HTTP
+	# basic auth is ON BY DEFAULT: the browser prompts once per session and
+	# fetch() sends the cached credential, no JS change needed. /api/health,
+	# /api/heartbeat, /api/price, /api/quote stay open (probed by monitors,
+	# bounded by shape); /api/morning_plays keeps its own key.
+	@scanclose path /api/scan /api/close
+	basic_auth @scanclose {
+		{$VIVEK_API_BASIC_USER} {$VIVEK_API_BASIC_HASH}
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8787 {
+			header_up X-Forwarded-For {http.request.remote.host}
+		}
+	}
+
+	handle {
+		file_server
+	}
+
+	# Pages served public/404.html for unknown paths.
+	handle_errors 404 {
+		rewrite * /404.html
+		file_server
+	}
+
+	log {
+		output stderr
+		format filter {
+			# /api/morning_plays accepts ?key=<secret>; never log it.
+			request>uri query {
+				delete key
+			}
+		}
+	}
+}

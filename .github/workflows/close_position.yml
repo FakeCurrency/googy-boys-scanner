@@ -43,6 +43,8 @@ permissions:
 
 jobs:
   close:
+    # deploy/DESIGN.md D5: repository variable VPS_ACTIVE=1 (cutover.sh) makes this workflow a no-op - the VPS is the one book writer (a close then goes through /api/close -> the box's spool). A job skipped here reports `skipped`, never `cancelled`, so the redispatch below stays quiet.
+    if: ${{ vars.VPS_ACTIVE != '1' }}
     runs-on: ubuntu-latest
     # TOP100 #44 - this job holds the `scan` mutex. Without an explicit
     # timeout a hung step (a Yahoo socket that never returns, a push retry

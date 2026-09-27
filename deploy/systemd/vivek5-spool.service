@@ -1,0 +1,30 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0 spool drainer: execute queued API dispatches oldest first (DESIGN 3.5)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+After=network-online.target
+Wants=network-online.target
+# The .path unit may start this many times in a row; never rate-limit it.
+StartLimitIntervalSec=0
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=oneshot
+User=vivek5
+WorkingDirectory=/opt/vivek5/app
+EnvironmentFile=/etc/vivek5/jobs.env
+ExecStart=/opt/vivek5/venv/bin/python -m scanner.vps drain-spool
+# A drain may run several queued jobs back to back, each waiting on the book
+# lock (2 h budget) before its own timeout (scan.yml 2 h); the runner bounds
+# every step itself, this is the outer backstop.
+TimeoutStartSec=8h
+KillMode=mixed
+LogRateLimitIntervalSec=0
+# Hardening (DESIGN section 4): the job may write only its three trees.
+ProtectSystem=strict
+ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

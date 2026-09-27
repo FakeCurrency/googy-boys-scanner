@@ -1,0 +1,34 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0 API adapter: the Cloudflare Pages Functions under Node (DESIGN section 5)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+After=network-online.target
+Wants=network-online.target
+# Restart=on-failure below plus no start-rate limit: a crash loop must never
+# park the dispatch endpoint permanently dead (ops review).
+StartLimitIntervalSec=0
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=simple
+# Its OWN user: the only internet-facing process on the box holds no broker,
+# SMTP, Telegram, Discord or git credential (security review) -- api.env
+# ONLY, and vivek5-api can read state/ but write only spool/ and kv.json.
+User=vivek5-api
+SupplementaryGroups=vivek5-spool
+WorkingDirectory=/opt/vivek5/app
+EnvironmentFile=/etc/vivek5/api.env
+ExecStart=/usr/bin/node /opt/vivek5/app/deploy/api/server.mjs
+Restart=on-failure
+RestartSec=5
+MemoryMax=512M
+LogRateLimitIntervalSec=0
+ProtectSystem=strict
+# The namespace grants state/; POSIX modes are the real control there
+# (state 2750 vivek5:vivek5-spool, spool/ 2770, kv.json 0660 vivek5-api).
+ReadWritePaths=/opt/vivek5/state
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

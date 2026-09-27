@@ -25,6 +25,8 @@ concurrency:
 
 jobs:
   kick:
+    # deploy/DESIGN.md D5: repository variable VPS_ACTIVE=1 (cutover.sh) makes this workflow a no-op - after cutover a session starts a scan with ops.yml `vps-dispatch`, never by kicking GitHub's scan.yml.
+    if: ${{ vars.VPS_ACTIVE != '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

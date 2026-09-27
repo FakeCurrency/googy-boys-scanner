@@ -344,3 +344,391 @@ def test_assert_staged_gate(tmp_path):
     # any-of semantics: second path staged is enough
     r = _gate(repo, script, "test", "missing.json", "book.json")
     assert r.returncode == 0
+
+
+# ── ledger mode (the VPS; deploy/DESIGN.md 3.6, 2026-09-27) ───────────────────
+#
+# When VIVEK_RUNS_LEDGER is set the run-history probe reads the job runner's
+# state/runs.json instead of api.github.com. The contract is the FILE: these
+# tests write rows in the documented shape and never import scanner.vps, so C1
+# (the writer) and C4 (this reader) can only meet at the format.
+
+import collections
+import pathlib
+import urllib.request
+
+
+def _ledger(tmp_path, rows: dict) -> pathlib.Path:
+    p = tmp_path / "runs.json"
+    p.write_text(json.dumps(rows), encoding="utf-8")
+    return p
+
+
+def _lrow(success_h=None, failure_h=None, skip_h=None, **extra) -> dict:
+    """One ledger row from ages-in-hours; None leaves the stamp absent."""
+    row = {"host": "vps", "last_status": "ok", "last_exit": 0}
+    if success_h is not None:
+        row["last_success_at"] = _iso(success_h)
+    if failure_h is not None:
+        row["last_failure_at"] = _iso(failure_h)
+        row["last_status"] = "failed"
+        row["last_exit"] = 1
+    if skip_h is not None:
+        row["last_skip_at"] = _iso(skip_h)
+    row.update(extra)
+    return row
+
+
+def _all_fresh_ledger() -> dict:
+    return {wf: _lrow(success_h=0.5) for wf in config.WATCHDOG_RUNS}
+
+
+def test_ledger_parity_same_facts_give_the_same_findings_as_github_mode(tmp_path):
+    """ONE fixture drives BOTH modes (book-safety review's ask). Where the two
+    overlap -- no failure newer than the last success -- the ledger probe must
+    produce the SAME findings, byte for byte: same keys, severities, wording
+    and session arithmetic. A gate-skipped Actions run concludes `success`,
+    so a skip stamp refreshes the ledger clock exactly as that run would."""
+    facts = {wf: {"success": 0.5} for wf in config.WATCHDOG_RUNS}
+    facts["kill_switch.yml"] = {"success": 3.0}                 # stale, CRITICAL
+    facts["phasemap.yml"] = {"success": 30.0}                   # stale, WARNING
+    facts["backup_book.yml"] = {"success": 30.0, "skip": 0.1}   # old success, fresh skip
+    facts["reco_note.yml"] = {"skip": 0.2}                      # only ever skipped
+    facts["confluence.yml"] = {}                                # never ran
+
+    github, ledger = {}, {}
+    for wf, f in facts.items():
+        runs = []
+        if "skip" in f:
+            runs.append(_run(f["skip"]))          # a gate skip = a success run
+        if "success" in f:
+            runs.append(_run(f["success"]))
+        github[wf] = sorted(runs, key=lambda r: r["run_started_at"], reverse=True)
+        if f:
+            ledger[wf] = _lrow(success_h=f.get("success"), skip_h=f.get("skip"))
+
+    notes_gh, notes_ld = [], []
+    from_github = wd.probe_runs(_runs_fetch(github), NOW, repo="x/y", notes=notes_gh)
+    from_ledger = wd.probe_ledger(_ledger(tmp_path, ledger), NOW, notes=notes_ld)
+
+    assert from_ledger == from_github
+    assert {p["key"] for p in from_ledger} == {"run_kill_switch.yml", "run_phasemap.yml"}
+    assert notes_ld == notes_gh == ["confluence.yml: no recorded runs yet"]
+
+
+def test_ledger_session_aware_scan_uses_the_same_clock_as_github(tmp_path, monkeypatch):
+    """scan.yml is judged in market hours in BOTH modes, off the same stamp."""
+    seen = []
+
+    def clock(a, b):
+        seen.append((a, b))
+        return 30.0
+    monkeypatch.setattr(wd, "session_hours_between", clock)
+    led = _all_fresh_ledger()
+    led["scan.yml"] = _lrow(success_h=30.0)
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    assert [p["key"] for p in probs] == ["run_scan.yml"]
+    assert "in market hours" in probs[0]["msg"] and probs[0]["severity"] == "WARNING"
+    assert seen and seen[0][0] == wd._parse_ts(led["scan.yml"]["last_success_at"])
+
+
+def test_ledger_failed_run_is_a_finding_not_a_silence(tmp_path):
+    """THE deliberate divergence from GitHub mode. There a failed latest run is
+    GitHub's to email about; the VPS has no red-run email, so the watchdog IS
+    the alarm. Table severity, except the four in VPS_WATCHDOG_FAILED_CRITICAL
+    which are CRITICAL regardless (scan.yml and crypto_bot.yml are WARNING in
+    the table and must come out CRITICAL here)."""
+    led = _all_fresh_ledger()
+    for wf in ("phasemap.yml", "confluence.yml", "scan.yml", "crypto_bot.yml",
+               "kill_switch.yml", "backup_book.yml"):
+        led[wf] = _lrow(success_h=5.0, failure_h=1.0, consecutive_failures=2,
+                        last_line="assert_staged FAILED: scan output")
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    got = {p["key"]: p["severity"] for p in probs}
+    assert got == {
+        "run_phasemap.yml_failed": "WARNING",
+        "run_confluence.yml_failed": "WARNING",
+        "run_scan.yml_failed": "CRITICAL",
+        "run_crypto_bot.yml_failed": "CRITICAL",
+        "run_kill_switch.yml_failed": "CRITICAL",
+        "run_backup_book.yml_failed": "CRITICAL",
+    }
+    msg = next(p["msg"] for p in probs if p["key"] == "run_scan.yml_failed")
+    assert "FAILED 1.0h ago" in msg and "last success 5.0h ago" in msg
+    assert "2 consecutive" in msg and "assert_staged FAILED" in msg
+    assert msg.isascii()
+    # A failed run is ONE finding per workflow: the staleness verdict is
+    # folded into its message rather than raised beside it.
+    assert not any(p["key"] == "run_scan.yml" for p in probs)
+
+    # ...and the SAME facts in GitHub mode stay silent (the rule there).
+    by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
+    by["scan.yml"] = [_run(1.0, "failure"), _run(5.0)]
+    notes = []
+    assert wd.probe_runs(_runs_fetch(by), NOW, repo="x/y", notes=notes) == []
+    assert any("scan.yml" in n and "FAILED" in n for n in notes)
+
+
+def test_ledger_failed_finding_is_raised_once_and_recovered_by_the_state_machine(tmp_path):
+    """Same dedupe / remind / recover discipline as every other finding: the
+    first failed run alerts, the next probe with the failure still standing
+    does NOT re-alert, and a real success afterwards recovers the key."""
+    led = _all_fresh_ledger()
+    led["kill_switch.yml"] = _lrow(success_h=3.5, failure_h=0.5)
+    path = _ledger(tmp_path, led)
+    f1 = wd.probe_ledger(path, NOW)
+    state, alerts, rec = wd.reconcile({}, f1, NOW)
+    assert [a["key"] for a in alerts] == ["run_kill_switch.yml_failed"] and rec == []
+
+    t2 = NOW + dt.timedelta(minutes=30)
+    state, alerts, rec = wd.reconcile(state, wd.probe_ledger(path, t2), t2)
+    assert alerts == [] and rec == []                     # still failed, no spam
+
+    # the 01:00 timer succeeded: last_success_at is now newer than the failure
+    led["kill_switch.yml"] = _lrow(success_h=-1.0, failure_h=0.5)
+    path = _ledger(tmp_path, led)
+    t3 = NOW + dt.timedelta(hours=1.1)
+    f3 = wd.probe_ledger(path, t3)
+    assert f3 == []
+    state, alerts, rec = wd.reconcile(state, f3, t3)
+    assert rec == ["run_kill_switch.yml_failed"] and state == {}
+
+
+def test_ledger_a_gate_skip_counts_as_a_concluded_success(tmp_path):
+    """crypto_bot's :52 backstop skips ~24 times a day. On Actions each skip
+    is a green run, so the 3h WARNING never fires while the scanner is merely
+    declining to double-scan. The ledger must reproduce that or the alarm
+    rings every half hour on a healthy box."""
+    led = _all_fresh_ledger()
+    led["crypto_bot.yml"] = _lrow(success_h=5.0, skip_h=0.3)    # limit 3h
+    assert wd.probe_ledger(_ledger(tmp_path, led), NOW) == []
+    led["crypto_bot.yml"] = _lrow(success_h=5.0)
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    assert [(p["key"], p["severity"]) for p in probs] == [("run_crypto_bot.yml", "WARNING")]
+
+
+def test_ledger_a_skip_does_not_bury_a_failure(tmp_path):
+    """The one place a skip is NOT a success: after a failed run, a gate skip
+    refreshes nothing -- the job that failed has still not done its work.
+    (On GitHub the newest-concluded rule would look at the skip and go quiet;
+    that is the silence the ledger mode exists to end.)"""
+    led = _all_fresh_ledger()
+    led["scan.yml"] = _lrow(success_h=5.0, failure_h=1.0, skip_h=0.1)
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    assert [p["key"] for p in probs] == ["run_scan.yml_failed"]
+
+
+def test_ledger_a_failure_is_only_a_failure_when_strictly_newer_than_the_success(tmp_path):
+    """DESIGN 3.6: `last_failure_at` NEWER than `last_success_at`. Equal
+    stamps (the ledger keeps whole seconds) are not newer, and the row's own
+    last_status already says which one landed last -- the finding is for a
+    failure the success has not yet answered, not for a tie."""
+    led = _all_fresh_ledger()
+    led["phasemap.yml"] = _lrow(success_h=1.0, failure_h=1.0)
+    assert wd.probe_ledger(_ledger(tmp_path, led), NOW) == []
+    led["phasemap.yml"] = _lrow(success_h=1.0, failure_h=1.0 - 1 / 3600)   # one second newer
+    assert [p["key"] for p in wd.probe_ledger(_ledger(tmp_path, led), NOW)] == ["run_phasemap.yml_failed"]
+
+
+def test_ledger_a_failure_with_no_success_ever_is_a_failure(tmp_path):
+    led = _all_fresh_ledger()
+    led["backup_book.yml"] = _lrow(failure_h=2.0)
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    assert [(p["key"], p["severity"]) for p in probs] == [("run_backup_book.yml_failed", "CRITICAL")]
+    assert "last success never" in probs[0]["msg"]
+
+
+def test_ledger_a_halted_row_says_so(tmp_path):
+    """HALT (a non-VPS data commit upstream) is recorded as a failure with
+    last_status=halted; the alert must name it, because the operator action
+    (accept-upstream / clear-halt) is different from a crash's."""
+    led = _all_fresh_ledger()
+    led["scan.yml"] = _lrow(success_h=3.0, failure_h=0.2, last_status="halted", last_exit=4)
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    assert probs[0]["key"] == "run_scan.yml_failed" and "HALTED" in probs[0]["msg"]
+    assert "state/HALT" in probs[0]["msg"]
+
+
+def test_ledger_absent_key_is_the_same_never_ran_note_github_gives_an_empty_list(tmp_path):
+    led = _all_fresh_ledger()
+    del led["confluence.yml"]
+    led["reco_note.yml"] = {"host": "vps"}          # a row with no stamps at all
+    notes_ld = []
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW, notes=notes_ld)
+    assert probs == []
+    by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
+    by["confluence.yml"] = []
+    by["reco_note.yml"] = []
+    notes_gh = []
+    wd.probe_runs(_runs_fetch(by), NOW, repo="x/y", notes=notes_gh)
+    assert notes_ld == notes_gh
+    assert notes_ld == ["confluence.yml: no recorded runs yet",
+                        "reco_note.yml: no recorded runs yet"]
+
+
+def test_ledger_missing_file_is_a_fresh_box_not_a_fault(tmp_path):
+    notes = []
+    assert wd.probe_ledger(tmp_path / "nope.json", NOW, notes=notes) == []
+    assert len(notes) == len(config.WATCHDOG_RUNS)
+    assert all(n.endswith("no recorded runs yet") for n in notes)
+
+
+def test_ledger_unreadable_file_is_a_warning_because_nothing_else_would_say_so(tmp_path):
+    p = tmp_path / "runs.json"
+    p.write_text("{not json", encoding="utf-8")
+    probs = wd.probe_ledger(p, NOW)
+    assert [(q["key"], q["severity"]) for q in probs] == [("runs_ledger_unreadable", "WARNING")]
+    p.write_text("[1, 2, 3]", encoding="utf-8")
+    assert [q["key"] for q in wd.probe_ledger(p, NOW)] == ["runs_ledger_unreadable"]
+
+
+def test_ledger_messages_stay_ascii_whatever_the_last_line_carried(tmp_path):
+    led = _all_fresh_ledger()
+    led["phasemap.yml"] = _lrow(success_h=5.0, failure_h=1.0,
+                                last_line="→ Yahoo — throttled ⚠ " + "x" * 300)
+    probs = wd.probe_ledger(_ledger(tmp_path, led), NOW)
+    assert probs[0]["msg"].isascii() and len(probs[0]["msg"]) < 400
+
+
+def test_ledger_mode_imports_nothing_from_the_runner_package():
+    """The two components meet ONLY at the file (deploy/DESIGN.md section 2):
+    the watchdog parses the documented fields itself."""
+    import re
+    src = pathlib.Path(wd.__file__).read_text(encoding="utf-8")
+    # Match the IMPORT, not the word: the docstring legitimately says why the
+    # package is not imported, and prose is not a coupling. An import is.
+    assert not re.search(r"^\s*(from\s+(scanner\.vps|\.vps|\.\s*import\s+vps)|import\s+scanner\.vps)",
+                         src, re.M), "watchdog.py imports the runner package"
+    for field in ("last_success_at", "last_failure_at", "last_skip_at"):
+        assert field in src
+
+
+def test_the_failed_critical_set_covers_the_book_writers_and_the_table_criticals():
+    crit = set(config.VPS_WATCHDOG_FAILED_CRITICAL)
+    assert crit <= set(config.WATCHDOG_RUNS), "every override must name a probed workflow"
+    table_crit = {wf for wf, s in config.WATCHDOG_RUNS.items() if s["severity"] == "CRITICAL"}
+    assert table_crit <= crit, "a table-CRITICAL workflow cannot fail at a lower severity"
+    writers = set(config.VPS_BOOK_WRITER_JOBS) & set(config.WATCHDOG_RUNS)
+    assert writers <= crit, "a failed BOOK WRITER is always CRITICAL"
+
+
+# ── disk_low ───────────────────────────────────────────────────────────────────
+
+_Usage = collections.namedtuple("usage", "total used free")
+_GIB = 1 << 30
+
+
+def test_disk_low_is_critical_below_the_config_floor(monkeypatch, tmp_path):
+    monkeypatch.setattr(wd.shutil, "disk_usage",
+                        lambda p: _Usage(100 * _GIB, 99 * _GIB, (config.VPS_DISK_MIN_GB - 0.5) * _GIB))
+    probs = wd.probe_disk(tmp_path)
+    assert [(p["key"], p["severity"]) for p in probs] == [("disk_low", "CRITICAL")]
+    assert f"limit {config.VPS_DISK_MIN_GB:g} GiB" in probs[0]["msg"]
+    monkeypatch.setattr(wd.shutil, "disk_usage",
+                        lambda p: _Usage(100 * _GIB, 1 * _GIB, (config.VPS_DISK_MIN_GB + 0.5) * _GIB))
+    assert wd.probe_disk(tmp_path) == []
+
+
+def test_disk_probe_failure_is_a_note_and_zero_switches_it_off(monkeypatch, tmp_path):
+    def boom(p):
+        raise OSError("statvfs failed")
+    monkeypatch.setattr(wd.shutil, "disk_usage", boom)
+    notes = []
+    assert wd.probe_disk(tmp_path, notes=notes) == []
+    assert notes and "disk probe failed" in notes[0]
+    assert wd.probe_disk(tmp_path, min_gb=0) == []
+
+
+# ── the mode switch inside run() ───────────────────────────────────────────────
+
+def _no_github(monkeypatch):
+    """A RECORDING stub, deliberately not a raising one: probe_runs catches
+    every per-workflow exception into a note, so a stub that raised would be
+    swallowed and the test would pass against a watchdog that still asked
+    GitHub (found by mutation, 2026-09-27). Callers assert the list is empty."""
+    asked = []
+
+    def record(url, *a, **k):
+        asked.append(str(url))
+        return {"workflow_runs": []}
+    monkeypatch.setattr(urllib.request, "urlopen", record)
+    monkeypatch.setattr(wd, "_default_fetch", record)
+    return asked
+
+
+def test_ledger_mode_never_calls_the_github_api(monkeypatch, tmp_path):
+    """With VIVEK_RUNS_LEDGER set, run() must not touch GitHub even when
+    GITHUB_REPOSITORY and a token are present -- after cutover that history
+    is stale for every key and would page about all eight workflows."""
+    asked = _no_github(monkeypatch)
+    monkeypatch.setattr(wd.shutil, "disk_usage", lambda p: _Usage(100 * _GIB, _GIB, 90 * _GIB))
+    monkeypatch.setenv("GITHUB_REPOSITORY", "x/y")
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_notused")
+    monkeypatch.setenv("WATCHDOG_STATE", str(tmp_path / "state.json"))
+    led = _all_fresh_ledger()
+    led["kill_switch.yml"] = _lrow(success_h=3.0, failure_h=0.5)
+    monkeypatch.setenv("VIVEK_RUNS_LEDGER", str(_ledger(tmp_path, led)))
+    assert not hasattr(wd, "requests"), "the watchdog must stay on urllib alone"
+
+    res = wd.run(dry_run=True, now=NOW, root=_tree(tmp_path / "tree"))
+    assert asked == [], f"ledger mode contacted GitHub: {asked}"
+    assert not any("fetch failed" in n or "no GITHUB_REPOSITORY" in n for n in res["notes"]), \
+        "the GitHub probe ran (and merely failed) in ledger mode"
+    keys = {f["key"] for f in res["findings"]}
+    assert keys == {"run_kill_switch.yml_failed"}
+    assert any("runs ledger" in n for n in res["notes"])
+    assert not (tmp_path / "state.json").exists()          # dry run writes nothing
+
+
+def test_github_mode_is_untouched_when_the_ledger_env_is_absent(monkeypatch, tmp_path):
+    """The switch is the env var and nothing else: unset, run() still asks the
+    Actions API (proving the test above measured the switch, not a broken
+    fetch) and the disk probe stays off (it is a VPS concern)."""
+    monkeypatch.delenv("VIVEK_RUNS_LEDGER", raising=False)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "x/y")
+    monkeypatch.setenv("WATCHDOG_STATE", str(tmp_path / "state.json"))
+    monkeypatch.setattr(wd.shutil, "disk_usage", lambda p: _Usage(100 * _GIB, 100 * _GIB, 0))
+    asked = []
+    by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
+    fetch = _runs_fetch(by)
+
+    def recorder(url):
+        asked.append(url)
+        return fetch(url)
+    monkeypatch.setattr(wd, "_default_fetch", recorder)
+    res = wd.run(dry_run=True, now=NOW, root=_tree(tmp_path / "tree"))
+    assert len(asked) == len(config.WATCHDOG_RUNS)
+    assert not any(f["key"] == "disk_low" for f in res["findings"])
+    assert not any("runs ledger" in n for n in res["notes"])
+
+
+def test_ledger_mode_runs_the_disk_probe(monkeypatch, tmp_path):
+    asked = _no_github(monkeypatch)
+    monkeypatch.setattr(wd.shutil, "disk_usage", lambda p: _Usage(100 * _GIB, 100 * _GIB, 0))
+    monkeypatch.setenv("WATCHDOG_STATE", str(tmp_path / "state.json"))
+    monkeypatch.setenv("VIVEK_RUNS_LEDGER", str(_ledger(tmp_path, _all_fresh_ledger())))
+    res = wd.run(dry_run=True, now=NOW, root=_tree(tmp_path / "tree"))
+    assert [f["key"] for f in res["findings"]] == ["disk_low"] and asked == []
+
+
+def test_ledger_mode_findings_persist_through_the_real_state_file(monkeypatch, tmp_path):
+    """Not a dry run: the failed-run finding is written to WATCHDOG_STATE
+    through the same reconcile path as every GitHub-mode finding, and a
+    second live run neither re-alerts nor loses the breach start."""
+    asked = _no_github(monkeypatch)
+    monkeypatch.setattr(wd.shutil, "disk_usage", lambda p: _Usage(100 * _GIB, _GIB, 90 * _GIB))
+    monkeypatch.setattr(wd, "_dispatch", lambda sev, text: [])      # channels are unconfigured
+    state = tmp_path / "state.json"
+    monkeypatch.setenv("WATCHDOG_STATE", str(state))
+    led = _all_fresh_ledger()
+    led["crypto_bot.yml"] = _lrow(success_h=2.0, failure_h=0.4)
+    monkeypatch.setenv("VIVEK_RUNS_LEDGER", str(_ledger(tmp_path, led)))
+    tree = _tree(tmp_path / "tree")
+    r1 = wd.run(dry_run=False, now=NOW, root=tree)
+    assert [a["key"] for a in r1["alerted"]] == ["run_crypto_bot.yml_failed"]
+    saved = json.loads(state.read_text(encoding="utf-8"))
+    assert set(saved) == {"run_crypto_bot.yml_failed"}
+    r2 = wd.run(dry_run=False, now=NOW + dt.timedelta(minutes=20), root=tree)
+    assert r2["alerted"] == [] and r2["recovered"] == []
+    assert json.loads(state.read_text(encoding="utf-8"))["run_crypto_bot.yml_failed"]["first"] == saved["run_crypto_bot.yml_failed"]["first"]
+    assert asked == []

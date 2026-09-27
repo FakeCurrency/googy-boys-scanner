@@ -1,0 +1,18 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+
+[Unit]
+Description=Vivek 5.0 timer for vivek5-crypto-bot.service
+
+[Timer]
+OnCalendar=*-*-* *:22 UTC
+# A missed elapse (box was down) fires ONCE after boot; the runner's
+# gate then decides whether the late fire is still worth running.
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=0
+Unit=vivek5-crypto-bot.service
+
+[Install]
+WantedBy=timers.target

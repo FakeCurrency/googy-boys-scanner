@@ -1,0 +1,30 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0 code updater: fast-forward the working checkout to origin/main (DESIGN 3.7)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+After=network-online.target
+Wants=network-online.target
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=oneshot
+User=vivek5
+WorkingDirectory=/opt/vivek5/app
+EnvironmentFile=/etc/vivek5/jobs.env
+ExecStart=/opt/vivek5/app/deploy/bin/update.sh
+TimeoutStartSec=30min
+KillMode=mixed
+LogRateLimitIntervalSec=0
+# DELIBERATE EXCEPTION to the job hardening set: update.sh runs
+# `sudo systemctl restart vivek5-api.service` (the ONE command
+# /etc/sudoers.d/vivek5 grants besides `reload caddy`) when functions/ or
+# deploy/api/ change, and sudo is a setuid binary that NoNewPrivileges=yes
+# would refuse; it also re-installs the venv on a requirements.txt change, so
+# /opt/vivek5/venv must be writable here and nowhere else. ProtectSystem=full
+# still keeps /usr, /boot and /etc read-only. tests/test_vps_deploy.py pins
+# that this is the only service without NoNewPrivileges=yes.
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes

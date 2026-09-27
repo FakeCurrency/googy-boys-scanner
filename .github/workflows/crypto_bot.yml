@@ -57,6 +57,8 @@ jobs:
   # does (market-hours only, one stock market per run), so the only thing left
   # here is the :52 freshness backstop.
   gate:
+    # deploy/DESIGN.md D5: repository variable VPS_ACTIVE=1 (cutover.sh) makes this workflow a no-op - the VPS is the one book writer; a skipped gate skips the crypto job behind its needs:.
+    if: ${{ vars.VPS_ACTIVE != '1' }}
     runs-on: ubuntu-latest
     # TOP100 #44 - clock/probe only; see scan.yml's gate.
     timeout-minutes: 5

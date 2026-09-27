@@ -23,6 +23,11 @@ import { withAccessLog } from "./_access_log.js";
 import { dispatchWorkflow } from "./_dispatch.js";
 export const onRequestPost = withAccessLog("/api/close", async ({ request, env }) => {
   const token = env.GH_DISPATCH_TOKEN;
+  // D4 (2026-09-27, deploy/DESIGN.md section 5): a VPS adapter URL is the
+  // alternate transport -- either it or the GitHub token makes this endpoint
+  // "configured"; with DISPATCH_URL unset nothing below changes.
+  const dispatchUrl = env.DISPATCH_URL;
+  const dispatchToken = env.DISPATCH_TOKEN;
   const repo  = env.GH_REPO     || "FakeCurrency/googy-boys-scanner";
   const ref   = env.GH_REF      || "main";
 
@@ -32,7 +37,7 @@ export const onRequestPost = withAccessLog("/api/close", async ({ request, env }
       headers: { "Content-Type": "application/json" },
     });
 
-  if (!token) {
+  if (!dispatchUrl && !token) {
     return json(503, {
       ok: false,
       message: "GH_DISPATCH_TOKEN not configured — add it to Cloudflare Pages env vars.",
@@ -139,6 +144,8 @@ async function dispatchClose(env, json, inputs, cdKey, nCloses) {
   const token = env.GH_DISPATCH_TOKEN;
   const repo  = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
   const ref   = env.GH_REF  || "main";
+  const dispatchUrl = env.DISPATCH_URL;      // D4 transport, see the handler above
+  const dispatchToken = env.DISPATCH_TOKEN;
 
   let refundGuard = null;
   if (env.JOURNAL_KV) {
@@ -167,6 +174,7 @@ async function dispatchClose(env, json, inputs, cdKey, nCloses) {
   // Transport + the cooldown refund rule live in _dispatch.js.
   const r = await dispatchWorkflow({
     token, repo, workflow: "close_position.yml", ref, inputs, refund: refundGuard,
+    dispatchUrl, dispatchToken,
   });
 
   if (r.ok) {

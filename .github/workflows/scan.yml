@@ -92,6 +92,8 @@ jobs:
   # this gate skips those. Manual (workflow_dispatch / SCAN button) runs are
   # always allowed, any day. Crypto stays live 24/7 via crypto_scalp.yml.
   gate:
+    # deploy/DESIGN.md D5: repository variable VPS_ACTIVE=1 (cutover.sh) makes this workflow a no-op - the VPS is the one book writer; a skipped gate skips the scan behind its needs:.
+    if: ${{ vars.VPS_ACTIVE != '1' }}
     runs-on: ubuntu-latest
     # TOP100 #44 - the gate only checks the clock and the freshness probe.
     # It is outside the mutex, but a hung curl here blocks the scan job

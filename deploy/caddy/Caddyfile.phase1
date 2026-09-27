@@ -1,0 +1,54 @@
+# Vivek 5.0 -- Caddyfile PHASE 1 (deploy/DESIGN.md 6, D7).
+#
+# Cloudflare Pages still serves the site and runs the Functions; the ONLY
+# thing this box exposes is the typed dispatch endpoint the Functions call
+# (DISPATCH_URL) and the read-only ledger view. Everything else is 404 here,
+# so the Node adapter's wider surface (price/quote relays, the healer) stays
+# unreachable until Phase 2 opens it on purpose.
+#
+# A HOSTNAME IS REQUIRED: Workers' fetch validates public CAs, so the
+# Functions cannot call an IP or a self-signed cert, and plain http would
+# carry the bearer token in clear. Set VIVEK_DOMAIN in /etc/caddy/vivek5.env
+# (install.sh writes the template; the caddy.service drop-in loads it) and
+# point an A/AAAA record at this box; Caddy obtains the certificate itself.
+# No open port at all? The README offers Cloudflare Tunnel instead.
+#
+# Installed by install.sh as /etc/caddy/Caddyfile (--phase 1). Validate with
+#   caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
+# Requires Caddy >= 2.8 (vendor repo, never Ubuntu's 2.6.2 -- D9).
+
+{$VIVEK_DOMAIN} {
+	# Optional second factor: only Cloudflare's egress may reach the dispatch
+	# route (the Functions call from Cloudflare IPs). Left OFF because the
+	# ranges change and a stale list turns every SCAN click into a silent 403
+	# with nothing on the box saying why; if you enable it, fetch the current
+	# lists from https://www.cloudflare.com/ips-v4 and /ips-v6 and re-check
+	# them when a dispatch stops arriving.
+	# @notcf not remote_ip 173.245.48.0/20 103.21.244.0/22 ...
+	# handle @notcf {
+	# 	respond 403
+	# }
+
+	@vps path /api/dispatch /api/vps
+	handle @vps {
+		reverse_proxy 127.0.0.1:8787 {
+			# Unambiguous client address regardless of Caddy version: the
+			# adapter trusts only the LAST hop, and only from loopback.
+			header_up X-Forwarded-For {http.request.remote.host}
+		}
+	}
+
+	handle {
+		respond 404
+	}
+
+	log {
+		output stderr
+		format filter {
+			# Never let a ?key= secret land in a log line (security review).
+			request>uri query {
+				delete key
+			}
+		}
+	}
+}

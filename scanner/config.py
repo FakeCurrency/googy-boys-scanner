@@ -1338,6 +1338,14 @@ VPS_LOCK_WAIT_S = {"scan": 7200, "heavy": 3600, "default": 600}
 VPS_PUBLISH_MAX_ATTEMPTS = 5
 # Ledger-mode watchdog: free space under the checkout below this is CRITICAL.
 VPS_DISK_MIN_GB = 3.0
+# Ledger-mode watchdog: a run whose last_failure_at is newer than its
+# last_success_at is a `run_<wf>_failed` finding at the WATCHDOG_RUNS
+# severity -- except these, which are CRITICAL REGARDLESS of the table
+# (deploy/DESIGN.md 3.6): the loss guard, the backup, and the two book
+# writers. On GitHub a failed latest run is GitHub's to email about; the VPS
+# has no red-run email, so the watchdog is the alarm (book-safety review).
+VPS_WATCHDOG_FAILED_CRITICAL = ("kill_switch.yml", "backup_book.yml",
+                                "scan.yml", "crypto_bot.yml")
 # Spool hygiene (deploy/DESIGN.md §3.5): a dispatch file larger than this is
 # refused unread; more pending files than this makes /api/dispatch answer 429.
 VPS_SPOOL_MAX_BYTES = 16 * 1024

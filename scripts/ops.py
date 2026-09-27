@@ -1,5 +1,6 @@
 """ops.py -- Claude's standing-access hands for the two dashboards it cannot
-reach: cron-job.org and Cloudflare Pages.
+reach: cron-job.org and Cloudflare Pages -- and, since the VPS kit
+(deploy/DESIGN.md, 2026-09-27), the box's own /api/dispatch.
 
 WHY THIS EXISTS (2026-09-10, owner: "you should be able to set up jobs and all
 to make this hands off"). The plays-digest trigger took the owner a night of
@@ -11,7 +12,9 @@ limit. So this script runs INSIDE ops.yml: Claude dispatches the workflow with
 an `action` + JSON `args`, the runner calls the API with a secret only it can
 read, and Claude reads the result back off the job log / step summary.
 
-Stdlib only (urllib + json). No scanner imports, no repo writes, no git.
+Stdlib (urllib + json) plus ONE repo import, `scanner.config.clean_secret`
+-- config.py itself imports nothing beyond the stdlib, so ops.yml still runs
+without a pip install. No repo writes, no git.
 
 ACTIONS
     cronjob-list                       every job on the account
@@ -26,12 +29,30 @@ ACTIONS
     cf-set-var       {"name","value","type":"secret_text"|"plain_text"}
     cf-delete-var    {"name"}
     cf-redeploy                        new production deployment (picks up vars)
+    vps-dispatch     {"workflow":"scan.yml","inputs":{"market":"asx"}}
+                                       POST {workflow, inputs} to the VPS's
+                                       /api/dispatch with the bearer token.
+                                       THIS is how a cloud Claude session
+                                       starts a scan / close / plays digest
+                                       after cutover: dispatch_scan.yml and
+                                       the scan-kick are disabled then, and
+                                       the session's proxy cannot reach the
+                                       box. The adapter validates the pair
+                                       (deploy/DESIGN.md 3.5) and answers
+                                       202 {ok,id} / 400 / 401 / 422 / 429.
 
 SECRETS (GitHub Actions secrets, read from env -- never printed)
     CRONJOB_API_KEY          cron-job.org -> Settings -> API -> Create key
     CLOUDFLARE_API_TOKEN     Cloudflare -> My Profile -> API Tokens ->
                              custom token, permission "Cloudflare Pages: Edit"
     CLOUDFLARE_ACCOUNT_ID    the 32-hex id in every dash.cloudflare.com URL
+    VPS_DISPATCH_URL         https://<VIVEK_DOMAIN>/api/dispatch (https ONLY --
+                             the token rides in a header; plain http would
+                             carry it in clear and is refused)
+    VPS_DISPATCH_TOKEN       the DISPATCH_TOKEN install.sh generated into
+                             /etc/vivek5/api.env (the same value cutover puts
+                             in Cloudflare Pages). Both are read through
+                             config.clean_secret (the 2026-08-01 BOM lesson).
 
 REDACTION IS THE ONLY SECURITY PROPERTY HERE and it is pinned in
 tests/test_ops.py: any secret value present in the environment is masked out of
@@ -45,10 +66,17 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+
+_ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+from scanner import config as _config  # noqa: E402  (clean_secret only; stdlib-only module)
 
 CRONJOB_API = "https://api.cron-job.org"
 CF_API = "https://api.cloudflare.com/client/v4"
@@ -56,12 +84,18 @@ CF_PAGES_PROJECT = os.environ.get("CF_PAGES_PROJECT", "googy-boys-scanner")
 UA = "vivek5-ops/1.0"
 TIMEOUT_S = 30
 
-SECRET_ENV = ("CRONJOB_API_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
+# Every value here is masked out of everything printed. The VPS URL is in the
+# list on purpose: the repo is public, so a run log naming the box's hostname
+# is a disclosure -- its hostname is masked on its own as well (see
+# _secret_values), because an SSL error quotes the host without the URL.
+SECRET_ENV = ("CRONJOB_API_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID",
+              "VPS_DISPATCH_URL", "VPS_DISPATCH_TOKEN")
 
 ACTIONS = (
     "cronjob-list", "cronjob-get", "cronjob-history", "cronjob-create",
     "cronjob-update", "cronjob-delete",
     "cf-list-vars", "cf-set-var", "cf-delete-var", "cf-redeploy",
+    "vps-dispatch",
 )
 
 
@@ -77,9 +111,15 @@ def _secret_values(env=None):
     env = os.environ if env is None else env
     vals = []
     for k in SECRET_ENV:
-        v = (env.get(k) or "").strip()
-        if len(v) >= 6:
-            vals.append(v)
+        for v in {(env.get(k) or "").strip(), _config.clean_secret(env.get(k))}:
+            if len(v) >= 6:
+                vals.append(v)
+    try:
+        host = urllib.parse.urlsplit(_config.clean_secret(env.get("VPS_DISPATCH_URL"))).hostname or ""
+    except ValueError:
+        host = ""
+    if len(host) >= 6:
+        vals.append(host)
     return vals
 
 
@@ -252,6 +292,50 @@ def do_cloudflare(action, args, env):
 
 
 # --------------------------------------------------------------------------
+# the VPS's /api/dispatch (deploy/DESIGN.md D4 / 3.5 / 5)
+# --------------------------------------------------------------------------
+
+def _vps_target(env):
+    """(url, token), both through config.clean_secret; https only.
+
+    Refusing a non-https URL is the whole of the transport's security: the
+    bearer token travels in a header, and over plain http it would cross the
+    Internet in clear. A loopback http URL is meaningless from a GitHub
+    runner, so there is no loopback exemption here (D4's is for the adapter
+    talking to itself)."""
+    url = _config.clean_secret(env.get("VPS_DISPATCH_URL"))
+    token = _config.clean_secret(env.get("VPS_DISPATCH_TOKEN"))
+    if not url:
+        raise OpsError("VPS_DISPATCH_URL is not set (GitHub Actions secret)")
+    if not token:
+        raise OpsError("VPS_DISPATCH_TOKEN is not set (GitHub Actions secret)")
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme != "https" or not parts.hostname:
+        raise OpsError(f"VPS_DISPATCH_URL must be an https:// URL (got scheme "
+                       f"{parts.scheme or 'none'!r}); the bearer token is refused over anything else")
+    return url, token
+
+
+def do_vps(action, args, env):
+    if action != "vps-dispatch":
+        raise OpsError(f"unknown vps action {action}")
+    workflow = args.get("workflow")
+    if not isinstance(workflow, str) or not workflow.strip():
+        raise OpsError('vps-dispatch needs a "workflow" (e.g. "scan.yml")')
+    inputs = args.get("inputs", {})
+    if inputs is None:
+        inputs = {}
+    if not isinstance(inputs, dict):
+        raise OpsError('vps-dispatch "inputs" must be a JSON object')
+    url, token = _vps_target(env)
+    # Exactly the body _dispatch.js sends (DESIGN 5): the adapter is the
+    # validator -- an unknown workflow or key comes back as a 400 that main()
+    # prints, redacted, which beats a second copy of its table here.
+    body = {"workflow": workflow.strip(), "inputs": inputs}
+    return call("POST", url, {"Authorization": f"Bearer {token}"}, body)
+
+
+# --------------------------------------------------------------------------
 # entry
 # --------------------------------------------------------------------------
 
@@ -261,6 +345,8 @@ def run(action, args, env=None):
         raise OpsError(f"unknown action {action!r}; one of {', '.join(ACTIONS)}")
     if action.startswith("cronjob-"):
         return do_cronjob(action, args, env)
+    if action.startswith("vps-"):
+        return do_vps(action, args, env)
     return do_cloudflare(action, args, env)
 
 

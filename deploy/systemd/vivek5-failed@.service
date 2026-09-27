@@ -1,0 +1,24 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0 failure hook for %i: alert with the last 30 journal lines
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+# No OnFailure= here on purpose: a failing hook must not fire itself.
+
+[Service]
+Type=oneshot
+User=vivek5
+WorkingDirectory=/opt/vivek5/app
+EnvironmentFile=/etc/vivek5/jobs.env
+# `journalctl -u %i -n 30` inside needs vivek5 in the systemd-journal group
+# (install.sh adds it).
+ExecStart=/opt/vivek5/venv/bin/python -m scanner.vps notify-failure %i
+TimeoutStartSec=5min
+KillMode=mixed
+# Hardening (DESIGN section 4): the job may write only its three trees.
+ProtectSystem=strict
+ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

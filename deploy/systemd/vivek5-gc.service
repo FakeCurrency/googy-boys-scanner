@@ -1,0 +1,25 @@
+# Vivek 5.0 VPS kit -- deploy/DESIGN.md section 4.  COPIED into
+# /etc/systemd/system by deploy/bin/install.sh (never symlinked).  Edit the
+# copy in the checkout and re-run `install.sh --units`.
+[Unit]
+Description=Vivek 5.0 weekly git gc of both clones under the exclusive repo lock (DESIGN section 4)
+Documentation=file:///opt/vivek5/app/deploy/DESIGN.md
+OnFailure=vivek5-failed@%n.service
+
+[Service]
+Type=oneshot
+User=vivek5
+WorkingDirectory=/opt/vivek5/app
+EnvironmentFile=/etc/vivek5/jobs.env
+ExecStart=/opt/vivek5/app/deploy/bin/gc.sh
+TimeoutStartSec=120min
+KillMode=mixed
+LogRateLimitIntervalSec=0
+Nice=10
+IOSchedulingClass=idle
+# Hardening (DESIGN section 4): the job may write only its three trees.
+ProtectSystem=strict
+ReadWritePaths=/opt/vivek5/app /opt/vivek5/publish /opt/vivek5/state
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

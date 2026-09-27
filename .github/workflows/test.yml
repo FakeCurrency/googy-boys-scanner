@@ -84,6 +84,11 @@ on:
       # workflow level, a renamed `name:` that empties the wait-loop filter —
       # are edits to files that used to skip this gate entirely.
       - ".github/workflows/**"
+      # deploy/** (2026-09-27): tests/test_vps_deploy.py reads every systemd unit,
+      # script, Caddyfile and env template under it, test/vps_api.test.js boots
+      # deploy/api/server.mjs, and tests/test_vps_jobs.py cross-checks the units'
+      # ExecStart args against scanner/vps -- TOP100 #48 rule, same as above.
+      - "deploy/**"
   pull_request:
   workflow_dispatch:
 
@@ -190,6 +195,18 @@ jobs:
       # workflow+input, never echoes the GitHub token, refunds the cooldown.
       - name: Plays-digest external trigger (fail-closed / dispatch / no-echo, 11)
         run: node test/morning_plays_api.test.js
+      # VPS API adapter (2026-09-27, deploy/DESIGN.md section 5): the Pages
+      # Functions imported UNCHANGED under Node behind deploy/api/server.mjs,
+      # started for real on an ephemeral port with temp state/public dirs and
+      # a fixture book. Pinned: every Function routes with Pages' method
+      # semantics, phase 1 exposes only dispatch/vps, the X-Forwarded-For
+      # trust rule, KV TTL expiry, ASSETS traversal refused, and the typed
+      # /api/dispatch 503/401/400/422/429/202 matrix (unknown workflow or key
+      # -> 400 and no spool file, close sanity against the book -> 422, spool
+      # file shape + atomic temp), plus _dispatch.js taking DISPATCH_URL only
+      # when set (https or loopback) with the GitHub path byte-identical.
+      - name: VPS API adapter (routes / XFF / KV TTL / ASSETS / dispatch matrix)
+        run: node test/vps_api.test.js
       # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
       # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
       # so the display can never disagree with what actually blocks a trade.

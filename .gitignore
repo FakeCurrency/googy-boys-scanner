@@ -4,6 +4,10 @@ __pycache__/
 .venv/
 venv/
 env/
+# deploy/env/ holds the VPS kit's env TEMPLATES (*.example), not a virtualenv:
+# the `env/` pattern above would swallow them and tests/test_vps_deploy.py
+# reads them (deploy/DESIGN.md 3.8). Real secrets live in /etc/vivek5/, never here.
+!deploy/env/
 *.egg-info/
 
 # Logs
@@ -48,3 +52,6 @@ test/e2e/__diff__/
 node_modules/
 package-lock.json
 package.json
+!functions/package.json
+# ^ the scoped one that tells Node the Pages Functions are ESM stays tracked
+#   (deploy/DESIGN.md D3/section 5; inert on Cloudflare, never a root package.json)

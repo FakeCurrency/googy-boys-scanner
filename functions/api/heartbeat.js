@@ -159,7 +159,12 @@ export async function onRequestGet(context) {
 
   // ---- overdue: heal ------------------------------------------------------
   const token = env.GH_DISPATCH_TOKEN;
-  if (!token) {
+  // D4 (2026-09-27, deploy/DESIGN.md section 5): a VPS adapter URL is the
+  // alternate transport -- either it or the GitHub token makes this endpoint
+  // "configured"; with DISPATCH_URL unset nothing below changes.
+  const dispatchUrl = env.DISPATCH_URL;
+  const dispatchToken = env.DISPATCH_TOKEN;
+  if (!dispatchUrl && !token) {
     // The healer is installed and disarmed. Nothing else in the system can see
     // that, so it is worth the alert rather than a quiet 200.
     return json(503, {
@@ -226,6 +231,7 @@ export async function onRequestGet(context) {
     token, repo, workflow, ref,
     inputs: { market, reason: "heartbeat" },
     refund,
+    dispatchUrl, dispatchToken,
   });
 
   if (r.ok) {

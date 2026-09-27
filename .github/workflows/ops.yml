@@ -1,6 +1,9 @@
 # Ops -- Claude's standing access to cron-job.org and Cloudflare Pages
 # (2026-09-10, owner: "you should be able to set up jobs and all to make this
-# hands off").
+# hands off") -- and, since the VPS kit (deploy/DESIGN.md, 2026-09-27), to
+# the box's /api/dispatch: `vps-dispatch` is how a cloud Claude session
+# starts a scan / close / plays digest AFTER cutover, when dispatch_scan.yml
+# and the scan-kick are disabled and the session's proxy cannot reach the box.
 #
 # A cloud Claude session cannot log into either dashboard and its egress proxy
 # refuses both APIs (HTTP 000). A runner can reach them, and the GitHub MCP can
@@ -12,8 +15,10 @@
 #
 # Manual only. READ-ONLY to the repo: no checkout writes, no git, no book, not
 # in the `scan` group, no assert_staged / WATCHDOG entry (commits nothing).
-# The three secrets are the owner's to create once; absent = the script says
-# which one and exits 2.
+# The five secrets are the owner's to create once; absent = the script says
+# which one and exits 2. VPS_DISPATCH_URL must be https (the script refuses
+# anything else) and is masked from the log like a secret: the repo is
+# public and the URL names the box.
 
 name: Ops
 
@@ -35,6 +40,7 @@ on:
           - cf-set-var
           - cf-delete-var
           - cf-redeploy
+          - vps-dispatch
       args:
         description: "JSON object of arguments for the action"
         default: "{}"
@@ -67,6 +73,8 @@ jobs:
           CRONJOB_API_KEY: ${{ secrets.CRONJOB_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VPS_DISPATCH_URL: ${{ secrets.VPS_DISPATCH_URL }}
+          VPS_DISPATCH_TOKEN: ${{ secrets.VPS_DISPATCH_TOKEN }}
           CF_PAGES_PROJECT: googy-boys-scanner
         run: |
           set -o pipefail

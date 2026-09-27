@@ -40,6 +40,27 @@ Noise rules (the whole point — high signal, low volume):
     WARNING skips email. Channel primitives are reused from alert_dispatch;
     send() itself is not used so existing alert behaviour stays untouched.
 
+LEDGER MODE (2026-09-27, deploy/DESIGN.md 3.6 -- the VPS). When the env var
+VIVEK_RUNS_LEDGER names the job runner's `state/runs.json`, the run-history
+probe reads THAT file (probe_ledger) and never touches api.github.com: after
+cutover the Actions run history goes stale for every key, so the GitHub probe
+would either page about all eight workflows within hours or, with
+GITHUB_REPOSITORY unset, silently vanish. Two deliberate differences from the
+GitHub path, both from the book-safety review:
+  * a run whose `last_failure_at` is newer than its `last_success_at` is a
+    FINDING (`run_<wf>_failed`) rather than a reason for silence -- the box
+    has no red-run email, so "GitHub emailed already" is not true there.
+    CRITICAL for config.VPS_WATCHDOG_FAILED_CRITICAL regardless of the table.
+  * `disk_low` (CRITICAL) when free space under the checkout is below
+    config.VPS_DISK_MIN_GB GiB -- the failure that takes every job down at
+    once and that no content probe can see coming.
+Everything else is parity: age = now - max(last_success_at, last_skip_at)
+because a gate-skipped Actions run concludes `success`; `session_aware` and
+the state machine are unchanged; an absent key is the same "no recorded runs
+yet" note an empty GitHub run list gets. The ledger is parsed directly from
+its documented fields -- this module does NOT import scanner.vps, so the two
+components meet only at the file. GitHub mode is untouched.
+
 Usage:
   python -m scanner.watchdog             # probe, alert, update state
   python -m scanner.watchdog --dry-run   # probe + print only, no sends/state
@@ -53,6 +74,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import shutil
 import urllib.error
 import urllib.request
 
@@ -388,24 +410,153 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
         succ = next((r for r in concluded
                      if r.get("conclusion") == "success"), None)
         last = _parse_ts((succ or {}).get("run_started_at"))
-        age = _age_h(last, now)
-        # A session-aware target is measured in hours a market was OPEN, not
-        # wall-clock hours — see session_hours_between and the scan.yml entry.
-        measured = age
-        unit = "h"
-        if spec.get("session_aware") and age is not None:
-            measured = session_hours_between(last, now)
-            unit = "h in-session"
-        if measured is None or measured > spec["max_age_h"]:
-            shown = "never" if age is None else f"{age:.1f}h ago"
-            extra = ("" if not spec.get("session_aware") or age is None
-                     else f", {measured:.1f}h of it in market hours")
-            out.append(_finding(
-                f"run_{wf}", spec["severity"],
-                f"{wf}: last successful run {shown}{extra} (limit "
-                f"{spec['max_age_h']:.0f}{unit}) - schedule skipped or silently "
-                f"doing nothing"))
+        f = _freshness_finding(wf, spec, last, now)
+        if f is not None:
+            out.append(f)
     return out
+
+
+def _freshness_finding(wf: str, spec: dict, last: dt.datetime | None,
+                       now: dt.datetime) -> dict | None:
+    """The one freshness verdict both run-history probes share.
+
+    Extracted from probe_runs (2026-09-27) so the ledger probe below cannot
+    drift from the GitHub one in wording, threshold or session arithmetic:
+    the parity test drives both with the same facts and compares whole
+    findings. `last` is the newest concluded success (None = never)."""
+    age = _age_h(last, now)
+    # A session-aware target is measured in hours a market was OPEN, not
+    # wall-clock hours — see session_hours_between and the scan.yml entry.
+    measured = age
+    unit = "h"
+    if spec.get("session_aware") and age is not None:
+        measured = session_hours_between(last, now)
+        unit = "h in-session"
+    if measured is None or measured > spec["max_age_h"]:
+        shown = "never" if age is None else f"{age:.1f}h ago"
+        extra = ("" if not spec.get("session_aware") or age is None
+                 else f", {measured:.1f}h of it in market hours")
+        return _finding(
+            f"run_{wf}", spec["severity"],
+            f"{wf}: last successful run {shown}{extra} (limit "
+            f"{spec['max_age_h']:.0f}{unit}) - schedule skipped or silently "
+            f"doing nothing")
+    return None
+
+
+# ── ledger mode (the VPS; deploy/DESIGN.md 3.6) ────────────────────────────────
+
+# The ledger row fields this probe reads. They are the DESIGN 3.6 contract, and
+# the reason there is no `from .vps import ledger` here: C1 writes the file, C4
+# reads it, and the two meet only at these keys.
+_LEDGER_SUCCESS = "last_success_at"
+_LEDGER_FAILURE = "last_failure_at"
+_LEDGER_SKIP = "last_skip_at"
+
+
+def _ascii(text, limit: int = 120) -> str:
+    """A ledger `last_line` is subprocess output: keep the stdout ASCII rule."""
+    s = str(text or "").strip().encode("ascii", "replace").decode("ascii")
+    return s if len(s) <= limit else s[: limit - 3] + "..."
+
+
+def probe_ledger(path: pathlib.Path, now: dt.datetime,
+                 notes: list | None = None) -> list[dict]:
+    """Run-history probe against the job runner's `state/runs.json`.
+
+    Per WATCHDOG_RUNS key, in this order:
+      1. no row / a row with none of the three stamps -> note "no recorded
+         runs yet" (parity with an empty GitHub run list: a brand-new box is
+         not a breach);
+      2. last_failure_at newer than last_success_at (or a failure with no
+         success ever) -> `run_<wf>_failed`. NOT the GitHub rule -- there a
+         failed latest run is GitHub's to email about; here nothing emails.
+         A later gate-skip does not clear it: only a real success does.
+      3. otherwise the GitHub freshness verdict off max(last_success_at,
+         last_skip_at) -- a gate-skipped Actions run concludes `success`, so
+         a skip refreshes the clock exactly as it does there.
+    A missing file is a fresh box (notes only); a file that exists but cannot
+    be parsed is a WARNING, because on the VPS nothing else would say that
+    every run-history probe has gone blind."""
+    path = pathlib.Path(path)
+    out: list[dict] = []
+    if not path.exists():
+        if notes is not None:
+            for wf in config.WATCHDOG_RUNS:
+                notes.append(f"{wf}: no recorded runs yet")
+        return out
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(doc, dict):
+            raise ValueError("ledger is not a JSON object")
+    except Exception as e:                                        # noqa: BLE001
+        out.append(_finding(
+            "runs_ledger_unreadable", "WARNING",
+            f"runs ledger unreadable ({_ascii(e, 80)}) - every run-history "
+            f"probe is blind until state/runs.json parses again"))
+        return out
+    for wf, spec in config.WATCHDOG_RUNS.items():
+        row = doc.get(wf)
+        if not isinstance(row, dict):
+            row = {}
+        success = _parse_ts(row.get(_LEDGER_SUCCESS))
+        failure = _parse_ts(row.get(_LEDGER_FAILURE))
+        skip = _parse_ts(row.get(_LEDGER_SKIP))
+        if success is None and failure is None and skip is None:
+            if notes is not None:
+                notes.append(f"{wf}: no recorded runs yet")
+            continue
+        if failure is not None and (success is None or failure > success):
+            severity = ("CRITICAL" if wf in config.VPS_WATCHDOG_FAILED_CRITICAL
+                        else spec["severity"])
+            fail_age = _age_h(failure, now)
+            succ_age = _age_h(success, now)
+            shown = "never" if succ_age is None else f"{succ_age:.1f}h ago"
+            try:
+                streak = int(row.get("consecutive_failures") or 0)
+            except (TypeError, ValueError):
+                streak = 0
+            status = str(row.get("last_status") or "")
+            halted = " [HALTED - a non-VPS data commit landed upstream; see state/HALT]" \
+                if status == "halted" else ""
+            tail = _ascii(row.get("last_line"))
+            out.append(_finding(
+                f"run_{wf}_failed", severity,
+                f"{wf}: run FAILED {fail_age:.1f}h ago and has not succeeded "
+                f"since (last success {shown}; {streak} consecutive; exit "
+                f"{row.get('last_exit')}){halted}"
+                + (f" - {tail}" if tail else "")))
+            continue
+        last = max(t for t in (success, skip) if t is not None)
+        f = _freshness_finding(wf, spec, last, now)
+        if f is not None:
+            out.append(f)
+    return out
+
+
+def probe_disk(root: pathlib.Path, notes: list | None = None,
+               min_gb: float | None = None) -> list[dict]:
+    """Free space under the checkout (ledger mode only). A full disk fails
+    every job at once -- the scan cannot write its frames, the publish clone
+    cannot fetch, the ledger itself cannot be replaced -- and no content
+    probe sees it coming. CRITICAL below config.VPS_DISK_MIN_GB; 0 = off."""
+    min_gb = config.VPS_DISK_MIN_GB if min_gb is None else min_gb
+    if not min_gb or min_gb <= 0:
+        return []
+    try:
+        usage = shutil.disk_usage(str(root))
+    except OSError as e:
+        if notes is not None:
+            notes.append(f"disk probe failed ({_ascii(e, 80)})")
+        return []
+    free_gb = usage.free / float(1 << 30)
+    if free_gb < min_gb:
+        return [_finding(
+            "disk_low", "CRITICAL",
+            f"free disk under the checkout is {free_gb:.2f} GiB (limit "
+            f"{min_gb:g} GiB) - the next scan or publish will fail; prune "
+            f"backups/ or .cache/ or grow the volume")]
+    return []
 
 
 def reconcile(state: dict, findings: list[dict], now: dt.datetime,
@@ -465,12 +616,24 @@ def _alert_text(severity: str, items: list[dict], host: str) -> str:
 
 # ── entrypoint ─────────────────────────────────────────────────────────────────
 
-def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
+def run(dry_run: bool = False, now: dt.datetime | None = None,
+        root: pathlib.Path | None = None) -> dict:
     now = now or _utcnow()
+    root = pathlib.Path(root) if root else ROOT
     host = os.environ.get("WATCHDOG_HOST", "unknown")
     notes: list[str] = []
-    findings = probe_content(ROOT, now)
-    findings += probe_runs(_default_fetch, now, notes=notes)
+    findings = probe_content(root, now)
+    # LEDGER MODE (the VPS): the runner's state/runs.json replaces the GitHub
+    # Actions run history outright -- api.github.com is never consulted, and
+    # the disk probe joins in. Unset (GitHub Actions): exactly as before.
+    ledger = os.environ.get("VIVEK_RUNS_LEDGER", "").strip()
+    if ledger:
+        findings += probe_ledger(pathlib.Path(ledger), now, notes=notes)
+        findings += probe_disk(root, notes=notes)
+        notes.append("run-history source: runs ledger (GitHub Actions API "
+                     "not consulted)")
+    else:
+        findings += probe_runs(_default_fetch, now, notes=notes)
 
     state_path = pathlib.Path(os.environ.get("WATCHDOG_STATE", str(STATE_FILE)))
     try:

@@ -26,6 +26,11 @@ import { dispatchWorkflow } from "./_dispatch.js";
 
 export const onRequestPost = withAccessLog("/api/scan", async ({ env, request }) => {
   const token = env.GH_DISPATCH_TOKEN;
+  // D4 (2026-09-27, deploy/DESIGN.md section 5): a VPS adapter URL is the
+  // alternate transport -- either it or the GitHub token makes this endpoint
+  // "configured"; with DISPATCH_URL unset nothing below changes.
+  const dispatchUrl = env.DISPATCH_URL;
+  const dispatchToken = env.DISPATCH_TOKEN;
   const repo = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
   const workflow = env.GH_WORKFLOW || "scan.yml";
   const ref = env.GH_REF || "main";
@@ -45,7 +50,7 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
       headers: { "Content-Type": "application/json" },
     });
 
-  if (!token) {
+  if (!dispatchUrl && !token) {
     return json(503, {
       ok: false,
       configured: false,
@@ -100,7 +105,8 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
 
   // Transport + the cooldown refund rule live in _dispatch.js; the wording below
   // is this endpoint's own (it answers the deck's SCAN button).
-  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { market }, refund: refundGuard });
+  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { market }, refund: refundGuard,
+                                     dispatchUrl, dispatchToken });
 
   if (r.ok) {
     const scope = market === "all" ? "Full scan" : `${market.toUpperCase()} scan`;
