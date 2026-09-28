@@ -2,7 +2,7 @@
   "schema_version": 2,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-09-28T05:40:07+00:00",
+  "generated_at": "2026-09-28T06:32:34+00:00",
   "ruleset_version": "1.0.0",
   "period": "max",
   "universe": 201,
@@ -52,7 +52,7 @@
     "Realised trades only: open and pending trades are shown as marks beside the numbers, never inside them.",
     "QNT's Sep-2026 move informed the thresholds, so it is excluded from every scored number and reported only as a case study.",
     "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no capital constraint or position cap.",
-    "Daily bars per source (coins): binance_vision 119, yahoo 32, coinbase 15. Exchange volume is one venue's, smaller than Yahoo's aggregate, so the turnover floors bind harder; young coins have thin early history.",
+    "Daily bars per source (coins): binance_vision 120, yahoo 32, coinbase 14. Exchange volume is one venue's, smaller than Yahoo's aggregate, so the turnover floors bind harder; young coins have thin early history.",
     "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample."
   ],
   "primary": {
@@ -3804,13 +3804,13 @@
       "design_case": true
     }
   ],
-  "elapsed_s": 172.4,
+  "elapsed_s": 168.6,
   "sources": {
     "mode": "exchange",
     "by_source": {
-      "binance_vision": 119,
+      "binance_vision": 120,
       "yahoo": 32,
-      "coinbase": 15
+      "coinbase": 14
     },
     "dead": {
       "binance": "HTTP 451",
