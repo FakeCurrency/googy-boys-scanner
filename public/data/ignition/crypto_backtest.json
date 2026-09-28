@@ -2,12 +2,12 @@
   "schema_version": 2,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-09-28T03:09:05+00:00",
+  "generated_at": "2026-09-28T03:41:58+00:00",
   "ruleset_version": "1.0.0",
   "period": "max",
   "universe": 201,
   "with_data": 167,
-  "symbols_replayed": 137,
+  "symbols_replayed": 138,
   "date_range": [
     "2017-08-17",
     "2026-09-27"
@@ -52,7 +52,7 @@
     "Realised trades only: open and pending trades are shown as marks beside the numbers, never inside them.",
     "QNT's Sep-2026 move informed the thresholds, so it is excluded from every scored number and reported only as a case study.",
     "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no capital constraint or position cap.",
-    "Daily bars per source (coins): binance_vision 119, yahoo 34, coinbase 14. Exchange volume is one venue's, smaller than Yahoo's aggregate, so the turnover floors bind harder; young coins have thin early history.",
+    "Daily bars per source (coins): binance_vision 120, yahoo 32, coinbase 15. Exchange volume is one venue's, smaller than Yahoo's aggregate, so the turnover floors bind harder; young coins have thin early history.",
     "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample."
   ],
   "primary": {
@@ -390,11 +390,11 @@
     },
     "breakout_only": {
       "n_primary": 94,
-      "n_baseline": 760,
-      "diff_r": 0.724,
+      "n_baseline": 765,
+      "diff_r": 0.725,
       "diff_ci90": [
-        -0.521,
-        2.169
+        -0.523,
+        2.172
       ],
       "p_diff_le_0": 0.202
     },
@@ -792,93 +792,93 @@
       "ci_method": "cluster bootstrap, entry months resampled whole"
     },
     "breakout_only": {
-      "n": 760,
+      "n": 765,
       "skipped": 0,
       "open": 20,
       "open_mtm_r": 14.42,
       "open_at_end": 19,
       "pending": 1,
-      "wins": 266,
-      "losses": 494,
+      "wins": 268,
+      "losses": 497,
       "flat": 0,
       "win_pct": 35.0,
-      "exp_r": 0.465,
-      "median_r": -0.541,
-      "total_r": 353.58,
-      "pf": 1.88,
+      "exp_r": 0.464,
+      "median_r": -0.542,
+      "total_r": 355.13,
+      "pf": 1.87,
       "pf_note": null,
-      "avg_win_r": 2.845,
-      "avg_loss_r": -0.816,
+      "avg_win_r": 2.841,
+      "avg_loss_r": -0.818,
       "pct_ge_3r": 9.9,
-      "pct_ge_5r": 4.9,
+      "pct_ge_5r": 4.8,
       "pct_ge_10r": 1.8,
       "max_r": 51.03,
-      "top5_share_pct": 42.1,
+      "top5_share_pct": 41.9,
       "exp_r_ex_top5": 0.271,
       "max_dd_r": -44.47,
       "avg_bars": 7.7,
-      "stop_pct": 41.3,
+      "stop_pct": 41.4,
       "exp_r_ci90": [
-        0.142,
-        0.801
+        0.135,
+        0.804
       ],
       "boot_p_exp_le_0": 0.004,
       "ci_method": "cluster bootstrap, entry months resampled whole",
       "by_split": {
         "in_sample": {
-          "n": 386,
+          "n": 389,
           "skipped": 0,
           "open": 0,
           "open_mtm_r": 0.0,
           "open_at_end": 0,
           "pending": 0,
-          "wins": 149,
-          "losses": 237,
+          "wins": 150,
+          "losses": 239,
           "flat": 0,
           "win_pct": 38.6,
-          "exp_r": 0.414,
-          "median_r": -0.452,
-          "total_r": 159.78,
-          "pf": 1.82,
+          "exp_r": 0.408,
+          "median_r": -0.453,
+          "total_r": 158.68,
+          "pf": 1.81,
           "pf_note": null,
-          "avg_win_r": 2.375,
-          "avg_loss_r": -0.819,
-          "pct_ge_3r": 10.4,
+          "avg_win_r": 2.366,
+          "avg_loss_r": -0.821,
+          "pct_ge_3r": 10.3,
           "pct_ge_5r": 5.4,
-          "pct_ge_10r": 1.6,
+          "pct_ge_10r": 1.5,
           "max_r": 15.76,
-          "top5_share_pct": 41.1,
-          "exp_r_ex_top5": 0.247,
+          "top5_share_pct": 41.4,
+          "exp_r_ex_top5": 0.242,
           "max_dd_r": -39.63,
           "avg_bars": 7.8,
-          "stop_pct": 39.1
+          "stop_pct": 39.3
         },
         "out_of_sample": {
-          "n": 374,
+          "n": 376,
           "skipped": 0,
           "open": 20,
           "open_mtm_r": 14.42,
           "open_at_end": 19,
           "pending": 1,
-          "wins": 117,
-          "losses": 257,
+          "wins": 118,
+          "losses": 258,
           "flat": 0,
-          "win_pct": 31.3,
-          "exp_r": 0.518,
+          "win_pct": 31.4,
+          "exp_r": 0.522,
           "median_r": -0.606,
-          "total_r": 193.8,
+          "total_r": 196.45,
           "pf": 1.93,
           "pf_note": null,
-          "avg_win_r": 3.444,
-          "avg_loss_r": -0.814,
-          "pct_ge_3r": 9.4,
+          "avg_win_r": 3.446,
+          "avg_loss_r": -0.815,
+          "pct_ge_3r": 9.6,
           "pct_ge_5r": 4.3,
           "pct_ge_10r": 2.1,
           "max_r": 51.03,
-          "top5_share_pct": 76.8,
-          "exp_r_ex_top5": 0.122,
+          "top5_share_pct": 75.8,
+          "exp_r_ex_top5": 0.128,
           "max_dd_r": -44.47,
-          "avg_bars": 7.6,
+          "avg_bars": 7.7,
           "stop_pct": 43.6
         },
         "forward": {
@@ -982,11 +982,11 @@
         "param": "ribbon_max",
         "value": 0.18,
         "default": false,
-        "n": 140,
+        "n": 141,
         "open": 10,
-        "exp_r": 0.947,
-        "pf": 2.68,
-        "median_r": -0.64
+        "exp_r": 0.933,
+        "pf": 2.65,
+        "median_r": -0.645
       },
       {
         "param": "atr_pctl_max",
@@ -1012,11 +1012,11 @@
         "param": "atr_pctl_max",
         "value": 0.4,
         "default": false,
-        "n": 99,
+        "n": 100,
         "open": 5,
-        "exp_r": 1.225,
-        "pf": 3.12,
-        "median_r": -0.808
+        "exp_r": 1.203,
+        "pf": 3.07,
+        "median_r": -0.81
       },
       {
         "param": "vol_pctl_max",
@@ -1093,8 +1093,8 @@
       "cells_below_min_n": 0,
       "n_min_counted": 10,
       "n_median_counted": 71,
-      "exp_r_min": 0.607,
-      "exp_r_median": 1.39,
+      "exp_r_min": 0.6,
+      "exp_r_median": 1.366,
       "exp_r_max": 5.72,
       "pct_cells_positive": 100.0,
       "pct_positive_trade_weighted": 100.0,
@@ -3804,13 +3804,13 @@
       "design_case": true
     }
   ],
-  "elapsed_s": 173.8,
+  "elapsed_s": 176.3,
   "sources": {
     "mode": "exchange",
     "by_source": {
-      "binance_vision": 119,
-      "yahoo": 34,
-      "coinbase": 14
+      "binance_vision": 120,
+      "yahoo": 32,
+      "coinbase": 15
     },
     "dead": {
       "binance": "HTTP 451",
@@ -3833,6 +3833,7 @@
       "BTT",
       "BTW",
       "CARDS",
+      "CASH",
       "CASHCAT",
       "CC",
       "COCO",
@@ -3844,7 +3845,6 @@
       "H",
       "HASH",
       "HTX",
-      "JPYC",
       "KAG",
       "KAS",
       "KAU",
@@ -3879,7 +3879,7 @@
       "UB",
       "ULTIMA"
     ],
-    "yahoo_fallback": 34,
+    "yahoo_fallback": 32,
     "identity_rejected": {
       "AI": [
         "binance_vision",
@@ -3893,9 +3893,6 @@
       ],
       "EDGE": [
         "coinbase",
-        "yahoo"
-      ],
-      "JPYC": [
         "yahoo"
       ],
       "KAG": [
