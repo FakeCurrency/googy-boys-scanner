@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-09-28",
+  "run_date": "2026-09-29",
   "ruleset_version": "1.3.1",
   "universe_size": 2047,
   "narrations_file": "narrations.json",
@@ -2026,8 +2026,8 @@
           "confluence": 5,
           "sources": [
             "fib_ext_1618",
-            "prior_yearly_close",
             "yearly_open",
+            "prior_yearly_close",
             "equal_lows",
             "box_low"
           ],
@@ -2074,312 +2074,6 @@
       "next": "bounces staying below 4.30–4.33; next objective the 3.80–3.88 zone (T3)"
     },
     {
-      "ticker": "MC2",
-      "direction": "bearish",
-      "state": "RUNNING",
-      "tier": "A+",
-      "tags": [
-        "FAST_FLIP",
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 13.0,
-          "high": 13.01,
-          "status": "UNTESTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "monthly_open"
-          ],
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 13.01,
-          "high": 13.0775,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 10.005,
-          "high": 10.0757,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 8.4184,
-          "high": 9.2958,
-          "status": "UNTESTED",
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 12.3911,
-          "high": 12.5838,
-          "status": "CONSUMED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_10",
-            "prior_low"
-          ],
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 12.0563,
-          "high": 12.3175,
-          "status": "CONSUMED",
-          "confluence": 4,
-          "sources": [
-            "fib_ext_1618",
-            "yearly_open",
-            "quarterly_open",
-            "prior_yearly_close"
-          ],
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 11.7263,
-          "high": 11.7938,
-          "status": "CONSUMED",
-          "confluence": 2,
-          "sources": [
-            "box_low",
-            "prior_low"
-          ],
-          "created_date": "2026-02-02"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 11.4763,
-          "high": 11.5438,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_low"
-          ],
-          "created_date": "2026-02-02"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.2479,
-        "dist_to_yearly_open_pct": -0.3069,
-        "avg_turnover_20d": 51392,
-        "close": 8.49,
-        "sweep_date": "2026-02-02",
-        "sweep_depth_pct": 0.0008,
-        "displacement_date": "2026-02-02"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Marimaca Copper Corp.",
-      "sector": "Materials",
-      "next": "bounces staying below 10.01–10.08; next objective the 11.48–11.54 zone (T4)"
-    },
-    {
-      "ticker": "MVB",
-      "direction": "bearish",
-      "state": "RUNNING",
-      "tier": "A+",
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 46.15,
-          "high": 46.26,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-05"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 46.26,
-          "high": 46.5964,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-05"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 43.745,
-          "high": 43.9167,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-08-10"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 42.4171,
-          "high": 43.1515,
-          "status": "UNTESTED",
-          "created_date": "2026-08-10"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 43.5717,
-          "high": 44.4724,
-          "status": "CONSUMED",
-          "confluence": 1,
-          "sources": [
-            "fib_ext_10"
-          ],
-          "created_date": "2026-08-10"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 40.6484,
-          "high": 43.255,
-          "status": "TESTED",
-          "confluence": 5,
-          "sources": [
-            "equal_lows",
-            "yearly_open",
-            "prior_yearly_close",
-            "quarterly_open",
-            "fib_ext_1618"
-          ],
-          "created_date": "2026-08-10"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 39.998,
-          "high": 40.5698,
-          "status": "UNTESTED",
-          "confluence": 2,
-          "sources": [
-            "box_low",
-            "equal_lows"
-          ],
-          "created_date": "2026-08-10"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.1133,
-        "dist_to_yearly_open_pct": 0.0134,
-        "avg_turnover_20d": 732825,
-        "close": 41.8,
-        "sweep_date": "2026-08-05",
-        "sweep_depth_pct": 0.0024,
-        "displacement_date": "2026-08-10"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Vaneck Australian Banks Etf",
-      "sector": "Not Applic",
-      "next": "bounces staying below 43.74–43.92; next objective the 40.65–43.26 zone (T2)"
-    },
-    {
-      "ticker": "NES",
-      "direction": "bearish",
-      "state": "RUNNING",
-      "tier": "A+",
-      "tags": [
-        "FAST_FLIP",
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
-      ],
-      "regime": "EXPANSION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.004,
-          "high": 0.004,
-          "status": "RESPECTED",
-          "confluence": 3,
-          "sources": [
-            "sweep_wick",
-            "yearly_open",
-            "monthly_open"
-          ],
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.004,
-          "high": 0.006,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.003,
-          "high": 0.004,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0025,
-          "high": 0.0028,
-          "status": "UNTESTED",
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.001,
-          "high": 0.004,
-          "status": "TESTED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_1618",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-08-27"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.25,
-        "dist_to_yearly_open_pct": -0.375,
-        "avg_turnover_20d": 2581,
-        "close": 0.0025,
-        "sweep_date": "2026-08-25",
-        "sweep_depth_pct": 0.0,
-        "displacement_date": "2026-08-27"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Nelson Resources Limited.",
-      "sector": "Materials",
-      "next": "bounces staying below 0.0030–0.0040; next objective the 0.0010–0.0040 zone (T1)"
-    },
-    {
       "ticker": "OZF",
       "direction": "bearish",
       "state": "RUNNING",
@@ -2414,7 +2108,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 30.765,
-          "high": 30.8465,
+          "high": 30.8458,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-08-10"
@@ -2472,10 +2166,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0684,
-        "dist_to_yearly_open_pct": -0.0073,
-        "avg_turnover_20d": 683576,
-        "close": 29.25,
+        "retrace_pct": 0.1795,
+        "dist_to_yearly_open_pct": 0.006,
+        "avg_turnover_20d": 677271,
+        "close": 29.64,
         "sweep_date": "2026-08-05",
         "sweep_depth_pct": 0.0006,
         "displacement_date": "2026-08-10"
@@ -2487,12 +2181,285 @@
       "next": "bounces staying below 30.77–30.85; next objective the 28.77–30.84 zone (T2)"
     },
     {
-      "ticker": "PHO",
+      "ticker": "PFG",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.2151,
+          "high": 0.22,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.22,
+          "high": 0.23,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-02"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.21,
+          "high": 0.215,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-02"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.2047,
+          "high": 0.2076,
+          "status": "UNTESTED",
+          "created_date": "2026-09-02"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.175,
+          "high": 0.205,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.25,
+        "dist_to_yearly_open_pct": -0.037,
+        "avg_turnover_20d": 13564,
+        "close": 0.205,
+        "sweep_date": "2026-09-02",
+        "sweep_depth_pct": 0.0226,
+        "displacement_date": "2026-09-02"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Prime Financial Group Limited",
+      "sector": "Financial Services",
+      "next": "bounces staying below 0.210–0.215; next objective the 0.175–0.205 zone (T1)"
+    },
+    {
+      "ticker": "RGN",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.39,
+          "high": 2.39,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-08-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.39,
+          "high": 2.412,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 2.28,
+          "high": 2.29,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 2.2219,
+          "high": 2.254,
+          "status": "UNTESTED",
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 2.085,
+          "high": 2.262,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "prior_low",
+            "fib_ext_1618",
+            "box_low",
+            "equal_lows",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 2.0462,
+          "high": 2.0799,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 2.0171,
+          "high": 2.0411,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-08-19"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0455,
+        "dist_to_yearly_open_pct": -0.0565,
+        "avg_turnover_20d": 6800690,
+        "close": 2.18,
+        "sweep_date": "2026-08-18",
+        "sweep_depth_pct": 0.0,
+        "displacement_date": "2026-08-19"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Region Group",
+      "sector": "Equity Real Estate Investment Trusts (REITs)",
+      "next": "bounces staying below 2.28–2.29; next objective the 2.08–2.26 zone (T1)"
+    },
+    {
+      "ticker": "SKS",
       "direction": "bullish",
       "state": "RUNNING",
       "tier": "A+",
       "tags": [
         "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 7.3364,
+          "high": 7.5644,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-15"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 7.1147,
+          "high": 7.3364,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-15"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 8.7929,
+          "high": 8.9132,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 9.2853,
+          "high": 9.7457,
+          "status": "UNTESTED",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 9.0794,
+          "high": 9.9651,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "box_high"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 10.225,
+          "high": 11.1542,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-18"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1046,
+        "dist_to_yearly_open_pct": 1.5782,
+        "avg_turnover_20d": 6266227,
+        "close": 10.16,
+        "sweep_date": "2026-09-15",
+        "sweep_depth_pct": 0.0301,
+        "displacement_date": "2026-09-18"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Sks Technologies Group Limited",
+      "sector": "Capital Goods",
+      "next": "pullbacks staying above 8.79–8.91; next objective the 10.22–11.15 zone (T2)"
+    },
+    {
+      "ticker": "SRN",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
         "ANCHOR_CONTEXT",
         "ILLIQUID"
       ],
@@ -2501,85 +2468,98 @@
         {
           "id": "demand",
           "type": "DEMAND",
-          "low": 0.135,
-          "high": 0.14,
-          "status": "UNTESTED",
+          "low": 0.021,
+          "high": 0.022,
+          "status": "TESTED",
           "confluence": 2,
           "sources": [
             "sweep_wick",
-            "monthly_open"
+            "quarterly_open"
           ],
-          "created_date": "2026-09-08"
+          "created_date": "2026-09-16"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.125,
-          "high": 0.135,
-          "status": "UNTESTED",
+          "low": 0.019,
+          "high": 0.021,
+          "status": "RESPECTED",
           "rule": "close_below_low",
-          "created_date": "2026-09-08"
+          "created_date": "2026-09-16"
         },
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.145,
-          "high": 0.15,
+          "low": 0.021,
+          "high": 0.022,
           "status": "UNTESTED",
           "rule": "touch",
-          "created_date": "2026-09-08"
+          "created_date": "2026-09-21"
         },
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.1535,
-          "high": 0.1579,
+          "low": 0.0222,
+          "high": 0.0225,
           "status": "UNTESTED",
-          "created_date": "2026-09-08"
+          "created_date": "2026-09-21"
         },
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 0.14,
-          "high": 0.1675,
-          "status": "TESTED",
-          "confluence": 5,
+          "low": 0.022,
+          "high": 0.028,
+          "status": "UNTESTED",
+          "confluence": 4,
           "sources": [
             "fib_ext_10",
-            "prior_yearly_close",
             "equal_highs",
             "fib_ext_1618",
-            "yearly_open"
+            "box_high"
           ],
-          "created_date": "2026-09-08"
+          "created_date": "2026-09-21"
         },
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 0.18,
-          "high": 0.19,
+          "low": 0.029,
+          "high": 0.031,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
             "prior_high"
           ],
-          "created_date": "2026-09-08"
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.048,
+          "high": 0.052,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close",
+            "equal_highs"
+          ],
+          "created_date": "2026-09-21"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": 0.0476,
-        "avg_turnover_20d": 18513,
-        "close": 0.165,
-        "sweep_date": "2026-09-08",
-        "sweep_depth_pct": 0.0357,
-        "displacement_date": "2026-09-08"
+        "retrace_pct": 1.0,
+        "dist_to_yearly_open_pct": -0.58,
+        "avg_turnover_20d": 2319,
+        "close": 0.021,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0455,
+        "displacement_date": "2026-09-21"
       },
       "smt": null,
       "route_to": null,
-      "name": "Phosco Ltd",
+      "name": "Surefire Resources Nl",
       "sector": "Materials",
-      "next": "pullbacks staying above 0.145–0.150; next objective the 0.140–0.168 zone (T1)"
+      "next": "pullbacks staying above 0.0210–0.0220; next objective the 0.0220–0.0280 zone (T1)"
     },
     {
       "ticker": "1TT",
@@ -2763,110 +2743,6 @@
       "name": "4Dmedical Limited",
       "sector": "Health Care Equipment & Services",
       "next": "pullbacks staying above 3.80–3.85; next objective the 4.25–4.71 zone (T1)"
-    },
-    {
-      "ticker": "AFI",
-      "direction": "bullish",
-      "state": "RUNNING",
-      "tier": "A",
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 6.172,
-          "high": 6.172,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-06-18"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 6.1343,
-          "high": 6.172,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-06-18"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 6.5327,
-          "high": 6.551,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-06-22"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 6.6404,
-          "high": 6.7511,
-          "status": "UNTESTED",
-          "created_date": "2026-06-22"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 6.5488,
-          "high": 6.741,
-          "status": "CONSUMED",
-          "confluence": 2,
-          "sources": [
-            "equal_highs",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-06-22"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 6.7438,
-          "high": 7.0335,
-          "status": "RESPECTED",
-          "confluence": 4,
-          "sources": [
-            "equal_highs",
-            "yearly_open",
-            "prior_yearly_close",
-            "fib_ext_1618"
-          ],
-          "created_date": "2026-06-22"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 7.1029,
-          "high": 7.1488,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "box_high"
-          ],
-          "created_date": "2026-06-22"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.3694,
-        "dist_to_yearly_open_pct": -0.0277,
-        "avg_turnover_20d": 3750949,
-        "close": 6.65,
-        "sweep_date": "2026-06-18",
-        "sweep_depth_pct": 0.0,
-        "displacement_date": "2026-06-22"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Australian Foundation Investment Company Limited",
-      "sector": "Not Applic",
-      "next": "pullbacks staying above 6.53–6.55; next objective the 6.74–7.03 zone (T2)"
     },
     {
       "ticker": "AI1",
@@ -4611,7 +4487,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 100.615,
-          "high": 100.8571,
+          "high": 100.8563,
           "status": "UNTESTED",
           "rule": "touch",
           "created_date": "2026-07-01"
@@ -4667,10 +4543,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.1288,
-        "dist_to_yearly_open_pct": 0.0191,
-        "avg_turnover_20d": 5428714,
-        "close": 96.84,
+        "retrace_pct": 0.0993,
+        "dist_to_yearly_open_pct": 0.0159,
+        "avg_turnover_20d": 5418813,
+        "close": 96.54,
         "sweep_date": "2026-07-01",
         "sweep_depth_pct": 0.0603,
         "displacement_date": "2026-07-01"
@@ -4940,295 +4816,119 @@
       "next": "bounces staying below 0.869–0.874; next objective the 0.796–0.833 zone (T1)"
     },
     {
-      "ticker": "LMS",
+      "ticker": "SHV",
       "direction": "bearish",
       "state": "RUNNING",
       "tier": "A",
       "tags": [
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.585,
-          "high": 0.63,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-05-15"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.63,
-          "high": 0.6527,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-05-15"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.405,
-          "high": 0.41,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-05-18"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.2862,
-          "high": 0.3519,
-          "status": "UNTESTED",
-          "created_date": "2026-05-18"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.4014,
-          "high": 0.4748,
-          "status": "CONSUMED",
-          "confluence": 5,
-          "sources": [
-            "fib_ext_10",
-            "quarterly_open",
-            "prior_yearly_close",
-            "yearly_open",
-            "equal_lows"
-          ],
-          "created_date": "2026-05-18"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.2777,
-          "high": 0.3973,
-          "status": "CONSUMED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_1618",
-            "equal_lows"
-          ],
-          "created_date": "2026-05-18"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 0.0877,
-          "high": 0.1123,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "box_low"
-          ],
-          "created_date": "2026-05-18"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.1111,
-        "dist_to_yearly_open_pct": -0.4889,
-        "avg_turnover_20d": 13652,
-        "close": 0.23,
-        "sweep_date": "2026-05-15",
-        "sweep_depth_pct": 0.0769,
-        "displacement_date": "2026-05-18"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Litchfield Minerals Limited",
-      "sector": "Materials",
-      "next": "bounces staying below 0.405–0.410; next objective the 0.0877–0.112 zone (T3)"
-    },
-    {
-      "ticker": "MAN",
-      "direction": "bearish",
-      "state": "RUNNING",
-      "tier": "A",
-      "tags": [
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
+        "ANCHOR_CONTEXT"
       ],
       "regime": "EXPANSION",
       "zones": [
         {
           "id": "supply",
           "type": "SUPPLY",
-          "low": 0.026,
-          "high": 0.027,
-          "status": "UNTESTED",
-          "confluence": 1,
+          "low": 4.91,
+          "high": 4.97,
+          "status": "RESPECTED",
+          "confluence": 3,
           "sources": [
-            "sweep_wick"
+            "sweep_wick",
+            "yearly_open",
+            "prior_yearly_close"
           ],
-          "created_date": "2026-05-14"
+          "created_date": "2026-09-04"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.027,
-          "high": 0.029,
-          "status": "UNTESTED",
+          "low": 4.97,
+          "high": 5.0495,
+          "status": "RESPECTED",
           "rule": "close_above_high",
-          "created_date": "2026-05-14"
+          "created_date": "2026-09-04"
         },
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.023,
-          "high": 0.024,
+          "low": 4.62,
+          "high": 4.6647,
           "status": "UNTESTED",
           "rule": "touch",
-          "created_date": "2026-05-15"
+          "created_date": "2026-09-09"
         },
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.0209,
-          "high": 0.0221,
+          "low": 4.4352,
+          "high": 4.5374,
           "status": "UNTESTED",
-          "created_date": "2026-05-15"
+          "created_date": "2026-09-09"
         },
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 0.016,
-          "high": 0.023,
-          "status": "TESTED",
-          "confluence": 4,
+          "low": 4.5171,
+          "high": 4.6958,
+          "status": "CONSUMED",
+          "confluence": 1,
           "sources": [
-            "fib_ext_1618",
-            "box_low",
-            "equal_lows",
             "fib_ext_10"
           ],
-          "created_date": "2026-05-15"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.125,
-        "dist_to_yearly_open_pct": -0.1304,
-        "avg_turnover_20d": 15822,
-        "close": 0.02,
-        "sweep_date": "2026-05-14",
-        "sweep_depth_pct": 0.0385,
-        "displacement_date": "2026-05-15"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mandrake Resources Limited",
-      "sector": "Materials",
-      "next": "bounces staying below 0.0230–0.0240; next objective the 0.0160–0.0230 zone (T1)"
-    },
-    {
-      "ticker": "MVS",
-      "direction": "bullish",
-      "state": "RUNNING",
-      "tier": "A",
-      "tags": [
-        "FAST_FLIP",
-        "ILLIQUID"
-      ],
-      "regime": "EXPANSION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 20.66,
-          "high": 21.92,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 20.508,
-          "high": 20.66,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 21.3501,
-          "high": 21.425,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 21.6055,
-          "high": 21.8289,
-          "status": "UNTESTED",
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 21.904,
-          "high": 22.456,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_10",
-            "prior_high"
-          ],
-          "created_date": "2026-09-21"
+          "created_date": "2026-09-09"
         },
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 22.7198,
-          "high": 23.4281,
-          "status": "UNTESTED",
-          "confluence": 4,
+          "low": 4.2842,
+          "high": 4.5058,
+          "status": "RESPECTED",
+          "confluence": 2,
           "sources": [
             "fib_ext_1618",
-            "prior_yearly_close",
-            "prior_high",
-            "yearly_open"
+            "equal_lows"
           ],
-          "created_date": "2026-09-21"
+          "created_date": "2026-09-09"
         },
         {
           "id": "t3",
           "type": "TARGET",
-          "low": 24.1181,
-          "high": 24.2701,
+          "low": 4.0642,
+          "high": 4.1558,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
-            "box_high"
+            "prior_low"
           ],
-          "created_date": "2026-09-21"
+          "created_date": "2026-09-09"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 3.9042,
+          "high": 3.9958,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-09"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3595,
-        "dist_to_yearly_open_pct": -0.0703,
-        "avg_turnover_20d": 121237,
-        "close": 21.64,
-        "sweep_date": "2026-09-21",
-        "sweep_depth_pct": 0.0575,
-        "displacement_date": "2026-09-21"
+        "retrace_pct": 0.0571,
+        "dist_to_yearly_open_pct": -0.1304,
+        "avg_turnover_20d": 3385517,
+        "close": 4.31,
+        "sweep_date": "2026-09-04",
+        "sweep_depth_pct": 0.0122,
+        "displacement_date": "2026-09-09"
       },
       "smt": null,
       "route_to": null,
-      "name": "Vaneck Small Companies Masters Etf",
-      "sector": "Not Applic",
-      "next": "pullbacks staying above 21.35–21.43; next objective the 21.90–22.46 zone (T1)"
+      "name": "Select Harvests Limited",
+      "sector": "Food, Beverage & Tobacco",
+      "next": "bounces staying below 4.62–4.66; next objective the 4.28–4.51 zone (T2)"
     },
     {
       "ticker": "ZLD",
@@ -6708,18 +6408,18 @@
       ],
       "metrics": {
         "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.081,
-        "avg_turnover_20d": 112938,
-        "close": 0.885,
+        "dist_to_yearly_open_pct": -0.0706,
+        "avg_turnover_20d": 125121,
+        "close": 0.895,
         "sweep_date": "2026-09-24",
         "sweep_depth_pct": 0.0011,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Amcil Limited",
       "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "ANX",
@@ -7757,19 +7457,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4444,
-        "dist_to_yearly_open_pct": -0.1767,
-        "avg_turnover_20d": 26056,
-        "close": 0.77,
+        "retrace_pct": 0.8889,
+        "dist_to_yearly_open_pct": -0.1874,
+        "avg_turnover_20d": 25753,
+        "close": 0.76,
         "sweep_date": "2026-09-24",
         "sweep_depth_pct": 0.0033,
-        "bars_remaining": 3
+        "bars_remaining": 2
       },
       "smt": null,
       "route_to": null,
       "name": "Cd Private Equity Fund Iii",
       "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
     },
     {
       "ticker": "CDA",
@@ -7814,6 +7514,53 @@
       "route_to": null,
       "name": "Codan Limited",
       "sector": "Technology Hardware & Equipment",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "CDM",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.7943,
+          "high": 0.7991,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.7991,
+          "high": 0.8091,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.1758,
+        "avg_turnover_20d": 183084,
+        "close": 0.775,
+        "sweep_date": "2026-09-28",
+        "sweep_depth_pct": 0.0061,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Cadence Capital Limited",
+      "sector": "Not Applic",
       "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
     },
     {
@@ -9939,7 +9686,7 @@
           "type": "SUPPLY",
           "low": 97.93,
           "high": 98.2,
-          "status": "UNTESTED",
+          "status": "RESPECTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
@@ -9957,109 +9704,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4133,
-        "dist_to_yearly_open_pct": 0.1899,
-        "avg_turnover_20d": 2754749,
-        "close": 97.32,
+        "retrace_pct": 0.0467,
+        "dist_to_yearly_open_pct": 0.1832,
+        "avg_turnover_20d": 2734147,
+        "close": 96.77,
         "sweep_date": "2026-09-23",
         "sweep_depth_pct": 0.0028,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Ishares Msci Emerging Markets Etf",
       "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "IJH",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 51.25,
-          "high": 51.265,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 50.9925,
-          "high": 51.25,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.16,
-        "dist_to_yearly_open_pct": 0.0478,
-        "avg_turnover_20d": 607260,
-        "close": 51.88,
-        "sweep_date": "2026-09-21",
-        "sweep_depth_pct": 0.0003,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Ishares S&P Mid-Cap Etf",
-      "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
-    },
-    {
-      "ticker": "IJR",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 195.78,
-          "high": 196.36,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 194.7974,
-          "high": 195.78,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.2987,
-        "dist_to_yearly_open_pct": 0.0884,
-        "avg_turnover_20d": 1142190,
-        "close": 197.4,
-        "sweep_date": "2026-09-21",
-        "sweep_depth_pct": 0.003,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Ishares S&P Small-Cap Etf",
-      "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "IKO",
@@ -10092,19 +9749,19 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.3924,
-        "dist_to_yearly_open_pct": 0.8094,
-        "avg_turnover_20d": 1094953,
-        "close": 263.19,
+        "retrace_pct": 0.2519,
+        "dist_to_yearly_open_pct": 0.7978,
+        "avg_turnover_20d": 1089811,
+        "close": 261.5,
         "sweep_date": "2026-09-23",
         "sweep_depth_pct": 0.0019,
-        "bars_remaining": 2
+        "bars_remaining": 1
       },
       "smt": null,
       "route_to": null,
       "name": "Ishares Msci South Korea Etf",
       "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
     },
     {
       "ticker": "IMB",
@@ -10751,553 +10408,6 @@
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
-      "ticker": "MAF",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 4.66,
-          "high": 4.68,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-25"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 4.5425,
-          "high": 4.66,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-25"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.8182,
-        "dist_to_yearly_open_pct": -0.5535,
-        "avg_turnover_20d": 2835275,
-        "close": 4.7,
-        "sweep_date": "2026-09-25",
-        "sweep_depth_pct": 0.0043,
-        "bars_remaining": 4
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Ma Financial Group Limited",
-      "sector": "Financial Services",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MAH",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 1.13,
-          "high": 1.145,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.145,
-          "high": 1.1708,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.5385,
-        "dist_to_yearly_open_pct": 0.6978,
-        "avg_turnover_20d": 8391585,
-        "close": 1.115,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0133,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Macmahon Holdings Limited",
-      "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MDI",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.017,
-          "high": 0.018,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.018,
-          "high": 0.02,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.1667,
-        "dist_to_yearly_open_pct": -0.6905,
-        "avg_turnover_20d": 15687,
-        "close": 0.013,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0588,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Middle Island Resources Limited",
-      "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MFF",
-      "direction": "bearish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 5.49,
-          "high": 5.5,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 5.5,
-          "high": 5.5421,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.2,
-        "dist_to_yearly_open_pct": 0.1072,
-        "avg_turnover_20d": 1278922,
-        "close": 5.42,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0018,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mff Capital Investments Limited",
-      "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MFG",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 8.18,
-          "high": 8.3,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-24"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 8.0334,
-          "high": 8.18,
-          "status": "TESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-24"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.28,
-        "dist_to_yearly_open_pct": -0.1267,
-        "avg_turnover_20d": 14692246,
-        "close": 8.11,
-        "sweep_date": "2026-09-24",
-        "sweep_depth_pct": 0.0145,
-        "bars_remaining": 3
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Magellan Financial Group Limited",
-      "sector": "Financial Services",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MGR",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 1.7025,
-          "high": 1.705,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-25"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.6826,
-          "high": 1.7025,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-25"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.7059,
-        "dist_to_yearly_open_pct": -0.1361,
-        "avg_turnover_20d": 30107854,
-        "close": 1.715,
-        "sweep_date": "2026-09-25",
-        "sweep_depth_pct": 0.0015,
-        "bars_remaining": 4
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mirvac Group",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MIN",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 51.81,
-          "high": 51.9175,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 50.5152,
-          "high": 51.81,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.8473,
-        "dist_to_yearly_open_pct": -0.0237,
-        "avg_turnover_20d": 77265162,
-        "close": 52.41,
-        "sweep_date": "2026-09-21",
-        "sweep_depth_pct": 0.0021,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mineral Resources Limited",
-      "sector": "Materials",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MOT",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 1.58,
-          "high": 1.5887,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.5639,
-          "high": 1.58,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.0813,
-        "avg_turnover_20d": 1465149,
-        "close": 1.62,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0055,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Metrics Income Opportunities Trust",
-      "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MRE",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 1.63,
-          "high": 1.655,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-24"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.6082,
-          "high": 1.63,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-24"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.1667,
-        "dist_to_yearly_open_pct": -0.1327,
-        "avg_turnover_20d": 300948,
-        "close": 1.68,
-        "sweep_date": "2026-09-24",
-        "sweep_depth_pct": 0.0151,
-        "bars_remaining": 3
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Metrics Real Estate Multi-Strategy Fund",
-      "sector": "Not Applic",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MVP",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.4425,
-          "high": 0.45,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.4317,
-          "high": 0.4425,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.8,
-        "dist_to_yearly_open_pct": -0.1909,
-        "avg_turnover_20d": 74382,
-        "close": 0.445,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0167,
-        "bars_remaining": 2
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Medical Developments International Limited",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 2 sessions, or the setup expires"
-    },
-    {
-      "ticker": "MYX",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 2.79,
-          "high": 2.92,
-          "status": "TESTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "quarterly_open"
-          ],
-          "created_date": "2026-09-24"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 2.7329,
-          "high": 2.79,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-24"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.875,
-        "dist_to_yearly_open_pct": -0.0994,
-        "avg_turnover_20d": 709434,
-        "close": 2.81,
-        "sweep_date": "2026-09-24",
-        "sweep_depth_pct": 0.0445,
-        "bars_remaining": 3
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mayne Pharma Group Limited",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
-    },
-    {
-      "ticker": "NVU",
-      "direction": "bullish",
-      "state": "SWEPT",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.052,
-          "high": 0.053,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.05,
-          "high": 0.052,
-          "status": "UNTESTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.4,
-        "dist_to_yearly_open_pct": -0.3012,
-        "avg_turnover_20d": 37008,
-        "close": 0.058,
-        "sweep_date": "2026-09-21",
-        "sweep_depth_pct": 0.0189,
-        "bars_remaining": 0
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Nanoveu Limited",
-      "sector": "Technology Hardware & Equipment",
-      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
-    },
-    {
       "ticker": "NXD",
       "direction": "bullish",
       "state": "SWEPT",
@@ -11343,6 +10453,370 @@
       "name": "Nexted Group Limited",
       "sector": "Consumer Services",
       "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "PL8",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 1.3875,
+          "high": 1.3993,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.3775,
+          "high": 1.3875,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-22"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6667,
+        "dist_to_yearly_open_pct": -0.0171,
+        "avg_turnover_20d": 571054,
+        "close": 1.4,
+        "sweep_date": "2026-09-22",
+        "sweep_depth_pct": 0.0084,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Plato Income Maximiser Limited.",
+      "sector": "Not Applic",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "POL",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.865,
+          "high": 0.87,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.8409,
+          "high": 0.865,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-21"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.375,
+        "dist_to_yearly_open_pct": -0.3307,
+        "avg_turnover_20d": 727857,
+        "close": 0.85,
+        "sweep_date": "2026-09-21",
+        "sweep_depth_pct": 0.0057,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Polymetals Resources Ltd",
+      "sector": "Materials",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SHJ",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.739,
+          "high": 0.7438,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.7438,
+          "high": 0.7564,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0,
+        "dist_to_yearly_open_pct": 0.015,
+        "avg_turnover_20d": 44685,
+        "close": 0.71,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0065,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Shine Justice Ltd",
+      "sector": "Consumer Services",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SKS",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 10.33,
+          "high": 10.49,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 10.49,
+          "high": 10.729,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-24"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4107,
+        "dist_to_yearly_open_pct": 1.5782,
+        "avg_turnover_20d": 6266227,
+        "close": 10.16,
+        "sweep_date": "2026-09-24",
+        "sweep_depth_pct": 0.0155,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Sks Technologies Group Limited",
+      "sector": "Capital Goods",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SLC",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 2.55,
+          "high": 2.6,
+          "status": "TESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.5111,
+          "high": 2.55,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-24"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.8,
+        "dist_to_yearly_open_pct": -0.0153,
+        "avg_turnover_20d": 4492005,
+        "close": 2.57,
+        "sweep_date": "2026-09-24",
+        "sweep_depth_pct": 0.0192,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Superloop Limited",
+      "sector": "Telecommunication Services",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "SYI",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 32.14,
+          "high": 32.15,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 32.15,
+          "high": 32.3098,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-22"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5672,
+        "dist_to_yearly_open_pct": 0.1436,
+        "avg_turnover_20d": 924101,
+        "close": 31.86,
+        "sweep_date": "2026-09-22",
+        "sweep_depth_pct": 0.0003,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "State Street Spdr Msci Aus Select High Dividend Yield Etf",
+      "sector": "Not Applic",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VNT",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 6.1,
+          "high": 6.13,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 6.13,
+          "high": 6.1938,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.0,
+        "dist_to_yearly_open_pct": 0.0699,
+        "avg_turnover_20d": 16281725,
+        "close": 6.13,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0049,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ventia Services Group Limited",
+      "sector": "Capital Goods",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "WTC",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 31.09,
+          "high": 31.13,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 30.4542,
+          "high": 31.09,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-25"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7818,
+        "dist_to_yearly_open_pct": -0.54,
+        "avg_turnover_20d": 58504411,
+        "close": 31.33,
+        "sweep_date": "2026-09-25",
+        "sweep_depth_pct": 0.0013,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Wisetech Global Limited",
+      "sector": "Software & Services",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 4 sessions, or the setup expires"
     },
     {
       "ticker": "14D",
@@ -11413,7 +10887,7 @@
         "dist_to_yearly_open_pct": -0.3708,
         "avg_turnover_20d": 9477,
         "close": 0.056,
-        "bars_in_box": 21,
+        "bars_in_box": 29,
         "box_low": 0.045,
         "box_high": 0.064,
         "box_height_pct": 0.4222,
@@ -11631,7 +11105,7 @@
         "dist_to_yearly_open_pct": -0.25,
         "avg_turnover_20d": 9874,
         "close": 0.0195,
-        "bars_in_box": 28,
+        "bars_in_box": 6,
         "box_low": 0.016,
         "box_high": 0.02,
         "box_height_pct": 0.25,
@@ -11852,7 +11326,7 @@
         "dist_to_yearly_open_pct": 0.5,
         "avg_turnover_20d": 6801,
         "close": 0.003,
-        "bars_in_box": 2,
+        "bars_in_box": 4,
         "box_low": 0.002,
         "box_high": 0.003,
         "box_height_pct": 0.5,
@@ -12334,34 +11808,6 @@
       "name": "Bayan Mining And Minerals Limited",
       "sector": "Materials",
       "next": "a run of the 0.0620–0.0630 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "BRU",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1765,
-        "avg_turnover_20d": 46246,
-        "close": 0.014,
-        "bars_in_box": 2,
-        "box_low": 0.011,
-        "box_high": 0.015,
-        "box_height_pct": 0.3636,
-        "cluster_low": 0.015,
-        "cluster_high": 0.015
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Buru Energy Limited",
-      "sector": "Energy",
-      "next": "a run of the 0.0150–0.0150 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "C7A",
@@ -13371,7 +12817,7 @@
         "dist_to_yearly_open_pct": -0.145,
         "avg_turnover_20d": 123165221,
         "close": 26.38,
-        "bars_in_box": 1,
+        "bars_in_box": 4,
         "box_low": 25.43,
         "box_high": 31.3,
         "box_height_pct": 0.2308,
@@ -13509,9 +12955,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": -0.0388,
-        "avg_turnover_20d": 119872,
+        "avg_turnover_20d": 116207,
         "close": 1.35,
-        "bars_in_box": 5,
+        "bars_in_box": 6,
         "box_low": 1.315,
         "box_high": 1.4,
         "box_height_pct": 0.0646,
@@ -13756,9 +13202,9 @@
       "metrics": {
         "retrace_pct": null,
         "dist_to_yearly_open_pct": 0.0473,
-        "avg_turnover_20d": 3365,
+        "avg_turnover_20d": 2471,
         "close": 0.435,
-        "bars_in_box": 4,
+        "bars_in_box": 5,
         "box_low": 0.4192,
         "box_high": 0.4389,
         "box_height_pct": 0.0471,
@@ -13835,10 +13281,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0191,
-        "avg_turnover_20d": 5428714,
-        "close": 96.84,
-        "bars_in_box": 2,
+        "dist_to_yearly_open_pct": 0.0159,
+        "avg_turnover_20d": 5418813,
+        "close": 96.54,
+        "bars_in_box": 3,
         "box_low": 95.53,
         "box_high": 101.0,
         "box_height_pct": 0.0573,
@@ -13972,10 +13418,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0383,
-        "avg_turnover_20d": 564065,
-        "close": 147.35,
-        "bars_in_box": 34,
+        "dist_to_yearly_open_pct": 0.0364,
+        "avg_turnover_20d": 594092,
+        "close": 147.08,
+        "bars_in_box": 35,
         "box_low": 144.65,
         "box_high": 151.57,
         "box_height_pct": 0.0478,
@@ -13998,10 +13444,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0756,
-        "avg_turnover_20d": 26600202,
-        "close": 73.17,
-        "bars_in_box": 9,
+        "dist_to_yearly_open_pct": 0.0763,
+        "avg_turnover_20d": 26746118,
+        "close": 73.22,
+        "bars_in_box": 10,
         "box_low": 70.51,
         "box_high": 73.59,
         "box_height_pct": 0.0437,
@@ -14078,10 +13524,10 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1536,
-        "avg_turnover_20d": 869432,
-        "close": 48.04,
-        "bars_in_box": 5,
+        "dist_to_yearly_open_pct": -0.1481,
+        "avg_turnover_20d": 897674,
+        "close": 48.35,
+        "bars_in_box": 6,
         "box_low": 47.345,
         "box_high": 52.15,
         "box_height_pct": 0.1015,
@@ -14234,90 +13680,6 @@
       "next": "a run of the 0.0070–0.0075 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "LGP",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.424,
-        "avg_turnover_20d": 15634,
-        "close": 0.072,
-        "bars_in_box": 1,
-        "box_low": 0.062,
-        "box_high": 0.078,
-        "box_height_pct": 0.2581,
-        "cluster_low": 0.062,
-        "cluster_high": 0.062
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Little Green Pharma Ltd",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "next": "a run of the 0.0620–0.0620 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "LNQ",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 1.2278,
-        "avg_turnover_20d": 85372,
-        "close": 0.44,
-        "bars_in_box": 1,
-        "box_low": 0.32,
-        "box_high": 0.47,
-        "box_height_pct": 0.4688,
-        "cluster_low": 0.465,
-        "cluster_high": 0.47
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Linq Minerals Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.465–0.470 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "LRD",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2222,
-        "avg_turnover_20d": 1846,
-        "close": 0.014,
-        "bars_in_box": 2,
-        "box_low": 0.013,
-        "box_high": 0.015,
-        "box_height_pct": 0.1538,
-        "cluster_low": 0.015,
-        "cluster_high": 0.015
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Lord Resources Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.0150–0.0150 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
       "ticker": "LRT",
       "direction": "bearish",
       "state": "TRAP_SET",
@@ -14329,13 +13691,13 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0603,
-        "avg_turnover_20d": 131700,
-        "close": 2.01,
-        "bars_in_box": 6,
-        "box_low": 1.92,
+        "dist_to_yearly_open_pct": -0.0696,
+        "avg_turnover_20d": 129431,
+        "close": 1.99,
+        "bars_in_box": 7,
+        "box_low": 1.965,
         "box_high": 2.4,
-        "box_height_pct": 0.25,
+        "box_height_pct": 0.2214,
         "cluster_low": 2.39,
         "cluster_high": 2.4
       },
@@ -14374,585 +13736,120 @@
       "next": "a run of the 0.0055–0.0070 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "M2R",
+      "ticker": "NSC",
       "direction": "bearish",
       "state": "TRAP_SET",
       "tier": "Watch",
       "tags": [
+        "ANCHOR_CAUTION",
         "ILLIQUID"
       ],
       "regime": "ROTATION",
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.3333,
-        "avg_turnover_20d": 3606,
-        "close": 0.002,
-        "bars_in_box": 13,
-        "box_low": 0.002,
-        "box_high": 0.003,
-        "box_height_pct": 0.5,
-        "cluster_low": 0.0025,
-        "cluster_high": 0.003
+        "dist_to_yearly_open_pct": -0.0902,
+        "avg_turnover_20d": 42815,
+        "close": 0.31,
+        "bars_in_box": 33,
+        "box_low": 0.3003,
+        "box_high": 0.3171,
+        "box_height_pct": 0.056,
+        "cluster_low": 0.3123,
+        "cluster_high": 0.3171
       },
       "smt": null,
       "route_to": null,
-      "name": "Miramar Resources Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.0025–0.0030 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MCP",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.4583,
-        "avg_turnover_20d": 41956,
-        "close": 0.13,
-        "bars_in_box": 7,
-        "box_low": 0.115,
-        "box_high": 0.16,
-        "box_height_pct": 0.3913,
-        "cluster_low": 0.15,
-        "cluster_high": 0.1525
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mcpherson'S Limited",
-      "sector": "Household & Personal Products",
-      "next": "a run of the 0.150–0.152 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MCP",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.4583,
-        "avg_turnover_20d": 41956,
-        "close": 0.13,
-        "bars_in_box": 7,
-        "box_low": 0.115,
-        "box_high": 0.16,
-        "box_height_pct": 0.3913,
-        "cluster_low": 0.12,
-        "cluster_high": 0.125
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mcpherson'S Limited",
-      "sector": "Household & Personal Products",
-      "next": "a run of the 0.120–0.125 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MGT",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.6852,
-        "avg_turnover_20d": 3128,
-        "close": 0.017,
-        "bars_in_box": 24,
-        "box_low": 0.017,
-        "box_high": 0.02,
-        "box_height_pct": 0.1765,
-        "cluster_low": 0.019,
-        "cluster_high": 0.02
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Magnetite Mines Limited.",
-      "sector": "Materials",
-      "next": "a run of the 0.0190–0.0200 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MKR",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2967,
-        "avg_turnover_20d": 691570,
-        "close": 0.064,
-        "bars_in_box": 7,
-        "box_low": 0.061,
-        "box_high": 0.099,
-        "box_height_pct": 0.623,
-        "cluster_low": 0.097,
-        "cluster_high": 0.099
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Manuka Resources Ltd.",
-      "sector": "Materials",
-      "next": "a run of the 0.0970–0.0990 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MLS",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2692,
-        "avg_turnover_20d": 2608,
-        "close": 0.019,
-        "bars_in_box": 9,
-        "box_low": 0.016,
-        "box_high": 0.02,
-        "box_height_pct": 0.25,
-        "cluster_low": 0.018,
-        "cluster_high": 0.018
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Metals Australia Ltd",
-      "sector": "Materials",
-      "next": "a run of the 0.0180–0.0180 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MMR",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.6,
-        "avg_turnover_20d": 303,
-        "close": 0.002,
-        "bars_in_box": 21,
-        "box_low": 0.001,
-        "box_high": 0.003,
-        "box_height_pct": 2.0,
-        "cluster_low": 0.0025,
-        "cluster_high": 0.003
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mec Resources Limited",
-      "sector": "Energy",
-      "next": "a run of the 0.0025–0.0030 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MPK",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.02,
-        "avg_turnover_20d": 94978,
-        "close": 0.98,
-        "bars_in_box": 11,
-        "box_low": 0.805,
-        "box_high": 1.035,
-        "box_height_pct": 0.2857,
-        "cluster_low": 1.02,
-        "cluster_high": 1.035
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Many Peaks Minerals Ltd",
-      "sector": "Materials",
-      "next": "a run of the 1.020–1.035 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MPK",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.02,
-        "avg_turnover_20d": 94978,
-        "close": 0.98,
-        "bars_in_box": 4,
-        "box_low": 0.805,
-        "box_high": 1.035,
-        "box_height_pct": 0.2857,
-        "cluster_low": 0.805,
-        "cluster_high": 0.805
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Many Peaks Minerals Ltd",
-      "sector": "Materials",
-      "next": "a run of the 0.805–0.805 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MRQ",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5,
-        "avg_turnover_20d": 9189,
-        "close": 0.002,
-        "bars_in_box": 19,
-        "box_low": 0.0015,
-        "box_high": 0.0035,
-        "box_height_pct": 1.3333,
-        "cluster_low": 0.003,
-        "cluster_high": 0.003
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mrg Metals Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.0030–0.0030 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MRQ",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.5,
-        "avg_turnover_20d": 9189,
-        "close": 0.002,
-        "bars_in_box": 19,
-        "box_low": 0.0015,
-        "box_high": 0.0035,
-        "box_height_pct": 1.3333,
-        "cluster_low": 0.0015,
-        "cluster_high": 0.0025
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mrg Metals Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.0015–0.0025 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MSB",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2088,
-        "avg_turnover_20d": 5373323,
-        "close": 2.16,
-        "bars_in_box": 7,
-        "box_low": 2.01,
-        "box_high": 2.58,
-        "box_height_pct": 0.2836,
-        "cluster_low": 2.54,
-        "cluster_high": 2.58
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mesoblast Limited",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "next": "a run of the 2.54–2.58 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "MTH",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.6198,
-        "avg_turnover_20d": 36030,
-        "close": 0.23,
-        "bars_in_box": 6,
-        "box_low": 0.205,
-        "box_high": 0.3,
-        "box_height_pct": 0.4634,
-        "cluster_low": 0.21,
-        "cluster_high": 0.21
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mithril Silver And Gold Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.210–0.210 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "NAN",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2513,
-        "avg_turnover_20d": 3654114,
-        "close": 2.95,
-        "bars_in_box": 6,
-        "box_low": 2.64,
-        "box_high": 3.73,
-        "box_height_pct": 0.4129,
-        "cluster_low": 3.69,
-        "cluster_high": 3.73
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Nanosonics Limited",
-      "sector": "Health Care Equipment & Services",
-      "next": "a run of the 3.69–3.73 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "NAN",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.2513,
-        "avg_turnover_20d": 3654114,
-        "close": 2.95,
-        "bars_in_box": 6,
-        "box_low": 2.64,
-        "box_high": 3.73,
-        "box_height_pct": 0.4129,
-        "cluster_low": 2.64,
-        "cluster_high": 2.65
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Nanosonics Limited",
-      "sector": "Health Care Equipment & Services",
-      "next": "a run of the 2.64–2.65 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "NC6",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.5102,
-        "avg_turnover_20d": 6800,
-        "close": 0.074,
-        "bars_in_box": 3,
-        "box_low": 0.068,
-        "box_high": 0.08,
-        "box_height_pct": 0.1765,
-        "cluster_low": 0.079,
-        "cluster_high": 0.08
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Nanollose Limited",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "next": "a run of the 0.0790–0.0800 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "NNL",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0263,
-        "avg_turnover_20d": 75567,
-        "close": 0.195,
-        "bars_in_box": 13,
-        "box_low": 0.175,
-        "box_high": 0.23,
-        "box_height_pct": 0.3143,
-        "cluster_low": 0.175,
-        "cluster_high": 0.18
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Nordic Resources Ltd",
-      "sector": "Materials",
-      "next": "a run of the 0.175–0.180 lows that closes back above them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "NRX",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.1333,
-        "avg_turnover_20d": 9299,
-        "close": 0.013,
-        "bars_in_box": 30,
-        "box_low": 0.012,
-        "box_high": 0.015,
-        "box_height_pct": 0.25,
-        "cluster_low": 0.014,
-        "cluster_high": 0.014
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Noronex Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.0140–0.0140 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "PPY",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0,
-        "avg_turnover_20d": 873,
-        "close": 0.009,
-        "bars_in_box": 6,
-        "box_low": 0.007,
-        "box_high": 0.01,
-        "box_height_pct": 0.4286,
-        "cluster_low": 0.01,
-        "cluster_high": 0.01
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Papyrus Australia Limited",
-      "sector": "Materials",
-      "next": "a run of the 0.0100–0.0100 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "TOT",
-      "direction": "bearish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0507,
-        "avg_turnover_20d": 42499,
-        "close": 0.405,
-        "bars_in_box": 6,
-        "box_low": 0.395,
-        "box_high": 0.42,
-        "box_height_pct": 0.0633,
-        "cluster_low": 0.41,
-        "cluster_high": 0.415
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "360 Capital Reit",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "next": "a run of the 0.410–0.415 highs that closes back below them, then a displacement candle within 5 sessions"
-    },
-    {
-      "ticker": "WHI",
-      "direction": "bullish",
-      "state": "TRAP_SET",
-      "tier": "Watch",
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [],
-      "metrics": {
-        "retrace_pct": null,
-        "dist_to_yearly_open_pct": -0.0813,
-        "avg_turnover_20d": 296058,
-        "close": 1.24,
-        "bars_in_box": 4,
-        "box_low": 1.24,
-        "box_high": 1.3495,
-        "box_height_pct": 0.0883,
-        "cluster_low": 1.2513,
-        "cluster_high": 1.2513
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Whitefield Income Limited",
+      "name": "Naos Small Cap Opportunities Company Limited",
       "sector": "Not Applic",
-      "next": "a run of the 1.251–1.251 lows that closes back above them, then a displacement candle within 5 sessions"
+      "next": "a run of the 0.312–0.317 highs that closes back below them, then a displacement candle within 5 sessions"
     },
     {
-      "ticker": "XPN",
+      "ticker": "NSC",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0902,
+        "avg_turnover_20d": 42815,
+        "close": 0.31,
+        "bars_in_box": 33,
+        "box_low": 0.3003,
+        "box_high": 0.3171,
+        "box_height_pct": 0.056,
+        "cluster_low": 0.3003,
+        "cluster_high": 0.3027
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Naos Small Cap Opportunities Company Limited",
+      "sector": "Not Applic",
+      "next": "a run of the 0.300–0.303 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "NSM",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4118,
+        "avg_turnover_20d": 339,
+        "close": 0.02,
+        "bars_in_box": 4,
+        "box_low": 0.018,
+        "box_high": 0.024,
+        "box_height_pct": 0.3333,
+        "cluster_low": 0.018,
+        "cluster_high": 0.019
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "North Stawell Minerals Ltd",
+      "sector": "Materials",
+      "next": "a run of the 0.0180–0.0190 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "PFG",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.037,
+        "avg_turnover_20d": 13564,
+        "close": 0.205,
+        "bars_in_box": 4,
+        "box_low": 0.2,
+        "box_high": 0.22,
+        "box_height_pct": 0.1,
+        "cluster_low": 0.2008,
+        "cluster_high": 0.2008
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Prime Financial Group Limited",
+      "sector": "Financial Services",
+      "next": "a run of the 0.201–0.201 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "PPK",
       "direction": "bearish",
       "state": "TRAP_SET",
       "tier": "Watch",
@@ -14963,21 +13860,241 @@
       "zones": [],
       "metrics": {
         "retrace_pct": null,
-        "dist_to_yearly_open_pct": 0.0909,
-        "avg_turnover_20d": 5420,
-        "close": 0.012,
-        "bars_in_box": 18,
-        "box_low": 0.01,
-        "box_high": 0.013,
-        "box_height_pct": 0.3,
-        "cluster_low": 0.012,
-        "cluster_high": 0.013
+        "dist_to_yearly_open_pct": -0.234,
+        "avg_turnover_20d": 25864,
+        "close": 0.36,
+        "bars_in_box": 13,
+        "box_low": 0.34,
+        "box_high": 0.45,
+        "box_height_pct": 0.3235,
+        "cluster_low": 0.44,
+        "cluster_high": 0.45
       },
       "smt": null,
       "route_to": null,
-      "name": "Xpon Technologies Group Limited",
+      "name": "Ppk Group Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.440–0.450 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "PPL",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4,
+        "avg_turnover_20d": 10125,
+        "close": 0.03,
+        "bars_in_box": 5,
+        "box_low": 0.029,
+        "box_high": 0.038,
+        "box_height_pct": 0.3103,
+        "cluster_low": 0.029,
+        "cluster_high": 0.029
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Pureprofile Ltd",
+      "sector": "Media & Entertainment",
+      "next": "a run of the 0.0290–0.0290 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "RHC",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.6371,
+        "avg_turnover_20d": 56884222,
+        "close": 55.31,
+        "bars_in_box": 6,
+        "box_low": 43.018,
+        "box_high": 55.98,
+        "box_height_pct": 0.3013,
+        "cluster_low": 55.98,
+        "cluster_high": 55.98
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ramsay Health Care Limited",
+      "sector": "Health Care Equipment & Services",
+      "next": "a run of the 55.98–55.98 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "RKT",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.125,
+        "avg_turnover_20d": 22777,
+        "close": 0.021,
+        "bars_in_box": 22,
+        "box_low": 0.02,
+        "box_high": 0.025,
+        "box_height_pct": 0.25,
+        "cluster_low": 0.024,
+        "cluster_high": 0.025
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Rocketdna Ltd.",
+      "sector": "Technology Hardware & Equipment",
+      "next": "a run of the 0.0240–0.0250 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "RKT",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.125,
+        "avg_turnover_20d": 22777,
+        "close": 0.021,
+        "bars_in_box": 22,
+        "box_low": 0.02,
+        "box_high": 0.025,
+        "box_height_pct": 0.25,
+        "cluster_low": 0.0205,
+        "cluster_high": 0.021
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Rocketdna Ltd.",
+      "sector": "Technology Hardware & Equipment",
+      "next": "a run of the 0.0205–0.0210 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "RRL",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0718,
+        "avg_turnover_20d": 28709916,
+        "close": 7.72,
+        "bars_in_box": 6,
+        "box_low": 5.8623,
+        "box_high": 8.5838,
+        "box_height_pct": 0.4642,
+        "cluster_low": 8.4862,
+        "cluster_high": 8.5838
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Regis Resources Limited",
+      "sector": "Materials",
+      "next": "a run of the 8.49–8.58 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "S66",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4909,
+        "avg_turnover_20d": 462,
+        "close": 0.14,
+        "bars_in_box": 39,
+        "box_low": 0.125,
+        "box_high": 0.14,
+        "box_height_pct": 0.12,
+        "cluster_low": 0.125,
+        "cluster_high": 0.13
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Star Combo Pharma Limited",
+      "sector": "Household & Personal Products",
+      "next": "a run of the 0.125–0.130 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "YOJ",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.44,
+        "avg_turnover_20d": 25336,
+        "close": 0.21,
+        "bars_in_box": 12,
+        "box_low": 0.205,
+        "box_high": 0.26,
+        "box_height_pct": 0.2683,
+        "cluster_low": 0.25,
+        "cluster_high": 0.26
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Yojee Limited",
       "sector": "Software & Services",
-      "next": "a run of the 0.0120–0.0130 highs that closes back below them, then a displacement candle within 5 sessions"
+      "next": "a run of the 0.250–0.260 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "ZAG",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2826,
+        "avg_turnover_20d": 9691,
+        "close": 0.033,
+        "bars_in_box": 2,
+        "box_low": 0.033,
+        "box_high": 0.04,
+        "box_height_pct": 0.2121,
+        "cluster_low": 0.033,
+        "cluster_high": 0.033
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Zuleika Gold Limited",
+      "sector": "Materials",
+      "next": "a run of the 0.0330–0.0330 lows that closes back above them, then a displacement candle within 5 sessions"
     },
     {
       "ticker": "88E",
@@ -15396,6 +14513,110 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
+      "ticker": "AFI",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 6.172,
+          "high": 6.172,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-06-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 6.1343,
+          "high": 6.172,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-06-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 6.5316,
+          "high": 6.551,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-06-22"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 6.6404,
+          "high": 6.7511,
+          "status": "UNTESTED",
+          "created_date": "2026-06-22"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 6.5488,
+          "high": 6.741,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "equal_highs",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-06-22"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 6.7438,
+          "high": 7.0335,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "equal_highs",
+            "yearly_open",
+            "prior_yearly_close",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-06-22"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 7.1029,
+          "high": 7.1488,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "box_high"
+          ],
+          "created_date": "2026-06-22"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4881,
+        "dist_to_yearly_open_pct": -0.0408,
+        "avg_turnover_20d": 3804405,
+        "close": 6.56,
+        "sweep_date": "2026-06-18",
+        "sweep_depth_pct": 0.0,
+        "displacement_date": "2026-06-22"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Australian Foundation Investment Company Limited",
+      "sector": "Not Applic",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
       "ticker": "AHF",
       "direction": "bullish",
       "state": "STALLED",
@@ -15726,10 +14947,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 1.0,
-        "dist_to_yearly_open_pct": 0.0173,
-        "avg_turnover_20d": 23973,
-        "close": 1.4,
+        "retrace_pct": 1.3333,
+        "dist_to_yearly_open_pct": 0.021,
+        "avg_turnover_20d": 23974,
+        "close": 1.405,
         "sweep_date": "2026-09-02",
         "sweep_depth_pct": 0.0036,
         "displacement_date": "2026-09-04"
@@ -16722,10 +15943,9 @@
           "low": 0.046,
           "high": 0.051,
           "status": "CONSUMED",
-          "confluence": 3,
+          "confluence": 2,
           "sources": [
             "fib_ext_10",
-            "box_high",
             "prior_high"
           ],
           "created_date": "2026-08-24"
@@ -17658,7 +16878,7 @@
       "metrics": {
         "retrace_pct": 0.6667,
         "dist_to_yearly_open_pct": -0.249,
-        "avg_turnover_20d": 16303,
+        "avg_turnover_20d": 14773,
         "close": 0.26,
         "sweep_date": "2026-09-11",
         "sweep_depth_pct": 0.0196,
@@ -18015,7 +17235,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 35.6605,
-          "high": 35.7996,
+          "high": 35.7901,
           "status": "VIOLATED",
           "rule": "touch",
           "created_date": "2026-08-31"
@@ -18082,10 +17302,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.2071,
-        "dist_to_yearly_open_pct": 0.0453,
-        "avg_turnover_20d": 105053,
-        "close": 35.01,
+        "retrace_pct": 0.081,
+        "dist_to_yearly_open_pct": 0.0369,
+        "avg_turnover_20d": 112197,
+        "close": 34.73,
         "sweep_date": "2026-08-25",
         "sweep_depth_pct": 0.0003,
         "displacement_date": "2026-08-31"
@@ -19607,7 +18827,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 98.95,
-          "high": 99.1969,
+          "high": 99.1958,
           "status": "VIOLATED",
           "rule": "touch",
           "created_date": "2026-09-11"
@@ -19652,10 +18872,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4,
-        "dist_to_yearly_open_pct": 0.0302,
-        "avg_turnover_20d": 283812,
-        "close": 98.76,
+        "retrace_pct": 0.1579,
+        "dist_to_yearly_open_pct": 0.0254,
+        "avg_turnover_20d": 286235,
+        "close": 98.3,
         "sweep_date": "2026-09-11",
         "sweep_depth_pct": 0.0058,
         "displacement_date": "2026-09-11"
@@ -21251,10 +20471,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4611,
-        "dist_to_yearly_open_pct": -0.0409,
-        "avg_turnover_20d": 15715,
-        "close": 0.415,
+        "retrace_pct": 0.3444,
+        "dist_to_yearly_open_pct": -0.0524,
+        "avg_turnover_20d": 12893,
+        "close": 0.41,
         "sweep_date": "2026-09-10",
         "sweep_depth_pct": 0.0337,
         "displacement_date": "2026-09-11"
@@ -21270,27 +20490,28 @@
       "direction": "bullish",
       "state": "STALLED",
       "tier": null,
-      "tags": [],
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
       "regime": "ROTATION",
       "zones": [
         {
           "id": "demand",
           "type": "DEMAND",
-          "low": 2.03,
-          "high": 2.0563,
-          "status": "TESTED",
-          "confluence": 2,
+          "low": 2.0168,
+          "high": 2.0168,
+          "status": "RESPECTED",
+          "confluence": 1,
           "sources": [
-            "sweep_wick",
-            "quarterly_open"
+            "sweep_wick"
           ],
           "created_date": "2026-09-04"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 2.01,
-          "high": 2.03,
+          "low": 1.9968,
+          "high": 2.0168,
           "status": "RESPECTED",
           "rule": "close_below_low",
           "created_date": "2026-09-04"
@@ -21298,8 +20519,8 @@
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 2.04,
-          "high": 2.05,
+          "low": 2.0316,
+          "high": 2.0366,
           "status": "VIOLATED",
           "rule": "touch",
           "created_date": "2026-09-04"
@@ -21307,16 +20528,16 @@
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 2.0547,
-          "high": 2.0606,
+          "low": 2.0413,
+          "high": 2.0471,
           "status": "UNTESTED",
           "created_date": "2026-09-04"
         },
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 2.06,
-          "high": 2.12,
+          "low": 2.0465,
+          "high": 2.1062,
           "status": "RESPECTED",
           "confluence": 3,
           "sources": [
@@ -21328,12 +20549,12 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 1.25,
-        "dist_to_yearly_open_pct": 0.0364,
-        "avg_turnover_20d": 2017776,
-        "close": 2.02,
+        "retrace_pct": 1.5,
+        "dist_to_yearly_open_pct": 0.0313,
+        "avg_turnover_20d": 2157556,
+        "close": 1.9969,
         "sweep_date": "2026-09-04",
-        "sweep_depth_pct": 0.0128,
+        "sweep_depth_pct": 0.0,
         "displacement_date": "2026-09-04"
       },
       "smt": null,
@@ -22301,7 +21522,7 @@
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
           "low": 133.185,
-          "high": 133.702,
+          "high": 133.6926,
           "status": "VIOLATED",
           "rule": "touch",
           "created_date": "2026-08-19"
@@ -22365,10 +21586,10 @@
         }
       ],
       "metrics": {
-        "retrace_pct": 1.0246,
-        "dist_to_yearly_open_pct": 0.156,
-        "avg_turnover_20d": 4996654,
-        "close": 136.38,
+        "retrace_pct": 1.0131,
+        "dist_to_yearly_open_pct": 0.1554,
+        "avg_turnover_20d": 4842922,
+        "close": 136.31,
         "sweep_date": "2026-08-18",
         "sweep_depth_pct": 0.0065,
         "displacement_date": "2026-08-19"
@@ -23798,1271 +23019,6 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
-      "ticker": "MBK",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.0125,
-          "high": 0.013,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "quarterly_open"
-          ],
-          "created_date": "2026-09-03"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.013,
-          "high": 0.015,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-03"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.012,
-          "high": 0.013,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-03"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0115,
-          "high": 0.0118,
-          "status": "UNTESTED",
-          "created_date": "2026-09-03"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.009,
-          "high": 0.013,
-          "status": "RESPECTED",
-          "confluence": 4,
-          "sources": [
-            "box_low",
-            "fib_ext_1618",
-            "prior_low",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-03"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.56,
-        "avg_turnover_20d": 2165,
-        "close": 0.011,
-        "sweep_date": "2026-09-03",
-        "sweep_depth_pct": 0.04,
-        "displacement_date": "2026-09-03"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Metal Bank Limited",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MCM",
-      "direction": "bullish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.26,
-          "high": 0.265,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.25,
-          "high": 0.26,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.2625,
-          "high": 0.2675,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.2693,
-          "high": 0.2715,
-          "status": "UNTESTED",
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.27,
-          "high": 0.32,
-          "status": "RESPECTED",
-          "confluence": 5,
-          "sources": [
-            "fib_ext_10",
-            "prior_high",
-            "fib_ext_1618",
-            "box_high",
-            "equal_highs"
-          ],
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.365,
-          "high": 0.375,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_high"
-          ],
-          "created_date": "2026-09-10"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.0,
-        "dist_to_yearly_open_pct": 0.3,
-        "avg_turnover_20d": 3885,
-        "close": 0.26,
-        "sweep_date": "2026-09-10",
-        "sweep_depth_pct": 0.0189,
-        "displacement_date": "2026-09-10"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Mc Mining Limited",
-      "sector": "Energy",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MEI",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.21,
-          "high": 0.21,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "monthly_open"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.21,
-          "high": 0.22,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.1862,
-          "high": 0.1912,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.1737,
-          "high": 0.1806,
-          "status": "UNTESTED",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.145,
-          "high": 0.19,
-          "status": "RESPECTED",
-          "confluence": 7,
-          "sources": [
-            "quarterly_open",
-            "equal_lows",
-            "box_low",
-            "fib_ext_1618",
-            "yearly_open",
-            "prior_yearly_close",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.13,
-          "high": 0.145,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-09-02"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.5789,
-        "dist_to_yearly_open_pct": 0.1176,
-        "avg_turnover_20d": 1101880,
-        "close": 0.19,
-        "sweep_date": "2026-09-02",
-        "sweep_depth_pct": 0.0,
-        "displacement_date": "2026-09-02"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Meteoric Resources Limited",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MFG",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 9.6092,
-          "high": 10.2116,
-          "status": "UNTESTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "quarterly_open"
-          ],
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 10.2116,
-          "high": 10.3979,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 9.1508,
-          "high": 9.2203,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 8.5907,
-          "high": 8.9004,
-          "status": "UNTESTED",
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 8.796,
-          "high": 9.2651,
-          "status": "CONSUMED",
-          "confluence": 3,
-          "sources": [
-            "fib_ext_10",
-            "box_low",
-            "equal_lows"
-          ],
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 7.9906,
-          "high": 8.6226,
-          "status": "RESPECTED",
-          "confluence": 3,
-          "sources": [
-            "equal_lows",
-            "fib_ext_1618",
-            "prior_low"
-          ],
-          "created_date": "2026-08-27"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0094,
-        "dist_to_yearly_open_pct": -0.1267,
-        "avg_turnover_20d": 14692246,
-        "close": 8.11,
-        "sweep_date": "2026-08-27",
-        "sweep_depth_pct": 0.0627,
-        "displacement_date": "2026-08-27"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Magellan Financial Group Limited",
-      "sector": "Financial Services",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MGT",
-      "direction": "bullish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 0.017,
-          "high": 0.0175,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "quarterly_open"
-          ],
-          "created_date": "2026-09-17"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.015,
-          "high": 0.017,
-          "status": "RESPECTED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-17"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.0165,
-          "high": 0.0175,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0176,
-          "high": 0.0178,
-          "status": "UNTESTED",
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.017,
-          "high": 0.023,
-          "status": "TESTED",
-          "confluence": 4,
-          "sources": [
-            "fib_ext_10",
-            "fib_ext_1618",
-            "equal_highs",
-            "box_high"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.0255,
-          "high": 0.0275,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_high"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 0.03,
-          "high": 0.032,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_highs"
-          ],
-          "created_date": "2026-09-21"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 0.032,
-          "high": 0.034,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_high"
-          ],
-          "created_date": "2026-09-21"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.0,
-        "dist_to_yearly_open_pct": -0.6852,
-        "avg_turnover_20d": 3128,
-        "close": 0.017,
-        "sweep_date": "2026-09-17",
-        "sweep_depth_pct": 0.0286,
-        "displacement_date": "2026-09-21"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Magnetite Mines Limited.",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MND",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "FAST_FLIP",
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 32.0051,
-          "high": 32.01,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 32.01,
-          "high": 32.556,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 29.59,
-          "high": 29.8116,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 28.3123,
-          "high": 29.0189,
-          "status": "UNTESTED",
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 24.9611,
-          "high": 28.0908,
-          "status": "RESPECTED",
-          "confluence": 4,
-          "sources": [
-            "yearly_open",
-            "prior_yearly_close",
-            "equal_lows",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 22.2947,
-          "high": 24.6441,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "fib_ext_1618"
-          ],
-          "created_date": "2026-08-25"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 19.1201,
-          "high": 19.666,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "box_low"
-          ],
-          "created_date": "2026-08-25"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.7851,
-        "dist_to_yearly_open_pct": 0.2142,
-        "avg_turnover_20d": 8261308,
-        "close": 30.97,
-        "sweep_date": "2026-08-25",
-        "sweep_depth_pct": 0.0002,
-        "displacement_date": "2026-08-25"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Monadelphous Group Limited",
-      "sector": "Capital Goods",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MP1",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 22.22,
-          "high": 22.98,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-13"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 22.98,
-          "high": 23.5622,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-13"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 19.49,
-          "high": 19.7247,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-08-20"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 17.6473,
-          "high": 18.6664,
-          "status": "UNTESTED",
-          "created_date": "2026-08-20"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 17.0814,
-          "high": 19.5773,
-          "status": "CONSUMED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_10",
-            "equal_lows"
-          ],
-          "created_date": "2026-08-20"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 13.8928,
-          "high": 16.2204,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "fib_ext_1618",
-            "prior_low"
-          ],
-          "created_date": "2026-08-20"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 11.3828,
-          "high": 12.8345,
-          "status": "UNTESTED",
-          "confluence": 4,
-          "sources": [
-            "box_low",
-            "prior_yearly_close",
-            "yearly_open",
-            "prior_low"
-          ],
-          "created_date": "2026-08-20"
-        },
-        {
-          "id": "t4",
-          "type": "TARGET",
-          "low": 8.1627,
-          "high": 9.7372,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-08-20"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.5186,
-        "dist_to_yearly_open_pct": 0.6108,
-        "avg_turnover_20d": 25924909,
-        "close": 19.62,
-        "sweep_date": "2026-08-13",
-        "sweep_depth_pct": 0.0342,
-        "displacement_date": "2026-08-20"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Megaport Limited",
-      "sector": "Software & Services",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MRD",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.05,
-          "high": 0.054,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-09"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.054,
-          "high": 0.056,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-09"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.046,
-          "high": 0.047,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0418,
-          "high": 0.0441,
-          "status": "UNTESTED",
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.027,
-          "high": 0.042,
-          "status": "RESPECTED",
-          "confluence": 5,
-          "sources": [
-            "fib_ext_1618",
-            "prior_low",
-            "prior_yearly_close",
-            "yearly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-10"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 0.019,
-          "high": 0.025,
-          "status": "UNTESTED",
-          "confluence": 3,
-          "sources": [
-            "box_low",
-            "prior_low",
-            "quarterly_open"
-          ],
-          "created_date": "2026-09-10"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.4375,
-        "dist_to_yearly_open_pct": 0.3235,
-        "avg_turnover_20d": 367953,
-        "close": 0.045,
-        "sweep_date": "2026-09-09",
-        "sweep_depth_pct": 0.08,
-        "displacement_date": "2026-09-10"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Mount Ridley Mines Limited",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MTO",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 3.0252,
-          "high": 3.0349,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 3.0349,
-          "high": 3.091,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-27"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 2.7425,
-          "high": 2.769,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 2.588,
-          "high": 2.6734,
-          "status": "UNTESTED",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 2.249,
-          "high": 2.7279,
-          "status": "TESTED",
-          "confluence": 5,
-          "sources": [
-            "equal_lows",
-            "box_low",
-            "fib_ext_1618",
-            "quarterly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 2.0245,
-          "high": 2.2107,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 1.927,
-          "high": 1.996,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "prior_low"
-          ],
-          "created_date": "2026-09-02"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": -0.1819,
-        "avg_turnover_20d": 200442,
-        "close": 2.45,
-        "sweep_date": "2026-08-27",
-        "sweep_depth_pct": 0.0032,
-        "displacement_date": "2026-09-02"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Motorcycle Holdings Limited",
-      "sector": "Consumer Discretionary Distribution & Retail",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "MYS",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 4.9607,
-          "high": 5.1166,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-26"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 5.1166,
-          "high": 5.1742,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-26"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 4.8883,
-          "high": 4.9222,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-08-26"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 4.7678,
-          "high": 4.8344,
-          "status": "UNTESTED",
-          "created_date": "2026-08-26"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 4.2399,
-          "high": 4.7946,
-          "status": "RESPECTED",
-          "confluence": 7,
-          "sources": [
-            "equal_lows",
-            "yearly_open",
-            "prior_yearly_close",
-            "box_low",
-            "fib_ext_1618",
-            "quarterly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-08-26"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 4.1424,
-          "high": 4.2293,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-08-26"
-        },
-        {
-          "id": "t3",
-          "type": "TARGET",
-          "low": 4.0158,
-          "high": 4.1172,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "equal_lows"
-          ],
-          "created_date": "2026-08-26"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.6132,
-        "dist_to_yearly_open_pct": 0.1354,
-        "avg_turnover_20d": 1041622,
-        "close": 4.94,
-        "sweep_date": "2026-08-26",
-        "sweep_depth_pct": 0.0314,
-        "displacement_date": "2026-08-26"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Mystate Limited",
-      "sector": "Banks",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "NGE",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 1.31,
-          "high": 1.33,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "monthly_open"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 1.33,
-          "high": 1.34,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 1.315,
-          "high": 1.32,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 1.3071,
-          "high": 1.3115,
-          "status": "UNTESTED",
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 1.225,
-          "high": 1.305,
-          "status": "RESPECTED",
-          "confluence": 7,
-          "sources": [
-            "equal_lows",
-            "quarterly_open",
-            "yearly_open",
-            "prior_yearly_close",
-            "fib_ext_1618",
-            "prior_low",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-02"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 1.1875,
-          "high": 1.22,
-          "status": "UNTESTED",
-          "confluence": 2,
-          "sources": [
-            "equal_lows",
-            "box_low"
-          ],
-          "created_date": "2026-09-02"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0,
-        "dist_to_yearly_open_pct": 0.0277,
-        "avg_turnover_20d": 8388,
-        "close": 1.3,
-        "sweep_date": "2026-09-02",
-        "sweep_depth_pct": 0.0153,
-        "displacement_date": "2026-09-02"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Nge Capital Limited",
-      "sector": "Not Applic",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "NSB",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.063,
-          "high": 0.066,
-          "status": "RESPECTED",
-          "confluence": 2,
-          "sources": [
-            "sweep_wick",
-            "monthly_open"
-          ],
-          "created_date": "2026-09-18"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.066,
-          "high": 0.068,
-          "status": "RESPECTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-18"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.063,
-          "high": 0.064,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-18"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.0614,
-          "high": 0.0623,
-          "status": "UNTESTED",
-          "created_date": "2026-09-18"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.054,
-          "high": 0.062,
-          "status": "RESPECTED",
-          "confluence": 6,
-          "sources": [
-            "box_low",
-            "prior_low",
-            "fib_ext_1618",
-            "equal_lows",
-            "quarterly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-18"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.3333,
-        "dist_to_yearly_open_pct": -0.4364,
-        "avg_turnover_20d": 8928,
-        "close": 0.062,
-        "sweep_date": "2026-09-18",
-        "sweep_depth_pct": 0.0476,
-        "displacement_date": "2026-09-18"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Neuroscientific Biopharmaceuticals Ltd",
-      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "NUF",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 3.21,
-          "high": 3.32,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 3.32,
-          "high": 3.3806,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 3.11,
-          "high": 3.1398,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 2.9991,
-          "high": 3.0604,
-          "status": "UNTESTED",
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 2.9497,
-          "high": 3.0103,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "prior_low"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "t2",
-          "type": "TARGET",
-          "low": 2.1797,
-          "high": 2.9303,
-          "status": "UNTESTED",
-          "confluence": 6,
-          "sources": [
-            "equal_lows",
-            "prior_yearly_close",
-            "yearly_open",
-            "fib_ext_1618",
-            "quarterly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.3333,
-        "dist_to_yearly_open_pct": 0.272,
-        "avg_turnover_20d": 4101504,
-        "close": 3.04,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0343,
-        "displacement_date": "2026-09-23"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Nufarm Limited",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
       "ticker": "OBL",
       "direction": "bullish",
       "state": "STALLED",
@@ -25154,176 +23110,106 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
-      "ticker": "PGM",
-      "direction": "bearish",
+      "ticker": "PRN",
+      "direction": "bullish",
       "state": "STALLED",
       "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
+      "tags": [],
       "regime": "ROTATION",
       "zones": [
         {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.026,
-          "high": 0.027,
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 2.07,
+          "high": 2.14,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
           ],
-          "created_date": "2026-08-27"
+          "created_date": "2026-09-17"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.027,
-          "high": 0.029,
+          "low": 2.0269,
+          "high": 2.07,
           "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-27"
+          "rule": "close_below_low",
+          "created_date": "2026-09-17"
         },
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.024,
-          "high": 0.025,
+          "low": 2.1571,
+          "high": 2.175,
           "status": "VIOLATED",
           "rule": "touch",
-          "created_date": "2026-08-27"
+          "created_date": "2026-09-17"
         },
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.0224,
-          "high": 0.0233,
+          "low": 2.1998,
+          "high": 2.2304,
           "status": "UNTESTED",
-          "created_date": "2026-08-27"
+          "created_date": "2026-09-17"
         },
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 0.018,
-          "high": 0.024,
+          "low": 2.2084,
+          "high": 2.4416,
           "status": "RESPECTED",
-          "confluence": 5,
+          "confluence": 4,
           "sources": [
-            "fib_ext_1618",
-            "box_low",
-            "equal_lows",
-            "quarterly_open",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-08-27"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.1667,
-        "dist_to_yearly_open_pct": -0.5,
-        "avg_turnover_20d": 7247,
-        "close": 0.022,
-        "sweep_date": "2026-08-27",
-        "sweep_depth_pct": 0.0385,
-        "displacement_date": "2026-08-27"
-      },
-      "smt": null,
-      "route_to": "fib_reversal",
-      "name": "Platina Resources Limited",
-      "sector": "Materials",
-      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "WAG",
-      "direction": "bearish",
-      "state": "STALLED",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT",
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.635,
-          "high": 0.66,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-05-07"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.66,
-          "high": 0.67,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-05-07"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 0.61,
-          "high": 0.615,
-          "status": "VIOLATED",
-          "rule": "touch",
-          "created_date": "2026-05-07"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 0.5836,
-          "high": 0.5982,
-          "status": "UNTESTED",
-          "created_date": "2026-05-07"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 0.5787,
-          "high": 0.605,
-          "status": "CONSUMED",
-          "confluence": 3,
-          "sources": [
+            "equal_highs",
             "fib_ext_10",
-            "yearly_open",
-            "prior_yearly_close"
+            "quarterly_open",
+            "fib_ext_1618"
           ],
-          "created_date": "2026-05-07"
+          "created_date": "2026-09-17"
         },
         {
           "id": "t2",
           "type": "TARGET",
-          "low": 0.535,
-          "high": 0.5679,
-          "status": "RESPECTED",
-          "confluence": 3,
+          "low": 2.5284,
+          "high": 2.5716,
+          "status": "UNTESTED",
+          "confluence": 2,
           "sources": [
-            "fib_ext_1618",
-            "quarterly_open",
-            "box_low"
+            "box_high",
+            "prior_high"
           ],
-          "created_date": "2026-05-07"
+          "created_date": "2026-09-17"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 2.6983,
+          "high": 2.7845,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-17"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.4,
-        "dist_to_yearly_open_pct": 0.0169,
-        "avg_turnover_20d": 976,
-        "close": 0.6,
-        "sweep_date": "2026-05-07",
-        "sweep_depth_pct": 0.0394,
-        "displacement_date": "2026-05-07"
+        "retrace_pct": 0.381,
+        "dist_to_yearly_open_pct": -0.1975,
+        "avg_turnover_20d": 4599419,
+        "close": 2.2,
+        "sweep_date": "2026-09-17",
+        "sweep_depth_pct": 0.0327,
+        "displacement_date": "2026-09-17"
       },
       "smt": null,
       "route_to": "fib_reversal",
-      "name": "The Australian Wealth Advisors Group Limited",
-      "sector": "Financial Services",
+      "name": "Perenti Limited",
+      "sector": "Materials",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
@@ -25509,11 +23395,129 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
-      "ticker": "ZEU",
+      "ticker": "YOJ",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.21,
+          "high": 0.225,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.2,
+          "high": 0.21,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.215,
+          "high": 0.22,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.2224,
+          "high": 0.2253,
+          "status": "UNTESTED",
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.225,
+          "high": 0.265,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "fib_ext_1618",
+            "quarterly_open",
+            "equal_highs"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.265,
+          "high": 0.285,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "box_high",
+            "equal_highs"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.29,
+          "high": 0.3,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.315,
+          "high": 0.325,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-22"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.0,
+        "dist_to_yearly_open_pct": -0.44,
+        "avg_turnover_20d": 25336,
+        "close": 0.21,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0667,
+        "displacement_date": "2026-09-22"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Yojee Limited",
+      "sector": "Software & Services",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ZNO",
       "direction": "bearish",
       "state": "STALLED",
       "tier": null,
       "tags": [
+        "FAST_FLIP",
         "ANCHOR_CONTEXT",
         "ILLIQUID"
       ],
@@ -25522,152 +23526,71 @@
         {
           "id": "supply",
           "type": "SUPPLY",
-          "low": 0.008,
-          "high": 0.009,
+          "low": 0.056,
+          "high": 0.058,
           "status": "RESPECTED",
           "confluence": 1,
           "sources": [
             "sweep_wick"
           ],
-          "created_date": "2026-07-23"
+          "created_date": "2026-09-15"
         },
         {
           "id": "inv_hard",
           "type": "INVALIDATION_HARD",
-          "low": 0.009,
-          "high": 0.011,
+          "low": 0.058,
+          "high": 0.06,
           "status": "UNTESTED",
           "rule": "close_above_high",
-          "created_date": "2026-07-23"
+          "created_date": "2026-09-15"
         },
         {
           "id": "inv_soft",
           "type": "INVALIDATION_MOMENTUM",
-          "low": 0.0065,
-          "high": 0.0075,
+          "low": 0.053,
+          "high": 0.054,
           "status": "VIOLATED",
           "rule": "touch",
-          "created_date": "2026-07-28"
+          "created_date": "2026-09-15"
         },
         {
           "id": "entry",
           "type": "ENTRY_CONTINUATION",
-          "low": 0.0052,
-          "high": 0.0059,
+          "low": 0.0504,
+          "high": 0.0518,
           "status": "UNTESTED",
-          "created_date": "2026-07-28"
+          "created_date": "2026-09-15"
         },
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 0.0035,
-          "high": 0.008,
-          "status": "RESPECTED",
+          "low": 0.045,
+          "high": 0.054,
+          "status": "TESTED",
           "confluence": 4,
           "sources": [
-            "quarterly_open",
             "box_low",
+            "equal_lows",
             "fib_ext_1618",
             "fib_ext_10"
           ],
-          "created_date": "2026-07-28"
+          "created_date": "2026-09-15"
         }
       ],
       "metrics": {
-        "retrace_pct": 0.8,
-        "dist_to_yearly_open_pct": -0.2,
-        "avg_turnover_20d": 43900,
-        "close": 0.008,
-        "sweep_date": "2026-07-23",
-        "sweep_depth_pct": 0.125,
-        "displacement_date": "2026-07-28"
+        "retrace_pct": 0.4,
+        "dist_to_yearly_open_pct": -0.3418,
+        "avg_turnover_20d": 488,
+        "close": 0.052,
+        "sweep_date": "2026-09-15",
+        "sweep_depth_pct": 0.0357,
+        "displacement_date": "2026-09-15"
       },
       "smt": null,
       "route_to": "fib_reversal",
-      "name": "Zeus Resources Limited",
-      "sector": "Energy",
+      "name": "Zoono Group Limited",
+      "sector": "Materials",
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
-    },
-    {
-      "ticker": "LIC",
-      "direction": "bearish",
-      "state": "COMPLETE",
-      "tier": null,
-      "tags": [
-        "ANCHOR_CONTEXT"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 5.43,
-          "high": 5.86,
-          "status": "UNTESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-08-28"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 5.86,
-          "high": 5.9836,
-          "status": "UNTESTED",
-          "rule": "close_above_high",
-          "created_date": "2026-08-28"
-        },
-        {
-          "id": "inv_soft",
-          "type": "INVALIDATION_MOMENTUM",
-          "low": 5.11,
-          "high": 5.1546,
-          "status": "UNTESTED",
-          "rule": "touch",
-          "created_date": "2026-08-28"
-        },
-        {
-          "id": "entry",
-          "type": "ENTRY_CONTINUATION",
-          "low": 4.714,
-          "high": 4.933,
-          "status": "UNTESTED",
-          "created_date": "2026-08-28"
-        },
-        {
-          "id": "t1",
-          "type": "TARGET",
-          "low": 4.4382,
-          "high": 5.3218,
-          "status": "CONSUMED",
-          "confluence": 6,
-          "sources": [
-            "equal_lows",
-            "fib_ext_1618",
-            "box_low",
-            "yearly_open",
-            "prior_yearly_close",
-            "fib_ext_10"
-          ],
-          "created_date": "2026-08-28"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 0.0067,
-        "dist_to_yearly_open_pct": -0.1347,
-        "avg_turnover_20d": 1211709,
-        "close": 4.37,
-        "sweep_date": "2026-08-28",
-        "sweep_depth_pct": 0.0792,
-        "displacement_date": "2026-08-28"
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Lifestyle Communities Limited",
-      "sector": "Real Estate Management & Development",
-      "next": "a new range to form — every mapped objective was consumed"
     },
     {
       "ticker": "ALL",
@@ -26171,140 +24094,6 @@
       "name": "Joyce Corporation Ltd",
       "sector": "Consumer Discretionary Distribution & Retail",
       "next": "a new trap to build — the swept high failed on a closing basis"
-    },
-    {
-      "ticker": "LIC",
-      "direction": "bullish",
-      "state": "DEAD",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 4.605,
-          "high": 4.61,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-23"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 4.507,
-          "high": 4.605,
-          "status": "VIOLATED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-23"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 2.1463,
-        "dist_to_yearly_open_pct": -0.1347,
-        "avg_turnover_20d": 1211709,
-        "close": 4.37,
-        "sweep_date": "2026-09-23",
-        "sweep_depth_pct": 0.0011
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Lifestyle Communities Limited",
-      "sector": "Real Estate Management & Development",
-      "next": "a new trap to build — the swept low failed on a closing basis"
-    },
-    {
-      "ticker": "M24",
-      "direction": "bearish",
-      "state": "DEAD",
-      "tier": null,
-      "tags": [
-        "ILLIQUID"
-      ],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "supply",
-          "type": "SUPPLY",
-          "low": 0.028,
-          "high": 0.032,
-          "status": "TESTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-24"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 0.032,
-          "high": 0.034,
-          "status": "VIOLATED",
-          "rule": "close_above_high",
-          "created_date": "2026-09-24"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.6667,
-        "dist_to_yearly_open_pct": 1.5333,
-        "avg_turnover_20d": 49502,
-        "close": 0.038,
-        "sweep_date": "2026-09-24",
-        "sweep_depth_pct": 0.1429
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Mamba Exploration Limited",
-      "sector": "Materials",
-      "next": "a new trap to build — the swept high failed on a closing basis"
-    },
-    {
-      "ticker": "SCG",
-      "direction": "bullish",
-      "state": "DEAD",
-      "tier": null,
-      "tags": [],
-      "regime": "ROTATION",
-      "zones": [
-        {
-          "id": "demand",
-          "type": "DEMAND",
-          "low": 3.415,
-          "high": 3.43,
-          "status": "RESPECTED",
-          "confluence": 1,
-          "sources": [
-            "sweep_wick"
-          ],
-          "created_date": "2026-09-22"
-        },
-        {
-          "id": "inv_hard",
-          "type": "INVALIDATION_HARD",
-          "low": 3.3859,
-          "high": 3.415,
-          "status": "VIOLATED",
-          "rule": "close_below_low",
-          "created_date": "2026-09-22"
-        }
-      ],
-      "metrics": {
-        "retrace_pct": 1.6364,
-        "dist_to_yearly_open_pct": -0.1526,
-        "avg_turnover_20d": 47653359,
-        "close": 3.38,
-        "sweep_date": "2026-09-22",
-        "sweep_depth_pct": 0.0044
-      },
-      "smt": null,
-      "route_to": null,
-      "name": "Scentre Group",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "next": "a new trap to build — the swept low failed on a closing basis"
     }
   ]
 }
