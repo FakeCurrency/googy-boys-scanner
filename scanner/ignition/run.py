@@ -156,6 +156,12 @@ def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFra
             return None
 
     completed = [day(E.clean(f)) for f in frames.values() if len(f)]
+    # `lagging` counts only frames the screen will actually READ: one past
+    # IGNITION_MAX_DATA_AGE_DAYS is skipped as a "stale frame" (its own
+    # count), and calling a coin last printed in 2022 "a day behind" was the
+    # page overstating what it screens (re-review, 2026-09-28).
+    screened = [day(E.clean(f)) for f in frames.values() if len(f)
+                and (_age_days(f, market, now) or 0) <= config.IGNITION_MAX_DATA_AGE_DAYS]
     raw = [day(forming[yf]) if yf in forming else day(E.clean(f))
            for yf, f in frames.items() if len(f)]
     expected = None
@@ -167,7 +173,7 @@ def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFra
         "completed_last": max((c for c in completed if c), default=None),
         "raw_last": max((r for r in raw if r), default=None),
         "expected_completed": expected,
-        "lagging": (sum(1 for c in completed if c and c < expected) if expected else 0),
+        "lagging": (sum(1 for c in screened if c and c < expected) if expected else 0),
         "completed_dist": dist(completed),
         "raw_dist": dist(raw),
     }

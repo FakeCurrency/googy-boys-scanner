@@ -79,6 +79,10 @@ CRYPTO_SKIP = {
     "TRYB", "IDRT", "BIDR", "MXNB", "CADC", "QCAD", "XIDR", "EUTBL", "USTBL",
     "JAAA", "JTRSY", "OUSG", "USTB", "USYC", "BENJI", "TBILL", "STBT", "USCC",
     "USR",
+    # Found by the dry run's behaviour check (1y high/low x1.00-x1.01) or its
+    # identity check, not by any name rule: Figure's YLDS, Tether's USAT, the
+    # yen stablecoin JPYC.
+    "YLDS", "USAT", "JPYC",
 }
 
 # Name words that mark a peg or a tokenised cash/bond fund whatever its

@@ -28,7 +28,8 @@ def test_real_trending_coins_are_kept():
 
 def test_non_dollar_fiat_pegs_and_tokenised_funds_are_skipped_by_ticker():
     for sym in ["EURCV", "EURR", "EURQ", "USDF", "USDGO", "USDM", "A7A5", "XSGD",
-                "JAAA", "JTRSY", "OUSG", "USTB", "USYC", "EUTBL", "USR"]:
+                "JAAA", "JTRSY", "OUSG", "USTB", "USYC", "EUTBL", "USR",
+                "YLDS", "USAT", "JPYC"]:
         assert _is_stable(sym), sym
 
 
