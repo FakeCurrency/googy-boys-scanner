@@ -146,7 +146,7 @@ def _calls(path: pathlib.Path, name: str) -> int:
 
 @pytest.mark.parametrize("rel", ["scanner/run.py", "scanner/broker/vivek_run.py",
                                  "scanner/broker/kill_switch.py", "scanner/ignition/run.py",
-                                 "scanner/momentum/run.py"])
+                                 "scanner/momentum/run.py", "phasemap/data/provider.py"])
 def test_every_crypto_pricing_path_goes_through_fetch(rel):
     """The sync guarantee, as structure: each of these files prices crypto,
     so each must call data.fetch. A future edit that reverts one to a bare

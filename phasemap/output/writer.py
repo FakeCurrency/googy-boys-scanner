@@ -90,16 +90,20 @@ def validate_published(slim: dict, narrations: dict | None) -> None:
 
 
 def build_snapshot(run_date: str, universe_size: int, results: list,
-                   identity_rejected: dict = None) -> dict:
-    """`identity_rejected` {ticker: ["yahoo"]} names the universe coins left
-    out because their only series is a different token (crypto; see
-    YFinanceProvider). Optional and ADDITIVE: omitted when None, so a stock
-    snapshot is byte-identical to before."""
+                   identity_rejected: dict = None, data_sources: dict = None) -> dict:
+    """`identity_rejected` {ticker: [sources]} names the universe coins left
+    out because no source's series is that coin (crypto; see the providers).
+    `data_sources` says where the crypto bars came from (mode, per-venue
+    counts, refused venues, Yahoo-fallback count). Both optional and
+    ADDITIVE: omitted when None, so a stock snapshot is byte-identical to
+    before."""
     snap = {
         "run_date": run_date,
         "ruleset_version": RULESET_VERSION,
         "universe_size": universe_size,
     }
+    if data_sources is not None:
+        snap["data_sources"] = data_sources
     if identity_rejected is not None:
         snap["identity_rejected"] = dict(sorted(identity_rejected.items()))
     snap["results"] = results
@@ -132,8 +136,9 @@ def split_narrations(snap: dict) -> tuple[dict, dict]:
         "universe_size": snap["universe_size"],
         "narrations_file": "narrations.json",
     }
-    if "identity_rejected" in snap:
-        slim["identity_rejected"] = snap["identity_rejected"]
+    for key in ("data_sources", "identity_rejected"):
+        if key in snap:
+            slim[key] = snap[key]
     slim["results"] = [{k: v for k, v in r.items() if k != "narration"}
                        for r in snap["results"]]
     narr = {

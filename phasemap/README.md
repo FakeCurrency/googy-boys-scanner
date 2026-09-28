@@ -40,14 +40,16 @@ Output per market: `public/data/phasemap/<market>/YYYY-MM-DD.json` +
 `latest.json` (the frontend reads `latest.json` only), plus
 `public/data/phasemap/charts/<market>/<TICKER>.json` candle files for the
 chart page. Deterministic: same bars + same `config.RULESET_VERSION` →
-byte-identical JSON. Crypto turnover uses Volume directly (Yahoo quotes
-crypto volume in USD already); tick sizes are market-aware (`engine/buffers.py`).
+byte-identical JSON. Crypto turnover uses Volume directly (exchange quote
+volume and Yahoo's crypto volume are both USD already); tick sizes are
+market-aware (`engine/buffers.py`).
 
 ## Layout
 
 ```
 config.py       every tunable parameter + RULESET_VERSION (bump on any change)
-data/           provider-agnostic bar source (yfinance = PROTOTYPE ONLY)
+data/           provider-agnostic bar source (yfinance = PROTOTYPE ONLY for
+                stocks; crypto = FetchProvider over scanner.data.fetch)
 engine/         buffers, indicators, zones, setup_engine (state machine), scanner
 narrate/        deterministic templates + renderer (no LLM in the scan path)
 output/         JSON snapshot writer + hand-rolled schema validator
@@ -70,6 +72,15 @@ tests/          synth.py fixture builders + the 8 M1 acceptance fixtures
    tracks internally without one.
 6. Data: yfinance is the prototyping provider only. Production needs
    EODHD/Norgate (full microcap coverage + delisted history for M4).
+   CRYPTO moved off it on 2026-09-28 (owner: "Move to exchange"): the scan
+   and the backtest read `scanner.data.fetch` -- exchange daily klines
+   (Binance's mirror, then Coinbase), Yahoo only for coins no exchange lists
+   -- the bars the VIVEK scan and the paper bot read. Every crypto series is
+   held to CoinGecko's price for the coin; Yahoo's AERO/JUP/ARB/PRL/SKY/XCN/
+   EDGE/MET were different tokens. A coin nothing confirms is left out and
+   named in the snapshot's `identity_rejected`; rows carry `data_source`,
+   the snapshot `data_sources`. No detection parameter moved, so
+   RULESET_VERSION did not.
 
 ## Guardrails (non-negotiable, from the spec)
 

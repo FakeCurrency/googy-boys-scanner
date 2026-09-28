@@ -317,6 +317,15 @@ test("a momentum chart draws the venue the momentum SCREEN read", () => {
                /vivekCryptoBars\(SYM/, "the momentum daily pull must go through the venue-aware fetch");
 });
 
+test("a PhaseMap chart draws the venue the PhaseMap row names", () => {
+  // PhaseMap crypto moved onto exchange klines (owner, 2026-09-28) and its rows
+  // carry data_source; the live 4H/header pulls must follow the row, falling
+  // back to the VIVEK row when the PhaseMap record carries none.
+  const pf = CHART.slice(CHART.indexOf("function pmOnlyFallback"),
+                         CHART.indexOf("const bull", CHART.indexOf("function pmOnlyFallback")));
+  assert.match(pf, /VIVEK_CRYPTO_SRC = cryptoSrcFor\(rec && rec\.data_source \? rec : m\)/);
+});
+
 test("the constant documents how to reverse it", () => {
   const block = CHART.slice(0, CHART.indexOf('const DAILY_RANGE'));
   assert.match(block, /CHART_MAX_YEARS/, "the revert path must be written where the knob is");

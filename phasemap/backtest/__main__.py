@@ -18,8 +18,7 @@ from phasemap.backtest.harness import (buy_hold_baseline, random_baseline,
 from phasemap.backtest.report import (write_public_stats, write_report,
                                       write_stats)
 from phasemap.config import PRODUCT_NAME, RULESET_VERSION
-from phasemap.data.provider import YFinanceProvider
-from phasemap.run import load_symbols, ref_prices, report_identity
+from phasemap.run import load_symbols, make_provider, report_identity, report_sources
 
 
 def main(argv=None) -> int:
@@ -37,12 +36,13 @@ def main(argv=None) -> int:
     print(f"{PRODUCT_NAME} backtest v{RULESET_VERSION} - {args.market} "
           f"({len(symbols)} tickers, {args.period})")
 
-    provider = YFinanceProvider({t: v["yf"] for t, v in symbols.items()},
-                                period=args.period, ref_prices=ref_prices(symbols))
+    # the SAME source as the nightly scan (crypto: exchange klines via
+    # data.fetch); a wrong-token series replayed as the coin would score
+    # another instrument's history as this lens's evidence
+    provider = make_provider(args.market, symbols, args.period)
     provider.fetch_all()
-    # a wrong-token series replayed as the coin would score another
-    # instrument's history as this lens's evidence
     report_identity(args.market, provider)
+    report_sources(args.market, provider)
 
     frames, signals = {}, []
     for t in provider.universe():

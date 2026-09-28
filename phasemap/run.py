@@ -20,7 +20,7 @@ import sys
 import zoneinfo
 
 from phasemap.config import CONFIG, PRODUCT_NAME, RULESET_VERSION
-from phasemap.data.provider import YFinanceProvider
+from phasemap.data.provider import FetchProvider, YFinanceProvider
 from phasemap.engine.scanner import drop_forming_bar, scan_ticker, sort_records
 from phasemap.narrate.renderer import render, render_next
 from phasemap.output.writer import build_snapshot, write_snapshot
@@ -58,7 +58,7 @@ def load_symbols(market: str) -> dict:
         items = repo_universe(market, full=True)
         if items:
             # cg_price (crypto only): CoinGecko's price for the coin, the
-            # identity reference YFinanceProvider checks Yahoo's series against.
+            # identity reference both providers hold every crypto series to.
             return {it["symbol"]: {"yf": it["yf"], "name": it.get("name") or it["symbol"],
                                    "sector": it.get("sector") or "",
                                    "cg_price": it.get("cg_price")}
@@ -140,14 +140,44 @@ def ref_prices(symbols: dict) -> dict:
     return {t: info.get("cg_price") for t, info in symbols.items()}
 
 
+def make_provider(market: str, symbols: dict, period: str):
+    """The bar source for a market. CRYPTO reads the house `scanner.data.fetch`
+    -- exchange klines first, the same bars the VIVEK scan and the bot read
+    (owner, 2026-09-28: "Move to exchange"); stocks stay on YFinanceProvider.
+    Both hold crypto to CoinGecko's price for the coin (the identity check).
+    One factory, so the nightly scan and the backtest can never read crypto
+    from two different places."""
+    yf_map = {t: info["yf"] for t, info in symbols.items()}
+    if market == "crypto":
+        return FetchProvider(market, yf_map, period=period, ref_prices=ref_prices(symbols))
+    return YFinanceProvider(yf_map, period=period, ref_prices=ref_prices(symbols))
+
+
+def report_sources(market: str, provider) -> dict:
+    """Where the crypto bars came from -- the scan payload's `data_sources`
+    convention (scanner/data.py::source_summary), minus identity_rejected,
+    which the snapshot carries at the top level. {} for a provider that
+    fetched nothing through `data.fetch` (stocks)."""
+    rep = getattr(provider, "report", None)
+    if not rep:
+        return {}
+    from scanner.data import source_summary
+    ds = source_summary(rep)
+    ds.pop("identity_rejected", None)
+    if ds.get("mode") == "exchange":
+        print(f"[{market}] sources {ds.get('by_source')}  refused {ds.get('dead')}  "
+              f"yahoo fallback {ds.get('yahoo_fallback', 0)}")
+    return ds
+
+
 def report_identity(market: str, provider) -> dict:
     """The coins the provider refused as wrong-token, NAMED on the log (and,
     for crypto, in the snapshot) -- a coin left out is a decision to state,
     not a silent gap in coverage. ASCII only (cp1252 consoles)."""
     rejected = dict(getattr(provider, "identity_rejected", {}) or {})
     if rejected:
-        print(f"[{market}] identity check: {len(rejected)} coin(s) left out - Yahoo's "
-              f"series is not the coin CoinGecko prices under that ticker: "
+        print(f"[{market}] identity check: {len(rejected)} coin(s) left out - no "
+              f"source's series is the coin CoinGecko prices under that ticker: "
               f"{', '.join(sorted(rejected))}")
     return rejected
 
@@ -163,10 +193,11 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
         print(f"[{market}] no universe — skipped")
         return {}
 
-    provider = YFinanceProvider({t: info["yf"] for t, info in symbols.items()},
-                                period=args.period, ref_prices=ref_prices(symbols))
+    provider = make_provider(market, symbols, args.period)
     provider.fetch_all()
     rejected = report_identity(market, provider)
+    sources = report_sources(market, provider)
+    source_of = getattr(provider, "source_of", None) or {}
     stats = load_stats(market)
 
     chart_dir = os.path.join(data_root, "charts", market)
@@ -188,6 +219,9 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
         for rec, _eng in recs:
             rec["name"] = info.get("name") or t
             rec["sector"] = info.get("sector") or ("Crypto" if market == "crypto" else "")
+            if source_of.get(t):
+                # the venue these bars came from; the chart draws the SAME one
+                rec["data_source"] = source_of[t]
             # {stats} only speaks on graded continuation setups — the claim it
             # makes ("reached its first target zone…") is about this pattern.
             use_stats = stats if (rec["state"] in ("DISPLACED", "RUNNING")
@@ -201,7 +235,8 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
 
     snap = build_snapshot(run_date, universe_size=len(symbols),
                           results=sort_records(results),
-                          identity_rejected=rejected if market == "crypto" else None)
+                          identity_rejected=rejected if market == "crypto" else None,
+                          data_sources=sources or None)
     out_dir = os.path.join(data_root, market)
     write_snapshot(snap, out_dir)
     pruned = prune_stale_files(chart_dir, charted) + prune_dated_snapshots(out_dir)

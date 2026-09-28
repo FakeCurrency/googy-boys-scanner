@@ -1313,6 +1313,11 @@
     // never dead-ends — journal names whose setup ended stay clickable.
     const m = meta || {};
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
+    // PhaseMap crypto reads exchange klines first (2026-09-28) and names each
+    // row's venue; the live 4H/header pulls follow it (else the VIVEK row's),
+    // so they are the coin the zones were drawn on, not Yahoo's same-ticker
+    // stranger.
+    VIVEK_CRYPTO_SRC = cryptoSrcFor(rec && rec.data_source ? rec : m);
     const bull = rec ? rec.direction === "bullish" : true;
     const d = {
       symbol: String(SYM).toUpperCase(), name: m.name || (rec && rec.name) || SYM,
