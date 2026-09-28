@@ -732,19 +732,19 @@ approval date — main traded 30 × $5,000 until the merge commit.
 - **A selection change nobody asked for:** `size_vs_adv` refuses a notional above
   2% of ADV (`VIVEK_BOT_MAX_NOTIONAL_PCT_ADV`) — below $250,000 ADV at $5,000,
   below $125,000 now. ASX's $250,000 and NASDAQ's $2,000,000 `VIVEK_BOT_MIN_ADV`
-  floors refuse first; on crypto (floor 0) a name gating at $125k–$250k is newly
-  takeable. That is not a thin coin: the gate reads `vivek_run._enrich_adv`'s
-  mean(Close × Volume), and Yahoo crypto Volume is already USD, so crypto
-  `adv_usd` is price × dollar-volume and cheap coins gate low whatever their
-  liquidity (2026-09-28: XDC trades ~$8.4M a day and gates at ~$252k).
-  - **Open (found 2026-09-28, pre-existing, owner decision):** `_enrich_adv`
-    ignores `volume_is_usd`, which `scan.py::_liquidity`, `vivek_parity._adv_usd_at`
-    and `vivek_backtest` all honour, so live and parity disagree on cheap coins.
-    It can only wrongly REFUSE — scan.py's $3,000,000 crypto `liquidity_min` (real
-    dollar volume) drops a thin coin before the bot sees it — and only coins under
-    ~4c at $2,500 (125,000 ÷ the $3M floor; ~8c at $5,000) — so the cut narrowed
-    the band, and the newly-takeable names above are this bug relenting. The fix (thread `market` in; `mean(Volume)` when `volume_is_usd`; pin it
-    equal to `_adv_usd_at`) only ever ADDS takeable crypto trades, so it is not made.
+  floors refuse first, so only crypto (floor 0) moves: a coin with $125k–$250k
+  ADV is newly takeable. scan.py's $3,000,000 crypto `liquidity_min` (real dollar
+  volume) still drops a thin coin before the bot ever sees it.
+  - **FIXED 2026-09-28 (owner: "Yeah fix it"):** `vivek_run._enrich_adv` used to
+    ignore `volume_is_usd` and stamp crypto `adv_usd` as mean(Close × Volume) —
+    but crypto Volume is already USD (Yahoo and the exchange klines alike), so
+    that was price × dollar-volume and a coin under ~4c gated far below its real
+    liquidity (XDC traded ~$8.4M a day and gated at ~$252k). It could only
+    wrongly REFUSE. `run_market` now passes its market in, `_enrich_adv` averages
+    `Volume` when the market's `volume_is_usd` is set (Close × Volume otherwise,
+    and when no market is passed), matching `scan.py::_liquidity`,
+    `vivek_parity._adv_usd_at` and `vivek_backtest`. A trade change that can only
+    ADD crypto takes. Pinned equal to `_adv_usd_at` by `tests/test_enrich_adv.py`.
 - **Owner ruling: restate the open book NOW** (the July precedent) — until the 30
   open $5,000 rows are restated the $150,000 ceiling is full and every $2,500 entry
   drops as `notional_cap`. The branch carries only the INTENT, `.github/resize-kick`

@@ -1151,17 +1151,34 @@ def _earnings_within(yf_symbol: str | None, buffer_days: int) -> bool:
     return False
 
 
-def _enrich_adv(results: list[dict], frames: dict, yf_map: dict) -> None:
+def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
+                market: str | None = None) -> None:
     """Stamp row['adv_usd'] (20-day average dollar volume, quote currency) on
     each scan row so the decision engine's liquidity gates can read it.
-    Missing/broken data leaves the row un-stamped (exempt, fail-open)."""
+    Missing/broken data leaves the row un-stamped (exempt, fail-open).
+
+    A market whose Volume is ALREADY dollar volume (`volume_is_usd`: crypto,
+    Yahoo and the exchange klines alike) averages Volume itself; every other
+    market multiplies by Close. Until 2026-09-28 this always multiplied, so
+    crypto adv_usd read price x dollar-volume: a coin under ~4c gated far below
+    its real liquidity and size_vs_adv wrongly REFUSED it (XDC traded ~$8.4M a
+    day and gated at ~$252k), while scan.py, vivek_parity._adv_usd_at and
+    vivek_backtest all honoured the flag. Owner: "Yeah fix it" (2026-09-28).
+    Fixing it can only ADD crypto takes: scan.py's $3M real-volume floor still
+    drops a thin coin before the bot sees it. Pinned equal to _adv_usd_at by
+    tests/test_enrich_adv.py."""
+    usd_volume = bool(getattr(config.MARKETS.get(market), "volume_is_usd", False)) \
+        if market else False
     for row in results:
         df = frames.get(yf_map.get(row.get("symbol")))
         if df is None or "Volume" not in getattr(df, "columns", ()):
             continue
         try:
             tail = df.tail(20)
-            adv = float((tail["Close"] * tail["Volume"]).mean())
+            if usd_volume:
+                adv = float(tail["Volume"].mean())
+            else:
+                adv = float((tail["Close"] * tail["Volume"]).mean())
             if adv > 0:
                 row["adv_usd"] = round(adv, 2)
         except Exception:
@@ -1384,7 +1401,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # Sector rides along so decide() can enforce the per-sector correlation cap;
     # ADV is stamped on the rows for the liquidity gates; recently-stopped
     # symbols are handed over for the re-entry cooldown.
-    _enrich_adv(results, frames, yf_map)
+    _enrich_adv(results, frames, yf_map, market)
     # Sector merge (2026-07-28, owner-authorised — REFINEMENTS #38). The
     # per-sector cap exempts rows with no sector, so NASDAQ had no
     # correlation control whatsoever: its universe file ships no sector column.
