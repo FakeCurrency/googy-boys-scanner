@@ -109,8 +109,8 @@ tests/ · test/        Python suites · JS suites
 
 ## Operating it
 
-[`OPERATIONS.md`](OPERATIONS.md) is the runbook and [`HEALTHCHECK.md`](HEALTHCHECK.md)
-is the 60-second daily check. [`CLAUDE.md`](CLAUDE.md) carries the working rules for
+[`OPERATIONS.md`](OPERATIONS.md) is the runbook, and the status lamp in the site's top bar
+is the quick daily check. [`CLAUDE.md`](CLAUDE.md) carries the working rules for
 anyone — human or agent — changing this repo.
 
 Two endpoints exist because GitHub's cron is best-effort and every in-repo backstop

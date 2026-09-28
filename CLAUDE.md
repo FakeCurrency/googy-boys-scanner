@@ -108,6 +108,11 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
                        at the SIZING 2 merge). Dry by default, idempotent, --apply/--check/--kick
 ```
 
+Old planning documents at the repo root (TOP100, REFINEMENTS, BATCH100,
+EDGE_RESEARCH, PROPOSALS_2026-09-04, and the July–September handoffs, review
+write-ups and design notes) were deleted 2026-09-28; the `reviews/` folder stays. Item tags like "REFINEMENTS #112" or "TOP100 #24"
+below refer to them; `git log --all -- <file>` recovers any of them.
+
 ## Workflows (current)
 
 | Workflow | Schedule | Does |
@@ -956,7 +961,7 @@ opening GitHub.
 
 ## Risk arithmetic — TOP100 Tier 1 (2026-07-28)
 
-`TOP100.md` is a 100-item audit of the live tree, ranked not by severity but by
+`TOP100.md` (deleted 2026-09-28, in git history) was a 100-item audit of the live tree, ranked not by severity but by
 what has to be true before the next fix can be trusted. **Tier 0 (1–12)** was
 every alert path that could fire into silence; **Tier 1 (13–24)** is the layer
 underneath it — the numbers the guards are computed from. Both are shipped. The
@@ -1305,7 +1310,7 @@ computed FROM, Tier 2 the numbers the owner READS, Tier 3 the jobs that PRODUCE
 them. **Tier 4 (57–74) is the layer under all four: where a number is
 COMPUTED.** Same rule as the tiers above — the items below changed a MODEL or
 recorded a decision, so reading the code without them misleads. The ordinary
-line fixes live in the commit body and in TOP100.md per item.
+line fixes live in the commit body.
 
 ### `risk <= 0` did not catch NaN, and a NaN disarms every guard it touches (#63)
 
@@ -1518,7 +1523,7 @@ paints as live, what it leaks, and what it does with a fault. Every item here is
 front-end only; nothing in `scanner/` or `broker/` moved, and no item changes
 which trades get taken. As with the tiers above, only the items that changed a
 MODEL or recorded a decision are written up; the line fixes live in the commit
-body and in TOP100.md per item.
+body.
 
 **Four of these items shipped with their TOP100 entry partly WRONG, and the
 correction is recorded beside the tick rather than quietly absorbed.** The
@@ -2319,8 +2324,8 @@ commit, not from memory — the engine's three audit-found bugs, the ½N stop
 display — the w3-1 freeze (live until the first mechanical exits, week of
 Sep 4 2026) forbids touching signals, sizing, grading, eligibility or any
 `cycle: w3-1` row, so anything trade-affecting stopped at a proposal.
-Ledger with per-item statuses: `BATCH100_2026-08-20.md` (83 shipped, 16
-proposal-only, 1 verified-no-change). Evidence base: `EDGE_RESEARCH_2026-08-20.md`.
+The per-item ledger (83 shipped, 16 proposal-only, 1 verified-no-change) and
+its evidence base were deleted 2026-09-28 with the other planning docs.
 The facts a later session must not re-derive:
 
 1. **The daily edge pipeline lives in alert_returns.yml** (see its table row
@@ -2330,13 +2335,14 @@ The facts a later session must not re-derive:
    re-typing a stat or a stamp is mirror-drift, and tests pin the imports.
    `alert_edge_report.py` stays READ-ONLY (pinned); the committed summary
    artefact exists precisely so the report never needs a write path.
-2. **PROPOSALS_2026-09-04.md is the freeze-blocked half** — P1..P15 for the
+2. **`PROPOSALS_2026-09-04.md` (deleted 2026-09-28, in git history) held the
+   freeze-blocked half** — P1..P15 for the
    Sep 4 checkpoint (tint repoint, the 1D entry-quality decision, short-side
    display honesty, High-conviction demotion, FX sizing boundary, risk_manager
    arming matrix, time-stop DEFENSE, checkpoints Sep 9/Sep 23, full-universe
    backtest calibration, breadth throttle). None deployed; each cites its
    numbers. If a future session is asked to "just do" one of these, the
-   evidence and the recommended shape are already written — start there, and
+   evidence and the recommended shape are in that file's history — start there, and
    note P11/P12 exist to PREVENT changes, not make them.
 3. **Ledger enrichment writes into BLANK fields only and freezes them**
    (sector / grade_raw / score / is_product / breadth at ingest-day values,
