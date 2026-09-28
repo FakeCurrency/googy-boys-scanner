@@ -2332,6 +2332,21 @@ QNT's 23 Sep poke as a BEARISH sweep).
 `per_page=260`; CoinGecko caps it at 250 and silently serves its default 100,
 so the universe SHRANK 101 → 86 on 2026-09-20. `universe._fetch_crypto` now
 pages at the cap (`tests/test_crypto_universe.py`; the old test pinned the bug).
+**The wider universe let PEGS in, so the peg rule grew (2026-09-28).** The
+first dry VIVEK crypto scan on exchange data graded **EURCV (a euro
+stablecoin) A+ and U ("United Stables") A** — and the OLD 86-name cache
+already held USDF, USYC, USTB, EUTBL, EURSAFO and USDGO, pegs and tokenised
+cash/T-bill funds the `<X>USD` rule never saw. `universe._is_stable(sym,
+name)` now also drops `USD<X>` / `EUR<X>` tickers, an explicit list of
+non-dollar fiat pegs and tokenised funds, and CoinGecko NAMES carrying a peg
+word (stablecoin(s), stables, USD, dollar, EUR, euro, treasury, T-bill,
+money market, government securities/bonds, CLO); a cached snapshot is
+re-filtered on load. It only ever REMOVES names, which is what the owner's
+original skip rule says pegs are. **Gold/silver tokens (PAXG, XAUT, KAU,
+KAG) stay — the metal trends and they were always scanned on purpose**; a
+singular "Stable" (the STABLE chain token) stays too. The dry run prints the
+rows the rule drops (false positives) and anything still scanned whose year
+never left a 30% band (misses). Pins: `tests/test_universe.py`.
 
 - **Package:** `scanner/ignition/` — `engine.py` (pure, causal features shared
   by the screen AND the replay: one implementation, two readers), `run.py`

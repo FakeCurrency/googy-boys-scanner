@@ -38,10 +38,35 @@ def _rows(payload):
     return {r["symbol"]: r for r in (payload or {}).get("results") or []}
 
 
+def _peg_rule_report() -> None:
+    """Which CoinGecko rows the peg rule (universe._is_stable) drops, with
+    names, so a false positive -- a real coin skipped -- is visible."""
+    dropped, kept = [], 0
+    try:
+        for page in (1, 2):
+            rows = json.loads(universe._http_get(universe.coingecko_url(page), timeout=30,
+                                                 headers=universe._BROWSER_HEADERS))
+            for c in rows:
+                sym = (c.get("symbol") or "").strip().upper()
+                name = (c.get("name") or "").strip()
+                if universe._is_stable(sym, name):
+                    dropped.append(f"{sym} ({name})")
+                elif sym.isalnum():
+                    kept += 1
+            if kept >= int(config.CRYPTO_UNIVERSE_SIZE):
+                break
+    except Exception as e:  # noqa: BLE001 - a report, not a gate
+        print(f"- peg rule report unavailable: {type(e).__name__}: {str(e)[:120]}")
+        return
+    print(f"- peg rule dropped {len(dropped)} CoinGecko rows: {', '.join(dropped)}")
+
+
 def main() -> int:
     now = dt.datetime.now(dt.timezone.utc)
     uni = universe.load_universe("crypto")
+    names = {u["symbol"]: u.get("name") or "" for u in uni}
     print(f"## Dry VIVEK crypto scan on exchange klines - {len(uni)} coins - {now:%Y-%m-%d %H:%M} UTC\n")
+    _peg_rule_report()
     frames, rep = data.fetch("crypto", [u["yf"] for u in uni], period=config.VIVEK_DATA_PERIOD,
                              ref_prices={u["yf"]: u.get("cg_price") for u in uni})
     s = data.source_summary(rep)
@@ -56,6 +81,17 @@ def main() -> int:
             done[yf] = str(last if last < now.date() else f.index[-2].date() if len(f) > 1 else last)
     y = str(now.date() - dt.timedelta(days=1))
     print(f"- last completed bar = {y}: {sum(1 for d in done.values() if d == y)}/{len(done)}")
+    # The peg rule's other half: anything still in the universe whose last
+    # year never left a 30% band trades like a peg whatever its name says.
+    # Gold tokens land here by design (scanned on purpose); anything else is
+    # a peg the rule missed.
+    flat = []
+    for yf, f in frames.items():
+        c = f["Close"].tail(365).astype(float)
+        if len(c) >= 120 and c.min() > 0 and c.max() / c.min() < 1.30:
+            sym = yf[:-len(config.MARKETS["crypto"].suffix)]
+            flat.append(f"{sym} ({names.get(sym, '')}, x{c.max() / c.min():.2f})")
+    print(f"- peg-like behaviour still scanned (1y high/low < 1.30): {', '.join(flat) or '-'}")
 
     committed = PUB / "crypto_vivek.json"
     before = json.loads(committed.read_text(encoding="utf-8")) if committed.exists() else {}
@@ -91,7 +127,10 @@ def main() -> int:
     def g(rows, sym):
         return rows[sym].get("grade")
 
-    print("- new: " + (", ".join(f"{x} {g(a, x)}" for x in new) or "-"))
+    def nm(sym):
+        return f" ({names[sym]})" if names.get(sym) else ""
+
+    print("- new: " + (", ".join(f"{x}{nm(x)} {g(a, x)}" for x in new) or "-"))
     print("- gone: " + (", ".join(f"{x} {g(b, x)}" for x in gone) or "-"))
     print("- regraded: " + (", ".join(f"{x} {g(b, x)}->{g(a, x)}" for x in moved) or "-"))
     h4 = sum(1 for r in a.values() if (r.get("plans") or {}).get("4H"))

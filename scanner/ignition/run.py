@@ -319,12 +319,29 @@ def backtest_market(market: str, *, limit: int = 0,
     # Completed bars only: the forming bar of the run day is not history yet.
     done, _ = _split_all(frames, market, now)
     symbols = {r["yf"]: r["symbol"] for r in rows}
+    sources = sdata.source_summary(src_report)
     started = time.time()
     payload = bt.backtest(done, market, symbols=symbols,
-                          universe_size=len(rows) or len(frames), now=now)
+                          universe_size=len(rows) or len(frames), now=now,
+                          data_note=data_note(sources))
     payload["elapsed_s"] = round(time.time() - started, 1)
-    payload["sources"] = sdata.source_summary(src_report)
+    payload["sources"] = sources
     return payload
+
+
+def data_note(sources: dict) -> str:
+    """The backtest caveat naming where the bars came from. On exchange data
+    it also says the one consequence a reader could not guess: the volume is
+    ONE venue's, smaller than Yahoo's cross-exchange aggregate, so the
+    turnover floors bind harder than they did on Yahoo."""
+    by = (sources or {}).get("by_source") or {}
+    if (sources or {}).get("mode") != "exchange" or not by:
+        return "Yahoo daily crypto bars; young coins have thin early history."
+    split = ", ".join("%s %d" % (k, v) for k, v in
+                      sorted(by.items(), key=lambda kv: (-kv[1], kv[0])))
+    return ("Daily bars per source (coins): %s. Exchange volume is one venue's, "
+            "smaller than Yahoo's aggregate, so the turnover floors bind harder; "
+            "young coins have thin early history." % split)
 
 
 def build_parser() -> argparse.ArgumentParser:

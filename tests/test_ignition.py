@@ -1630,3 +1630,23 @@ def test_btc_regime_is_context_from_the_last_completed_bar():
     assert RUN.btc_regime({"BTC-USD": down})["btc_above_200"] is False
     assert RUN.btc_regime({}) is None
     assert RUN.btc_regime({"BTC-USD": up.iloc[:150]}) is None
+
+
+def test_the_data_caveat_names_the_real_source():
+    """The first exchange-data backtest still printed "Yahoo daily crypto
+    bars" -- a hard-coded caveat describing the wrong feed. It is now written
+    from the fetch report, and says what exchange volume does to the floors."""
+    ex = RUN.data_note({"mode": "exchange",
+                        "by_source": {"yahoo": 33, "binance_vision": 113, "coinbase": 13}})
+    assert "binance_vision 113, yahoo 33, coinbase 13" in ex
+    assert "one venue's" in ex and "Yahoo daily" not in ex
+    assert RUN.data_note({"mode": "yahoo", "by_source": {"yahoo": 100}}).startswith("Yahoo daily")
+    assert RUN.data_note({}).startswith("Yahoo daily")
+
+
+def test_backtest_market_threads_the_data_note_into_the_caveats(monkeypatch):
+    frames, rows = _bt_inputs()
+    monkeypatch.setattr(RUN, "data_note", lambda sources: "NOTE-X")
+    payload = RUN.backtest_market(MARKET, frames=frames, rows=rows, now=BT_NOW)
+    assert "NOTE-X" in payload["caveats"]
+    assert not any("Yahoo daily" in c for c in payload["caveats"])
