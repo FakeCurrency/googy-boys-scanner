@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-09-28T03:06:53+00:00",
+  "generated_at": "2026-09-28T04:12:12+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-09-27",
@@ -39,17 +39,17 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 174,
-    "screened": 142,
+    "downloaded": 166,
+    "screened": 136,
     "skipped": {
-      "short history": 31,
+      "short history": 29,
       "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 5,
       "CLOSED": 2,
-      "COILED": 24,
+      "COILED": 23,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -57,24 +57,22 @@
       "completed_last": "2026-09-27",
       "raw_last": "2026-09-28",
       "expected_completed": "2026-09-27",
-      "lagging": 38,
+      "lagging": 31,
       "completed_dist": {
-        "2026-09-27": 136,
-        "2026-09-26": 37,
+        "2026-09-27": 134,
+        "2026-09-26": 31,
         "2025-10-27": 1
       },
       "raw_dist": {
-        "2026-09-28": 167,
-        "2026-09-27": 3,
-        "2026-09-26": 4
+        "2026-09-28": 166
       }
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
         "binance_vision": 119,
-        "yahoo": 34,
-        "coinbase": 14
+        "yahoo": 32,
+        "coinbase": 15
       },
       "dead": {
         "binance": "HTTP 451",
@@ -97,6 +95,7 @@
         "BTT",
         "BTW",
         "CARDS",
+        "CASH",
         "CASHCAT",
         "CC",
         "COCO",
@@ -108,7 +107,6 @@
         "H",
         "HASH",
         "HTX",
-        "JPYC",
         "KAG",
         "KAS",
         "KAU",
@@ -130,6 +128,7 @@
         "PIEVERSE",
         "PONS",
         "PRL",
+        "Q",
         "RAIL",
         "RAIN",
         "SAFO",
@@ -140,10 +139,9 @@
         "STONK",
         "STRCX",
         "TIBBIR",
-        "UB",
-        "ULTIMA"
+        "UB"
       ],
-      "yahoo_fallback": 34,
+      "yahoo_fallback": 32,
       "identity_rejected": {
         "AI": [
           "binance_vision",
@@ -152,21 +150,12 @@
         "BR": [
           "yahoo"
         ],
-        "BTT": [
-          "binance_vision"
-        ],
         "EDGE": [
           "coinbase",
           "yahoo"
         ],
-        "JPYC": [
-          "yahoo"
-        ],
         "KAG": [
           "yahoo"
-        ],
-        "LIT": [
-          "binance_vision"
         ],
         "M": [
           "yahoo"
@@ -177,21 +166,40 @@
         "PRL": [
           "coinbase",
           "yahoo"
+        ]
+      },
+      "stale_rejected": {
+        "BTT": [
+          "binance_vision"
+        ],
+        "LIT": [
+          "binance_vision"
         ],
         "XMR": [
           "binance_vision"
         ]
-      }
+      },
+      "refused": [
+        "AI-USD",
+        "BR-USD",
+        "EDGE-USD",
+        "KAG-USD",
+        "M-USD",
+        "MNT-USD",
+        "PRL-USD"
+      ],
+      "unchecked": 0
     },
     "errors": 0,
     "cache": {
-      "fresh": 167,
-      "reused": 7,
-      "merged": 174,
+      "fresh": 166,
+      "reused": 0,
+      "merged": 166,
       "universe": 201,
-      "stale_dropped": 0
+      "stale_dropped": 0,
+      "refused": 7
     },
-    "elapsed_s": 125.3
+    "elapsed_s": 136.6
   },
   "results": [
     {
@@ -233,9 +241,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 271.81,
-      "change_pct": 175.4,
-      "r_now": 14.15,
+      "price": 263.1,
+      "change_pct": 166.6,
+      "r_now": 13.44,
       "trail": 107.52
     },
     {
@@ -277,9 +285,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 1.134,
-      "change_pct": -4.5,
-      "r_now": -0.6,
+      "price": 1.127,
+      "change_pct": -5.1,
+      "r_now": -0.68,
       "trail": 1.09988889
     },
     {
@@ -321,8 +329,8 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 70.95,
-      "change_pct": -1.4,
+      "price": 70.89,
+      "change_pct": -1.5,
       "r_now": -0.1,
       "trail": 65.80666667
     },
@@ -365,9 +373,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 311.0,
-      "change_pct": -2.6,
-      "r_now": -0.14,
+      "price": 307.0,
+      "change_pct": -3.9,
+      "r_now": -0.21,
       "trail": 300.23333333
     },
     {
@@ -409,9 +417,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 10.837,
-      "change_pct": 7.4,
-      "r_now": 0.35,
+      "price": 10.658,
+      "change_pct": 5.6,
+      "r_now": 0.26,
       "trail": 10.75788889
     },
     {
@@ -458,8 +466,8 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.0949,
-      "change_pct": -4.2,
+      "price": 0.09488,
+      "change_pct": -4.3,
       "r_now": -0.42,
       "trail": 0.09212
     },
@@ -507,9 +515,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 4.27e-06,
-      "change_pct": -10.5,
-      "r_now": -1.02,
+      "price": 4.19e-06,
+      "change_pct": -12.2,
+      "r_now": -1.18,
       "trail": 4.43e-06
     },
     {
@@ -535,7 +543,7 @@
       "breakout_level": 0.01838,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.01694
+      "price": 0.01689
     },
     {
       "symbol": "CFX",
@@ -560,7 +568,7 @@
       "breakout_level": 0.05784,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.05476
+      "price": 0.05429
     },
     {
       "symbol": "GNO",
@@ -585,7 +593,7 @@
       "breakout_level": 146.28,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 119.19
+      "price": 117.76
     },
     {
       "symbol": "FLR",
@@ -610,7 +618,7 @@
       "breakout_level": 0.00825,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.007078
+      "price": 0.007015
     },
     {
       "symbol": "HTX",
@@ -660,7 +668,7 @@
       "breakout_level": 6.406e-05,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 5.5e-05
+      "price": 5.408e-05
     },
     {
       "symbol": "FLOKI",
@@ -685,7 +693,7 @@
       "breakout_level": 3.131e-05,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 2.801e-05
+      "price": 2.765e-05
     },
     {
       "symbol": "XDC",
@@ -710,7 +718,7 @@
       "breakout_level": 0.03191,
       "provisional": false,
       "last_bar": "2026-09-26",
-      "price": 0.03327661
+      "price": 0.03265121
     },
     {
       "symbol": "SHIB",
@@ -735,7 +743,7 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 5.79e-06
+      "price": 5.71e-06
     },
     {
       "symbol": "DOGE",
@@ -760,32 +768,7 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.09489
-    },
-    {
-      "symbol": "M",
-      "name": "MemeCore",
-      "yf": "M-USD",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 12.55,
-        "atr_pctl": 31.6,
-        "vol_pctl": 61.3,
-        "drawdown_pct": 97.4,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-09-24"
-      },
-      "base": {
-        "high": 0.000348,
-        "low": 0.000235,
-        "bars": 60
-      },
-      "breakout_level": 0.000348,
-      "provisional": false,
-      "last_bar": "2026-09-26",
-      "price": 0.000296
+      "price": 0.09351
     },
     {
       "symbol": "VIRTUAL",
@@ -810,7 +793,7 @@
       "breakout_level": 0.8504,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.8134
+      "price": 0.7984
     },
     {
       "symbol": "SYRUP",
@@ -835,7 +818,7 @@
       "breakout_level": 0.2395,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2119
+      "price": 0.2109
     },
     {
       "symbol": "FARTCOIN",
@@ -860,7 +843,7 @@
       "breakout_level": 0.22344,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.18715
+      "price": 0.18284
     },
     {
       "symbol": "ADA",
@@ -885,7 +868,7 @@
       "breakout_level": 0.2654,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2525
+      "price": 0.2481
     },
     {
       "symbol": "MANA",
@@ -910,7 +893,7 @@
       "breakout_level": 0.0934,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.0902
+      "price": 0.0895
     },
     {
       "symbol": "APE",
@@ -935,7 +918,7 @@
       "breakout_level": 0.1728,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.1593
+      "price": 0.1569
     },
     {
       "symbol": "1INCH",
@@ -960,7 +943,7 @@
       "breakout_level": 0.1059,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.1003
+      "price": 0.0989
     },
     {
       "symbol": "AKT",
@@ -985,7 +968,7 @@
       "breakout_level": 0.7734,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.6716
+      "price": 0.6684
     },
     {
       "symbol": "COMP",
@@ -1010,7 +993,7 @@
       "breakout_level": 25.61,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 23.74
+      "price": 23.33
     },
     {
       "symbol": "EIGEN",
@@ -1035,7 +1018,7 @@
       "breakout_level": 0.2858,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2664
+      "price": 0.2614
     },
     {
       "symbol": "PENGU",
@@ -1060,7 +1043,7 @@
       "breakout_level": 0.011163,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.01004
+      "price": 0.009798
     },
     {
       "symbol": "SUI",
@@ -1085,7 +1068,7 @@
       "breakout_level": 1.2947,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 1.2544
+      "price": 1.2292
     },
     {
       "symbol": "TIA",
@@ -1110,7 +1093,7 @@
       "breakout_level": 0.5382,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.4892
+      "price": 0.4746
     }
   ],
   "errors": []
