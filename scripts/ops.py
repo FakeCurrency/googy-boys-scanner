@@ -62,7 +62,9 @@ ACTIONS = (
     "cronjob-list", "cronjob-get", "cronjob-history", "cronjob-create",
     "cronjob-update", "cronjob-delete",
     "cf-list-vars", "cf-set-var", "cf-delete-var", "cf-redeploy",
+    "cf-deployments", "site-probe",
 )
+SITE = "https://googy-boys-scanner.pages.dev"
 
 
 class OpsError(Exception):
@@ -248,7 +250,44 @@ def do_cloudflare(action, args, env):
             return status, {"deployment_id": r.get("id"), "url": r.get("url"),
                             "stage": (r.get("latest_stage") or {}).get("name")}
         return status, js
+    if action == "cf-deployments":
+        # READ-ONLY: which commit is each recent production deploy built from,
+        # and did it finish? ("merged" is not "live" -- this answers the gap.)
+        status, js = call("GET", f"{base}/deployments?env=production&per_page=8", h)
+        if status == 200 and isinstance(js, dict):
+            rows = []
+            for d in js.get("result") or []:
+                meta = ((d.get("deployment_trigger") or {}).get("metadata") or {})
+                stage = d.get("latest_stage") or {}
+                rows.append({"created_on": d.get("created_on"), "branch": meta.get("branch"),
+                             "commit": (meta.get("commit_hash") or "")[:10],
+                             "message": (meta.get("commit_message") or "")[:70],
+                             "stage": stage.get("name"), "status": stage.get("status"),
+                             "url": d.get("url")})
+            return status, {"deployments": rows}
+        return status, js
     raise OpsError(f"unknown cloudflare action {action}")
+
+
+def do_site_probe(args):
+    """READ-ONLY, no credentials: what the LIVE site serves right now --
+    the versioned asset tags in index.html, version.json, and the Ignition
+    file's stamp. `args.base` overrides the production URL."""
+    base = str(args.get("base") or SITE).rstrip("/")
+    out = {"base": base}
+    st, html = call("GET", f"{base}/?probe=1", {"Accept": "text/html"})
+    out["index_status"] = st
+    if isinstance(html, str):
+        out["assets"] = sorted(set(re.findall(r'(?:js|css)/[\w.-]+\?v=\d+', html)))
+        out["has_ignition_panel"] = 'id="ignition-panel"' in html
+    st, ver = call("GET", f"{base}/version.json?probe=1")
+    out["version_status"], out["version"] = st, ver
+    st, ig = call("GET", f"{base}/data/ignition/crypto.json?probe=1")
+    out["ignition_status"] = st
+    if isinstance(ig, dict):
+        out["ignition"] = {"generated_at": ig.get("generated_at"),
+                           "rows": len(ig.get("results") or [])}
+    return 200, out
 
 
 # --------------------------------------------------------------------------
@@ -261,6 +300,8 @@ def run(action, args, env=None):
         raise OpsError(f"unknown action {action!r}; one of {', '.join(ACTIONS)}")
     if action.startswith("cronjob-"):
         return do_cronjob(action, args, env)
+    if action == "site-probe":
+        return do_site_probe(args)
     return do_cloudflare(action, args, env)
 
 

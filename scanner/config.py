@@ -1361,6 +1361,10 @@ MARKETS = {
         key="crypto", label="CRYPTO", suffix="-USD",
         currency="USD", currency_symbol="$",
         timezone="UTC", tz_label="UTC",
+        # $3M/20d turnover. Since the exchange-klines switch (2026-09-28) this
+        # reads ONE venue's volume, not Yahoo's aggregate, so fewer thin alts
+        # clear it (65/108 vs 91/108 measured). Put to the owner the same day:
+        # "Keep". Do not lower it, or re-raise it, without his ask.
         liquidity_min=3_000_000, volume_is_usd=True,
     ),
 }

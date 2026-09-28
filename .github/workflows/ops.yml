@@ -35,6 +35,8 @@ on:
           - cf-set-var
           - cf-delete-var
           - cf-redeploy
+          - cf-deployments
+          - site-probe
       args:
         description: "JSON object of arguments for the action"
         default: "{}"
