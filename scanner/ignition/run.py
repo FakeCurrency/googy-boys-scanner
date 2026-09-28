@@ -115,8 +115,9 @@ def _download(market: str, period: str, limit: int):
     rows = suniverse.load_universe(market)
     if limit:
         rows = rows[:limit]
+    refs, tol = suniverse.identity_refs(rows)
     frames, report = sdata.fetch(market, [r["yf"] for r in rows], period=period,
-                                 ref_prices={r["yf"]: r.get("cg_price") for r in rows})
+                                 ref_prices=refs, ref_tol=tol)
     return rows, frames, report
 
 
@@ -217,7 +218,8 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         now = now or dt.datetime.now(dt.timezone.utc)
         done, forming = _split_all(fresh, market, now)
         frames, cache_stats = sdata.merge_with_cache(
-            f"ignition-{market}", done, [r["yf"] for r in rows])
+            f"ignition-{market}", done, [r["yf"] for r in rows],
+            refused=src_report.get("refused") or ())
     else:
         now = now or dt.datetime.now(dt.timezone.utc)
         frames, forming = _split_all(frames, market, now)

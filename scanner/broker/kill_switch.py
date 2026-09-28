@@ -216,7 +216,7 @@ def _live_marks(book: dict) -> dict:
         return {}
     try:
         from scanner import config
-        from scanner.data import download, fetch
+        from scanner.data import download, fetch, held_price_kwargs
         from scanner.vivek_journal import _current_price
         want = {}                                # yf ticker -> (symbol, market)
         for p in open_pos:
@@ -231,7 +231,11 @@ def _live_marks(book: dict) -> dict:
         if other:
             frames.update(download(other, period="5d", retries=1))
         if crypto:
-            frames.update(fetch("crypto", crypto, period="5d", retries=1)[0])
+            # Pinned to the venue each position was marked on (or checked
+            # against its last mark): a same-ticker token on another venue
+            # must never reach the loss check (2026-09-28 review).
+            frames.update(fetch("crypto", crypto, period="5d", retries=1,
+                                **held_price_kwargs(open_pos))[0])
         by_key = {}
         for p in open_pos:
             m = p.get("market")

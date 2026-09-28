@@ -247,21 +247,48 @@ def same_coin(df: Optional[pd.DataFrame], ref: Optional[float],
     return 1.0 / (1.0 + tol) <= ratio <= 1.0 + tol
 
 
+def bar_age_days(df: Optional[pd.DataFrame], now: Optional[dt.datetime] = None) -> Optional[int]:
+    """Whole UTC days between the frame's newest bar and `now` (None when
+    the frame is empty or its index is unreadable)."""
+    if df is None or not len(df):
+        return None
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        last = pd.Timestamp(df.index[-1])
+        if last.tzinfo is not None:
+            last = last.tz_convert("UTC").tz_localize(None)
+        return max(0, (now.astimezone(dt.timezone.utc).date() - last.date()).days)
+    except Exception:  # noqa: BLE001 - unreadable = unknown, never "fresh"
+        return None
+
+
 def download_klines(symbols: List[str], *, days: Optional[int] = None,
                     sources: Optional[Tuple[str, ...]] = None,
                     interval: str = "1d",
-                    ref_prices: Optional[Dict[str, float]] = None) -> Tuple[Dict[str, pd.DataFrame], dict]:
+                    ref_prices: Optional[Dict[str, float]] = None,
+                    ref_tol: Optional[float] = None,
+                    now: Optional[dt.datetime] = None) -> Tuple[Dict[str, pd.DataFrame], dict]:
     """{symbol: daily frame} from the first source that lists each coin, plus
     a report: which sources answered, which were dead (and why), how many
     coins each supplied, and which coins no exchange had (the caller's
-    fallback list). `days=None` = full history."""
+    fallback list). `days=None` = full history.
+
+    A venue's frame is refused for a coin, and the next venue asked, when
+    (1) its newest bar is older than EXCHANGE_MAX_BAR_AGE_DAYS -- a delisted
+    pair's frozen klines, which Binance's mirror keeps serving -- reported as
+    `stale_rejected`; or (2) its latest close is not the coin's reference
+    price within `ref_tol` (default CRYPTO_IDENTITY_TOL) -- a same-ticker
+    stranger -- reported as `identity_rejected`."""
     sources = tuple(sources or config.EXCHANGE_KLINE_SOURCES)
     timeout = float(config.EXCHANGE_HTTP_TIMEOUT)
+    max_age = int(getattr(config, "EXCHANGE_MAX_BAR_AGE_DAYS", 0) or 0)
+    now = now or dt.datetime.now(dt.timezone.utc)
     dead: Dict[str, str] = {}
     errors: Dict[str, int] = {}
     frames: Dict[str, pd.DataFrame] = {}
     refs = {str(k).upper(): v for k, v in (ref_prices or {}).items()}
     rejected: Dict[str, List[str]] = {}
+    stale: Dict[str, List[str]] = {}
 
     def one(sym: str, probe: bool = False) -> Tuple[str, Optional[pd.DataFrame]]:
         for src in sources:
@@ -282,7 +309,12 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
                     dead.setdefault(src, f"{type(e).__name__}: {str(e)[:80]}")
                 continue
             if df is not None and len(df):
-                if not same_coin(df, refs.get(sym)):
+                age = bar_age_days(df, now)
+                if max_age and (age is None or age > max_age):
+                    # Listed here once; not trading here now (delisted/halted).
+                    stale.setdefault(sym, []).append(src)
+                    continue
+                if not same_coin(df, refs.get(sym), ref_tol):
                     # Listed here, but not THIS coin (a same-ticker token).
                     rejected.setdefault(sym, []).append(src)
                     continue
@@ -310,5 +342,6 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
         "by_source": by_source,
         "missing": sorted(s for s in todo if s not in frames),
         "identity_rejected": dict(sorted(rejected.items())),
+        "stale_rejected": dict(sorted(stale.items())),
     }
     return frames, report

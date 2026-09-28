@@ -50,6 +50,14 @@ class Router:
 
 
 @pytest.fixture
+def ageless(monkeypatch):
+    """The venue-walk tests below use 2024-dated fixture bars; the age gate
+    (EXCHANGE_MAX_BAR_AGE_DAYS) would refuse them all as a delisted pair's
+    frozen klines. It is switched off here and pinned by its own tests."""
+    monkeypatch.setattr(config, "EXCHANGE_MAX_BAR_AGE_DAYS", 0)
+
+
+@pytest.fixture
 def route(monkeypatch):
     def install(handler):
         r = Router(handler)
@@ -131,7 +139,7 @@ def test_coinbase_column_order_and_approximate_quote_volume(route):
     assert row["Volume"] == 60.0                    # close x base volume
 
 
-def test_a_geo_blocked_venue_is_asked_ONCE_then_skipped(route, monkeypatch):
+def test_a_geo_blocked_venue_is_asked_ONCE_then_skipped(route, monkeypatch, ageless):
     """The whole point of the dead list: 200 coins must not each wait out a
     host that answers 451 to a US runner."""
     monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance", "bybit"))
@@ -149,7 +157,7 @@ def test_a_geo_blocked_venue_is_asked_ONCE_then_skipped(route, monkeypatch):
     assert sum("api.binance.com" in u for u in r.calls) == 1
 
 
-def test_the_first_venue_that_LISTS_a_coin_wins_and_the_rest_fall_through(route, monkeypatch):
+def test_the_first_venue_that_LISTS_a_coin_wins_and_the_rest_fall_through(route, monkeypatch, ageless):
     monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance_vision", "coinbase"))
     now = dt.datetime.now(dt.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -173,7 +181,7 @@ def test_the_first_venue_that_LISTS_a_coin_wins_and_the_rest_fall_through(route,
     assert rep["by_source"] == {"binance_vision": 1, "coinbase": 1}
 
 
-def test_a_venue_that_keeps_erroring_is_dropped_for_the_run(route, monkeypatch):
+def test_a_venue_that_keeps_erroring_is_dropped_for_the_run(route, monkeypatch, ageless):
     monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance", "bybit"))
     monkeypatch.setattr(config, "EXCHANGE_DEAD_AFTER_ERRORS", 2)
     monkeypatch.setattr(config, "EXCHANGE_THREADS", 1)
@@ -223,7 +231,7 @@ def test_no_credentials_and_no_order_endpoints_anywhere():
         assert bad not in text, bad
 
 
-def test_a_network_error_on_the_probe_coin_drops_the_venue_at_once(route, monkeypatch):
+def test_a_network_error_on_the_probe_coin_drops_the_venue_at_once(route, monkeypatch, ageless):
     monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance", "bybit"))
 
     def h(url):
@@ -235,3 +243,59 @@ def test_a_network_error_on_the_probe_coin_drops_the_venue_at_once(route, monkey
     frames, rep = X.download_klines(["BTC", "ETH", "SOL"], days=None)
     assert len(frames) == 3 and "binance" in rep["dead"]
     assert sum("api.binance.com" in u for u in r.calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# the age gate (2026-09-28 review): a delisted pair's frozen klines
+# ---------------------------------------------------------------------------
+
+def _recent_rows(n, end, base=10.0):
+    start = int(end.timestamp() * 1000) - (n - 1) * DAY
+    return binance_rows(n, start=start, base=base)
+
+
+def test_a_venue_whose_newest_bar_is_old_is_skipped_for_a_live_one(route, monkeypatch):
+    """Binance's mirror keeps serving a delisted pair (XMR, BTT, LIT did on
+    the first real run). When that frozen close is still near today's price
+    the identity check passes it -- so the AGE decides: the live venue wins,
+    and the report names the dead pair."""
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance_vision", "coinbase"))
+    today = dt.datetime.now(dt.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    frozen = _recent_rows(30, today - dt.timedelta(days=120), base=10.0)
+
+    def h(url):
+        if "binance.vision" in url:
+            return frozen
+        q = parse_qs(urlparse(url).query)
+        if dt.datetime.fromisoformat(q["start"][0]) < today - dt.timedelta(days=301):
+            return []
+        return [[int(today.timestamp()), 7.0, 8.0, 7.2, 7.5, 3.0]]
+
+    route(h)
+    frames, rep = X.download_klines(["XYZ"], days=None, ref_prices={"XYZ": 7.5})
+    assert frames["XYZ"].attrs["source"] == "coinbase"
+    assert float(frames["XYZ"]["Close"].iloc[-1]) == 7.5
+    assert rep["stale_rejected"] == {"XYZ": ["binance_vision"]}
+    assert rep["identity_rejected"] == {}
+
+
+def test_a_fresh_frame_passes_the_age_gate_and_the_limit_is_config(route, monkeypatch):
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance_vision",))
+    today = dt.datetime.now(dt.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    rows = _recent_rows(10, today - dt.timedelta(days=config.EXCHANGE_MAX_BAR_AGE_DAYS))
+    route(lambda url: rows)
+    frames, rep = X.download_klines(["BTC"], days=None)
+    assert "BTC" in frames and rep["stale_rejected"] == {}
+    rows[:] = _recent_rows(10, today - dt.timedelta(days=config.EXCHANGE_MAX_BAR_AGE_DAYS + 1))
+    frames, rep = X.download_klines(["BTC"], days=None)
+    assert frames == {} and rep["stale_rejected"] == {"BTC": ["binance_vision"]}
+
+
+def test_the_identity_band_is_the_callers_to_widen():
+    """ref_tol is threaded through: an OLD reference (a cached universe, a
+    held position's last mark) reads with the wide stale band."""
+    df = pd.DataFrame({"Close": [3.0]}, index=[pd.Timestamp("2026-09-27")])
+    assert not X.same_coin(df, 1.0)                                    # 3x: refused at 0.40
+    assert X.same_coin(df, 1.0, config.CRYPTO_IDENTITY_TOL_STALE)      # inside 5x
+    far = pd.DataFrame({"Close": [0.0003]}, index=[pd.Timestamp("2026-09-27")])
+    assert not X.same_coin(far, 2.0, config.CRYPTO_IDENTITY_TOL_STALE)  # M on Yahoo: still refused

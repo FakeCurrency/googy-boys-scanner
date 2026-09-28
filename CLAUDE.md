@@ -2288,6 +2288,44 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
   `cg_price`), else that source is rejected for that coin and the next tried;
   a coin nothing confirms is LEFT OUT, never scanned as a stranger. The
   report publishes `identity_rejected`.
+- **EVERY path a crypto price takes to the book is guarded, not just the
+  scan's (pre-merge review, 2026-09-28 — three independent reviewers found
+  the same holes; all fixed, `tests/test_crypto_identity_paths.py`, every
+  fix mutation-checked):**
+  1. **The frame cache never refills a REFUSED coin.** `fetch()` reports
+     `refused` (every source priced a different token) and
+     `merge_with_cache(..., refused=)` neither back-fills nor re-saves it —
+     it used to hand straight back the stranger the check had just refused.
+     **And exchange mode has its OWN cache file** (`crypto.exchange.pkl.gz`,
+     `ignition-crypto.exchange…`): the pre-switch cache actions/cache
+     restores holds Yahoo's wrong-token M / MNT (~$0.0003 for coins at ~$1-2).
+  2. **A held coin is priced on the venue it was marked on.** `vivek_run`
+     stamps `data_source` on each crypto position every time a scan frame
+     marks it; the kill switch and the off-universe straggler fetch pass
+     `data.held_price_kwargs(positions)` → `fetch(pin=...)`, which asks THAT
+     venue only and gives NO quote (unpriced, counted) if it fails — never a
+     quote from whichever venue lists the ticker first (Binance's AI and LIT
+     are other tokens). A pre-stamp row (BNB at the switch) is checked
+     against its own last mark with the stale band until its first stamp.
+  3. **A delisted pair is not a price.** Binance's mirror keeps serving a
+     dead pair's frozen klines; a venue whose newest bar is older than
+     `EXCHANGE_MAX_BAR_AGE_DAYS` (3) is skipped for the next venue and named
+     under `stale_rejected`.
+  4. **An OLD reference reads with a wide band.** On a CoinGecko outage the
+     universe comes from the snapshot (`cg_stale`), and
+     `universe.identity_refs()` hands `fetch` `CRYPTO_IDENTITY_TOL_STALE`
+     (4.0 = [0.2x, 5x]) instead of 0.40, so a real coin that ran while
+     CoinGecko was down is not refused everywhere; gross collisions still
+     are. A universe with no reference at all (the committed pre-switch
+     snapshot has no `cg_price`) prices with the check OFF and says so:
+     `unchecked` in the report, a WARNING in the log.
+  5. **The 4H plans were built off OTHER INSTRUMENTS on main, crypto AND
+     ASX** — `_attach_h4_plans` asked Yahoo for the bare symbol ("ETH" =
+     Ethan Allen, 25.7 on a $2,695 coin; "BHP" = the NYSE ADR) and was
+     handed the MarketConfig, so its crypto branch never ran. It now gets
+     the market key, asks for `symbol + suffix`, and pins each coin's 4h
+     candles to its daily venue, checked against the row's price. Display
+     only; nothing reads a 4H plan to trade.
 - **What moved, measured:** freshness — at 02:15 UTC exchange bars had the
   prior day complete for 100/100 coins, Yahoo for 0/100 (Yahoo was a day
   behind); median close gap to Yahoo 0.07% (90th pct 1.27%) where the ticker

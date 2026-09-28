@@ -67,12 +67,16 @@ def main() -> int:
     names = {u["symbol"]: u.get("name") or "" for u in uni}
     print(f"## Dry VIVEK crypto scan on exchange klines - {len(uni)} coins - {now:%Y-%m-%d %H:%M} UTC\n")
     _peg_rule_report()
+    refs, tol = universe.identity_refs(uni)
     frames, rep = data.fetch("crypto", [u["yf"] for u in uni], period=config.VIVEK_DATA_PERIOD,
-                             ref_prices={u["yf"]: u.get("cg_price") for u in uni})
+                             ref_prices=refs, ref_tol=tol)
     s = data.source_summary(rep)
     print(f"- sources: {s['by_source']}")
     print(f"- refused the runner: {s['dead']}")
     print(f"- identity check rejected (source -> not this coin): {s['identity_rejected']}")
+    print(f"- refused outright (no source confirms; never back-filled from the cache): {s['refused']}")
+    print(f"- stale pairs skipped (a venue's newest bar too old -- delisted): {s['stale_rejected']}")
+    print(f"- priced with NO identity reference: {s['unchecked']}")
     print(f"- no exchange lists: {len(s['no_exchange'])}; Yahoo fallback: {s['yahoo_fallback']}")
     done = {}
     for yf, f in frames.items():

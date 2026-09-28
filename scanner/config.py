@@ -155,6 +155,18 @@ EXCHANGE_KLINE_SOURCES = ("binance_vision", "binance", "bybit", "coinbase")
 # [0.71x, 1.40x]: wide enough for minutes of drift in a squeeze, far inside
 # every collision measured (the smallest, MET, was -43%).
 CRYPTO_IDENTITY_TOL = 0.40
+# The band when the reference is NOT a fresh CoinGecko price: the universe came
+# from the last-good snapshot (CoinGecko down), or the reference is a held
+# position's last accepted mark. An old reference cannot tell a real move from
+# a stranger at 0.40 -- a coin that fell 35% while CoinGecko was down would be
+# refused on every venue -- so it only catches the GROSS collisions (every one
+# measured 2026-09-28 was 80% to 2.6-million% off). 4.0 = [0.2x, 5x].
+CRYPTO_IDENTITY_TOL_STALE = 4.0
+# A venue whose newest daily bar is older than this does NOT list the coin any
+# more (Binance's market-data mirror keeps serving a delisted pair's frozen
+# klines -- XMR/BTT/LIT on 2026-09-28): the next venue is asked instead, and the
+# report names it under `stale_rejected`. 0 = off.
+EXCHANGE_MAX_BAR_AGE_DAYS = 3
 EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit

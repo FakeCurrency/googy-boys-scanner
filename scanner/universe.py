@@ -63,12 +63,15 @@ COINGECKO_URL = coingecko_url(1)
 # reaction system is meaningless on them — e.g. a "long" on a $1 peg is noise).
 CRYPTO_SKIP = {
     "USDT", "USDC", "DAI", "BUSD", "TUSD", "USDD", "FDUSD", "PYUSD", "USDE", "USDS",
-    "FRAX", "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
+    "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
     "RLUSD", "GHO", "USDG", "USD1", "SUSDE", "SUSDS", "BUIDL", "USDY", "EURS",
     "WBTC", "WETH", "WEETH", "WSTETH", "STETH", "RETH", "CBETH", "WBETH", "BSC-USD",
     # newer wrapped/staked BTC-ETH derivatives — duplicates of the underlying
     "CBBTC", "TBTC", "SOLVBTC", "LBTC", "EZETH", "RSETH", "METH", "CMETH",
     "LSETH", "SWETH", "OSETH", "JITOSOL", "MSOL", "BNSOL", "JUPSOL",
+    # FRAX left this list 2026-09-28: CoinGecko's FRAX is now the floating
+    # Frax governance token ("Frax (prev. FXS)"); the old stablecoin is
+    # "Legacy Frax Dollar" (caught by name) and frxUSD (the USD suffix rule).
     # 2026-09-28: the pagination fix put ranks ~100-250 back in the universe,
     # and that band carries pegs the <X>USD rule cannot see -- non-dollar
     # fiat stablecoins (EURCV graded A+ on the first exchange-data dry run,
@@ -356,6 +359,18 @@ def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
     return items
 
 
+def identity_refs(items: list[dict]) -> tuple[dict, float]:
+    """({yf ticker: CoinGecko price}, tolerance) for data.fetch's identity
+    check. A universe served from the last-good snapshot (CoinGecko down)
+    carries OLD prices, so it gets config.CRYPTO_IDENTITY_TOL_STALE -- wide
+    enough that a real coin which moved while CoinGecko was down is not
+    refused everywhere, tight enough for the gross same-ticker collisions."""
+    refs = {i["yf"]: i.get("cg_price") for i in items if i.get("yf")}
+    stale = any(i.get("cg_stale") for i in items)
+    tol = config.CRYPTO_IDENTITY_TOL_STALE if stale else config.CRYPTO_IDENTITY_TOL
+    return refs, float(tol)
+
+
 def load_universe(market_key: str, full: bool = True) -> list[dict]:
     """Return [{symbol, name, yf}, ...] for a market.
 
@@ -398,8 +413,11 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
         cached = _load_universe_cache(market_key)
         if cached and market_key == "crypto":
             # A snapshot saved under an older peg rule must not bring a peg
-            # back the day CoinGecko is down.
-            cached = [i for i in cached
+            # back the day CoinGecko is down. Its cg_price is as old as the
+            # snapshot: flag it, so the identity check reads it with the wide
+            # stale band (identity_refs) instead of refusing every real coin
+            # that moved while CoinGecko was down.
+            cached = [dict(i, cg_stale=True) for i in cached
                       if not _is_stable(i.get("symbol", ""), i.get("name", ""))]
         if cached:
             print(f"  universe: {market_key} directory fetch FAILED - "

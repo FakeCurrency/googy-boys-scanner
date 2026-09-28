@@ -1166,6 +1166,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
     yf_map = {u["symbol"]: u["yf"] for u in universe}
+    from ..data import venue_of                       # deferred, like fetch below
     costs = costs_for(market)                         # fees + slippage R-drag (None = off)
 
     def price_of(sym):
@@ -1189,8 +1190,14 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         try:
             # data.fetch: crypto from the same exchange klines the scan
             # used (config.CRYPTO_DATA_SOURCE), stocks from Yahoo as before.
-            from ..data import fetch
-            extra = fetch(market, list(yf_missing.values()), period="6mo")[0]
+            from ..data import fetch, held_price_kwargs
+            # Held crypto is priced on the venue it was marked on (or checked
+            # against its own last mark) -- never on whichever venue lists
+            # the ticker first, which can be a different token.
+            held = [p for p in book["open"]
+                    if p.get("market") == market and p["symbol"] in yf_missing]
+            extra = fetch(market, list(yf_missing.values()), period="6mo",
+                          **held_price_kwargs(held))[0]
             priced = sum(1 for v in extra.values() if v is not None and len(v))
             frames = {**frames, **extra}
             yf_map = {**yf_map, **yf_missing}
@@ -1211,6 +1218,12 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             still_open.append(pos)
             continue
         price = price_of(pos["symbol"])
+        if price is not None and market == "crypto":
+            # The venue this mark came from: the kill switch and the
+            # off-universe fetch price the position there and nowhere else.
+            src = venue_of(frames, yf_map.get(pos["symbol"]))
+            if src:
+                pos["data_source"] = src
         # Auditable freeze detection: a position that can't be priced can't be
         # stopped out. Count consecutive unpriced runs on the position itself
         # so the book (and anyone reading it) SEES the freeze instead of a
@@ -1506,6 +1519,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             if pos is None:                              # don't chase
                 chased += 1
                 continue
+            if market == "crypto" and venue_of(frames, yf_map.get(sym)):
+                pos["data_source"] = venue_of(frames, yf_map.get(sym))
             # guard against a duplicate already in the persistent book
             if any(p["symbol"] == sym and p.get("market") == market for p in book["open"]):
                 continue
@@ -1662,7 +1677,7 @@ def main() -> None:
     dry_run = True if args.dry_run else (False if args.live else None)
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
 
-    from ..universe import load_universe
+    from ..universe import identity_refs, load_universe
     from ..data import fetch, merge_with_cache
 
     for market_key in markets:
@@ -1692,9 +1707,11 @@ def main() -> None:
             if isinstance(extra, dict):
                 r.update(extra)
         universe = load_universe(market_key, full=True)
-        fresh, _ = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
-                         ref_prices={u["yf"]: u.get("cg_price") for u in universe})
-        frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe])
+        refs, ref_tol = identity_refs(universe)
+        fresh, rep = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
+                           ref_prices=refs, ref_tol=ref_tol)
+        frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe],
+                                     refused=rep.get("refused") or ())
         run_market(market_key, results, frames, universe, dry_run=dry_run)
 
 

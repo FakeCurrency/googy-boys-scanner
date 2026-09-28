@@ -14,7 +14,7 @@ import pathlib
 
 from . import config, output, scan
 from .data import download, fetch, merge_with_cache, source_summary
-from .universe import load_universe
+from .universe import identity_refs, load_universe
 
 DEFAULT_OUT = pathlib.Path(__file__).resolve().parents[1] / "public" / "data"
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -183,14 +183,17 @@ def main() -> None:
             # paper bot go to the binance or bybit ... so it's all in SYNC"):
             # crypto from exchange daily klines (config.CRYPTO_DATA_SOURCE),
             # Yahoo only for coins no exchange lists; stocks unchanged.
+            refs, ref_tol = identity_refs(universe)
             fresh, src_report = fetch(market_key, [u["yf"] for u in universe],
-                                      period=dl_period,
-                                      ref_prices={u["yf"]: u.get("cg_price") for u in universe})
+                                      period=dl_period, ref_prices=refs, ref_tol=ref_tol)
             # Reuse last-good cached frames for tickers Yahoo dropped this run, so
             # transient throttling no longer shrinks coverage (the cache refreshes
             # with whatever we DID get). Aging is reported honestly per row.
+            # A coin the identity check REFUSED is never refilled from the
+            # cache: the cache would hand back the stranger it just refused.
             deep_frames, cache_stats = merge_with_cache(
-                market_key, fresh, [u["yf"] for u in universe])
+                market_key, fresh, [u["yf"] for u in universe],
+                refused=src_report.get("refused") or ())
             cov = 100 * len(deep_frames) // max(len(universe), 1)
             reused_note = f" (+{cache_stats['reused']} cached)" if cache_stats["reused"] else ""
             low = (cov < getattr(config, "SCAN_COVERAGE_LOW_PCT", 80)

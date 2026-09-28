@@ -171,7 +171,8 @@ def test_live_marks_price_crypto_from_the_exchange_the_scan_uses(monkeypatch):
     from scanner import exchange_data as ex
 
     monkeypatch.setattr(sdata, "download", lambda *a, **k: pytest.fail("crypto must not hit Yahoo"))
-    idx_ms = int(pd.Timestamp("2024-01-02").timestamp() * 1000)
+    # today's bar: an older one is a delisted pair's frozen klines (age gate)
+    idx_ms = int(pd.Timestamp.now(tz="UTC").normalize().timestamp() * 1000)
     monkeypatch.setattr(ex, "_get_json", lambda url, timeout: [
         [idx_ms, "1", "2", "0.5", "51000", "1", idx_ms + 1, "9"]] if "BTCUSDT" in url else [])
     q = ks._live_marks(_book(open_=[_pos("BTC", "crypto")]))

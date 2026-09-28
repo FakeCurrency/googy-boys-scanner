@@ -19,7 +19,10 @@ import pytest
 from scanner import config, data, exchange_data as X, run, scan
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-T0 = int(pd.Timestamp("2024-01-01").timestamp() * 1000)
+# Recent bars: a venue whose newest bar is older than
+# EXCHANGE_MAX_BAR_AGE_DAYS is a delisted pair and is skipped (the age gate,
+# pinned in tests/test_exchange_data.py), so fixture klines end today.
+T0 = int((pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=2)).timestamp() * 1000)
 
 
 def _klines(n=3, px=100.0):
@@ -96,12 +99,12 @@ def test_4h_bars_come_from_exchange_4h_candles_and_yahoo_1h(monkeypatch):
     assert set(seen) == {"4h"}
     assert yk == [{"interval": "1h"}]              # Yahoo has no 4h; the resampler buckets 1h
     # an intraday frame keeps its hour (a DAILY frame is normalised to the date)
-    assert frames["BTC-USD"].index[0] == pd.Timestamp("2024-01-01 00:00:00")
+    assert frames["BTC-USD"].index[0] == pd.Timestamp(T0, unit="ms")
 
 
 def test_scan_routes_crypto_through_fetch_and_stocks_through_download(monkeypatch):
     calls = []
-    monkeypatch.setattr(scan, "fetch", lambda m, t, period=None, interval="1d":
+    monkeypatch.setattr(scan, "fetch", lambda m, t, period=None, interval="1d", **kw:
                         (calls.append(("fetch", m, interval)) or ({}, {})))
     monkeypatch.setattr(scan, "download", lambda t, period=None, interval="1d":
                         (calls.append(("download", interval)) or {}))
@@ -112,10 +115,29 @@ def test_scan_routes_crypto_through_fetch_and_stocks_through_download(monkeypatc
 
 def test_the_4H_plan_asks_crypto_for_exchange_4h_candles(monkeypatch):
     seen = []
-    monkeypatch.setattr(scan, "_bars", lambda m, t, p, iv="1d": (seen.append((m, iv)) or {}))
-    scan._attach_h4_plans([{"symbol": "BTC", "yf": "BTC-USD", "dir": "LONG"}], "crypto")
-    scan._attach_h4_plans([{"symbol": "BHP", "yf": "BHP.AX", "dir": "LONG"}], "asx")
-    assert seen == [("crypto", "4h"), ("asx", config.VIVEK_H4_INTERVAL)]
+    monkeypatch.setattr(scan, "_bars", lambda m, t, p, iv="1d", **kw:
+                        (seen.append((m, list(t), iv, kw)) or {}))
+    daily = pd.DataFrame({"Close": [2695.21]}, index=[pd.Timestamp("2026-09-27")])
+    daily.attrs["source"] = "binance_vision"
+    scan._attach_h4_plans([{"symbol": "ETH", "dir": "LONG", "price": 2695.21}], "crypto",
+                          {"ETH-USD": daily})
+    scan._attach_h4_plans([{"symbol": "BHP", "dir": "LONG", "price": 45.0}], "asx")
+    (m, t, iv, kw), (m2, t2, iv2, _) = seen
+    # Published rows carry no "yf": the ticker is symbol + the market suffix.
+    # It used to be the bare symbol -- "ETH" is Ethan Allen on Yahoo, "BHP"
+    # the NYSE ADR -- and the MarketConfig was passed, so "crypto" never held.
+    assert (m, t, iv) == ("crypto", ["ETH-USD"], "4h")
+    assert (m2, t2, iv2) == ("asx", ["BHP.AX"], config.VIVEK_H4_INTERVAL)
+    # the 4h candles come from the venue the DAILY bars came from, checked
+    # against the row's own price
+    assert kw["pin"] == {"ETH-USD": "binance_vision"}
+    assert kw["ref_prices"] == {"ETH-USD": 2695.21}
+
+
+def test_the_scan_hands_the_4H_leg_its_market_KEY_and_its_frames():
+    src = (ROOT / "scanner" / "scan.py").read_text(encoding="utf-8")
+    assert "_attach_h4_plans(results, market_key, frames)" in src
+    assert "_attach_h4_plans(results, market)" not in src
 
 
 def test_crypto_rows_name_their_venue_and_stock_rows_stay_lean():
@@ -219,6 +241,15 @@ def test_the_universe_keeps_coingeckos_price_as_the_reference(monkeypatch):
 
 
 def test_the_scan_and_the_lens_pass_the_reference_prices():
+    """Every universe-wide crypto fetch arms the identity check through
+    universe.identity_refs (fresh CoinGecko prices at the tight band, a cached
+    snapshot's at the stale band) and keeps refused coins out of the cache."""
+    for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py",
+                "scanner/scan.py"):
+        src = (ROOT / rel).read_text(encoding="utf-8")
+        assert "identity_refs(" in src and "ref_prices=refs" in src and "ref_tol=" in src, rel
     for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py"):
         src = (ROOT / rel).read_text(encoding="utf-8")
-        assert "ref_prices=" in src and "cg_price" in src, rel
+        assert "refused=" in src, rel
+    for rel in ("scanner/broker/vivek_run.py", "scanner/broker/kill_switch.py"):
+        assert "held_price_kwargs(" in (ROOT / rel).read_text(encoding="utf-8"), rel
