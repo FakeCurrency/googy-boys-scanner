@@ -195,3 +195,44 @@ def test_the_workflow_uses_the_script_through_env_and_declares_the_three_secrets
     assert "git " not in wf.split("jobs:")[1], "ops.yml must never touch git"
     for a in ops.ACTIONS:
         assert f"- {a}\n" in wf, f"{a} missing from the dispatch choice list"
+
+
+# --------------------------------------------------------------------------
+# the two READ-ONLY checks (2026-09-28: "merged" is not "live")
+# --------------------------------------------------------------------------
+
+def test_cf_deployments_is_a_get_that_names_the_commit_each_deploy_built(monkeypatch):
+    seen = []
+
+    def fake(method, url, headers=None, body=None, raw_body=None):
+        seen.append((method, url, body, raw_body))
+        return 200, {"result": [{
+            "created_on": "2026-09-28T05:35:36Z", "url": "https://x.pages.dev",
+            "latest_stage": {"name": "deploy", "status": "success"},
+            "deployment_trigger": {"metadata": {"branch": "main", "commit_hash": "94c795f91b631de0",
+                                                "commit_message": "Ignition lens + pill"}}}]}
+    monkeypatch.setattr(ops, "call", fake)
+    status, out = ops.run("cf-deployments", {}, env=ENV)
+    (method, url, body, raw), = seen
+    assert method == "GET" and body is None and raw is None          # never a write
+    assert "/deployments?env=production" in url
+    assert out["deployments"][0]["commit"] == "94c795f91b"
+    assert out["deployments"][0]["status"] == "success"
+
+
+def test_site_probe_is_get_only_needs_no_credentials_and_reads_the_asset_tags(monkeypatch):
+    seen = []
+
+    def fake(method, url, headers=None, body=None, raw_body=None):
+        seen.append((method, url, headers, body))
+        if "version.json" in url:
+            return 200, {"version": "2026.09.28-x"}
+        if "ignition" in url:
+            return 200, {"generated_at": "t", "results": [{}, {}]}
+        return 200, '<script src="js/app.js?v=140"></script><div id="ignition-panel"></div>'
+    monkeypatch.setattr(ops, "call", fake)
+    status, out = ops.run("site-probe", {}, env={})                   # no secrets at all
+    assert status == 200 and all(m == "GET" and b is None for m, _, _, b in seen)
+    assert not any("Authorization" in (h or {}) for _, _, h, _ in seen)
+    assert out["assets"] == ["js/app.js?v=140"] and out["has_ignition_panel"] is True
+    assert out["ignition"] == {"generated_at": "t", "rows": 2}
