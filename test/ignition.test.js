@@ -1397,3 +1397,15 @@ Promise.all(pending).then(() => {
   console.log(`\n${failed ? "✗" : "✓"} ignition.test.js: ${passed} passed, ${failed} failed`);
   if (failed) process.exit(1);
 });
+
+// ── the chart link names its lens (2026-09-28: TAO dead-ended) ───────────────
+// chart.js reads `src=ignition` two ways: the back-link says "← Ignition", and
+// a coin VIVEK has no row for gets its VENUE from this lens's row instead of
+// the Yahoo default (Binance's TAO is Bittensor; Yahoo's "TAO-USD" is not).
+test("the symbol link carries src=ignition so chart.js knows which lens sent it", () => {
+  const h = I.triggerCardHTML(trig(), "crypto", {});
+  const href = (/class="ig-sym" href="([^"]+)"/.exec(h) || [])[1] || "";
+  const q = new URLSearchParams(href.replace(/&amp;/g, "&").split("?")[1]);
+  assert.equal(q.get("src"), "ignition");
+  assert.equal(I.chartHref("crypto", "TAO"), "chart.html?m=crypto&s=TAO&src=ignition");
+});

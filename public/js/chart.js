@@ -111,6 +111,7 @@
     alerts:   ["alerts.html",   "← Alerts"],
     sectors:  ["sectors.html",  "← News"],
     momentum: ["momentum.html", "← Momentum"],
+    ignition: ["index.html",    "← Ignition"],
   };
   // Back-link context: return to wherever the user actually came from
   // (journal / phasemap / specs / alerts pass src=...) instead of
@@ -1313,6 +1314,11 @@
     // never dead-ends — journal names whose setup ended stay clickable.
     const m = meta || {};
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
+    // Same rule as vivekFallback: draw the venue the row's bars came from. An
+    // Ignition-only coin arrives here with the lens row as `meta` (boot()), so
+    // a Binance-sourced TAO no longer asks Yahoo for a "TAO-USD" that is not
+    // Bittensor and dead-ends. No row -> Yahoo <base>-USD, as before.
+    VIVEK_CRYPTO_SRC = cryptoSrcFor(m);
     const bull = rec ? rec.direction === "bullish" : true;
     const d = {
       symbol: String(SYM).toUpperCase(), name: m.name || (rec && rec.name) || SYM,
@@ -4615,6 +4621,28 @@
       .catch(() => null);
   }
 
+  // IGNITION-only coins (2026-09-28): the lens lists names VIVEK has no row for
+  // (28 of its rows at the time; TAO ran 7 days off the deck), and with no scan
+  // row VIVEK_CRYPTO_SRC stayed at its Yahoo default — so the chart asked Yahoo
+  // for "<SYM>-USD", which for TAO is not Bittensor, and failed with "No chart
+  // data". The Ignition row names the venue its identity-checked bars came
+  // from (`source`); hand it on in the scan row's shape (`data_source`) so
+  // pmOnlyFallback / cryptoSrcFor read it unchanged. Crypto only (the lens's
+  // market); a missing file or row resolves null and the chart draws as before.
+  function ignitionMeta() {
+    if (market !== "crypto") return Promise.resolve(null);
+    const want = decodeURIComponent(symbol).toUpperCase();
+    return fetch(`data/ignition/${market}.json`, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const row = ((j && j.results) || []).find((r) => String(r.symbol || "").toUpperCase() === want);
+        if (!row) return null;
+        return { symbol: row.symbol, name: row.name || row.symbol, data_source: row.source || "",
+                 price: row.price != null ? row.price : null, asset_type: "crypto" };
+      })
+      .catch(() => null);
+  }
+
   // No static chart anywhere → render from live history instead of dead-ending.
   function fallbackFromLive() {
     fetchResultMeta().then((meta) => liveFallback(baseSymbol, meta));
@@ -4711,7 +4739,10 @@
         pmRec = rec;
         const hasPlan = meta && meta.entry != null && meta.stop != null && meta.tp1 != null;
         if (hasPlan) { vivekFallback(baseSymbol, meta); return; }
-        pmOnlyFallback(baseSymbol, meta, rec);   // rec may be null -> plain chart
+        // rec may be null -> plain chart. No VIVEK row at all: the Ignition
+        // row (if any) stands in, so the chart draws the venue that priced it.
+        (meta ? Promise.resolve(meta) : ignitionMeta())
+          .then((m) => pmOnlyFallback(baseSymbol, m, rec));
       });
       return;
     }

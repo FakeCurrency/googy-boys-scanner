@@ -306,6 +306,31 @@ test("the fallback sets it from the row, and both fetches use it", () => {
   assert.match(live, /VIVEK_CRYPTO_SRC !== "binance"/, "the header price follows the chart's venue");
 });
 
+// 2026-09-28: TAO (Bittensor, Binance-sourced in the IGNITION lens, no VIVEK
+// row) opened from the Ignition panel and dead-ended: with no scan row the
+// venue stayed "yahoo" and Yahoo's "TAO-USD" is not Bittensor. The no-plan
+// path now sets the venue from whatever row it was handed, and boot() hands
+// it the Ignition row when VIVEK has none.
+test("an Ignition-only coin draws the lens row's venue, not the Yahoo default", () => {
+  const pm = CHART.slice(CHART.indexOf("function pmOnlyFallback"), CHART.indexOf("function pmOnlyFallback") + 900);
+  assert.match(pm, /const m = meta \|\| \{\};[\s\S]{0,600}VIVEK_CRYPTO_SRC = cryptoSrcFor\(m\)/,
+    "pmOnlyFallback must set the venue from its row, as vivekFallback does");
+  const ig = CHART.slice(CHART.indexOf("function ignitionMeta"), CHART.indexOf("function fallbackFromLive"));
+  assert.match(ig, /data\/ignition\/\$\{market\}\.json/, "reads the lens's own file");
+  assert.match(ig, /data_source: row\.source/, "the lens's `source` is handed on as the scan row's `data_source`");
+  assert.match(ig, /if \(market !== "crypto"\) return Promise\.resolve\(null\)/, "crypto only");
+  const boot = CHART.slice(CHART.indexOf("if (isVivek) {"), CHART.indexOf("if (isVivek) {") + 700);
+  assert.match(boot, /\(meta \? Promise\.resolve\(meta\) : ignitionMeta\(\)\)[\s\S]{0,120}pmOnlyFallback\(baseSymbol, m, rec\)/,
+    "the Ignition row stands in ONLY when VIVEK has no row");
+  // The whole chain, end to end, on a row shaped like the shipped file's TAO.
+  const src = new Function(CHART.slice(CHART.indexOf("const cryptoSrcFor"), CHART.indexOf("const GRADE_VAR")) + "return cryptoSrcFor;")();
+  const row = { symbol: "TAO", name: "Bittensor", data_source: "binance_vision", price: 304.2, asset_type: "crypto" };
+  assert.equal(src(row), "binance");
+  assert.equal(src({ symbol: "LTC", data_source: "coinbase" }), "yahoo", "a Coinbase-sourced coin still draws Yahoo (the proxy serves two venues)");
+  const back = CHART.slice(CHART.indexOf("const SRC_BACK_MAP"), CHART.indexOf("const SRC_BACK_MAP") + 500);
+  assert.match(back, /ignition:\s*\["index\.html",\s*"← Ignition"\]/, "the back-link names the lens");
+});
+
 test("the constant documents how to reverse it", () => {
   const block = CHART.slice(0, CHART.indexOf('const DAILY_RANGE'));
   assert.match(block, /CHART_MAX_YEARS/, "the revert path must be written where the knob is");

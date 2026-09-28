@@ -2648,7 +2648,11 @@ explicit list is where a new odd-named peg has to be added. Pins:
   IGNITING — the panel heading prints the same number from the same function;
   forming-bar breaks show as visible "+N forming" text, never in N. It opens
   `#ignition-panel` (`public/js/ignition.js` + `css/ignition.css`; the
-  backtest file is fetched only when the panel opens). **STALE** (⚠ on the
+  backtest file is fetched only when the panel opens). **A symbol link carries
+  `src=ignition`, and chart.js reads the VENUE off the lens row when VIVEK has
+  no row for the coin** (2026-09-28: TAO, Binance-sourced, dead-ended on Yahoo's
+  "TAO-USD", which is not Bittensor — `ignitionMeta()` → `pmOnlyFallback` sets
+  `VIVEK_CRYPTO_SRC`; pinned in `test/deep_history.test.js`). **STALE** (⚠ on the
   pill, a badge in the header): the run is over 26h old, or — 6h past 00:00
   UTC (`STALE_BAR_GRACE_H`; the 00:14 cron lands late, and a mark that lit
   every morning would be learned-to-ignore) — the newest completed bar is
