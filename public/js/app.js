@@ -864,9 +864,18 @@
     const nConf = state.confl ? state.confl.all().length : null;
     // #93: every filter pill carries aria-pressed so its on/off state is exposed
     // to assistive tech, not just conveyed by the is-active colour.
-    const pill = (attrs, cls, label, n, title, active) =>
+    // `extra` is finished markup appended after the count (Ignition's "+p").
+    const pill = (attrs, cls, label, n, title, active, extra) =>
       `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} aria-pressed="${active ? "true" : "false"}" title="${esc(title)}">` +
-      `${label}${n == null ? "" : ` <b>${n}</b>`}</button>`;
+      `${label}${n == null ? "" : ` <b>${n}</b>`}${extra || ""}</button>`;
+    // ⚡ IGNITION (2026-09-28): the report-only coil → ignition lens. Every rule
+    // (which markets, the count, when it shows, the panel) lives in
+    // js/ignition.js; the deck only places the pill after ◎ At level. No pill
+    // until that market's file has loaded — the lazy load re-renders this strip
+    // when it lands, and an absent file simply never produces one.
+    const ign = window.Ignition
+      ? window.Ignition.pill(state.market, (m) => { if (m === state.market) renderDeckPills(state.data); })
+      : null;
     box.innerHTML =
       pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.tab === "aplus") +
       pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.tab === "a") +
@@ -874,6 +883,7 @@
         "Names with 2+ lenses aligned right now — click to filter the list to them", state.vkConfl) +
       pill(`data-pill="atlevel"`, "t", "◎ At level", nAt,
         "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
+      (ign ? pill(`data-ignition="1" aria-controls="ignition-panel"`, "ig", "⚡ Ignition", ign.n, ign.title, ign.open, ign.mark) : "") +
       (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
         `title="Top tradeable pick (funds/REITs excluded) — open the chart">★ ${esc(top.symbol)} ${fmtPrice(top.price)}</a>` : "") +
       // "N tradeable" retired (Lane A 2026-08-16): it was the arithmetic sum of
@@ -917,6 +927,13 @@
       renderDeckPills(state.data);
       renderRows();
     }));
+    // Not a filter: it opens/closes the Ignition panel and leaves the list alone.
+    const ignPill = box.querySelector("[data-ignition]");
+    if (ignPill) ignPill.addEventListener("click", () => {
+      window.Ignition.toggle(state.market);
+      renderDeckPills(state.data);
+    });
+    if (window.Ignition) window.Ignition.sync(state.market);
     // Grade-tab counts + watch count live in the toolbar as before
     $("#count-aplus").textContent = nAplus;
     $("#count-a").textContent = nA;

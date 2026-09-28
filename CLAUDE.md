@@ -62,6 +62,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
   scan.py              scan_vivek_market → public/data/<m>_vivek.json
   run.py               CLI: python -m scanner.run [--market ...]; publishes bot_rules.json
   spec.py + spec_run.py    Specs lens (asx+nasdaq) → <m>_spec.json
+  ignition/            IGNITION lens (crypto, REPORT-ONLY): coil -> ignition
+                       screen + replay → public/data/ignition/ (see IGNITION)
   confluence_alert.py  multi-lens confluence engine: ALERTS page history log
                        + push-owed state (delivery removed 2026-08-27)
   vivek_backtest.py    walk-forward replay (1D/3D/1W, level_tf cohorts)
@@ -117,6 +119,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | ops.yml | manual only | **Claude's standing access (2026-09-10, owner: "you should be able to set up jobs and all to make this hands off").** `scripts/ops.py` runs on a runner (which can reach APIs the cloud session's proxy refuses — api.cron-job.org and api.cloudflare.com both answer HTTP 000 from a session) and Claude dispatches it via the GitHub MCP with an `action` (`cronjob-list/get/history/create/update/delete`, `cf-list-vars/set-var/delete-var/redeploy`) + JSON `args`, then reads the job log. Secrets: `CRONJOB_API_KEY`, `CLOUDFLARE_API_TOKEN` (Pages: Edit), `CLOUDFLARE_ACCOUNT_ID`. REDACTED OUTPUT IS THE ONLY SECURITY PROPERTY: secret values, caller-supplied values and `key=` query params are masked, and `cf-list-vars` prints names + types NEVER values (Cloudflare returns plain_text values in the clear; `GH_DISPATCH_TOKEN` is stored as Text). Read-only to the repo, no git, own concurrency group, no assert_staged/WATCHDOG. Note the one honest limit: `args` for `cf-set-var` carries the value through the run's dispatch inputs, which GitHub records. Pins: `tests/test_ops.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
+| ignition.yml | `14 0` UTC (the new completed crypto bar) + `14 1,2` backstops (skip once today's file is on the branch) + `44 5,11,17,21` intraday; push to `.github/ignition-kick`; manual (`backtest`, `dry_run`) | IGNITION lens (REPORT-ONLY, crypto): screens the coil → ignition shape into `public/data/ignition/crypto.json`; a kick or `backtest: true` also replays full history into `crypto_backtest.json`, committed back to the PUSHED branch (never hard-coded main). Own concurrency group per branch, not in the scan mutex; assert_staged per reported path; no WATCHDOG entry by decision. Pins: `tests/test_ignition_workflow.py` |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -2249,6 +2252,81 @@ blank on new ledger rows (frozen values on old rows survive under the
 blank-only rule). The three HORIZON/BACKFILL/REGIME sections further down
 are kept as HISTORY of code that no longer exists — do not re-add any of it;
 `git log -- scanner/sectorbreadth.py` at the removal commit has the engines.
+
+## IGNITION — the coil → ignition lens (2026-09-28, owner: "build it") — REPORT-ONLY
+
+**Why it exists.** QNT ran 71 → 373 (intraday) over 24–27 Sep 2026 while the
+deck showed nothing. The committed scan history says the scanner HAD it: VIVEK
+graded QNT **A, 1D break armed (🎯 High Conviction)** from 24 Sep 18:24 to
+25 Sep ~9pm Melbourne at $71.64 (entry 69.73, stop 55.56, 3.0:1). Three things
+lost it: (1) the bot's weekly/3d level gate refused a daily-200 row (correct —
+do not loosen it on one anecdote); (2) VIVEK deletes a row the moment price
+leaves the 4% band, so a setup that WORKS vanishes; (3) nothing looks for the
+SHAPE — months of compression, then a close out of the base on a multiple of
+volume — as a thing in its own right (Specs does, but only ASX/NASDAQ under
+$0.50; the "arriving" list only runs inside the VIVEK branch; PhaseMap read
+QNT's 23 Sep poke as a BEARISH sweep).
+
+**Also found chasing it: the crypto universe was never the top 200.**
+`CRYPTO_UNIVERSE_SIZE = 200` made the one-page CoinGecko request ask
+`per_page=260`; CoinGecko caps it at 250 and silently serves its default 100,
+so the universe SHRANK 101 → 86 on 2026-09-20. `universe._fetch_crypto` now
+pages at the cap (`tests/test_crypto_universe.py`; the old test pinned the bug).
+
+- **Package:** `scanner/ignition/` — `engine.py` (pure, causal features shared
+  by the screen AND the replay: one implementation, two readers), `run.py`
+  (CLI; exit 0 published / 3 kept the last file / 1 failure), `backtest.py`.
+  Publishes ONLY `public/data/ignition/crypto.json` (+ `crypto_backtest.json`).
+  Config: the `IGNITION_*` block — every threshold PRE-REGISTERED before the
+  first real run; a change bumps `IGNITION_RULESET_VERSION`.
+- **The rule.** COIL (one bar, all four): SMA 9/26/43/200 within 12% of each
+  other; ATR%-of-price in the bottom 25% of its 2-year window; 20d volume in
+  the bottom 35% of its 2-year window; ≥50% under the 3-year high. TRIGGER
+  (completed bar): coiled on any of the 10 bars BEFORE it; close > the 60-bar
+  base's highest high; volume ≥ 3× the prior 20-day average; ≤60% over the
+  9-SMA; $1M/20d base and $3M trigger-day turnover (crypto volume is already
+  USD). One trigger per move (20-bar rearm). PLAN: stop = max(base low, base
+  high − 1×ATR(t−1)); exit at the next open after a daily close below the
+  9-SMA — NO fixed TP ladder (Specs' ladder averaged a 1.03R win: it cut every
+  runner). The 2-year rank window replaced a drafted 1-year one BEFORE any real
+  data was seen: a year-long base becomes its own reference and stops ranking
+  quiet.
+- **States on the page:** IGNITING (fired on one of the last 2 completed bars)
+  → RUNNING → CLOSED (kept 20 bars ON PURPOSE — a list of only winners is the
+  survivorship this lens exists to stop), COILED (a trigger tomorrow would
+  count). `provisional` = the FORMING bar qualifies; never confirmed (QNT's own
+  23 Sep poke closed back inside the base). Once the bar after a trigger exists
+  the row is priced from ITS OPEN — the replay's fill — so page R and evidence
+  R are one number.
+- **The replay's honesty rules (each closed an audit finding, 2026-09-28):**
+  realised trades only (open/pending are marks beside the stats, never in
+  them); the design case (QNT from 2026-09-01) is NEVER scored — it informed
+  the thresholds; the baseline is random timing on the SAME coin within ±182
+  bars (same season) drawn only from bars the rule could have traded; the
+  decision statistic is `versus.random_timing` (primary minus baseline,
+  cluster-bootstrapped by entry month — alt ignitions bunch); exit variants
+  trade exactly the primary's entries; the sensitivity grid is a robustness
+  distribution, never a menu. A FORWARD bucket (from 2026-09-28) is the only
+  truly unseen data and accrues from now.
+- **Fences (`tests/test_ignition_fences.py`, AST-based, both directions):**
+  nothing under `scanner/broker/` (or vivek/scan/conviction/confluence/
+  morning_plays/run.py) can reach the lens; the lens imports only config,
+  data, output, universe, scanerrors, indicators. NOT confluence, NOT traded.
+- **Workflow `ignition.yml`:** own concurrency group PER BRANCH
+  (`ignition-<ref>`); crons 00:14 UTC (the new completed crypto bar) + 01:14/
+  02:14 backstops that skip once today's file exists + 4 intraday refreshes;
+  the backtest runs on a manual dispatch or a push touching
+  `.github/ignition-kick`, committing back to the PUSHED branch (never a
+  hard-coded main). assert_staged once PER reported path. Deliberately no
+  WATCHDOG_RUNS entry (momentum precedent, pinned as a decision).
+- **Front end:** the `⚡ Ignition N` pill on the deck (crypto only; N =
+  confirmed IGNITING; "+p" marks provisional) opens `#ignition-panel`
+  (`public/js/ignition.js` + `css/ignition.css`); the backtest file is fetched
+  only when the panel opens. Tests: `test/ignition.test.js`,
+  `tests/test_ignition_frontend.py` (JS market list == config).
+- **What would have to be true to trade it:** the FORWARD bucket beating
+  random timing on its own, not the historical replay alone — and then it is
+  the owner's call, like every trade change.
 
 ## HIGH CONVICTION — the four-cell rule (2026-09-20)
 

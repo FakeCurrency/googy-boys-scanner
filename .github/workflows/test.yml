@@ -215,6 +215,16 @@ jobs:
       # draws the label on, which are five apart and mean different things.
       - name: Momentum lens (nav contract, purple scoping, row evidence)
         run: node test/momentum.test.js
+      # IGNITION (2026-09-28). The coil -> ignition crypto lens is report-only,
+      # so what is gated is the deck surface's honesty: the pill counts only
+      # CONFIRMED triggers (a forming-bar break is a "+p" marker, never part of
+      # N), CLOSED rows stay on the panel so misses stay visible, every value is
+      # escaped, the evidence line never invents a number, and an absent file
+      # hides silently while a renderer fault is re-raised rather than
+      # swallowed by the fetch's catch. Paths: scanner/**, public/js/**,
+      # public/css/** and test/** above already cover every file it reads.
+      - name: Ignition lens (deck pill count rule, panel states, escaping, hide-when-absent)
+        run: node test/ignition.test.js
       # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
       # reference, comments stripped) and deleted stay deleted: each pin fails
       # on the name coming back even as a string, and each file must still
