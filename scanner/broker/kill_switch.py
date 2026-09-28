@@ -216,7 +216,7 @@ def _live_marks(book: dict) -> dict:
         return {}
     try:
         from scanner import config
-        from scanner.data import download, fetch, held_price_kwargs
+        from scanner.data import download, fetch, held_fetch_period, held_price_kwargs
         from scanner.vivek_journal import _current_price
         want = {}                                # yf ticker -> (symbol, market)
         for p in open_pos:
@@ -234,8 +234,11 @@ def _live_marks(book: dict) -> dict:
             # Each position must reproduce its OWN recorded history (a
             # day_marks anchor) or its last mark: a same-ticker token on any
             # venue must never reach the loss check (2026-09-28 reviews).
-            frames.update(fetch("crypto", crypto, period="5d", retries=1,
-                                **held_price_kwargs(open_pos))[0])
+            hk = held_price_kwargs(open_pos)
+            # The window must reach back to every anchor date (an old one =
+            # the bot stopped marking, exactly when this check matters).
+            frames.update(fetch("crypto", crypto, period=held_fetch_period(hk),
+                                retries=1, **hk)[0])
         by_key = {}
         for p in open_pos:
             m = p.get("market")

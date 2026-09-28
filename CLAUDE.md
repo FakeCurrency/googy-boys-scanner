@@ -2409,7 +2409,8 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
   `config.CRYPTO_DATA_SOURCE = "exchange"` → `scanner/exchange_data.py`
   (public, KEYLESS klines; no credentials, no order paths — test-pinned);
   every other market → `download()` exactly as before. Callers: `run.py` (the
-  scan download), `scan.py::_bars` (its fallback + the 4H plans' bars),
+  scan download), `scan.py::_bars` (its fallback + the 4H plans' bars; it forwards every
+  identity kwarg),
   `vivek_run.py` (off-universe stragglers + CLI), `kill_switch._live_marks`,
   the IGNITION lens. `tests/test_crypto_source_switch.py` fails if any of
   them stops calling `fetch`. **Revert = one line**: `CRYPTO_DATA_SOURCE =
@@ -2444,22 +2445,35 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
      restores holds Yahoo's wrong-token M / MNT (~$0.0003 for coins at ~$1-2).
   2. **A held coin must reproduce its OWN recorded history.** The kill
      switch and the book's off-universe fetch pass
-     `data.held_price_kwargs(positions)`: a position that has lived through a
-     day boundary carries `day_marks[D]` (the mark it took into day D ≈ the
-     D−1 close), and a venue's frame must close within `CRYPTO_ANCHOR_TOL`
-     (0.15) of it on D−1 (`exchange_data.anchor_ok`) — on WHATEVER venue
-     answers. A same-ticker stranger fails that (Binance's AI and MET; a
-     venue re-listing a symbol as a new token); a real move since cannot; an
-     outage at one venue falls through to the next. A position opened today
-     or with no marks is checked against its last mark at 0.40. A quote
-     either check refuses leaves the kill switch on its stamped mark and the
-     book position unpriced (counted), never on a stranger. `vivek_run`
-     still stamps `data_source` (the chart draws that venue) — only when
-     `_mark_sanity` ACCEPTS the mark.
+     `data.held_price_kwargs(positions)`: a venue's frame must close within
+     `CRYPTO_ANCHOR_TOL` (0.15) of the position's HISTORY ANCHOR on the
+     anchor's date (`exchange_data.anchor_ok`) — on WHATEVER venue answers.
+     The anchor is the position's stored `anchor` [date, close]:
+     `vivek_run._stamp_identity` writes it (with `data_source`, the venue the
+     chart draws) only when `_mark_sanity` ACCEPTS a mark or a position
+     opens, and only from an identity-CHECKED frame (`data.anchor_of`, the
+     frame's last completed close). **It is a real past close, not a mark**
+     (fourth review): the first cut anchored on `day_marks[D]`, but a mark
+     only moves when a price is accepted, so after an outage it lagged the
+     market, every venue failed it and the position stayed unpriced FOR
+     EVER — and Yahoo publishes D−1 late, so a D−1 anchor failed every
+     Yahoo coin each morning. `day_marks` survives only as the fallback for
+     a row stamped before `anchor` existed (a malformed stored anchor falls
+     back too). The kill switch sizes its window from the oldest anchor
+     (`held_fetch_period`; an old anchor = the bot stopped marking, exactly
+     when the check matters). A same-ticker stranger fails the anchor
+     (Binance's AI and MET; a venue re-listing a symbol as a new token); a
+     real move since cannot; an outage at one venue falls through to the
+     next. A position with no anchor at all is checked against its last mark
+     at 0.40. A quote either check refuses leaves the kill switch on its
+     stamped mark and the book position unpriced (counted), never on a
+     stranger.
   3. **A delisted pair is not a price.** Binance's mirror keeps serving a
      dead pair's frozen klines; a venue whose newest bar is older than
-     `EXCHANGE_MAX_BAR_AGE_DAYS` (3) is skipped for the next venue and named
-     under `stale_rejected`. For a coin left with no frame, `refused` +
+     `EXCHANGE_MAX_BAR_AGE_DAYS` (**1** — crypto trades 24/7 and every venue
+     opens today's candle at 00:00 UTC; at 3 a pair frozen two days ago
+     still beat a live venue and froze a held coin's mark) is skipped for
+     the next venue and named under `stale_rejected`. For a coin left with no frame, `refused` +
      `rejected_venues` let `merge_with_cache` block a cached frame FROM A
      REJECTED VENUE (the stranger, the frozen pair) or of unknown venue,
      while a cached frame from a live venue that merely failed this run

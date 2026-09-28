@@ -17,7 +17,7 @@ from .data import download, fetch, _frame_age_days
 
 def _bars(market_key: str, tickers: list, period: str, interval: str = "1d",
           ref_prices: dict | None = None, ref_tol: float | None = None,
-          pin: dict | None = None) -> dict:
+          pin: dict | None = None, **identity) -> dict:
     """The scan's own downloads, market-aware. Crypto goes through
     `data.fetch` -- the exchange klines the runner, the bot and the kill
     switch price with (config.CRYPTO_DATA_SOURCE, owner 2026-09-28: "so it's
@@ -26,7 +26,7 @@ def _bars(market_key: str, tickers: list, period: str, interval: str = "1d",
     calling `download` exactly as before."""
     if market_key == "crypto":
         return fetch(market_key, tickers, period=period, interval=interval,
-                     ref_prices=ref_prices, ref_tol=ref_tol, pin=pin)[0]
+                     ref_prices=ref_prices, ref_tol=ref_tol, pin=pin, **identity)[0]
     return download(tickers, period=period, interval=interval)
 from .universe import load_universe
 

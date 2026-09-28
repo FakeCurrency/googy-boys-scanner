@@ -453,6 +453,23 @@ def _restamp(book: dict, market: str, day: str) -> None:
     book.setdefault("guard", {})[market] = guard
 
 
+def _stamp_identity(pos: dict, frame, src: str | None, anchor_of) -> None:
+    """After a crypto mark is ACCEPTED (or a position opened): record the
+    venue that priced it (`data_source`; the chart draws that venue) and the
+    frame's own last COMPLETED close as `anchor` [date, close] -- the evidence
+    the kill switch and the off-universe fetch check every later price
+    against (data.held_price_kwargs). A real past close, not a mark: a mark
+    only moves when a price is accepted, so an anchor built from marks
+    lagged the market after an outage and then refused the real coin for
+    ever (third pre-merge review, 2026-09-28). Only an identity-checked frame
+    may write it (anchor_of enforces that)."""
+    if src:
+        pos["data_source"] = src
+    a = anchor_of(frame)
+    if a:
+        pos["anchor"] = [a[0], round(float(a[1]), 10)]
+
+
 def _stamp_day_ref(pos: dict, day: str, price: float | None) -> None:
     """Record the mark this position CARRIED INTO `day` (vivek_guard reference).
 
@@ -1184,7 +1201,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
     yf_map = {u["symbol"]: u["yf"] for u in universe}
-    from ..data import venue_of                       # deferred, like fetch below
+    from ..data import anchor_of, venue_of            # deferred, like fetch below
     costs = costs_for(market)                         # fees + slippage R-drag (None = off)
 
     def price_of(sym):
@@ -1263,8 +1280,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # challenge budget on a run that could never have managed anything.
         if price is not None:
             price = _mark_sanity(pos, price, market, session_open=is_open)
-        if price is not None and src:
-            pos["data_source"] = src
+        if price is not None and market == "crypto":
+            _stamp_identity(pos, frames.get(yf_map.get(pos["symbol"])), src, anchor_of)
         if is_open and price is not None:
             _mark(pos, price, day, costs)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going
@@ -1540,8 +1557,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             if pos is None:                              # don't chase
                 chased += 1
                 continue
-            if market == "crypto" and venue_of(frames, yf_map.get(sym)):
-                pos["data_source"] = venue_of(frames, yf_map.get(sym))
+            if market == "crypto":
+                _stamp_identity(pos, frames.get(yf_map.get(sym)),
+                                venue_of(frames, yf_map.get(sym)), anchor_of)
             # guard against a duplicate already in the persistent book
             if any(p["symbol"] == sym and p.get("market") == market for p in book["open"]):
                 continue

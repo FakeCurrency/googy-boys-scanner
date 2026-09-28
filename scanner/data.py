@@ -577,11 +577,12 @@ def held_price_kwargs(positions: list) -> dict:
     """fetch() kwargs that price HELD crypto (the kill switch, the book's
     off-universe fetch) as ITS OWN coin, on whatever venue answers.
 
-    A position that has lived through a day boundary carries `day_marks[D]`:
-    the mark it took into day D, i.e. roughly the D-1 close. That is a
-    HISTORY ANCHOR -- a venue's frame must close within CRYPTO_ANCHOR_TOL of
-    it on D-1 -- which a same-ticker stranger fails and a real move since
-    cannot. (Venue pins stood here for an hour; a review showed a pinned
+    The HISTORY ANCHOR is the position's stored `anchor` (the real last
+    completed close of the frame that last priced it), else -- for a row
+    stamped before anchors existed -- `day_marks[D]`, the mark it took into
+    day D, i.e. roughly the D-1 close. A venue's frame must close within
+    CRYPTO_ANCHOR_TOL of it on that date: a same-ticker stranger fails it,
+    a real move since cannot. (Venue pins stood here for an hour; a review showed a pinned
     venue could re-list a different token with no check at all, and that a
     pinned venue's outage froze the mark.) A position opened today, or with
     no marks yet, is checked against its last accepted mark at the ordinary
@@ -593,12 +594,43 @@ def held_price_kwargs(positions: list) -> dict:
         if p.get("market") != "crypto" or not p.get("symbol"):
             continue
         yf = f"{p['symbol']}{suffix}"
-        a = _day_mark_anchor(p)
+        a = _stored_anchor(p) or _day_mark_anchor(p)
         if a:
             anchors[yf] = a
         elif (p.get("last_mark") or p.get("entry") or 0) > 0:
             refs[yf] = float(p.get("last_mark") or p.get("entry"))
     return {"anchors": anchors, "ref_prices": refs, "ref_tol": float(config.CRYPTO_IDENTITY_TOL)}
+
+
+def _stored_anchor(pos: dict) -> tuple | None:
+    """The position's `anchor` [date, close]: the last completed close of the
+    identity-checked frame that last priced it (vivek_run._stamp_identity).
+    Preferred over day_marks: it is a real close, so neither a lagging mark
+    nor a venue that publishes yesterday late (Yahoo) can make the real coin
+    fail it."""
+    a = pos.get("anchor")
+    try:
+        day, px = str(a[0])[:10], float(a[1])
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
+    return (day, px) if px > 0 and len(day) == 10 else None
+
+
+def held_fetch_period(kwargs: dict, floor_days: int = 5) -> str:
+    """The shortest yfinance-valid period that still contains every anchor
+    date (the kill switch asks for "5d"; an anchor older than that would make
+    every held coin fail -- exactly when the bot has stopped marking)."""
+    days = floor_days
+    today = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
+    for day, _ in (kwargs.get("anchors") or {}).values():
+        try:
+            days = max(days, int((today - pd.Timestamp(day)).days) + 2)
+        except Exception:  # noqa: BLE001
+            continue
+    for cap, name in ((5, "5d"), (28, "1mo"), (88, "3mo"), (180, "6mo"), (360, "1y")):
+        if days <= cap:
+            return name
+    return "2y"
 
 
 def _day_mark_anchor(pos: dict) -> tuple | None:

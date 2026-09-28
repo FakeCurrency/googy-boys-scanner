@@ -173,8 +173,12 @@ CRYPTO_ANCHOR_TOL = 0.15
 # A venue whose newest daily bar is older than this does NOT list the coin any
 # more (Binance's market-data mirror keeps serving a delisted pair's frozen
 # klines -- XMR/BTT/LIT on 2026-09-28): the next venue is asked instead, and the
-# report names it under `stale_rejected`. 0 = off.
-EXCHANGE_MAX_BAR_AGE_DAYS = 3
+# report names it under `stale_rejected`. 0 = off. ONE day, not three: crypto
+# trades 24/7 and every venue opens today's candle at 00:00 UTC, so a live
+# pair's newest bar is today; at 3 a pair frozen two days ago still beat a live
+# venue and froze a held coin's mark (fourth pre-merge review). A thin coin with
+# no trade today or yesterday falls through to the next venue / Yahoo.
+EXCHANGE_MAX_BAR_AGE_DAYS = 1
 EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit

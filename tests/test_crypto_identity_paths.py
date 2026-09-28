@@ -289,7 +289,7 @@ def test_every_mark_stamps_the_venue_it_came_from():
     """run_market writes the frame's venue onto each crypto position it marks
     (once the mark is accepted) and on each one it opens."""
     src = (vr.__file__ and open(vr.__file__, encoding="utf-8").read())
-    assert src.count('pos["data_source"] = ') >= 2
+    assert src.count("_stamp_identity(pos,") >= 2       # the accepted mark AND the open
     f = _yframe(1.0)
     f.attrs["source"] = "coinbase"
     assert data.venue_of({"X-USD": f}, "X-USD") == "coinbase"
@@ -535,3 +535,138 @@ def test_a_fetch_with_no_reference_says_the_check_is_off(venues, caplog):
     assert rep["unchecked"] == 1
     assert any("identity check OFF" in r.message for r in caplog.records)
     assert data.source_summary(rep)["unchecked"] == 1
+
+
+# ── 8. the anchor is a REAL past close, stored at every accepted mark ─────────
+#
+# The fourth review: an anchor built from day_marks is a MARK, and a mark only
+# moves when a price is accepted -- after an outage it lags the market, every
+# venue then fails it, and the position is unpriced for ever. And Yahoo
+# publishes yesterday late, so a D-1 anchor failed every Yahoo coin each
+# morning. The anchor is now the checked frame's own last completed close.
+
+def _held_row(**kw):
+    from scanner.vivek_journal import _snapshot
+    row = {"symbol": "XYZ", "name": "XYZ", "sector": "", "grade": "A+", "dir": "LONG",
+           "entry_types": ["reclaim"]}
+    plan = {"stop": 0.50, "tp1": 1.5, "tp2": 1.8, "tp3": 2.0,
+            "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "reclaim",
+            "armed": True, "trigger_bar": None}
+    pos = _snapshot(row, "1W", plan, "crypto", 1.0, "2026-09-01")
+    pos.update(market="crypto", risk_usd=500.0, last_mark=1.0, opened_at="2026-09-01")
+    pos.update(kw)
+    return pos
+
+
+def test_an_accepted_mark_stores_the_frames_own_last_close_as_the_anchor(tmp_path, monkeypatch):
+    pos = _held_row()
+    _book_with(tmp_path, monkeypatch, pos)
+    f = _yframe(0.98)
+    f.attrs.update(source="binance_vision", identity="ref")
+    bk = vr.run_market("crypto", [], {"XYZ-USD": f}, [{"symbol": "XYZ", "yf": "XYZ-USD"}],
+                       now=dt.datetime.now(ZoneInfo("UTC")))
+    (held,) = [p for p in bk["open"] if p["symbol"] == "XYZ"]
+    assert held["anchor"] == [_yday(1), 0.98] and held["data_source"] == "binance_vision"
+    kw = data.held_price_kwargs([dict(held, day_marks={_yday(0): 5.0})])
+    assert kw["anchors"]["XYZ-USD"] == (_yday(1), 0.98), "the stored close beats day_marks"
+
+
+def test_an_UNCHECKED_frame_never_writes_the_anchor(tmp_path, monkeypatch):
+    pos = _held_row(anchor=["2026-09-20", 1.0])
+    _book_with(tmp_path, monkeypatch, pos)
+    f = _yframe(0.97)
+    f.attrs.update(source="yahoo", identity="none")
+    bk = vr.run_market("crypto", [], {"XYZ-USD": f}, [{"symbol": "XYZ", "yf": "XYZ-USD"}],
+                       now=dt.datetime.now(ZoneInfo("UTC")))
+    (held,) = [p for p in bk["open"] if p["symbol"] == "XYZ"]
+    assert held["anchor"] == ["2026-09-20", 1.0]
+
+
+def test_a_coin_that_drifted_while_unpriced_is_NOT_locked_out(venues, monkeypatch):
+    """The review's lock-up: last priced at 1.00, then unpriced while the coin
+    slid to 0.60 (under the 0.85 stop). Its day_marks say 1.00 into today, so a
+    mark-based anchor refuses the real 0.60 for ever. The stored close (1.00 on
+    the day it was last priced) is in the real history, so 0.60 is accepted."""
+    last_priced = (_today() - pd.Timedelta(days=5)).strftime("%Y-%m-%d")
+    log, _ = venues()
+
+    def router(url, timeout):
+        log.append(url)
+        if "binance.vision" in url and "XYZUSDT" in url:
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+            start = int(q["startTime"][0])
+            rows = []
+            for k in range(8, -1, -1):
+                t = int((_today() - pd.Timedelta(days=k)).timestamp() * 1000)
+                px = 1.00 if k >= 5 else 0.60
+                rows.append([t, str(px), str(px), str(px), str(px), "1", t + 1, "9e6"])
+            return [r for r in rows if r[0] >= start]
+        raise _http(404)
+    monkeypatch.setattr(X, "_get_json", router)
+    pos = _held_row(anchor=[last_priced, 1.00], day_marks={_yday(0): 1.00})
+    kw = data.held_price_kwargs([pos])
+    assert kw["anchors"]["XYZ-USD"] == (last_priced, 1.00)
+    fr, rep = data.fetch("crypto", ["XYZ-USD"], period=data.held_fetch_period(kw), **kw)
+    assert float(fr["XYZ-USD"]["Close"].iloc[-1]) == 0.60
+    # ...where the day_marks anchor alone refuses the real coin:
+    fr2, rep2 = data.fetch("crypto", ["XYZ-USD"], period="1mo",
+                           **data.held_price_kwargs([dict(pos, anchor=None)]))
+    assert fr2 == {} and rep2["identity_rejected"] == {"XYZ": ["binance_vision"]}
+
+
+def test_a_yahoo_coin_missing_yesterdays_row_still_passes_its_stored_anchor(venues, monkeypatch):
+    """Yahoo publishes D-1 late: its frame at 02:00 UTC ends D-2, D. The stored
+    anchor is the close Yahoo DID have when it last priced the coin (D-2)."""
+    idx = [_today().tz_localize(None) - pd.Timedelta(days=k) for k in (4, 3, 2, 0)]
+    frame = pd.DataFrame({"Open": 0.05, "High": 0.05, "Low": 0.05, "Close": 0.05,
+                          "Volume": 1e6}, index=pd.DatetimeIndex(idx))
+    venues()
+    monkeypatch.setattr(data, "download", lambda t, period=None, **k: {"AI-USD": frame})
+    pos = {"symbol": "AI", "market": "crypto", "last_mark": 0.05, "opened_at": "2026-09-01",
+           "anchor": [_yday(2), 0.05], "day_marks": {_yday(0): 0.05}}
+    fr, rep = data.fetch("crypto", ["AI-USD"], period="5d", **data.held_price_kwargs([pos]))
+    assert float(fr["AI-USD"]["Close"].iloc[-1]) == 0.05 and rep["source_of"] == {"AI-USD": "yahoo"}
+
+
+def test_the_kill_switch_window_reaches_the_oldest_anchor(monkeypatch):
+    seen = {}
+
+    def fake_fetch(market, tickers, period=None, **kw):
+        seen["period"] = period
+        return {}, {}
+    monkeypatch.setattr(data, "fetch", fake_fetch)
+    monkeypatch.setattr(data, "download", lambda *a, **k: {})
+    old = (_today() - pd.Timedelta(days=12)).strftime("%Y-%m-%d")
+    ks._live_marks({"open": [{"symbol": "XYZ", "market": "crypto", "status": "open",
+                              "last_mark": 1.0, "anchor": [old, 1.0]}]})
+    assert seen["period"] == "1mo"
+    assert data.held_fetch_period({"anchors": {}}) == "5d"
+    assert data.held_fetch_period({"anchors": {"A": (_yday(2), 1.0)}}) == "5d"
+
+
+def test_the_scans_own_fetch_forwards_the_identity_kwargs(monkeypatch):
+    """scan._bars had no anchors/require_identity parameters, so the path
+    that downloads its own frames raised TypeError on every market."""
+    from scanner import scan
+    seen = {}
+    monkeypatch.setattr(scan, "fetch", lambda m, t, **kw: (seen.update(kw) or ({}, {})))
+    scan._bars("crypto", ["BTC-USD"], "5y", **data.identity_kwargs("crypto", [
+        {"symbol": "BTC", "yf": "BTC-USD", "cg_price": 100.0, "cg_stale": True}]))
+    assert "anchors" in seen and seen["require_identity"] is True
+
+
+def test_the_age_gate_is_ONE_day():
+    """Crypto trades 24/7 and every venue opens today's candle at 00:00 UTC;
+    at 3 days a pair frozen two days ago still beat a live venue."""
+    assert config.EXCHANGE_MAX_BAR_AGE_DAYS == 1
+
+
+def test_a_malformed_stored_anchor_falls_back_to_day_marks():
+    """A hand-edited or truncated `anchor` must never become the evidence:
+    a zero/negative close or a date that is not YYYY-MM-DD is ignored."""
+    base = {"symbol": "XYZ", "market": "crypto", "last_mark": 1.0, "opened_at": "2026-09-01",
+            "day_marks": {_yday(0): 0.9}}
+    for bad in (["2026-09-20", 0], ["2026-09-20", -1.0], ["20260920", 1.0], ["2026-09-20"],
+                None, "junk", [None, 1.0]):
+        kw = data.held_price_kwargs([dict(base, anchor=bad)])
+        assert kw["anchors"]["XYZ-USD"] == (_yday(1), 0.9), bad
