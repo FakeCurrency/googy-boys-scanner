@@ -42,22 +42,22 @@
       "mae_r": -0.429,
       "mfe_r": 0.016,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 182.61505308,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 91.30752654,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.533,
-      "risk_usd": 799.47,
+      "risk_pct": 0.2665,
+      "risk_usd": 399.73,
       "sizing_mode": "fixed_notional",
       "cycle": "w3-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 17.8,
+          "share_pct": 8.9,
           "stop_pct": 16.0,
-          "risk_usd": 799.47,
+          "risk_usd": 399.73,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $799 - 18% of the $4,500 daily loss guard, on a 16% stop"
+          "note": "a 1R loss here is $400 - 9% of the $4,500 daily loss guard, on a 16% stop"
         }
       ],
       "source": "vivek_bot",
@@ -78,7 +78,21 @@
         "2026-09-27": 25.44000053
       },
       "unreal_r": -0.429,
-      "unreal_usd": -342.8
+      "unreal_usd": -171.4,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 17.8,
+          "stop_pct": 16.0,
+          "risk_usd": 799.47,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $799 - 18% of the $4,500 daily loss guard, on a 16% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 182.61505308,
+      "risk_usd_before": 799.47,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "ASTS:long:3D:2026-09-18",
@@ -119,22 +133,22 @@
       "mae_r": -0.038,
       "mfe_r": 0.655,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 79.73210131,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 39.86605066,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.768,
-      "risk_usd": 1152.01,
+      "risk_pct": 0.384,
+      "risk_usd": 576.01,
       "sizing_mode": "fixed_notional",
       "cycle": "w3-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 25.6,
+          "share_pct": 12.8,
           "stop_pct": 23.0,
-          "risk_usd": 1152.01,
+          "risk_usd": 576.01,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $1,152 - 26% of the $4,500 daily loss guard, on a 23% stop"
+          "note": "a 1R loss here is $576 - 13% of the $4,500 daily loss guard, on a 23% stop"
         }
       ],
       "source": "vivek_bot",
@@ -155,7 +169,21 @@
         "2026-09-27": 61.81000137
       },
       "unreal_r": 0.316,
-      "unreal_usd": 363.55
+      "unreal_usd": 181.78,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 25.6,
+          "stop_pct": 23.0,
+          "risk_usd": 1152.01,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $1,152 - 26% of the $4,500 daily loss guard, on a 23% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 79.73210131,
+      "risk_usd_before": 1152.01,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "CVLT:long:1D:2026-09-21",
@@ -196,22 +224,22 @@
       "mae_r": -0.101,
       "mfe_r": 0.07,
       "entry_type_label": "Break of small structure near the 200 SMA",
-      "units": 35.21374609,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 17.60687304,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.791,
-      "risk_usd": 1186.49,
+      "risk_pct": 0.3955,
+      "risk_usd": 593.25,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 26.4,
+          "share_pct": 13.2,
           "stop_pct": 23.7,
-          "risk_usd": 1186.49,
+          "risk_usd": 593.25,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $1,186 - 26% of the $4,500 daily loss guard, on a 24% stop"
+          "note": "a 1R loss here is $593 - 13% of the $4,500 daily loss guard, on a 24% stop"
         }
       ],
       "source": "vivek_bot",
@@ -230,7 +258,21 @@
         "2026-09-27": 145.53999329
       },
       "unreal_r": -0.05,
-      "unreal_usd": -59.46
+      "unreal_usd": -29.73,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 26.4,
+          "stop_pct": 23.7,
+          "risk_usd": 1186.49,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $1,186 - 26% of the $4,500 daily loss guard, on a 24% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 35.21374609,
+      "risk_usd_before": 1186.49,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "SMCI:long:3D:2026-09-21",
@@ -271,22 +313,22 @@
       "mae_r": -0.041,
       "mfe_r": 0.202,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 127.9099509,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 63.95497545,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.751,
-      "risk_usd": 1126.55,
+      "risk_pct": 0.3755,
+      "risk_usd": 563.28,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 25.0,
+          "share_pct": 12.5,
           "stop_pct": 22.5,
-          "risk_usd": 1126.55,
+          "risk_usd": 563.28,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $1,127 - 25% of the $4,500 daily loss guard, on a 23% stop"
+          "note": "a 1R loss here is $563 - 13% of the $4,500 daily loss guard, on a 23% stop"
         }
       ],
       "source": "vivek_bot",
@@ -305,7 +347,21 @@
         "2026-09-27": 43.25999832
       },
       "unreal_r": 0.2,
-      "unreal_usd": 224.95
+      "unreal_usd": 112.48,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 25.0,
+          "stop_pct": 22.5,
+          "risk_usd": 1126.55,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $1,127 - 25% of the $4,500 daily loss guard, on a 23% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 127.9099509,
+      "risk_usd_before": 1126.55,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "GLBE:long:3D:2026-09-21",
@@ -353,12 +409,12 @@
       "mae_r": 0.0,
       "mfe_r": 0.466,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 131.44058567,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 65.72029284,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.411,
-      "risk_usd": 616.43,
+      "risk_pct": 0.2055,
+      "risk_usd": 308.21,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [],
@@ -378,7 +434,12 @@
         "2026-09-27": 40.16999817
       },
       "unreal_r": 0.1,
-      "unreal_usd": 61.44
+      "unreal_usd": 30.72,
+      "review_before": [],
+      "notional_before": 5000.0,
+      "units_before": 131.44058567,
+      "risk_usd_before": 616.43,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "INTR:long:1W:2026-09-22",
@@ -419,22 +480,22 @@
       "mae_r": -0.399,
       "mfe_r": 0.08,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 897.66604083,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 448.83302041,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.6682,
-      "risk_usd": 1002.28,
+      "risk_pct": 0.3341,
+      "risk_usd": 501.14,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 22.3,
+          "share_pct": 11.1,
           "stop_pct": 20.0,
-          "risk_usd": 1002.28,
+          "risk_usd": 501.14,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $1,002 - 22% of the $4,500 daily loss guard, on a 20% stop"
+          "note": "a 1R loss here is $501 - 11% of the $4,500 daily loss guard, on a 20% stop"
         }
       ],
       "source": "vivek_bot",
@@ -452,7 +513,21 @@
         "2026-09-27": 5.11000013
       },
       "unreal_r": -0.344,
-      "unreal_usd": -345.25
+      "unreal_usd": -172.62,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 22.3,
+          "stop_pct": 20.0,
+          "risk_usd": 1002.28,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $1,002 - 22% of the $4,500 daily loss guard, on a 20% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 897.66604083,
+      "risk_usd_before": 1002.28,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "RIVN:long:1W:2026-09-22",
@@ -493,22 +568,22 @@
       "mae_r": -0.058,
       "mfe_r": 0.14,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 325.52084054,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 162.76042027,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.6208,
-      "risk_usd": 931.24,
+      "risk_pct": 0.3104,
+      "risk_usd": 465.62,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 20.7,
+          "share_pct": 10.3,
           "stop_pct": 18.6,
-          "risk_usd": 931.24,
+          "risk_usd": 465.62,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $931 - 21% of the $4,500 daily loss guard, on a 19% stop"
+          "note": "a 1R loss here is $466 - 10% of the $4,500 daily loss guard, on a 19% stop"
         }
       ],
       "source": "vivek_bot",
@@ -526,7 +601,21 @@
         "2026-09-27": 15.47000027
       },
       "unreal_r": 0.14,
-      "unreal_usd": 130.44
+      "unreal_usd": 65.22,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 20.7,
+          "stop_pct": 18.6,
+          "risk_usd": 931.24,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $931 - 21% of the $4,500 daily loss guard, on a 19% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 325.52084054,
+      "risk_usd_before": 931.24,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "BEAM:long:3D:2026-09-22",
@@ -567,22 +656,22 @@
       "mae_r": -0.291,
       "mfe_r": 0.072,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 197.94140754,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 98.97070377,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.6533,
-      "risk_usd": 980.02,
+      "risk_pct": 0.3267,
+      "risk_usd": 490.01,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 21.8,
+          "share_pct": 10.9,
           "stop_pct": 19.6,
-          "risk_usd": 980.02,
+          "risk_usd": 490.01,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $980 - 22% of the $4,500 daily loss guard, on a 20% stop"
+          "note": "a 1R loss here is $490 - 11% of the $4,500 daily loss guard, on a 20% stop"
         }
       ],
       "source": "vivek_bot",
@@ -600,7 +689,21 @@
         "2026-09-27": 24.27000046
       },
       "unreal_r": -0.285,
-      "unreal_usd": -279.45
+      "unreal_usd": -139.72,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 21.8,
+          "stop_pct": 19.6,
+          "risk_usd": 980.02,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $980 - 22% of the $4,500 daily loss guard, on a 20% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 197.94140754,
+      "risk_usd_before": 980.02,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "NXST:long:1W:2026-09-22",
@@ -641,22 +744,22 @@
       "mae_r": -0.203,
       "mfe_r": 0.116,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 30.0932903,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 15.04664515,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.5267,
-      "risk_usd": 790.1,
+      "risk_pct": 0.2634,
+      "risk_usd": 395.05,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 17.6,
+          "share_pct": 8.8,
           "stop_pct": 15.8,
-          "risk_usd": 790.1,
+          "risk_usd": 395.05,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $790 - 18% of the $4,500 daily loss guard, on a 16% stop"
+          "note": "a 1R loss here is $395 - 9% of the $4,500 daily loss guard, on a 16% stop"
         }
       ],
       "source": "vivek_bot",
@@ -674,7 +777,21 @@
         "2026-09-27": 162.1000061
       },
       "unreal_r": -0.116,
-      "unreal_usd": -91.82
+      "unreal_usd": -45.91,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 17.6,
+          "stop_pct": 15.8,
+          "risk_usd": 790.1,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $790 - 18% of the $4,500 daily loss guard, on a 16% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 30.0932903,
+      "risk_usd_before": 790.1,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "MESO:long:3D:2026-09-22",
@@ -715,22 +832,22 @@
       "mae_r": -0.262,
       "mfe_r": 0.065,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 322.99742562,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 161.49871281,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.4805,
-      "risk_usd": 720.78,
+      "risk_pct": 0.2403,
+      "risk_usd": 360.39,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 16.0,
+          "share_pct": 8.0,
           "stop_pct": 14.4,
-          "risk_usd": 720.78,
+          "risk_usd": 360.39,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $721 - 16% of the $4,500 daily loss guard, on a 14% stop"
+          "note": "a 1R loss here is $360 - 8% of the $4,500 daily loss guard, on a 14% stop"
         }
       ],
       "source": "vivek_bot",
@@ -748,7 +865,21 @@
         "2026-09-27": 15.11999989
       },
       "unreal_r": -0.262,
-      "unreal_usd": -188.97
+      "unreal_usd": -94.48,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 16.0,
+          "stop_pct": 14.4,
+          "risk_usd": 720.78,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $721 - 16% of the $4,500 daily loss guard, on a 14% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 322.99742562,
+      "risk_usd_before": 720.78,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "HBAN:long:3D:2026-09-22",
@@ -789,12 +920,12 @@
       "mae_r": -0.513,
       "mfe_r": 0.027,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 311.72068038,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 155.86034019,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.2277,
-      "risk_usd": 341.55,
+      "risk_pct": 0.1139,
+      "risk_usd": 170.78,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [],
@@ -813,7 +944,12 @@
         "2026-09-27": 15.64000034
       },
       "unreal_r": -0.048,
-      "unreal_usd": -16.36
+      "unreal_usd": -8.18,
+      "review_before": [],
+      "notional_before": 5000.0,
+      "units_before": 311.72068038,
+      "risk_usd_before": 341.55,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "WMT:long:3D:2026-09-22",
@@ -854,12 +990,12 @@
       "mae_r": -0.178,
       "mfe_r": 0.13,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 46.53760133,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 23.26880066,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.2702,
-      "risk_usd": 405.35,
+      "risk_pct": 0.1351,
+      "risk_usd": 202.67,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [],
@@ -878,7 +1014,12 @@
         "2026-09-27": 107.98000336
       },
       "unreal_r": -0.114,
-      "unreal_usd": -46.38
+      "unreal_usd": -23.19,
+      "review_before": [],
+      "notional_before": 5000.0,
+      "units_before": 46.53760133,
+      "risk_usd_before": 405.35,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "FWONA:long:3D:2026-09-22",
@@ -919,12 +1060,12 @@
       "mae_r": -0.41,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 56.72149646,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 28.36074823,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.2313,
-      "risk_usd": 346.9,
+      "risk_pct": 0.1156,
+      "risk_usd": 173.45,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [],
@@ -943,7 +1084,12 @@
         "2026-09-27": 86.45999908
       },
       "unreal_r": -0.27,
-      "unreal_usd": -93.79
+      "unreal_usd": -46.9,
+      "review_before": [],
+      "notional_before": 5000.0,
+      "units_before": 56.72149646,
+      "risk_usd_before": 346.9,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "SKYW:long:3D:2026-09-22",
@@ -984,12 +1130,12 @@
       "mae_r": -0.164,
       "mfe_r": 0.086,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 49.90020112,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 24.95010056,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.3857,
-      "risk_usd": 578.52,
+      "risk_pct": 0.1928,
+      "risk_usd": 289.26,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [],
@@ -1008,7 +1154,12 @@
         "2026-09-27": 102.29000092
       },
       "unreal_r": 0.086,
-      "unreal_usd": 49.57
+      "unreal_usd": 24.79,
+      "review_before": [],
+      "notional_before": 5000.0,
+      "units_before": 49.90020112,
+      "risk_usd_before": 578.52,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "FWONK:long:3D:2026-09-22",
@@ -1049,12 +1200,12 @@
       "mae_r": -0.428,
       "mfe_r": 0.0,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 51.85108352,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 25.92554176,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.229,
-      "risk_usd": 343.43,
+      "risk_pct": 0.1145,
+      "risk_usd": 171.72,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [],
@@ -1073,7 +1224,12 @@
         "2026-09-27": 94.61000061
       },
       "unreal_r": -0.296,
-      "unreal_usd": -101.67
+      "unreal_usd": -50.84,
+      "review_before": [],
+      "notional_before": 5000.0,
+      "units_before": 51.85108352,
+      "risk_usd_before": 343.43,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     },
     {
       "id": "TSLA:long:3D:2026-09-22",
@@ -1114,22 +1270,22 @@
       "mae_r": -0.106,
       "mfe_r": 0.063,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 13.32267563,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 6.66133781,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 5.0,
-      "risk_pct": 0.5773,
-      "risk_usd": 865.88,
+      "risk_pct": 0.2886,
+      "risk_usd": 432.94,
       "sizing_mode": "fixed_notional",
       "cycle": "hc4-1",
       "review": [
         {
           "code": "heavy_risk",
-          "share_pct": 19.2,
+          "share_pct": 9.6,
           "stop_pct": 17.3,
-          "risk_usd": 865.88,
+          "risk_usd": 432.94,
           "limit_usd": 4500.0,
-          "note": "a 1R loss here is $866 - 19% of the $4,500 daily loss guard, on a 17% stop"
+          "note": "a 1R loss here is $433 - 10% of the $4,500 daily loss guard, on a 17% stop"
         }
       ],
       "source": "vivek_bot",
@@ -1147,7 +1303,21 @@
         "2026-09-27": 372.10998535
       },
       "unreal_r": -0.085,
-      "unreal_usd": -73.94
+      "unreal_usd": -36.97,
+      "review_before": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 19.2,
+          "stop_pct": 17.3,
+          "risk_usd": 865.88,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $866 - 19% of the $4,500 daily loss guard, on a 17% stop"
+        }
+      ],
+      "notional_before": 5000.0,
+      "units_before": 13.32267563,
+      "risk_usd_before": 865.88,
+      "resized_at": "2026-09-28T04:03:28+00:00"
     }
   ],
   "closed": [
@@ -5500,12 +5670,12 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -747.9,
+      "week_usd": -373.95,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
       "worst_session_usd": 0.0,
-      "worst_week_usd": -747.9,
+      "worst_week_usd": -373.95,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
       "unrealised_usd": 0.0,
@@ -5513,14 +5683,14 @@
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 16,
-      "open_total_usd": -784.4,
+      "open_total_usd": -392.2,
       "notified": ""
     }
   },
   "summary": {
     "open": 16,
-    "unreal_usd": -809.94,
+    "unreal_usd": -404.95,
     "updated_day": "2026-09-27"
   },
-  "updated_at": "2026-09-28T02:38:35+00:00"
+  "updated_at": "2026-09-28T04:03:28+00:00"
 }
