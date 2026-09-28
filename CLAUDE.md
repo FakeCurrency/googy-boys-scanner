@@ -2381,6 +2381,27 @@ QNT's 23 Sep poke as a BEARISH sweep).
 `per_page=260`; CoinGecko caps it at 250 and silently serves its default 100,
 so the universe SHRANK 101 → 86 on 2026-09-20. `universe._fetch_crypto` now
 pages at the cap (`tests/test_crypto_universe.py`; the old test pinned the bug).
+**The wider universe let PEGS in, so the peg rule grew (2026-09-28).** The
+first dry VIVEK crypto scan on exchange data graded **EURCV (a euro
+stablecoin) A+ and U ("United Stables") A** — and the OLD 86-name cache
+already held USDF, USYC, USTB, EUTBL, EURSAFO and USDGO, pegs and tokenised
+cash/T-bill funds the `<X>USD` rule never saw. `universe._is_stable(sym,
+name)` now also drops `USD<X>` / `EUR<X>` tickers, an explicit list of
+non-dollar fiat pegs and tokenised funds, and CoinGecko NAMES carrying a peg
+word (stablecoin(s), stables, USD, dollar, EUR, euro, treasury, T-bill,
+money market, government securities/bonds, CLO); a cached snapshot is
+re-filtered on load. It only ever REMOVES names, which is what the owner's
+original skip rule says pegs are. **Gold/silver tokens (PAXG, XAUT, KAU,
+KAG) stay — the metal trends and they were always scanned on purpose**; a
+singular "Stable" (the STABLE chain token) stays too. The dry run prints the
+rows the rule drops (false positives) and anything still scanned whose year
+never left a 30% band (misses). Its first run on a runner: 40 rows dropped,
+every one a peg or cash fund; misses YLDS and USAT (x1.00 / x1.01 over a
+year) and the yen coin JPYC went onto the explicit list; what remains in the
+band is XAUT (gold) and HTX (a real, quiet token). **Re-run
+crypto_source_check after any universe change and read that line** — the
+explicit list is where a new odd-named peg has to be added. Pins:
+`tests/test_universe.py`.
 
 - **Package:** `scanner/ignition/` — `engine.py` (pure, causal features shared
   by the screen AND the replay: one implementation, two readers), `run.py`
@@ -2428,11 +2449,33 @@ pages at the cap (`tests/test_crypto_universe.py`; the old test pinned the bug).
   `.github/ignition-kick`, committing back to the PUSHED branch (never a
   hard-coded main). assert_staged once PER reported path. Deliberately no
   WATCHDOG_RUNS entry (momentum precedent, pinned as a decision).
-- **Front end:** the `⚡ Ignition N` pill on the deck (crypto only; N =
-  confirmed IGNITING; "+p" marks provisional) opens `#ignition-panel`
-  (`public/js/ignition.js` + `css/ignition.css`); the backtest file is fetched
-  only when the panel opens. Tests: `test/ignition.test.js`,
+- **Front end:** the `⚡ Ignition N` pill sits THIRD on the crypto deck
+  (after A+ and A, so a 390px phone sees it without swiping; a placeholder
+  holds the slot while the file loads, so nothing reflows). N = confirmed
+  IGNITING — the panel heading prints the same number from the same function;
+  forming-bar breaks show as visible "+N forming" text, never in N. It opens
+  `#ignition-panel` (`public/js/ignition.js` + `css/ignition.css`; the
+  backtest file is fetched only when the panel opens). **STALE** (⚠ on the
+  pill, a badge in the header): the run is over 26h old, or — 6h past 00:00
+  UTC (`STALE_BAR_GRACE_H`; the 00:14 cron lands late, and a mark that lit
+  every morning would be learned-to-ignore) — the newest completed bar is
+  older than UTC-yesterday. The evidence line only PRINTS the file's numbers
+  (realised n, open-not-counted, expectancy, OOS, vs random timing with CI
+  and P, top-5 share); JS computes no statistic. A payload fault anywhere
+  hides the panel, resets the pill and re-raises; the deck keeps rendering.
+  Tests: `test/ignition.test.js` (97, mutation-verified),
   `tests/test_ignition_frontend.py` (JS market list == config).
+- **What the replay says (exchange data + peg rule, run of 2026-09-28
+  03:09 UTC — report-only, READ AS SUGGESTIVE):** 94 realised trades,
+  expectancy **+1.19R**, median **−0.76R**, PF 3.08, 34% winners; versus
+  random timing on the same coins **+1.15R, 90% CI −0.06..+2.59, P(no edge)
+  0.062** — borderline. **The top 5 trades are 108% of the total R (ex-top-5
+  −0.10R)**: a fat-tail system whose whole average is a handful of monster
+  runs. Pre-2024 (n=44) +0.03R; 2024+ (n=50) +2.21R. BTC above its 200-SMA
+  n=82 +1.37R, below n=12 −0.02R (context, not a filter). hold-20 exit
+  +1.65R vs the 9-SMA trail's +1.19R; the ladder exit +0.21R (it cuts the
+  runners). All 243 grid cells positive (median +1.39R) — overlapping cells,
+  a robustness read only.
 - **What would have to be true to trade it:** the FORWARD bucket beating
   random timing on its own, not the historical replay alone — and then it is
   the owner's call, like every trade change.

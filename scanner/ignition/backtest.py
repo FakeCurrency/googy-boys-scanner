@@ -48,7 +48,8 @@ HONEST LIMITS, published inside the payload (`caveats`), not just here:
     why beating IT is the bar, not beating zero.
   * Per-trade R, not a portfolio: overlapping trades across coins are each
     counted at 1R; no capital constraint, no position cap.
-  * Yahoo daily crypto bars; thin early history on young coins.
+  * Daily bars from whichever venue served each coin (`data_note`, and the
+    `sources` block run.py adds); thin early history on young coins.
 """
 
 from __future__ import annotations
@@ -509,9 +510,12 @@ def _grid_summary(prepared: List[Prepared], p: E.Params) -> dict:
 def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
              symbols: Optional[Dict[str, str]] = None,
              universe_size: Optional[int] = None,
-             now: Optional[dt.datetime] = None) -> dict:
+             now: Optional[dt.datetime] = None,
+             data_note: Optional[str] = None) -> dict:
     """The whole replay -> one publishable payload. Deterministic given the
-    frames: every random draw is seeded, no clock is read except `now`."""
+    frames: every random draw is seeded, no clock is read except `now`.
+    `data_note` is the caveat line naming where the bars came from (run.py
+    writes it from the fetch report; the replay itself cannot know)."""
     p = E.Params.from_config(market)
     prepared = prepare(frames, market, symbols)
     seed = int(config.IGNITION_BT_SEED)
@@ -616,7 +620,7 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
             "number and reported only as a case study.",
             "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no "
             "capital constraint or position cap.",
-            "Yahoo daily crypto bars; young coins have thin early history.",
+            data_note or "Daily bars; young coins have thin early history.",
             "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample.",
         ],
         "primary": {

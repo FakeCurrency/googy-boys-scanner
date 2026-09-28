@@ -869,21 +869,33 @@
       `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} aria-pressed="${active ? "true" : "false"}" title="${esc(title)}">` +
       `${label}${n == null ? "" : ` <b>${n}</b>`}${extra || ""}</button>`;
     // ⚡ IGNITION (2026-09-28): the report-only coil → ignition lens. Every rule
-    // (which markets, the count, when it shows, the panel) lives in
-    // js/ignition.js; the deck only places the pill after ◎ At level. No pill
-    // until that market's file has loaded — the lazy load re-renders this strip
-    // when it lands, and an absent file simply never produces one.
+    // (which markets, the count, when it shows, staleness, the panel) lives in
+    // js/ignition.js; the deck only places the pill THIRD, straight after "A",
+    // so a 390px phone sees it without swiping the strip. While that market's
+    // file is first loading a placeholder pill holds the slot (no reflow when
+    // it lands); an absent file simply never produces a pill.
+    // A lens fault must never abort this function (Multi-lens, Eyes and the
+    // counts all render from it): it is re-raised asynchronously, so it still
+    // reaches window.onerror, and the deck renders without the pill.
+    const ignCall = (fn) => {
+      try { return fn(); } catch (e) { setTimeout(() => { throw e; }, 0); return null; }
+    };
     const ign = window.Ignition
-      ? window.Ignition.pill(state.market, (m) => { if (m === state.market) renderDeckPills(state.data); })
+      ? ignCall(() => window.Ignition.pill(state.market, (m) => { if (m === state.market) renderDeckPills(state.data); }))
       : null;
+    const ignPillHTML = !ign ? ""
+      : ign.loading
+        ? pill(`data-ignition-wait="1" aria-busy="true" aria-disabled="true"`, "ig is-loading", "⚡ Ignition", ign.n, ign.title, false, "")
+        : pill(`data-ignition="1" aria-controls="ignition-panel" aria-expanded="${ign.open ? "true" : "false"}"`,
+            "ig", "⚡ Ignition", ign.n, ign.title, ign.open, ign.mark);
     box.innerHTML =
       pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.tab === "aplus") +
       pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.tab === "a") +
+      ignPillHTML +
       pill(`data-pill="confl"`, "o", "⨂ Multi-lens", nConf ?? "…",
         "Names with 2+ lenses aligned right now — click to filter the list to them", state.vkConfl) +
       pill(`data-pill="atlevel"`, "t", "◎ At level", nAt,
         "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
-      (ign ? pill(`data-ignition="1" aria-controls="ignition-panel"`, "ig", "⚡ Ignition", ign.n, ign.title, ign.open, ign.mark) : "") +
       (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
         `title="Top tradeable pick (funds/REITs excluded) — open the chart">★ ${esc(top.symbol)} ${fmtPrice(top.price)}</a>` : "") +
       // "N tradeable" retired (Lane A 2026-08-16): it was the arithmetic sum of
@@ -928,12 +940,16 @@
       renderRows();
     }));
     // Not a filter: it opens/closes the Ignition panel and leaves the list alone.
+    // The strip is re-rendered under the pointer, so focus goes back to the
+    // (new) Ignition pill — a keyboard user is not dropped to <body>.
     const ignPill = box.querySelector("[data-ignition]");
     if (ignPill) ignPill.addEventListener("click", () => {
-      window.Ignition.toggle(state.market);
+      ignCall(() => window.Ignition.toggle(state.market));
       renderDeckPills(state.data);
+      const again = box.querySelector("[data-ignition]");
+      if (again) again.focus({ preventScroll: true });
     });
-    if (window.Ignition) window.Ignition.sync(state.market);
+    if (window.Ignition) ignCall(() => window.Ignition.sync(state.market));
     // Grade-tab counts + watch count live in the toolbar as before
     $("#count-aplus").textContent = nAplus;
     $("#count-a").textContent = nA;

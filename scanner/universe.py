@@ -12,6 +12,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import time
 import urllib.request
 
@@ -68,18 +69,51 @@ CRYPTO_SKIP = {
     # newer wrapped/staked BTC-ETH derivatives — duplicates of the underlying
     "CBBTC", "TBTC", "SOLVBTC", "LBTC", "EZETH", "RSETH", "METH", "CMETH",
     "LSETH", "SWETH", "OSETH", "JITOSOL", "MSOL", "BNSOL", "JUPSOL",
+    # 2026-09-28: the pagination fix put ranks ~100-250 back in the universe,
+    # and that band carries pegs the <X>USD rule cannot see -- non-dollar
+    # fiat stablecoins (EURCV graded A+ on the first exchange-data dry run,
+    # i.e. a long on EUR/USD dressed as a crypto setup) and tokenised
+    # money-market / T-bill / CLO funds whose price is a NAV that only
+    # accrues. Same reason as every line above: no trend to react to.
+    "A7A5", "XSGD", "ZCHF", "VCHF", "VEUR", "AEUR", "GYEN", "BRZ", "BRLA",
+    "TRYB", "IDRT", "BIDR", "MXNB", "CADC", "QCAD", "XIDR", "EUTBL", "USTBL",
+    "JAAA", "JTRSY", "OUSG", "USTB", "USYC", "BENJI", "TBILL", "STBT", "USCC",
+    "USR",
+    # Found by the dry run's behaviour check (1y high/low x1.00-x1.01) or its
+    # identity check, not by any name rule: Figure's YLDS, Tether's USAT, the
+    # yen stablecoin JPYC.
+    "YLDS", "USAT", "JPYC",
 }
 
+# Name words that mark a peg or a tokenised cash/bond fund whatever its
+# ticker (CoinGecko's `name`, whole words, case-insensitive): "Resolv USR",
+# "Global Dollar", "United Stables" (U -- graded A on the first exchange-data
+# dry run), "Spiko Amundi Overnight Swap Fund (EUR)", "Circle USYC".
+# Deliberately narrow -- "Fund", "Gold" or a singular "Stable" (the STABLE
+# chain token, which floats) would catch coins that do trend -- so only
+# words that cannot describe a free-floating coin are here.
+_PEG_NAME = re.compile(
+    r"\b(stablecoins?|stables|usd|dollar|eur|euro|treasury|treasuries|"
+    r"t-?bills?|money market|government (securities|bonds?)|CLO)\b",
+    re.IGNORECASE)
 
-def _is_stable(sym: str) -> bool:
+
+def _is_stable(sym: str, name: str = "") -> bool:
     """True for pegged stablecoins (and the explicit wrapped-token list).
 
     Beyond the explicit set, any ``<X>USD`` ticker is treated as a USD peg
     (RLUSD, FDUSD, crvUSD, …) so a newly-listed dollar stablecoin is skipped
     automatically rather than waiting to be hand-added after it's traded once.
+    ``USD<X>`` (USDF, USDM, ...) and ``EUR<X>`` (EURCV, EURR, EURQ, ...)
+    tickers are pegs by the same reasoning (2026-09-28), and when the coin's
+    NAME is known a stablecoin / T-bill / treasury / CLO phrase marks one too.
+    Gold and silver tokens (PAXG, XAUT, KAU, KAG) are NOT pegs here: the metal
+    trends, and they have been scanned on purpose since the start.
     """
     s = (sym or "").upper()
-    return s in CRYPTO_SKIP or s.endswith("USD")
+    if s in CRYPTO_SKIP or s.endswith("USD") or s.startswith(("USD", "EUR")):
+        return True
+    return bool(name) and bool(_PEG_NAME.search(name))
 
 _BROWSER_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; FibScanner/1.0)"}
 
@@ -158,9 +192,9 @@ def _from_csv(path: pathlib.Path, suffix: str) -> list[dict]:
             symbol = (row.get("symbol") or "").strip().upper()
             if not symbol:
                 continue
-            if suffix == "-USD" and _is_stable(symbol):    # crypto fallback list: drop pegs too
-                continue
             name = (row.get("name") or symbol).strip()
+            if suffix == "-USD" and _is_stable(symbol, name):    # crypto fallback list: drop pegs too
+                continue
             sector = (row.get("sector") or "").strip()
             items.append({"symbol": symbol, "name": name, "sector": sector,
                           "yf": symbol + suffix})
@@ -296,7 +330,7 @@ def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
         for coin in data:
             sym = (coin.get("symbol") or "").strip().upper()
             name = (coin.get("name") or sym).strip()
-            if not sym or _is_stable(sym) or not sym.isalnum() or sym in seen:
+            if not sym or _is_stable(sym, name) or not sym.isalnum() or sym in seen:
                 continue
             seen.add(sym)
             px = coin.get("current_price")
@@ -362,6 +396,11 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
     # shrink a scan from ~2,000 names to ~90 without a trace.
     if full or market_key == "crypto":
         cached = _load_universe_cache(market_key)
+        if cached and market_key == "crypto":
+            # A snapshot saved under an older peg rule must not bring a peg
+            # back the day CoinGecko is down.
+            cached = [i for i in cached
+                      if not _is_stable(i.get("symbol", ""), i.get("name", ""))]
         if cached:
             print(f"  universe: {market_key} directory fetch FAILED - "
                   f"using last-good cache ({len(cached)} names)", flush=True)

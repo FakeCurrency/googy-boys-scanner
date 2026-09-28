@@ -25,13 +25,28 @@
 
 /* ── the deck pill ─────────────────────────────────────────────────────── */
 .fpill.ig { color: var(--ig); background: var(--ig-soft); border-color: var(--ig-line); }
-/* "+p": provisional breaks on the still-forming bar. NOT part of the count,
-   so it is drawn as an outlined afterthought, never as a second number. */
+/* "+N forming": provisional breaks on the still-forming bar. NOT part of the
+   count, so it is drawn as an outlined afterthought, never as a second number.
+   It is visible TEXT (not only a title) so touch and screen readers get it. */
 .ig-pmark {
-  font: 800 10px/1 var(--mono); letter-spacing: 0.02em;
-  padding: 2px 5px; margin-left: -3px;
-  border: 1px dashed currentColor; border-radius: 6px; opacity: 0.85;
+  font: 800 10px/1 var(--mono); letter-spacing: 0.02em; white-space: nowrap;
+  padding: 2px 5px; border: 1px dashed currentColor; border-radius: 6px; opacity: 0.85;
   cursor: help;
+  /* The box is 16px tall inside a 13px line: the negative block margins keep
+     its layout footprint at 12px, so a pill that gains the marker (or the
+     stale glyph) is exactly as tall as the placeholder it replaced — the
+     desktop deck measured 3px taller without them. */
+  margin: -2px 0 -2px -3px;
+}
+/* Stale data: a visible warning glyph on the pill (its title says "as of"). */
+.ig-smark { font: 800 12px/1 var(--sans); color: var(--orange); margin: -1px 0 -1px -3px; cursor: help; }
+/* While the first fetch is in flight the pill holds its slot, inert. */
+.fpill.ig.is-loading { opacity: 0.55; cursor: progress; }
+.fpill.ig.is-loading:hover { background: var(--ig-soft); }
+/* Visually hidden, still read aloud. */
+.ig-vh {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
 /* ── the panel ─────────────────────────────────────────────────────────── */
@@ -46,6 +61,23 @@
 
 .ig-title { font: 800 12px/1.25 var(--sans); letter-spacing: 0.08em; color: var(--ig); }
 .ig-sub { margin-top: 3px; font: 500 11.5px/1.4 var(--sans); color: var(--muted-2); cursor: help; }
+/* STALE: the screen is behind (bars older than UTC-yesterday, or no run for
+   26h). Red on purpose: the evidence this lens trades on is not current. */
+.ig-stale {
+  display: inline-block; margin-left: 6px; padding: 3px 6px; border-radius: 6px;
+  font: 800 10px/1.2 var(--sans); letter-spacing: 0.04em;
+  color: var(--red); background: var(--red-soft); cursor: help;
+}
+/* BTC regime + "N coins behind yesterday's close": context lines under the
+   sub-line. The lag line keeps the muted colour on purpose: Yahoo-fallback
+   coins land a day late on most runs, so it is context, not an alarm. */
+.ig-meta {
+  display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 4px;
+  font: 600 11.5px/1.4 var(--sans); color: var(--muted-2);
+}
+.ig-meta > span { cursor: help; min-width: 0; overflow-wrap: anywhere; }
+.ig-regime.is-up { color: var(--green); }
+.ig-regime.is-down { color: var(--orange); }
 
 .ig-ev {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
@@ -58,6 +90,12 @@
 .ig-ev-cav { color: var(--orange); cursor: help; }
 .ig-ev-warn { color: var(--red); font-weight: 700; }
 .ig-ev.is-pending { color: var(--muted-2); font-style: italic; }
+/* The decision number (edge over random timing) is set apart from the rest. */
+.ig-ev-i[title] { cursor: help; }
+.ig-ev-dec {
+  color: var(--text-2); padding: 1px 6px; border-radius: 6px;
+  background: var(--ig-soft); border: 1px solid var(--ig-line);
+}
 
 .ig-sec { margin-top: 12px; }
 .ig-h {
@@ -70,6 +108,12 @@
   color: var(--muted-2); margin-left: 4px;
 }
 .ig-empty { margin: 0; font: 500 12px/1.4 var(--sans); color: var(--muted-2); }
+.ig-prov-note { color: var(--orange); white-space: nowrap; }
+/* Forming-bar breaks: listed under their own label, never counted. */
+.ig-subh {
+  margin: 10px 0 6px; font: 700 10.5px/1.3 var(--sans); letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--orange);
+}
 
 details.ig-coiled { margin-top: 12px; }
 details.ig-coiled > summary { cursor: pointer; list-style: none; }
@@ -108,10 +152,18 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
 .ig-sym:hover { color: var(--blue); text-decoration: underline; }
 .ig-sym:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
 .ig-name { font: 500 11.5px/1.2 var(--sans); color: var(--muted-2); overflow-wrap: anywhere; min-width: 0; }
+/* Where the bars came from (Binance / Coinbase / Yahoo / Cached). Muted. */
+.ig-src {
+  font: 600 9.5px/1.2 var(--sans); letter-spacing: 0.03em; color: var(--muted-2);
+  padding: 1px 5px; border: 1px solid var(--border-soft); border-radius: 5px;
+  cursor: help; min-width: 0; overflow-wrap: anywhere;
+}
 .ig-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; min-width: 0; }
 .ig-tag {
-  font: 700 10px/1 var(--sans); padding: 3px 6px; border-radius: 6px;
-  color: var(--text-2); background: var(--fill); white-space: nowrap; cursor: default;
+  font: 700 10px/1.2 var(--sans); padding: 2px 6px; border-radius: 6px;
+  color: var(--text-2); background: var(--fill); cursor: default;
+  /* A long tag wraps inside the card instead of pushing it wider. */
+  max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere;
 }
 .ig-tag[title] { cursor: help; }
 .ig-tag.is-prov { color: var(--orange); background: var(--orange-soft); }

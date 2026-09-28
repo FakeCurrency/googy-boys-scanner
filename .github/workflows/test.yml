@@ -217,8 +217,9 @@ jobs:
         run: node test/momentum.test.js
       # IGNITION (2026-09-28). The coil -> ignition crypto lens is report-only,
       # so what is gated is the deck surface's honesty: the pill counts only
-      # CONFIRMED triggers (a forming-bar break is a "+p" marker, never part of
-      # N), CLOSED rows stay on the panel so misses stay visible, every value is
+      # CONFIRMED triggers (a forming-bar break is a "+N forming" marker, never
+      # part of N), CLOSED rows stay on the panel so misses stay visible, the
+      # STALE mark follows the screen's clock (6h grace past 00:00 UTC), every value is
       # escaped, the evidence line never invents a number, and an absent file
       # hides silently while a renderer fault is re-raised rather than
       # swallowed by the fetch's catch. Paths: scanner/**, public/js/**,
