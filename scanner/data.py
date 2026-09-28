@@ -134,6 +134,14 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     the scan can stamp honest coverage/aging.
     """
     cache = load_frame_cache(market_key)
+    # Every frame fetched this run carries WHEN (config VIVEK_BOT_MAX_MARK_AGE_H):
+    # the stamp is pickled with the frame, so a frame the cache hands back on a
+    # later run still says how old its price is -- a re-save must never renew it.
+    fetched_at = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    for df in fresh.values():
+        if df is not None:
+            df.attrs[FETCHED_AT] = fetched_at
+            df.attrs.pop(CACHE_REUSED, None)
     merged = dict(fresh)
     reused = 0
     rv = rejected_venues or {}
@@ -157,7 +165,7 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
         if max_age and _frame_age_days(cache[t], tz) > max_age:
             fossils.append(t)
             continue
-        merged[t] = cache[t]
+        merged[t] = _as_reused(cache[t])
         reused += 1
     # Persist only current-universe tickers so the cache doesn't accumulate
     # delisted names forever; freshly downloaded frames overwrite stale ones.
@@ -168,7 +176,10 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     # cache that will be useful the moment Yahoo comes back. That guard wins on
     # purpose: the fossil is refused at read time on every later run regardless,
     # so nothing reaches the scanner off it and the only cost is disk.
-    save_frame_cache(market_key, {t: df for t, df in merged.items() if t in wanted})
+    # A reused frame is saved as it was loaded (the untagged original), with its
+    # ORIGINAL fetch stamp, so its age keeps growing for as long as it is reused.
+    save_frame_cache(market_key, {t: (df if t in fresh else cache[t])
+                                  for t, df in merged.items() if t in wanted})
     stats = {"fresh": len(fresh), "reused": reused, "merged": len(merged),
              "universe": len(tickers), "stale_dropped": len(fossils),
              "refused": len(blocked & set(tickers))}
@@ -563,6 +574,45 @@ def anchor_of(df) -> tuple | None:
     except Exception:  # noqa: BLE001
         return None
     return (day, px) if px > 0 else None
+
+
+FETCHED_AT = "fetched_at"      # attrs: UTC ISO time the frame was downloaded
+CACHE_REUSED = "cache_reused"  # attrs: True when merge_with_cache back-filled it
+
+
+def _as_reused(df: pd.DataFrame) -> pd.DataFrame:
+    """A cached frame handed back for a ticker the source skipped this run,
+    tagged so a reader can tell it from a fresh one. A shallow copy: the
+    object loaded from the cache stays untagged and is what gets re-saved."""
+    out = df.copy(deep=False)
+    out.attrs = {**(df.attrs or {}), CACHE_REUSED: True}
+    return out
+
+
+def mark_age_h(df, now: dt.datetime | None = None) -> float:
+    """How old this frame's price is, in hours, for a reader about to treat
+    its last close as the CURRENT price (config VIVEK_BOT_MAX_MARK_AGE_H).
+
+    0.0 for any frame the frame cache did not back-fill -- fetched this run,
+    or never through merge_with_cache at all. Hours since the ORIGINAL fetch
+    for a frame the cache reused. inf for a reused frame whose age cannot be
+    read (cached before fetch stamps existed): an unknown age must never read
+    as fresh."""
+    attrs = getattr(df, "attrs", None) or {}
+    if not attrs.get(CACHE_REUSED):
+        return 0.0
+    try:
+        t = pd.Timestamp(attrs.get(FETCHED_AT))
+        if pd.isna(t):
+            return float("inf")
+        if t.tzinfo is None:
+            t = t.tz_localize("UTC")
+        ref = pd.Timestamp(now) if now is not None else pd.Timestamp.now(tz="UTC")
+        if ref.tzinfo is None:
+            ref = ref.tz_localize("UTC")
+        return max(0.0, (ref - t).total_seconds() / 3600.0)
+    except Exception:  # noqa: BLE001
+        return float("inf")
 
 
 def venue_of(frames: dict, ticker: str | None) -> str | None:

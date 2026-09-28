@@ -1218,11 +1218,24 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
     yf_map = {u["symbol"]: u["yf"] for u in universe}
-    from ..data import anchor_of, venue_of            # deferred, like fetch below
+    from ..data import anchor_of, mark_age_h, venue_of  # deferred, like fetch below
     costs = costs_for(market)                         # fees + slippage R-drag (None = off)
 
+    # A cache-reused frame's last close is a PAST price (config
+    # VIVEK_BOT_MAX_MARK_AGE_H): past the limit it is not a mark, so the
+    # position is unpriced this run -- for management AND for the loss guard,
+    # which both read this one function. `stale_marks` names them for the log.
+    max_mark_h = float(getattr(config, "VIVEK_BOT_MAX_MARK_AGE_H", 0) or 0)
+    stale_marks: dict[str, float] = {}
+
     def price_of(sym):
-        return _current_price(frames, yf_map.get(sym))
+        t = yf_map.get(sym)
+        if max_mark_h:
+            age = mark_age_h(frames.get(t) if t else None, now)
+            if age > max_mark_h:
+                stale_marks[sym] = age
+                return None
+        return _current_price(frames, t)
 
     # CANONICAL per-market slice: this run can only ever write THIS market's
     # file (Phase 3 book layout v2) — cross-market interference is impossible.
@@ -1279,6 +1292,11 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # so the book (and anyone reading it) SEES the freeze instead of a
         # silently stale mark.
         if price is None:
+            if pos["symbol"] in stale_marks:
+                log.warning("vivek_run [%s]: %s [stale_cache] only a cached frame "
+                            "%.1fh old (limit %.1fh) - treated as UNPRICED, its stop "
+                            "is not tested this run", market, pos["symbol"],
+                            stale_marks[pos["symbol"]], max_mark_h)
             pos["unpriced_runs"] = int(pos.get("unpriced_runs") or 0) + 1
             if pos["unpriced_runs"] in (3, 10, 30):
                 log.warning("vivek_run [%s]: %s has had NO price for %d "
@@ -1557,6 +1575,13 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     if is_open and not guard["breached"]:
         for out in decision["plans"]:
             sym = out["plan"]["symbol"]
+            # A FILL needs a price fetched THIS run (VIVEK_BOT_MAX_MARK_AGE_H):
+            # skipping is re-tried next run; a fill off a cached frame books a
+            # price nobody traded at.
+            if max_mark_h and mark_age_h(frames.get(yf_map.get(sym)), now) > 0:
+                log.info("SKIP  %-8s [stale_cache] only a cached frame this run - "
+                         "no fill off a past price", sym)
+                continue
             price = _current_price(frames, yf_map.get(sym))
             if price is None:
                 continue
