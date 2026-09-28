@@ -339,8 +339,12 @@
     return new Date(t).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   }
 
+  // `src=ignition` (2026-09-28): the chart's back-link reads it, and chart.js
+  // reads the VENUE off this lens's row for a coin VIVEK has no row for —
+  // TAO (Bittensor) is Binance-sourced here and is NOT Yahoo's "TAO-USD", so
+  // a bare m+s link dead-ended on "No chart data".
   function chartHref(market, sym) {
-    return "chart.html?m=" + encodeURIComponent(market) + "&s=" + encodeURIComponent(sym);
+    return "chart.html?m=" + encodeURIComponent(market) + "&s=" + encodeURIComponent(sym) + "&src=ignition";
   }
 
   // One label/value cell. Both are TEXT, escaped here — nothing reaches the
