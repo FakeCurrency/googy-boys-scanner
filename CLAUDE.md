@@ -2442,36 +2442,44 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
      **And exchange mode has its OWN cache file** (`crypto.exchange.pkl.gz`,
      `ignition-crypto.exchange…`): the pre-switch cache actions/cache
      restores holds Yahoo's wrong-token M / MNT (~$0.0003 for coins at ~$1-2).
-  2. **A held coin is priced on the venue it was marked on.** `vivek_run`
-     stamps `data_source` on each crypto position every time a scan frame
-     marks it; the kill switch and the off-universe straggler fetch pass
-     `data.held_price_kwargs(positions)` → `fetch(pin=...)`, which asks THAT
-     venue only and gives NO quote (unpriced, counted) if it fails — never a
-     quote from whichever venue lists the ticker first (Binance's AI and LIT
-     are other tokens). The stamp is written only when `_mark_sanity`
-     ACCEPTS the mark, so a suspect print can never move the pin to the venue
-     that printed it. A pre-stamp row (BNB at the switch) is checked against
-     its own last mark at the ordinary 0.40 band until its first stamp.
+  2. **A held coin must reproduce its OWN recorded history.** The kill
+     switch and the book's off-universe fetch pass
+     `data.held_price_kwargs(positions)`: a position that has lived through a
+     day boundary carries `day_marks[D]` (the mark it took into day D ≈ the
+     D−1 close), and a venue's frame must close within `CRYPTO_ANCHOR_TOL`
+     (0.15) of it on D−1 (`exchange_data.anchor_ok`) — on WHATEVER venue
+     answers. A same-ticker stranger fails that (Binance's AI and MET; a
+     venue re-listing a symbol as a new token); a real move since cannot; an
+     outage at one venue falls through to the next. A position opened today
+     or with no marks is checked against its last mark at 0.40. A quote
+     either check refuses leaves the kill switch on its stamped mark and the
+     book position unpriced (counted), never on a stranger. `vivek_run`
+     still stamps `data_source` (the chart draws that venue) — only when
+     `_mark_sanity` ACCEPTS the mark.
   3. **A delisted pair is not a price.** Binance's mirror keeps serving a
      dead pair's frozen klines; a venue whose newest bar is older than
      `EXCHANGE_MAX_BAR_AGE_DAYS` (3) is skipped for the next venue and named
-     under `stale_rejected` — and a coin whose ONLY listing was such a pair
-     joins `refused`, so the cache cannot hand the same frozen klines back.
-  4. **An OLD reference is answered by PINNING, never by a wider band.** On a
-     CoinGecko outage the universe comes from the snapshot (`cg_stale`) and
-     `data.identity_kwargs()` pins every coin whose last-good frame is in the
-     frame cache to that frame's venue (the one the check confirmed it on),
-     priced there with no band; a coin with no cached frame keeps the tight
-     0.40 band against the old price — it can be refused for a run, never
-     admit a stranger. **A wider "stale" band ([0.2x, 5x]) shipped for a few
-     hours and a second independent review killed it**: a Binance 'MET' 43%
-     under the real one passed it, priced a HELD coin and fired its stop
-     (−2.88R, and −4.68R once the mark-sanity guard gave in) on a coin that
-     never moved. `CRYPTO_IDENTITY_TOL_STALE` is gone and a test asserts it
-     stays gone. A universe with no reference at all (the committed
-     pre-switch snapshot has no `cg_price`) prices with the check OFF and
-     says so: `unchecked` in the report, a WARNING in the log — live only if
-     CoinGecko fails before the first post-merge fetch succeeds.
+     under `stale_rejected`. For a coin left with no frame, `refused` +
+     `rejected_venues` let `merge_with_cache` block a cached frame FROM A
+     REJECTED VENUE (the stranger, the frozen pair) or of unknown venue,
+     while a cached frame from a live venue that merely failed this run
+     (LIT's Yahoo series on a throttled run — seen on a real run) refills.
+  4. **An OLD reference is answered by a HISTORY ANCHOR — not a wider band,
+     not a venue pin.** On a CoinGecko outage the universe comes from the
+     snapshot (`cg_stale`) and `data.identity_kwargs()` anchors every coin
+     whose last IDENTITY-CHECKED frame is in the frame cache to that frame's
+     last completed close; a coin with no such frame keeps the tight 0.40
+     band against the old price; one with neither is REFUSED
+     (`require_identity`). Frames record how they were checked
+     (`attrs["identity"]` = ref / anchor / none) and an unchecked frame is
+     never an anchor. **Two designs died in pre-merge review first:** a
+     wider [0.2x, 5x] band let a Binance 'MET' 43% under the real one price
+     a HELD coin and fire its stop (−2.88R, −4.68R once the sanity guard
+     gave in); venue PINS let an unchecked frame become a trusted pin, gave
+     a pinned venue no check at all, and froze a held coin's mark when the
+     pinned venue was down. `CRYPTO_IDENTITY_TOL_STALE` is gone (test-pinned).
+     `unchecked` in the report + a WARNING = frames priced with no evidence
+     (a fresh universe coin CoinGecko gave no price, e.g. the FLASH extra).
   5. **The 4H plans were built off OTHER INSTRUMENTS on main, crypto AND
      ASX** — `_attach_h4_plans` asked Yahoo for the bare symbol ("ETH" =
      Ethan Allen, 25.7 on a $2,695 coin; "BHP" = the NYSE ADR) and was

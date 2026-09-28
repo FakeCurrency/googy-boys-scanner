@@ -251,6 +251,6 @@ def test_the_scan_and_the_lens_pass_the_reference_prices():
         assert "identity_kwargs(" in src, rel
     for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py"):
         src = (ROOT / rel).read_text(encoding="utf-8")
-        assert "refused=" in src, rel
+        assert "refused=" in src and "rejected_venues=" in src, rel
     for rel in ("scanner/broker/vivek_run.py", "scanner/broker/kill_switch.py"):
         assert "held_price_kwargs(" in (ROOT / rel).read_text(encoding="utf-8"), rel

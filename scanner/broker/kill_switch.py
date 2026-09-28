@@ -231,9 +231,9 @@ def _live_marks(book: dict) -> dict:
         if other:
             frames.update(download(other, period="5d", retries=1))
         if crypto:
-            # Pinned to the venue each position was marked on (or checked
-            # against its last mark): a same-ticker token on another venue
-            # must never reach the loss check (2026-09-28 review).
+            # Each position must reproduce its OWN recorded history (a
+            # day_marks anchor) or its last mark: a same-ticker token on any
+            # venue must never reach the loss check (2026-09-28 reviews).
             frames.update(fetch("crypto", crypto, period="5d", retries=1,
                                 **held_price_kwargs(open_pos))[0])
         by_key = {}

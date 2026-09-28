@@ -276,7 +276,8 @@ def main() -> None:
             # cache: the cache would hand back the stranger it just refused.
             deep_frames, cache_stats = merge_with_cache(
                 market_key, fresh, [u["yf"] for u in universe],
-                refused=src_report.get("refused") or ())
+                refused=src_report.get("refused") or (),
+                rejected_venues=src_report.get("rejected_venues"))
             cov = 100 * len(deep_frames) // max(len(universe), 1)
             reused_note = f" (+{cache_stats['reused']} cached)" if cache_stats["reused"] else ""
             low = (cov < getattr(config, "SCAN_COVERAGE_LOW_PCT", 80)

@@ -151,7 +151,9 @@ def test_live_marks_suffix_mapping_and_batching(monkeypatch):
         return {t: px[t] for t in tickers if t in px}
 
     monkeypatch.setattr(sdata, "download", fake_download)
-    book = _book(open_=[_pos("BHP", "asx"), _pos("BTC", "crypto"),
+    # A crypto quote must be the coin's own price (identity check vs its last
+    # mark / entry), so the BTC fixture holds a BTC-sized entry.
+    book = _book(open_=[_pos("BHP", "asx"), _pos("BTC", "crypto", entry=49000.0),
                         _pos("GHOST", "not_a_market")])
     q = ks._live_marks(book)
     assert q == {("BHP", "asx"): 42.0, ("BTC", "crypto"): 50000.0}
@@ -175,7 +177,7 @@ def test_live_marks_price_crypto_from_the_exchange_the_scan_uses(monkeypatch):
     idx_ms = int(pd.Timestamp.now(tz="UTC").normalize().timestamp() * 1000)
     monkeypatch.setattr(ex, "_get_json", lambda url, timeout: [
         [idx_ms, "1", "2", "0.5", "51000", "1", idx_ms + 1, "9"]] if "BTCUSDT" in url else [])
-    q = ks._live_marks(_book(open_=[_pos("BTC", "crypto")]))
+    q = ks._live_marks(_book(open_=[_pos("BTC", "crypto", entry=50000.0)]))
     assert q == {("BTC", "crypto"): 51000.0}
 
 

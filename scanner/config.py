@@ -158,10 +158,18 @@ CRYPTO_IDENTITY_TOL = 0.40
 # There is deliberately NO wider "stale" band. One shipped for a few hours on
 # 2026-09-28 ([0.2x, 5x] when CoinGecko was down) and the pre-merge review
 # proved it let MET-class strangers (-43%, measured above) price a HELD coin and
-# fire its stop on a coin that never moved. When the reference is old the scan
-# instead PINS each coin to the venue its last confirmed frame came from
-# (data.identity_kwargs); a coin with no such frame keeps this band against the
-# old price, which can only refuse a real coin for a run, never admit a stranger.
+# fire its stop on a coin that never moved. Venue PINS replaced it and a second
+# review broke those too (an unchecked frame became a pin; a pinned venue had
+# no check at all; a pinned venue's outage froze the mark). What stands:
+# HISTORY ANCHORS. When no fresh CoinGecko price exists -- the universe is the
+# snapshot, or the caller prices HELD positions (kill switch, off-universe
+# fetch) -- a venue's frame must reproduce a price the system already RECORDED
+# for this coin on a past date (the last identity-checked cached frame, or the
+# position's own day_marks): its close on that date within this band. A real
+# move since cannot fail it; a same-ticker stranger does; a venue outage falls
+# through to the next venue. 0.15: day_marks[D] is the last mark taken BEFORE
+# day D's first run, which can sit a few hours before the D-1 close.
+CRYPTO_ANCHOR_TOL = 0.15
 # A venue whose newest daily bar is older than this does NOT list the coin any
 # more (Binance's market-data mirror keeps serving a delisted pair's frozen
 # klines -- XMR/BTT/LIT on 2026-09-28): the next venue is asked instead, and the

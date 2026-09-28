@@ -219,7 +219,8 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         done, forming = _split_all(fresh, market, now)
         frames, cache_stats = sdata.merge_with_cache(
             f"ignition-{market}", done, [r["yf"] for r in rows],
-            refused=src_report.get("refused") or ())
+            refused=src_report.get("refused") or (),
+            rejected_venues=src_report.get("rejected_venues"))
     else:
         now = now or dt.datetime.now(dt.timezone.utc)
         frames, forming = _split_all(frames, market, now)

@@ -133,46 +133,106 @@ def test_exchange_mode_never_reads_the_yahoo_era_cache(cache_dir, monkeypatch):
     assert data.load_frame_cache("crypto") == {}
 
 
-# ── 2. held coins are priced on the venue they were marked on ──────────────────
+# ── 2. a held coin must reproduce its OWN recorded history ─────────────────────
+#
+# Venue pins stood here for an hour; a second review showed a pinned venue
+# could re-list a DIFFERENT token under the symbol with no check at all, and
+# that an outage at the pinned venue froze the mark. The position's own
+# day_marks are the evidence now, on whatever venue answers.
 
-def test_held_price_kwargs_pins_a_stamped_position_and_checks_a_legacy_one():
+def _cb_router(log, days_px, today_px, binance=None):
+    """Coinbase serving the REAL coin (close `days_px` on past days, `today_px`
+    today); Binance's mirror serving `binance` {pair: px} or failing."""
+    def router(url, timeout):
+        log.append(url)
+        if "binance.vision" in url:
+            for pair, px in (binance or {}).items():
+                if f"symbol={pair}USDT" in url:
+                    if px == "timeout":
+                        raise TimeoutError("venue down")
+                    return _klines(px)
+            raise _http(400)
+        if "/products/" in url:
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+            if dt.datetime.fromisoformat(q["start"][0]) < dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=301):
+                return []
+            t = int(_today().timestamp())
+            return [[t, today_px, today_px, today_px, today_px, 5e6]] + [
+                [t - 86_400 * k, days_px, days_px, days_px, days_px, 5e6] for k in range(1, 6)]
+        raise _http(404)
+    return router
+
+
+def _yday(n=1):
+    return (_today() - pd.Timedelta(days=n)).strftime("%Y-%m-%d")
+
+
+def test_held_price_kwargs_anchors_on_the_positions_own_day_marks():
+    today = _today().strftime("%Y-%m-%d")
     kw = data.held_price_kwargs([
-        {"symbol": "AI", "market": "crypto", "data_source": "yahoo", "last_mark": 0.05},
-        {"symbol": "BNB", "market": "crypto", "last_mark": 776.0},          # pre-stamp row
-        {"symbol": "OLD", "market": "crypto", "data_source": "cache", "last_mark": 3.0},
-        {"symbol": "BHP", "market": "asx", "data_source": "yahoo", "last_mark": 45.0},
+        {"symbol": "MET", "market": "crypto", "opened_at": "2026-09-20T01:00:00+00:00",
+         "last_mark": 0.98, "day_marks": {_yday(2): 1.02, _yday(1): 1.00}},
+        {"symbol": "NEW", "market": "crypto", "opened_at": today + "T03:00:00+00:00",
+         "last_mark": 5.1, "day_marks": {today: 5.0}},                     # opened today
+        {"symbol": "BNB", "market": "crypto", "last_mark": 776.0},          # no marks yet
+        {"symbol": "BHP", "market": "asx", "last_mark": 45.0, "day_marks": {today: 45.0}},
     ])
-    assert kw["pin"] == {"AI-USD": "yahoo"}
-    assert kw["ref_prices"] == {"BNB-USD": 776.0, "OLD-USD": 3.0}
-    assert kw["ref_tol"] == config.CRYPTO_IDENTITY_TOL
+    assert kw["anchors"] == {"MET-USD": (_yday(2), 1.00)}
+    assert kw["ref_prices"] == {"NEW-USD": 5.1, "BNB-USD": 776.0}
+    assert kw["ref_tol"] == config.CRYPTO_IDENTITY_TOL and "pin" not in kw
 
 
-def test_a_PINNED_coin_is_priced_on_its_venue_only_and_never_falls_through(venues):
-    """Binance lists a DIFFERENT 'AI' (0.03); the scan marked the held AI on
-    Yahoo (0.05). Pinned to yahoo, Binance is never asked for AI. Pinned to
-    a venue that fails, there is no quote at all -- unpriced, not wrong."""
-    log, asked = venues(binance={"AI": 0.03}, yahoo={"AI-USD": 0.05})
-    fr, rep = data.fetch("crypto", ["AI-USD"], period="5d", pin={"AI-USD": "yahoo"})
-    assert float(fr["AI-USD"]["Close"].iloc[-1]) == 0.05 and rep["source_of"] == {"AI-USD": "yahoo"}
-    assert not any("AIUSDT" in u for u in log), "a yahoo-pinned coin must not touch Binance"
-    log.clear(); asked.clear()
-    fr, _ = data.fetch("crypto", ["LIT-USD"], period="5d", pin={"LIT-USD": "coinbase"})
-    assert fr == {} and asked == [], "a failed pinned venue falls back to NOTHING"
-    assert not any("binance" in u for u in log)
+def test_a_venue_that_relisted_a_STRANGER_under_the_symbol_is_refused(venues, monkeypatch):
+    """The second review's case: the venue that marked MET now serves a
+    DIFFERENT MET at 0.57. Its close on the anchor date is 0.57, not the
+    1.00 the book recorded, so it is refused and the real coin (Coinbase)
+    prices the position -- whichever venue answers."""
+    log, _ = venues()
+    monkeypatch.setattr(X, "_get_json", _cb_router(log, 1.00, 1.00, binance={"MET": 0.57}))
+    kw = data.held_price_kwargs([{"symbol": "MET", "market": "crypto",
+                                  "opened_at": "2026-09-01", "last_mark": 1.0,
+                                  "day_marks": {_yday(0): 1.00}}])
+    fr, rep = data.fetch("crypto", ["MET-USD"], period="5d", **kw)
+    assert rep["identity_rejected"] == {"MET": ["binance_vision"]}
+    assert rep["source_of"] == {"MET-USD": "coinbase"} and float(fr["MET-USD"]["Close"].iloc[-1]) == 1.0
+    assert fr["MET-USD"].attrs["identity"] == "anchor"
 
 
-def test_the_kill_switch_prices_a_held_coin_on_its_own_venue(venues):
+def test_an_outage_at_one_venue_falls_through_instead_of_freezing_the_mark(venues, monkeypatch):
+    """The second review's major: with a pin, a binance_vision timeout left the
+    cached 1.00 frame in place while the real MET was at 0.80, under its 0.85
+    stop. Now the next venue that reproduces MET's history prices it."""
+    log, _ = venues()
+    monkeypatch.setattr(X, "_get_json", _cb_router(log, 1.00, 0.80, binance={"MET": "timeout"}))
+    book = {"open": [{"symbol": "MET", "market": "crypto", "status": "open", "last_mark": 1.0,
+                      "opened_at": "2026-09-01", "day_marks": {_yday(0): 1.00}}]}
+    assert ks._live_marks(book) == {("MET", "crypto"): 0.80}
+
+
+def test_the_YAHOO_leg_is_held_to_the_same_history(venues):
+    """No exchange lists M; Yahoo's M-USD is a different token (0.0003 against
+    MemeCore's ~2). A held M's own day_marks refuse it on the Yahoo leg too."""
+    venues(yahoo={"M-USD": 0.0003})
+    kw = data.held_price_kwargs([{"symbol": "M", "market": "crypto", "last_mark": 2.0,
+                                  "opened_at": "2026-09-01", "day_marks": {_yday(0): 2.0}}])
+    fr, rep = data.fetch("crypto", ["M-USD"], period="5d", **kw)
+    assert fr == {} and rep["identity_rejected"] == {"M": ["yahoo"]}
+
+
+def test_the_kill_switch_never_quotes_a_stranger(venues, monkeypatch):
+    """Binance lists a DIFFERENT 'AI' (0.03); the real AI is on Yahoo at 0.05.
+    The position's own history rejects Binance's."""
     venues(binance={"AI": 0.03}, yahoo={"AI-USD": 0.05})
-    book = {"open": [{"symbol": "AI", "market": "crypto", "status": "open",
-                      "data_source": "yahoo", "last_mark": 0.05}]}
+    book = {"open": [{"symbol": "AI", "market": "crypto", "status": "open", "last_mark": 0.05,
+                      "opened_at": "2026-09-01", "day_marks": {_yday(0): 0.05}}]}
     assert ks._live_marks(book) == {("AI", "crypto"): 0.05}
 
 
-def test_the_off_universe_fetch_prices_a_held_coin_on_its_own_venue(venues, tmp_path, monkeypatch):
-    """The reviewers' scenario: a held AI drops out of the top 200. The book
-    fetches it directly -- and must get the coin it holds (Yahoo, 0.49), not
-    Binance's 'AI' at 0.05, which after 3 sanity challenges would have been
-    accepted and booked a -5.6R stop on another token."""
+def test_the_off_universe_fetch_prices_a_held_coin_on_its_own_coin(venues, tmp_path, monkeypatch):
+    """The first review's scenario: a held AI drops out of the top 200. The
+    book fetches it directly -- and must get the coin it holds (Yahoo, 0.49),
+    not Binance's 'AI' at 0.05, which after 3 sanity challenges would have
+    been accepted and booked a -5.6R stop on another token."""
     from scanner.vivek_journal import _snapshot
     row = {"symbol": "AI", "name": "AI", "sector": "", "grade": "A+", "dir": "LONG",
            "entry_types": ["break"]}
@@ -180,15 +240,16 @@ def test_the_off_universe_fetch_prices_a_held_coin_on_its_own_venue(venues, tmp_
             "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "break",
             "armed": True, "trigger_bar": None}
     pos = _snapshot(row, "1D", plan, "crypto", 0.50, "2026-09-20")
-    pos.update(market="crypto", risk_usd=500.0, data_source="yahoo", last_mark=0.50)
+    pos.update(market="crypto", risk_usd=500.0, last_mark=0.50, opened_at="2026-09-20",
+               day_marks={_yday(0): 0.50})
     _book_with(tmp_path, monkeypatch, pos)
     log, asked = venues(binance={"AI": 0.05}, yahoo={"AI-USD": 0.49})
     bk = vr.run_market("crypto", [], {}, [], now=dt.datetime.now(ZoneInfo("UTC")))
-    assert asked == [["AI-USD"]], "the straggler was fetched, from its pinned venue"
-    assert not any("AIUSDT" in u for u in log)
+    assert asked == [["AI-USD"]], "the straggler was fetched"
+    assert any("AIUSDT" in u for u in log), "Binance was asked -- and refused"
     (held,) = [p for p in bk["open"] if p["symbol"] == "AI"]
     assert held["last_mark"] == pytest.approx(0.49), "marked on the coin it holds"
-    assert held["status"] == "open" and held["data_source"] == "yahoo"
+    assert held["status"] == "open"
 
 
 def _book_with(tmp_path, monkeypatch, pos):
@@ -205,7 +266,7 @@ def _book_with(tmp_path, monkeypatch, pos):
 
 def test_a_held_position_is_stamped_with_the_venue_that_marked_it(tmp_path, monkeypatch):
     """BNB was opened before the stamp existed. The first scan-frame mark
-    records its venue, so from then on the kill switch pins it there."""
+    records its venue (the chart draws that venue's candles)."""
     from scanner.vivek_journal import _snapshot
     row = {"symbol": "BNB", "name": "BNB", "sector": "", "grade": "A+", "dir": "LONG",
            "entry_types": ["reclaim"]}
@@ -222,12 +283,11 @@ def test_a_held_position_is_stamped_with_the_venue_that_marked_it(tmp_path, monk
                        now=dt.datetime.now(ZoneInfo("UTC")))
     (held,) = [p for p in bk["open"] if p["symbol"] == "BNB"]
     assert held["data_source"] == "binance_vision" and held["last_mark"] == pytest.approx(772.0)
-    assert data.held_price_kwargs([held])["pin"] == {"BNB-USD": "binance_vision"}
 
 
 def test_every_mark_stamps_the_venue_it_came_from():
-    """The pin is only as good as the stamp: run_market writes the frame's
-    venue onto each crypto position it marks and on each one it opens."""
+    """run_market writes the frame's venue onto each crypto position it marks
+    (once the mark is accepted) and on each one it opens."""
     src = (vr.__file__ and open(vr.__file__, encoding="utf-8").read())
     assert src.count('pos["data_source"] = ') >= 2
     f = _yframe(1.0)
@@ -237,10 +297,10 @@ def test_every_mark_stamps_the_venue_it_came_from():
     assert data.venue_of({}, None) is None
 
 
-def test_the_yahoo_leg_stamps_its_frames_so_they_can_be_pinned(venues):
+def test_the_yahoo_leg_stamps_its_frames_with_venue_and_identity(venues):
     venues(yahoo={"XMR-USD": 150.0})
     fr, _ = data.fetch("crypto", ["XMR-USD"], period="5y", ref_prices={"XMR-USD": 150.0})
-    assert fr["XMR-USD"].attrs["source"] == "yahoo"
+    assert fr["XMR-USD"].attrs["source"] == "yahoo" and fr["XMR-USD"].attrs["identity"] == "ref"
 
 
 # ── 3. a delisted pair does not beat a live venue ─────────────────────────────
@@ -261,85 +321,115 @@ def test_a_delisted_pairs_frozen_klines_fall_through_to_a_live_source(venues, mo
     assert rep["stale_rejected"] == {"XYZ": ["binance_vision"]}
 
 
-# ── 4. an old reference is answered by PINNING, never by a wider band ────────
+# ── 4. an old reference is answered by a HISTORY ANCHOR ───────────────────────
 
-def _cached_universe(tmp_path, monkeypatch, extra):
+def _cached_universe(tmp_path, monkeypatch, extra, price=1.0):
     """load_universe with CoinGecko down: the snapshot, flagged cg_stale."""
     monkeypatch.setattr(universe, "UNIVERSE_CACHE_DIR", tmp_path / "uc")
     (tmp_path / "uc").mkdir()
-    items = [{"symbol": f"C{i}", "name": f"Coin {i}", "yf": f"C{i}-USD", "cg_price": 1.0}
+    items = [{"symbol": f"C{i}", "name": f"Coin {i}", "yf": f"C{i}-USD", "cg_price": price}
              for i in range(45)] + extra
     (tmp_path / "uc" / "crypto.json").write_text(json.dumps({"items": items}), encoding="utf-8")
     monkeypatch.setattr(universe, "_fetch_crypto", lambda suffix: [])
     return universe.load_universe("crypto")
 
 
-def test_a_live_universe_arms_the_tight_band_and_pins_nothing():
+def _checked(px, source="coinbase", how="ref"):
+    f = _yframe(px)
+    f.attrs.update(source=source, identity=how)
+    return f
+
+
+def test_a_live_universe_arms_the_tight_band_and_nothing_else():
     kw = data.identity_kwargs("crypto", [{"symbol": "QNT", "yf": "QNT-USD", "cg_price": 71.0}])
     assert kw == {"ref_prices": {"QNT-USD": 71.0}, "ref_tol": config.CRYPTO_IDENTITY_TOL,
-                  "pin": {}}
+                  "anchors": {}, "require_identity": False}
 
 
-def test_the_reviewers_MET_case_a_held_coin_is_not_priced_on_a_stranger(
+def test_the_reviewers_MET_case_on_a_snapshot_the_stranger_is_refused(
         venues, cache_dir, tmp_path, monkeypatch):
-    """The blocker the pre-merge review found in the wider-band design, run
-    end to end: CoinGecko down, the held MET was confirmed on Coinbase at
-    1.00, Binance's mirror lists a DIFFERENT 'MET' at 0.57 (-43%, the
-    measured collision). The old band admitted it and the stop fired at
-    -2.88R on a coin that never moved. Now MET is pinned to the venue of its
-    last confirmed frame: Binance is never asked, and the price is 1.00."""
+    """The first review's blocker, end to end: CoinGecko down, MET last
+    confirmed at 1.00, Binance's mirror lists a DIFFERENT 'MET' at 0.57
+    (-43%, the measured collision). The wide band admitted it and a held
+    MET was stopped at -2.88R. Now MET is anchored to its last checked
+    frame: Binance's MET cannot reproduce that close and is refused."""
     uni = _cached_universe(tmp_path, monkeypatch,
                            [{"symbol": "MET", "name": "Meteora", "yf": "MET-USD", "cg_price": 1.00}])
-    confirmed = _yframe(1.00)
-    confirmed.attrs["source"] = "coinbase"
-    data.save_frame_cache("crypto", {"MET-USD": confirmed})
+    data.save_frame_cache("crypto", {"MET-USD": _checked(1.00)})
     kw = data.identity_kwargs("crypto", uni)
-    assert kw["pin"] == {"MET-USD": "coinbase"} and "MET-USD" not in kw["ref_prices"]
-    assert kw["ref_tol"] == config.CRYPTO_IDENTITY_TOL
-    log, _ = venues(binance={"MET": 0.57})
-    live = [[int(_today().timestamp()), 0.99, 1.01, 1.0, 1.0, 5e6]]
-
-    def router(url, timeout):
-        log.append(url)
-        if "binance.vision" in url and "METUSDT" in url:
-            return _klines(0.57)
-        if "/products/MET-USD/" in url:
-            q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-            start = dt.datetime.fromisoformat(q["start"][0])
-            return live if start > dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=301) else []
-        raise _http(404)
-    monkeypatch.setattr(X, "_get_json", router)
+    assert kw["anchors"]["MET-USD"][1] == 1.00 and "MET-USD" not in kw["ref_prices"]
+    assert kw["require_identity"] is True and "pin" not in kw
+    log, _ = venues()
+    monkeypatch.setattr(X, "_get_json", _cb_router(log, 1.00, 1.00, binance={"MET": 0.57}))
     fr, rep = data.fetch("crypto", ["MET-USD"], period="5y", **kw)
-    assert rep["source_of"] == {"MET-USD": "coinbase"}
-    assert float(fr["MET-USD"]["Close"].iloc[-1]) == 1.0
-    assert not any("METUSDT" in u for u in log), "the stranger's venue is never asked"
+    assert rep["identity_rejected"] == {"MET": ["binance_vision"]}
+    assert rep["source_of"] == {"MET-USD": "coinbase"} and float(fr["MET-USD"]["Close"].iloc[-1]) == 1.0
 
 
-def test_a_coin_with_no_confirmed_venue_keeps_the_TIGHT_band_on_a_snapshot(
+def test_an_UNCHECKED_frame_never_becomes_the_evidence(venues, cache_dir, tmp_path, monkeypatch):
+    """The second review's blocker: on a snapshot with no prices (the
+    committed pre-switch one), a frame fetched with NO check was cached and
+    then trusted as a confirmed pin -- Yahoo's wrong-token M stayed scanned
+    and the 'check OFF' warning went quiet. Now an unchecked frame is never
+    an anchor, and a snapshot coin nothing vouches for is refused."""
+    uni = _cached_universe(tmp_path, monkeypatch,
+                           [{"symbol": "M", "name": "MemeCore", "yf": "M-USD"}])   # no cg_price
+    data.save_frame_cache("crypto", {"M-USD": _checked(0.0003, source="yahoo", how="none")})
+    kw = data.identity_kwargs("crypto", uni)
+    assert "M-USD" not in kw["anchors"] and kw["require_identity"] is True
+    venues(yahoo={"M-USD": 0.0003})
+    fr, rep = data.fetch("crypto", ["M-USD"], period="5y", **kw)
+    assert fr == {} and rep["refused"] == ["M-USD"] and rep["unchecked"] == 0
+
+
+def test_a_coin_with_no_anchor_keeps_the_TIGHT_band_on_a_snapshot(
         venues, cache_dir, tmp_path, monkeypatch):
-    """No cached frame to pin to: the old price is checked at 0.40. A real
-    coin that ran past it is refused for the run (never refilled) -- the
-    cost -- and a stranger can never get in -- the point."""
+    """No checked frame to anchor to: the old price is checked at 0.40. A real
+    coin that ran past it is refused for the run -- the cost -- and a
+    stranger can never get in -- the point."""
     uni = _cached_universe(tmp_path, monkeypatch,
                            [{"symbol": "QNT", "name": "Quant", "yf": "QNT-USD", "cg_price": 71.0}])
     kw = data.identity_kwargs("crypto", uni)
-    assert kw["pin"] == {} and kw["ref_prices"]["QNT-USD"] == 71.0
+    assert kw["anchors"] == {} and kw["ref_prices"]["QNT-USD"] == 71.0
     venues(binance={"QNT": 271.8})
     fr, rep = data.fetch("crypto", ["QNT-USD"], period="5y", **kw)
     assert fr == {} and rep["refused"] == ["QNT-USD"]
 
 
-def test_the_lens_pins_from_its_OWN_cache():
+def test_a_real_coin_that_RAN_on_a_snapshot_passes_its_anchor(venues, cache_dir, tmp_path, monkeypatch):
+    """QNT's own move while CoinGecko is down: 71 -> 272. The stale price
+    would refuse it; its anchor (yesterday's 71 close) does not care where it
+    trades today."""
+    uni = _cached_universe(tmp_path, monkeypatch,
+                           [{"symbol": "QNT", "name": "Quant", "yf": "QNT-USD", "cg_price": 71.0}])
+    data.save_frame_cache("crypto", {"QNT-USD": _checked(71.0, source="coinbase")})
+    kw = data.identity_kwargs("crypto", uni)
+    log, _ = venues()
+    monkeypatch.setattr(X, "_get_json", _cb_router(log, 71.0, 271.8))
+    fr, rep = data.fetch("crypto", ["QNT-USD"], period="5y", **kw)
+    assert float(fr["QNT-USD"]["Close"].iloc[-1]) == 271.8 and fr["QNT-USD"].attrs["identity"] == "anchor"
+
+
+def test_anchor_ok_needs_the_date_and_the_band():
+    f = _yframe(1.0)
+    day = _yday(1)
+    assert X.anchor_ok(f, (day, 1.0)) and X.anchor_ok(f, (day, 1.0 * (1 + config.CRYPTO_ANCHOR_TOL)))
+    assert not X.anchor_ok(f, (day, 1.2 * (1 + config.CRYPTO_ANCHOR_TOL)))
+    assert not X.anchor_ok(f, ("2020-01-01", 1.0)), "a frame without the date cannot vouch"
+    assert not X.anchor_ok(None, (day, 1.0)) and not X.anchor_ok(f, None)
+
+
+def test_the_lens_anchors_from_its_OWN_cache():
     src = open(__import__("scanner.ignition.run", fromlist=["x"]).__file__, encoding="utf-8").read()
     assert 'identity_kwargs(market, rows,' in src and 'cache_key=f"ignition-{market}"' in src
 
 
-# ── 5. a mark the sanity guard refuses does not move the pin ──────────────────
+# ── 5. a mark the sanity guard refuses does not relabel the source ────────────
 
-def test_a_suspect_print_does_not_move_the_venue_pin(tmp_path, monkeypatch):
+def test_a_suspect_print_does_not_relabel_the_positions_source(tmp_path, monkeypatch):
     """The review's second MET case: a stranger at 0.30 (-70%) is SUSPENDED by
-    the mark-sanity guard -- and must not become the position's venue on the
-    way, or the kill switch would ask the stranger's venue from then on."""
+    the mark-sanity guard -- and must not become the position's recorded
+    venue on the way."""
     from scanner.vivek_journal import _snapshot
     row = {"symbol": "MET", "name": "MET", "sector": "", "grade": "A+", "dir": "LONG",
            "entry_types": ["reclaim"]}
@@ -355,7 +445,7 @@ def test_a_suspect_print_does_not_move_the_venue_pin(tmp_path, monkeypatch):
                        now=dt.datetime.now(ZoneInfo("UTC")))
     (held,) = [p for p in bk["open"] if p["symbol"] == "MET"]
     assert held.get("suspect_price_runs"), "the -70% print was challenged"
-    assert held["data_source"] == "coinbase", "a refused mark must not move the pin"
+    assert held["data_source"] == "coinbase", "a refused mark must not relabel the source"
     assert held["last_mark"] == 1.0
 
 
@@ -377,8 +467,36 @@ def test_a_coin_whose_only_listing_is_a_delisted_pair_is_refused_not_refilled(
     data.save_frame_cache("crypto", {"LIT-USD": old})
     fresh, rep = data.fetch("crypto", ["LIT-USD"], period="5y", ref_prices={"LIT-USD": 2.0})
     assert rep["stale_rejected"] == {"LIT": ["binance_vision"]} and rep["refused"] == ["LIT-USD"]
-    merged, stats = data.merge_with_cache("crypto", fresh, ["LIT-USD"], refused=rep["refused"])
-    assert merged == {} and stats["reused"] == 0
+    assert rep["rejected_venues"] == {"LIT-USD": ["binance_vision"]}
+    merged, stats = data.merge_with_cache("crypto", fresh, ["LIT-USD"], refused=rep["refused"],
+                                          rejected_venues=rep["rejected_venues"])
+    assert merged == {} and stats["reused"] == 0 and stats["refused"] == 1
+
+
+def test_a_cached_frame_from_a_venue_that_was_NOT_rejected_is_still_reused(
+        venues, cache_dir, monkeypatch):
+    """Found on the real run of 9af7396f: LIT's only exchange listing is
+    Binance's dead pair (skipped by the age gate) and its real series is on
+    Yahoo -- which was throttled that run. Blocking LIT's cached YAHOO frame
+    would turn an ordinary transient miss into a missing coin. Only a cached
+    frame from a REJECTED venue (or of unknown venue) is blocked."""
+    frozen_end = _today() - pd.Timedelta(days=6)
+    t0 = int((frozen_end - pd.Timedelta(days=4)).timestamp() * 1000)
+    rows = [[t0 + i * DAY, "2", "2", "2", "2", "1", t0 + i * DAY + 1, "9e6"] for i in range(5)]
+    venues(yahoo={})                                        # Yahoo throttled: nothing back
+    monkeypatch.setattr(X, "_get_json", lambda url, timeout: rows if "LITUSDT" in url
+                        else (_ for _ in ()).throw(_http(404)))
+    real = _yframe(2.1, end=(_today() - pd.Timedelta(days=1)).tz_localize(None))
+    real.attrs["source"] = "yahoo"
+    data.save_frame_cache("crypto", {"LIT-USD": real})
+    fresh, rep = data.fetch("crypto", ["LIT-USD"], period="5y", ref_prices={"LIT-USD": 2.0})
+    assert rep["refused"] == ["LIT-USD"] and rep["rejected_venues"] == {"LIT-USD": ["binance_vision"]}
+    merged, stats = data.merge_with_cache("crypto", fresh, ["LIT-USD"], refused=rep["refused"],
+                                          rejected_venues=rep["rejected_venues"])
+    assert float(merged["LIT-USD"]["Close"].iloc[-1]) == 2.1 and stats["reused"] == 1
+    # ...and with no venue map at all, every refused coin stays blocked
+    merged, _ = data.merge_with_cache("crypto", fresh, ["LIT-USD"], refused=rep["refused"])
+    assert merged == {}
 
 
 def test_a_pinned_venue_that_returns_nothing_is_REPORTED(venues):

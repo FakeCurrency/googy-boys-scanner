@@ -271,11 +271,47 @@ def bar_age_days(df: Optional[pd.DataFrame], now: Optional[dt.datetime] = None) 
         return None
 
 
+def anchor_ok(df: Optional[pd.DataFrame], anchor, tol: Optional[float] = None) -> bool:
+    """Does this frame reproduce a price already RECORDED for the coin?
+    `anchor` = (YYYY-MM-DD, price): the frame's close on that date must sit
+    within [1/(1+tol), 1+tol] x price (tol default CRYPTO_ANCHOR_TOL). A frame
+    without that date cannot vouch for itself and fails."""
+    if df is None or not len(df) or not anchor:
+        return False
+    day, price = anchor
+    try:
+        price = float(price)
+        idx = pd.DatetimeIndex(df.index)
+        if idx.tz is not None:
+            idx = idx.tz_convert("UTC").tz_localize(None)
+        hit = df.loc[idx.normalize() == pd.Timestamp(str(day)).normalize(), "Close"]
+        if not len(hit) or not (price > 0):
+            return False
+        close = float(hit.iloc[-1])
+    except Exception:  # noqa: BLE001 - unreadable = cannot vouch
+        return False
+    tol = float(config.CRYPTO_ANCHOR_TOL if tol is None else tol)
+    return close > 0 and 1.0 / (1.0 + tol) <= close / price <= 1.0 + tol
+
+
+def identity_of(df, ref, anchor, ref_tol=None, require=False) -> Optional[str]:
+    """How this frame proves it is the coin: "anchor", "ref", "none" (no
+    evidence, allowed), or None (refused). An anchor wins over a reference:
+    it cannot be fooled by a real move since the reference was taken."""
+    if anchor:
+        return "anchor" if anchor_ok(df, anchor) else None
+    if ref is not None and ref > 0:
+        return "ref" if same_coin(df, ref, ref_tol) else None
+    return None if require else "none"
+
+
 def download_klines(symbols: List[str], *, days: Optional[int] = None,
                     sources: Optional[Tuple[str, ...]] = None,
                     interval: str = "1d",
                     ref_prices: Optional[Dict[str, float]] = None,
                     ref_tol: Optional[float] = None,
+                    anchors: Optional[Dict[str, tuple]] = None,
+                    require_identity: bool = False,
                     now: Optional[dt.datetime] = None) -> Tuple[Dict[str, pd.DataFrame], dict]:
     """{symbol: daily frame} from the first source that lists each coin, plus
     a report: which sources answered, which were dead (and why), how many
@@ -285,9 +321,13 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
     A venue's frame is refused for a coin, and the next venue asked, when
     (1) its newest bar is older than EXCHANGE_MAX_BAR_AGE_DAYS -- a delisted
     pair's frozen klines, which Binance's mirror keeps serving -- reported as
-    `stale_rejected`; or (2) its latest close is not the coin's reference
-    price within `ref_tol` (default CRYPTO_IDENTITY_TOL) -- a same-ticker
-    stranger -- reported as `identity_rejected`."""
+    `stale_rejected`; or (2) it is not THIS coin -- a same-ticker stranger --
+    reported as `identity_rejected`. Identity is proved by a history ANCHOR
+    when the caller has one (`anchors[sym]` = (date, recorded price):
+    anchor_ok), else by the latest close against a current reference price
+    (`ref_prices`, `ref_tol`); with neither the frame is accepted unchecked
+    unless `require_identity`. Each accepted frame records how in
+    attrs["identity"]: "anchor" | "ref" | "none"."""
     sources = tuple(sources or config.EXCHANGE_KLINE_SOURCES)
     timeout = float(config.EXCHANGE_HTTP_TIMEOUT)
     max_age = int(getattr(config, "EXCHANGE_MAX_BAR_AGE_DAYS", 0) or 0)
@@ -296,6 +336,7 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
     errors: Dict[str, int] = {}
     frames: Dict[str, pd.DataFrame] = {}
     refs = {str(k).upper(): v for k, v in (ref_prices or {}).items()}
+    anch = {str(k).upper(): v for k, v in (anchors or {}).items() if v}
     rejected: Dict[str, List[str]] = {}
     stale: Dict[str, List[str]] = {}
 
@@ -323,10 +364,12 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
                     # Listed here once; not trading here now (delisted/halted).
                     stale.setdefault(sym, []).append(src)
                     continue
-                if not same_coin(df, refs.get(sym), ref_tol):
+                how = identity_of(df, refs.get(sym), anch.get(sym), ref_tol, require_identity)
+                if how is None:
                     # Listed here, but not THIS coin (a same-ticker token).
                     rejected.setdefault(sym, []).append(src)
                     continue
+                df.attrs["identity"] = how
                 return sym, df
         return sym, None
 

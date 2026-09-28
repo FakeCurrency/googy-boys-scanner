@@ -1209,9 +1209,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             # data.fetch: crypto from the same exchange klines the scan
             # used (config.CRYPTO_DATA_SOURCE), stocks from Yahoo as before.
             from ..data import fetch, held_price_kwargs
-            # Held crypto is priced on the venue it was marked on (or checked
-            # against its own last mark) -- never on whichever venue lists
-            # the ticker first, which can be a different token.
+            # Held crypto must reproduce its own recorded history (a
+            # day_marks anchor) or its last mark -- never priced on whichever
+            # venue lists the ticker first, which can be a different token.
             held = [p for p in book["open"]
                     if p.get("market") == market and p["symbol"] in yf_missing]
             extra = fetch(market, list(yf_missing.values()), period="6mo",
@@ -1236,10 +1236,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             still_open.append(pos)
             continue
         price = price_of(pos["symbol"])
-        # The venue this mark came from -- stamped below only if the mark is
-        # ACCEPTED, because the kill switch and the off-universe fetch price
-        # the position there and nowhere else: a suspect print must not move
-        # the pin to the venue that printed it.
+        # The venue this mark came from (the chart draws that venue's
+        # candles) -- stamped below only if the mark is ACCEPTED, so a
+        # suspect print never relabels the position's source.
         src = venue_of(frames, yf_map.get(pos["symbol"])) if market == "crypto" else None
         # Auditable freeze detection: a position that can't be priced can't be
         # stopped out. Count consecutive unpriced runs on the position itself
@@ -1733,7 +1732,8 @@ def main() -> None:
         fresh, rep = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
                            **identity_kwargs(market_key, universe))
         frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe],
-                                     refused=rep.get("refused") or ())
+                                     refused=rep.get("refused") or (),
+                                     rejected_venues=rep.get("rejected_venues"))
         run_market(market_key, results, frames, universe, dry_run=dry_run)
 
 

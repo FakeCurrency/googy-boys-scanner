@@ -1547,7 +1547,7 @@ def test_main_exit_1_on_an_exception(sandbox, monkeypatch, capsys):
 def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
     frames, rows = _fresh_frames()
     monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames, {}))
-    monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t, refused=(): (dict(fr), {}))
+    monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t, refused=(), rejected_venues=None: (dict(fr), {}))
 
     def no_write(*a, **k):
         raise AssertionError("--dry-run wrote a file")
@@ -1561,7 +1561,7 @@ def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
 def test_main_publishes_exactly_one_screen_file(sandbox, monkeypatch):
     frames, rows = _fresh_frames()
     monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames, {}))
-    monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t, refused=(): (dict(fr), {}))
+    monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t, refused=(), rejected_venues=None: (dict(fr), {}))
     assert RUN.main(["--market", MARKET]) == 0
     assert _files(sandbox) == [f"{MARKET}.json"]
     text = (sandbox / f"{MARKET}.json").read_text(encoding="utf-8")
