@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-09-28T05:38:03+00:00",
+  "generated_at": "2026-09-28T12:00:56+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-09-27",
@@ -39,10 +39,10 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 166,
+    "downloaded": 167,
     "screened": 136,
     "skipped": {
-      "short history": 29,
+      "short history": 30,
       "stale frame": 1
     },
     "counts": {
@@ -57,20 +57,19 @@
       "completed_last": "2026-09-27",
       "raw_last": "2026-09-28",
       "expected_completed": "2026-09-27",
-      "lagging": 31,
+      "lagging": 0,
       "completed_dist": {
-        "2026-09-27": 134,
-        "2026-09-26": 31,
+        "2026-09-27": 166,
         "2025-10-27": 1
       },
       "raw_dist": {
-        "2026-09-28": 166
+        "2026-09-28": 167
       }
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 119,
+        "binance_vision": 120,
         "yahoo": 32,
         "coinbase": 15
       },
@@ -128,7 +127,6 @@
         "PIEVERSE",
         "PONS",
         "PRL",
-        "Q",
         "RAIL",
         "RAIN",
         "SAFO",
@@ -139,7 +137,8 @@
         "STONK",
         "STRCX",
         "TIBBIR",
-        "UB"
+        "UB",
+        "ULTIMA"
       ],
       "yahoo_fallback": 32,
       "identity_rejected": {
@@ -194,14 +193,14 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 166,
+      "fresh": 167,
       "reused": 0,
-      "merged": 166,
+      "merged": 167,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 8
     },
-    "elapsed_s": 125.9
+    "elapsed_s": 132.7
   },
   "results": [
     {
@@ -243,9 +242,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 254.72,
-      "change_pct": 158.1,
-      "r_now": 12.75,
+      "price": 237.46,
+      "change_pct": 140.6,
+      "r_now": 11.34,
       "trail": 107.52
     },
     {
@@ -287,9 +286,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 1.108,
-      "change_pct": -6.7,
-      "r_now": -0.89,
+      "price": 1.103,
+      "change_pct": -7.2,
+      "r_now": -0.94,
       "trail": 1.09988889
     },
     {
@@ -331,9 +330,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 70.18,
-      "change_pct": -2.5,
-      "r_now": -0.17,
+      "price": 71.25,
+      "change_pct": -1.0,
+      "r_now": -0.07,
       "trail": 65.80666667
     },
     {
@@ -375,9 +374,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 304.2,
-      "change_pct": -4.8,
-      "r_now": -0.26,
+      "price": 305.9,
+      "change_pct": -4.2,
+      "r_now": -0.23,
       "trail": 300.23333333
     },
     {
@@ -419,8 +418,8 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 10.504,
-      "change_pct": 4.1,
+      "price": 10.496,
+      "change_pct": 4.0,
       "r_now": 0.19,
       "trail": 10.75788889
     },
@@ -468,9 +467,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.09501,
-      "change_pct": -4.1,
-      "r_now": -0.41,
+      "price": 0.11741,
+      "change_pct": 18.5,
+      "r_now": 1.83,
       "trail": 0.09212
     },
     {
@@ -517,9 +516,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 4.14e-06,
-      "change_pct": -13.2,
-      "r_now": -1.29,
+      "price": 4.21e-06,
+      "change_pct": -11.7,
+      "r_now": -1.14,
       "trail": 4.43e-06
     },
     {
@@ -545,7 +544,7 @@
       "breakout_level": 0.01838,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.01688
+      "price": 0.01707
     },
     {
       "symbol": "CFX",
@@ -570,7 +569,7 @@
       "breakout_level": 0.05784,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.05354
+      "price": 0.05344
     },
     {
       "symbol": "GNO",
@@ -595,7 +594,7 @@
       "breakout_level": 146.28,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 117.88
+      "price": 118.7
     },
     {
       "symbol": "FLR",
@@ -620,32 +619,7 @@
       "breakout_level": 0.00825,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.007001
-    },
-    {
-      "symbol": "HTX",
-      "name": "HTX DAO",
-      "yf": "HTX-USD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 0.0,
-        "atr_pctl": 0.1,
-        "vol_pctl": 31.8,
-        "drawdown_pct": 50.0,
-        "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-09-26"
-      },
-      "base": {
-        "high": 2e-06,
-        "low": 2e-06,
-        "bars": 60
-      },
-      "breakout_level": 2e-06,
-      "provisional": false,
-      "last_bar": "2026-09-26",
-      "price": 1.69e-06
+      "price": 0.007042
     },
     {
       "symbol": "LUNC",
@@ -670,7 +644,7 @@
       "breakout_level": 6.406e-05,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 5.349e-05
+      "price": 5.34e-05
     },
     {
       "symbol": "FLOKI",
@@ -695,7 +669,7 @@
       "breakout_level": 3.131e-05,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 2.738e-05
+      "price": 2.736e-05
     },
     {
       "symbol": "XDC",
@@ -704,10 +678,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.4,
-        "atr_pctl": 26.6,
-        "vol_pctl": 15.8,
-        "drawdown_pct": 80.8,
+        "ribbon_pct": 5.94,
+        "atr_pctl": 33.0,
+        "vol_pctl": 16.4,
+        "drawdown_pct": 78.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-22"
@@ -717,10 +691,10 @@
         "low": 0.025858,
         "bars": 60
       },
-      "breakout_level": 0.03191,
+      "breakout_level": 0.034453,
       "provisional": false,
-      "last_bar": "2026-09-26",
-      "price": 0.03306244
+      "last_bar": "2026-09-27",
+      "price": 0.03369644
     },
     {
       "symbol": "SHIB",
@@ -745,7 +719,7 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 5.66e-06
+      "price": 5.68e-06
     },
     {
       "symbol": "DOGE",
@@ -770,7 +744,7 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.09281
+      "price": 0.09321
     },
     {
       "symbol": "VIRTUAL",
@@ -795,7 +769,7 @@
       "breakout_level": 0.8504,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.7928
+      "price": 0.7986
     },
     {
       "symbol": "SYRUP",
@@ -820,7 +794,7 @@
       "breakout_level": 0.2395,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2088
+      "price": 0.2112
     },
     {
       "symbol": "FARTCOIN",
@@ -845,7 +819,7 @@
       "breakout_level": 0.22344,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.17723
+      "price": 0.17026
     },
     {
       "symbol": "ADA",
@@ -870,7 +844,7 @@
       "breakout_level": 0.2654,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2444
+      "price": 0.2458
     },
     {
       "symbol": "MANA",
@@ -895,7 +869,7 @@
       "breakout_level": 0.0934,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.0879
+      "price": 0.0885
     },
     {
       "symbol": "APE",
@@ -920,7 +894,7 @@
       "breakout_level": 0.1728,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.1557
+      "price": 0.1512
     },
     {
       "symbol": "1INCH",
@@ -945,7 +919,7 @@
       "breakout_level": 0.1059,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.098
+      "price": 0.099
     },
     {
       "symbol": "AKT",
@@ -970,7 +944,7 @@
       "breakout_level": 0.7734,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.6586
+      "price": 0.6542
     },
     {
       "symbol": "COMP",
@@ -995,7 +969,7 @@
       "breakout_level": 25.61,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 23.25
+      "price": 23.39
     },
     {
       "symbol": "EIGEN",
@@ -1020,7 +994,7 @@
       "breakout_level": 0.2858,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2581
+      "price": 0.2567
     },
     {
       "symbol": "PENGU",
@@ -1045,7 +1019,7 @@
       "breakout_level": 0.011163,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.009657
+      "price": 0.009604
     },
     {
       "symbol": "SUI",
@@ -1070,7 +1044,7 @@
       "breakout_level": 1.2947,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 1.1954
+      "price": 1.1824
     },
     {
       "symbol": "TIA",
@@ -1095,7 +1069,32 @@
       "breakout_level": 0.5382,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.469
+      "price": 0.4636
+    },
+    {
+      "symbol": "HTX",
+      "name": "HTX DAO",
+      "yf": "HTX-USD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 0.0,
+        "atr_pctl": 0.1,
+        "vol_pctl": 38.2,
+        "drawdown_pct": 50.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 2e-06,
+        "low": 2e-06,
+        "bars": 60
+      },
+      "breakout_level": 2e-06,
+      "provisional": false,
+      "last_bar": "2026-09-27",
+      "price": 1.71e-06
     }
   ],
   "errors": []
