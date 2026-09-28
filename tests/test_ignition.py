@@ -479,9 +479,9 @@ def test_rearm_suppresses_the_next_day_of_the_same_move():
     f = _compute("base")
     assert bool(f["raw_trigger"].iloc[T + 1]) and not bool(f["trigger"].iloc[T + 1])
     assert f["rvol"].iloc[T + 1] >= config.IGNITION_RVOL_MIN
-    # without the rearm, it WOULD fire
-    assert T + 1 in trig_bars(fx("base"), P(rearm_bars=0)) or \
-        bool(E.apply_rules(E.base_features(fx("base"), MARKET), P())["raw_trigger"].iloc[T + 1])
+    assert bool(f["coil_window"].iloc[T + 1]) and f["ext"].iloc[T + 1] <= config.IGNITION_MAX_EXT
+    # the suppression is the rearm and nothing else: the raw legs all pass at T+1
+    assert bool(f["breakout"].iloc[T + 1])
 
 
 @pytest.mark.parametrize("leg,col,kind", [

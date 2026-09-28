@@ -59,6 +59,7 @@ CANON = ("public/data/ignition/crypto.json",
          "public/data/ignition/crypto_backtest.json")
 KICK = ".github/ignition-kick"
 PRIMARY_CRON = "14 0 * * *"
+BACKSTOP_CRON = "14 1,2 * * *"   # the scheduler-drop backstop the gate recognises
 GATE_OK = "steps.due.outputs.run == 'true'"
 
 BASH = shutil.which("bash")
@@ -145,18 +146,35 @@ def _split_top(expr: str, op: str) -> list[str]:
     return [" ".join(x.split()) for x in out]
 
 
+def _conjuncts_of(expr: str) -> list[str]:
+    """The top-level `&&` conjuncts of a GitHub expression, PRECEDENCE-CORRECT.
+
+    In GitHub's expression language `&&` binds tighter than `||` (the JS
+    order), so `a || b && c` is `a || (b && c)`: an OR at the top level, with
+    NO top-level conjuncts to speak of -- it is returned whole, as one term.
+    Splitting on `&&` first would read it as `(a || b) && c`, which is exactly
+    the mistake a mutation pass caught in the first draft of this file (the
+    commit condition lost its parentheses and every test stayed green)."""
+    if len(_split_top(expr, "||")) > 1:
+        return [" ".join(_strip_outer_parens(expr).split())]
+    return _split_top(expr, "&&")
+
+
 def _conjuncts(step: dict) -> list[str]:
     cond = step.get("if")
-    return _split_top(str(cond), "&&") if cond else []
+    return _conjuncts_of(str(cond)) if cond else []
 
 
 def test_the_expression_splitter_splits_the_way_github_evaluates():
     """Guards the condition tests below, which are only as good as it."""
-    assert _split_top("a == 'x' && (b || c) && d", "&&") == ["a == 'x'", "b || c", "d"]
-    assert _split_top("(a || b) && c", "&&") == ["a || b", "c"]
+    assert _conjuncts_of("a == 'x' && (b || c) && d") == ["a == 'x'", "b || c", "d"]
+    assert _conjuncts_of("(a || b) && c") == ["a || b", "c"]
+    assert _conjuncts_of("a || b && c") == ["a || b && c"], "&& binds tighter than ||"
+    assert _conjuncts_of("x == 'a && b'") == ["x == 'a && b'"]
+    assert _conjuncts_of("((a && b))") == ["a", "b"]
+    assert _conjuncts_of("(a) || (b)") == ["(a) || (b)"]
     assert _split_top("a || b", "||") == ["a", "b"]
-    assert _split_top("x == 'a && b'", "&&") == ["x == 'a && b'"]
-    assert _split_top("((a && b))", "&&") == ["a", "b"]
+    assert _split_top("a || b && c", "||") == ["a", "b && c"]
 
 
 # ---------------------------------------------------------------------------
@@ -464,9 +482,10 @@ def _run_block(sh, body: str, cwd: pathlib.Path, extra_env: dict) -> tuple[int, 
 # ---------------------------------------------------------------------------
 
 def _backstop_cron() -> str:
-    m = re.search(r'"\$\{SCHEDULE:-\}" != "([^"]+)"', GATE["run"])
-    assert m, "the gate's backstop comparison moved - re-point this test"
-    return m.group(1)
+    """The backstop cron, as PINNED here. Deliberately not re-read out of the
+    gate at collection time: a rewritten gate must fail the test that checks
+    it, not turn the whole module into a collection error."""
+    return BACKSTOP_CRON
 
 
 def test_the_gate_compares_against_a_cron_that_really_exists():
@@ -478,8 +497,12 @@ def test_the_gate_compares_against_a_cron_that_really_exists():
     the real `github.event.schedule`."""
     backstop = _backstop_cron()
     crons = [c["cron"] for c in ON["schedule"]]
-    assert backstop in crons, (backstop, crons)
+    assert crons.count(backstop) == 1, (backstop, crons)
     assert backstop != PRIMARY_CRON
+    m = re.search(r'"\$\{SCHEDULE:-\}" != "([^"]+)"', GATE["run"])
+    assert m and m.group(1) == backstop, (
+        "the gate no longer recognises the backstop cron by the string the "
+        "schedule fires with - " + (m.group(1) if m else "comparison not found"))
     assert GATE.get("env") == {"SCHEDULE": "${{ github.event.schedule }}"}, GATE.get("env")
     assert "${{" not in GATE["run"], "the gate reads env, so it can be executed verbatim"
 
@@ -576,8 +599,7 @@ def test_the_gate_reads_the_branch_as_it_is_NOW_not_the_checkout(sh):
 
 
 def _non_backstop_triggers():
-    backstop = _backstop_cron()
-    cases = [("schedule", c["cron"]) for c in ON["schedule"] if c["cron"] != backstop]
+    cases = [("schedule", c["cron"]) for c in ON["schedule"] if c["cron"] != BACKSTOP_CRON]
     cases += [("push", ""), ("workflow_dispatch", "")]
     return cases
 
@@ -864,10 +886,10 @@ def test_there_is_DELIBERATELY_no_watchdog_entry():
     First, the watchdog alarms when a workflow has not RUN recently, and for
     a report-only lens a quiet day costs a stale page and nothing else: there
     is no book to mis-price and no alert to miss, and the page already shows
-    `generated_at`. Second, since the 2026-08-27 Discord removal the
-    watchdog's WARNING tier reaches nobody anyway, so an entry would buy a
-    log line at the price of one more file (`scanner/config.py`) to edit
-    when the lens is removed. Third, the backstop crons already heal the
+    `generated_at`. Second, since the 2026-08-27 Discord removal no alert
+    channel is configured (CLAUDE.md, ALERT DELIVERY), so an entry would buy
+    a "NOBODY WAS TOLD" log line at the price of one more file
+    (`scanner/config.py`) to edit when the lens is removed. Third, the backstop crons already heal the
     common failure (a dropped 00:14) inside the same morning.
 
     IT IS THE OWNER'S CALL, not a permanent ruling. This test exists so the
