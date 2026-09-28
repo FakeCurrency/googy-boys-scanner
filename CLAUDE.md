@@ -8,15 +8,19 @@ version predated the three-lens pivot and half its claims were stale.)
 
 ## What this project is
 
-A **three-lens trading scanner** + paper-trade journal + execution bot
-(paper today, Bybit-gated live path built). Owner: Vivek (Melbourne,
+A **multi-lens trading scanner** + Claude's paper-trade bot book (PAPER ONLY —
+the Bybit/Alpaca clients survive only as the kill switch's flatten path). Owner: Vivek (Melbourne,
 Australia). Brand name everywhere: **Vivek 5.0** — never "Googy Boys
 Scanner", never "Vivek's Beta Scanner" as the primary name ("BETA SCANNER"
 as a subtitle under the wordmark is fine).
 
 **The lenses** (see ROADMAP.md for the honest project state). All three feed
 the confluence machinery. (A fourth, TURTLE, existed 2026-08-21 → 2026-09-17
-and was REMOVED ENTIRELY — see the TURTLE note near the end.)
+and was REMOVED ENTIRELY — see the TURTLE note near the end.) Two more lenses
+are REPORT-ONLY and outside confluence: **MOMENTUM** (`scanner/momentum/`,
+`momentum.html`, `momentum.yml`) — a 20/50/200-EMA + RSI-divergence screen
+published per market after that market's close — and **IGNITION**
+(`scanner/ignition/`, crypto coil → breakout; see IGNITION below).
 
 1. **VIVEK** (`scanner/vivek.py` + `scan.py`) — the core lens. Price
    *reacting* at its 200-SMA on Weekly / 3-Day / Daily(H4-proxy) levels.
@@ -72,7 +76,7 @@ scanner/               VIVEK + Specs engines, bot, alerts
                        backtester + bot runner import its trade primitives
                        (notify/alerts/pulse + broker paper_run/bracket_order/
                        reconcile DELETED 2026-07-20 — see git history)
-  universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100+extras
+  universe.py          ASX full (~2,000) · NASDAQ Global Select (~1,430) · crypto top-200 (paged) + extras, pegs filtered
   conviction.py        HIGH CONVICTION — the one four-cell definition every
                        Python reader imports; app.js/chart.js carry the same
                        table as a JSON literal, parity test-pinned (2026-09-20)
@@ -104,7 +108,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | Workflow | Schedule | Does |
 |---|---|---|
 | dispatch_scan.yml | on push to itself or `.github/scan-kick` | turns a PUSH into a real `workflow_dispatch` of scan.yml (`market=all`). **The only way a cloud Claude session can trigger a scan** — these sessions can push but cannot reach api.github.com or POST to /api/scan. Touch `.github/scan-kick`, push, done. `permissions: actions: write`; GITHUB_TOKEN-created dispatches DO start runs (the documented exception to the no-recursive-workflows guard) |
-| test.yml | every push/PR | pytest + every `test/*.test.js` suite (24 at 2026-09-28; count them in test.yml, not here) + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — **and since 2026-07-28 that rule is a GATE, not a convention** (`test_screenshot_determinism.py::test_every_javascript_suite_has_a_step_in_the_workflow` fails the push instead of letting the suite pass locally and never run). New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) — plus `.github/resize-kick` (2026-09-27: `tests/test_resize_book_workflow.py` reads it, and the push that touches it is the one that restates the open book) |
+| test.yml | every push/PR | pytest + every `test/*.test.js` suite (count them in test.yml, not here) + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — **and since 2026-07-28 that rule is a GATE, not a convention** (`test_screenshot_determinism.py::test_every_javascript_suite_has_a_step_in_the_workflow` fails the push instead of letting the suite pass locally and never run). New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) — plus `.github/resize-kick` (2026-09-27: `tests/test_resize_book_workflow.py` reads it, and the push that touches it is the one that restates the open book) |
 | scan.yml | **MARKET HOURS ONLY (2026-09-21)** — the crons are a deliberate SUPERSET and the gate job asks the tz database, in the market's own calendar, whether now is inside that market's window (`config.MARKET_SCAN_WINDOWS`: ASX 11:00–16:45 Sydney, NASDAQ 10:30–16:45 New York, weekdays). One STOCK market per run, never `all`, never crypto, nothing outside a session. Delivers 7 ASX scans 11:07→16:30 and 7 NASDAQ 10:37→16:07 local, IDENTICALLY in all four DST regimes. `:47` closing backstops per market | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52`, EVERY hour, EVERY day (2026-09-21 — the weekday window-ownership gate is GONE; it only existed because scan.yml used to scan crypto too). `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
@@ -113,8 +117,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | phasemap.yml | nightly 08:30 UTC | PhaseMap + Specs + schema gate (SLIM latest.json + narrations sidecar); no confluence here. GATE COLLECTS, COMMIT ALWAYS LANDS (2026-09-01 — run #63): the must-change asserts used to abort the commit step under bash -e, so one Yahoo-starved market (crypto, byte-unchanged latest.json) discarded ASX's + NASDAQ's staged output with it. The asserts now collect into GATE_FAILED, the commit/push of whatever staged happens regardless, and the step exits red at the end — same alarm, no discard (the turtle.yml 2026-08-21 pattern). Pinned in test_workflow_hardening.py |
 | lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
-| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set. Hosts the freshness watchdog (scanner/watchdog.py) + a best-effort piggyback /api/tick (2026-08-27, see stop_watcher row) |
-| stop_watcher.yml | **REMOVED 2026-09-21** with the manual journal (see MY JOURNAL) — HISTORY: */5 cron, TICK LOOP per run | curls /api/tick (cloud watcher for the KV manual journal). REWRITTEN 2026-08-27: GitHub coalesces the 5-min cron to ~31 starts/day (gaps to 115 min, measured), so each run now fires 4 ticks at 5-min spacing (~15 min runner time; repo is public so minutes are free), and kill_switch.yml + crypto_bot.yml each fire a best-effort piggyback tick per run — combined ≈ a tick every ~8 min real-world. Verdict taxonomy unchanged: 503 green+warn (setup gap), 000 green+warn per tick, continue the loop (watchdog owns the alarm), 401/5xx fatal immediately. All behaviourally pinned in `test_workflow_hardening.py` |
+| kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set. Hosts the freshness watchdog (scanner/watchdog.py) |
 | close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. `batch` closes up to 60 in one run (= the book cap since 2026-09-27; was 30 — see SIZING 2). Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
 | resize_book.yml | push to main touching `.github/resize-kick` + manual (`apply` defaults FALSE = dry run; apply only from main) — NO cron | ONE-SHOT open-book restatement (2026-09-27, owner-approved — see SIZING 2). `preview` job OUTSIDE the mutex runs `resize_book_notional.py --check --kick` into the step summary: 0 = green no-op, 3 = rows pending, anything else red (a traceback's 1 never reads as "pending"; 4 = an off-target row the script cannot restate, named). `resize` job JOB-scoped in `group: scan`, `ref: main`, 5 attempts that each `git fetch` + `reset --hard origin/main` and RE-RUN the idempotent resize (regenerate, never replay), a `--check` postcondition re-read off disk, `vivek_run --verify`, then REPUBLISHES `public/data/bot_rules.json` from the same checkout (`scanner.run.bot_rules_payload()`, run.py's own writer) so the restated book and the rules describing it land in ONE commit (2026-09-28); one-path `git add` with no `\|\| true`, assert_staged on the three CANONICAL books only (the combined pair and bot_rules.json are DERIVED — staged and diff-checked, never gated: bot_rules.json's `generated_at` would satisfy an any-of gate on every run). `evicted` job turns a cancelled/evicted resize RED with the remedy — deliberately NO auto-redispatch (nothing is lost, only delayed, and the delay is fail-safe) and NO WATCHDOG_RUNS entry (a one-shot must not ring for ever). Pins: `tests/test_resize_book_workflow.py` |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
@@ -125,6 +128,8 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 | ignition.yml | `14 0` UTC (the new completed crypto bar) + `14 1,2` backstops (skip once today's file is on the branch) + `44 5,11,17,21` intraday; push to `.github/ignition-kick`; manual (`backtest`, `dry_run`) | IGNITION lens (REPORT-ONLY, crypto): screens the coil → ignition shape into `public/data/ignition/crypto.json`; a kick or `backtest: true` also replays full history into `crypto_backtest.json`, committed back to the PUSHED branch (never hard-coded main). Own concurrency group per branch, not in the scan mutex; assert_staged per reported path; no WATCHDOG entry by decision. Pins: `tests/test_ignition_workflow.py` |
 | crypto_source_check.yml | manual; push to `.github/crypto-source-kick` | READ-ONLY verification of the crypto data-source switch (see CRYPTO DATA SOURCE): venue reachability from a runner, freshness, close gap to Yahoo (ticker collisions), liquidity-floor effect, and a DRY VIVEK crypto scan on exchange klines diffed against the published one — writes nothing, no bot, no mutex, no assert_staged/WATCHDOG (evidence_brief pattern) |
+| momentum.yml | `30 6`, `30 21` Mon–Fri + `30 0` daily + a `41 */3` backstop, and after every completed morning_plays.yml run | MOMENTUM lens (REPORT-ONLY): screens ONE market per run — the newest one due per `scripts/momentum_due.py`, read against main — after that market's close, into `public/data/momentum/<market>.json`; nothing else. Own concurrency group (`momentum`), not in the scan mutex; assert_staged on the one path |
+| data_depth.yml | manual only | READ-ONLY probe of how much free daily history each source serves (`scripts/data_depth.py`, stdlib only); the printed table is the deliverable. No git, no assert_staged, no WATCHDOG entry |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -401,7 +406,8 @@ too little or fail its gate once.
 Tier 3).** Callers of `scripts/assert_staged.sh`, in full as of 2026-09-28
 (re-derive with `grep -n "bash scripts/assert_staged.sh" .github/workflows/*.yml`
 — a comment naming it is not a call): scan, crypto_bot, phasemap, backup_book,
-reco_note, alert_returns, momentum, and — new in Tier 3 — close_position, gated to
+reco_note, alert_returns, momentum, ignition (once per reported path), and —
+new in Tier 3 — close_position, gated to
 `journal_type=bot` only (see "Tier 3" below for why the swing/scalp path must
 stay a green no-op); and (2026-09-27) resize_book, gated BEHIND its `--check`
 exit-3 discriminator so an already-applied re-kick stays an honest green no-op.
@@ -419,127 +425,12 @@ recovery; red runs are GitHub's to email about). Thresholds: config
 WATCHDOG_*. When adding a workflow that commits data, give it an
 assert_staged call and a WATCHDOG_RUNS entry.
 
-### The tick endpoint — and why a 503 must NOT fail the job (2026-07-28) — HISTORY ONLY
+### The tick endpoint (removed 2026-09-21)
 
-> **`/api/tick` and stop_watcher.yml were REMOVED 2026-09-21** with the manual
-> journal they watched (see MY JOURNAL). Everything below is the record of a
-> blackout and of a verdict taxonomy worth re-reading BEFORE writing the next
-> polled endpoint — nothing in it describes code that still exists.
-
-**2026-08-27 — THE 5-MINUTE CRON WAS NEVER DELIVERING 5 MINUTES.** A run
-audit measured stop_watcher at ~31 STARTS/day against its */5 cron (gaps
-20–115 min — GitHub coalesces busy repos' schedules; kill_switch showed the
-same shape at ~27/48). So the effective stop/target latency was ~46 min
-average, ~2h worst. Fixed in-repo, twice over: (1) each stop_watcher run is
-now a 4-tick LOOP at 5-min spacing — GitHub throttles how often runs START,
-not what a run does while alive — and (2) kill_switch.yml + crypto_bot.yml
-fire one best-effort piggyback tick per run, because the union of interleaved
-schedules is what restores cadence (combined ≈ every ~8 min). Deliberately
-NOT a resident self-chaining loop (cron-as-a-service invites harder
-throttling). For a guaranteed 5-min beat the honest fix remains an external
-cron (Cloudflare Worker cron trigger / any uptime pinger) hitting /api/tick
-with the bearer secret — owner's infrastructure, owner's call. The piggyback
-steps are `continue-on-error` with no fatal branch (pinned): stop_watcher
-owns every verdict, and a dead beat must never block the kill switch.
-
-**`/api/tick` IS LIVE (corrected 2026-08-18).** The owner set `TICK_SECRET` in both halves at some point after this section was written, and the endpoint proves it: an unauthenticated probe now returns **401** (`tick.js` returns 503 only when the secret is unset), and stop_watcher.yml — the only caller that holds the secret — has been green for hundreds of consecutive runs, which a mismatch could not be. **The cloud stop/target watcher is armed; paper stops no longer depend on a chart page being open.** The paragraph below is kept as the historical record of the blackout and of why the 503 branch exists; its claim that the secret is unset is FALSE as of this correction.
-
-HISTORICAL: `TICK_SECRET` was not set in the
-Cloudflare Pages project, and `functions/api/tick.js` fails closed: no secret →
-**503**, configured-but-unauthenticated → **401**. An unauthenticated probe of
-the live URL returns 503, which is proof of the unset secret rather than an
-inference. Consequence, and it is the important half of this section: **paper
-stops and targets only fire while a chart page is open on some device.** Closing
-it is the owner's action — set `TICK_SECRET` in Cloudflare Pages → Settings →
-Environment variables and mirror the identical value as the `TICK_SECRET`
-GitHub Actions secret. It is a credential; do not generate or handle one.
-
-- **stop_watcher.yml used to exit 0 on every non-200**, so all 288 daily runs
-  showed green against an endpoint that had never worked. Nothing else watched
-  it, so "green" was the entire signal and it meant nothing. Making it `exit 1`
-  fixed the blind spot and immediately created a worse one: a failure email
-  every five minutes, for ever, about a fact only the owner can change. An alarm
-  that cannot stop ringing gets muted, and a muted channel is how the original
-  blackout happened.
-- **000 (NO ANSWER) IS NO LONGER FATAL (2026-08-18, run #776).** The taxonomy
-  below drew its line in the wrong place: it treated "the server said 5xx" and
-  "nothing answered at all" as the same evidence, and they are not. Every other
-  code here is a statement Cloudflare made about its own state, which one runner
-  can trust; 000 is the ABSENCE of a statement, and from a single vantage point
-  it cannot distinguish a site outage from that runner's egress hiccuping for
-  two minutes. Empirically it has been the latter every single time — #277,
-  #372, #406 and #776, four for four, with the endpoint answering 401 normally
-  throughout #776. Four false "DOWN" alarms on a job that runs 288 times a day
-  is precisely how a channel gets muted, which is the blackout this whole
-  section exists to prevent. So 000 now behaves like 503: `::warning::` plus a
-  step summary, exit 0. **The alarm is not dropped, it moves to the component
-  with a SECOND VANTAGE POINT** — `watchdog.probe_endpoints()` in
-  kill_switch.yml probes the same URL half-hourly from a different runner and
-  raises `tick_unreachable` through the state machine that can say it once,
-  remind every `WATCHDOG_RENOTIFY_HOURS`, and **announce recovery** (a red run
-  structurally cannot). A blip only this runner saw finds the watchdog seeing
-  401 and stays correctly silent; a real outage is seen by both. Stated cost:
-  detection of a genuine outage moves from ~5 min to at most 30 — the deliberate
-  price of an alarm that is believed when it fires. 401 and 5xx stay fatal.
-  Pinned behaviourally in `tests/test_workflow_hardening.py` (000 → exit 0 and
-  names the watchdog; 401/500/502 → exit 1; 503 → exit 0; plus a pin that the
-  watchdog really does still raise `tick_unreachable`, because a handoff to a
-  receiver that stopped listening alerts nobody).
-- **The split is the fix: one icon was being asked two questions.** 503 means
-  *never switched on* (a standing setup gap) — the job stays green and says so
-  loudly on the run page via `::warning::` plus a step summary carrying the
-  exact Cloudflare steps. Every OTHER non-200 means *was configured and has now
-  broken* (401 = secret mismatch between Cloudflare and GitHub, 000 =
-  unreachable, 5xx = down) — still `exit 1`, still an email, because that is a
-  real regression worth hearing about the moment it happens.
-- **401 stays fatal even though it floods too, and the reason is not symmetry.**
-  This job is the ONLY caller that holds the secret, so it is the only thing
-  that can see a half-configured setup. To the watchdog's deliberately
-  anonymous probe a 401 reads as "configured and correctly refusing an
-  anonymous caller" = healthy — right for the prober, wrong for the system,
-  because `TICK_SECRET` set in Cloudflare and absent in GitHub means the
-  watcher still is not running. Make 401 green and that state goes invisible to
-  every channel at once, which is the original blackout in a better disguise.
-  It is also the one flood that follows immediately from an action the owner
-  just took, so it is feedback rather than ambience. **Set both halves in one
-  sitting**; the 503 step summary says so at the point of action.
-- **The 200/503/other taxonomy above was never reachable on a curl-level
-  failure, and that was the whole of run #372 (2026-08-04).** `Process completed
-  with exit code 28` — curl's "operation timed out", not any exit this workflow
-  writes. GitHub's default shell is `bash -e {0}`, so the bare
-  `code=$(curl ...)` assignment ABORTED THE STEP the instant curl failed:
-  upstream of the 3-digit normalisation, of the retry loop, of the 503 branch
-  and of the `exit 1` branch alike. The log is the proof — not one `attempt N`
-  line printed. So the three tries that exist to absorb a transient were
-  unreachable by the most common transient there is, and a single 30-second
-  stall was emailed as "stop watcher DOWN" (run #277 on Jul 28 is the same
-  signature; those two are the ONLY failures this job has ever had). Fixed with
-  `|| true` on that one assignment — which neutralises curl's STATUS without
-  appending a second value to its OUTPUT, the distinction from the `|| echo 000`
-  that caused the earlier "000000" bug. This job judges on the HTTP code, never
-  on curl's exit code. Pinned behaviourally (the shipped run block executed under
-  `bash -e` against a curl stubbed to fail exactly as #372's did, asserting it
-  reaches `exit 1` and prints `attempt 3` rather than dying with 28) plus two
-  source pins, in `tests/test_workflow_hardening.py`.
-- **Endpoint health moved to `watchdog.probe_endpoints()`**, which inherits the
-  same state machine as every other finding: say it once, remind every
-  `WATCHDOG_RENOTIFY_HOURS`, and — the thing a red run structurally cannot do —
-  **announce recovery**. Three states, deliberately: 401 → healthy (configured
-  and correctly refusing an anonymous caller), 503 → WARNING, 200 → **CRITICAL**,
-  because an unauthenticated 200 means the watcher is open to anyone who knows
-  the URL and every synced journal is reachable through it. That is a security
-  finding, not a freshness one.
-- **The probe is UNAUTHENTICATED BY CONSTRUCTION and must stay that way.**
-  Sending the real secret to "probe it properly" would make the monitor fire an
-  extra unscheduled tick every 30 minutes — the monitor would start moving the
-  thing it monitors. `tests/test_watchdog.py::test_tick_probe_is_never_sent_a_credential`
-  fails if a credential ever reaches the URL.
-- **`WATCHDOG_RUNS["stop_watcher.yml"]` is retained but re-scoped** to one
-  question — "is the 5-minute cron still firing at all?" — since a green run no
-  longer implies a healthy endpoint. Note the two mechanisms cancelled rather
-  than complemented each other while this was broken: `probe_runs` stays silent
-  when a workflow's latest run FAILED (on the rule that GitHub emailed already),
-  so the watchdog was mute for exactly as long as the inbox was flooded.
+`/api/tick` and `stop_watcher.yml` went with the manual journal. Their
+write-up is in `docs/claude-history.md`; read its verdict taxonomy (why a 503 or a 000 must
+not fail a polled job, and why a 401 must) before building any new polled
+endpoint.
 
 ---
 
@@ -1052,223 +943,9 @@ opening GitHub.
   dot on phones leaves the journal header byte-for-byte the height it was
   (0.05% screenshot drift); a 40px labelled chip wrapped it onto a second row
   and cost 54px of page height. See the block comment in `status.css`.
-- Tests: `test/status.test.js` (48, registered in test.yml), all logic
+- Tests: `test/status.test.js` (registered in test.yml), all logic
   mutation-verified (9 mutations, every one caught, source restored
   byte-identical). Screenshot baselines re-cut at `screenshot-baselines-v19`.
-
----
-
-## HORIZON — the rotation surface (2026-07-28) — REMOVED ENTIRELY 2026-09-20, HISTORY ONLY
-
-**Why it exists.** Owner post-mortem: ASX consumer discretionaries ran for four
-weeks while the market was "SHIT to trade", and the book held none of them. Two
-separate failures let that happen and the module addresses both.
-(1) The only published sector number was a RAW SETUP COUNT — Materials lists 766
-of the ASX's 2,212 names and out-counts everything on every scan regardless of
-what it is doing, so the count could never surface a 104-name sector waking up.
-(2) The book sat at its 10-slot ceiling for 20 straight sessions, so nothing
-could have been taken even had it been seen. A leaderboard alone would have been
-half an answer; the panel therefore always shows CAPACITY beside the leaders.
-
-**REPORT-ONLY, deliberately.** `sectorbreadth` is imported by `scanner/run.py`
-only, never by `broker/`. It reads the book; nothing reads it back. Every
-question it raises — raise the 3-per-sector cap? tilt the ranking? page on
-"leading sector, zero held"? — changes which trades get taken and is therefore
-the owner's call, not a refactor. Keep it that way.
-
-- **`scanner/sectorbreadth.py`** — `compute()` per market, `update()` publishes.
-  Participation rate = A+/A setups ÷ names in the sector; ranked descending by
-  rate, then by A+/A count. `run.py` fills `breadth_inputs[market]` only for
-  `("asx", "nasdaq")`, so a crypto-only weekend run never calls `update()`.
-- **The denominator is NOT the same on both markets** (`names_source`). ASX
-  divides by names LISTED in the sector (the universe carries GICS for all
-  2,212) — a true participation rate. NASDAQ's symbol file ships no sector
-  column, so it divides by the names a scan has CLASSIFIED so far via
-  `data/sector_map.json`. Ranking within NASDAQ is sound; the LEVEL is not
-  comparable to ASX and drifts down as coverage fills in. The page says so.
-- **Unranked rows are published, never ranked, and always carry a reason.**
-  `real: false` = not a sector (Unclassified/None — 389 ASX names; on the first
-  run that bucket topped the board at 23.4%, the exact failure the module
-  exists to correct wearing a different hat). `thin · N` = under
-  `SECTOR_BREADTH_MIN_NAMES` (15). `off-directory` = held under a label the
-  market's directory does not use, so there is no listing count to divide by —
-  this is REFINEMENTS #112 surfacing on the page (ASX `Financial Services` and
-  `Insurance` each hold 1 under Yahoo-style labels, and the 3-per-sector cap
-  counts them as separate buckets). Bars scale off RANKED rows only.
-- **Capacity is stated in BOTH currencies, because they can disagree.** Slots
-  and dollars are two different readings of "how full is the book", and the
-  panel prints the reconciliation whenever the dollar headroom exceeds the slot
-  headroom by more than 25%. That gap was enormous before the resize — 24 of 30
-  slots read 80% full while $6.1k of the $150k ceiling read 4% invested,
-  because the 24 legacy holdings averaged ~$250 each, sized off the old $10,000
-  equity. **The 2026-07-28 resize closed it**: 24 × $5,000 = $120,000, so 80% of
-  the slots is now 80% of the notional and the two agree. Keep the divergence
-  logic — it is the general case, and the next retune of
-  `VIVEK_BOT_POSITION_NOTIONAL` reopens the gap on every row already held. The
-  number that answers "how much can I put to work" is still free slots ×
-  `VIVEK_BOT_POSITION_NOTIONAL` ($30k today), which `book_state()` publishes as
-  `position_notional`. Slots bind first; do not read the notional bar as spare
-  room.
-- **Coverage is stated, not hidden.** 91 of 216 ASX A+/A sit in names carrying
-  no sector at all, so the footnote prints what share of the day's A+/A the
-  ranked sectors actually account for whenever the off-rank share tops 10%.
-  "Leading sector" is a claim about the part of the tape this board can see.
-- **`data/sector_history.json` is the only long sector memory in the system**
-  (the 7-day PhaseMap archive was too short to reconstruct July after the
-  fact). One row per market per day, capped at 2,000; feeds the trend column.
-- **The STREAK is the number that separates a shrug from a miss in progress**
-  (2026-07-28). "Consumer Discretionary is third and you hold none" is a fact
-  you can wave off once; "for the 19th session running" is not the same
-  sentence, and the gap between them is the entire four weeks.
-  `unheld_streak()` counts consecutive most-recent SESSIONS a sector led on
-  rate while the book held zero of it, rebuilt from history rather than kept as
-  a counter so a re-run, a backfill or a skipped day cannot corrupt it. Rows
-  exist only for days the scan ran, so a weekend does not break a run.
-  `append_history` is called BEFORE `horizon()`, so a first-day leader reads 1.
-  - **A run stops at a session whose `held` is null**, not just at a held
-    position. Null means reconstructed from before the bot book existed, where
-    "held nothing" cannot be told apart from "no book to hold anything" — so the
-    streak reports only the part of the run we can stand behind. See BACKFILL.
-  - The reconstruction MUST re-apply all three of `compute()`'s exclusions —
-    `_NOT_A_SECTOR`, `MIN_NAMES`, rate > 0 — because history stores every
-    bucket that had listed names. Today's real ASX row is led by "Unclassified"
-    at 91/389 = 23.4%, above every genuine sector. Omitting the `_NOT_A_SECTOR`
-    test (the version this shipped with, caught pre-commit) hands it rank 1
-    every day, pushes the real third-place sector out of the top three, and
-    reports a streak of ZERO for the one sector the surface exists to catch —
-    silently, and only for the sector that mattered. Tie-break is
-    `(-rate, -ag, name)`, identical to the live sort, so a reconstructed rank
-    can never disagree with the rank that was displayed.
-- **`SECTOR_BREADTH_RUN_ALERT` (5 sessions) is when the surface stops
-  describing and starts shouting**, and it widened `expand`. The old rule fired
-  only when the book could not act; a fortnight of leading-with-nothing-held
-  and 30 slots FREE is the worse reading — being capped out is at least an
-  explanation — and it now raises the banner too. Because both states raise it,
-  `horizon()` publishes `expand_why` and the banner prints that instead of the
-  old hard-coded "it can barely act", which was a lie in the new case. The
-  sustained note is `notes.insert(0, ...)` on purpose: the dashboard strip
-  renders only `notes[0]`. Still report-only — it changes the volume, never the
-  trades.
-- **Both files must stay in `scan.yml`'s scoped `SHARED` staging list.**
-  `public/data/sector_breadth.json` is shared, not per-market: a run recomputes
-  only the market it scanned and MERGES it in, so an ASX-only run must stage
-  the whole file or the NASDAQ block it just carried forward is dropped. Leave
-  the history file unstaged and every session starts from day one forever.
-- **Front end:** `public/js/horizon.js` + `public/css/horizon.css`, one
-  vocabulary in two skins — the full board `#horizon-panel` on sectors.html
-  (follows the market buttons) and the compact strip `#horizon-strip` on
-  index.html. Both hide themselves silently if the JSON is missing, so a
-  market that has never run degrades to nothing rather than to an error.
-- Constants: `SECTOR_BREADTH_*` in `scanner/config.py`.
-- **The sustained-run alarm pushes through the NOTICE tier** (2026-07-28,
-  owner decision; channel-less since the 2026-08-27 Discord removal —
-  `sectorbreadth.notify()`). A dashboard only works on the days you open it, and
-  the raw ingredients of the July rotation were on the page for four weeks while
-  the miss happened anyway. `notify()` fires the first time a sector enters
-  `horizon()["sustained"]`, then at most once every
-  `SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS` (7) for as long as the run lasts.
-  - **Its own `NOTICE` severity tier** (routed to `["discord"]` until the
-    2026-08-27 removal; now `[]`). INFO is
-    silent and WARNING would file a market observation beside kill switches and
-    order failures at the same volume. Nothing is *wrong* when this fires.
-  - **The ping memory lives in `data/sector_history.json`** under
-    `hist["alerts"]["sector_run"]`, NOT in `journal/alert_state.json`. The
-    router's own state file is not in scan.yml's staging list, so it dies with
-    the Actions container — every scan would read "never pinged" and re-fire,
-    which for a run that lasts weeks means a ping every scan for a fortnight.
-    The history file is committed by the same step that commits the streak the
-    alert is derived from, so the memory and the number can never disagree about
-    what day it is.
-  - **`ALERT_RATE_LIMITS["sector_run"] = 0` on purpose.** The router's limit is
-    per EVENT TYPE and scan.yml runs markets sequentially in one job, so ASX
-    firing would silently swallow NASDAQ. `notify()` owns the dedupe per market
-    AND per sector, which is strictly tighter everywhere it differs.
-  - A sector that stops leading, or that the book finally buys, is FORGOTTEN —
-    scoped to the market in hand, so a crypto-only weekend cannot wipe ASX
-    memory. Report-only: it changes what gets SAID, never what gets taken.
-
-### BACKFILL — filling the memory backwards (2026-07-28) — REMOVED 2026-09-20, HISTORY ONLY
-
-`scripts/backfill_sector_history.py` + `.github/workflows/backfill_history.yml`.
-History only started being written on 2026-07-28, a week after the ASX Consumer
-Discretionary rotation it exists to catch had already run: until the gap is
-filled the streak can only ever say "1" and the trend column has nothing to
-trend. The script replays the REAL engine — `evaluate` → liquidity gate →
-`score_and_grade` → hysteresis → `build_plans` → `gate_grade`, scan.py's order,
-on frames truncated to each session — and writes rows marked `"r": 1`.
-
-- **UNKNOWN IS NOT ZERO — the one rule the whole thing rests on.** The bot
-  book's earliest entry is 2026-06-28; before that, whether the book held a
-  sector is not merely unrecorded but *unknowable* — there was no book. Those
-  `held` cells are written `null`, never `0`, and **`unheld_streak` now stops at
-  a null exactly as it stops at a held position** (`sectorbreadth.py`). Counting
-  through a null the way we count through a zero would have manufactured streaks
-  of up to six months the first time a backfill landed and fired the Discord
-  alarm on every sector at once — the one failure mode that costs that number
-  its credibility permanently.
-- **Honest about its own error bars.** REAL: the per-name grade, the liquidity
-  gate recomputed per session, the sector denominator from the same universe
-  file. KNOWN WRONG and bounded: survivorship (today's universe, so delisted
-  names are missing), and hysteresis chains once per DAY where live chains once
-  per SCAN — which skews A+/A LOW, i.e. wrong in the conservative direction.
-  The first `--warmup` sessions are computed then DISCARDED because their
-  hysteresis is cold. The still-forming trailing bar is dropped using
-  `_bar_is_forming` with **market-local** time (it compares the wall clock
-  against the market's own close, so handing it UTC would misjudge every ASX
-  session).
-- **The replay never writes the repo.** `--rows-out` parks the reconstruction in
-  `$RUNNER_TEMP`; `--merge-only` folds it into the history file as it stands
-  now. That split is what makes the push retry safe: each attempt re-merges the
-  parked rows against a freshly-reset `origin/main`, so a scan that landed
-  mid-replay is folded in rather than reverted, and attempt 1 and attempt 5 run
-  identical code. Real rows always beat reconstructed ones; a re-run is
-  idempotent.
-- **Manual only (`workflow_dispatch`), `dry_run` defaulting TRUE**, in the
-  `scan` concurrency group. Not scheduled because it is not maintenance — the
-  live scan writes today's row every session, so once the gap is filled there is
-  nothing left to fill, and a re-run costs ~25 min of a runner for a result that
-  does not change. Run the dry pass first: the printed post-mortem (which
-  sectors led, for how long, between which dates) is the actual deliverable; the
-  file is what keeps it true tomorrow.
-
----
-
-## REGIME — is the index telling the truth? (2026-07-28) — REMOVED ENTIRELY 2026-09-20, HISTORY ONLY
-
-The owner's framing: *"this scanner and this scanner alone is INSUFFICIENT."*
-HORIZON answers "which sector is running"; REGIME answers the question that sits
-underneath it — whether the index level is representative of the names in it,
-and which sectors are outperforming rather than merely numerous. Built to say,
-in one line, the thing the scanner could not previously express: *the index is up
-while the median name is down.*
-
-- **`scanner/regime.py`** — `compute(market, frames, universe, bench=...)` per
-  market, `publish()` merges and writes `public/data/regime.json`, `report()`
-  prints. Computed INSIDE `run.py`'s market loop because it reads `deep_frames`
-  (five years of bars for every name, the largest object in the scan) and that is
-  the only point at which they exist; only the finished block travels out.
-- **Four things, one payload.** (1) Participation — % above the 200-day and the
-  50-day, net highs-minus-lows. (2) Divergence — benchmark return vs the MEDIAN
-  name's return over the same window; `REGIME_DIVERGENCE_MIN` (2%) is where the
-  gap is called wide and the page says the index is being carried by its biggest
-  names. (3) Relative strength — each sector's median return against the market
-  median, with a top-3 streak so a one-day leader reads differently from a
-  thirty-session one. (4) Basing/coiling counts — names compressing but not yet
-  triggering, which is the pre-setup population a grade filter cannot show.
-- **Benchmarks are per market** (`REGIME_BENCHMARK`: ASX `^AXJO`, NASDAQ
-  `^IXIC`). Crypto has no index worth the name here and is not computed.
-- **REPORT-ONLY, same as HORIZON.** Nothing in `broker/` imports it. Whether a
-  narrow tape should change position sizing or the ranking is the owner's call.
-- **Front end:** `public/js/regime.js` + `public/css/regime.css`, two skins from
-  one vocabulary — `#regime-panel` on sectors.html (under the HORIZON board) and
-  `#regime-strip` on index.html. Both hide silently when the JSON is absent, so
-  the surface is invisible until the first scan writes it.
-- `public/data/regime.json` is in scan.yml's SHARED staging list (merged
-  per-market like sector_breadth.json). It has no history file — it recomputes
-  six months from bars every run, so there is nothing to lose.
-- Constants: `REGIME_*` in `scanner/config.py` (note: the older
-  `REGIME_ADX_THRESHOLD` / `REGIME_RANGING_*` trio belongs to the bot's
-  trend/range filter and is unrelated).
 
 ---
 
@@ -1315,33 +992,13 @@ same bug — the number was not a day's P&L.
   cost this window) and, if that is enough to breach, the guard halts new entries
   and says `unmeasured` rather than saying all-clear about a book it cannot see.
 
-### The consecutive-loss breaker had never been able to trip (#16)
+### Closed-trade P&L is derived when a row carries no `pnl` (#16)
 
-`check_consecutive_losses` read `t.get("pnl", 0)`. The bot book writes
-`realized_r` / `gross_r` / `cost_r` / `risk_usd` and **no `pnl` at all**, so every
-closed trade read as exactly breakeven. Now centralised in
-`risk_manager.trade_pnl`, which takes an explicit `pnl` when it is a real number
-and otherwise derives dollars from `realized_r × risk_usd`. None-safe and
-NaN-safe on purpose: `None < 0` raises (taking down the whole pre-trade check),
-and a NaN propagates silently through a sum making every comparison False — it
-*disarms* a guard rather than tripping it, which is the worse way to fail.
-
-- **The larger finding, unrepaired because it is a trade decision:** every
-  consumer of `risk_manager` (`pre_trade_check`, `circuit_breaker`, `bybit_run`,
-  `scaling_advisor`, `performance_report`) is handed the SCALP journal. Nothing
-  in `vivek_run.py` or `vivek_bot.py` calls any of it, so **the bot book — the one
-  and only track record — is guarded by none of these limits**: not portfolio
-  heat, not the drawdown breaker, not the consecutive-loss breaker. Wiring that
-  up changes which trades get taken, so it is the owner's call.
-  `scripts/health_check.py` now REPORTS what those guards would say about the bot
-  book without arming any of them.
-- `check_consecutive_losses(journal, notify=False)` exists for exactly that
-  reporter: a read-only caller must not push "circuit breaker fired — new orders
-  paused" to Discord about a book whose entries were never paused.
-- **"The last N" means list order, not exit-date order, and is left that way.**
-  Same thing for the scalp journal; not the same thing for the bot book, where
-  three markets append into one file. Changing what "consecutive" means changes
-  when it fires, so it is noted in the docstring, not silently altered.
+`kill_switch.trade_pnl` takes an explicit `pnl` when it is a real number and
+otherwise derives dollars from `realized_r × risk_usd` (the bot book writes no
+`pnl`). It is None- and NaN-safe on purpose: a NaN inside a sum makes every
+later comparison False and disarms a guard. The rest of this item described
+`risk_manager` and its callers, removed 2026-09-17; see `docs/claude-history.md`.
 
 ### `VIVEK_KILL_SWITCH_BROKERS` — a book breach is per-market, a flatten is not (#17)
 
@@ -1365,17 +1022,6 @@ rather than quietly unguarded.
 accepted. It was called outside the `is_open` gate, so three closed-market scans
 burned the entire budget on prices nobody was quoting — and a genuinely bad mark
 on the next open was accepted unchallenged.
-
-### Reconcile: stale `units`, and a time floor on closed-PnL matching (#19/#20)
-
-`reconcile_journal` never copied the broker's filled `size` into `pos["units"]`,
-so a partial fill booked full-size R. Separately, a vanished position was matched
-against the account's last 50 closed-PnL records with **no time filter**, so
-re-entering a symbol you had traded before resolved the NEW position against the
-PREVIOUS trade's record. The floor is the position's own `opened_ts` minus
-`BYBIT_RECONCILE_SKEW_MIN` (5 min) for runner-vs-exchange clock skew. Records
-Bybit did not date, and pre-2026 rows with no `opened_ts`, bypass the filter
-entirely rather than becoming uncloseable.
 
 ### `_restamp` — one writer for `summary` and `guard` (#21)
 
@@ -1495,44 +1141,6 @@ hand-typed mirrors that decide what the page shows when a fetch fails. Same rule
 as Tier 1: the items below changed a MODEL, so reading the code without them
 misleads. The rest of 25–40 are ordinary line fixes and live in the commit body.
 
-### A hand-closed partial booked only the last rung (#25)
-
-`ensureClosedR` guarded on `if (!t.exits.length && t.exit != null)`, so a trade
-that scaled 0.25 at tp1 and was then closed by hand booked **0.25 of its move and
-discarded the other 0.75**. Not a display bug: `computeCloseOutcome` reads the
-same resolver, so the understated R went into the stats, the equity curve and the
-win rate. Direction is asymmetric and therefore worse than a wash — a
-partially-scaled WINNER is under-reported (the good part is the tail you cut off)
-while a partially-scaled LOSER is flattered.
-
-- The fix sums `exits.map(e => e.frac)` and appends a synthetic exit for the
-  `1 - booked` remainder. **The full ladder sums to 0.90 by design**, so even a
-  trade that took all three rungs has a 10% runner that was never priced.
-- **It is idempotent because it runs on EVERY load, not once at close.** A second
-  pass must find the remainder already booked and do nothing; the test that pins
-  this calls it six times.
-- A legacy row carrying `booked_pct` but an EMPTY `exits` array is NOT booked
-  twice — that combination is how rows written before the ladder existed look.
-
-### `_init` is a session cache, and it used to be persisted (#26)
-
-`_init` memoises the per-row sizing derivation. `mjSaveLocal` stringified it, so
-it rode out to localStorage AND to the KV sync store — permanently freezing
-`risk_usd` at whatever constants happened to be loaded at the moment the row was
-first painted. Compounded by the first-paint ordering (#40): that was reliably
-the FALLBACK constants, not the published ones.
-
-- Now **non-enumerable** (so `JSON.stringify` cannot see it) and stamped with
-  `RULES_GEN`, which `loadBotRules()` bumps. A rules change invalidates every
-  cached derivation instead of leaving the page showing sizing from a previous
-  ruleset. The `loadMe()` immediately after the bump is what makes the
-  invalidation visible rather than merely correct.
-- **1R is pinned to the PLAN stop (`risk_stop`), not the CURRENT stop.** Trailing
-  a stop to breakeven used to rescale R that had already been banked, which makes
-  a trade look better the moment you protect it. Legacy rows with no `risk_stop`
-  recover the plan stop exactly from `entry ∓ risk`, on the correct side for
-  shorts.
-
 ### Max drawdown was a function of row insertion order (#30)
 
 `stats()` walked the trades in STORE order while `series()` beside it sorted by
@@ -1543,53 +1151,14 @@ survived** — a book with a +5R, a −3R and a −1R reports −$400 in exit or
 `byExit` now feeds both, copies before sorting (it must not reorder the caller's
 array), and treats an unparseable exit date as 0 rather than throwing.
 
-### The offline fallback had drifted, and only shows when nobody can check (#34)
-
-`risk_manager.js` carries `PUBLISHED_DEFAULTS`, a hand-typed mirror of five
-`config.py` constants. It is a real fallback, not dead code — `bot.js` fetches
-`data/bot_rules.json` and falls through to the mirror only when that fetch fails.
-**So the mirror is what the page shows exactly when the person reading it is
-least able to verify it.** It had drifted and lived that way for months: Python
-risked 0.35% over 30 positions while the JS said 0.25% over 5, and the portfolio
-cap read **2.0% against a live `PORTFOLIO_HEAT_LIMIT` of 7%**.
-
-- **The portfolio cap moving 2 → 7 is the one number here worth stating out
-  loud.** It is not a loosening of a limit that was binding — nothing in
-  `broker/` reads this engine (see Tier 1, the `risk_manager` wiring gap), so no
-  trade was ever blocked or allowed by it. It is a *display* correcting to the
-  Python that actually governs the book. If the wiring gap is ever closed, this
-  is the number that starts binding, at 7%.
-- **`maxPortfolioRiskPct` is the only entry that is not a straight copy** —
-  Python stores a fraction (0.07), every JS consumer wants a percent (7.0) — and
-  the unit conversion is precisely how it ended up at 2.0, a value that was
-  neither and had been a plausible cap once.
-- `test/risk_defaults.test.js` also asserts **`run.py` still PUBLISHES each
-  mirrored key**, which is the half a mirror test normally misses: stop
-  publishing one and `bot.js` falls through to the mirror for that key on EVERY
-  load rather than only offline, so the fallback silently becomes the value.
-
-### #27 was relabelled, not wired — deliberately
-
-The KILL SWITCH button on bot.html called `risk.activateKillSwitch()` and dimmed
-itself. No fetch, no dispatch, nothing server-side. Making it real is a
-live-trading gate and therefore **never autonomous**, so the fix went the other
-way: the button, its tooltip, its log line and its modal now all say what it
-actually does — blocks new entries **in this browser only**, does not close
-positions, does not reach a broker, does not stop the server bot — and name
-`kill_switch.yml` as the thing that does. A control that looks like it flattens
-the book and does not is worse than no control; a control that states its own
-scope is honest at the size it really is.
-
 ### Tests
 
-`test/journal_money.test.js` (22) and `test/risk_defaults.test.js` (20), both
-registered in test.yml. **Both read the SHIPPED artefacts rather than mirroring
-them** — the money suite `vm`-slices ~15 real functions out of `public/js/journal.js`
-(the pattern from `journal_review`/`journal_stale`), and the defaults suite parses
-the real `config.py` and `bot.html` as source. A re-typed fixture drifts in step
-with the bug it is supposed to catch. The money suite ends with a **`?v=` floor
-check** that fails until `journal.html` requests `journal.js?v=63` or higher,
-which turns project rule 2 from a convention into a gate.
+`test/journal_money.test.js` reads the SHIPPED artefact rather than mirroring
+it — it `vm`-slices real functions out of `public/js/journal.js` (the pattern
+from `journal_review`/`journal_stale`), because a re-typed fixture drifts in step
+with the bug it is supposed to catch. It ends with a **`?v=` floor check** on
+`journal.html`'s `journal.js` tag, which turns project rule 2 from a convention
+into a gate.
 
 ---
 
@@ -1716,8 +1285,8 @@ default shell is `bash -e {0}`, so **`-e` is already on but `pipefail` is NOT**.
 `tests/test_backup_completeness.py` (29); `test_workflow_mutex.py` 11 → 15.
 **New `tests/*.py` files need no registration** — `pytest` collects the
 directory; only new `test/*.test.js` files need a step in test.yml. The
-hardening suite also runs **`bash -n` over all 73 `run:` blocks in all 15
-workflows**, the cheapest gate this repo did not have: a YAML parse says nothing
+hardening suite also runs **`bash -n` over every `run:` block in every
+workflow**, the cheapest gate this repo did not have: a YAML parse says nothing
 about the shell inside the scalars, and a broken `if`/`for`/`fi` is otherwise
 discovered by dispatching the workflow — which for a manual close means
 discovering it at the moment you are trying to record a real trade.
@@ -1790,12 +1359,6 @@ position **~43% larger in units**, in the ringfenced file. That is position SIZE
 Flagged, not taken. (Owner ruling 2026-07-29, recorded in config.py's SIZING
 block: KEPT — the notional is deliberately in each market's own currency; it
 carried unchanged to $2,500 on 2026-09-27.)
-
-**#61 has a front-end twin, found 2026-07-28 and also flagged rather than
-fixed** — `dollarsPerPoint` in `public/js/risk_manager.js` falls back to `1` for
-a bare ASX ticker with no `STOCK.AX` class, which is ~43% overstated at 0.6969.
-The engine now RECORDS which source it used but changes no arithmetic; see "The
-Lighthouse budget was measuring the TAPE" below.
 
 ### Two items closed as FINDINGS, and neither may be "fixed" later
 
@@ -1956,8 +1519,8 @@ body and in TOP100.md per item.
 correction is recorded beside the tick rather than quietly absorbed.** The
 entries were written by reading the code; the fixes were written by running it.
 Where they disagree, the tick means "the real defect was found and fixed", not
-"the description was accurate" — see #85, #87 and #88 below, and the retraction
-at the end.
+"the description was accurate" (#85, #87 and #88 described code since removed;
+their write-ups and the retraction are in `docs/claude-history.md`).
 
 ### #78/#79 — a cached payload is not a live one, and a poll must know its market
 
@@ -1970,60 +1533,6 @@ that is not merely stale but wrong about which market it is showing, with nothin
 on screen saying so. The poll now checks the market it was started for before it
 applies anything, and drops the payload if the answer changed underneath it.
 
-### #84 — a memo keyed on a generation counter, not on a timestamp
-
-The close preview re-parsed the entire journal out of localStorage on **every
-keystroke**. The fix is a one-row memo (`closeRow` + `closeRowGen`) invalidated
-by a `mjGen` counter that every writer bumps.
-
-- **The generation counter is what makes it safe, and the discipline is that
-  every writer must bump it.** `mjSaveLocal`, `mjSave` and `afterStoreChange`
-  each start with `mjGen++`; the cross-tab `storage` listener routes through
-  `afterStoreChange` rather than doing its own thing. Add a fourth writer that
-  forgets to bump and the modal shows a row that no longer exists in the store —
-  a test asserts all three still contain the bump, so the omission fails a push
-  rather than surfacing as an unreproducible stale-preview report.
-- **The memo is cleared on `closeModal()`, not merely invalidated.** It must not
-  outlive the modal: a held row plus a matching generation is indistinguishable
-  from a fresh read, so the next open of a DIFFERENT row within the same
-  generation would answer from the previous one. `openCloseModal` seeds it from
-  the read it just did rather than forcing a second.
-
-### #85 — common-subexpression elimination, and the cache that was deliberately refused
-
-`getCurrentRiskState()` walked the open book **six times per read**, and it is the
-most-called method on the engine (`_emit()` after every mutation, every
-`subscribe()`, and bot.js's 30s `loadData()`). Now two walks.
-
-- **It is CSE, NOT a cache, and that distinction is the whole design.** No value
-  is held across calls, so nothing can go stale. The alternative — memoising the
-  result — was rejected because `getPositionUnrealized` reads `pos.current`,
-  which `onPrice()`/`onPrices()` move **without any signal a memo could key on**:
-  they only `_emit()` when TP1 actually fires, so an ordinary tick moves the
-  number and announces nothing. A risk read answering with a price from a minute
-  ago is a worse failure than a slow one. `test/statekeep.test.js` pins this
-  behaviourally (a price move must land on the very next read) *and* pins the
-  comment that says so, because the comment is what stands between the next
-  reader and re-introducing the memo.
-- **Bit-identical, not merely close.** A risk figure that drifts in the last cent
-  is a support ticket nobody can reproduce. The accumulator preserves the exact
-  key order the old `reduce` summed in and still rounds once at the end.
-- **The hoist made the calls strictly FEWER, never more.** The old
-  `atBE || this.getPositionOpenRisk(p) <= 0` short-circuited, so a break-even
-  position skipped its second call; hoisting means one call per position instead
-  of one *or* two. A test pins the direction with a fixture that deliberately
-  contains a break-even row — without one the property is vacuous.
-- **The item's "called from bot.js:828 (1s)" is FALSE.** The only 1-second
-  interval is `startClocks`'s `tick`, which touches nothing on this engine. The
-  real cadence is 30s plus every mutation. The cost per read was real; the
-  frequency in the item was not, and the comment in the source now says so, so
-  nobody re-derives the urgency from the item.
-- **The comment above the method named `updatePrice`/`updatePrices` for months.
-  Neither has ever existed.** Corrected to `onPrice()`/`onPrices()`. A test now
-  asserts every method the comment cites in backticks is a real method on
-  `RiskManager.prototype` — the general form, since the two named regexes beside
-  it only catch the instance we already knew about.
-
 ### #86 — the layout read is deferred and coalesced, not removed
 
 `ensureActiveVisible` called `getBoundingClientRect()` inside the render path.
@@ -2034,61 +1543,6 @@ and force zero layouts. The reader half was split into `_scrollActiveIntoStrip`,
 which has **exactly one caller** on purpose, and a test counts it: a second
 caller would be a path that bypasses the coalescing entirely, which is the only
 way this regresses.
-
-### #87 — the feed's rows and this session's rows are different things
-
-`bot.js` assigned the status fetch straight onto `LOG` and `JOURNAL` every 30
-seconds, so **anything that happened in this browser was erased on the next
-refresh** — including the kill-switch confirmation line, which is the one log
-entry a person goes looking for to check that the thing they just clicked
-actually happened.
-
-- The two halves are now held apart (`FEED_*` / `LOCAL_*`) and composed
-  newest-first into the rendered `LOG` / `JOURNAL`. `_ms` maps an unparseable or
-  absent timestamp to **0, not NaN**, so undated rows sort to the BACK; NaN would
-  make every comparison False and scatter them unpredictably through the list.
-  Ties keep the local row first — `concat` puts local first and `Array.prototype
-  .sort` is stable, which is spec-required since ES2019 and not an accident of V8.
-- **They are merged, never deduped**, deliberately: a locally-closed trade and
-  its feed twin are the same trade seen from two sides and will differ in their
-  fields, so a dedupe would have to pick a winner and would sometimes pick the
-  staler one. The duplicate is visible and self-correcting on the next scan; a
-  wrong single row is neither.
-- **A failed fetch clears `FEED_LOG` and re-renders the merge** rather than
-  blanking the panel, so an outage costs you the server's lines and keeps your
-  own. The item called `LOG`/`JOURNAL` "globals" — they are module-scoped `let`s
-  inside the page IIFE. The defect was real; the word was not.
-
-### #88 — the `.catch` was catching the wrong thing
-
-`horizon.js` and `regime.js` chained `.then(mount)` **before** `.catch(...)`, so
-the catch that exists to handle *"the JSON is not there yet"* was also swallowing
-every fault thrown by the renderers inside `mount` — and its handler hides both
-hosts. A renderer bug therefore made the surface silently vanish, which is
-indistinguishable from the market simply never having run, and it is the failure
-mode that keeps a broken panel invisible for weeks.
-
-- **The catch is now scoped to the fetch and the parse only**, with `mount` after
-  it. A test asserts the ordering by index and that `.then(mount)` no longer
-  precedes it.
-- **A renderer fault is REPORTED, not disguised**: `draw()` wraps each surface so
-  a throwing strip cannot stop a panel that rendered fine, and `report()`
-  re-raises asynchronously via `setTimeout(() => { throw err; }, 0)` rather than
-  `console.error`. The async re-raise reaches `window.onerror` and the telemetry
-  behind it; a `console.error` reaches a devtools panel nobody has open.
-- **`DATA` is module-scoped and `render()` reads it, so the market switch redraws
-  from the CURRENT payload.** The item's claim that the buttons get re-bound over
-  a stale snapshot is wrong twice over — `mount` binds once behind a `BOUND`
-  flag, and the buttons are static HTML — but the stale-snapshot risk it was
-  pointing at is real and this is what closes it. `host.hidden = false` was
-  already present in all four renderers.
-- Both files are covered by **the same parameterised suite**, so the two surfaces
-  cannot diverge silently — which is the actual risk with a file pair this close.
-
-**RETRACTED, and must not be re-propagated: "sectors.html has no market
-switcher" is NOT a defect.** `renderPanel` columns every market via
-`Object.keys(MARKETS)` and never calls `activeMarket()` — the panel is
-market-independent by construction. Do not "fix" it by adding a switcher.
 
 ### Tests
 
@@ -2327,9 +1781,9 @@ time, every one caught.
   "RC=$?"` reports `tail`'s exit code, which is always 0. Redirect to a log file
   and echo `$?` immediately, or a failing gate reads as a passing one.
 
-### Two smaller findings shipped in the same batch
+### A smaller finding shipped in the same batch
 
-Both are about a number that was right but had **nothing on it saying what it
+It is about a number that was right but had **nothing on it saying what it
 meant** — the failure mode that survives review because the value looks fine.
 
 - **The backtest's dollar column had no stated basis.** `_sizing_basis()` now
@@ -2339,17 +1793,6 @@ meant** — the failure mode that survives review because the value looks fine.
   right number with no regime attached, which **after the 2026-07-28 resize is
   the difference between two incomparable series** being read as one track
   record. `tests/test_backtest_truth.py` 24 → 31.
-- **`dollarsPerPoint` provenance is now recorded** in `public/js/risk_manager.js`
-  — `"feed"` / `spec:<symbol>` / `"fallback"` — with a warn log and
-  `getUnpricedPositions()`. **The arithmetic is byte-for-byte unchanged**, and
-  that is the point: a bare ASX ticker has no `STOCK.AX` class, falls back to
-  `1`, and is ~43% overstated at 0.6969. That is the front-end twin of #61's
-  live half and it is **position sizing**, so it is FLAGGED FOR VIV, not fixed.
-  Latent today only because `vivek_bot_book.json` holds zero positions — it
-  becomes real the moment one is opened. `test/risk_manager.test.js` 54 → 65
-  (suite 9, with a `captureLog` helper); `bot.html` bumped `risk_manager.js?v=9`
-  → `?v=10` per the asset-version rule.
-
 - Gate at this commit: **1193 pytest across 55 files, 613 JS assertions across 15
   suites**, all four e2e steps green locally including `screenshot-diff` at 0.00%
   drift on four images.
@@ -2417,8 +1860,8 @@ just no longer drawn as cards. Pins: `test/hygiene.test.js`,
 `sector_map.json` / `sectorcache`) is unrelated and stays** — it is a signal path, not a report surface.
 `alert_returns._breadth_series()` now returns `{}` so `breadth200` stays
 blank on new ledger rows (frozen values on old rows survive under the
-blank-only rule). The three HORIZON/BACKFILL/REGIME sections further down
-are kept as HISTORY of code that no longer exists — do not re-add any of it;
+blank-only rule). The HORIZON, BACKFILL and REGIME write-ups are in
+`docs/claude-history.md` as history of code that no longer exists — do not re-add any of it;
 `git log -- scanner/sectorbreadth.py` at the removal commit has the engines.
 
 ## CRYPTO DATA SOURCE — exchange klines, one entry point (2026-09-28, owner-ruled)
@@ -2673,7 +2116,7 @@ explicit list is where a new odd-named peg has to be added. Pins:
   (realised n, open-not-counted, expectancy, OOS, vs random timing with CI
   and P, top-5 share); JS computes no statistic. A payload fault anywhere
   hides the panel, resets the pill and re-raises; the deck keeps rendering.
-  Tests: `test/ignition.test.js` (97, mutation-verified),
+  Tests: `test/ignition.test.js` (mutation-verified),
   `tests/test_ignition_frontend.py` (JS market list == config).
 - **What the replay says (exchange data + peg rule, run of 2026-09-28
   03:09 UTC — report-only, READ AS SUGGESTIVE):** 94 realised trades,
@@ -2787,7 +2230,7 @@ store nothing reads:
     paper track record loses NOTHING here; what is gone is a */5 cron, its
     4-tick loop, the kill_switch/crypto_bot piggyback ticks, `TICK_SECRET`'s only
     reader, `watchdog.probe_endpoints()` and the `tick_unreachable` finding. The
-    long 503/401/000 taxonomy in the tick section above is HISTORY — do not
+    long 503/401/000 taxonomy is in `docs/claude-history.md` — do not
     re-derive it for a new endpoint without re-reading why 000 was made green.
   * The stars: `public/mynames.html`, `public/js/mynames.js`, the ★ nav tab, and
     app.js's `WATCH_KEY`/`isStarred`/`toggleStar`/`lensStars`/`isWatchedAny`/
@@ -2812,8 +2255,8 @@ GitHub whenever convenient, same as `DISCORD_WEBHOOK_URL` and `TICK_SECRET`.
 **What deliberately STAYS**: `/api/close` (the close-all button and the stalled
 strip both post to it), `close_position.yml` including its legacy swing/scalp
 path, `scanner/journal.py` / `scalp_journal.py`, and every bot-book surface. The
-Tier 2 "Journal arithmetic" write-up above is now HISTORY of the manual side's
-maths — the numbers it fixed were the Me side's.
+manual side's journal-arithmetic write-ups (Tier 2 #25/#26/#27/#34) are in
+`docs/claude-history.md`.
 
 ## AI BOT — REMOVED ENTIRELY (2026-09-17)
 
@@ -2842,8 +2285,8 @@ cutting that is a kill-switch decision, not a page removal), `bot_rules.json`
 (status.js + journal.js read it), the legacy `journal.py`/`scalp_journal.py`
 (close_position.yml's swing/scalp path + `_session_day`), and every `SCALP_*`
 / `BYBIT_*` config constant (inert without readers; not worth a config diff).
-The Tier 1/2 write-ups above that mention risk_manager, pre_trade_check,
-bot.js or risk_manager.js are HISTORY of code that no longer exists.
+Their Tier 1/2/5 write-ups (risk_manager, reconcile, bot.js, risk_manager.js)
+are in `docs/claude-history.md`.
 
 ## TURTLE — REMOVED ENTIRELY (2026-09-17)
 
@@ -2907,16 +2350,9 @@ The facts a later session must not re-derive:
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
    commit: `git stash -q -u; git pull -q --rebase origin main; git stash pop -q`.
-   - **RETIRED 2026-08-13 — do not reinstate.** This rule used to end
-     *"`journal/alert_state.json` gets polluted by local test runs —
-     `git checkout -- journal/alert_state.json`, never commit it."* That
-     stopped being true at `22ddb448c` (2026-08-07), which redirected pytest
-     off the live alert/circuit-breaker state entirely; a full pytest run now
-     leaves `journal/` byte-clean, verified by `git status` at head. The rule
-     is recorded rather than deleted because a habit of blind-checkout-ing a
-     state file is worth un-learning explicitly: with the write fixed, that
-     `git checkout` now only ever discards a REAL alert-state change written
-     by something that meant it.
+   A full pytest run leaves `journal/` byte-clean, so a diff in
+   `journal/alert_state.json` after tests is a real alert-state change —
+   never discard it with `git checkout`.
 2. **Version bump:** every edit to ANY `public/js/*.js` or `public/css/*.css`
    bumps its `?v=` in every referencing HTML page. Don't record the numbers
    in docs — read them from the HTML.
@@ -2932,11 +2368,13 @@ The facts a later session must not re-derive:
 6. **Pinned deps:** `requirements.txt` pins the trade-path packages exactly.
    Bump deliberately (edit pin → pytest → push), never loosen to `>=`.
 7. **Atomic writes** for any journal/state JSON (temp + `os.replace`).
-8. **Push to `main`** — Cloudflare Pages deploys it; feature branches don't.
+8. **Push to `main`** — production deploys only from `main`; other branches
+   get a Cloudflare preview URL, never the live site.
 9. **ASCII-only prints** in scanner code — Windows consoles are cp1252 and
    choke on arrows/em-dashes.
 10. **CF Functions** are Workers runtime: no Node builtins; KV binding
-    `JOURNAL_KV` backs sync + the scan/close rate limits.
+    `JOURNAL_KV` backs the scan/close/morning-plays rate limits and the access
+    log (the name is historical).
 
 ## Frontend rules
 
@@ -2945,7 +2383,7 @@ The facts a later session must not re-derive:
   documented in the :root comment for revert.
 - One timestamp convention: **Melbourne on screen**, market-local/UTC in
   tooltips (`PM.fmtMelb`).
-- Preview: launch config "fib-scanner" (port 8765). `preview_screenshot`
+- Preview: launch config "scanner" (port 8765, `.claude/launch.json`). `preview_screenshot`
   TIMES OUT on canvas-heavy pages (chart) — verify via `preview_eval` DOM
   checks instead.
 - PWA: `sw.js` (network-first for `data/` + HTML, cache-first for `?v=`
@@ -2961,7 +2399,9 @@ nothing reads it, safe for the owner to delete from GitHub + Cloudflare),
 stop_watcher.yml and the KV journal went with the manual journal; nothing reads
 either, safe to delete from GitHub + Cloudflare),
 `BYBIT_*` (testnet), `ALPACA_*` (legacy),
-`TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub).
+`TELEGRAM_*`, `GH_DISPATCH_TOKEN` (in Cloudflare, not GitHub),
+`DISCORD_MORNING_WEBHOOK_URL` (the morning high-conviction digest's own
+webhook, distinct from the removed alert webhook — see MORNING PLAYS).
 **STANDING ACCESS (ops.yml, 2026-09-10 — ALL THREE SET the same day; `cronjob-list` and `cf-list-vars` both answered HTTP 200 from ops.yml runs #1 and #2):** `CRONJOB_API_KEY`,
 `CLOUDFLARE_API_TOKEN` (custom token, Account → Cloudflare Pages → Edit),
 `CLOUDFLARE_ACCOUNT_ID` — GitHub Actions secrets read ONLY by ops.yml; set
@@ -2969,9 +2409,6 @@ them once and Claude can create/edit cron-job.org jobs and Cloudflare Pages
 env vars itself via `workflow_dispatch` (see the ops.yml row).
 **Pending owner:** `MORNING_PLAYS_TRIGGER_SECRET` (arms `/api/morning_plays`,
 the on-time external trigger for the plays digest — see MORNING PLAYS),
-`DISCORD_MORNING_WEBHOOK_URL` (SET 2026-09-08 — deliveries prove it; switches on the morning
-high-conviction digest — see MORNING PLAYS; a fresh webhook for a dedicated
-channel, distinct from the removed alert webhook),
 data-provider key, Cloudflare Access.
 
 ---
