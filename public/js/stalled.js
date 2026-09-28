@@ -9,8 +9,9 @@
    answer to "what is squatting my slots right now". The two automatic rules
    leave a gap on purpose — MAX_HOLD_DAYS only time-stops pre-TP1 stalls, and a
    runner past TP1 is exempt from it forever — so a +0.1R runner can hold one
-   of 30 scarce slots for months with nothing on any page saying so. With the
-   book at its global cap, every stalled row is a new A+ the bot must decline.
+   of the book's scarce slots (60 since 2026-09-27; 30 when this was written)
+   for months with nothing on any page saying so. With the book at its global
+   cap, every stalled row is a new A+ the bot must decline.
 
    ONE WRITE PATH, AND IT IS THE OWNER'S FINGER (owner-ruled 2026-08-07).
    Nothing here decides. No threshold, no timer, no condition in this file

@@ -5,8 +5,8 @@ missing-only selection, best-grade-first ordering, the per-run cap, and the
 atomic dual-file write.
 
 SINCE 2026-07-28 THIS IS A SIGNAL PATH (owner-authorised — REFINEMENTS #38).
-vivek_run merges the cache into the rows decide() sees, so the 3-per-sector
-correlation cap finally binds on NASDAQ, whose universe file carries no sectors
+vivek_run merges the cache into the rows decide() sees, so the per-sector
+correlation cap (3 then, 6 since 2026-09-27) finally binds on NASDAQ, whose universe file carries no sectors
 at all. A wrong sector here now changes which trades get taken. The
 sector_map_for / enrich_rows tests at the bottom cover that wiring; the rule
 they enforce is that enrichment only ever WRITES INTO A BLANK FIELD.
@@ -168,10 +168,15 @@ def test_enrich_rows_degrades_to_a_no_op_rather_than_clearing_sectors():
 def test_enriched_rows_make_the_sector_cap_bind():
     """End to end, because this is the whole point of REFINEMENTS #38.
 
-    Same four NASDAQ setups, all Technology. Un-enriched they are exempt from
-    the correlation cap and all four get taken; enriched, three get in.
+    Same seven NASDAQ setups, all Technology -- one more than the cap (6 since
+    2026-09-27; this was four against a cap of 3). Un-enriched they are exempt
+    from the correlation cap and all seven get taken; enriched, six get in.
     """
     from scanner.broker import vivek_bot as vb
+
+    # One more same-sector setup than the cap allows, or the cap never binds
+    # and the "enriched" half of this test proves nothing.
+    SYMS = ("AAPL", "MDB", "MSFT", "NVDA", "AMD", "AVGO", "ORCL")
 
     def _rows():
         return [{"symbol": s, "dir": "LONG", "grade": "A+", "price": 100.0,
@@ -180,18 +185,17 @@ def test_enriched_rows_make_the_sector_cap_bind():
                                   "entry": 100.0, "stop": 96.0, "tp1": 106.0,
                                   "tp2": 112.0, "tp3": 120.0, "rr": 3.0,
                                   "scale": [0.25, 0.50, 0.15]}}}
-                for s in ("AAPL", "MDB", "MSFT", "NVDA")]
+                for s in SYMS]
 
     blind = vb.decide(_rows(), equity=150_000, market="nasdaq", open_book=[])
-    assert len(blind["plans"]) == 4                       # today's bug, pinned
+    assert len(blind["plans"]) == 7                       # today's bug, pinned
     assert blind["summary"]["sector_coverage"] == 0.0
 
     rows = _rows()
-    cache = {f"nasdaq:{s}": {"sector": "Technology", "ts": "t"}
-             for s in ("AAPL", "MDB", "MSFT", "NVDA")}
-    assert sectorcache.enrich_rows(rows, "nasdaq", cache) == 4
+    cache = {f"nasdaq:{s}": {"sector": "Technology", "ts": "t"} for s in SYMS}
+    assert sectorcache.enrich_rows(rows, "nasdaq", cache) == 7
     seeing = vb.decide(rows, equity=150_000, market="nasdaq", open_book=[])
-    assert len(seeing["plans"]) == 3
+    assert len(seeing["plans"]) == 6
     assert seeing["summary"]["skip_reasons"]["sector_cap"] == 1
     assert seeing["summary"]["sector_coverage"] == 1.0
 
@@ -242,7 +246,9 @@ def test_global_sector_load_sees_what_the_per_market_cap_cannot():
 
     Three ASX financials and three NASDAQ financials pass every per-market
     check — decide() is handed one market's slice — while the book holds six
-    of one real sector against a 30-position ceiling that IS global.
+    of one real sector against a 30-position ceiling that IS global. (The book
+    is 60 positions and the cap 6 since 2026-09-27; the fixture passes its cap
+    explicitly, so the shape it pins is unchanged.)
     """
     book = ([{"symbol": f"A{i}", "market": "asx", "sector": "Financials"}
              for i in range(3)]

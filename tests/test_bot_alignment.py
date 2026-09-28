@@ -39,13 +39,21 @@ def test_the_retired_rule_names_are_gone_so_nothing_reads_a_stale_gate():
 
 
 def test_bot_rules_json_publishes_the_new_keys_and_not_the_old():
-    import pathlib
-    src = (pathlib.Path(__file__).resolve().parents[1] / "scanner" / "run.py").read_text(encoding="utf-8")
-    i = src.index("rules = {"); block = src[i:src.index("bot_rules.json", i)]
+    # The payload lives in run.bot_rules_payload() since 2026-09-28 (main()
+    # and resize_book.yml both publish it). Read the function's own source -
+    # a slice of run.py to the next "bot_rules.json" would now run on into
+    # main() - and the payload it actually returns.
+    import inspect
+    from scanner import run
+    block = inspect.getsource(run.bot_rules_payload)
+    block = block[block.index("rules = {"):]
+    payload = run.bot_rules_payload()
     for k in ('"grades"', '"entry_cells"', '"cycle_tag"'):
         assert k in block, f"bot_rules.json no longer publishes {k}"
+        assert k.strip('"') in payload, f"bot_rules.json no longer publishes {k}"
     for k in ('"min_grade"', '"skip_entry_types"', '"prefer_tf"'):
         assert k not in block, f"bot_rules.json still publishes the retired {k}"
+        assert k.strip('"') not in payload, f"bot_rules.json still publishes the retired {k}"
 
 
 def test_a_row_the_deck_calls_high_conviction_is_takeable_by_the_bot():

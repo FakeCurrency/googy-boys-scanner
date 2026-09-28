@@ -397,32 +397,38 @@ VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # so the bot is long-only for now — shorts disabled and no short slots reserved.
 # The short machinery is retained behind the flag in case it's reworked later.
 VIVEK_BOT_ALLOW_SHORTS   = False   # False → bot never opens a short
-# Book size (owner, 2026-07-28): 30 open positions TOTAL across every market,
-# free to distribute wherever the A+ setups actually are. The per-market number
-# below is therefore NOT the binding constraint any more -- it is set equal to
-# the global cap so one market CAN hold the whole book, and the ceiling that
-# really bites is VIVEK_BOT_MAX_OPEN_TOTAL. The per-sector cap (3) still stops
-# the book becoming one macro bet. Sizing is fixed-notional -- see
-# VIVEK_BOT_POSITION_NOTIONAL below -- so 30 slots x $5,000 = the $150,000
-# portfolio ceiling exactly.
-VIVEK_BOT_MAX_POSITIONS  = 30      # max concurrent open positions PER MARKET
+# Book size (owner, 2026-07-28; raised 30 -> 60 by the owner on 2026-09-27):
+# 60 open positions TOTAL across every market, free to distribute wherever the
+# A/A+ cell setups actually are. The per-market number below is therefore NOT
+# the binding constraint -- it is set equal to the global cap so one market CAN
+# hold the whole book, and the ceiling that really bites is
+# VIVEK_BOT_MAX_OPEN_TOTAL. The per-sector cap (6) still stops the book becoming
+# one macro bet. Sizing is fixed-notional -- see VIVEK_BOT_POSITION_NOTIONAL
+# below -- so 60 slots x $2,500 = the $150,000 portfolio ceiling exactly (30 x
+# $5,000 = $150,000 from 2026-07-28 until 2026-09-27).
+VIVEK_BOT_MAX_POSITIONS  = 60      # max concurrent open positions PER MARKET
 # Global ceiling across ALL markets, enforced in vivek_run by counting the other
 # markets' canonical book files before deciding. This is race-free by
 # construction: scan.yml and crypto_bot.yml share `concurrency: group: scan`
 # with cancel-in-progress false, so no two market runs are ever live at once and
 # a run's read of the other books cannot be stale. 0 = off (per-market only).
-VIVEK_BOT_MAX_OPEN_TOTAL = 30
+VIVEK_BOT_MAX_OPEN_TOTAL = 60
 VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 # ---------------------------------------------------------------------------
 # SIZING — FIXED NOTIONAL (owner decision, 2026-07-28):
 #   "5k position moving forward on each 30 stocks and a cap of 150k"
+# RESIZED 2026-09-27 (owner): $2,500 a position on 60 slots. Same $150,000
+#   ceiling, same equity, same loss guards -- half the size, twice the slots.
+#   The open $5,000 rows are restated to $2,500 at merge by
+#   scripts/resize_book_notional.py (the 2026-07-28 RESIZE precedent); closed
+#   rows keep the size they were really held at.
 #
-# THE 5,000 IS IN EACH MARKET'S OWN CURRENCY (owner decision, 2026-07-29:
-# "It's fine make the US 5k USD and the AUS 5k AUD"). The constant is
-# currency-less and `notional / entry` prices entry in the market's local
-# currency, so an ASX position buys A$5,000 of stock and a NASDAQ one US$5,000
-# — that asymmetry (~US$3,500 vs US$5,000 at 0.70) was flagged as #61's live
-# half and the owner EXPLICITLY KEPT IT. Do not "fix" it by converting the
+# THE NOTIONAL IS IN EACH MARKET'S OWN CURRENCY (owner decision, 2026-07-29,
+# made at 5,000: "It's fine make the US 5k USD and the AUS 5k AUD"; it carries
+# to 2,500 unchanged). The constant is currency-less and `notional / entry`
+# prices entry in the market's local currency, so an ASX position buys A$2,500
+# of stock and a NASDAQ one US$2,500 — that asymmetry (~US$1,750 vs US$2,500 at
+# 0.70) was flagged as #61's live half and the owner EXPLICITLY KEPT IT. Do not "fix" it by converting the
 # notional through FX before sizing; that exact one-liner was offered and
 # declined. Cross-market AGGREGATES (report dollars, drawdown) still convert
 # to REPORT_CURRENCY — that half shipped in the backtest and stays.
@@ -435,9 +441,10 @@ VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 #   * Risk per trade is no longer constant. Under risk-% sizing every loss was
 #     the same dollar amount and the STOP DISTANCE moved the share count. Under
 #     fixed notional the share count is constant and the STOP DISTANCE moves the
-#     loss: risk_usd = 5,000 x (stop distance / entry). The stop-distance gates
+#     loss: risk_usd = 2,500 x (stop distance / entry). The stop-distance gates
 #     bound it -- MIN_STOP_PCT 1% and MAX_STOP_PCT 25% -- so a 1R loss lands
-#     between $50 and $1,250, typically $250-$500 on a 5-10% structural stop.
+#     between $25 and $625, typically $125-$250 on a 5-10% structural stop
+#     ($50-$1,250 / $250-$500 at the 2026-07-28 $5,000).
 #   * Position count, not position size, is now the risk dial.
 #
 # WHY ACCOUNT_EQUITY MOVED WITH IT (see below): vivek_guard's daily/weekly
@@ -445,15 +452,18 @@ VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 # old $10,000 paper equity would have tripped the 3% ($300) daily stop on the
 # FIRST ordinary stop-out and halted the bot more or less permanently. Equity is
 # therefore set to the owner's stated book size, which also makes the numbers
-# self-consistent: 30 x $5,000 = $150,000 = 1.0x equity, no margin implied.
-VIVEK_BOT_POSITION_NOTIONAL = 5_000     # target $ invested per position (0 = risk-% mode)
+# self-consistent: 60 x $2,500 = $150,000 = 1.0x equity (30 x $5,000 until
+# 2026-09-27), no margin implied.
+VIVEK_BOT_POSITION_NOTIONAL = 2_500     # target $ invested per position (0 = risk-% mode)
 # Ceiling on TOTAL open notional across every market, enforced in decide() the
 # same way the position ceiling is: the runner sums the sibling books and passes
-# what the other markets already hold. Redundant with 30 x $5,000 by
-# construction today -- deliberately so. It is the backstop that keeps the
-# dollar exposure honest if the slot count or the per-position size is ever
-# changed independently, and it is what actually binds if a future sizing mode
-# makes positions unequal. 0 = off.
+# what the other markets already hold. Redundant with 60 x $2,500 (30 x $5,000
+# until 2026-09-27) by construction -- deliberately so. It is the backstop that
+# keeps the dollar exposure honest if the slot count or the per-position size is
+# ever changed independently, and it is what actually binds if a future sizing
+# mode makes positions unequal -- or in the window after a size cut before the
+# open book is restated: on 2026-09-27 the 30 open $5,000 rows filled the whole
+# $150,000 by themselves and would have blocked every $2,500 entry. 0 = off.
 VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL = 150_000
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade — ONLY used when
                                    # VIVEK_BOT_POSITION_NOTIONAL is 0 (0.25–0.5 band)
@@ -550,14 +560,17 @@ VIVEK_BOT_EARNINGS_MARKETS     = ("nasdaq",)   # ASX earnings data on yfinance i
 # normal VIVEK_BOT_MAX_PER_SECTOR cap applies.
 VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # Correlation control: cap open positions per GICS sector per market so the book
-# can't quietly become one macro bet (e.g. 6 ASX materials names = one iron-ore
-# trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
-VIVEK_BOT_MAX_PER_SECTOR = 3
+# can't quietly become one macro bet (a book of ASX materials names is one
+# iron-ore trade). 6 since 2026-09-27 (was 3; owner, 2026-09-27): he kept the
+# DOLLARS, not the count -- 6 x $2,500 = 3 x $5,000 = $15,000 of one sector per
+# market. Empty/unknown stock sectors are exempt (crypto is bucketed above).
+# 0 = off.
+VIVEK_BOT_MAX_PER_SECTOR = 6
 
 # HORIZON (sector breadth) and REGIME (relative strength) were REMOVED ENTIRELY
 # on 2026-09-20 (owner: "get rid of it entirely, rip out the guts of it"). The
 # SECTOR_BREADTH_* / REGIME_* blocks that lived here are gone with the engines;
-# the bot's 3-per-sector correlation cap above is unrelated and stays.
+# the bot's per-sector correlation cap above is unrelated and stays.
 
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
@@ -574,17 +587,19 @@ VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 # the trailing 7 calendar days + open unrealised falls to -this% of equity,
 # new entries halt until the window rolls off. 0 = off.
 VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
-# REVIEW threshold (2026-07-28, owner's instruction). NOT a gate — nothing is
-# ever skipped for crossing it. When a plan the bot has already decided to take
-# would risk this % or more of the daily loss guard above, the ticket carries a
-# `review` flag so the owner can decide whether to let the bot take it or take
-# it himself, sized his own way. The two numbers it sits between: the hard
-# MAX_STOP_PCT gate caps any new position at 25% x $5,000 = $1,250 of risk,
-# which is 27.8% of the $4,500 guard, so a threshold at or above ~28 could
-# never fire; a typical A+ plan runs a 5-12% stop, i.e. $250-$600, i.e. 6-13%
-# of the guard. 15 therefore flags the genuinely wide half without crying wolf
-# on ordinary trades. 0 = off.
-VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0
+# REVIEW threshold (2026-07-28, owner's instruction; 15.0 -> 7.5 with the
+# notional on 2026-09-27, owner). NOT a gate — nothing is ever skipped for
+# crossing it. When a plan the bot has already decided to take would risk this %
+# or more of the daily loss guard above, the ticket carries a `review` flag so
+# the owner can decide whether to let the bot take it or take it himself, sized
+# his own way. The two numbers it sits between: the hard MAX_STOP_PCT gate caps
+# any new position at 25% x $2,500 = $625 of risk, which is 13.9% of the $4,500
+# guard, so a threshold at or above ~14 could never fire; a typical A+ plan
+# runs a 5-12% stop, i.e. $125-$300, i.e. 3-7% of the guard. 7.5 is $337.50 =
+# a 13.5% stop on $2,500 -- the SAME stop width 15.0 flagged on $5,000 ($675),
+# so what gets flagged did not move. Left at 15.0 beside $2,500 it would have
+# needed a 27% stop, which the 25% gate never admits: dead code. 0 = off.
+VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 7.5
 
 # Push the review flag through the NOTICE tier when a flagged position is opened
 # (`vivek_run._notify_reviews`). ON, unlike VIVEK_BOT_NOTIFY_TRADES next to it,
@@ -621,6 +636,9 @@ VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"
 # ordinary 1R loss — and the bot would have sat halted. At 150,000 the guard
 # keeps roughly the same headroom in R that it had before: $4,500/day against a
 # typical $250–$500 loss is ~9–18R, versus $300 against $35 (8.6R) before.
+# UNCHANGED on 2026-09-27 when the notional halved to $2,500: the book is still
+# $150,000 of exposure, so the guards stay $4,500/day and $9,000/week; per trade
+# the headroom doubled (a typical $125–$250 loss is ~18–36R of the daily guard).
 VIVEK_BOT_ACCOUNT_EQUITY = 150_000  # book size; scales the loss guards, NOT position size
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
 

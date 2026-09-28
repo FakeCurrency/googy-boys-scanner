@@ -54,8 +54,13 @@ export const onRequestPost = withAccessLog("/api/close", async ({ request, env }
     if (body.journal_type !== "bot") {
       return json(400, { ok: false, message: "Batch close is bot-book only." });
     }
-    if (body.closes.length < 1 || body.closes.length > 30) {
-      return json(400, { ok: false, message: "Batch must contain 1-30 closes." });
+    // Ceiling = the book cap (config VIVEK_BOT_MAX_OPEN_TOTAL, 60 since the
+    // owner's 2026-09-27 resize; was 30), so a FULL book closes in ONE run.
+    // Mirrored by journal.js CLOSE_ALL_MAX and vivek_run CLOSE_BATCH_MAX;
+    // tests/test_close_ceiling_parity.py pins all three to config, because a
+    // split ceiling accepts a close here that the workflow then refuses.
+    if (body.closes.length < 1 || body.closes.length > 60) {
+      return json(400, { ok: false, message: "Batch must contain 1-60 closes." });
     }
     const entries = [];
     const seen = new Set();

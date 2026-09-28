@@ -433,9 +433,10 @@ def build_report(shards: list, verdict: str = "") -> tuple[str, dict]:
         L += _pair(f"5.0 bot rule as taken, {m.upper()}", [t for t in taken if t["m"] == m])
     for g in ("A+", "A"):
         L += _pair(f"5.0 grade {g}", [t for t in vl if t["cohort"] == g])
-    L += ["", "The bot's other gates -- minimum price, liquidity/ADV, the 3-per-sector cap and "
-          "the 30-position book -- are not simulated, so the as-taken rows are the rule's trade "
-          "set before those gates, not a replay of the book."]
+    L += ["", "The bot's other gates -- minimum price, liquidity/ADV, the "
+          f"{config.VIVEK_BOT_MAX_PER_SECTOR}-per-sector cap and "
+          f"the {config.VIVEK_BOT_MAX_OPEN_TOTAL}-position book -- are not simulated, so the "
+          "as-taken rows are the rule's trade set before those gates, not a replay of the book."]
 
     ml = by(longs, "momentum")
     L += ["", f"## Momentum -- Rule A vs Rule B by market (longs; live min_signal_score "

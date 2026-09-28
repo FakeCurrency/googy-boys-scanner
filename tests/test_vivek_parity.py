@@ -219,6 +219,21 @@ def test_exclude_map_and_taken_flag_schema():
     assert sum(1 for t in rep["trades"] if t["taken"]) == rep["baseline"]["portfolio"]["taken"]
 
 
+def test_the_report_echoes_the_cap_the_sim_actually_used(monkeypatch):
+    """With the global cap off (0) the parity sim falls back to the per-market
+    cap; the report's rules block must say the same number rather than a stale
+    hard-coded 30 (review RR-4, 2026-09-28: the echo read `... or 30` while the
+    sim used VIVEK_BOT_MAX_POSITIONS)."""
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_POSITIONS", 17)
+    monkeypatch.setattr(parity, "fx_rates", lambda: {})
+    rep = parity.build_parity_report([], {}, {}, {})
+    assert rep["baseline"]["rules"]["max_open_total"] == 17
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 60)
+    rep = parity.build_parity_report([], {}, {}, {})
+    assert rep["baseline"]["rules"]["max_open_total"] == 60
+
+
 def test_close_r_checkpoint_stamps_with_close_price():
     from scanner.vivek_parity import _stamp_mfe_checkpoints
     tr = {"direction": "long", "entry": 100.0, "risk": 10.0, "mfe_r": 0.3,

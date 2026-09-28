@@ -83,12 +83,14 @@ def _sim_trade(sym, entry_date, exit_date, r=1.0, sector="secA", **kw):
 
 
 def test_portfolio_sim_slot_cap():
+    # The sim's per-market share of the global cap: 60 // 3 markets = 20 slots
+    # (was 30 // 3 = 10 until the 2026-09-27 resize). Two over, two skipped.
     trades = [_sim_trade(f"S{i}", "2026-01-05", "2026-02-01", sector=f"sec{i}")
-              for i in range(12)]
+              for i in range(22)]
     r = bt.portfolio_sim(trades)
-    assert r["taken"] == 10 and r["skipped"]["book_full"] == 2
-    assert r["peak_open"] == 10
-    assert r["eligible"]["n"] == 12 and r["portfolio"]["n"] == 10
+    assert r["taken"] == 20 and r["skipped"]["book_full"] == 2
+    assert r["peak_open"] == 20
+    assert r["eligible"]["n"] == 22 and r["portfolio"]["n"] == 20
 
 
 def test_portfolio_sim_slots_free_after_exit():
@@ -102,7 +104,7 @@ def test_portfolio_sim_one_per_symbol_and_sector_cap():
     trades = ([_sim_trade("AAA", "2026-01-05", "2026-03-01"),
                _sim_trade("AAA", "2026-01-12", "2026-03-01")] +      # dup while open
               [_sim_trade(f"M{i}", "2026-01-05", "2026-03-01", sector="materials")
-               for i in range(4)])                                    # 4th materials blocked
+               for i in range(7)])                                    # 7th materials blocked (cap 6)
     r = bt.portfolio_sim(trades)
     assert r["skipped"]["dup_symbol"] == 1
     assert r["skipped"]["sector_cap"] == 1

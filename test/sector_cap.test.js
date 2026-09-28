@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /* Sector-cap marking on the deck (2026-08-20, Task 10).
  *
- * bot_rules publishes max_per_sector (3) and decide() blocks an entry once a
- * market's open book holds that many of a sector — likely the most common
- * reason a specific A+ cannot be taken, previously invisible on the hunt
- * screen. These tests slice the REAL sectorKeyOf / sectorCapChip out of the
- * shipped app.js.
+ * bot_rules publishes max_per_sector (6 since 2026-09-27; 3 before) and
+ * decide() blocks an entry once a market's open book holds that many of a
+ * sector — likely the most common reason a specific A+ cannot be taken,
+ * previously invisible on the hunt screen. These tests slice the REAL
+ * sectorKeyOf / sectorCapChip out of the shipped app.js.
  *
  * PARITY NOTE: sectorKeyOf must mirror scanner/broker/vivek_bot.py's
  * _sector_key (lower-cased real sector wins; crypto falls back to synthetic

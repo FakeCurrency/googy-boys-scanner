@@ -1,0 +1,21 @@
+# .github/resize-kick - the one-shot authorisation read by
+# .github/workflows/resize_book.yml (2026-09-27, owner: resize the open book to
+# $2,500 a position, the 2026-07-28 RESIZE precedent, rather than waiting for
+# the 30 open $5,000 rows to close one at a time).
+#
+# A push to main that changes this file restates every OPEN bot-book position
+# to the target below (scripts/resize_book_notional.py --apply --kick). It is a
+# RESTATEMENT, not a trade: units / notional / risk_usd / unreal_usd scale;
+# entry, stop, risk, every R field and every CLOSED row are frozen.
+#
+# The script REFUSES (exit 2, nothing written) unless target= equals
+# scanner/config.py VIVEK_BOT_POSITION_NOTIONAL, so a kick can only restate the
+# book to the size new entries are already taken at. Exactly one non-comment
+# line, no inline comment on it. Re-touching this file with the same target is
+# a green no-op (rows already at the target are skipped); deleting it is a
+# green no-op too.
+#
+# If VIVEK_BOT_POSITION_NOTIONAL ever changes, tests/test_resize_book_workflow.py
+# fails until this file is either updated (the push restates the open book) or
+# deleted (it does not) - the open book becomes an explicit decision either way.
+target=2500

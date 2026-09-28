@@ -247,7 +247,21 @@ jobs:
       group: scan
       cancel-in-progress: false
     steps:
+      # Read the book as of ACQUIRING the mutex, not as of being queued
+      # (2026-09-27, found building resize_book.yml). With no `ref`, checkout
+      # uses github.sha -- the commit the run was TRIGGERED on, fixed when the
+      # run is created. A job that waited in the `scan` queue behind another
+      # writer then scans and marks a book OLDER than main's, and the retry
+      # loop below replays its copy of journal/vivek_bot_book.<m>.json over the
+      # newer one -- silently reverting whatever the writer ahead of it
+      # committed for that market (a close, a same-market scan, the open-book
+      # resize). A branch `ref` makes checkout fetch the branch TIP at job
+      # start. Nothing in this job reads github.sha; scan.py's display-only
+      # `code_sha` stamp reads git HEAD first, GITHUB_SHA only as a fallback
+      # (tests/test_code_sha.py). Pinned in tests/test_workflow_mutex.py.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -284,7 +298,7 @@ jobs:
       # sidecar; never allowed to fail the run." The first half stopped being
       # true at REFINEMENTS #38: `broker/vivek_run.py` now calls
       # `sectorcache.enrich_rows` on the rows `decide()` sees, so the map
-      # decides which names the 3-per-sector cap can SEE, and a row with no
+      # decides which names the per-sector cap can SEE, and a row with no
       # sector is exempt from the cap entirely. A stale line in a workflow is
       # not cosmetic — "display-only" is the sentence a future reader (or I)
       # would quote while widening this tolerance or deleting the step.
@@ -307,7 +321,7 @@ jobs:
       - name: Refresh sector cache
         run: |
           if ! python -m scanner.sectorcache; then
-            echo "::warning::sector cache refresh FAILED - data/sector_map.json did not advance this run. It is a SIGNAL PATH (REFINEMENTS #38): rows with no sector are exempt from the 3-per-sector cap, so the cap binds LESS than intended until coverage refills. Check summary.sector_coverage in the scan output - expect ~1.0."
+            echo "::warning::sector cache refresh FAILED - data/sector_map.json did not advance this run. It is a SIGNAL PATH (REFINEMENTS #38): rows with no sector are exempt from the per-sector cap (config VIVEK_BOT_MAX_PER_SECTOR), so the cap binds LESS than intended until coverage refills. Check summary.sector_coverage in the scan output - expect ~1.0."
           fi
 
       - name: Run market scans (small markets first, then ASX uncontended)

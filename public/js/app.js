@@ -1281,13 +1281,14 @@
   }
 
   // SECTOR-CAP marking (2026-08-20, Task 10). bot_rules publishes
-  // max_per_sector (3) and decide() blocks entries once a market's open book
-  // holds that many of a sector — likely the single most common reason a
-  // specific A+ cannot be taken today, with nothing on the hunt screen saying
-  // so. sectorKeyOf mirrors vivek_bot._sector_key EXACTLY (lower-cased sector;
-  // crypto gets synthetic major/alt buckets off the published crypto_majors
-  // list; sector-less rows are EXEMPT from the cap and therefore never marked)
-  // so the display cannot disagree with what actually blocks the trade.
+  // max_per_sector (6 since 2026-09-27, was 3) and decide() blocks entries
+  // once a market's open book holds that many of a sector — likely the single
+  // most common reason a specific A+ cannot be taken today, with nothing on
+  // the hunt screen saying so. sectorKeyOf mirrors vivek_bot._sector_key
+  // EXACTLY (lower-cased sector; crypto gets synthetic major/alt buckets off
+  // the published crypto_majors list; sector-less rows are EXEMPT from the cap
+  // and therefore never marked) so the display cannot disagree with what
+  // actually blocks the trade.
   // Display-only, same posture as HELD: it marks rows, filters nothing, and
   // the bot never sees it. A held row is skipped — it IS one of the counted
   // positions, and HELD already says everything.
@@ -2839,7 +2840,7 @@
       // book declines every new A+ before quality is even considered — "96 A+"
       // and "0 free" is a different morning to "96 A+" and "8 free", and the
       // deck could only ever tell you the first half. Journal's own wording
-      // ("N of 30 A+ slots", "FULL") is reused verbatim so the two surfaces
+      // ("N of <cap> A+ slots", "FULL") is reused verbatim so the two surfaces
       // read as one system.
       const capTxt = facts.maxOpen == null
         ? `${facts.open} open`

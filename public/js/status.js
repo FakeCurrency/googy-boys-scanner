@@ -27,8 +27,9 @@
  *   90m = functions/api/heartbeat.js DEFAULT_STALE_MIN. The point at which the
  *         system itself considers a scan overdue and heals. Used here for
  *         AMBER.
- *   30  = the position cap, read from data/bot_rules.json rather than typed
- *         (project rule 3 — never hardcode a published constant twice).
+ *   60  = the position cap, read from data/bot_rules.json rather than typed
+ *         (project rule 3 — never hardcode a published constant twice). 30
+ *         until the owner's 2026-09-27 resize to 60 × $2,500.
  *
  * Uptime is measured, not asserted: public/data/funnel_history.json carries a
  * wall-clock stamp for every successful scan publish (scanner/run.py appends
@@ -49,7 +50,10 @@
   // ── constants, each one sourced ────────────────────────────────────────────
   const HEALTH_MAX_H = 4;      // functions/api/health.js (max_h default)
   const HEAL_STALE_MIN = 90;   // functions/api/heartbeat.js (DEFAULT_STALE_MIN)
-  const FALLBACK_CAP = 30;     // only if bot_rules.json is unreachable
+  // = config VIVEK_BOT_MAX_OPEN_TOTAL (60 since 2026-09-27); pinned to it by
+  // tests/test_close_ceiling_parity.py so the offline sheet cannot read
+  // "Open 45 / 30" on a 60-slot book.
+  const FALLBACK_CAP = 60;     // only if bot_rules.json is unreachable
   const CYCLE_TAG = "hc4-1";   // scanner/config.py VIVEK_BOT_CYCLE_TAG (w3-1 ended 2026-09-21)
   const CYCLE_TARGET = 30;     // the pre-registered close count for the cohort
   const REPO = "FakeCurrency/googy-boys-scanner";

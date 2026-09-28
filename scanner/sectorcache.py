@@ -8,7 +8,7 @@ names by. Same design as the market-cap cache (scanner/marketcaps.py):
      mirrored to ``public/data/sector_map.json`` for the dashboard to merge in.
 
      THIS IS NOW A SIGNAL PATH (2026-07-28, owner-authorised — REFINEMENTS #38).
-     It used to be display-only, and that was the bug: vivek_bot's 3-per-sector
+     It used to be display-only, and that was the bug: vivek_bot's per-sector
      correlation cap exempts rows with no sector, so NASDAQ — whose universe
      file carries none — had *no* correlation control at all while looking like
      it did. It merely needed wiring, not sourcing: the cache already covered
@@ -127,7 +127,7 @@ def diverging(positions, rows) -> list[str]:
     failure — a sector that is present but from a DIFFERENT taxonomy than the
     one the market's universe ships today. Two ASX holdings carry Yahoo-style
     'Insurance' / 'Financial Services' where the ASX universe says 'Financials'
-    for the same symbols, so the 3-per-sector cap sees three buckets where
+    for the same symbols, so the per-sector cap sees three buckets where
     there is one. Overwriting a non-blank sector changes which trades get
     taken, so that is an owner decision (REFINEMENTS #112) and this function
     exists only to stop it being invisible.
@@ -153,10 +153,12 @@ def global_sector_load(positions, cap: int = 0) -> list[str]:
     """Real sectors held ABOVE `cap` once every market is counted together.
 
     The correlation cap is enforced PER MARKET — `decide()` seeds its counter
-    from `open_book`, which is one market's slice — while the 30-position and
+    from `open_book`, which is one market's slice — while the 60-position and
     $150,000 ceilings are GLOBAL (`open_elsewhere` / `notional_elsewhere`). So
-    three ASX financials plus three NASDAQ financials is six of one real sector
-    in a 30-slot book, and every per-market check passes. That gap only started
+    six ASX financials plus six NASDAQ financials is twelve of one real sector
+    in a 60-slot book ($30,000 at $2,500 a position -- the same dollars that
+    3 + 3 were in the 30-slot $5,000 book before 2026-09-27), and every
+    per-market check passes. That gap only started
     mattering when the position ceiling went global (2026-07-28); before it, a
     per-market sector cap matched a per-market position cap.
 
@@ -264,7 +266,7 @@ def _fetch_sector(yf_symbol: str) -> tuple[str, str]:
     Both landed in the same `got X/N` line, so a run where Yahoo rate-limited
     every request and a run where every remaining name is genuinely an ETF
     printed the identical sentence. Since REFINEMENTS #38 made this cache a
-    SIGNAL path — a blank sector is exempt from the 3-per-sector cap — "coverage
+    SIGNAL path — a blank sector is exempt from the per-sector cap — "coverage
     stopped improving" is a question about the correlation limit, and it needed
     an answer better than one number.
 

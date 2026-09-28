@@ -9,11 +9,11 @@ Last updated: 2026-07-21 (bottom-half runbooks rewritten for the bot-book era �
 | What | Command |
 |------|---------|
 | Run a VIVEK scan | `python -m scanner.run --market asx` (or nasdaq / crypto) |
-| Run Bybit executor (PARKED until ROADMAP P3) | `python -m scanner.broker.bybit_run` |
-| Dry run (log only) | `python -m scanner.broker.bybit_run --dry-run` |
+| ~~Run Bybit executor~~ | REMOVED 2026-09-17 — `scanner/broker/bybit_run.py` no longer exists (see Circuit breakers below) |
 | Check kill-switch | `python -m scanner.broker.kill_switch` |
 | Audit bot-book integrity (read-only) | `python -m scanner.broker.vivek_run --verify` |
 | Rebuild derived combined book | `python -m scanner.broker.vivek_run --rebuild-combined` |
+| Is every open row at the configured notional? (read-only) | `python scripts/resize_book_notional.py --check` — exit 0 yes / 3 rows to restate / 4 an off-target row it cannot restate (Runbook 7) |
 | Freshness watchdog (read-only preview) | `python -m scanner.watchdog --dry-run` |
 | Run all tests | `pytest tests/ -v` |
 | Serve frontend locally | `python -m http.server 8000 --directory public` |
@@ -33,8 +33,9 @@ GitHub Actions handles everything automatically:
 | `lens_backtest.yml` | Weekly Sun | PhaseMap/Specs/VIVEK replays -> Insights stats |
 | `vivek_backtest.yml` | Monthly 1st | Long-only VIVEK evidence file |
 | `kill_switch.yml` | Every 30 min, 24/7 | Standalone loss check on the BOT BOOK (per market) — open positions re-priced with LIVE quotes, falling back to last-scan marks per symbol. Also hosts the freshness watchdog |
-| `stop_watcher.yml` | Every 5 min | Curls /api/tick (cloud watcher for the KV-synced manual journal) |
+| ~~`stop_watcher.yml`~~ | — | REMOVED 2026-09-21 with the manual journal and /api/tick it watched (CLAUDE.md "MY JOURNAL"). The bot book's stops are evaluated by the scans and `kill_switch.yml` |
 | `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals. Re-dispatches itself (max 3) if the scan mutex evicts it — Runbook 4 |
+| `resize_book.yml` | Push touching `.github/resize-kick`, or manual (dry run by default) | One-shot restatement of the OPEN bot book at the configured notional (approved 2026-09-27: $5,000 -> $2,500), republishing `public/data/bot_rules.json` in the same commit — Runbook 7 |
 | `test.yml` | Every push/PR | pytest + JS tests |
 
 (Table rewritten 2026-07-20 — the previous one listed retired workflows:
@@ -82,7 +83,9 @@ unrealised) breaches VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY.
 **The dollar figure moved on 2026-07-28** with fixed-notional sizing: equity is
 now $150,000 (was $10,000), so the 3% daily limit is **$4,500 per market** and
 the 6% weekly limit is $9,000 — up from $300/$600. Equity no longer sizes
-positions (that is `VIVEK_BOT_POSITION_NOTIONAL`, a flat $5,000 x 30 slots);
+positions (that is `VIVEK_BOT_POSITION_NOTIONAL`, a flat $2,500 x 60 slots since
+the sizing-change merge (approved 2026-09-27; CLAUDE.md "SIZING 2") — $5,000 x 30 before; the same $150,000 book either way, so these
+guards did not move);
 it survives precisely to scale these guards and the leverage ceiling, which is
 why it had to move with the book rather than stay at the old figure.
 Open positions are re-priced with LIVE quotes at check time (2026-07-20
@@ -307,6 +310,57 @@ a silent stale mark). The next run usually recovers. Only investigate after
 two consecutive empty scheduled runs — then check the run log's download
 errors and yfinance GitHub issues before touching anything.
 
+### Runbook 7 — Open-book resize (resize_book.yml, 2026-09-27)
+The $5,000 -> $2,500 sizing change (approved 2026-09-27, live from the merge)
+restates the 30 open rows through `resize_book.yml`, fired by the merge push
+because it touches `.github/resize-kick` (`target=2500`; the script refuses
+unless it equals config). It is a restatement, not a trade: entry, stop, every R
+field and every CLOSED row stay frozen (a partial already banked on an OPEN row
+restates with it — GLBE's tp1 — and the report names it). Until it lands the
+$150,000 notional ceiling is full, so the bot takes no new entries
+(`notional_cap`) — fail-safe, never more exposure. The resize commit carries the
+3 per-market books, the combined book, its public twin AND
+`public/data/bot_rules.json` (republished from the same checkout), so the site
+never shows the old rules beside the restated book.
+
+- **Before pushing the merge:** Actions -> confirm no "Scheduled scan",
+  "Crypto bot (24/7 paper)" or "Close position (manual)" run is queued or in
+  progress (GitHub MCP `actions_list`). A run created before the merge runs the
+  OLD workflow file at its trigger SHA and, if it reaches the mutex after the
+  resize, replays the pre-resize book and republishes the old rules — and
+  `--verify` still passes. Also: timing outside both stock sessions and away
+  from :15–:35 past the hour (crypto fires at :22).
+- **The merge commit message must carry no CI skip token** (`[skip ci]`,
+  `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`) — it would
+  suppress the push trigger and the resize would silently never run. After the
+  push, confirm a "Resize open book" run exists for the merge SHA; if none,
+  dispatch it from main with `apply` = true.
+- **After the merge, NEVER "Re-run" a scan / crypto / close run created before
+  it.** A re-run reuses the old SHA and the old YAML and replays the pre-resize
+  book. Dispatch a fresh run instead.
+- **1–2 hours after the merge** (once the next crypto run and one stock scan
+  have committed): Actions -> "Resize open book" -> Run workflow, `apply` =
+  false (a dry run). The plan must read `CHECK: 0 open row(s) off the $2,500
+  target` and the summary **Nothing to resize**, and main's
+  `public/data/bot_rules.json` must show `position_notional` 2500,
+  `max_open_total` 60, `max_per_sector` 6. If rows are listed, run again with
+  `apply` = true — rows already at the target are skipped, so a repeat is always
+  safe. Repeat the check after any accidental re-run of a pre-merge run.
+- **`--check` exit codes:** 0 = every open row at target; 3 = rows to restate;
+  **4 = an open row off target that the script cannot restate** (no usable
+  entry/risk basis, or the sizer returned nothing — printed as NOT
+  RESTATABLE with the symbols; it wins over 3, so no writer is queued for
+  it): red, and
+  `--apply` refuses with 4 before writing anything. Fix or close that row by
+  hand, then dispatch again. 2 = refused (kick/config mismatch); 1 = crash.
+- **Red "NOT applied" run:** the resize job was evicted from the scan mutex,
+  cancelled or timed out; it almost certainly pushed nothing. It does NOT
+  re-dispatch itself — use the dry-run / apply steps above.
+- **Merged by an automation token** (a GITHUB_TOKEN push triggers nothing):
+  dispatch `apply` = true from main by hand.
+- Leaving the kick file on main is harmless (a re-touch is a no-op; deleting it
+  is a green no-op too).
+
 ---
 
 ## Key file locations (current)
@@ -315,7 +369,7 @@ errors and yfinance GitHub issues before touching anything.
 |------|---------|
 | `journal/vivek_bot_book.<market>.json` | CANONICAL per-market track record — the record itself |
 | `journal/vivek_bot_book.json` + `public/data/vivek_bot_book.json` | Derived combined view (regenerable) |
-| `public/data/bot_rules.json` | The executing bot's rule constants, published each scan (dashboard reads them) |
+| `public/data/bot_rules.json` | The executing bot's rule constants, published each scan and by the resize commit (dashboard reads them) |
 | `public/data/<m>_vivek.json` | Latest VIVEK scan per market |
 | `public/data/phasemap/<m>/latest.json` (+ `narrations.json`) | Latest PhaseMap per market |
 | `public/data/<m>_spec.json` | Latest Specs (discovery) scan |
@@ -377,18 +431,22 @@ that has never been restored is a hope, not a backup.
 
 ---
 
-## Circuit breakers (Bybit live-executor path — PARKED until ROADMAP P3)
+## Circuit breakers (Bybit live-executor path — REMOVED 2026-09-17)
 
-`pre_trade_check.py` / `circuit_breaker.py` gate the BYBIT executor
-(`bybit_run.py`), which does not run on any schedule today. They are built
-and unit-tested, and become load-bearing only when live execution is wired.
+HISTORY: `pre_trade_check.py` / `circuit_breaker.py` gated the BYBIT executor
+(`bybit_run.py`), which never ran on a schedule. All three were DELETED on
+2026-09-17 with the AI BOT page (CLAUDE.md "AI BOT — REMOVED ENTIRELY"); live
+execution would have to rebuild them. Only `kill_switch.py`'s flatten path
+(`bybit_client.py` / `alpaca_client.py`) survives.
 The PAPER book's active protections are the ones above: daily/weekly loss
-guards, the 30-open-across-all-markets ceiling + one-per-symbol and
-3-per-sector caps, re-entry cooldown
+guards, the 60-open-across-all-markets ceiling (30 until the sizing-change merge) + the
+$150,000 notional ceiling + one-per-symbol and 6-per-sector-per-market caps,
+re-entry cooldown
 (`VIVEK_BOT_REENTRY_COOLDOWN_DAYS` 7), time stop (`VIVEK_BOT_MAX_HOLD_DAYS`
 28), mark-sanity guard, book integrity gates.
 
-Headline breaker thresholds (all in `scanner/config.py`): portfolio heat 7%,
+HISTORY — the deleted breakers' headline thresholds (the `SCALP_*` / `BYBIT_*`
+constants may still sit in `scanner/config.py`, inert with no reader): portfolio heat 7%,
 drawdown pause 12% / flatten 15%, ≥4 consecutive losses, order notional
 $10–$5,000, daily loss and trade caps, sector/correlation caps, slippage
 reject. Re-verify every number against config before relying on this

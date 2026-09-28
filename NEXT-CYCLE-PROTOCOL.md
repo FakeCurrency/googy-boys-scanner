@@ -103,7 +103,7 @@ Because the pre-registered bundle failed, the next cycle is an **entry/exit rede
 2. **Liquidity honesty on ASX:** thin band is −0.27R; consider raising ASX `VIVEK_BOT_MIN_ADV` in a *future* sim grid (not shipped now).  
 3. **Re-test level split only after stop fix** — G2 may have failed because NASDAQ h4 winners are real, or because noise; do not gate on one OOS draw.  
 4. **Keep 28d time-stop** (V1 already failed in IS pack).  
-5. **Keep paper 30×$5k**; do not scale.
+5. **Keep paper 30×$5k**; do not scale. *(2026-09-27: now 60 × $2.5k — the same $150k book, not a scale-up; see CLAUDE.md SIZING 2.)*
 
 ### 5c. If the owner later forces a *minimal* sim-only shadow bundle (not live)
 

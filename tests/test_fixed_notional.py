@@ -4,6 +4,10 @@ The owner's words: "5k position moving forward on each 30 stocks and a cap of
 150k". So every entry now buys a FIXED dollar amount instead of a risk-derived
 one, and total open exposure is capped at 30 x $5,000.
 
+Resized 2026-09-27 (owner): $2,500 on each of 60 slots, the same $150,000
+ceiling -- half the size, twice the slots. The pins below carry the new
+numbers; the trade-off they hold down is unchanged.
+
 The thing these tests exist to hold down is the TRADE-OFF, not just the maths:
 under fixed sizing the dollars risked per trade is an OUTPUT (it falls out of
 the stop distance), where it used to be the input. A tight stop now risks less
@@ -53,9 +57,10 @@ def _rows(n, **plan_kw):
 def test_the_owner_s_sizing_decision():
     # These two are the owner's, not an implementation detail. Change them only
     # on his say-so, and update this test in the same commit.
-    assert config.VIVEK_BOT_POSITION_NOTIONAL == 5_000
+    # 2026-07-28: 30 x $5,000. 2026-09-27 (owner): 60 x $2,500, same ceiling.
+    assert config.VIVEK_BOT_POSITION_NOTIONAL == 2_500
     assert config.VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL == 150_000
-    # The ceiling is exactly the full book at full size — 30 x $5,000. If these
+    # The ceiling is exactly the full book at full size — 60 x $2,500. If these
     # ever disagree, one of the two caps is dead weight and the book can't
     # actually fill.
     assert (config.VIVEK_BOT_MAX_OPEN_TOTAL * config.VIVEK_BOT_POSITION_NOTIONAL
@@ -65,12 +70,13 @@ def test_the_owner_s_sizing_decision():
 def test_equity_scales_the_loss_guards_not_the_position_size():
     # Equity moved 10k -> 150k WITH the sizing switch, because vivek_guard's
     # limits are equity x pct: at 10k the 3% daily stop would have been $300,
-    # less than one ordinary 1R loss under $5,000 positions, and the bot would
-    # have sat halted. It no longer influences size at all in fixed mode.
+    # less than one ordinary 1R loss under the then-$5,000 positions, and the bot
+    # would have sat halted. It no longer influences size at all in fixed mode
+    # (equity stayed at 150k through the 2026-09-27 resize to $2,500).
     assert config.VIVEK_BOT_ACCOUNT_EQUITY == 150_000
     a = vb.size_position(150_000, entry=100, stop=96)
     b = vb.size_position(10_000, entry=100, stop=96)
-    assert a["notional"] == b["notional"] == pytest.approx(5_000.0)
+    assert a["notional"] == b["notional"] == pytest.approx(2_500.0)
     assert a["units"] == b["units"]
 
 
@@ -79,44 +85,45 @@ def test_equity_scales_the_loss_guards_not_the_position_size():
 def test_fixed_mode_buys_the_configured_dollar_amount():
     s = vb.size_position(150_000, entry=100, stop=96)
     assert s["sizing_mode"] == "fixed_notional"
-    assert s["notional"] == pytest.approx(5_000.0)
-    assert s["units"] == pytest.approx(50.0)          # $5,000 / $100
-    assert s["risk_usd"] == pytest.approx(200.0)      # 50 units x $4 stop
+    assert s["notional"] == pytest.approx(2_500.0)
+    assert s["units"] == pytest.approx(25.0)          # $2,500 / $100
+    assert s["risk_usd"] == pytest.approx(100.0)      # 25 units x $4 stop
     assert not s["leverage_capped"]
 
 
 def test_dollars_risked_now_varies_with_the_stop_distance():
     """THE trade-off of fixed sizing, stated as a test so it can't be lost.
 
-    Same $5,000 position; a 2% stop risks $100, a 12% stop risks $600. Under
+    Same $2,500 position; a 2% stop risks $50, a 12% stop risks $300. Under
     the old risk-% path both would have risked an identical 0.35% of equity.
     """
     tight = vb.size_position(150_000, entry=100, stop=98)     # 2% stop
     wide = vb.size_position(150_000, entry=100, stop=88)      # 12% stop
-    assert tight["notional"] == wide["notional"] == pytest.approx(5_000.0)
-    assert tight["risk_usd"] == pytest.approx(100.0)
-    assert wide["risk_usd"] == pytest.approx(600.0)
+    assert tight["notional"] == wide["notional"] == pytest.approx(2_500.0)
+    assert tight["risk_usd"] == pytest.approx(50.0)
+    assert wide["risk_usd"] == pytest.approx(300.0)
     assert wide["risk_usd"] > tight["risk_usd"] * 5
 
 
 def test_risk_stays_inside_the_band_the_stop_width_rules_imply():
     # MIN_STOP_PCT / MAX_STOP_PCT bound the stop, so they bound 1R too:
-    # $5,000 x 1% = $50 at the tightest, $5,000 x 25% = $1,250 at the widest.
+    # $2,500 x 1% = $25 at the tightest, $2,500 x 25% = $625 at the widest
+    # ($50 / $1,250 at the 2026-07-28 $5,000).
     at_min = vb.size_position(150_000, entry=100,
                               stop=100 * (1 - config.VIVEK_BOT_MIN_STOP_PCT / 100))
     at_max = vb.size_position(150_000, entry=100,
                               stop=100 * (1 - config.VIVEK_BOT_MAX_STOP_PCT / 100))
-    assert at_min["risk_usd"] == pytest.approx(50.0)
-    assert at_max["risk_usd"] == pytest.approx(1_250.0)
+    assert at_min["risk_usd"] == pytest.approx(25.0)
+    assert at_max["risk_usd"] == pytest.approx(625.0)
 
 
 def test_fixed_mode_does_not_clamp_the_derived_risk_pct():
     # risk_pct is REPORTING in fixed mode, not an input. Clamping it to the
     # 0.25-0.5 band would make it a lie about what was actually risked.
-    s = vb.size_position(150_000, entry=100, stop=88)         # $600 = 0.4%
-    assert s["risk_pct"] == pytest.approx(0.4)
-    tiny = vb.size_position(150_000, entry=100, stop=99)      # $50 = 0.0333%
-    assert tiny["risk_pct"] == pytest.approx(0.0333, abs=1e-4)
+    s = vb.size_position(150_000, entry=100, stop=88)         # $300 = 0.2%
+    assert s["risk_pct"] == pytest.approx(0.2)                # below the old floor too
+    tiny = vb.size_position(150_000, entry=100, stop=99)      # $25 = 0.0167%
+    assert tiny["risk_pct"] == pytest.approx(0.0167, abs=1e-4)
     assert tiny["risk_pct"] < 0.25                            # below the old floor
 
 
@@ -159,9 +166,9 @@ def test_degenerate_inputs_return_a_zero_position_in_fixed_mode():
 # ── decide(): the portfolio-notional ceiling ─────────────────────────────────
 
 def test_the_notional_ceiling_stops_entries_once_exposure_is_full():
-    # $145,000 already open elsewhere leaves room for exactly one $5,000 entry.
+    # $147,500 already open elsewhere leaves room for exactly one $2,500 entry.
     d = vb.decide(_rows(6), equity=150_000, market="asx", open_book=[],
-                  max_portfolio_notional=150_000, notional_elsewhere=145_000)
+                  max_portfolio_notional=150_000, notional_elsewhere=147_500)
     assert len(d["plans"]) == 1
     assert d["summary"]["skip_reasons"]["notional_cap"] == 5
     assert d["summary"]["open_notional"] == pytest.approx(150_000.0)
@@ -170,10 +177,10 @@ def test_the_notional_ceiling_stops_entries_once_exposure_is_full():
 def test_positions_already_held_here_consume_the_same_ceiling():
     # The book carries its own notional; it must not be double-counted as
     # "elsewhere" nor ignored.
-    held = [{"symbol": "H1", "direction": "long", "sector": "Banks", "notional": 100_000.0}]
+    held = [{"symbol": "H1", "direction": "long", "sector": "Banks", "notional": 110_000.0}]
     d = vb.decide(_rows(4), equity=150_000, market="asx", open_book=held,
                   max_portfolio_notional=120_000, notional_elsewhere=0)
-    assert len(d["plans"]) == 4                       # 100k + 4 x 5k = 120k exactly
+    assert len(d["plans"]) == 4                       # 110k + 4 x 2.5k = 120k exactly
     d2 = vb.decide(_rows(5), equity=150_000, market="asx", open_book=held,
                    max_portfolio_notional=120_000, notional_elsewhere=0)
     assert len(d2["plans"]) == 4                      # the 5th would breach
@@ -228,11 +235,11 @@ def test_the_notional_gate_is_off_unless_the_runner_asks_for_it():
 
 
 def test_both_ceilings_bind_together_and_the_tighter_one_wins():
-    # 28 open elsewhere (2 slots left) but only $5,000 of notional room (1
+    # 28 open elsewhere (2 slots left) but only $2,500 of notional room (1
     # position). Whichever is tighter must be what stops it.
     d = vb.decide(_rows(6), equity=150_000, market="nasdaq", open_book=[],
                   max_open_total=30, open_elsewhere=28,
-                  max_portfolio_notional=150_000, notional_elsewhere=145_000)
+                  max_portfolio_notional=150_000, notional_elsewhere=147_500)
     assert len(d["plans"]) == 1
     r = d["summary"]["skip_reasons"]
     assert r.get("notional_cap", 0) + r.get("global_cap", 0) == 5
@@ -293,7 +300,8 @@ def test_the_count_wrapper_still_answers_for_callers_that_only_want_slots(book_d
 def test_the_book_row_records_the_sizing_mode_not_just_the_numbers(monkeypatch):
     # The book is a permanent mixture: rows opened before the switch landed on
     # 2026-07-28 03:34 UTC were sized risk-% off a $10,000 equity (~$400
-    # notional, $35 risk), everything after is fixed $5,000. Without the label
+    # notional, $35 risk), everything after is fixed $5,000 (fixed $2,500 from
+    # 2026-09-27 -- both read "fixed_notional"). Without the label
     # the only way to tell them apart is to infer it from the notional, which
     # stops working the first time either number is retuned.
     captured = {}
@@ -311,7 +319,7 @@ def test_the_book_row_records_the_sizing_mode_not_just_the_numbers(monkeypatch):
     pos = vr._ticket_to_position({"plan": plan}, 100.0, "asx", "2026-07-28")
     captured.update(pos or {})
     assert captured["sizing_mode"] == "fixed_notional"
-    assert captured["notional"] == 5_000.0
+    assert captured["notional"] == 2_500.0
 
 
 def test_a_plan_without_the_field_records_an_empty_string_not_a_crash(monkeypatch):

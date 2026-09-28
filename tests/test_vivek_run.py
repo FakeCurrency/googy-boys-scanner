@@ -149,7 +149,7 @@ def test_book_caps_hold_across_runs(tmp_path, monkeypatch):
     _enable(monkeypatch, tmp_path)
     # Pin a small book so this stays about the MECHANISM (a cap survives a
     # restart because it is re-derived from the persisted book) rather than
-    # about the live number — which is now a 30-position ceiling shared across
+    # about the live number — which is now a 60-position ceiling shared across
     # markets, covered in tests/test_vivek_bot_global_cap.py.
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_POSITIONS", 10)
     monkeypatch.setattr(config, "VIVEK_BOT_MIN_SHORTS", 4)   # exercise the 6-long reservation cap
@@ -185,7 +185,10 @@ def test_open_position_marks_to_market_and_closes_on_stop(tmp_path, monkeypatch)
 
 def test_daily_loss_guard_halts_new_entries(tmp_path, monkeypatch):
     _enable(monkeypatch, tmp_path)
-    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.1)   # tiny limit, easy to breach
+    # Tiny limit, easy to breach: 0.05% of $150k = $75 against the ~$123 the
+    # BHP stop-out below realises on a $2,500 position (it was 0.1% = $150
+    # against ~$245 at the pre-2026-09-27 $5,000 -- the same ~1.6x ratio).
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.05)
     uni = [{"symbol": "BHP", "yf": "BHP.AX"}, {"symbol": "CBA", "yf": "CBA.AX"}]
     frames_ok = {"BHP.AX": _frame(101.0), "CBA.AX": _frame(101.0)}
     # open BHP, then stop it out the SAME day → a realised loss on the books
@@ -1121,11 +1124,36 @@ class TestCloseBatchCLI:
                 main()
             assert e.value.code == 2   # argparse usage error
 
-    def test_cli_caps_the_batch_at_30(self, tmp_path, monkeypatch):
+    def test_the_batch_ceiling_is_the_book_cap_not_a_literal(self):
+        # 2026-09-27: the ceiling was a literal 30 that happened to equal the
+        # book cap; the book went to 60 and the literal would have refused a
+        # close-all of a full book. It now derives from config, so it cannot lag.
+        assert vr.CLOSE_BATCH_MAX == config.VIVEK_BOT_MAX_OPEN_TOTAL == 60
+
+    def test_cli_caps_the_batch_at_the_book_cap(self, tmp_path, monkeypatch, capsys):
         _batch_book(tmp_path)
-        entries = [{"symbol": f"S{i}", "market": "asx", "price": 1.0} for i in range(31)]
+        entries = [{"symbol": f"S{i}", "market": "asx", "price": 1.0}
+                   for i in range(vr.CLOSE_BATCH_MAX + 1)]              # 61
         main = self._cli(monkeypatch, tmp_path, json.dumps(entries))
-        with pytest.raises(SystemExit):
+        with pytest.raises(SystemExit) as e:
             main()
+        assert e.value.code == 2                                         # usage error
+        assert f"capped at {vr.CLOSE_BATCH_MAX} entries, got 61" in capsys.readouterr().err
         book = json.loads(_mfile(tmp_path, "asx").read_text())
         assert len(book["open"]) == 2, "an over-cap batch must not touch the book"
+
+    def test_cli_accepts_a_batch_exactly_at_the_book_cap(self, tmp_path, monkeypatch, capsys):
+        # A full 60-slot book must close in ONE run. Two real rows + 58 misses:
+        # the ceiling lets it through, the two land, the rest are skipped.
+        _batch_book(tmp_path)
+        entries = ([{"symbol": "AAA", "market": "asx", "price": 11.0},
+                    {"symbol": "BBB", "market": "asx", "price": 11.0}]
+                   + [{"symbol": f"S{i}", "market": "asx", "price": 1.0}
+                      for i in range(vr.CLOSE_BATCH_MAX - 2)])           # 60 total
+        assert len(entries) == 60
+        main = self._cli(monkeypatch, tmp_path, json.dumps(entries))
+        main()                                                            # must not raise
+        out = capsys.readouterr().out
+        assert "batch: 2 closed, 58 skipped" in out
+        book = json.loads(_mfile(tmp_path, "asx").read_text())
+        assert book["open"] == []
