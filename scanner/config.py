@@ -130,6 +130,89 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
+# IGNITION -- the coil -> ignition lens (2026-09-28, owner: "build it"). REPORT-ONLY.
+# ---------------------------------------------------------------------------
+# Thesis (the QNT move of 24-27 Sep 2026, 71 -> 373 intraday): a coin that
+# has gone QUIET for months -- every moving average stacked on top of each
+# other, volatility and volume at a 1-year low, far below its old highs --
+# then closes out of its base on a multiple of normal volume. The edge, if
+# there is one, lives in the few that run 10R+, so the lens is judged on a
+# TRAILING exit, never a fixed TP ladder (the Specs replay's ladder averaged
+# a 1.03R win: it cut every runner). The engine is scanner/ignition/; it
+# publishes public/data/ignition/<market>.json and writes nothing else.
+#
+# PRE-REGISTERED 2026-09-28, BEFORE the first backtest ran. These values are
+# the hypothesis, not a fit. The backtest publishes a sensitivity grid around
+# them as a ROBUSTNESS read -- picking the best cell off that grid and calling
+# it the rule is exactly the overfit this block exists to prevent. Any change
+# bumps IGNITION_RULESET_VERSION and says why.
+#
+# NOT TRADED, NOT CONFLUENCE: nothing under scanner/broker/ can import the
+# lens and the lens cannot import the bot (tests/test_ignition_fences.py).
+IGNITION_RULESET_VERSION = "1.0.0"
+IGNITION_MARKETS = ("crypto",)   # v1: crypto only. ASX/NASDAQ sub-$0.50 is Specs' ground.
+IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window + warm-up
+IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
+IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
+                                 # a fresh-looking signal off a stale bar is the worst output
+
+# THE COIL -- all four at once, on one bar. Measured on the bar, causally.
+IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
+IGNITION_RIBBON_MAX = 0.12       # highest/lowest of those SMAs - 1. QNT on 23 Sep:
+                                 # 9/26/43 ~64-66 vs 200 ~70 => ~9%.
+IGNITION_ATR_LEN = 14
+IGNITION_RANK_WINDOW = 730       # "quiet" = percentile rank inside the last TWO years.
+                                 # 365 was drafted first and failed on a synthetic flat
+                                 # base before any real data was seen: a base that lasts
+                                 # ~a year becomes its OWN reference, so its volatility
+                                 # stops ranking low exactly when the base is longest.
+                                 # QNT's base ran for years; 2y keeps the pre-base
+                                 # history in the comparison.
+IGNITION_RANK_MIN_PERIODS = 365  # a rank over less than a year is not context
+IGNITION_ATR_PCTL_MAX = 0.25     # ATR%-of-price in the quietest quarter of 2 years
+IGNITION_VOL_AVG_LEN = 20
+IGNITION_VOL_PCTL_MAX = 0.35     # 20d avg volume in the quietest ~third of 2 years
+IGNITION_DD_LOOKBACK = 1095      # "far below its old highs": max High over 3y...
+IGNITION_DD_MIN_PERIODS = 365
+IGNITION_MIN_DRAWDOWN = 0.50     # ...and price at least 50% under it. QNT ~-60% vs
+                                 # its Dec-2024 high; 60% would have been a near-miss.
+
+# THE TRIGGER -- on a completed daily bar.
+IGNITION_COIL_LOOKBACK = 10      # coiled on ANY of the 10 bars before the trigger:
+                                 # the pre-break poke (QNT 23 Sep) can un-coil a bar
+IGNITION_BASE_BARS = 60          # the base = the 60 bars before the trigger bar
+IGNITION_BREAKOUT_TOL = 0.0      # close strictly above the base's highest high
+IGNITION_RVOL_LEN = 20
+IGNITION_RVOL_MIN = 3.0          # trigger-day volume >= 3x its prior 20-day average
+IGNITION_EXT_SMA = 9
+IGNITION_MAX_EXT = 0.60          # not already >60% over the 9-SMA (Specs' latecomer cap)
+IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000}      # 20d avg $ before the trigger
+IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000}   # trigger-day $ (= crypto floor)
+IGNITION_REARM_BARS = 20         # one trigger per move, not one per day of it
+
+# THE PLAN -- what the page shows and the backtest trades.
+IGNITION_STOP_ATR_MULT = 1.0     # stop = max(base low, base high - 1 x pre-trigger ATR):
+                                 # a close back inside the base is a failed breakout
+IGNITION_TRAIL_SMA = 9           # exit at the next open after a daily close < 9-SMA
+IGNITION_WIDE_STOP_PCT = 35.0    # flag (never skip) a plan risking more than this %
+
+# THE PAGE
+IGNITION_FRESH_BARS = 2          # IGNITING = fired on one of the last 2 completed bars
+IGNITION_KEEP_BARS = 20          # then RUNNING / CLOSED stays visible for 20 bars --
+                                 # a setup that works must not vanish (QNT's A row
+                                 # left the deck the day it started to run)
+
+# THE BACKTEST (scanner/ignition/backtest.py, dispatched via ignition.yml)
+IGNITION_BT_PERIOD = "max"       # every bar Yahoo has; the regimes are the point
+IGNITION_BT_COST_PCT = 0.30      # round trip: 2 x 0.10% taker + slippage on thin alts
+IGNITION_BT_MAX_HOLD = 180       # bars; open trades past it exit at the close
+IGNITION_BT_SPLIT_DATE = "2024-01-01"   # in-sample before, out-of-sample from
+IGNITION_BT_RANDOM_DRAWS = 5     # random-timing baseline: draws per real trade
+IGNITION_BT_SEED = 20260928      # every random choice is seeded -> reproducible
+IGNITION_BT_BOOTSTRAP = 2000     # resamples for the expectancy confidence band
+IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
+
+# ---------------------------------------------------------------------------
 # VIVEK — 5.0Trading.Bull style: reactions at the 200 SMA on higher timeframes
 # ---------------------------------------------------------------------------
 # Core idea: price reacting (bounce / reject / break+retest) at the 200 SMA on
@@ -180,6 +263,10 @@ VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% fo
 # the rank depth should scan ~110-130, not 200 — the bottom of the top 200 is
 # thin alt territory where a paper fill is the most fictional, and the
 # liquidity gate is what keeps it honest.
+# NOT DELIVERED UNTIL 2026-09-28: the one-page CoinGecko request asked for
+# per_page=260, above CoinGecko's 250 cap, which silently serves its default
+# 100 -- the universe SHRANK 101 -> 86. universe._fetch_crypto now pages at
+# the cap (tests/test_crypto_universe.py).
 CRYPTO_UNIVERSE_SIZE   = 200
 # Coins pinned into the crypto universe regardless of market-cap rank
 # (2026-07-02, the FLASH gap: not in CoinGecko's top-100 -> invisible to

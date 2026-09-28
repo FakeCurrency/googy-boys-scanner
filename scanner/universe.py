@@ -31,12 +31,32 @@ _CACHE_MIN = {"asx": 400, "nasdaq": 400, "crypto": 40}
 
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 ASX_LISTED_URL = "https://www.asx.com.au/asx/research/ASXListedCompanies.csv"
-# per_page is deliberately ABOVE the target count: stablecoins and wrapped
-# tokens are filtered out of the response (CRYPTO_SKIP), so asking for exactly
-# N coins returns fewer than N tradeable ones. ~30% headroom covers the pegs.
-COINGECKO_URL = ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
-                 f"&order=market_cap_desc&per_page={config.CRYPTO_UNIVERSE_SIZE + 60}"
-                 "&page=1&sparkline=false")
+# CoinGecko's /coins/markets serves at most 250 rows per page. Asking for more
+# is NOT an error: it silently answers with its DEFAULT page of 100. That is
+# exactly what happened when CRYPTO_UNIVERSE_SIZE went 100 -> 200 (owner,
+# 2026-09-21): per_page became 260, the universe SHRANK from 101 names to 86
+# on the first run after the change, and the "top 200" the owner asked for
+# was a top ~100 from then until 2026-09-28 (found chasing the QNT move --
+# most ignitions of that shape happen in ranks 100-250, the band that was
+# being dropped). So pages are fetched at the cap and walked until the target
+# count of TRADEABLE coins is reached: stablecoins and wrapped tokens are
+# filtered OUT of each response, so N rows never yield N tradeable coins.
+COINGECKO_PER_PAGE_MAX = 250
+COINGECKO_MAX_PAGES = 4          # 1,000 rows: a hard stop, never a loop
+
+
+def coingecko_url(page: int, per_page: int = COINGECKO_PER_PAGE_MAX) -> str:
+    """One page of the market-cap-ordered coin list. per_page is CLAMPED to
+    CoinGecko's cap -- a larger value is the silent 100-row fallback above."""
+    per_page = max(1, min(int(per_page), COINGECKO_PER_PAGE_MAX))
+    return ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
+            f"&order=market_cap_desc&per_page={per_page}"
+            f"&page={int(page)}&sparkline=false")
+
+
+# Page 1, kept under its old name: _fetch_failed and the logs name the host
+# through it, and it is the one URL every fetch starts from.
+COINGECKO_URL = coingecko_url(1)
 
 # Stablecoins / wrapped-pegged tokens to skip (they don't trend, so the 200-SMA
 # reaction system is meaningless on them — e.g. a "long" on a $1 peg is noise).
@@ -244,25 +264,49 @@ def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
 
     Maps each coin to a Yahoo ``<SYMBOL>-USD`` ticker; coins Yahoo doesn't carry
     under that exact ticker are dropped at scan time when no data comes back.
+
+    Pages are walked at CoinGecko's 250-row cap until ``limit`` tradeable coins
+    are collected (see COINGECKO_PER_PAGE_MAX for why one oversized page is
+    not an option). Page 1 failing is a failed fetch (cache fallback, as
+    before). A LATER page failing keeps what the earlier pages returned: a
+    universe of the top ~215 is strictly better than falling back to a
+    cached snapshot that is smaller, and the gap is logged, not hidden.
     """
     if limit is None:
         limit = int(getattr(config, "CRYPTO_UNIVERSE_SIZE", 100) or 100)
-    try:
-        data = json.loads(_http_get(COINGECKO_URL, timeout=30, headers=_BROWSER_HEADERS))
-    except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
-        return _fetch_failed("crypto", COINGECKO_URL, exc)
 
     items: list[dict] = []
     seen: set[str] = set()
-    for coin in data:
-        sym = (coin.get("symbol") or "").strip().upper()
-        name = (coin.get("name") or sym).strip()
-        if not sym or _is_stable(sym) or not sym.isalnum() or sym in seen:
-            continue
-        seen.add(sym)
-        items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
-        if len(items) >= limit:
+    for page in range(1, COINGECKO_MAX_PAGES + 1):
+        url = coingecko_url(page)
+        try:
+            data = json.loads(_http_get(url, timeout=30, headers=_BROWSER_HEADERS))
+        except Exception as exc:  # noqa: BLE001 - logged, then falls back
+            if page == 1:
+                return _fetch_failed("crypto", url, exc)
+            print(f"  universe: crypto page {page} FAILED - keeping {len(items)} "
+                  f"coins from earlier pages ({type(exc).__name__}: "
+                  f"{str(exc)[:120]})", flush=True)
             break
+        if not isinstance(data, list):
+            if page == 1:
+                return _fetch_failed("crypto", url, ValueError(
+                    f"unexpected payload type {type(data).__name__}"))
+            break
+        for coin in data:
+            sym = (coin.get("symbol") or "").strip().upper()
+            name = (coin.get("name") or sym).strip()
+            if not sym or _is_stable(sym) or not sym.isalnum() or sym in seen:
+                continue
+            seen.add(sym)
+            items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
+            if len(items) >= limit:
+                break
+        # Stop when the target is met, or when CoinGecko ran out of coins (a
+        # short page is the last page -- asking again would only repeat it).
+        if len(items) >= limit or len(data) < COINGECKO_PER_PAGE_MAX:
+            break
+        time.sleep(1.5)   # free-tier rate limit is per minute; be polite
     # Pinned extras (2026-07-02): coins the owner tracks that must never fall
     # out of the universe because their market-cap rank slips below the cut. Coins Yahoo doesn't carry are dropped at scan time as usual.
     for sym in getattr(config, "CRYPTO_EXTRA_SYMBOLS", []):
