@@ -14,6 +14,11 @@ Australia). Brand name everywhere: **Vivek 5.0** — never "Googy Boys
 Scanner", never "Vivek's Beta Scanner" as the primary name ("BETA SCANNER"
 as a subtitle under the wordmark is fine).
 
+**Personal use only (owner, 2026-09-28).** Everything here is for the owner's
+own trading. No disclaimers are needed anywhere (the Discord digest included),
+there is no paid or Discord business goal, and compliance or "reads like
+advice" flags are not wanted.
+
 **The lenses** (see ROADMAP.md for the honest project state). All three feed
 the confluence machinery. (A fourth, TURTLE, existed 2026-08-21 → 2026-09-17
 and was REMOVED ENTIRELY — see the TURTLE note near the end.) Two more lenses
@@ -2368,8 +2373,11 @@ The facts a later session must not re-derive:
 6. **Pinned deps:** `requirements.txt` pins the trade-path packages exactly.
    Bump deliberately (edit pin → pytest → push), never loosen to `>=`.
 7. **Atomic writes** for any journal/state JSON (temp + `os.replace`).
-8. **Push to `main`** — production deploys only from `main`; other branches
-   get a Cloudflare preview URL, never the live site.
+8. **The owner says what to do; Claude ships it (owner, 2026-09-28).** Work on
+   a branch, open a PR, and once the checks are green merge it with **Rebase
+   and merge** — never squash, never a merge commit (the owner's `SHIP.bat`
+   convention). No need to ask before merging. Production deploys only from
+   `main`; other branches get a Cloudflare preview URL, never the live site.
 9. **ASCII-only prints** in scanner code — Windows consoles are cp1252 and
    choke on arrows/em-dashes.
 10. **CF Functions** are Workers runtime: no Node builtins; KV binding
