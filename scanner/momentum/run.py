@@ -179,7 +179,10 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
                     reason = f"stale frame ({age} sessions old)"
                     stale += 1
             if reason is not None:
-                skipped[reason.split(" (")[0]] = skipped.get(reason.split(" (")[0], 0) + 1
+                # by GATE, not by value: the floor reasons carry each coin's
+                # own number, so the raw text would give every coin its own key
+                key = gates.reason_key(reason)
+                skipped[key] = skipped.get(key, 0) + 1
                 continue
 
             row = screen_symbol(frame, cfg, symbol=symbol, market=market)

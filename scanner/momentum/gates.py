@@ -165,6 +165,18 @@ def gate_frame(frame: pd.DataFrame, market: str, *, cfg=None,
     return None
 
 
+def reason_key(reason: str) -> str:
+    """'price 0.0070 below the asx floor 0.0200' -> 'price'; the words before
+    the first number or bracket, so a TALLY of gate reasons groups by gate
+    rather than by value. The screen's `skipped_by_reason` and the replay's
+    `signals_gated` both count through this, so the two published files
+    bucket identically. (The screen used `reason.split(" (")[0]`, which only
+    strips a bracketed tail: every coin under the turnover or price floor
+    became its own key, its own value printed in it.)"""
+    m = re.match(r"[a-z][a-z\- ]*[a-z]", reason)
+    return m.group(0) if m else reason
+
+
 def directions_agree(row: Dict[str, Any]) -> bool:
     """Mode C's test: both rules fired AND their directions match.
 

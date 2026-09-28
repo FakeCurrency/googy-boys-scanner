@@ -369,6 +369,33 @@ def test_a_stale_frame_is_gated_and_counted(monkeypatch, market_fixture):
     assert any("stale" in k for k in p["summary"]["skipped_by_reason"])
 
 
+def test_two_coins_under_the_turnover_floor_land_in_ONE_bucket(market_fixture):
+    """The floor reasons carry each coin's OWN number ("turnover 83 below the
+    asx floor 250000"), and the screen used to key on the raw text -- so the
+    published crypto file listed every thin coin as its own reason with a
+    count of 1. Tallied by gate now, the same rule the replay's
+    `signals_gated` uses, so the two files bucket identically."""
+    rows, frames = market_fixture
+    rows = rows + [{"symbol": "THIN2", "name": "Thin Two", "sector": "Materials", "yf": "THIN2.AX"}]
+    frames = dict(frames, **{"THIN2.AX": frame(walk(9), vol=25.0)})
+    p = R.screen_market("asx", cfg=C.DEFAULTS.replace(mode="B"), frames=frames, rows=rows)
+    by = p["summary"]["skipped_by_reason"]
+    assert by["turnover"] == 2, by
+    assert by["price"] == 1, by
+    assert not any(ch.isdigit() for k in by for ch in k if k.startswith(("turnover", "price"))), by
+    assert sum(by.values()) == p["summary"]["skipped_gates"]
+
+
+def test_the_screen_and_the_replay_bucket_through_one_rule():
+    from scanner.momentum import backtest as BT
+    from scanner.momentum import gates as G
+    assert BT._reason_key is G.reason_key
+    assert G.reason_key("turnover 3622139 below the crypto floor 5000000") == "turnover"
+    assert G.reason_key("price 0.0070 below the asx floor 0.0200") == "price"
+    assert G.reason_key("stale frame (4 sessions old)") == "stale frame"
+    assert G.reason_key("turnover not computable") == "turnover not computable"
+
+
 def test_the_default_run_is_mode_A_and_a_one_bar_window(market_fixture):
     rows, frames = market_fixture
     p = R.screen_market("asx", frames=frames, rows=rows)
