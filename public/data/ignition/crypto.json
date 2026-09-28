@@ -1,0 +1,886 @@
+{
+  "schema_version": 1,
+  "lens": "ignition",
+  "market": "crypto",
+  "generated_at": "2026-09-28T02:00:11+00:00",
+  "ruleset_version": "1.0.0",
+  "timeframe": "1d",
+  "last_closed_bar": "2026-09-26",
+  "report_only": true,
+  "params": {
+    "ribbon_max": 0.12,
+    "atr_pctl_max": 0.25,
+    "vol_pctl_max": 0.35,
+    "min_drawdown": 0.5,
+    "coil_lookback": 10,
+    "breakout_tol": 0.0,
+    "rvol_min": 3.0,
+    "max_ext": 0.6,
+    "min_base_turnover": 1000000.0,
+    "min_trigger_turnover": 3000000.0,
+    "rearm_bars": 20,
+    "stop_atr_mult": 1.0,
+    "require_coil": true,
+    "require_rvol": true
+  },
+  "rules": {
+    "fresh_bars": 2,
+    "keep_bars": 20,
+    "base_bars": 60,
+    "trail_sma": 9,
+    "wide_stop_pct": 35.0
+  },
+  "summary": {
+    "universe": 201,
+    "downloaded": 137,
+    "screened": 126,
+    "skipped": {
+      "short history": 10,
+      "stale frame": 1
+    },
+    "counts": {
+      "IGNITING": 1,
+      "RUNNING": 7,
+      "CLOSED": 1,
+      "COILED": 18,
+      "provisional": 0,
+      "igniting_confirmed": 1
+    },
+    "errors": 0,
+    "cache": {
+      "fresh": 137,
+      "reused": 0,
+      "merged": 137,
+      "universe": 201,
+      "stale_dropped": 0
+    },
+    "elapsed_s": 71.6
+  },
+  "results": [
+    {
+      "symbol": "AXS",
+      "name": "Axie Infinity",
+      "yf": "AXS-USD",
+      "trigger_date": "2026-09-25",
+      "trigger_close": 1.18858004,
+      "entry": 1.18857896,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-26",
+      "bars_since": 1,
+      "rvol": 5.32,
+      "ext_pct": 12.4,
+      "turnover_trigger": 105577532.0,
+      "turnover_base": 19842290.0,
+      "base": {
+        "high": 1.15625501,
+        "low": 0.80318999,
+        "bars": 60,
+        "range_pct": 44.0
+      },
+      "stop": 1.09765789,
+      "risk_pct": 7.6,
+      "wide_stop": false,
+      "mm_target": 1.50932002,
+      "mm_passed": false,
+      "mm_r": 3.53,
+      "coil": {
+        "ribbon_pct": 11.75,
+        "atr_pctl": 16.4,
+        "vol_pctl": 14.5,
+        "drawdown_pct": 92.0,
+        "coiled": true,
+        "coiled_bars": 1
+      },
+      "mfe_r": 0.43,
+      "state": "IGNITING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 1.15649998,
+      "change_pct": -2.7,
+      "r_now": -0.35,
+      "trail": 1.082288
+    },
+    {
+      "symbol": "ONDO",
+      "name": "Ondo",
+      "yf": "ONDO-USD",
+      "trigger_date": "2026-09-24",
+      "trigger_close": 0.523489,
+      "entry": 0.52367598,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-25",
+      "bars_since": 2,
+      "rvol": 5.28,
+      "ext_pct": 23.8,
+      "turnover_trigger": 873874978.0,
+      "turnover_base": 165611618.0,
+      "base": {
+        "high": 0.46236601,
+        "low": 0.32164499,
+        "bars": 60,
+        "range_pct": 43.8
+      },
+      "stop": 0.43475822,
+      "risk_pct": 17.0,
+      "wide_stop": false,
+      "mm_target": 0.60308704,
+      "mm_passed": false,
+      "mm_r": 0.89,
+      "coil": {
+        "ribbon_pct": 20.15,
+        "atr_pctl": 38.1,
+        "vol_pctl": 51.8,
+        "drawdown_pct": 80.7,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.61,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.57538998,
+      "change_pct": 9.9,
+      "r_now": 0.58,
+      "trail": 0.46377867
+    },
+    {
+      "symbol": "LTC",
+      "name": "Litecoin",
+      "yf": "LTC-USD",
+      "trigger_date": "2026-09-24",
+      "trigger_close": 71.91226959,
+      "entry": 71.91249847,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-25",
+      "bars_since": 2,
+      "rvol": 5.09,
+      "ext_pct": 20.0,
+      "turnover_trigger": 1663409933.0,
+      "turnover_base": 326809827.0,
+      "base": {
+        "high": 64.48930359,
+        "low": 43.37860489,
+        "bars": 60,
+        "range_pct": 48.7
+      },
+      "stop": 61.77829372,
+      "risk_pct": 14.1,
+      "wide_stop": false,
+      "mm_target": 85.60000229,
+      "mm_passed": false,
+      "mm_r": 1.35,
+      "coil": {
+        "ribbon_pct": 14.03,
+        "atr_pctl": 42.7,
+        "vol_pctl": 33.3,
+        "drawdown_pct": 57.8,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.3,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 70.26399994,
+      "change_pct": -2.3,
+      "r_now": -0.16,
+      "trail": 64.30209902
+    },
+    {
+      "symbol": "XEC",
+      "name": "eCash",
+      "yf": "XEC-USD",
+      "trigger_date": "2026-09-22",
+      "trigger_close": 9e-06,
+      "entry": 9e-06,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-23",
+      "bars_since": 4,
+      "rvol": 5.21,
+      "ext_pct": 15.7,
+      "turnover_trigger": 25031691.0,
+      "turnover_base": 4805055.0,
+      "base": {
+        "high": 8e-06,
+        "low": 6e-06,
+        "bars": 60,
+        "range_pct": 33.3
+      },
+      "stop": 7.66e-06,
+      "risk_pct": 14.9,
+      "wide_stop": false,
+      "mm_target": 1e-05,
+      "mm_passed": false,
+      "mm_r": 0.75,
+      "coil": {
+        "ribbon_pct": 14.86,
+        "atr_pctl": 19.6,
+        "vol_pctl": 13.4,
+        "drawdown_pct": 90.7,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.75,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 8.74e-06,
+      "change_pct": -2.9,
+      "r_now": -0.19,
+      "trail": 8.56e-06
+    },
+    {
+      "symbol": "QNT",
+      "name": "Quant",
+      "yf": "QNT-USD",
+      "trigger_date": "2026-09-22",
+      "trigger_close": 73.7372818,
+      "entry": 73.73727417,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-23",
+      "bars_since": 4,
+      "rvol": 3.24,
+      "ext_pct": 14.1,
+      "turnover_trigger": 21456582.0,
+      "turnover_base": 6631168.0,
+      "base": {
+        "high": 69.73288727,
+        "low": 55.55501175,
+        "bars": 60,
+        "range_pct": 25.5
+      },
+      "stop": 67.03554336,
+      "risk_pct": 9.1,
+      "wide_stop": false,
+      "mm_target": 83.91076279,
+      "mm_passed": false,
+      "mm_r": 1.52,
+      "coil": {
+        "ribbon_pct": 8.81,
+        "atr_pctl": 13.7,
+        "vol_pctl": 6.0,
+        "drawdown_pct": 60.9,
+        "coiled": true,
+        "coiled_bars": 19
+      },
+      "mfe_r": 12.3,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 258.33999634,
+      "change_pct": 250.4,
+      "r_now": 27.55,
+      "trail": 82.90683111
+    },
+    {
+      "symbol": "AKT",
+      "name": "Akash Network",
+      "yf": "AKT-USD",
+      "trigger_date": "2026-09-21",
+      "trigger_close": 0.67147899,
+      "entry": 0.67147899,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-22",
+      "bars_since": 5,
+      "rvol": 5.21,
+      "ext_pct": 22.0,
+      "turnover_trigger": 24018137.0,
+      "turnover_base": 4606991.0,
+      "base": {
+        "high": 0.61230701,
+        "low": 0.40880501,
+        "bars": 60,
+        "range_pct": 49.8
+      },
+      "stop": 0.57843659,
+      "risk_pct": 13.9,
+      "wide_stop": false,
+      "mm_target": 0.81580901,
+      "mm_passed": false,
+      "mm_r": 1.55,
+      "coil": {
+        "ribbon_pct": 7.49,
+        "atr_pctl": 11.6,
+        "vol_pctl": 16.2,
+        "drawdown_pct": 91.5,
+        "coiled": true,
+        "coiled_bars": 4
+      },
+      "mfe_r": 1.04,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.67619997,
+      "change_pct": 0.7,
+      "r_now": 0.05,
+      "trail": 0.64886267
+    },
+    {
+      "symbol": "HBAR",
+      "name": "Hedera",
+      "yf": "HBAR-USD",
+      "trigger_date": "2026-09-21",
+      "trigger_close": 0.093191,
+      "entry": 0.093191,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-22",
+      "bars_since": 5,
+      "rvol": 3.0,
+      "ext_pct": 17.2,
+      "turnover_trigger": 194390732.0,
+      "turnover_base": 64714883.0,
+      "base": {
+        "high": 0.089659,
+        "low": 0.064297,
+        "bars": 60,
+        "range_pct": 39.4
+      },
+      "stop": 0.08575139,
+      "risk_pct": 8.0,
+      "wide_stop": false,
+      "mm_target": 0.115021,
+      "mm_passed": false,
+      "mm_r": 2.93,
+      "coil": {
+        "ribbon_pct": 9.27,
+        "atr_pctl": 18.5,
+        "vol_pctl": 17.7,
+        "drawdown_pct": 78.4,
+        "coiled": true,
+        "coiled_bars": 6
+      },
+      "mfe_r": 1.07,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.09653,
+      "change_pct": 3.6,
+      "r_now": 0.45,
+      "trail": 0.09019411
+    },
+    {
+      "symbol": "AVAX",
+      "name": "Avalanche",
+      "yf": "AVAX-USD",
+      "trigger_date": "2026-09-20",
+      "trigger_close": 11.3370657,
+      "entry": 11.33731747,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-21",
+      "bars_since": 6,
+      "rvol": 4.14,
+      "ext_pct": 37.5,
+      "turnover_trigger": 1483182294.0,
+      "turnover_base": 358484920.0,
+      "base": {
+        "high": 10.11745453,
+        "low": 6.05973196,
+        "bars": 60,
+        "range_pct": 67.0
+      },
+      "stop": 9.65911848,
+      "risk_pct": 14.8,
+      "wide_stop": false,
+      "mm_target": 14.1751771,
+      "mm_passed": false,
+      "mm_r": 1.69,
+      "coil": {
+        "ribbon_pct": 9.81,
+        "atr_pctl": 13.7,
+        "vol_pctl": 50.7,
+        "drawdown_pct": 84.5,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.26,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 10.82400036,
+      "change_pct": -4.5,
+      "r_now": -0.31,
+      "trail": 10.45574909
+    },
+    {
+      "symbol": "ICP",
+      "name": "Internet Computer",
+      "yf": "ICP-USD",
+      "trigger_date": "2026-09-07",
+      "trigger_close": 2.99312711,
+      "entry": 2.99310493,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-08",
+      "bars_since": 19,
+      "rvol": 3.16,
+      "ext_pct": 16.8,
+      "turnover_trigger": 183869993.0,
+      "turnover_base": 58149874.0,
+      "base": {
+        "high": 2.80223393,
+        "low": 2.00397801,
+        "bars": 60,
+        "range_pct": 39.8
+      },
+      "stop": 2.6632467,
+      "risk_pct": 11.0,
+      "wide_stop": false,
+      "mm_target": 3.60048985,
+      "mm_passed": false,
+      "mm_r": 1.84,
+      "coil": {
+        "ribbon_pct": 9.78,
+        "atr_pctl": 15.5,
+        "vol_pctl": 13.4,
+        "drawdown_pct": 86.9,
+        "coiled": true,
+        "coiled_bars": 19
+      },
+      "mfe_r": 0.33,
+      "exit_reason": "trail",
+      "exit_date": "2026-09-12",
+      "exit_price": 2.7234931,
+      "exit_r": -0.82,
+      "exit_pending": false,
+      "state": "CLOSED",
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 3.0861001,
+      "change_pct": 3.1,
+      "r_now": 0.28,
+      "trail": 3.00760955
+    },
+    {
+      "symbol": "SUN",
+      "name": "Sun Token",
+      "yf": "SUN-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 5.96,
+        "atr_pctl": 3.3,
+        "vol_pctl": 4.4,
+        "drawdown_pct": 61.0,
+        "coiled": true,
+        "coiled_bars": 49,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.018352,
+        "low": 0.015989,
+        "bars": 60
+      },
+      "breakout_level": 0.018352,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.01697055
+    },
+    {
+      "symbol": "GNO",
+      "name": "Gnosis",
+      "yf": "GNO-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 0.9,
+        "atr_pctl": 5.2,
+        "vol_pctl": 0.1,
+        "drawdown_pct": 73.5,
+        "coiled": true,
+        "coiled_bars": 11,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 136.38343811,
+        "low": 102.09578705,
+        "bars": 60
+      },
+      "breakout_level": 136.38343811,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 118.87000275
+    },
+    {
+      "symbol": "VIRTUAL",
+      "name": "Virtuals Protocol",
+      "yf": "VIRTUAL-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.74,
+        "atr_pctl": 9.5,
+        "vol_pctl": 32.5,
+        "drawdown_pct": 84.4,
+        "coiled": true,
+        "coiled_bars": 11,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.82929301,
+        "low": 0.51553202,
+        "bars": 60
+      },
+      "breakout_level": 0.82929301,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.82805312
+    },
+    {
+      "symbol": "FLOKI",
+      "name": "FLOKI",
+      "yf": "FLOKI-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.99,
+        "atr_pctl": 16.2,
+        "vol_pctl": 22.1,
+        "drawdown_pct": 91.6,
+        "coiled": true,
+        "coiled_bars": 11,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 3.1e-05,
+        "low": 2e-05,
+        "bars": 60
+      },
+      "breakout_level": 3.1e-05,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 2.843e-05
+    },
+    {
+      "symbol": "CFX",
+      "name": "Conflux",
+      "yf": "CFX-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.1,
+        "atr_pctl": 7.3,
+        "vol_pctl": 10.1,
+        "drawdown_pct": 89.8,
+        "coiled": true,
+        "coiled_bars": 10,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.056604,
+        "low": 0.037524,
+        "bars": 60
+      },
+      "breakout_level": 0.057608,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.05594453
+    },
+    {
+      "symbol": "FARTCOIN",
+      "name": "Fartcoin",
+      "yf": "FARTCOIN-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.8,
+        "atr_pctl": 11.8,
+        "vol_pctl": 9.8,
+        "drawdown_pct": 92.6,
+        "coiled": true,
+        "coiled_bars": 7,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.22006901,
+        "low": 0.1181,
+        "bars": 60
+      },
+      "breakout_level": 0.22006901,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.19320001
+    },
+    {
+      "symbol": "HTX",
+      "name": "HTX DAO",
+      "yf": "HTX-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 0.0,
+        "atr_pctl": 0.1,
+        "vol_pctl": 31.8,
+        "drawdown_pct": 50.0,
+        "coiled": true,
+        "coiled_bars": 6,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 2e-06,
+        "low": 2e-06,
+        "bars": 60
+      },
+      "breakout_level": 2e-06,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 1.7e-06
+    },
+    {
+      "symbol": "FLR",
+      "name": "Flare",
+      "yf": "FLR-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.36,
+        "atr_pctl": 19.7,
+        "vol_pctl": 13.0,
+        "drawdown_pct": 86.4,
+        "coiled": true,
+        "coiled_bars": 2,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.007966,
+        "low": 0.005858,
+        "bars": 60
+      },
+      "breakout_level": 0.007966,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.007125
+    },
+    {
+      "symbol": "SKY",
+      "name": "Sky",
+      "yf": "SKY-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 12.0,
+        "atr_pctl": 4.7,
+        "vol_pctl": 4.0,
+        "drawdown_pct": 80.8,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.014877,
+        "low": 0.014099,
+        "bars": 60
+      },
+      "breakout_level": 0.014877,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.01411662
+    },
+    {
+      "symbol": "XDC",
+      "name": "XDC Network",
+      "yf": "XDC-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 4.4,
+        "atr_pctl": 26.6,
+        "vol_pctl": 15.8,
+        "drawdown_pct": 80.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-22"
+      },
+      "base": {
+        "high": 0.03191,
+        "low": 0.025858,
+        "bars": 60
+      },
+      "breakout_level": 0.03191,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.03315649
+    },
+    {
+      "symbol": "DOGE",
+      "name": "Dogecoin",
+      "yf": "DOGE-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.6,
+        "atr_pctl": 35.8,
+        "vol_pctl": 34.9,
+        "drawdown_pct": 80.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-22"
+      },
+      "base": {
+        "high": 0.105281,
+        "low": 0.067973,
+        "bars": 60
+      },
+      "breakout_level": 0.105281,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.0955
+    },
+    {
+      "symbol": "LUNC",
+      "name": "Terra Luna Classic",
+      "yf": "LUNC-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.36,
+        "atr_pctl": 21.0,
+        "vol_pctl": 39.6,
+        "drawdown_pct": 79.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-22"
+      },
+      "base": {
+        "high": 6.4e-05,
+        "low": 4.6e-05,
+        "bars": 60
+      },
+      "breakout_level": 6.4e-05,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 5.532e-05
+    },
+    {
+      "symbol": "XPL",
+      "name": "Plasma",
+      "yf": "XPL-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.36,
+        "atr_pctl": 27.1,
+        "vol_pctl": 59.2,
+        "drawdown_pct": 93.4,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-22"
+      },
+      "base": {
+        "high": 0.124776,
+        "low": 0.072071,
+        "bars": 60
+      },
+      "breakout_level": 0.124776,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.10372
+    },
+    {
+      "symbol": "M",
+      "name": "MemeCore",
+      "yf": "M-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 12.55,
+        "atr_pctl": 31.6,
+        "vol_pctl": 61.3,
+        "drawdown_pct": 97.4,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-24"
+      },
+      "base": {
+        "high": 0.000348,
+        "low": 0.000235,
+        "bars": 60
+      },
+      "breakout_level": 0.000348,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.00029687
+    },
+    {
+      "symbol": "APE",
+      "name": "ApeCoin",
+      "yf": "APE-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 13.24,
+        "atr_pctl": 12.1,
+        "vol_pctl": 9.5,
+        "drawdown_pct": 99.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-25"
+      },
+      "base": {
+        "high": 0.165383,
+        "low": 0.120501,
+        "bars": 60
+      },
+      "breakout_level": 0.165383,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.16196969
+    },
+    {
+      "symbol": "ADA",
+      "name": "Cardano",
+      "yf": "ADA-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 13.8,
+        "atr_pctl": 33.7,
+        "vol_pctl": 35.5,
+        "drawdown_pct": 80.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-22"
+      },
+      "base": {
+        "high": 0.26161599,
+        "low": 0.154101,
+        "bars": 60
+      },
+      "breakout_level": 0.264281,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.25426999
+    },
+    {
+      "symbol": "MANA",
+      "name": "Decentraland",
+      "yf": "MANA-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 13.89,
+        "atr_pctl": 11.9,
+        "vol_pctl": 10.0,
+        "drawdown_pct": 89.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-24"
+      },
+      "base": {
+        "high": 0.093036,
+        "low": 0.062129,
+        "bars": 60
+      },
+      "breakout_level": 0.093227,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.0909
+    },
+    {
+      "symbol": "EIGEN",
+      "name": "EigenCloud (prev. EigenLayer)",
+      "yf": "EIGEN-USD",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 21.78,
+        "atr_pctl": 11.7,
+        "vol_pctl": 25.4,
+        "drawdown_pct": 95.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-22"
+      },
+      "base": {
+        "high": 0.26888201,
+        "low": 0.164846,
+        "bars": 60
+      },
+      "breakout_level": 0.28410199,
+      "provisional": false,
+      "last_bar": "2026-09-26",
+      "price": 0.26987001
+    }
+  ],
+  "errors": []
+}
