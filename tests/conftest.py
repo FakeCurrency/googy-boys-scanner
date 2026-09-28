@@ -34,6 +34,23 @@ def _isolated_frame_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(_data, "_CACHE_DIR", tmp_path / "frames")
 
 
+@pytest.fixture(autouse=True)
+def _no_exchange_network(monkeypatch):
+    """No test may reach a real exchange (2026-09-28). The shipped default is
+    config.CRYPTO_DATA_SOURCE = "exchange", so without this every crypto path
+    under test would try Binance/Bybit/Coinbase for real -- slow, flaky, and
+    live network from CI. Every venue refuses instead; data.fetch() then falls
+    back to `download`, which the tests already stub, so they read exactly
+    as before. A test that exercises the exchange path installs its own fake
+    `_get_json` (tests/test_exchange_data.py), which replaces this one."""
+    from scanner import exchange_data as _ex
+
+    def _refuse(url, timeout):
+        raise _ex.SourceDead("network disabled in tests")
+
+    monkeypatch.setattr(_ex, "_get_json", _refuse)
+
+
 @pytest.fixture
 def today():
     """Current AEST session-day key (matches how positions are tagged)."""

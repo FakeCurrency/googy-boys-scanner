@@ -26,6 +26,15 @@ _CACHE_DIR = pathlib.Path(__file__).resolve().parents[1] / ".cache" / "frames"
 
 
 def _cache_path(market_key: str) -> pathlib.Path:
+    """One cache file per market -- and per SOURCE for crypto (2026-09-28).
+    The pre-switch crypto cache holds Yahoo frames, including the wrong-token
+    series the identity check now refuses (M, MNT: Yahoo priced different
+    tokens at ~$0.0003). Reading it after the switch would back-fill them for
+    up to FRAME_CACHE_MAX_AGE_DAYS, so exchange mode reads and writes its own
+    file and starts clean; a revert to "yahoo" goes back to the old one."""
+    if (market_key == "crypto" or market_key.endswith("-crypto")) and \
+            str(getattr(config, "CRYPTO_DATA_SOURCE", "yahoo")) == "exchange":
+        return _CACHE_DIR / f"{market_key}.exchange.pkl.gz"   # also ignition-crypto
     return _CACHE_DIR / f"{market_key}.pkl.gz"
 
 
@@ -103,9 +112,23 @@ def _frame_age_days(df: pd.DataFrame, tz: str | None = None) -> int:
 
 
 def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
-                     tickers: list[str]) -> tuple[dict[str, pd.DataFrame], dict]:
+                     tickers: list[str],
+                     refused=(), rejected_venues: dict | None = None
+                     ) -> tuple[dict[str, pd.DataFrame], dict]:
     """Fill tickers Yahoo dropped this run from the last-good cache, then refresh
     the cache with everything we now hold (capped to the current universe).
+
+    `refused` / `rejected_venues` (fetch()'s report): coins with no frame this
+    run whose listings were REJECTED -- a same-ticker stranger (identity) or a
+    delisted pair's frozen klines (age). The cache only knows a ticker is
+    missing, not why, so for these it must not hand back a frame FROM A
+    REJECTED VENUE (the stranger it just refused, or the same frozen klines),
+    nor one whose venue it cannot tell: such a coin is not back-filled and is
+    dropped from the saved cache (2026-09-28 reviews). A cached frame from a
+    venue that was NOT rejected -- LIT's Yahoo series, on a run where Yahoo
+    was merely throttled and only Binance's dead pair answered -- is the
+    ordinary transient miss the cache exists for, and is reused as before.
+    Without the venue map every refused coin is blocked.
 
     Returns (merged_frames, stats) where stats reports fresh vs reused counts so
     the scan can stamp honest coverage/aging.
@@ -113,7 +136,14 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     cache = load_frame_cache(market_key)
     merged = dict(fresh)
     reused = 0
-    wanted = set(tickers)
+    rv = rejected_venues or {}
+    blocked = set()
+    for t in set(refused or ()):
+        v = venue_of(cache, t)
+        bad = rv.get(t)
+        if bad is None or v is None or v in bad:
+            blocked.add(t)
+    wanted = set(tickers) - blocked
     # A cached frame is only DATA for so long (TOP100 #24). Past the ceiling it
     # is a fossil, and a fossil's last close is published as a live mark and used
     # to mark held positions and test their stops. See FRAME_CACHE_MAX_AGE_DAYS.
@@ -140,7 +170,8 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     # so nothing reaches the scanner off it and the only cost is disk.
     save_frame_cache(market_key, {t: df for t, df in merged.items() if t in wanted})
     stats = {"fresh": len(fresh), "reused": reused, "merged": len(merged),
-             "universe": len(tickers), "stale_dropped": len(fossils)}
+             "universe": len(tickers), "stale_dropped": len(fossils),
+             "refused": len(blocked & set(tickers))}
     if reused:
         log.info("frame cache: reused %d cached tickers Yahoo dropped (now %d/%d)",
                  reused, len(merged), len(tickers))
@@ -320,3 +351,316 @@ def download(tickers: list[str], period: str | None = None,
         log.error("download: ZERO tickers returned for %d requested — upstream data source likely down", total)
 
     return frames
+
+
+# ── market-aware bars: the ONE entry point for anything that prices crypto ───
+
+# A pinned venue -> the kline sources that ARE that venue (Binance's public
+# API and its market-data mirror serve the same candles).
+_PIN_SOURCES = {"binance_vision": ("binance_vision", "binance"),
+                "binance": ("binance_vision", "binance"),
+                "bybit": ("bybit",), "coinbase": ("coinbase",)}
+
+
+def fetch(market_key: str, tickers: list[str], period: str | None = None,
+          interval: str = "1d", ref_prices: dict | None = None,
+          ref_tol: float | None = None, pin: dict | None = None,
+          anchors: dict | None = None, require_identity: bool = False,
+          **kw) -> tuple[dict[str, pd.DataFrame], dict]:
+    """({ticker: frame}, source report) -- what the scan, the paper bot and
+    the kill switch price through, so crypto can never come from two sources
+    depending on which path asked (owner, 2026-09-28: "make the VIVEK crypto
+    scan and paper bot go to the binance or bybit ... so it's all in SYNC").
+
+    crypto with config.CRYPTO_DATA_SOURCE == "exchange": public exchange daily
+    klines per coin (scanner/exchange_data.py -- exact 00:00 UTC closes, quote
+    volume), Yahoo only for the coins no exchange lists (and only when
+    CRYPTO_YAHOO_FALLBACK). Every other market, or "yahoo": `download()`
+    exactly as before. Tickers keep their Yahoo spelling ("QNT-USD") either
+    way, so every caller's keys are unchanged.
+
+    `interval` "1d" (the scan, the bot, the lens) or "4h" (the display-only
+    4H plans). Yahoo has no 4h, so a Yahoo leg asks for 1h and vivek's
+    resampler buckets it -- the same bins an exchange's 4h candles already
+    sit in.
+
+    `ref_prices` {ticker: CoinGecko price} arms the IDENTITY CHECK
+    (`ref_tol`, default config.CRYPTO_IDENTITY_TOL; build the kwargs with
+    identity_kwargs, which pins instead when the prices are old): a source --
+    exchange OR Yahoo -- whose latest close is not that coin's price is
+    rejected for it, and a coin no source confirms is left out rather than
+    scanned as a same-ticker stranger. Such tickers -- and those whose only
+    listing was a delisted pair's frozen klines -- are listed in
+    report["refused"] so the frame cache never back-fills them.
+
+    `anchors` {ticker: (YYYY-MM-DD, recorded price)} prove identity WITHOUT a
+    current reference: a venue's frame must reproduce a price the system
+    already recorded for the coin on that date (exchange_data.anchor_ok). An
+    anchor beats a reference -- a real move since cannot fail it -- and is
+    what the kill switch, the book's off-universe fetch and a CoinGecko-down
+    universe use (held_price_kwargs / identity_kwargs). `require_identity`
+    refuses a frame nothing vouches for. Each accepted frame records how it
+    was checked in attrs["identity"] ("anchor" | "ref" | "none").
+
+    `pin` {ticker: venue} asks that venue only (the 4H plans, drawn from the
+    venue the daily bars came from). A pinned venue that fails gives no frame.
+
+    The report: `source_of` {ticker: venue}, `by_source` counts, `dead`
+    venues (refused the runner), `yahoo_fallback` count, `identity_rejected`,
+    `stale_rejected` (a venue whose newest bar is too old: a delisted pair),
+    `refused`, and `unchecked` (tickers priced with no reference at all).
+    """
+    tickers = list(tickers)
+    yahoo_iv = {"4h": "1h"}.get(interval, interval)
+    # A daily Yahoo leg keeps the exact call shape `download` always had.
+    ykw = dict(kw) if yahoo_iv == "1d" else {**kw, "interval": yahoo_iv}
+    if market_key == "crypto" and str(getattr(config, "CRYPTO_DATA_SOURCE", "yahoo")) == "exchange":
+        from . import exchange_data
+        suffix = config.MARKETS["crypto"].suffix
+        base = {t: (t[:-len(suffix)] if suffix and t.endswith(suffix) else t) for t in tickers}
+        refs = {base[t]: v for t, v in (ref_prices or {}).items() if t in base}
+        days = exchange_data.period_days(period or config.DATA_PERIOD)
+        # Pinned tickers go to their venue ONLY; the rest walk every venue.
+        pins = {t: str((pin or {}).get(t) or "") for t in tickers}
+        groups: dict[tuple, list[str]] = {}
+        to_yahoo: list[str] = []
+        for t in tickers:
+            v = pins[t]
+            if v == "yahoo":
+                to_yahoo.append(t)
+            else:
+                groups.setdefault(_PIN_SOURCES.get(v, ()), []).append(t)
+        rejected: dict[str, list] = {}
+        stale: dict[str, list] = {}
+        frames: dict[str, pd.DataFrame] = {}
+        source_of: dict[str, str] = {}
+        dead: dict = {}
+        errors: dict = {}
+        no_exchange: list = []
+        for srcs, ts in groups.items():
+            ex, rep = exchange_data.download_klines(
+                [base[t] for t in ts], days=days, sources=srcs or None,
+                interval=interval, ref_prices={base[t]: refs[base[t]] for t in ts if base[t] in refs},
+                ref_tol=ref_tol, require_identity=require_identity,
+                anchors={base[t]: (anchors or {})[t] for t in ts if (anchors or {}).get(t)})
+            for k, v in (rep.get("identity_rejected") or {}).items():
+                rejected.setdefault(k, []).extend(v)
+            for k, v in (rep.get("stale_rejected") or {}).items():
+                stale.setdefault(k, []).extend(v)
+            for k, v in (rep.get("dead") or {}).items():
+                dead.setdefault(k, v)
+            for k, v in (rep.get("errors") or {}).items():
+                errors[k] = errors.get(k, 0) + v
+            for t in ts:
+                f = ex.get(str(base[t]).upper())
+                if f is not None and len(f):
+                    frames[t] = f
+                    source_of[t] = f.attrs.get("source", "exchange")
+                elif not srcs:
+                    # Unpinned and no exchange has it: the Yahoo fallback.
+                    # A PINNED coin whose venue failed does not fall back.
+                    no_exchange.append(base[t])
+                    to_yahoo.append(t)
+        fb: dict[str, pd.DataFrame] = {}
+        if to_yahoo and getattr(config, "CRYPTO_YAHOO_FALLBACK", True):
+            asked = set(to_yahoo)
+            fb = {t: f for t, f in download(to_yahoo, period=period, **ykw).items()
+                  if t in asked}
+            for t, f in list(fb.items()):
+                how = exchange_data.identity_of(f, (ref_prices or {}).get(t), (anchors or {}).get(t),
+                                                ref_tol, require_identity)
+                if how is None:
+                    rejected.setdefault(base[t], []).append("yahoo")
+                    del fb[t]
+                    continue
+                f.attrs["source"] = "yahoo"
+                f.attrs["identity"] = how
+                frames[t] = f
+                source_of[t] = "yahoo"
+        # Refused = no source is THIS coin (identity) or only a delisted pair
+        # listed it (age gate). Either way the cache must not refill it: its
+        # last frame is the stranger's, or the same frozen klines, 10 days on.
+        no_live = {str(k).upper() for k in rejected} | {str(k).upper() for k in stale}
+        refused = sorted(t for t in tickers if t not in frames and base[t].upper() in no_live)
+        bad_by = {str(k).upper(): set(v) for k, v in rejected.items()}
+        for k, v in stale.items():
+            bad_by.setdefault(str(k).upper(), set()).update(v)
+        report = {"mode": "exchange", "dead": dead, "errors": errors,
+                  "no_exchange": sorted(no_exchange),
+                  "yahoo_fallback": len(fb), "source_of": source_of,
+                  "identity_rejected": dict(sorted(rejected.items())),
+                  "stale_rejected": dict(sorted(stale.items())),
+                  "refused": refused,
+                  "rejected_venues": {t: sorted(bad_by.get(base[t].upper(), ())) for t in refused},
+                  "pinned_missing": sorted(t for t in tickers if pins[t] and t not in frames),
+                  "unchecked": sum(1 for f in frames.values()
+                                   if f.attrs.get("identity") == "none")}
+    else:
+        frames = download(tickers, period=period, **ykw)
+        report = {"mode": "yahoo", "dead": {}, "errors": {}, "no_exchange": [],
+                  "yahoo_fallback": 0, "source_of": {t: "yahoo" for t in frames},
+                  "identity_rejected": {}, "stale_rejected": {}, "refused": [],
+                  "rejected_venues": {}, "pinned_missing": [], "unchecked": 0}
+    by: dict[str, int] = {}
+    for v in report["source_of"].values():
+        by[v] = by.get(v, 0) + 1
+    report["by_source"] = dict(sorted(by.items(), key=lambda kv: -kv[1]))
+    if report["mode"] == "exchange":
+        log.info("fetch [%s]: %s; dead %s; yahoo fallback %d",
+                 market_key, report["by_source"], report["dead"], report["yahoo_fallback"])
+        if report["unchecked"]:
+            log.warning("fetch [%s]: identity check OFF for %d coin(s) -- no reference "
+                        "price (no CoinGecko price in the universe)", market_key,
+                        report["unchecked"])
+    return frames, report
+
+
+def identity_kwargs(market_key: str, items: list, cache_key: str | None = None) -> dict:
+    """fetch() kwargs that arm the identity check for a universe-wide fetch.
+
+    Fresh universe: every coin is checked against CoinGecko's current price at
+    CRYPTO_IDENTITY_TOL. Universe from the last-good SNAPSHOT (CoinGecko down,
+    items flagged `cg_stale`): the prices may be hours old, and neither a
+    wider band nor a venue pin is safe -- two pre-merge reviews (2026-09-28)
+    broke both, each by pricing a HELD coin on a same-ticker stranger. So each
+    coin whose last IDENTITY-CHECKED frame is in the frame cache gets a
+    HISTORY ANCHOR instead: a venue's frame must reproduce that cached frame's
+    last completed close (exchange_data.anchor_ok) -- a real move since cannot
+    fail it, a stranger does, and an outage at one venue falls through to the
+    next. A coin with no such frame keeps the tight band against the old
+    price; one with neither is refused for the run (`require_identity`), so
+    a snapshot with no prices at all admits nothing unchecked. `cache_key` is
+    the frame cache to read (default: the market's)."""
+    refs = {i["yf"]: i.get("cg_price") for i in items or [] if i.get("yf")}
+    out = {"ref_prices": refs, "ref_tol": float(config.CRYPTO_IDENTITY_TOL),
+           "anchors": {}, "require_identity": False}
+    if market_key != "crypto" or not any(i.get("cg_stale") for i in items or []):
+        return out
+    cache = load_frame_cache(cache_key or market_key)
+    anchors = {}
+    for t in refs:
+        a = anchor_of(cache.get(t))
+        if a:
+            anchors[t] = a
+    out.update(anchors=anchors, require_identity=True,
+               ref_prices={t: p for t, p in refs.items() if t not in anchors})
+    log.warning("identity: CoinGecko snapshot in use -- %d coin(s) anchored to their last "
+                "checked frame, %d checked against old prices, the rest refused",
+                len(anchors), sum(1 for p in out["ref_prices"].values() if p))
+    return out
+
+
+def anchor_of(df) -> tuple | None:
+    """(date, close) of a frame's last COMPLETED bar, if the frame was itself
+    identity-checked (attrs["identity"] "ref"/"anchor"): an unchecked frame
+    must never become the evidence the next check trusts. The second-to-last
+    bar, because a frame is cached with its forming bar still on the end."""
+    if df is None or len(df) < 2 or getattr(df, "attrs", {}).get("identity") not in ("ref", "anchor"):
+        return None
+    try:
+        day = pd.Timestamp(df.index[-2]).strftime("%Y-%m-%d")
+        px = float(df["Close"].iloc[-2])
+    except Exception:  # noqa: BLE001
+        return None
+    return (day, px) if px > 0 else None
+
+
+def venue_of(frames: dict, ticker: str | None) -> str | None:
+    """The venue a frame came from (fetch() stamps every crypto frame's
+    attrs["source"]; the stamp survives the frame cache's pickle)."""
+    df = frames.get(ticker) if ticker else None
+    src = getattr(df, "attrs", {}).get("source") if df is not None else None
+    return str(src) if src else None
+
+
+def held_price_kwargs(positions: list) -> dict:
+    """fetch() kwargs that price HELD crypto (the kill switch, the book's
+    off-universe fetch) as ITS OWN coin, on whatever venue answers.
+
+    The HISTORY ANCHOR is the position's stored `anchor` (the real last
+    completed close of the frame that last priced it), else -- for a row
+    stamped before anchors existed -- `day_marks[D]`, the mark it took into
+    day D, i.e. roughly the D-1 close. A venue's frame must close within
+    CRYPTO_ANCHOR_TOL of it on that date: a same-ticker stranger fails it,
+    a real move since cannot. (Venue pins stood here for an hour; a review showed a pinned
+    venue could re-list a different token with no check at all, and that a
+    pinned venue's outage froze the mark.) A position opened today, or with
+    no marks yet, is checked against its last accepted mark at the ordinary
+    band; a quote either check refuses leaves it on its stamped mark (the
+    kill switch's fallback) or unpriced (the book), never on a stranger."""
+    suffix = config.MARKETS["crypto"].suffix
+    anchors, refs = {}, {}
+    for p in positions or []:
+        if p.get("market") != "crypto" or not p.get("symbol"):
+            continue
+        yf = f"{p['symbol']}{suffix}"
+        a = _stored_anchor(p) or _day_mark_anchor(p)
+        if a:
+            anchors[yf] = a
+        elif (p.get("last_mark") or p.get("entry") or 0) > 0:
+            refs[yf] = float(p.get("last_mark") or p.get("entry"))
+    return {"anchors": anchors, "ref_prices": refs, "ref_tol": float(config.CRYPTO_IDENTITY_TOL)}
+
+
+def _stored_anchor(pos: dict) -> tuple | None:
+    """The position's `anchor` [date, close]: the last completed close of the
+    identity-checked frame that last priced it (vivek_run._stamp_identity).
+    Preferred over day_marks: it is a real close, so neither a lagging mark
+    nor a venue that publishes yesterday late (Yahoo) can make the real coin
+    fail it."""
+    a = pos.get("anchor")
+    try:
+        day, px = str(a[0])[:10], float(a[1])
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
+    return (day, px) if px > 0 and len(day) == 10 else None
+
+
+def held_fetch_period(kwargs: dict, floor_days: int = 5) -> str:
+    """The shortest yfinance-valid period that still contains every anchor
+    date (the kill switch asks for "5d"; an anchor older than that would make
+    every held coin fail -- exactly when the bot has stopped marking)."""
+    days = floor_days
+    today = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
+    for day, _ in (kwargs.get("anchors") or {}).values():
+        try:
+            days = max(days, int((today - pd.Timestamp(day)).days) + 2)
+        except Exception:  # noqa: BLE001
+            continue
+    for cap, name in ((5, "5d"), (28, "1mo"), (88, "3mo"), (180, "6mo"), (360, "1y")):
+        if days <= cap:
+            return name
+    return "2y"
+
+
+def _day_mark_anchor(pos: dict) -> tuple | None:
+    """(D-1, day_marks[D]) for the latest day D the position was ALREADY held
+    going into (opened before D), else None."""
+    marks = pos.get("day_marks") or {}
+    opened = str(pos.get("opened_at") or pos.get("entry_date") or "")[:10]
+    for day in sorted(marks, reverse=True):
+        if opened and day <= opened:
+            continue
+        try:
+            px = float(marks[day])
+            prev = (pd.Timestamp(day) - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        except Exception:  # noqa: BLE001
+            continue
+        if px > 0:
+            return (prev, px)
+    return None
+
+
+def source_summary(report: dict) -> dict:
+    """The published half of a fetch() report (the per-ticker map stays out:
+    rows carry their own `data_source`)."""
+    return {"mode": report.get("mode"), "by_source": report.get("by_source") or {},
+            "dead": report.get("dead") or {}, "errors": report.get("errors") or {},
+            "no_exchange": list(report.get("no_exchange") or [])[:60],
+            "yahoo_fallback": report.get("yahoo_fallback", 0),
+            "identity_rejected": report.get("identity_rejected") or {},
+            "stale_rejected": report.get("stale_rejected") or {},
+            "refused": list(report.get("refused") or []),
+            "pinned_missing": list(report.get("pinned_missing") or []),
+            "unchecked": report.get("unchecked", 0)}
+

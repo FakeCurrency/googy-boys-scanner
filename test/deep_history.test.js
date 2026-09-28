@@ -50,7 +50,7 @@ function load({ fetchImpl, now = 1_780_000_000_000 } = {}) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(src + "\n;globalThis.__api = { deepYears, fetchYahooDeep, fetchYahooWindow, targetBars, trimCandles, yahooCandles };", sandbox);
+  vm.runInContext(src + "\n;globalThis.__api = { deepYears, fetchYahooDeep, fetchYahooWindow, targetBars, trimCandles, yahooCandles, fetchBinanceCandles, fetchBinancePrice };", sandbox);
   return sandbox.__api;
 }
 
@@ -220,7 +220,90 @@ test("one constant drives every stock daily call site", () => {
 
 test("crypto is deliberately left shallow", () => {
   assert.match(CHART, /vivekCryptoBars\(SYM, "5y", "1d", true\)/,
-    "crypto was changed — that needs its own measurements (Binance caps at 1000 bars)");
+    "crypto was changed — that needs its own measurements (the Binance proxy pages to 4000 bars)");
+});
+
+// ═══════════════ Binance at full depth (2026-09-28, the crypto switch) ═════════
+suite("the Binance proxy pages past its 1000-bar cap, mirror first");
+
+// A fake Binance: `n` daily klines ending at `endMs`; honours limit + endTime.
+function binance(n, endMs, { failHosts = [] } = {}) {
+  const DAY = 86_400_000;
+  const all = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const t = endMs - i * DAY;
+    all.push([t, "1", "2", "0.5", String(t / DAY), "10"]);
+  }
+  const calls = [];
+  const impl = (url) => {
+    calls.push(url);
+    if (failHosts.some((h) => url.startsWith(h))) return Promise.resolve({ ok: false, status: 451 });
+    const q = new URL(url).searchParams;
+    const limit = +q.get("limit");
+    const end = q.get("endTime") == null ? Infinity : +q.get("endTime");
+    const page = all.filter((k) => k[0] <= end).slice(-limit);
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(page) });
+  };
+  return { impl, calls };
+}
+
+test("5 years of daily bars arrive in order, unique, newest last", async () => {
+  const END = 1_790_000_000_000;
+  const b = binance(2500, END);
+  const a = load({ fetchImpl: b.impl });
+  const c = await a.fetchBinanceCandles("QNT-USD", { interval: "1d", limit: 1900 });
+  assert.equal(c.length, 1900);
+  assert.equal(c[c.length - 1].time, END / 1000);
+  for (let i = 1; i < c.length; i++) assert.equal(c[i].time - c[i - 1].time, 86400);
+  assert.equal(b.calls.length, 2, "1000 + 900");
+  assert.ok(b.calls.every((u) => u.startsWith("https://data-api.binance.vision/")), "the mirror is asked first");
+  assert.ok(/[?&]symbol=QNTUSDT/.test(b.calls[0]) && !/endTime/.test(b.calls[0]));
+  assert.ok(/endTime=/.test(b.calls[1]), "the second page walks back with endTime");
+});
+
+test("a young coin stops at its listing date after one request", async () => {
+  const b = binance(300, 1_790_000_000_000);
+  const c = await load({ fetchImpl: b.impl }).fetchBinanceCandles("NEW-USD", { limit: 1900 });
+  assert.equal(c.length, 300);
+  assert.equal(b.calls.length, 1);
+});
+
+test("a refused mirror falls back to the main API", async () => {
+  const b = binance(50, 1_790_000_000_000, { failHosts: ["https://data-api.binance.vision"] });
+  const c = await load({ fetchImpl: b.impl }).fetchBinanceCandles("BTC-USD", { limit: 50 });
+  assert.equal(c.length, 50);
+  assert.ok(b.calls.some((u) => u.startsWith("https://api.binance.com/")));
+});
+
+test("the page count is bounded (Cloudflare subrequests)", async () => {
+  const b = binance(9000, 1_790_000_000_000);
+  const c = await load({ fetchImpl: b.impl }).fetchBinanceCandles("BTC-USD", { limit: 6600 });
+  assert.equal(c.length, 4000);
+  assert.equal(b.calls.length, 4);
+});
+
+suite("the VIVEK crypto chart draws the venue the scan read");
+
+test("the row's data_source picks the series; anything but Binance stays Yahoo", () => {
+  const i = CHART.indexOf("const cryptoSrcFor");
+  const expr = CHART.slice(CHART.indexOf("=", i) + 1, CHART.indexOf(";", i));
+  const f = eval(expr);
+  assert.equal(f({ data_source: "binance_vision" }), "binance");
+  assert.equal(f({ data_source: "binance" }), "binance");
+  assert.equal(f({ data_source: "coinbase" }), "yahoo");
+  assert.equal(f({ data_source: "yahoo" }), "yahoo");
+  assert.equal(f({}), "yahoo");
+  assert.equal(f(null), "yahoo");
+});
+
+test("the fallback sets it from the row, and both fetches use it", () => {
+  const vf = CHART.slice(CHART.indexOf("function vivekFallback"), CHART.indexOf("function vivekCryptoBars"));
+  assert.match(vf, /VIVEK_CRYPTO_SRC = cryptoSrcFor\(m\)/);
+  const vb = CHART.slice(CHART.indexOf("function vivekCryptoBars"), CHART.indexOf("function vivekCryptoBars") + 700);
+  assert.match(vb, /&src=\$\{VIVEK_CRYPTO_SRC\}/);
+  assert.ok(!/&src=yahoo`/.test(vb), "the chart must not hard-force Yahoo any more");
+  const live = CHART.slice(CHART.indexOf("function startStockLive"), CHART.indexOf("function startStockLive") + 1500);
+  assert.match(live, /VIVEK_CRYPTO_SRC !== "binance"/, "the header price follows the chart's venue");
 });
 
 test("the constant documents how to reverse it", () => {

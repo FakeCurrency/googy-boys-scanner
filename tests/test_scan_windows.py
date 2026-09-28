@@ -256,5 +256,9 @@ def test_crypto_bots_window_ownership_gate_is_gone_not_merely_bypassed():
 def test_the_crypto_universe_is_the_top_200():
     assert config.CRYPTO_UNIVERSE_SIZE == 200
     from scanner import universe
-    assert f"per_page={config.CRYPTO_UNIVERSE_SIZE + 60}" in universe.COINGECKO_URL, \
-        "per_page must exceed the target: stablecoins are filtered OUT of the response"
+    # This test used to pin per_page=260 -- i.e. it pinned the BUG. CoinGecko
+    # caps per_page at 250 and answers anything larger with its default 100,
+    # which is how "top 200" became 86 names (2026-09-20..28). The fetch now
+    # pages at the cap; the behaviour is pinned in tests/test_crypto_universe.py.
+    assert "per_page=250" in universe.COINGECKO_URL
+    assert universe.COINGECKO_PER_PAGE_MAX == 250

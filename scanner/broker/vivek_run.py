@@ -453,6 +453,23 @@ def _restamp(book: dict, market: str, day: str) -> None:
     book.setdefault("guard", {})[market] = guard
 
 
+def _stamp_identity(pos: dict, frame, src: str | None, anchor_of) -> None:
+    """After a crypto mark is ACCEPTED (or a position opened): record the
+    venue that priced it (`data_source`; the chart draws that venue) and the
+    frame's own last COMPLETED close as `anchor` [date, close] -- the evidence
+    the kill switch and the off-universe fetch check every later price
+    against (data.held_price_kwargs). A real past close, not a mark: a mark
+    only moves when a price is accepted, so an anchor built from marks
+    lagged the market after an outage and then refused the real coin for
+    ever (third pre-merge review, 2026-09-28). Only an identity-checked frame
+    may write it (anchor_of enforces that)."""
+    if src:
+        pos["data_source"] = src
+    a = anchor_of(frame)
+    if a:
+        pos["anchor"] = [a[0], round(float(a[1]), 10)]
+
+
 def _stamp_day_ref(pos: dict, day: str, price: float | None) -> None:
     """Record the mark this position CARRIED INTO `day` (vivek_guard reference).
 
@@ -1184,6 +1201,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
     yf_map = {u["symbol"]: u["yf"] for u in universe}
+    from ..data import anchor_of, venue_of            # deferred, like fetch below
     costs = costs_for(market)                         # fees + slippage R-drag (None = off)
 
     def price_of(sym):
@@ -1205,8 +1223,16 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     if missing:
         yf_missing = {s: s + mkt.suffix for s in missing}
         try:
-            from ..data import download
-            extra = download(list(yf_missing.values()), period="6mo")
+            # data.fetch: crypto from the same exchange klines the scan
+            # used (config.CRYPTO_DATA_SOURCE), stocks from Yahoo as before.
+            from ..data import fetch, held_price_kwargs
+            # Held crypto must reproduce its own recorded history (a
+            # day_marks anchor) or its last mark -- never priced on whichever
+            # venue lists the ticker first, which can be a different token.
+            held = [p for p in book["open"]
+                    if p.get("market") == market and p["symbol"] in yf_missing]
+            extra = fetch(market, list(yf_missing.values()), period="6mo",
+                          **held_price_kwargs(held))[0]
             priced = sum(1 for v in extra.values() if v is not None and len(v))
             frames = {**frames, **extra}
             yf_map = {**yf_map, **yf_missing}
@@ -1227,6 +1253,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             still_open.append(pos)
             continue
         price = price_of(pos["symbol"])
+        # The venue this mark came from (the chart draws that venue's
+        # candles) -- stamped below only if the mark is ACCEPTED, so a
+        # suspect print never relabels the position's source.
+        src = venue_of(frames, yf_map.get(pos["symbol"])) if market == "crypto" else None
         # Auditable freeze detection: a position that can't be priced can't be
         # stopped out. Count consecutive unpriced runs on the position itself
         # so the book (and anyone reading it) SEES the freeze instead of a
@@ -1250,6 +1280,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # challenge budget on a run that could never have managed anything.
         if price is not None:
             price = _mark_sanity(pos, price, market, session_open=is_open)
+        if price is not None and market == "crypto":
+            _stamp_identity(pos, frames.get(yf_map.get(pos["symbol"])), src, anchor_of)
         if is_open and price is not None:
             _mark(pos, price, day, costs)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going
@@ -1525,6 +1557,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             if pos is None:                              # don't chase
                 chased += 1
                 continue
+            if market == "crypto":
+                _stamp_identity(pos, frames.get(yf_map.get(sym)),
+                                venue_of(frames, yf_map.get(sym)), anchor_of)
             # guard against a duplicate already in the persistent book
             if any(p["symbol"] == sym and p.get("market") == market for p in book["open"]):
                 continue
@@ -1683,7 +1718,7 @@ def main() -> None:
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
 
     from ..universe import load_universe
-    from ..data import download, merge_with_cache
+    from ..data import fetch, identity_kwargs, merge_with_cache
 
     for market_key in markets:
         pub = ROOT / "public" / "data" / f"{market_key}_vivek.json"
@@ -1712,8 +1747,11 @@ def main() -> None:
             if isinstance(extra, dict):
                 r.update(extra)
         universe = load_universe(market_key, full=True)
-        fresh = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
-        frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe])
+        fresh, rep = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
+                           **identity_kwargs(market_key, universe))
+        frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe],
+                                     refused=rep.get("refused") or (),
+                                     rejected_venues=rep.get("rejected_venues"))
         run_market(market_key, results, frames, universe, dry_run=dry_run)
 
 

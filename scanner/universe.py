@@ -12,6 +12,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import time
 import urllib.request
 
@@ -31,35 +32,91 @@ _CACHE_MIN = {"asx": 400, "nasdaq": 400, "crypto": 40}
 
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 ASX_LISTED_URL = "https://www.asx.com.au/asx/research/ASXListedCompanies.csv"
-# per_page is deliberately ABOVE the target count: stablecoins and wrapped
-# tokens are filtered out of the response (CRYPTO_SKIP), so asking for exactly
-# N coins returns fewer than N tradeable ones. ~30% headroom covers the pegs.
-COINGECKO_URL = ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
-                 f"&order=market_cap_desc&per_page={config.CRYPTO_UNIVERSE_SIZE + 60}"
-                 "&page=1&sparkline=false")
+# CoinGecko's /coins/markets serves at most 250 rows per page. Asking for more
+# is NOT an error: it silently answers with its DEFAULT page of 100. That is
+# exactly what happened when CRYPTO_UNIVERSE_SIZE went 100 -> 200 (owner,
+# 2026-09-21): per_page became 260, the universe SHRANK from 101 names to 86
+# on the first run after the change, and the "top 200" the owner asked for
+# was a top ~100 from then until 2026-09-28 (found chasing the QNT move --
+# most ignitions of that shape happen in ranks 100-250, the band that was
+# being dropped). So pages are fetched at the cap and walked until the target
+# count of TRADEABLE coins is reached: stablecoins and wrapped tokens are
+# filtered OUT of each response, so N rows never yield N tradeable coins.
+COINGECKO_PER_PAGE_MAX = 250
+COINGECKO_MAX_PAGES = 4          # 1,000 rows: a hard stop, never a loop
+
+
+def coingecko_url(page: int, per_page: int = COINGECKO_PER_PAGE_MAX) -> str:
+    """One page of the market-cap-ordered coin list. per_page is CLAMPED to
+    CoinGecko's cap -- a larger value is the silent 100-row fallback above."""
+    per_page = max(1, min(int(per_page), COINGECKO_PER_PAGE_MAX))
+    return ("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
+            f"&order=market_cap_desc&per_page={per_page}"
+            f"&page={int(page)}&sparkline=false")
+
+
+# Page 1, kept under its old name: _fetch_failed and the logs name the host
+# through it, and it is the one URL every fetch starts from.
+COINGECKO_URL = coingecko_url(1)
 
 # Stablecoins / wrapped-pegged tokens to skip (they don't trend, so the 200-SMA
 # reaction system is meaningless on them — e.g. a "long" on a $1 peg is noise).
 CRYPTO_SKIP = {
     "USDT", "USDC", "DAI", "BUSD", "TUSD", "USDD", "FDUSD", "PYUSD", "USDE", "USDS",
-    "FRAX", "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
+    "GUSD", "LUSD", "USDP", "EURT", "EURC", "USD0", "USDL", "USDX", "CRVUSD",
     "RLUSD", "GHO", "USDG", "USD1", "SUSDE", "SUSDS", "BUIDL", "USDY", "EURS",
     "WBTC", "WETH", "WEETH", "WSTETH", "STETH", "RETH", "CBETH", "WBETH", "BSC-USD",
     # newer wrapped/staked BTC-ETH derivatives — duplicates of the underlying
     "CBBTC", "TBTC", "SOLVBTC", "LBTC", "EZETH", "RSETH", "METH", "CMETH",
     "LSETH", "SWETH", "OSETH", "JITOSOL", "MSOL", "BNSOL", "JUPSOL",
+    # FRAX left this list 2026-09-28: CoinGecko's FRAX is now the floating
+    # Frax governance token ("Frax (prev. FXS)"); the old stablecoin is
+    # "Legacy Frax Dollar" (caught by name) and frxUSD (the USD suffix rule).
+    # 2026-09-28: the pagination fix put ranks ~100-250 back in the universe,
+    # and that band carries pegs the <X>USD rule cannot see -- non-dollar
+    # fiat stablecoins (EURCV graded A+ on the first exchange-data dry run,
+    # i.e. a long on EUR/USD dressed as a crypto setup) and tokenised
+    # money-market / T-bill / CLO funds whose price is a NAV that only
+    # accrues. Same reason as every line above: no trend to react to.
+    "A7A5", "XSGD", "ZCHF", "VCHF", "VEUR", "AEUR", "GYEN", "BRZ", "BRLA",
+    "TRYB", "IDRT", "BIDR", "MXNB", "CADC", "QCAD", "XIDR", "EUTBL", "USTBL",
+    "JAAA", "JTRSY", "OUSG", "USTB", "USYC", "BENJI", "TBILL", "STBT", "USCC",
+    "USR",
+    # Found by the dry run's behaviour check (1y high/low x1.00-x1.01) or its
+    # identity check, not by any name rule: Figure's YLDS, Tether's USAT, the
+    # yen stablecoin JPYC.
+    "YLDS", "USAT", "JPYC",
 }
 
+# Name words that mark a peg or a tokenised cash/bond fund whatever its
+# ticker (CoinGecko's `name`, whole words, case-insensitive): "Resolv USR",
+# "Global Dollar", "United Stables" (U -- graded A on the first exchange-data
+# dry run), "Spiko Amundi Overnight Swap Fund (EUR)", "Circle USYC".
+# Deliberately narrow -- "Fund", "Gold" or a singular "Stable" (the STABLE
+# chain token, which floats) would catch coins that do trend -- so only
+# words that cannot describe a free-floating coin are here.
+_PEG_NAME = re.compile(
+    r"\b(stablecoins?|stables|usd|dollar|eur|euro|treasury|treasuries|"
+    r"t-?bills?|money market|government (securities|bonds?)|CLO)\b",
+    re.IGNORECASE)
 
-def _is_stable(sym: str) -> bool:
+
+def _is_stable(sym: str, name: str = "") -> bool:
     """True for pegged stablecoins (and the explicit wrapped-token list).
 
     Beyond the explicit set, any ``<X>USD`` ticker is treated as a USD peg
     (RLUSD, FDUSD, crvUSD, …) so a newly-listed dollar stablecoin is skipped
     automatically rather than waiting to be hand-added after it's traded once.
+    ``USD<X>`` (USDF, USDM, ...) and ``EUR<X>`` (EURCV, EURR, EURQ, ...)
+    tickers are pegs by the same reasoning (2026-09-28), and when the coin's
+    NAME is known a stablecoin / T-bill / treasury / CLO phrase marks one too.
+    Gold and silver tokens (PAXG, XAUT, KAU, KAG) are NOT pegs here: the metal
+    trends, and they have been scanned on purpose since the start.
     """
     s = (sym or "").upper()
-    return s in CRYPTO_SKIP or s.endswith("USD")
+    if s in CRYPTO_SKIP or s.endswith("USD") or s.startswith(("USD", "EUR")):
+        return True
+    return bool(name) and bool(_PEG_NAME.search(name))
 
 _BROWSER_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; FibScanner/1.0)"}
 
@@ -138,9 +195,9 @@ def _from_csv(path: pathlib.Path, suffix: str) -> list[dict]:
             symbol = (row.get("symbol") or "").strip().upper()
             if not symbol:
                 continue
-            if suffix == "-USD" and _is_stable(symbol):    # crypto fallback list: drop pegs too
-                continue
             name = (row.get("name") or symbol).strip()
+            if suffix == "-USD" and _is_stable(symbol, name):    # crypto fallback list: drop pegs too
+                continue
             sector = (row.get("sector") or "").strip()
             items.append({"symbol": symbol, "name": name, "sector": sector,
                           "yf": symbol + suffix})
@@ -244,25 +301,54 @@ def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
 
     Maps each coin to a Yahoo ``<SYMBOL>-USD`` ticker; coins Yahoo doesn't carry
     under that exact ticker are dropped at scan time when no data comes back.
+
+    Pages are walked at CoinGecko's 250-row cap until ``limit`` tradeable coins
+    are collected (see COINGECKO_PER_PAGE_MAX for why one oversized page is
+    not an option). Page 1 failing is a failed fetch (cache fallback, as
+    before). A LATER page failing keeps what the earlier pages returned: a
+    universe of the top ~215 is strictly better than falling back to a
+    cached snapshot that is smaller, and the gap is logged, not hidden.
     """
     if limit is None:
         limit = int(getattr(config, "CRYPTO_UNIVERSE_SIZE", 100) or 100)
-    try:
-        data = json.loads(_http_get(COINGECKO_URL, timeout=30, headers=_BROWSER_HEADERS))
-    except Exception as exc:  # noqa: BLE001 - logged, then falls back to cache
-        return _fetch_failed("crypto", COINGECKO_URL, exc)
 
     items: list[dict] = []
     seen: set[str] = set()
-    for coin in data:
-        sym = (coin.get("symbol") or "").strip().upper()
-        name = (coin.get("name") or sym).strip()
-        if not sym or _is_stable(sym) or not sym.isalnum() or sym in seen:
-            continue
-        seen.add(sym)
-        items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
-        if len(items) >= limit:
+    for page in range(1, COINGECKO_MAX_PAGES + 1):
+        url = coingecko_url(page)
+        try:
+            data = json.loads(_http_get(url, timeout=30, headers=_BROWSER_HEADERS))
+        except Exception as exc:  # noqa: BLE001 - logged, then falls back
+            if page == 1:
+                return _fetch_failed("crypto", url, exc)
+            print(f"  universe: crypto page {page} FAILED - keeping {len(items)} "
+                  f"coins from earlier pages ({type(exc).__name__}: "
+                  f"{str(exc)[:120]})", flush=True)
             break
+        if not isinstance(data, list):
+            if page == 1:
+                return _fetch_failed("crypto", url, ValueError(
+                    f"unexpected payload type {type(data).__name__}"))
+            break
+        for coin in data:
+            sym = (coin.get("symbol") or "").strip().upper()
+            name = (coin.get("name") or sym).strip()
+            if not sym or _is_stable(sym, name) or not sym.isalnum() or sym in seen:
+                continue
+            seen.add(sym)
+            px = coin.get("current_price")
+            # CoinGecko's own price for THIS coin: the identity reference that
+            # stops a same-ticker collision (Yahoo's ARB-USD/JUP-USD/AERO-USD
+            # were different tokens -- 2026-09-28) from being scanned as it.
+            items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix,
+                          "cg_price": float(px) if isinstance(px, (int, float)) and px > 0 else None})
+            if len(items) >= limit:
+                break
+        # Stop when the target is met, or when CoinGecko ran out of coins (a
+        # short page is the last page -- asking again would only repeat it).
+        if len(items) >= limit or len(data) < COINGECKO_PER_PAGE_MAX:
+            break
+        time.sleep(1.5)   # free-tier rate limit is per minute; be polite
     # Pinned extras (2026-07-02): coins the owner tracks that must never fall
     # out of the universe because their market-cap rank slips below the cut. Coins Yahoo doesn't carry are dropped at scan time as usual.
     for sym in getattr(config, "CRYPTO_EXTRA_SYMBOLS", []):
@@ -313,6 +399,14 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
     # shrink a scan from ~2,000 names to ~90 without a trace.
     if full or market_key == "crypto":
         cached = _load_universe_cache(market_key)
+        if cached and market_key == "crypto":
+            # A snapshot saved under an older peg rule must not bring a peg
+            # back the day CoinGecko is down. Its cg_price is as old as the
+            # snapshot: flag it, so data.identity_kwargs pins each coin to the
+            # venue of its last confirmed frame instead of trusting a price
+            # that may be hours old.
+            cached = [dict(i, cg_stale=True) for i in cached
+                      if not _is_stable(i.get("symbol", ""), i.get("name", ""))]
         if cached:
             print(f"  universe: {market_key} directory fetch FAILED - "
                   f"using last-good cache ({len(cached)} names)", flush=True)

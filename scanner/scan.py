@@ -12,7 +12,22 @@ from collections import Counter
 from zoneinfo import ZoneInfo
 
 from . import config, scanerrors   # (pulse import removed 2026-07-20 — module retired & deleted)
-from .data import download, _frame_age_days
+from .data import download, fetch, _frame_age_days
+
+
+def _bars(market_key: str, tickers: list, period: str, interval: str = "1d",
+          ref_prices: dict | None = None, ref_tol: float | None = None,
+          pin: dict | None = None, **identity) -> dict:
+    """The scan's own downloads, market-aware. Crypto goes through
+    `data.fetch` -- the exchange klines the runner, the bot and the kill
+    switch price with (config.CRYPTO_DATA_SOURCE, owner 2026-09-28: "so it's
+    all in SYNC") -- WITH an identity reference and/or a venue pin, since the
+    first venue that lists a ticker can be a different token; stocks keep
+    calling `download` exactly as before."""
+    if market_key == "crypto":
+        return fetch(market_key, tickers, period=period, interval=interval,
+                     ref_prices=ref_prices, ref_tol=ref_tol, pin=pin, **identity)[0]
+    return download(tickers, period=period, interval=interval)
 from .universe import load_universe
 
 log = logging.getLogger(__name__)
@@ -195,7 +210,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         if progress:
             print(f"  downloading {len(universe)} {market.label} tickers "
                   f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
-        frames = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
+        from .data import identity_kwargs
+        frames = _bars(market_key, [u["yf"] for u in universe], config.VIVEK_DATA_PERIOD,
+                       **identity_kwargs(market_key, universe))
 
     now = dt.datetime.now(ZoneInfo(market.timezone))
     prev_grades = _load_prev_grades(out_root, market_key)   # for grade hysteresis
@@ -434,7 +451,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     price_errors.report(scanned)
     _report_sma_proxies(results)
     # AFTER scoring/grading/gating, so a 4H plan cannot influence any of them.
-    _attach_h4_plans(results, market)
+    # The market KEY, not the MarketConfig: the 4H leg picks its source and
+    # its ticker suffix off it (2026-09-28 review -- see _attach_h4_plans).
+    _attach_h4_plans(results, market_key, frames)
 
     # Rank by VIVEK grade, then score, then R:R.
     counts = _finalize_vivek(results)
@@ -534,7 +553,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     }
 
 
-def _attach_h4_plans(results: list[dict], market: str) -> None:
+def _attach_h4_plans(results: list[dict], market: str, frames: dict | None = None) -> None:
     """Give every published row a REAL 4H plan (owner, 2026-09-19).
 
     "I need to see genuine set ups forming on d and weekly 3d and then if i
@@ -569,12 +588,35 @@ def _attach_h4_plans(results: list[dict], market: str) -> None:
     rows = rows[:config.VIVEK_H4_MAX_SYMBOLS]
     if not rows:
         return
-    tickers = [r.get("yf") or r["symbol"] for r in rows]
+    # The YAHOO/exchange ticker, not the bare symbol. Until 2026-09-28 this read
+    # `r.get("yf") or r["symbol"]`, rows carry no "yf", and every ASX and crypto
+    # 4H plan was drawn off a DIFFERENT instrument: "BHP" is the NYSE ADR, not
+    # BHP.AX, and "ETH" is Ethan Allen (a 25.7 entry on a $2,695 coin). The
+    # caller also passed the MarketConfig, so `market == "crypto"` never held.
+    mkt = config.MARKETS.get(market)
+    suffix = getattr(mkt, "suffix", "") or ""
+
+    def yf_of(r):
+        return r.get("yf") or f"{r['symbol']}{suffix}"
+
+    tickers = [yf_of(r) for r in rows]
+    # Crypto: each coin's 4h candles come from the venue its DAILY bars came
+    # from (pinned), checked against the row's own price -- a first-listed
+    # same-ticker token must not draw the plan. Stocks: Yahoo 1h, bucketed.
+    # A venue with no 4h candles (Coinbase) is NOT pinned: those coins walk
+    # the venues under the same price check instead of getting no plan.
+    from .exchange_data import supports
+    pin = {}
+    for t in tickers:
+        v = getattr((frames or {}).get(t), "attrs", {}).get("source")
+        if v and supports(v, "4h"):
+            pin[t] = v
+    refs = {yf_of(r): r.get("price") for r in rows}
     t0 = time.time()
     try:
-        frames = download(tickers,
-                          period=config.VIVEK_H4_PERIOD,
-                          interval=config.VIVEK_H4_INTERVAL)
+        frames = _bars(market, tickers, config.VIVEK_H4_PERIOD,
+                       "4h" if market == "crypto" else config.VIVEK_H4_INTERVAL,
+                       ref_prices=refs, pin=pin)
     except Exception as exc:                       # noqa: BLE001 - see DEGRADES above
         print(f"  h4: download failed ({type(exc).__name__}) - 4H toggles keep the Daily plan")
         return
@@ -582,7 +624,7 @@ def _attach_h4_plans(results: list[dict], market: str) -> None:
     built = skipped = 0
     for row in rows:
         try:
-            df = frames.get(row.get("yf") or row["symbol"])
+            df = frames.get(yf_of(row))
             if df is None or df.empty:
                 skipped += 1
                 continue

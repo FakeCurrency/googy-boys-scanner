@@ -1,0 +1,85 @@
+name: Crypto source check
+
+# READ-ONLY verification of the crypto data-source switch (2026-09-28, owner:
+# "make the VIVEK crypto scan and paper bot go to the binance or bybit ... so
+# it's all in SYNC"). Runs on a GitHub runner -- the only place the real
+# venues can be measured from (Binance's main API and Bybit geo-block US
+# hosts; Binance's market-data mirror and Coinbase answer):
+#   * scripts/crypto_source_compare.py  venue reachability, freshness, the
+#     close gap to Yahoo (ticker collisions show up here), liquidity floor
+#   * scripts/crypto_scan_dryrun.py     the REAL VIVEK crypto scan on exchange
+#     klines, compared with the published one -- writes nothing, no bot
+# Everything goes to the step summary. It commits nothing, so it needs no
+# assert_staged, no WATCHDOG entry and no mutex (evidence_brief pattern).
+#
+# Triggers: a manual dispatch, or a push touching .github/crypto-source-kick
+# (a cloud session can push but cannot call the dispatch API).
+
+on:
+  push:
+    paths:
+      - ".github/crypto-source-kick"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-source-check-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compare Yahoo with exchange klines
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python scripts/crypto_source_compare.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Dry VIVEK crypto scan on exchange klines
+        run: |
+          set -o pipefail
+          python scripts/crypto_scan_dryrun.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The END-TO-END path the dry run cannot see (2026-09-28 review): the
+      # real crypto scan -> merge_with_cache -> the paper bot, exactly as
+      # crypto_bot.yml runs it, on this runner's scratch checkout. This job has
+      # contents: read and no push step, so every file it writes (the scan
+      # JSON, the book, the cache) is thrown away with the runner. The frame
+      # cache starts EMPTY here, which is what the first post-merge crypto_bot
+      # run sees too (exchange mode reads its own cache file).
+      - name: Full crypto scan + paper bot (scratch; nothing is committed)
+        run: |
+          set -o pipefail
+          python -m scanner.run --market crypto 2>&1 | tail -60 | tee -a "$GITHUB_STEP_SUMMARY"
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          vk = json.loads(pathlib.Path("public/data/crypto_vivek.json").read_text())
+          src = vk.get("data_sources") or {}
+          print("\n### End-to-end result\n")
+          print(f"- funnel: {json.dumps(vk.get('funnel', {}))[:300]}")
+          print(f"- sources: {src.get('by_source')}; refused: {src.get('refused')}; "
+                f"stale pairs: {src.get('stale_rejected')}; unchecked: {src.get('unchecked')}")
+          rows = vk.get("results") or []
+          print(f"- rows by data_source: " + json.dumps(
+              {s: sum(1 for r in rows if r.get('data_source') == s)
+               for s in sorted({r.get('data_source') for r in rows}, key=str)}))
+          bk = json.loads(pathlib.Path("journal/vivek_bot_book.crypto.json").read_text())
+          for p in bk.get("open") or []:
+              print(f"- open {p['symbol']}: last_mark {p.get('last_mark')} stop {p.get('stop')} "
+                    f"data_source {p.get('data_source')} unpriced_runs {p.get('unpriced_runs')}")
+          print(f"- closed rows: {len(bk.get('closed') or [])}")
+          PY

@@ -108,7 +108,7 @@ def test_merge_with_cache_reuses_dropped_tickers(tmp_path, monkeypatch):
     full = {t: _ohlc() for t in uni}
     merged, stats = data.merge_with_cache("asx", full, uni)
     assert stats == {"fresh": 3, "reused": 0, "merged": 3, "universe": 3,
-                     "stale_dropped": 0}
+                     "stale_dropped": 0, "refused": 0}
     # Second run: Yahoo only returns A; B and C must be reused from cache.
     partial = {"A.AX": _ohlc()}
     merged, stats = data.merge_with_cache("asx", partial, uni)

@@ -195,12 +195,18 @@ def check_and_kill(j: dict, dry_run: bool = False,
 def _live_marks(book: dict) -> dict:
     """(symbol, market) -> latest price for every open book position.
 
-    Best-effort, ONE batched yfinance call (2026-07-20 Phase 4): the standalone
+    Best-effort, batched (2026-07-20 Phase 4): the standalone
     check runs BETWEEN scans, and pricing open risk off the marks the runner
     stamped last scan meant a fast adverse move could stay invisible for up to
     an hour (crypto overnight/weekend especially). Daily bars: the last close
     IS the running candle for crypto and the delayed session price for stocks —
     exactly the freshness a scan run would have stamped at this moment.
+
+    CRYPTO IS PRICED THROUGH `data.fetch` (2026-09-28, owner: "make the VIVEK
+    crypto scan and paper bot go to the binance or bybit ... so it's all in
+    SYNC"): the same exchange klines the scan marks the book with, so the
+    loss check never measures a position on a different venue's print than
+    the one that opened and stops it. Stocks stay one Yahoo batch.
 
     Returns {} on ANY failure so every caller falls back to the last-scan
     marks per position — the safety net can never end up WORSE than before.
@@ -210,7 +216,7 @@ def _live_marks(book: dict) -> dict:
         return {}
     try:
         from scanner import config
-        from scanner.data import download
+        from scanner.data import download, fetch, held_fetch_period, held_price_kwargs
         from scanner.vivek_journal import _current_price
         want = {}                                # yf ticker -> (symbol, market)
         for p in open_pos:
@@ -219,7 +225,20 @@ def _live_marks(book: dict) -> dict:
                 want[p["symbol"] + config.MARKETS[m].suffix] = (p["symbol"], m)
         if not want:
             return {}
-        frames = download(sorted(want), period="5d", retries=1)
+        crypto = sorted(t for t, (_, m) in want.items() if m == "crypto")
+        other = sorted(t for t in want if t not in crypto)
+        frames = {}
+        if other:
+            frames.update(download(other, period="5d", retries=1))
+        if crypto:
+            # Each position must reproduce its OWN recorded history (a
+            # day_marks anchor) or its last mark: a same-ticker token on any
+            # venue must never reach the loss check (2026-09-28 reviews).
+            hk = held_price_kwargs(open_pos)
+            # The window must reach back to every anchor date (an old one =
+            # the bot stopped marking, exactly when this check matters).
+            frames.update(fetch("crypto", crypto, period=held_fetch_period(hk),
+                                retries=1, **hk)[0])
         by_key = {}
         for p in open_pos:
             m = p.get("market")

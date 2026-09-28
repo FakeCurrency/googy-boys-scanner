@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/styles.css?v=119" />
   <link rel="stylesheet" href="css/status.css?v=3" />
   <link rel="stylesheet" href="css/eyes.css?v=6" />
+  <link rel="stylesheet" href="css/ignition.css?v=2" />
   <script>
   /* Head-start fetch of the active market's scan JSON (UI Wave 1) — reads the
      saved market from gbs:prefs and starts the request before any script
@@ -129,6 +130,10 @@
            set the pill counts; pure surface — changes nothing the bot takes. -->
       <div class="eyes" id="eyes-strip" hidden aria-label="Multi-lens names needing attention"></div>
       <div class="deck-pills" id="deck-pills" role="group" aria-label="Scan filters"></div>
+      <!-- ⚡ IGNITION panel (2026-09-28): the report-only coil → ignition lens,
+           opened by its deck pill and rendered by js/ignition.js. Hidden until
+           opened, and never shown for a market whose file is absent. -->
+      <div class="ig-panel" id="ignition-panel" hidden role="region" aria-label="Ignition: coil to ignition, report-only"></div>
       <div class="deck-bot" id="bot-activity" hidden></div>
     </section>
 
@@ -176,6 +181,7 @@
   <script src="js/phasemap-shared.js?v=19"></script>
   <script src="js/cache.js?v=3"></script>
   <script src="js/eyes-store.js?v=6"></script>
-  <script src="js/app.js?v=138"></script>
+  <script src="js/ignition.js?v=2"></script>
+  <script src="js/app.js?v=140"></script>
 </body>
 </html>

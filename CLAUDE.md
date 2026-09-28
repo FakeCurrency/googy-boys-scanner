@@ -48,7 +48,7 @@ agreements get banners everywhere, a permanent ALERTS page log
 | Frontend | Vanilla JS + CSS — static site on **Cloudflare Pages** (`public/`), iOS-style dark theme, PWA with service worker |
 | Backend API | Cloudflare Pages Functions (`functions/api/*.js`) — CF **Workers runtime, NOT Node** (no `require`, no fs; env via `context.env`) |
 | Scheduler | GitHub Actions cron (`.github/workflows/`) |
-| Data source | `yfinance` (pinned) — free, ~15 min delayed, survivor-biased history. Production-grade provider (EODHD/Norgate) is an open owner decision |
+| Data source | Stocks: `yfinance` (pinned) — free, ~15 min delayed, survivor-biased history; production-grade provider (EODHD/Norgate) is an open owner decision. **Crypto (since 2026-09-28): exchange daily klines** — Binance's market-data mirror first, then Coinbase, Yahoo only for coins no exchange lists — via `data.fetch()` (see CRYPTO DATA SOURCE) |
 | Broker | PAPER ONLY. The scalp-era Bybit execution bot (bracket/reconcile/run) and the AI BOT page were REMOVED 2026-09-17 (see AI BOT below). `bybit_client.py`/`alpaca_client.py` survive only as the kill switch's flatten path |
 
 ---
@@ -63,6 +63,8 @@ scanner/               VIVEK + Specs engines, bot, alerts
   run.py               CLI: python -m scanner.run [--market ...]; publishes bot_rules.json
                        (`bot_rules_payload()` — resize_book.yml calls it too)
   spec.py + spec_run.py    Specs lens (asx+nasdaq) → <m>_spec.json
+  ignition/            IGNITION lens (crypto, REPORT-ONLY): coil -> ignition
+                       screen + replay → public/data/ignition/ (see IGNITION)
   confluence_alert.py  multi-lens confluence engine: ALERTS page history log
                        + push-owed state (delivery removed 2026-08-27)
   vivek_backtest.py    walk-forward replay (1D/3D/1W, level_tf cohorts)
@@ -121,6 +123,8 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | ops.yml | manual only | **Claude's standing access (2026-09-10, owner: "you should be able to set up jobs and all to make this hands off").** `scripts/ops.py` runs on a runner (which can reach APIs the cloud session's proxy refuses — api.cron-job.org and api.cloudflare.com both answer HTTP 000 from a session) and Claude dispatches it via the GitHub MCP with an `action` (`cronjob-list/get/history/create/update/delete`, `cf-list-vars/set-var/delete-var/redeploy`) + JSON `args`, then reads the job log. Secrets: `CRONJOB_API_KEY`, `CLOUDFLARE_API_TOKEN` (Pages: Edit), `CLOUDFLARE_ACCOUNT_ID`. REDACTED OUTPUT IS THE ONLY SECURITY PROPERTY: secret values, caller-supplied values and `key=` query params are masked, and `cf-list-vars` prints names + types NEVER values (Cloudflare returns plain_text values in the clear; `GH_DISPATCH_TOKEN` is stored as Text). Read-only to the repo, no git, own concurrency group, no assert_staged/WATCHDOG. Note the one honest limit: `args` for `cf-set-var` carries the value through the run's dispatch inputs, which GitHub records. Pins: `tests/test_ops.py` |
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
+| ignition.yml | `14 0` UTC (the new completed crypto bar) + `14 1,2` backstops (skip once today's file is on the branch) + `44 5,11,17,21` intraday; push to `.github/ignition-kick`; manual (`backtest`, `dry_run`) | IGNITION lens (REPORT-ONLY, crypto): screens the coil → ignition shape into `public/data/ignition/crypto.json`; a kick or `backtest: true` also replays full history into `crypto_backtest.json`, committed back to the PUSHED branch (never hard-coded main). Own concurrency group per branch, not in the scan mutex; assert_staged per reported path; no WATCHDOG entry by decision. Pins: `tests/test_ignition_workflow.py` |
+| crypto_source_check.yml | manual; push to `.github/crypto-source-kick` | READ-ONLY verification of the crypto data-source switch (see CRYPTO DATA SOURCE): venue reachability from a runner, freshness, close gap to Yahoo (ticker collisions), liquidity-floor effect, and a DRY VIVEK crypto scan on exchange klines diffed against the published one — writes nothing, no bot, no mutex, no assert_staged/WATCHDOG (evidence_brief pattern) |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -2392,6 +2396,256 @@ blank on new ledger rows (frozen values on old rows survive under the
 blank-only rule). The three HORIZON/BACKFILL/REGIME sections further down
 are kept as HISTORY of code that no longer exists — do not re-add any of it;
 `git log -- scanner/sectorbreadth.py` at the removal commit has the engines.
+
+## CRYPTO DATA SOURCE — exchange klines, one entry point (2026-09-28, owner-ruled)
+
+Owner: *"Nah make the VIVEK crypto scan and paper bot go to the binance or
+bybit. That way it's all in SYNC."* Until this, EVERY crypto bar (scan, bot
+marks and stops, kill switch, every lens) came from Yahoo's aggregated
+`<SYM>-USD` series; Bybit was wired only as the kill switch's ORDER client.
+
+- **One entry point: `scanner/data.py::fetch(market, tickers, period,
+  interval, ref_prices)`** → `({ticker: frame}, report)`. Crypto with
+  `config.CRYPTO_DATA_SOURCE = "exchange"` → `scanner/exchange_data.py`
+  (public, KEYLESS klines; no credentials, no order paths — test-pinned);
+  every other market → `download()` exactly as before. Callers: `run.py` (the
+  scan download), `scan.py::_bars` (its fallback + the 4H plans' bars; it forwards every
+  identity kwarg),
+  `vivek_run.py` (off-universe stragglers + CLI), `kill_switch._live_marks`,
+  the IGNITION lens. `tests/test_crypto_source_switch.py` fails if any of
+  them stops calling `fetch`. **Revert = one line**: `CRYPTO_DATA_SOURCE =
+  "yahoo"`.
+- **Venues, MEASURED from a GitHub runner (the kick of 2026-09-28):**
+  `data-api.binance.vision` (Binance's market-data mirror) ANSWERS;
+  `api.binance.com` → **451**, `api.bybit.com` → **403** (both geo-block US
+  hosts — GitHub's runners are US); Coinbase answers. Order:
+  `EXCHANGE_KLINE_SOURCES = (binance_vision, binance, bybit, coinbase)`; a
+  venue that refuses or errors on the probe coin is dropped for the run.
+  First run: 117 coins Binance, 15 Coinbase, 36 Yahoo fallback; coverage
+  137 → 168 of 201.
+- **THE IDENTITY CHECK — a ticker is not an identity.** The side-by-side run
+  found Yahoo pricing a DIFFERENT TOKEN under the same ticker: AERO
+  +2,623,839% vs Binance, JUP +96,729%, ARB +35,210%, PRL, SKY, XCN… — so the
+  old Yahoo crypto scan had been scanning the wrong instrument for those
+  names. Every source's latest close must sit within `CRYPTO_IDENTITY_TOL`
+  (0.40) of CoinGecko's current price for the coin (the universe now carries
+  `cg_price`), else that source is rejected for that coin and the next tried;
+  a coin nothing confirms is LEFT OUT, never scanned as a stranger. The
+  report publishes `identity_rejected`.
+- **EVERY path a crypto price takes to the book is guarded, not just the
+  scan's (pre-merge review, 2026-09-28 — three independent reviewers found
+  the same holes; all fixed, `tests/test_crypto_identity_paths.py`, every
+  fix mutation-checked):**
+  1. **The frame cache never refills a REFUSED coin.** `fetch()` reports
+     `refused` (every source priced a different token) and
+     `merge_with_cache(..., refused=)` neither back-fills nor re-saves it —
+     it used to hand straight back the stranger the check had just refused.
+     **And exchange mode has its OWN cache file** (`crypto.exchange.pkl.gz`,
+     `ignition-crypto.exchange…`): the pre-switch cache actions/cache
+     restores holds Yahoo's wrong-token M / MNT (~$0.0003 for coins at ~$1-2).
+  2. **A held coin must reproduce its OWN recorded history.** The kill
+     switch and the book's off-universe fetch pass
+     `data.held_price_kwargs(positions)`: a venue's frame must close within
+     `CRYPTO_ANCHOR_TOL` (0.15) of the position's HISTORY ANCHOR on the
+     anchor's date (`exchange_data.anchor_ok`) — on WHATEVER venue answers.
+     The anchor is the position's stored `anchor` [date, close]:
+     `vivek_run._stamp_identity` writes it (with `data_source`, the venue the
+     chart draws) only when `_mark_sanity` ACCEPTS a mark or a position
+     opens, and only from an identity-CHECKED frame (`data.anchor_of`, the
+     frame's last completed close). **It is a real past close, not a mark**
+     (fourth review): the first cut anchored on `day_marks[D]`, but a mark
+     only moves when a price is accepted, so after an outage it lagged the
+     market, every venue failed it and the position stayed unpriced FOR
+     EVER — and Yahoo publishes D−1 late, so a D−1 anchor failed every
+     Yahoo coin each morning. `day_marks` survives only as the fallback for
+     a row stamped before `anchor` existed (a malformed stored anchor falls
+     back too). The kill switch sizes its window from the oldest anchor
+     (`held_fetch_period`; an old anchor = the bot stopped marking, exactly
+     when the check matters). A same-ticker stranger fails the anchor
+     (Binance's AI and MET; a venue re-listing a symbol as a new token); a
+     real move since cannot; an outage at one venue falls through to the
+     next. A position with no anchor at all is checked against its last mark
+     at 0.40. A quote either check refuses leaves the kill switch on its
+     stamped mark and the book position unpriced (counted), never on a
+     stranger.
+  3. **A delisted pair is not a price.** Binance's mirror keeps serving a
+     dead pair's frozen klines; a venue whose newest bar is older than
+     `EXCHANGE_MAX_BAR_AGE_DAYS` (**1** — crypto trades 24/7 and every venue
+     opens today's candle at 00:00 UTC; at 3 a pair frozen two days ago
+     still beat a live venue and froze a held coin's mark) is skipped for
+     the next venue and named under `stale_rejected`. For a coin left with no frame, `refused` +
+     `rejected_venues` let `merge_with_cache` block a cached frame FROM A
+     REJECTED VENUE (the stranger, the frozen pair) or of unknown venue,
+     while a cached frame from a live venue that merely failed this run
+     (LIT's Yahoo series on a throttled run — seen on a real run) refills.
+  4. **An OLD reference is answered by a HISTORY ANCHOR — not a wider band,
+     not a venue pin.** On a CoinGecko outage the universe comes from the
+     snapshot (`cg_stale`) and `data.identity_kwargs()` anchors every coin
+     whose last IDENTITY-CHECKED frame is in the frame cache to that frame's
+     last completed close; a coin with no such frame keeps the tight 0.40
+     band against the old price; one with neither is REFUSED
+     (`require_identity`). Frames record how they were checked
+     (`attrs["identity"]` = ref / anchor / none) and an unchecked frame is
+     never an anchor. **Two designs died in pre-merge review first:** a
+     wider [0.2x, 5x] band let a Binance 'MET' 43% under the real one price
+     a HELD coin and fire its stop (−2.88R, −4.68R once the sanity guard
+     gave in); venue PINS let an unchecked frame become a trusted pin, gave
+     a pinned venue no check at all, and froze a held coin's mark when the
+     pinned venue was down. `CRYPTO_IDENTITY_TOL_STALE` is gone (test-pinned).
+     `unchecked` in the report + a WARNING = frames priced with no evidence
+     (a fresh universe coin CoinGecko gave no price, e.g. the FLASH extra).
+  5. **The 4H plans were built off OTHER INSTRUMENTS on main, crypto AND
+     ASX** — `_attach_h4_plans` asked Yahoo for the bare symbol ("ETH" =
+     Ethan Allen, 25.7 on a $2,695 coin; "BHP" = the NYSE ADR) and was
+     handed the MarketConfig, so its crypto branch never ran. It now gets
+     the market key, asks for `symbol + suffix`, and pins each coin's 4h
+     candles to its daily venue where that venue has 4h candles (Coinbase
+     has none, so those coins walk the venues), all checked against the row's
+     price. Display only; nothing reads a 4H plan to trade. Real run: 15 of
+     16 crypto rows now carry a real 4H plan, and ASX 4H plans go from ~4 of
+     226 rows to nearly all (the ASX detail file grows ~135KB).
+- **What moved, measured:** freshness — at 02:15 UTC exchange bars had the
+  prior day complete for 100/100 coins, Yahoo for 0/100 (Yahoo was a day
+  behind); median close gap to Yahoo 0.07% (90th pct 1.27%) where the ticker
+  IS the same coin; **liquidity — one exchange's quote volume is smaller than
+  Yahoo's aggregate: 63/100 coins clear the $3M floor on exchange volume vs
+  85/100 on Yahoo's**, so thin alts leave the deck. The floor itself is
+  untouched (a trade change, the owner's call). Open book at the switch: BNB
+  only; no colliding ticker was ever traded.
+- **Published:** every scan payload gets `data_sources` (mode, per-venue
+  counts, refused venues, identity rejections); crypto rows carry
+  `data_source`. The chart reads it: a Binance-sourced row draws Binance
+  candles + a Binance header quote through `/api/price` / `/api/quote`
+  (`_prices.js` now asks the mirror first and PAGES past Binance's 1000-bar
+  cap, bounded at 4 pages); anything else draws Yahoo as before.
+- **Verification without touching main:** `.github/workflows/
+  crypto_source_check.yml` (read-only; kick `.github/crypto-source-kick`) runs
+  `scripts/crypto_source_compare.py` + `scripts/crypto_scan_dryrun.py` — the
+  REAL crypto scan on exchange klines, writing nothing, diffed against the
+  published scan. crypto_bot.yml is never dispatched from a branch: its
+  commit step pushes to main.
+- **Still on Yahoo, by scope:** PhaseMap (spec-governed provider) and the
+  momentum lens for crypto — including the same wrong-token tickers above.
+  Stocks everywhere. Tests never reach an exchange (`tests/conftest.py`
+  refuses every venue unless a test installs its own fake).
+
+## IGNITION — the coil → ignition lens (2026-09-28, owner: "build it") — REPORT-ONLY
+
+**Why it exists.** QNT ran 71 → 373 (intraday) over 24–27 Sep 2026 while the
+deck showed nothing. The committed scan history says the scanner HAD it: VIVEK
+graded QNT **A, 1D break armed (🎯 High Conviction)** from 24 Sep 18:24 to
+25 Sep ~9pm Melbourne at $71.64 (entry 69.73, stop 55.56, 3.0:1). Three things
+lost it: (1) the bot's weekly/3d level gate refused a daily-200 row (correct —
+do not loosen it on one anecdote); (2) VIVEK deletes a row the moment price
+leaves the 4% band, so a setup that WORKS vanishes; (3) nothing looks for the
+SHAPE — months of compression, then a close out of the base on a multiple of
+volume — as a thing in its own right (Specs does, but only ASX/NASDAQ under
+$0.50; the "arriving" list only runs inside the VIVEK branch; PhaseMap read
+QNT's 23 Sep poke as a BEARISH sweep).
+
+**Also found chasing it: the crypto universe was never the top 200.**
+`CRYPTO_UNIVERSE_SIZE = 200` made the one-page CoinGecko request ask
+`per_page=260`; CoinGecko caps it at 250 and silently serves its default 100,
+so the universe SHRANK 101 → 86 on 2026-09-20. `universe._fetch_crypto` now
+pages at the cap (`tests/test_crypto_universe.py`; the old test pinned the bug).
+**The wider universe let PEGS in, so the peg rule grew (2026-09-28).** The
+first dry VIVEK crypto scan on exchange data graded **EURCV (a euro
+stablecoin) A+ and U ("United Stables") A** — and the OLD 86-name cache
+already held USDF, USYC, USTB, EUTBL, EURSAFO and USDGO, pegs and tokenised
+cash/T-bill funds the `<X>USD` rule never saw. `universe._is_stable(sym,
+name)` now also drops `USD<X>` / `EUR<X>` tickers, an explicit list of
+non-dollar fiat pegs and tokenised funds, and CoinGecko NAMES carrying a peg
+word (stablecoin(s), stables, USD, dollar, EUR, euro, treasury, T-bill,
+money market, government securities/bonds, CLO); a cached snapshot is
+re-filtered on load. It only ever REMOVES names, which is what the owner's
+original skip rule says pegs are. **Gold/silver tokens (PAXG, XAUT, KAU,
+KAG) stay — the metal trends and they were always scanned on purpose**; a
+singular "Stable" (the STABLE chain token) stays too. The dry run prints the
+rows the rule drops (false positives) and anything still scanned whose year
+never left a 30% band (misses). Its first run on a runner: 40 rows dropped,
+every one a peg or cash fund; misses YLDS and USAT (x1.00 / x1.01 over a
+year) and the yen coin JPYC went onto the explicit list; what remains in the
+band is XAUT (gold) and HTX (a real, quiet token). **Re-run
+crypto_source_check after any universe change and read that line** — the
+explicit list is where a new odd-named peg has to be added. Pins:
+`tests/test_universe.py`.
+
+- **Package:** `scanner/ignition/` — `engine.py` (pure, causal features shared
+  by the screen AND the replay: one implementation, two readers), `run.py`
+  (CLI; exit 0 published / 3 kept the last file / 1 failure), `backtest.py`.
+  Publishes ONLY `public/data/ignition/crypto.json` (+ `crypto_backtest.json`).
+  Config: the `IGNITION_*` block — every threshold PRE-REGISTERED before the
+  first real run; a change bumps `IGNITION_RULESET_VERSION`.
+- **The rule.** COIL (one bar, all four): SMA 9/26/43/200 within 12% of each
+  other; ATR%-of-price in the bottom 25% of its 2-year window; 20d volume in
+  the bottom 35% of its 2-year window; ≥50% under the 3-year high. TRIGGER
+  (completed bar): coiled on any of the 10 bars BEFORE it; close > the 60-bar
+  base's highest high; volume ≥ 3× the prior 20-day average; ≤60% over the
+  9-SMA; $1M/20d base and $3M trigger-day turnover (crypto volume is already
+  USD). One trigger per move (20-bar rearm). PLAN: stop = max(base low, base
+  high − 1×ATR(t−1)); exit at the next open after a daily close below the
+  9-SMA — NO fixed TP ladder (Specs' ladder averaged a 1.03R win: it cut every
+  runner). The 2-year rank window replaced a drafted 1-year one BEFORE any real
+  data was seen: a year-long base becomes its own reference and stops ranking
+  quiet.
+- **States on the page:** IGNITING (fired on one of the last 2 completed bars)
+  → RUNNING → CLOSED (kept 20 bars ON PURPOSE — a list of only winners is the
+  survivorship this lens exists to stop), COILED (a trigger tomorrow would
+  count). `provisional` = the FORMING bar qualifies; never confirmed (QNT's own
+  23 Sep poke closed back inside the base). Once the bar after a trigger exists
+  the row is priced from ITS OPEN — the replay's fill — so page R and evidence
+  R are one number.
+- **The replay's honesty rules (each closed an audit finding, 2026-09-28):**
+  realised trades only (open/pending are marks beside the stats, never in
+  them); the design case (QNT from 2026-09-01) is NEVER scored — it informed
+  the thresholds; the baseline is random timing on the SAME coin within ±182
+  bars (same season) drawn only from bars the rule could have traded; the
+  decision statistic is `versus.random_timing` (primary minus baseline,
+  cluster-bootstrapped by entry month — alt ignitions bunch); exit variants
+  trade exactly the primary's entries; the sensitivity grid is a robustness
+  distribution, never a menu. A FORWARD bucket (from 2026-09-28) is the only
+  truly unseen data and accrues from now.
+- **Fences (`tests/test_ignition_fences.py`, AST-based, both directions):**
+  nothing under `scanner/broker/` (or vivek/scan/conviction/confluence/
+  morning_plays/run.py) can reach the lens; the lens imports only config,
+  data, output, universe, scanerrors, indicators. NOT confluence, NOT traded.
+- **Workflow `ignition.yml`:** own concurrency group PER BRANCH
+  (`ignition-<ref>`); crons 00:14 UTC (the new completed crypto bar) + 01:14/
+  02:14 backstops that skip once today's file exists + 4 intraday refreshes;
+  the backtest runs on a manual dispatch or a push touching
+  `.github/ignition-kick`, committing back to the PUSHED branch (never a
+  hard-coded main). assert_staged once PER reported path. Deliberately no
+  WATCHDOG_RUNS entry (momentum precedent, pinned as a decision).
+- **Front end:** the `⚡ Ignition N` pill sits THIRD on the crypto deck
+  (after A+ and A, so a 390px phone sees it without swiping; a placeholder
+  holds the slot while the file loads, so nothing reflows). N = confirmed
+  IGNITING — the panel heading prints the same number from the same function;
+  forming-bar breaks show as visible "+N forming" text, never in N. It opens
+  `#ignition-panel` (`public/js/ignition.js` + `css/ignition.css`; the
+  backtest file is fetched only when the panel opens). **STALE** (⚠ on the
+  pill, a badge in the header): the run is over 26h old, or — 6h past 00:00
+  UTC (`STALE_BAR_GRACE_H`; the 00:14 cron lands late, and a mark that lit
+  every morning would be learned-to-ignore) — the newest completed bar is
+  older than UTC-yesterday. The evidence line only PRINTS the file's numbers
+  (realised n, open-not-counted, expectancy, OOS, vs random timing with CI
+  and P, top-5 share); JS computes no statistic. A payload fault anywhere
+  hides the panel, resets the pill and re-raises; the deck keeps rendering.
+  Tests: `test/ignition.test.js` (97, mutation-verified),
+  `tests/test_ignition_frontend.py` (JS market list == config).
+- **What the replay says (exchange data + peg rule, run of 2026-09-28
+  03:09 UTC — report-only, READ AS SUGGESTIVE):** 94 realised trades,
+  expectancy **+1.19R**, median **−0.76R**, PF 3.08, 34% winners; versus
+  random timing on the same coins **+1.15R, 90% CI −0.06..+2.59, P(no edge)
+  0.062** — borderline. **The top 5 trades are 108% of the total R (ex-top-5
+  −0.10R)**: a fat-tail system whose whole average is a handful of monster
+  runs. Pre-2024 (n=44) +0.03R; 2024+ (n=50) +2.21R. BTC above its 200-SMA
+  n=82 +1.37R, below n=12 −0.02R (context, not a filter). hold-20 exit
+  +1.65R vs the 9-SMA trail's +1.19R; the ladder exit +0.21R (it cuts the
+  runners). All 243 grid cells positive (median +1.39R) — overlapping cells,
+  a robustness read only.
+- **What would have to be true to trade it:** the FORWARD bucket beating
+  random timing on its own, not the historical replay alone — and then it is
+  the owner's call, like every trade change.
 
 ## HIGH CONVICTION — the four-cell rule (2026-09-20)
 
