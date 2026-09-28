@@ -359,18 +359,6 @@ def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
     return items
 
 
-def identity_refs(items: list[dict]) -> tuple[dict, float]:
-    """({yf ticker: CoinGecko price}, tolerance) for data.fetch's identity
-    check. A universe served from the last-good snapshot (CoinGecko down)
-    carries OLD prices, so it gets config.CRYPTO_IDENTITY_TOL_STALE -- wide
-    enough that a real coin which moved while CoinGecko was down is not
-    refused everywhere, tight enough for the gross same-ticker collisions."""
-    refs = {i["yf"]: i.get("cg_price") for i in items if i.get("yf")}
-    stale = any(i.get("cg_stale") for i in items)
-    tol = config.CRYPTO_IDENTITY_TOL_STALE if stale else config.CRYPTO_IDENTITY_TOL
-    return refs, float(tol)
-
-
 def load_universe(market_key: str, full: bool = True) -> list[dict]:
     """Return [{symbol, name, yf}, ...] for a market.
 
@@ -414,9 +402,9 @@ def load_universe(market_key: str, full: bool = True) -> list[dict]:
         if cached and market_key == "crypto":
             # A snapshot saved under an older peg rule must not bring a peg
             # back the day CoinGecko is down. Its cg_price is as old as the
-            # snapshot: flag it, so the identity check reads it with the wide
-            # stale band (identity_refs) instead of refusing every real coin
-            # that moved while CoinGecko was down.
+            # snapshot: flag it, so data.identity_kwargs pins each coin to the
+            # venue of its last confirmed frame instead of trusting a price
+            # that may be hours old.
             cached = [dict(i, cg_stale=True) for i in cached
                       if not _is_stable(i.get("symbol", ""), i.get("name", ""))]
         if cached:

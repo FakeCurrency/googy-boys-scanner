@@ -242,12 +242,13 @@ def test_the_universe_keeps_coingeckos_price_as_the_reference(monkeypatch):
 
 def test_the_scan_and_the_lens_pass_the_reference_prices():
     """Every universe-wide crypto fetch arms the identity check through
-    universe.identity_refs (fresh CoinGecko prices at the tight band, a cached
-    snapshot's at the stale band) and keeps refused coins out of the cache."""
+    data.identity_kwargs (CoinGecko prices at the tight band; when they are a
+    snapshot's, pins to each coin's last confirmed venue) and keeps refused
+    coins out of the cache."""
     for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py",
-                "scanner/scan.py"):
+                "scanner/scan.py", "scripts/crypto_scan_dryrun.py"):
         src = (ROOT / rel).read_text(encoding="utf-8")
-        assert "identity_refs(" in src and "ref_prices=refs" in src and "ref_tol=" in src, rel
+        assert "identity_kwargs(" in src, rel
     for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py"):
         src = (ROOT / rel).read_text(encoding="utf-8")
         assert "refused=" in src, rel

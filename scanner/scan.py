@@ -210,10 +210,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         if progress:
             print(f"  downloading {len(universe)} {market.label} tickers "
                   f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
-        from .universe import identity_refs
-        refs, ref_tol = identity_refs(universe)
+        from .data import identity_kwargs
         frames = _bars(market_key, [u["yf"] for u in universe], config.VIVEK_DATA_PERIOD,
-                       ref_prices=refs, ref_tol=ref_tol)
+                       **identity_kwargs(market_key, universe))
 
     now = dt.datetime.now(ZoneInfo(market.timezone))
     prev_grades = _load_prev_grades(out_root, market_key)   # for grade hysteresis
@@ -604,8 +603,14 @@ def _attach_h4_plans(results: list[dict], market: str, frames: dict | None = Non
     # Crypto: each coin's 4h candles come from the venue its DAILY bars came
     # from (pinned), checked against the row's own price -- a first-listed
     # same-ticker token must not draw the plan. Stocks: Yahoo 1h, bucketed.
-    pin = {t: (frames or {}).get(t).attrs.get("source")
-           for t in tickers if (frames or {}).get(t) is not None}
+    # A venue with no 4h candles (Coinbase) is NOT pinned: those coins walk
+    # the venues under the same price check instead of getting no plan.
+    from .exchange_data import supports
+    pin = {}
+    for t in tickers:
+        v = getattr((frames or {}).get(t), "attrs", {}).get("source")
+        if v and supports(v, "4h"):
+            pin[t] = v
     refs = {yf_of(r): r.get("price") for r in rows}
     t0 = time.time()
     try:

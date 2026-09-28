@@ -1236,12 +1236,11 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             still_open.append(pos)
             continue
         price = price_of(pos["symbol"])
-        if price is not None and market == "crypto":
-            # The venue this mark came from: the kill switch and the
-            # off-universe fetch price the position there and nowhere else.
-            src = venue_of(frames, yf_map.get(pos["symbol"]))
-            if src:
-                pos["data_source"] = src
+        # The venue this mark came from -- stamped below only if the mark is
+        # ACCEPTED, because the kill switch and the off-universe fetch price
+        # the position there and nowhere else: a suspect print must not move
+        # the pin to the venue that printed it.
+        src = venue_of(frames, yf_map.get(pos["symbol"])) if market == "crypto" else None
         # Auditable freeze detection: a position that can't be priced can't be
         # stopped out. Count consecutive unpriced runs on the position itself
         # so the book (and anyone reading it) SEES the freeze instead of a
@@ -1265,6 +1264,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # challenge budget on a run that could never have managed anything.
         if price is not None:
             price = _mark_sanity(pos, price, market, session_open=is_open)
+        if price is not None and src:
+            pos["data_source"] = src
         if is_open and price is not None:
             _mark(pos, price, day, costs)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going
@@ -1699,8 +1700,8 @@ def main() -> None:
     dry_run = True if args.dry_run else (False if args.live else None)
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
 
-    from ..universe import identity_refs, load_universe
-    from ..data import fetch, merge_with_cache
+    from ..universe import load_universe
+    from ..data import fetch, identity_kwargs, merge_with_cache
 
     for market_key in markets:
         pub = ROOT / "public" / "data" / f"{market_key}_vivek.json"
@@ -1729,9 +1730,8 @@ def main() -> None:
             if isinstance(extra, dict):
                 r.update(extra)
         universe = load_universe(market_key, full=True)
-        refs, ref_tol = identity_refs(universe)
         fresh, rep = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
-                           ref_prices=refs, ref_tol=ref_tol)
+                           **identity_kwargs(market_key, universe))
         frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe],
                                      refused=rep.get("refused") or ())
         run_market(market_key, results, frames, universe, dry_run=dry_run)

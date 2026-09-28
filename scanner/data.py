@@ -371,12 +371,13 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
     sit in.
 
     `ref_prices` {ticker: CoinGecko price} arms the IDENTITY CHECK
-    (`ref_tol`, default config.CRYPTO_IDENTITY_TOL; callers holding an OLD
-    reference pass CRYPTO_IDENTITY_TOL_STALE): a source -- exchange OR Yahoo
-    -- whose latest close is not that coin's price is rejected for it, and a
-    coin no source confirms is left out rather than scanned as a same-ticker
-    stranger. Such tickers are listed in report["refused"] so the frame cache
-    never back-fills them (merge_with_cache).
+    (`ref_tol`, default config.CRYPTO_IDENTITY_TOL; build the kwargs with
+    identity_kwargs, which pins instead when the prices are old): a source --
+    exchange OR Yahoo -- whose latest close is not that coin's price is
+    rejected for it, and a coin no source confirms is left out rather than
+    scanned as a same-ticker stranger. Such tickers -- and those whose only
+    listing was a delisted pair's frozen klines -- are listed in
+    report["refused"] so the frame cache never back-fills them.
 
     `pin` {ticker: venue} prices a HELD coin from the venue the scan marked it
     on and nowhere else (the kill switch and the book's off-universe fetch):
@@ -453,14 +454,18 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
                 f.attrs["source"] = "yahoo"
                 frames[t] = f
                 source_of[t] = "yahoo"
-        refused = sorted(t for t in tickers if t not in frames and base[t].upper() in
-                         {str(k).upper() for k in rejected})
+        # Refused = no source is THIS coin (identity) or only a delisted pair
+        # listed it (age gate). Either way the cache must not refill it: its
+        # last frame is the stranger's, or the same frozen klines, 10 days on.
+        no_live = {str(k).upper() for k in rejected} | {str(k).upper() for k in stale}
+        refused = sorted(t for t in tickers if t not in frames and base[t].upper() in no_live)
         report = {"mode": "exchange", "dead": dead, "errors": errors,
                   "no_exchange": sorted(no_exchange),
                   "yahoo_fallback": len(fb), "source_of": source_of,
                   "identity_rejected": dict(sorted(rejected.items())),
                   "stale_rejected": dict(sorted(stale.items())),
                   "refused": refused,
+                  "pinned_missing": sorted(t for t in tickers if pins[t] and t not in frames),
                   "unchecked": sum(1 for t in frames
                                    if (ref_prices or {}).get(t) is None and not pins[t])}
     else:
@@ -468,7 +473,7 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
         report = {"mode": "yahoo", "dead": {}, "errors": {}, "no_exchange": [],
                   "yahoo_fallback": 0, "source_of": {t: "yahoo" for t in frames},
                   "identity_rejected": {}, "stale_rejected": {}, "refused": [],
-                  "unchecked": 0}
+                  "pinned_missing": [], "unchecked": 0}
     by: dict[str, int] = {}
     for v in report["source_of"].values():
         by[v] = by.get(v, 0) + 1
@@ -483,6 +488,38 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
     return frames, report
 
 
+def identity_kwargs(market_key: str, items: list, cache_key: str | None = None) -> dict:
+    """fetch() kwargs that arm the identity check for a universe-wide fetch.
+
+    Fresh universe: every coin is checked against CoinGecko's current price at
+    CRYPTO_IDENTITY_TOL. Universe from the last-good SNAPSHOT (CoinGecko down,
+    items flagged `cg_stale`): the prices may be hours old, so a real coin that
+    moved since would be refused on every venue -- and widening the band to
+    let it through lets a same-ticker stranger through too (the pre-merge
+    review, 2026-09-28: a Binance 'MET' 43% under the real one fired a held
+    position's stop). So each coin whose last-good frame is in the frame cache
+    is PINNED to that frame's venue (the venue the check confirmed it on) and
+    priced there with no band; a coin with no cached frame keeps the tight
+    band against the old price, which can refuse it for a run, never admit a
+    stranger. `cache_key` is the frame cache to read (default: the market's)."""
+    refs = {i["yf"]: i.get("cg_price") for i in items or [] if i.get("yf")}
+    out = {"ref_prices": refs, "ref_tol": float(config.CRYPTO_IDENTITY_TOL), "pin": {}}
+    if market_key != "crypto" or not any(i.get("cg_stale") for i in items or []):
+        return out
+    cache = load_frame_cache(cache_key or market_key)
+    pin = {}
+    for t in refs:
+        v = venue_of(cache, t)
+        if v and v != "cache":
+            pin[t] = v
+    out["pin"] = pin
+    out["ref_prices"] = {t: p for t, p in refs.items() if t not in pin}
+    log.warning("identity: CoinGecko snapshot in use -- %d coin(s) pinned to the venue "
+                "of their last confirmed frame, %d checked against old prices",
+                len(pin), sum(1 for p in out["ref_prices"].values() if p))
+    return out
+
+
 def venue_of(frames: dict, ticker: str | None) -> str | None:
     """The venue a frame came from (fetch() stamps every crypto frame's
     attrs["source"]; the stamp survives the frame cache's pickle)."""
@@ -494,10 +531,11 @@ def venue_of(frames: dict, ticker: str | None) -> str | None:
 def held_price_kwargs(positions: list) -> dict:
     """fetch() kwargs that price HELD crypto the way the scan marked it
     (2026-09-28 review). A position that records its venue (`data_source`,
-    stamped by vivek_run each time it is marked) is PINNED to it; one that
-    predates the stamp is checked against its own last accepted mark with
-    the wide stale band -- enough to refuse a same-ticker stranger priced
-    orders of magnitude away, never enough to refuse a real crash."""
+    stamped by vivek_run each time a mark is ACCEPTED) is PINNED to it; one
+    that predates the stamp is checked against its own last accepted mark at
+    the ordinary band. That mark is at most a run old, and a quote the band
+    refuses leaves the position on its stamped mark (the kill switch's
+    fallback) rather than on a stranger's price."""
     suffix = config.MARKETS["crypto"].suffix
     pin, refs = {}, {}
     for p in positions or []:
@@ -509,8 +547,7 @@ def held_price_kwargs(positions: list) -> dict:
             pin[yf] = src
         elif (p.get("last_mark") or 0) > 0:
             refs[yf] = float(p["last_mark"])
-    return {"pin": pin, "ref_prices": refs,
-            "ref_tol": float(config.CRYPTO_IDENTITY_TOL_STALE)}
+    return {"pin": pin, "ref_prices": refs, "ref_tol": float(config.CRYPTO_IDENTITY_TOL)}
 
 
 def source_summary(report: dict) -> dict:
@@ -523,5 +560,6 @@ def source_summary(report: dict) -> dict:
             "identity_rejected": report.get("identity_rejected") or {},
             "stale_rejected": report.get("stale_rejected") or {},
             "refused": list(report.get("refused") or []),
+            "pinned_missing": list(report.get("pinned_missing") or []),
             "unchecked": report.get("unchecked", 0)}
 

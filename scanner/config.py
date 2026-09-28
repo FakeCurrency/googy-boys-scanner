@@ -155,13 +155,13 @@ EXCHANGE_KLINE_SOURCES = ("binance_vision", "binance", "bybit", "coinbase")
 # [0.71x, 1.40x]: wide enough for minutes of drift in a squeeze, far inside
 # every collision measured (the smallest, MET, was -43%).
 CRYPTO_IDENTITY_TOL = 0.40
-# The band when the reference is NOT a fresh CoinGecko price: the universe came
-# from the last-good snapshot (CoinGecko down), or the reference is a held
-# position's last accepted mark. An old reference cannot tell a real move from
-# a stranger at 0.40 -- a coin that fell 35% while CoinGecko was down would be
-# refused on every venue -- so it only catches the GROSS collisions (every one
-# measured 2026-09-28 was 80% to 2.6-million% off). 4.0 = [0.2x, 5x].
-CRYPTO_IDENTITY_TOL_STALE = 4.0
+# There is deliberately NO wider "stale" band. One shipped for a few hours on
+# 2026-09-28 ([0.2x, 5x] when CoinGecko was down) and the pre-merge review
+# proved it let MET-class strangers (-43%, measured above) price a HELD coin and
+# fire its stop on a coin that never moved. When the reference is old the scan
+# instead PINS each coin to the venue its last confirmed frame came from
+# (data.identity_kwargs); a coin with no such frame keeps this band against the
+# old price, which can only refuse a real coin for a run, never admit a stranger.
 # A venue whose newest daily bar is older than this does NOT list the coin any
 # more (Binance's market-data mirror keeps serving a delisted pair's frozen
 # klines -- XMR/BTT/LIT on 2026-09-28): the next venue is asked instead, and the

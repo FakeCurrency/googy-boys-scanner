@@ -67,9 +67,8 @@ def main() -> int:
     names = {u["symbol"]: u.get("name") or "" for u in uni}
     print(f"## Dry VIVEK crypto scan on exchange klines - {len(uni)} coins - {now:%Y-%m-%d %H:%M} UTC\n")
     _peg_rule_report()
-    refs, tol = universe.identity_refs(uni)
     frames, rep = data.fetch("crypto", [u["yf"] for u in uni], period=config.VIVEK_DATA_PERIOD,
-                             ref_prices=refs, ref_tol=tol)
+                             **data.identity_kwargs("crypto", uni))
     s = data.source_summary(rep)
     print(f"- sources: {s['by_source']}")
     print(f"- refused the runner: {s['dead']}")

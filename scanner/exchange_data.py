@@ -99,6 +99,15 @@ _IV = {"binance": {"1d": "1d", "4h": "4h", "1h": "1h"},
        "coinbase": {"1d": 86400}}
 
 
+def supports(venue: str, interval: str) -> bool:
+    """Does this venue serve candles at `interval`? ("yahoo" is Yahoo's 1h leg,
+    bucketed by the resampler, so it serves 4h too.) Coinbase has no 4h."""
+    if venue == "yahoo":
+        return True
+    key = "binance" if venue in ("binance", "binance_vision") else venue
+    return interval in _IV.get(key, {})
+
+
 def _frame(rows: List[Tuple[int, float, float, float, float, float]], source: str,
            daily: bool = True) -> pd.DataFrame:
     """[(open_ms, o, h, l, c, quote_vol)] -> an ascending frame indexed by

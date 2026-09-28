@@ -291,11 +291,13 @@ def test_a_fresh_frame_passes_the_age_gate_and_the_limit_is_config(route, monkey
     assert frames == {} and rep["stale_rejected"] == {"BTC": ["binance_vision"]}
 
 
-def test_the_identity_band_is_the_callers_to_widen():
-    """ref_tol is threaded through: an OLD reference (a cached universe, a
-    held position's last mark) reads with the wide stale band."""
-    df = pd.DataFrame({"Close": [3.0]}, index=[pd.Timestamp("2026-09-27")])
-    assert not X.same_coin(df, 1.0)                                    # 3x: refused at 0.40
-    assert X.same_coin(df, 1.0, config.CRYPTO_IDENTITY_TOL_STALE)      # inside 5x
-    far = pd.DataFrame({"Close": [0.0003]}, index=[pd.Timestamp("2026-09-27")])
-    assert not X.same_coin(far, 2.0, config.CRYPTO_IDENTITY_TOL_STALE)  # M on Yahoo: still refused
+def test_the_band_is_threaded_and_there_is_NO_wide_stale_band():
+    """ref_tol reaches same_coin. A wider "stale" band (0.2x-5x) shipped for a
+    few hours and the pre-merge review proved a Binance 'MET' 43% under the
+    real one then priced a HELD coin and fired its stop; it must not return.
+    An old reference is handled by pinning (data.identity_kwargs), never by
+    widening the band."""
+    df = pd.DataFrame({"Close": [0.57]}, index=[pd.Timestamp("2026-09-27")])
+    assert not X.same_coin(df, 1.0)                       # the MET collision: refused
+    assert X.same_coin(df, 1.0, 1.0)                      # a caller-supplied band is honoured
+    assert not hasattr(config, "CRYPTO_IDENTITY_TOL_STALE")

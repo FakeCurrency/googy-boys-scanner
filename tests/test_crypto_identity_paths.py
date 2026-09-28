@@ -12,13 +12,16 @@ four others could still hand the book a different token's price:
   3. a delisted pair's frozen klines, still served by Binance's mirror, beat
      a live venue whenever the frozen close sat near today's price;
   4. a cached universe's OLD CoinGecko price refused a real coin that moved
-     while CoinGecko was down.
+     while CoinGecko was down -- and the first fix for that (a wider band)
+     let a same-ticker stranger price a HELD coin, so it is answered by
+     pinning each coin to its last confirmed venue instead.
 
 Every test drives the SHIPPED functions with the venues and Yahoo stubbed.
 """
 import datetime as dt
 import json
 import urllib.error
+import urllib.parse
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -141,7 +144,7 @@ def test_held_price_kwargs_pins_a_stamped_position_and_checks_a_legacy_one():
     ])
     assert kw["pin"] == {"AI-USD": "yahoo"}
     assert kw["ref_prices"] == {"BNB-USD": 776.0, "OLD-USD": 3.0}
-    assert kw["ref_tol"] == config.CRYPTO_IDENTITY_TOL_STALE
+    assert kw["ref_tol"] == config.CRYPTO_IDENTITY_TOL
 
 
 def test_a_PINNED_coin_is_priced_on_its_venue_only_and_never_falls_through(venues):
@@ -258,33 +261,153 @@ def test_a_delisted_pairs_frozen_klines_fall_through_to_a_live_source(venues, mo
     assert rep["stale_rejected"] == {"XYZ": ["binance_vision"]}
 
 
-# ── 4. an old reference reads with the wide band ──────────────────────────────
+# ── 4. an old reference is answered by PINNING, never by a wider band ────────
 
-def test_a_cached_universe_arms_the_STALE_band_a_live_one_the_tight_band(monkeypatch, tmp_path):
-    live = [{"symbol": "QNT", "yf": "QNT-USD", "cg_price": 71.0}]
-    refs, tol = universe.identity_refs(live)
-    assert refs == {"QNT-USD": 71.0} and tol == config.CRYPTO_IDENTITY_TOL
-    monkeypatch.setattr(universe, "UNIVERSE_CACHE_DIR", tmp_path)
+def _cached_universe(tmp_path, monkeypatch, extra):
+    """load_universe with CoinGecko down: the snapshot, flagged cg_stale."""
+    monkeypatch.setattr(universe, "UNIVERSE_CACHE_DIR", tmp_path / "uc")
+    (tmp_path / "uc").mkdir()
     items = [{"symbol": f"C{i}", "name": f"Coin {i}", "yf": f"C{i}-USD", "cg_price": 1.0}
-             for i in range(45)] + [{"symbol": "QNT", "name": "Quant", "yf": "QNT-USD",
-                                     "cg_price": 71.0}]
-    (tmp_path / "crypto.json").write_text(json.dumps({"items": items}), encoding="utf-8")
-    monkeypatch.setattr(universe, "_fetch_crypto", lambda suffix: [])      # CoinGecko down
-    cached = universe.load_universe("crypto")
-    refs, tol = universe.identity_refs(cached)
-    assert refs["QNT-USD"] == 71.0 and tol == config.CRYPTO_IDENTITY_TOL_STALE
+             for i in range(45)] + extra
+    (tmp_path / "uc" / "crypto.json").write_text(json.dumps({"items": items}), encoding="utf-8")
+    monkeypatch.setattr(universe, "_fetch_crypto", lambda suffix: [])
+    return universe.load_universe("crypto")
 
 
-def test_a_real_coin_that_ran_while_CoinGecko_was_down_is_not_refused(venues):
-    """QNT's own move: 71 -> 272 on a stale 71 reference. The tight band
-    would refuse the real coin on every venue; the stale band keeps it, and
-    still refuses a same-ticker stranger priced orders of magnitude away."""
-    venues(binance={"QNT": 271.8}, yahoo={"M-USD": 0.0003})
-    fr, rep = data.fetch("crypto", ["QNT-USD", "M-USD"], period="5y",
-                         ref_prices={"QNT-USD": 71.0, "M-USD": 2.0},
-                         ref_tol=config.CRYPTO_IDENTITY_TOL_STALE)
-    assert float(fr["QNT-USD"]["Close"].iloc[-1]) == 271.8
-    assert "M-USD" not in fr and rep["refused"] == ["M-USD"]
+def test_a_live_universe_arms_the_tight_band_and_pins_nothing():
+    kw = data.identity_kwargs("crypto", [{"symbol": "QNT", "yf": "QNT-USD", "cg_price": 71.0}])
+    assert kw == {"ref_prices": {"QNT-USD": 71.0}, "ref_tol": config.CRYPTO_IDENTITY_TOL,
+                  "pin": {}}
+
+
+def test_the_reviewers_MET_case_a_held_coin_is_not_priced_on_a_stranger(
+        venues, cache_dir, tmp_path, monkeypatch):
+    """The blocker the pre-merge review found in the wider-band design, run
+    end to end: CoinGecko down, the held MET was confirmed on Coinbase at
+    1.00, Binance's mirror lists a DIFFERENT 'MET' at 0.57 (-43%, the
+    measured collision). The old band admitted it and the stop fired at
+    -2.88R on a coin that never moved. Now MET is pinned to the venue of its
+    last confirmed frame: Binance is never asked, and the price is 1.00."""
+    uni = _cached_universe(tmp_path, monkeypatch,
+                           [{"symbol": "MET", "name": "Meteora", "yf": "MET-USD", "cg_price": 1.00}])
+    confirmed = _yframe(1.00)
+    confirmed.attrs["source"] = "coinbase"
+    data.save_frame_cache("crypto", {"MET-USD": confirmed})
+    kw = data.identity_kwargs("crypto", uni)
+    assert kw["pin"] == {"MET-USD": "coinbase"} and "MET-USD" not in kw["ref_prices"]
+    assert kw["ref_tol"] == config.CRYPTO_IDENTITY_TOL
+    log, _ = venues(binance={"MET": 0.57})
+    live = [[int(_today().timestamp()), 0.99, 1.01, 1.0, 1.0, 5e6]]
+
+    def router(url, timeout):
+        log.append(url)
+        if "binance.vision" in url and "METUSDT" in url:
+            return _klines(0.57)
+        if "/products/MET-USD/" in url:
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+            start = dt.datetime.fromisoformat(q["start"][0])
+            return live if start > dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=301) else []
+        raise _http(404)
+    monkeypatch.setattr(X, "_get_json", router)
+    fr, rep = data.fetch("crypto", ["MET-USD"], period="5y", **kw)
+    assert rep["source_of"] == {"MET-USD": "coinbase"}
+    assert float(fr["MET-USD"]["Close"].iloc[-1]) == 1.0
+    assert not any("METUSDT" in u for u in log), "the stranger's venue is never asked"
+
+
+def test_a_coin_with_no_confirmed_venue_keeps_the_TIGHT_band_on_a_snapshot(
+        venues, cache_dir, tmp_path, monkeypatch):
+    """No cached frame to pin to: the old price is checked at 0.40. A real
+    coin that ran past it is refused for the run (never refilled) -- the
+    cost -- and a stranger can never get in -- the point."""
+    uni = _cached_universe(tmp_path, monkeypatch,
+                           [{"symbol": "QNT", "name": "Quant", "yf": "QNT-USD", "cg_price": 71.0}])
+    kw = data.identity_kwargs("crypto", uni)
+    assert kw["pin"] == {} and kw["ref_prices"]["QNT-USD"] == 71.0
+    venues(binance={"QNT": 271.8})
+    fr, rep = data.fetch("crypto", ["QNT-USD"], period="5y", **kw)
+    assert fr == {} and rep["refused"] == ["QNT-USD"]
+
+
+def test_the_lens_pins_from_its_OWN_cache():
+    src = open(__import__("scanner.ignition.run", fromlist=["x"]).__file__, encoding="utf-8").read()
+    assert 'identity_kwargs(market, rows,' in src and 'cache_key=f"ignition-{market}"' in src
+
+
+# ── 5. a mark the sanity guard refuses does not move the pin ──────────────────
+
+def test_a_suspect_print_does_not_move_the_venue_pin(tmp_path, monkeypatch):
+    """The review's second MET case: a stranger at 0.30 (-70%) is SUSPENDED by
+    the mark-sanity guard -- and must not become the position's venue on the
+    way, or the kill switch would ask the stranger's venue from then on."""
+    from scanner.vivek_journal import _snapshot
+    row = {"symbol": "MET", "name": "MET", "sector": "", "grade": "A+", "dir": "LONG",
+           "entry_types": ["reclaim"]}
+    plan = {"stop": 0.85, "tp1": 1.3, "tp2": 1.5, "tp3": 1.8,
+            "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "reclaim",
+            "armed": True, "trigger_bar": None}
+    pos = _snapshot(row, "1W", plan, "crypto", 1.0, "2026-09-20")
+    pos.update(market="crypto", risk_usd=500.0, last_mark=1.0, data_source="coinbase")
+    _book_with(tmp_path, monkeypatch, pos)
+    stranger = _yframe(0.30)
+    stranger.attrs["source"] = "binance_vision"
+    bk = vr.run_market("crypto", [], {"MET-USD": stranger}, [{"symbol": "MET", "yf": "MET-USD"}],
+                       now=dt.datetime.now(ZoneInfo("UTC")))
+    (held,) = [p for p in bk["open"] if p["symbol"] == "MET"]
+    assert held.get("suspect_price_runs"), "the -70% print was challenged"
+    assert held["data_source"] == "coinbase", "a refused mark must not move the pin"
+    assert held["last_mark"] == 1.0
+
+
+# ── 6. a delisted pair is not refilled from the cache either ─────────────────
+
+def test_a_coin_whose_only_listing_is_a_delisted_pair_is_refused_not_refilled(
+        venues, cache_dir, monkeypatch):
+    """The review's second finding: the age gate refused LIT's frozen Binance
+    pair, nothing else listed it, and the frame cache handed the SAME frozen
+    klines back for up to 10 days. Now it is `refused` like a stranger."""
+    frozen_end = _today() - pd.Timedelta(days=6)
+    t0 = int((frozen_end - pd.Timedelta(days=4)).timestamp() * 1000)
+    rows = [[t0 + i * DAY, "2", "2", "2", "2", "1", t0 + i * DAY + 1, "9e6"] for i in range(5)]
+    venues()
+    monkeypatch.setattr(X, "_get_json", lambda url, timeout: rows if "LITUSDT" in url
+                        else (_ for _ in ()).throw(_http(404)))
+    old = _yframe(2.0, end=(_today() - pd.Timedelta(days=3)).tz_localize(None))
+    old.attrs["source"] = "binance_vision"
+    data.save_frame_cache("crypto", {"LIT-USD": old})
+    fresh, rep = data.fetch("crypto", ["LIT-USD"], period="5y", ref_prices={"LIT-USD": 2.0})
+    assert rep["stale_rejected"] == {"LIT": ["binance_vision"]} and rep["refused"] == ["LIT-USD"]
+    merged, stats = data.merge_with_cache("crypto", fresh, ["LIT-USD"], refused=rep["refused"])
+    assert merged == {} and stats["reused"] == 0
+
+
+def test_a_pinned_venue_that_returns_nothing_is_REPORTED(venues):
+    venues()
+    fr, rep = data.fetch("crypto", ["AI-USD"], period="5d", pin={"AI-USD": "coinbase"})
+    assert fr == {} and rep["pinned_missing"] == ["AI-USD"]
+    assert data.source_summary(rep)["pinned_missing"] == ["AI-USD"]
+
+
+# ── 7. 4H: a venue with no 4h candles is not pinned ───────────────────────────
+
+def test_a_coinbase_sourced_row_still_gets_a_4H_fetch(monkeypatch):
+    """The review's third finding: Coinbase has no 4h candles, so pinning a
+    Coinbase-sourced coin there left it with no 4H plan and no request made."""
+    from scanner import scan
+    assert X.supports("binance_vision", "4h") and X.supports("yahoo", "4h")
+    assert not X.supports("coinbase", "4h") and X.supports("coinbase", "1d")
+    seen = []
+    monkeypatch.setattr(scan, "_bars", lambda m, t, p, iv="1d", **kw: (seen.append(kw) or {}))
+    cb = _yframe(2.0)
+    cb.attrs["source"] = "coinbase"
+    bn = _yframe(3.0)
+    bn.attrs["source"] = "binance_vision"
+    scan._attach_h4_plans([{"symbol": "LIT", "dir": "LONG", "price": 2.0},
+                           {"symbol": "ETH", "dir": "LONG", "price": 3.0}], "crypto",
+                          {"LIT-USD": cb, "ETH-USD": bn})
+    (kw,) = seen
+    assert kw["pin"] == {"ETH-USD": "binance_vision"}
+    assert kw["ref_prices"] == {"LIT-USD": 2.0, "ETH-USD": 3.0}
 
 
 def test_a_fetch_with_no_reference_says_the_check_is_off(venues, caplog):

@@ -115,9 +115,9 @@ def _download(market: str, period: str, limit: int):
     rows = suniverse.load_universe(market)
     if limit:
         rows = rows[:limit]
-    refs, tol = suniverse.identity_refs(rows)
     frames, report = sdata.fetch(market, [r["yf"] for r in rows], period=period,
-                                 ref_prices=refs, ref_tol=tol)
+                                 **sdata.identity_kwargs(market, rows,
+                                                         cache_key=f"ignition-{market}"))
     return rows, frames, report
 
 
