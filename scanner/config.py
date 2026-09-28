@@ -705,6 +705,25 @@ VIVEK_BOT_STALE_PROBE_PUSH       = True
 #    so the bot skips rows older than this. 0 = off. The scan still DISPLAYS
 #    stale rows (age-badged); this gates the bot's entries only.
 VIVEK_BOT_MAX_DATA_AGE_DAYS = 3
+#  • MAX_MARK_AGE_H (2026-09-28, owner: "Fix it"): the last-good frame cache
+#    back-fills a ticker the source skipped this run, and until now the bot
+#    MANAGED held positions off that frame's last close as if it were live:
+#    stops and time stops tested, mae/mfe and the loss guard updated, and
+#    `unpriced_runs` reset to 0 -- so a coin a venue skipped for days froze at
+#    its old price with nothing counting the freeze. Now `merge_with_cache`
+#    stamps every fresh frame with its fetch time and tags a reused one, and a
+#    held position whose frame was fetched more than this many hours ago is
+#    UNPRICED for the run: not marked, no stop/target/time-stop test, counted
+#    by `unpriced_runs` (alerts at 3/10/30), and the loss guard values it at
+#    its own stop (fail closed, TOP100 #15). 2h tolerates ONE missed fetch
+#    after an on-time run (crypto runs hourly, stock scans ~every 45-60 min),
+#    and no more: a coin missing after a dropped-schedule gap, or a stock
+#    reusing yesterday's frame at the open, is unpriced. A reused frame with no
+#    fetch stamp (a cache written before this) counts as too old. NEW ENTRIES
+#    are stricter -- a fill needs a price fetched THIS run, because a skipped
+#    fill is simply re-tried next run while a stale fill books a price nobody
+#    traded at. 0 = off (reused frames price everything, the old behaviour).
+VIVEK_BOT_MAX_MARK_AGE_H = 2.0
 # Earnings gap-avoidance (best-effort, fail-open): skip NEW entries when the
 # name reports within the buffer. Gapping through a stop is the one tail the
 # stop can't manage. Lookup is one yfinance call per candidate FILL (a handful

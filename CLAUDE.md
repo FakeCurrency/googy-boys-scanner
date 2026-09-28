@@ -1455,6 +1455,30 @@ rows are named in a WARNING, not just counted.
     exactly the row that gets priced off cache for weeks.
   - A live quote carries no age BY CONSTRUCTION (it was just fetched), so the
     badge only travels with the scan-snapshot branch of `refreshLive`.
+- **#24, the held-position half (2026-09-28, owner: "Fix it") —
+  `VIVEK_BOT_MAX_MARK_AGE_H = 2.0`.** Inside the 10-day ceiling the bot still
+  MANAGED held positions off a reused frame's last close as if it were live —
+  stop/time-stop tested, guard fed, `unpriced_runs` reset — so a coin a venue
+  skipped for days froze at an old price with nothing counting the freeze.
+  `merge_with_cache` now stamps every fresh frame `attrs["fetched_at"]` (UTC)
+  and hands a reused one back as a TAGGED shallow copy (`cache_reused`); the
+  cache re-saves the untagged original with its ORIGINAL stamp, so a frame's
+  age keeps growing for as long as it is reused (a renewed stamp is the one
+  bug that would undo the whole fix — pinned). `data.mark_age_h` reads it: 0
+  for anything not back-filled, hours since the original fetch for a reused
+  frame, **inf for a reused frame with no stamp** (unknown never reads as
+  fresh). In `run_market`, `price_of` — which BOTH management and
+  `vivek_guard.check` read — returns None past the limit: the position is
+  unpriced (counted, WARNING `[stale_cache]`), and the guard values it at its
+  stop (fail closed, #15; a run where many held names are only cache-priced
+  can halt that run's new entries, which is the #15 design). 2h tolerates one
+  skipped fetch after an on-time run and no more (a stock reusing yesterday's
+  frame at the open is unpriced). **Fills are stricter: any reused frame
+  skips the fill** (re-tried next run; a stale fill books a price nobody
+  traded at) — beside, not instead of, the row-level `VIVEK_BOT_MAX_DATA_AGE_DAYS`
+  gate. Scan grading/display is untouched. `0` = off. The first run after the
+  deploy reads a cache with no stamps, so any held name reused on that run is
+  unpriced once. Pins: `tests/test_stale_cache_marks.py`.
 - Tests: `tests/test_data_download.py` (17) + `test/journal_stale.test.js` (13,
   which slices the real helpers out of the shipped file rather than mirroring
   them). **`_ohlc()` in the download tests defaults to TODAY** — it used to be a
