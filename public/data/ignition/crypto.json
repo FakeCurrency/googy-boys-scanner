@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-09-28T02:43:26+00:00",
+  "generated_at": "2026-09-28T03:06:53+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-09-27",
@@ -39,8 +39,8 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 167,
-    "screened": 135,
+    "downloaded": 174,
+    "screened": 142,
     "skipped": {
       "short history": 31,
       "stale frame": 1
@@ -49,7 +49,7 @@
       "IGNITING": 0,
       "RUNNING": 5,
       "CLOSED": 2,
-      "COILED": 23,
+      "COILED": 24,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -59,22 +59,22 @@
       "expected_completed": "2026-09-27",
       "lagging": 38,
       "completed_dist": {
-        "2026-09-27": 129,
+        "2026-09-27": 136,
         "2026-09-26": 37,
         "2025-10-27": 1
       },
       "raw_dist": {
-        "2026-09-28": 159,
+        "2026-09-28": 167,
         "2026-09-27": 3,
-        "2026-09-26": 5
+        "2026-09-26": 4
       }
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 113,
-        "yahoo": 33,
-        "coinbase": 13
+        "binance_vision": 119,
+        "yahoo": 34,
+        "coinbase": 14
       },
       "dead": {
         "binance": "HTTP 451",
@@ -82,7 +82,6 @@
       },
       "errors": {},
       "no_exchange": [
-        "A7A5",
         "AI",
         "AKE",
         "APEPE",
@@ -101,16 +100,15 @@
         "CASHCAT",
         "CC",
         "COCO",
+        "DGAI",
         "EDGE",
-        "EURCV",
-        "EURSAFO",
-        "EUTBL",
         "FLASH",
+        "GOMINING",
         "GT",
+        "H",
         "HASH",
         "HTX",
-        "JAAA",
-        "JTRSY",
+        "JPYC",
         "KAG",
         "KAS",
         "KAU",
@@ -125,9 +123,9 @@
         "NPC",
         "OHM",
         "OKB",
-        "OUSG",
         "PC0000031",
         "PC0000033",
+        "PC0000097",
         "PI",
         "PIEVERSE",
         "PONS",
@@ -136,14 +134,16 @@
         "RAIN",
         "SAFO",
         "SHFL",
+        "SN51",
         "SOFID",
         "STABLE",
         "STONK",
+        "STRCX",
         "TIBBIR",
         "UB",
         "ULTIMA"
       ],
-      "yahoo_fallback": 33,
+      "yahoo_fallback": 34,
       "identity_rejected": {
         "AI": [
           "binance_vision",
@@ -157,6 +157,9 @@
         ],
         "EDGE": [
           "coinbase",
+          "yahoo"
+        ],
+        "JPYC": [
           "yahoo"
         ],
         "KAG": [
@@ -175,9 +178,6 @@
           "coinbase",
           "yahoo"
         ],
-        "USDF": [
-          "yahoo"
-        ],
         "XMR": [
           "binance_vision"
         ]
@@ -185,13 +185,13 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 159,
-      "reused": 8,
-      "merged": 167,
+      "fresh": 167,
+      "reused": 7,
+      "merged": 174,
       "universe": 201,
-      "stale_dropped": 1
+      "stale_dropped": 0
     },
-    "elapsed_s": 108.9
+    "elapsed_s": 125.3
   },
   "results": [
     {
@@ -233,9 +233,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 270.52,
-      "change_pct": 174.1,
-      "r_now": 14.05,
+      "price": 271.81,
+      "change_pct": 175.4,
+      "r_now": 14.15,
       "trail": 107.52
     },
     {
@@ -277,9 +277,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 1.145,
-      "change_pct": -3.6,
-      "r_now": -0.48,
+      "price": 1.134,
+      "change_pct": -4.5,
+      "r_now": -0.6,
       "trail": 1.09988889
     },
     {
@@ -321,9 +321,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 70.45,
-      "change_pct": -2.1,
-      "r_now": -0.15,
+      "price": 70.95,
+      "change_pct": -1.4,
+      "r_now": -0.1,
       "trail": 65.80666667
     },
     {
@@ -365,9 +365,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 311.8,
-      "change_pct": -2.4,
-      "r_now": -0.13,
+      "price": 311.0,
+      "change_pct": -2.6,
+      "r_now": -0.14,
       "trail": 300.23333333
     },
     {
@@ -409,9 +409,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 10.828,
-      "change_pct": 7.3,
-      "r_now": 0.34,
+      "price": 10.837,
+      "change_pct": 7.4,
+      "r_now": 0.35,
       "trail": 10.75788889
     },
     {
@@ -458,9 +458,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.09529,
-      "change_pct": -3.8,
-      "r_now": -0.38,
+      "price": 0.0949,
+      "change_pct": -4.2,
+      "r_now": -0.42,
       "trail": 0.09212
     },
     {
@@ -507,9 +507,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 4.26e-06,
-      "change_pct": -10.7,
-      "r_now": -1.04,
+      "price": 4.27e-06,
+      "change_pct": -10.5,
+      "r_now": -1.02,
       "trail": 4.43e-06
     },
     {
@@ -535,7 +535,7 @@
       "breakout_level": 0.01838,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.01695
+      "price": 0.01694
     },
     {
       "symbol": "CFX",
@@ -560,7 +560,7 @@
       "breakout_level": 0.05784,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.05521
+      "price": 0.05476
     },
     {
       "symbol": "GNO",
@@ -585,7 +585,7 @@
       "breakout_level": 146.28,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 119.31
+      "price": 119.19
     },
     {
       "symbol": "FLR",
@@ -610,7 +610,7 @@
       "breakout_level": 0.00825,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.007082
+      "price": 0.007078
     },
     {
       "symbol": "HTX",
@@ -635,7 +635,7 @@
       "breakout_level": 2e-06,
       "provisional": false,
       "last_bar": "2026-09-26",
-      "price": 1.7e-06
+      "price": 1.69e-06
     },
     {
       "symbol": "LUNC",
@@ -660,7 +660,7 @@
       "breakout_level": 6.406e-05,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 5.499e-05
+      "price": 5.5e-05
     },
     {
       "symbol": "FLOKI",
@@ -685,7 +685,7 @@
       "breakout_level": 3.131e-05,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 2.808e-05
+      "price": 2.801e-05
     },
     {
       "symbol": "XDC",
@@ -710,7 +710,7 @@
       "breakout_level": 0.03191,
       "provisional": false,
       "last_bar": "2026-09-26",
-      "price": 0.03325732
+      "price": 0.03327661
     },
     {
       "symbol": "SHIB",
@@ -735,7 +735,7 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 5.82e-06
+      "price": 5.79e-06
     },
     {
       "symbol": "DOGE",
@@ -760,7 +760,7 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.09511
+      "price": 0.09489
     },
     {
       "symbol": "M",
@@ -810,7 +810,7 @@
       "breakout_level": 0.8504,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.824
+      "price": 0.8134
     },
     {
       "symbol": "SYRUP",
@@ -835,7 +835,7 @@
       "breakout_level": 0.2395,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.212
+      "price": 0.2119
     },
     {
       "symbol": "FARTCOIN",
@@ -860,7 +860,7 @@
       "breakout_level": 0.22344,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.19116
+      "price": 0.18715
     },
     {
       "symbol": "ADA",
@@ -885,7 +885,7 @@
       "breakout_level": 0.2654,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.254
+      "price": 0.2525
     },
     {
       "symbol": "MANA",
@@ -910,7 +910,7 @@
       "breakout_level": 0.0934,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.0907
+      "price": 0.0902
     },
     {
       "symbol": "APE",
@@ -935,7 +935,32 @@
       "breakout_level": 0.1728,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.1604
+      "price": 0.1593
+    },
+    {
+      "symbol": "1INCH",
+      "name": "1INCH",
+      "yf": "1INCH-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 16.77,
+        "atr_pctl": 15.1,
+        "vol_pctl": 22.2,
+        "drawdown_pct": 85.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-23"
+      },
+      "base": {
+        "high": 0.1059,
+        "low": 0.0795,
+        "bars": 60
+      },
+      "breakout_level": 0.1059,
+      "provisional": false,
+      "last_bar": "2026-09-27",
+      "price": 0.1003
     },
     {
       "symbol": "AKT",
@@ -960,7 +985,7 @@
       "breakout_level": 0.7734,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.6763
+      "price": 0.6716
     },
     {
       "symbol": "COMP",
@@ -985,7 +1010,7 @@
       "breakout_level": 25.61,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 23.8
+      "price": 23.74
     },
     {
       "symbol": "EIGEN",
@@ -1010,7 +1035,7 @@
       "breakout_level": 0.2858,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.2688
+      "price": 0.2664
     },
     {
       "symbol": "PENGU",
@@ -1035,7 +1060,7 @@
       "breakout_level": 0.011163,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.010068
+      "price": 0.01004
     },
     {
       "symbol": "SUI",
@@ -1060,7 +1085,7 @@
       "breakout_level": 1.2947,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 1.2598
+      "price": 1.2544
     },
     {
       "symbol": "TIA",
@@ -1085,7 +1110,7 @@
       "breakout_level": 0.5382,
       "provisional": false,
       "last_bar": "2026-09-27",
-      "price": 0.4923
+      "price": 0.4892
     }
   ],
   "errors": []
