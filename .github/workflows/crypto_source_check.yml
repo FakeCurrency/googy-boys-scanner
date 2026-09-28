@@ -53,3 +53,33 @@ jobs:
         run: |
           set -o pipefail
           python scripts/crypto_scan_dryrun.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The END-TO-END path the dry run cannot see (2026-09-28 review): the
+      # real crypto scan -> merge_with_cache -> the paper bot, exactly as
+      # crypto_bot.yml runs it, on this runner's scratch checkout. This job has
+      # contents: read and no push step, so every file it writes (the scan
+      # JSON, the book, the cache) is thrown away with the runner. The frame
+      # cache starts EMPTY here, which is what the first post-merge crypto_bot
+      # run sees too (exchange mode reads its own cache file).
+      - name: Full crypto scan + paper bot (scratch; nothing is committed)
+        run: |
+          set -o pipefail
+          python -m scanner.run --market crypto 2>&1 | tail -60 | tee -a "$GITHUB_STEP_SUMMARY"
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          vk = json.loads(pathlib.Path("public/data/crypto_vivek.json").read_text())
+          src = vk.get("data_sources") or {}
+          print("\n### End-to-end result\n")
+          print(f"- funnel: {json.dumps(vk.get('funnel', {}))[:300]}")
+          print(f"- sources: {src.get('by_source')}; refused: {src.get('refused')}; "
+                f"stale pairs: {src.get('stale_rejected')}; unchecked: {src.get('unchecked')}")
+          rows = vk.get("results") or []
+          print(f"- rows by data_source: " + json.dumps(
+              {s: sum(1 for r in rows if r.get('data_source') == s)
+               for s in sorted({r.get('data_source') for r in rows}, key=str)}))
+          bk = json.loads(pathlib.Path("journal/vivek_bot_book.crypto.json").read_text())
+          for p in bk.get("open") or []:
+              print(f"- open {p['symbol']}: last_mark {p.get('last_mark')} stop {p.get('stop')} "
+                    f"data_source {p.get('data_source')} unpriced_runs {p.get('unpriced_runs')}")
+          print(f"- closed rows: {len(bk.get('closed') or [])}")
+          PY
