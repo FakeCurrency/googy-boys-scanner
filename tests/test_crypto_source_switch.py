@@ -145,7 +145,8 @@ def _calls(path: pathlib.Path, name: str) -> int:
 
 
 @pytest.mark.parametrize("rel", ["scanner/run.py", "scanner/broker/vivek_run.py",
-                                 "scanner/broker/kill_switch.py", "scanner/ignition/run.py"])
+                                 "scanner/broker/kill_switch.py", "scanner/ignition/run.py",
+                                 "scanner/momentum/run.py"])
 def test_every_crypto_pricing_path_goes_through_fetch(rel):
     """The sync guarantee, as structure: each of these files prices crypto,
     so each must call data.fetch. A future edit that reverts one to a bare
@@ -219,6 +220,67 @@ def test_the_universe_keeps_coingeckos_price_as_the_reference(monkeypatch):
 
 
 def test_the_scan_and_the_lens_pass_the_reference_prices():
-    for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py"):
+    for rel in ("scanner/run.py", "scanner/ignition/run.py", "scanner/broker/vivek_run.py",
+                "scanner/momentum/run.py"):
         src = (ROOT / rel).read_text(encoding="utf-8")
         assert "ref_prices=" in src and "cg_price" in src, rel
+
+
+# ---------------------------------------------------------------------------
+# the CACHE must not undo the identity check (2026-09-28, follow-up)
+# ---------------------------------------------------------------------------
+
+def _fresh_yahoo(px):
+    idx = pd.date_range(end=pd.Timestamp.now().normalize(), periods=3, freq="D")
+    return pd.DataFrame({"Open": px, "High": px, "Low": px, "Close": px, "Volume": 1.0}, index=idx)
+
+
+def test_a_cached_stranger_is_not_readmitted_after_fetch_rejects_it():
+    """Every Yahoo-era run cached Yahoo's SKY-USD (a different token, +454%
+    vs the real coin). `fetch` now rejects it -- but `merge_with_cache` back-
+    fills whatever `fetch` did not return, so without the reference prices the
+    stranger walked straight back into the scan for FRAME_CACHE_MAX_AGE_DAYS.
+    It is refused, named, and dropped from the cache; the real coin beside it
+    is reused as before."""
+    uni = ["SKY-USD", "BTC-USD"]
+    data.save_frame_cache("crypto", {"SKY-USD": _fresh_yahoo(0.4), "BTC-USD": _fresh_yahoo(100.0)})
+    refs = {"SKY-USD": 0.07, "BTC-USD": 101.0}
+    merged, stats = data.merge_with_cache("crypto", {}, uni, ref_prices=refs)
+    assert set(merged) == {"BTC-USD"}
+    assert stats["identity_dropped"] == 1 and stats["identity_dropped_names"] == ["SKY-USD"]
+    assert stats["reused"] == 1
+    assert set(data.load_frame_cache("crypto")) == {"BTC-USD"}    # gone from disk too
+
+
+def test_no_reference_means_the_cache_behaves_exactly_as_before():
+    """Stocks carry no cg_price, and a coin CoinGecko gave no price for is
+    unchecked everywhere -- the cache check must be the same no-op."""
+    data.save_frame_cache("asx", {"BHP.AX": _fresh_yahoo(40.0)})
+    merged, stats = data.merge_with_cache("asx", {}, ["BHP.AX"], ref_prices={"BHP.AX": None})
+    assert set(merged) == {"BHP.AX"} and stats["identity_dropped"] == 0
+    assert "identity_dropped_names" not in stats
+    merged, _ = data.merge_with_cache("asx", {}, ["BHP.AX"])
+    assert set(merged) == {"BHP.AX"}
+
+
+def _merge_calls(path: pathlib.Path):
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            f = node.func
+            name = f.id if isinstance(f, ast.Name) else getattr(f, "attr", None)
+            if name == "merge_with_cache":
+                yield node
+
+
+@pytest.mark.parametrize("rel", ["scanner/run.py", "scanner/broker/vivek_run.py",
+                                 "scanner/ignition/run.py", "scanner/momentum/run.py"])
+def test_every_cache_merge_after_a_crypto_fetch_carries_the_reference_prices(rel):
+    """Each of these files fetches crypto with ref_prices and then back-fills
+    from the frame cache. A merge without the same map re-opens the leak the
+    test above closes."""
+    calls = list(_merge_calls(ROOT / rel))
+    assert calls, f"{rel}: no merge_with_cache call found (test is stale)"
+    for c in calls:
+        assert any(k.arg == "ref_prices" for k in c.keywords), \
+            f"{rel}:{c.lineno}: merge_with_cache without ref_prices"

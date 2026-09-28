@@ -306,6 +306,17 @@ test("the fallback sets it from the row, and both fetches use it", () => {
   assert.match(live, /VIVEK_CRYPTO_SRC !== "binance"/, "the header price follows the chart's venue");
 });
 
+test("a momentum chart draws the venue the momentum SCREEN read", () => {
+  // The momentum lens prices crypto through data.fetch and tags each hit's
+  // data_source (2026-09-28); without this line its chart kept drawing Yahoo,
+  // whose ARB-USD/JUP-USD/AERO-USD are a different token from the coin screened.
+  const mf = CHART.slice(CHART.indexOf("function momentumFallback"),
+                         CHART.indexOf("const liveDaily", CHART.indexOf("function momentumFallback")));
+  assert.match(mf, /VIVEK_CRYPTO_SRC = cryptoSrcFor\(row\)/);
+  assert.match(CHART.slice(CHART.indexOf("const liveDaily", CHART.indexOf("function momentumFallback"))).slice(0, 400),
+               /vivekCryptoBars\(SYM/, "the momentum daily pull must go through the venue-aware fetch");
+});
+
 test("the constant documents how to reverse it", () => {
   const block = CHART.slice(0, CHART.indexOf('const DAILY_RANGE'));
   assert.match(block, /CHART_MAX_YEARS/, "the revert path must be written where the knob is");

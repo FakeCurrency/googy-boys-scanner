@@ -32,6 +32,10 @@ def _validate_header(snap: dict) -> None:
             raise ValueError(f"snapshot missing key: {key}")
     if not isinstance(snap["results"], list):
         raise ValueError("results must be a list")
+    rej = snap.get("identity_rejected")
+    if rej is not None and not (isinstance(rej, dict) and all(
+            isinstance(k, str) and isinstance(v, list) for k, v in rej.items())):
+        raise ValueError("identity_rejected must be {ticker: [source, ...]}")
 
 
 def _validate_result(r: dict, required_keys: tuple) -> None:
@@ -85,13 +89,21 @@ def validate_published(slim: dict, narrations: dict | None) -> None:
             raise ValueError(f"{r['ticker']}: narration missing/short in sidecar")
 
 
-def build_snapshot(run_date: str, universe_size: int, results: list) -> dict:
-    return {
+def build_snapshot(run_date: str, universe_size: int, results: list,
+                   identity_rejected: dict = None) -> dict:
+    """`identity_rejected` {ticker: ["yahoo"]} names the universe coins left
+    out because their only series is a different token (crypto; see
+    YFinanceProvider). Optional and ADDITIVE: omitted when None, so a stock
+    snapshot is byte-identical to before."""
+    snap = {
         "run_date": run_date,
         "ruleset_version": RULESET_VERSION,
         "universe_size": universe_size,
-        "results": results,
     }
+    if identity_rejected is not None:
+        snap["identity_rejected"] = dict(sorted(identity_rejected.items()))
+    snap["results"] = results
+    return snap
 
 
 def serialise(snap: dict) -> str:
@@ -119,9 +131,11 @@ def split_narrations(snap: dict) -> tuple[dict, dict]:
         "ruleset_version": snap["ruleset_version"],
         "universe_size": snap["universe_size"],
         "narrations_file": "narrations.json",
-        "results": [{k: v for k, v in r.items() if k != "narration"}
-                    for r in snap["results"]],
     }
+    if "identity_rejected" in snap:
+        slim["identity_rejected"] = snap["identity_rejected"]
+    slim["results"] = [{k: v for k, v in r.items() if k != "narration"}
+                       for r in snap["results"]]
     narr = {
         "run_date": snap["run_date"],
         "narrations": {f"{r['ticker']}|{r['direction']}": r["narration"]

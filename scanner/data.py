@@ -103,12 +103,23 @@ def _frame_age_days(df: pd.DataFrame, tz: str | None = None) -> int:
 
 
 def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
-                     tickers: list[str]) -> tuple[dict[str, pd.DataFrame], dict]:
+                     tickers: list[str],
+                     ref_prices: dict | None = None) -> tuple[dict[str, pd.DataFrame], dict]:
     """Fill tickers Yahoo dropped this run from the last-good cache, then refresh
     the cache with everything we now hold (capped to the current universe).
 
     Returns (merged_frames, stats) where stats reports fresh vs reused counts so
     the scan can stamp honest coverage/aging.
+
+    `ref_prices` {ticker: CoinGecko price} (crypto; the same map `fetch` takes)
+    puts every CACHED frame through the identity check before it is reused
+    (2026-09-28). Without it the cache undid `fetch`'s: a coin whose Yahoo
+    series is a different token (PRL/SKY/XCN/EDGE/MET, none on an exchange
+    here) is rejected by `fetch` -- and then re-admitted from the cache, which
+    still holds the stranger from every Yahoo-era run, for the full
+    FRAME_CACHE_MAX_AGE_DAYS. A cached frame that fails is neither reused nor
+    re-saved, so it leaves the cache too. A None/absent reference checks
+    nothing (stocks carry none), exactly as in `fetch`.
     """
     cache = load_frame_cache(market_key)
     merged = dict(fresh)
@@ -121,11 +132,18 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     mkt = config.MARKETS.get(market_key) if hasattr(config, "MARKETS") else None
     tz = getattr(mkt, "timezone", None)
     fossils: list[str] = []
+    strangers: list[str] = []
+    refs = {t: v for t, v in (ref_prices or {}).items() if v is not None}
+    if refs:
+        from .exchange_data import same_coin
     for t in sorted(wanted):
         if t in merged or t not in cache:
             continue
         if max_age and _frame_age_days(cache[t], tz) > max_age:
             fossils.append(t)
+            continue
+        if t in refs and not same_coin(cache[t], refs[t]):
+            strangers.append(t)
             continue
         merged[t] = cache[t]
         reused += 1
@@ -140,7 +158,14 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
     # so nothing reaches the scanner off it and the only cost is disk.
     save_frame_cache(market_key, {t: df for t, df in merged.items() if t in wanted})
     stats = {"fresh": len(fresh), "reused": reused, "merged": len(merged),
-             "universe": len(tickers), "stale_dropped": len(fossils)}
+             "universe": len(tickers), "stale_dropped": len(fossils),
+             "identity_dropped": len(strangers)}
+    if strangers:
+        stats["identity_dropped_names"] = strangers[:60]
+        log.warning("frame cache [%s]: %d cached frames are NOT the coin CoinGecko "
+                    "prices under that ticker and were NOT reused - dropped from "
+                    "the scan and the cache: %s", market_key, len(strangers),
+                    ", ".join(strangers[:12]) + (" ..." if len(strangers) > 12 else ""))
     if reused:
         log.info("frame cache: reused %d cached tickers Yahoo dropped (now %d/%d)",
                  reused, len(merged), len(tickers))

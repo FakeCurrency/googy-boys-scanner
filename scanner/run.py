@@ -183,14 +183,16 @@ def main() -> None:
             # paper bot go to the binance or bybit ... so it's all in SYNC"):
             # crypto from exchange daily klines (config.CRYPTO_DATA_SOURCE),
             # Yahoo only for coins no exchange lists; stocks unchanged.
+            refs = {u["yf"]: u.get("cg_price") for u in universe}
             fresh, src_report = fetch(market_key, [u["yf"] for u in universe],
-                                      period=dl_period,
-                                      ref_prices={u["yf"]: u.get("cg_price") for u in universe})
+                                      period=dl_period, ref_prices=refs)
             # Reuse last-good cached frames for tickers Yahoo dropped this run, so
             # transient throttling no longer shrinks coverage (the cache refreshes
             # with whatever we DID get). Aging is reported honestly per row.
+            # The SAME reference prices: a cached frame must pass the identity
+            # check too, or the cache re-admits a coin `fetch` just rejected.
             deep_frames, cache_stats = merge_with_cache(
-                market_key, fresh, [u["yf"] for u in universe])
+                market_key, fresh, [u["yf"] for u in universe], ref_prices=refs)
             cov = 100 * len(deep_frames) // max(len(universe), 1)
             reused_note = f" (+{cache_stats['reused']} cached)" if cache_stats["reused"] else ""
             low = (cov < getattr(config, "SCAN_COVERAGE_LOW_PCT", 80)

@@ -79,6 +79,44 @@ def _frame_age_days(frame: pd.DataFrame, market: str) -> Optional[int]:
         return None
 
 
+def _fetch(market: str, rows: List[dict], period: str) -> tuple:
+    """({yf: frame}, source report, reference prices) through `data.fetch`.
+
+    THE SAME ENTRY POINT the VIVEK scan, the paper bot, the kill switch and
+    IGNITION price through (2026-09-28). Until then this lens called
+    `data.download` directly, so for crypto it read Yahoo's `<SYM>-USD` -- and
+    for AERO, JUP, ARB, PRL, SKY, XCN, EDGE and MET that is a DIFFERENT TOKEN
+    from the CoinGecko coin of the same symbol (AERO +2,623,839% vs Binance,
+    measured from a runner by scripts/crypto_source_compare.py): the lens was
+    screening the wrong coin. `fetch` gives crypto exchange klines with Yahoo
+    only as a fallback, and holds every source to CoinGecko's price for the
+    coin (`cg_price`, config.CRYPTO_IDENTITY_TOL); a coin nothing confirms is
+    left out. Stocks: `download()` exactly as before (no `cg_price` -> no
+    check). The reference map is returned so the cache merge can apply the
+    SAME check to the frames it back-fills.
+    """
+    refs = {r["yf"]: r.get("cg_price") for r in rows}
+    frames, report = sdata.fetch(market, [r["yf"] for r in rows], period=period,
+                                 interval=TIMEFRAME, ref_prices=refs)
+    return frames, report, refs
+
+
+def tag_sources(payload: dict, market: str, report: dict) -> None:
+    """Where the bars came from, said out loud -- the VIVEK scan's convention
+    (`scanner/run.py::tag_sources`), mirrored: `data_sources` on the payload
+    (mode, per-venue counts, refused venues, identity rejections), and on
+    crypto every hit names its own venue in `data_source` ("cache" = the
+    last-good frame cache covered a coin the fetch missed). The chart reads
+    it to draw the SAME series the screen read -- a Binance-screened hit
+    drawn off Yahoo's same-ticker stranger would show a different coin."""
+    payload["data_sources"] = sdata.source_summary(report)
+    if market != "crypto":
+        return
+    src_of = report.get("source_of") or {}
+    for r in payload.get("results") or []:
+        r["data_source"] = src_of.get(r.get("yf"), "cache")
+
+
 def _last_bar(frame: pd.DataFrame) -> Optional[str]:
     try:
         return str(pd.Timestamp(frame.index[-1]).date())
@@ -105,11 +143,14 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
     by_yf = {r["yf"]: r for r in rows}
 
     cache_stats: Dict[str, Any] = {}
+    src_report: Dict[str, Any] = {}
     if frames is None:
-        fresh = sdata.download([r["yf"] for r in rows], period=config.DATA_PERIOD,
-                               interval=TIMEFRAME)
+        fresh, src_report, refs = _fetch(market, rows, config.DATA_PERIOD)
+        # The cache back-fill is held to the same reference prices: every
+        # Yahoo-era run cached the wrong-token frames, and a merge without
+        # them would re-admit exactly the coins `fetch` just refused.
         frames, cache_stats = sdata.merge_with_cache(
-            f"momentum-{market}", fresh, [r["yf"] for r in rows])
+            f"momentum-{market}", fresh, [r["yf"] for r in rows], ref_prices=refs)
 
     if not frames:
         # Nothing fresh AND nothing cached: the source is fully blocked. Keep
@@ -188,8 +229,26 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
         # A first-class part of the payload, not a log line.
         "errors": errs.sample(),
     }
+    if src_report:
+        tag_sources(payload, market, src_report)
+        _print_sources(market, payload["data_sources"])
     print(errs.report(screened), flush=True)
     return payload
+
+
+def _print_sources(market: str, ds: dict) -> None:
+    """One line of venue counts, and the identity rejections NAMED -- a coin
+    left out because its only series is a different token is a decision the
+    log should state, not a silent gap in coverage."""
+    if ds.get("mode") != "exchange":
+        return
+    print(f"momentum: {market} sources {ds.get('by_source')}  refused {ds.get('dead')}  "
+          f"yahoo fallback {ds.get('yahoo_fallback', 0)}", flush=True)
+    rej = ds.get("identity_rejected") or {}
+    if rej:
+        print(f"momentum: {market} {len(rej)} coin(s) left out - no source is the "
+              f"coin CoinGecko prices under that ticker: {', '.join(sorted(rej))}",
+              flush=True)
 
 
 def backtest_market(market: str, *, rows: Optional[List[dict]] = None,
@@ -211,9 +270,9 @@ def backtest_market(market: str, *, rows: Optional[List[dict]] = None,
     if limit:
         rows = rows[:limit]
     by_yf = {r["yf"]: r for r in rows}
+    src_report: Dict[str, Any] = {}
     if frames is None:
-        frames = sdata.download([r["yf"] for r in rows], period=config.BT_PERIOD,
-                                interval=TIMEFRAME)
+        frames, src_report, _ = _fetch(market, rows, config.BT_PERIOD)
     if not frames:
         print(f"momentum: backtest {market} - no data (download blocked/empty) - "
               f"keeping the existing file", flush=True)
@@ -280,6 +339,9 @@ def backtest_market(market: str, *, rows: Optional[List[dict]] = None,
         "errors": errs.sample(),
         "elapsed_s": round(time.time() - started, 1),
     }
+    if src_report:
+        payload["data_sources"] = sdata.source_summary(src_report)
+        _print_sources(market, payload["data_sources"])
     print(errs.report(replayed), flush=True)
     return payload
 

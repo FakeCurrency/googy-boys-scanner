@@ -57,8 +57,11 @@ def load_symbols(market: str) -> dict:
         from scanner.universe import load_universe as repo_universe
         items = repo_universe(market, full=True)
         if items:
+            # cg_price (crypto only): CoinGecko's price for the coin, the
+            # identity reference YFinanceProvider checks Yahoo's series against.
             return {it["symbol"]: {"yf": it["yf"], "name": it.get("name") or it["symbol"],
-                                   "sector": it.get("sector") or ""}
+                                   "sector": it.get("sector") or "",
+                                   "cg_price": it.get("cg_price")}
                     for it in items}
     except Exception:
         pass
@@ -131,6 +134,24 @@ def write_chart_json(out_dir: str, ticker: str, df) -> None:
     os.replace(tmp, path)
 
 
+def ref_prices(symbols: dict) -> dict:
+    """{ticker: CoinGecko price} for the identity check. Stocks carry no
+    cg_price, so for them this is all-None and checks nothing."""
+    return {t: info.get("cg_price") for t, info in symbols.items()}
+
+
+def report_identity(market: str, provider) -> dict:
+    """The coins the provider refused as wrong-token, NAMED on the log (and,
+    for crypto, in the snapshot) -- a coin left out is a decision to state,
+    not a silent gap in coverage. ASCII only (cp1252 consoles)."""
+    rejected = dict(getattr(provider, "identity_rejected", {}) or {})
+    if rejected:
+        print(f"[{market}] identity check: {len(rejected)} coin(s) left out - Yahoo's "
+              f"series is not the coin CoinGecko prices under that ticker: "
+              f"{', '.join(sorted(rejected))}")
+    return rejected
+
+
 def run_market(market: str, args, run_date: str, data_root: str) -> dict:
     symbols = load_symbols(market)
     if args.tickers:
@@ -143,8 +164,9 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
         return {}
 
     provider = YFinanceProvider({t: info["yf"] for t, info in symbols.items()},
-                                period=args.period)
+                                period=args.period, ref_prices=ref_prices(symbols))
     provider.fetch_all()
+    rejected = report_identity(market, provider)
     stats = load_stats(market)
 
     chart_dir = os.path.join(data_root, "charts", market)
@@ -178,7 +200,8 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
             charted.add(t)
 
     snap = build_snapshot(run_date, universe_size=len(symbols),
-                          results=sort_records(results))
+                          results=sort_records(results),
+                          identity_rejected=rejected if market == "crypto" else None)
     out_dir = os.path.join(data_root, market)
     write_snapshot(snap, out_dir)
     pruned = prune_stale_files(chart_dir, charted) + prune_dated_snapshots(out_dir)

@@ -1692,9 +1692,11 @@ def main() -> None:
             if isinstance(extra, dict):
                 r.update(extra)
         universe = load_universe(market_key, full=True)
+        refs = {u["yf"]: u.get("cg_price") for u in universe}
         fresh, _ = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
-                         ref_prices={u["yf"]: u.get("cg_price") for u in universe})
-        frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe])
+                         ref_prices=refs)
+        frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe],
+                                     ref_prices=refs)
         run_market(market_key, results, frames, universe, dry_run=dry_run)
 
 

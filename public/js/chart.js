@@ -1457,6 +1457,11 @@
     const row = (mom && mom.row) || null;
     const mp = (mom && mom.params) || null;
     const assetType = market === "crypto" ? "crypto" : null;
+    // The momentum screen prices crypto through the same exchange-first path
+    // as VIVEK (2026-09-28) and names each hit's venue, so the chart draws the
+    // series the SCREEN read -- Yahoo's same-ticker stranger (ARB/JUP/AERO...)
+    // is a different coin. No row, or a non-Binance one: Yahoo, as before.
+    VIVEK_CRYPTO_SRC = cryptoSrcFor(row);
     const bull = String((row && (row.rule_a_direction || row.direction)) || "bull") === "bull";
     // P12: the header carries the PLAN SIDE (its own badge) and the RULES that
     // fired -- nothing else. "trend up" beside a SHORT box reads as a

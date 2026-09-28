@@ -2268,8 +2268,9 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
   every other market → `download()` exactly as before. Callers: `run.py` (the
   scan download), `scan.py::_bars` (its fallback + the 4H plans' bars),
   `vivek_run.py` (off-universe stragglers + CLI), `kill_switch._live_marks`,
-  the IGNITION lens. `tests/test_crypto_source_switch.py` fails if any of
-  them stops calling `fetch`. **Revert = one line**: `CRYPTO_DATA_SOURCE =
+  the IGNITION lens, the momentum lens (since the follow-up below).
+  `tests/test_crypto_source_switch.py` fails if any of them stops calling
+  `fetch`. **Revert = one line**: `CRYPTO_DATA_SOURCE =
   "yahoo"`.
 - **Venues, MEASURED from a GitHub runner (the kick of 2026-09-28):**
   `data-api.binance.vision` (Binance's market-data mirror) ANSWERS;
@@ -2308,10 +2309,46 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
   REAL crypto scan on exchange klines, writing nothing, diffed against the
   published scan. crypto_bot.yml is never dispatched from a branch: its
   commit step pushes to main.
-- **Still on Yahoo, by scope:** PhaseMap (spec-governed provider) and the
-  momentum lens for crypto — including the same wrong-token tickers above.
-  Stocks everywhere. Tests never reach an exchange (`tests/conftest.py`
-  refuses every venue unless a test installs its own fake).
+- **THE FRAME CACHE WAS UNDOING THE CHECK (found + closed 2026-09-28, same
+  day).** Every caller back-fills from `merge_with_cache` AFTER `fetch`, and
+  the last-good cache still held the wrong-token Yahoo frames from every
+  Yahoo-era run — so a coin `fetch` rejected (PRL/SKY/XCN/EDGE/MET shape: on
+  no exchange here, Yahoo the only series) walked straight back into the scan
+  as `data_source: "cache"` for up to `FRAME_CACHE_MAX_AGE_DAYS`, VIVEK and
+  therefore the bot included. `merge_with_cache(..., ref_prices=)` now holds
+  each CACHED frame to the same `same_coin` check; a failure is neither
+  reused nor re-saved, counted in `identity_dropped` and named in
+  `identity_dropped_names`. All four callers pass the map (`run.py`,
+  `vivek_run.py` CLI, IGNITION, momentum) — pinned structurally in
+  `tests/test_crypto_source_switch.py`. Monotonically REMOVING: it can only
+  take a name out of a scan, never add one. Stated cost: a real coin missing
+  from `fetch` whose cached frame is >40% off today's CoinGecko price is left
+  out for the run rather than priced off a stale frame.
+- **MOMENTUM moved onto `fetch` (2026-09-28).** `scanner/momentum/run.py`
+  called `data.download` directly, so it screened Yahoo's same-ticker
+  strangers. The screen and the replay now go through `momentum.run._fetch`
+  (`data.fetch` + `cg_price`), the screen's cache merge carries the same map,
+  the payload publishes `data_sources` and crypto hits carry `data_source`;
+  the chart's `momentumFallback` sets `VIVEK_CRYPTO_SRC` from the row, so a
+  Binance-screened hit is DRAWN off Binance too. Stocks: `download()` exactly
+  as before. Tests: `tests/test_momentum_crypto_source.py`; the momentum
+  fences are unchanged (`scanner.data` was already on the allowlist).
+- **PHASEMAP stays on Yahoo, with the identity check (2026-09-28).** Its
+  provider is spec-governed, so moving it to exchange klines is the OWNER's
+  call (asked; see below). What shipped is the minimum that needs no ruling:
+  `YFinanceProvider(ref_prices=)` refuses a series that is not CoinGecko's
+  price for the coin — a data-integrity reject at the provider boundary, NOT
+  a detection change (no spec maths, zone or threshold moved; no
+  `RULESET_VERSION` bump, since no parameter changed). The nightly scan AND
+  the PhaseMap backtest arm it (`phasemap.run.ref_prices`/`report_identity`),
+  the refused coins are printed by name, and the crypto snapshot (dated +
+  slim `latest.json`) carries `identity_rejected` `{ticker: ["yahoo"]}` — the
+  shape `data.fetch` reports — `{}` when the check ran clean, absent for
+  stocks (their snapshots are byte-identical). `phasemap/tests/test_identity.py`.
+  Owner decision on the provider: PENDING at the time of writing.
+- **Still on Yahoo, by scope:** stocks everywhere, and PhaseMap's crypto
+  bars (above). Tests never reach an exchange (`tests/conftest.py` refuses
+  every venue unless a test installs its own fake).
 
 ## IGNITION — the coil → ignition lens (2026-09-28, owner: "build it") — REPORT-ONLY
 

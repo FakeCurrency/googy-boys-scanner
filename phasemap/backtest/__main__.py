@@ -19,7 +19,7 @@ from phasemap.backtest.report import (write_public_stats, write_report,
                                       write_stats)
 from phasemap.config import PRODUCT_NAME, RULESET_VERSION
 from phasemap.data.provider import YFinanceProvider
-from phasemap.run import load_symbols
+from phasemap.run import load_symbols, ref_prices, report_identity
 
 
 def main(argv=None) -> int:
@@ -38,8 +38,11 @@ def main(argv=None) -> int:
           f"({len(symbols)} tickers, {args.period})")
 
     provider = YFinanceProvider({t: v["yf"] for t, v in symbols.items()},
-                                period=args.period)
+                                period=args.period, ref_prices=ref_prices(symbols))
     provider.fetch_all()
+    # a wrong-token series replayed as the coin would score another
+    # instrument's history as this lens's evidence
+    report_identity(args.market, provider)
 
     frames, signals = {}, []
     for t in provider.universe():

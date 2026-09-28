@@ -901,7 +901,7 @@ def cli(monkeypatch):
             return state["load"](market, period, limit)
         return rows, frames, {"source_of": {yf: "binance_vision" for yf in frames}}
 
-    def fake_merge(key, fresh, tickers):
+    def fake_merge(key, fresh, tickers, **kw):
         # The real merge LOADS and SAVES .cache/frames/<key>.pkl.gz; recorded
         # here (key + exactly what it was handed) instead of touching disk.
         state["cache_calls"].append((key, {k: v.copy() for k, v in fresh.items()}, list(tickers)))
