@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-29T05:20:26+10:00",
+  "generated_at": "2026-09-29T09:57:25+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "UOS",
-      "name": "United Overseas Australia Limited",
-      "sector": "Real Estate Management & Development",
-      "dir": "SHORT",
-      "price": 0.62,
-      "turnover_avg20": 31669,
-      "turnover_today": 616755,
-      "rvol": 19.5,
-      "adv_usd": 31669.18,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "CAM",
       "name": "Clime Capital Limited",
@@ -33,6 +20,19 @@
       "adv_usd": 82811.19,
       "fund": true,
       "is_product": true
+    },
+    {
+      "symbol": "NHE",
+      "name": "Noble Helium Limited",
+      "sector": "Energy",
+      "dir": "SHORT",
+      "price": 0.03,
+      "turnover_avg20": 44630,
+      "turnover_today": 174276,
+      "rvol": 3.8,
+      "adv_usd": 44630.12,
+      "fund": false,
+      "is_product": false
     },
     {
       "symbol": "SSO",
