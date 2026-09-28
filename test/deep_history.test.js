@@ -331,6 +331,90 @@ test("an Ignition-only coin draws the lens row's venue, not the Yahoo default", 
   assert.match(back, /ignition:\s*\["index\.html",\s*"← Ignition"\]/, "the back-link names the lens");
 });
 
+// 2026-09-28, MEASURED on the live proxy: from Cloudflare's servers Binance
+// never answers (BNB/QNT asked src=binance came back source "yahoo"; TAO came
+// back 502). A Binance-sourced chart therefore reads Binance from the BROWSER,
+// and the proxy is the fallback. These run the SHIPPED functions against a
+// fake network, not a copy of them.
+function directHarness(src, handler) {
+  const body = CHART.slice(CHART.indexOf("const BINANCE_DIRECT_HOSTS"),
+                           CHART.indexOf("// ── PhaseMap-only chart"));
+  const calls = [];
+  const fetch = (url) => { calls.push(url); return Promise.resolve(handler(url)); };
+  const res = (status, json) => ({ ok: status === 200, status, json: () => Promise.resolve(json) });
+  const api = new Function("fetch", "src", `let VIVEK_CRYPTO_SRC = src; let DATA_META = null;
+    ${body}
+    return { vivekCryptoBars, binanceDirectPrice, meta: () => DATA_META };`)(fetch, src);
+  return { api, calls, res };
+}
+const kl = (n, endMs, step) => Array.from({ length: n }, (_, i) =>
+  [endMs - (n - 1 - i) * step, "1", "2", "0.5", String(100 + i), "10"]);
+
+test("a Binance coin draws Binance from the browser even when the proxy is dead", async () => {
+  const { api, calls, res } = directHarness("binance", (u) =>
+    /binance\.vision/.test(u) ? res(200, kl(900, 1790000000000, 864e5)) : res(502, { ok: false }));
+  const bars = await api.vivekCryptoBars("TAO", "5y", "1d", true);
+  assert.equal(bars.length, 900);
+  assert.equal(calls.length, 1, "900 < a full page: one request, stops at the listing date");
+  assert.match(calls[0], /^https:\/\/data-api\.binance\.vision\/api\/v3\/klines\?symbol=TAOUSDT&interval=1d&limit=1000$/);
+  assert.ok(!calls.some((u) => u.startsWith("/api/price")), "the proxy is not asked when Binance answered");
+  assert.equal(api.meta().bars, 900);
+  assert.ok(bars.every((b, i) => i === 0 || b.time > bars[i - 1].time), "ascending, de-duplicated");
+});
+
+test("deep history pages BACKWARD with endTime, bounded at 4 pages", async () => {
+  const { api, calls, res } = directHarness("binance", (u) => {
+    const q = new URL(u).searchParams;
+    const end = q.get("endTime") ? +q.get("endTime") : 1790000000000;
+    return res(200, kl(+q.get("limit"), end, 36e5));
+  });
+  const bars = await api.vivekCryptoBars("BTC-USD", "2y", "1h");
+  assert.equal(bars.length, 3300, "matches the proxy's 2y hourly depth");
+  assert.equal(calls.length, 4);
+  assert.ok(!/endTime/.test(calls[0]) && calls.slice(1).every((u) => /endTime=\d+/.test(u)));
+});
+
+test("mirror down -> main API; both down -> the proxy, exactly as before", async () => {
+  let h = directHarness("binance", (u) => /binance\.vision/.test(u) ? res451()
+    : /api\.binance\.com/.test(u) ? { ok: true, status: 200, json: () => Promise.resolve(kl(50, 1790000000000, 864e5)) }
+    : null);
+  function res451() { return { ok: false, status: 451, json: () => Promise.resolve({}) }; }
+  assert.equal((await h.api.vivekCryptoBars("TAO", "5y", "1d")).length, 50);
+  assert.match(h.calls[1], /^https:\/\/api\.binance\.com\//);
+  h = directHarness("binance", (u) => u.startsWith("/api/price")
+    ? { ok: true, status: 200, json: () => Promise.resolve({ ok: true, candles: [{ time: 1, close: 7 }] }) }
+    : res451());
+  const viaProxy = await h.api.vivekCryptoBars("TAO", "5y", "1d");
+  assert.deepEqual(viaProxy, [{ time: 1, close: 7 }]);
+  assert.match(h.calls[2], /^\/api\/price\?symbol=TAO-USD&type=crypto&range=5y&interval=1d&src=binance$/);
+});
+
+test("a host that answers EMPTY (pair not there) hands on to the next host", async () => {
+  const ok = (j) => ({ ok: true, status: 200, json: () => Promise.resolve(j) });
+  let h = directHarness("binance", (u) => /binance\.vision/.test(u) ? ok([])
+    : /api\.binance\.com/.test(u) ? ok(kl(40, 1790000000000, 864e5)) : null);
+  assert.equal((await h.api.vivekCryptoBars("TAO", "5y", "1d")).length, 40);
+  h = directHarness("binance", (u) => /binance\.vision/.test(u) ? ok({}) : ok({ price: "9.5" }));
+  assert.equal(await h.api.binanceDirectPrice("TAO"), 9.5, "no price from the mirror -> the main API");
+});
+
+test("a Yahoo-sourced coin never touches Binance", async () => {
+  const { api, calls } = directHarness("yahoo", () =>
+    ({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, candles: [] }) }));
+  await api.vivekCryptoBars("LTC", "5y", "1d");
+  assert.deepEqual(calls, ["/api/price?symbol=LTC-USD&type=crypto&range=5y&interval=1d&src=yahoo"]);
+});
+
+test("the header price reads Binance direct for a Binance coin, then the proxy", async () => {
+  const { api, calls } = directHarness("binance", (u) => /binance\.vision/.test(u)
+    ? { ok: true, status: 200, json: () => Promise.resolve({ price: "304.20" }) } : null);
+  assert.equal(await api.binanceDirectPrice("TAO"), 304.2);
+  assert.match(calls[0], /ticker\/price\?symbol=TAOUSDT$/);
+  const live = CHART.slice(CHART.indexOf("function startStockLive"), CHART.indexOf("function startStockLive") + 2500);
+  assert.match(live, /VIVEK_CRYPTO_SRC === "binance" \? await binanceDirectPrice\(SYM\) : null/);
+  assert.match(live, /if \(px == null\) \{[\s\S]{0,80}\/api\/quote/, "the quote proxy is still the fallback");
+});
+
 test("the constant documents how to reverse it", () => {
   const block = CHART.slice(0, CHART.indexOf('const DAILY_RANGE'));
   assert.match(block, /CHART_MAX_YEARS/, "the revert path must be written where the knob is");

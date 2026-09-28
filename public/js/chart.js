@@ -1275,12 +1275,68 @@
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
+  // BROWSER-DIRECT BINANCE (2026-09-28). Measured on the LIVE proxy from a
+  // runner: from Cloudflare's servers Binance never answers. BNB and QNT asked
+  // with src=binance came back `source: "yahoo"`, and TAO -- which has no Yahoo
+  // series under "TAO-USD" -- came back 502, so the chart dead-ended. Every
+  // Binance-sourced chart had been Yahoo's copy of the coin all along. The
+  // reader's browser CAN reach Binance (this page's live stream already does),
+  // so a Binance-sourced coin fetches its klines here first -- the market-data
+  // mirror, then the main API, paged backward like _prices.js -- and the proxy
+  // stays the fallback. A browser that cannot reach Binance falls through to
+  // exactly what it got before.
+  const BINANCE_DIRECT_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
+  const BINANCE_DIRECT_PAGES = 4;               // the proxy's own bound: 4 x 1000 bars
+  const binanceUsdtPair = (sym) =>
+    String(sym || "").toUpperCase().replace(/-USDT?$/, "").replace(/USDT$/, "") + "USDT";
+  function binanceDirectBars(sym, interval, want) {
+    const pair = binanceUsdtPair(sym);
+    const iv = interval === "1h" || interval === "60m" ? "1h" : "1d";
+    const cap = Math.min(want, 1000 * BINANCE_DIRECT_PAGES);
+    const toBars = (rows) => {
+      const seen = new Set();
+      return rows
+        .filter((k) => (seen.has(k[0]) ? false : (seen.add(k[0]), true)))
+        .sort((a, b) => a[0] - b[0])
+        .map((k) => ({ time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2],
+                       low: +k[3], close: +k[4], volume: +k[5] || 0 }));
+    };
+    const fromHost = (i) => {
+      if (i >= BINANCE_DIRECT_HOSTS.length) return Promise.resolve([]);
+      const got = [];
+      const page = (endTime, n, left) =>
+        fetch(`${BINANCE_DIRECT_HOSTS[i]}/api/v3/klines?symbol=${pair}&interval=${iv}&limit=${n}` +
+              (endTime == null ? "" : `&endTime=${endTime}`), { cache: "no-store" })
+          .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then((rows) => {
+            if (!Array.isArray(rows) || !rows.length) return;
+            got.unshift(...rows);
+            if (rows.length < n || got.length >= cap || left <= 1) return;   // listing date / enough
+            return page(rows[0][0] - 1, Math.min(1000, cap - got.length), left - 1);
+          });
+      return page(null, Math.min(1000, cap), BINANCE_DIRECT_PAGES)
+        .then(() => (got.length ? toBars(got) : fromHost(i + 1)))
+        // a later page failing keeps the pages already fetched
+        .catch(() => (got.length ? toBars(got) : fromHost(i + 1)));
+    };
+    return fromHost(0);
+  }
+  function binanceDirectPrice(sym) {
+    const pair = binanceUsdtPair(sym);
+    const fromHost = (i) => (i >= BINANCE_DIRECT_HOSTS.length ? Promise.resolve(null)
+      : fetch(`${BINANCE_DIRECT_HOSTS[i]}/api/v3/ticker/price?symbol=${pair}`, { cache: "no-store" })
+          .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then((j) => (j && j.price != null && isFinite(+j.price) ? +j.price : fromHost(i + 1)))
+          .catch(() => fromHost(i + 1)));
+    return fromHost(0);
+  }
+
   // VIVEK crypto history from the venue the SCAN read (VIVEK_CRYPTO_SRC, set
   // from the row's data_source) — Binance when the scan confirmed the pair,
   // else the Yahoo <base>-USD series. Never a guessed pair.
   function vivekCryptoBars(sym, range, interval, capture) {
     const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
-    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=${VIVEK_CRYPTO_SRC}`,
+    const viaProxy = () => fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=${VIVEK_CRYPTO_SRC}`,
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((j) => {
@@ -1290,6 +1346,15 @@
         }
         return (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
       });
+    if (VIVEK_CRYPTO_SRC !== "binance") return viaProxy();
+    // Depth matches the proxy's targetBars: 5y daily = 1900, 2y hourly = 3300
+    // (capped at 4 pages, as the proxy is).
+    const want = interval === "1h" || interval === "60m" ? 3300 : 1900;
+    return binanceDirectBars(sym, interval, want).then((bars) => {
+      if (!bars || bars.length < 6) return viaProxy();
+      if (capture) DATA_META = { bars: bars.length, flat: 0, basis: "adj", degraded: false };
+      return bars;
+    });
   }
 
   // ── PhaseMap-only chart: the ticker has no live VIVEK plan but IS in the
@@ -2176,11 +2241,18 @@
     const tick = async () => {
       if (document.hidden) return;   // backgrounded tab: don't burn the quote relay
       try {
-        const r = await fetch(`/api/quote?sym=${encodeURIComponent(yf)}${srcParam}`, { cache: "no-store" });
-        if (!r.ok) return;
-        const j = await r.json();
-        if (j == null || j.price == null) return;
-        const px = +j.price;
+        // A Binance-sourced coin reads Binance from the BROWSER first: the
+        // quote proxy cannot reach Binance from Cloudflare (measured
+        // 2026-09-28; see binanceDirectBars), so it would hand back Yahoo's
+        // price -- or, for TAO, nothing.
+        let px = isCryptoQuote && VIVEK_CRYPTO_SRC === "binance" ? await binanceDirectPrice(SYM) : null;
+        if (px == null) {
+          const r = await fetch(`/api/quote?sym=${encodeURIComponent(yf)}${srcParam}`, { cache: "no-store" });
+          if (!r.ok) return;
+          const j = await r.json();
+          if (j == null || j.price == null) return;
+          px = +j.price;
+        }
         liveState.price = px;
         // The "~15m delayed" chip is an EQUITIES exchange-licensing fact
         // (Yahoo delays ASX/NASDAQ quotes ~15-20m). Crypto quotes are

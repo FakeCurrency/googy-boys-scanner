@@ -236,3 +236,24 @@ def test_site_probe_is_get_only_needs_no_credentials_and_reads_the_asset_tags(mo
     assert not any("Authorization" in (h or {}) for _, _, h, _ in seen)
     assert out["assets"] == ["js/app.js?v=140"] and out["has_ignition_panel"] is True
     assert out["ignition"] == {"generated_at": "t", "rows": 2}
+
+
+def test_site_probe_paths_are_get_only_same_host_and_summarised(monkeypatch):
+    seen = []
+
+    def fake(method, url, headers=None, body=None, raw_body=None):
+        seen.append((method, url, body))
+        if "/api/price" in url:
+            return 200, {"ok": True, "source": "binance", "bars": 900, "price": 304.2,
+                         "candles": [{"close": 1.0}, {"close": 304.2}]}
+        return 200, {}
+    monkeypatch.setattr(ops, "call", fake)
+    status, out = ops.run("site-probe", {"paths": [
+        "/api/price?symbol=TAO-USD&type=crypto&range=5y&interval=1d&src=binance",
+        "https://evil.example/x", "//evil.example/x"]}, env={})
+    assert all(m == "GET" and b is None for m, _, b in seen)
+    assert not any("evil" in u for _, u, _ in seen), "only site-relative paths are fetched"
+    ok, bad1, bad2 = out["probes"]
+    assert ok["source"] == "binance" and ok["bars"] == 900 and ok["last_close"] == 304.2
+    assert "candles" not in ok, "the summary never dumps the series"
+    assert bad1["error"].startswith("refused") and bad2["error"].startswith("refused")

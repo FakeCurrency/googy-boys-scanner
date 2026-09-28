@@ -287,6 +287,30 @@ def do_site_probe(args):
     if isinstance(ig, dict):
         out["ignition"] = {"generated_at": ig.get("generated_at"),
                            "rows": len(ig.get("results") or [])}
+    # `args.paths` (2026-09-28): GET a few SITE-RELATIVE paths -- e.g. the
+    # /api/price proxy -- and summarise each answer, so "the chart says no
+    # data" can be measured on the live Functions instead of guessed at.
+    # Same host only (a path must start with "/"), GET only, at most 10.
+    probes = []
+    for path in list(args.get("paths") or [])[:10]:
+        path = str(path)
+        if not path.startswith("/") or path.startswith("//"):
+            probes.append({"path": path, "error": "refused: must be a site-relative path"})
+            continue
+        st, body = call("GET", base + path)
+        row = {"path": path, "status": st}
+        if isinstance(body, dict):
+            for k in ("ok", "source", "bars", "price", "error", "symbol", "delayed"):
+                if k in body:
+                    row[k] = body[k]
+            c = body.get("candles")
+            if isinstance(c, list) and c:
+                row["first_close"], row["last_close"] = c[0].get("close"), c[-1].get("close")
+        elif isinstance(body, str):
+            row["text"] = body[:200]
+        probes.append(row)
+    if probes:
+        out["probes"] = probes
     return 200, out
 
 
