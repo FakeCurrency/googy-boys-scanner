@@ -726,17 +726,56 @@ def test_the_commit_step_stages_only_the_lens_paths():
         assert forbidden not in "\n".join(_code(SRC)), f"ignition.yml names {forbidden}"
 
 
-def test_the_must_change_gate_names_both_canonical_paths():
+def test_the_must_change_gate_runs_ONCE_PER_REPORTED_PATH():
+    """assert_staged.sh is ANY-OF. One call naming both files would pass on
+    the screen alone while a backtest the kick REPORTED publishing was lost
+    (audit, 2026-09-28) -- so the gate is called once per path, inside the
+    loop over PATHS, and PATHS only ever holds the two canonical files."""
     code = _code(COMMIT["run"])
     calls = [ln for ln in code if "scripts/assert_staged.sh" in ln]
     assert len(calls) == 1, calls
     argv = shlex.split(calls[0])
     assert argv[:2] == ["bash", "scripts/assert_staged.sh"], argv
     assert argv[2].startswith("ignition"), argv
-    assert sorted(argv[3:]) == sorted(CANON), argv
+    assert argv[3:] == ["$p"], argv
     at = code.index(calls[0])
+    loop = [i for i, ln in enumerate(code[:at]) if ln.startswith("for p in $PATHS")]
+    assert loop, "the gate is not inside a loop over PATHS"
+    assert not any(ln.startswith("done") for ln in code[loop[-1] + 1:at]), \
+        "the gate sits after the loop closed, not inside it"
+    assigned = [ln for ln in code if "PATHS=" in ln and "PATHS=\"\"" not in ln]
+    named = {tok for ln in assigned for tok in re.findall(r"public/data/ignition/[a-z_]+\.json", ln)}
+    assert named == set(CANON), named
     assert any(ln.startswith("git add") for ln in code[:at]), "gate before staging"
     assert not any(ln.startswith("git commit") for ln in code[:at]), "gate after commit"
+
+
+@needs_shell
+def test_a_reported_backtest_that_is_missing_fails_even_though_the_screen_staged(sh):
+    """The audit's repro, run for real: both steps reported published=true,
+    the screen file changed, the backtest file is GONE. The old single ANY-OF
+    call went green here and pushed a commit without the backtest."""
+    url, _, work = _commit_world(sh, "main")
+    before = _tip(sh, url, "main")
+    (work / CANON[0]).write_text(_crypto("2031-03-04T00:14:31+00:00"), encoding="utf-8")
+    (work / CANON[1]).unlink()
+    rc, _, log = _run_block(sh, COMMIT["run"], work,
+                            _publish({"SCAN_PUBLISHED": "true", "BT_PUBLISHED": "true"}, "main"))
+    assert rc != 0, log
+    assert "reported published but is not present" in log
+    assert _tip(sh, url, "main") == before
+
+
+@needs_shell
+def test_a_reported_backtest_that_staged_nothing_fails_even_though_the_screen_staged(sh):
+    url, _, work = _commit_world(sh, "main")
+    before = _tip(sh, url, "main")
+    (work / CANON[0]).write_text(_crypto("2031-03-04T00:14:31+00:00"), encoding="utf-8")
+    rc, _, log = _run_block(sh, COMMIT["run"], work,
+                            _publish({"SCAN_PUBLISHED": "true", "BT_PUBLISHED": "true"}, "main"))
+    assert rc != 0, log
+    assert "ASSERT-STAGED FAILED" in log
+    assert _tip(sh, url, "main") == before
 
 
 def test_the_push_target_is_the_runs_own_branch_and_never_main():

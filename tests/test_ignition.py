@@ -23,9 +23,10 @@ CONTRACT into the break (so the 2-year ATR% and volume ranks really are at
 the bottom), a breakout bar on a volume multiple, then a run. Variants remove
 one ingredient at a time. Network is never touched.
 
-BUGS are pinned as `xfail(strict=True)` so the suite stays green while the
-defect stands and turns red the moment it is fixed (strict: an XPASS fails,
-so the marker cannot outlive the bug).
+BUGS were pinned as `xfail(strict=True)` while they stood; the three this
+suite found (gap-through-stop MFE/MAE, the second clock in the staleness
+gate, an all-stale screen overwriting the last good file) were fixed on
+2026-09-28 and their tests now run as ordinary regressions.
 """
 
 from __future__ import annotations
@@ -842,12 +843,12 @@ def test_no_risk_means_no_R():
     assert np.isnan(out["gross_r"])
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: simulate() folds the high/low of a bar that GAPS THROUGH the stop into "
-    "mfe/mae before exiting at that bar's open. The position was out at the open, "
-    "so nothing after it was lived through -- the exact principle the trail branch "
-    "states ('only the OPEN of the exit bar was lived through'). A trade that gapped "
-    "straight to a loss reports +2R MFE."))
+# WAS A BUG (fixed 2026-09-28): simulate() folds the high/low of a bar that
+# GAPS THROUGH the stop into mfe/mae before exiting at that bar's open. The
+# position was out at the open, so nothing after it was lived through -- the
+# exact principle the trail branch states ('only the OPEN of the exit bar
+# was lived through'). A trade that gapped straight to a loss reports +2R
+# MFE.
 def test_a_gap_through_stop_bar_contributes_only_its_open_to_mfe_and_mae():
     o, h, lo, c = arrays([PRE, (85, 120, 80, 88)])
     out = E.simulate(o, h, lo, c, nan_trail(2), start=1, entry=100.0, stop=90.0)
@@ -1094,10 +1095,11 @@ def test_a_next_open_under_the_stop_is_a_counted_skip_not_a_trade():
     ru = E.apply_rules(pr.bf, P())
     assert df["Open"].iloc[T + 1] < ru["stop"].iloc[T]
     trades = BT.trades_for(pr, ru)
-    assert trades == [{"symbol": "QNT", "skipped": "gap_below_stop",
+    assert trades == [{"symbol": "QNT", "skipped": "gap_below_stop", "_t0": T,
                        "trigger_date": _date(df.index[T])}]
     s = BT.stats(trades)
-    assert s == {"n": 0, "skipped": 1}
+    assert s == {"n": 0, "skipped": 1, "open": 0, "open_mtm_r": 0.0,
+                 "open_at_end": 0, "pending": 0}
 
 
 def test_a_trigger_on_the_last_bar_has_no_entry_yet():
@@ -1156,20 +1158,35 @@ STATS_TRADES = [
 
 
 def test_stats_by_hand():
+    """REALISED trades only (audit 2026-09-28): the +3R 'open' mark is counted
+    and marked BESIDE the numbers, never inside them -- a headline that moves
+    with one coin's price every day is not a result."""
     s = BT.stats(STATS_TRADES)
-    assert s["n"] == 7 and s["skipped"] == 1
-    assert s["wins"] == 4 and s["win_pct"] == 57.1          # 4/7
-    assert s["exp_r"] == 1.857                              # 13/7
-    assert s["median_r"] == 0.5
-    assert s["total_r"] == 13.0
-    assert s["pf"] == 6.2                                   # 15.5 / 2.5
-    assert s["avg_win_r"] == 3.875 and s["avg_loss_r"] == -0.833
-    assert (s["pct_ge_3r"], s["pct_ge_5r"], s["pct_ge_10r"]) == (28.6, 14.3, 14.3)
+    assert s["n"] == 6 and s["skipped"] == 1
+    assert s["open"] == 1 and s["open_mtm_r"] == 3.0 and s["open_at_end"] == 1
+    assert s["pending"] == 0
+    assert (s["wins"], s["losses"], s["flat"]) == (3, 3, 0)
+    assert s["win_pct"] == 50.0                             # 3/6
+    assert s["exp_r"] == 1.667                              # 10/6
+    assert s["median_r"] == 0.0                             # (-0.5 + 0.5) / 2
+    assert s["total_r"] == 10.0
+    assert s["pf"] == 5.0 and s["pf_note"] is None          # 12.5 / 2.5
+    assert s["avg_win_r"] == 4.167 and s["avg_loss_r"] == -0.833
+    assert (s["pct_ge_3r"], s["pct_ge_5r"], s["pct_ge_10r"]) == (16.7, 16.7, 16.7)
     assert s["max_r"] == 10.0
-    assert s["top5_share_pct"] == 115.4                     # (10+3+2+0.5-0.5)/13
-    assert s["exp_r_ex_top5"] == -1.0                       # the two -1s left over
-    assert s["avg_bars"] == 10.0                            # 70/7
-    assert s["stop_pct"] == 28.6 and s["open_at_end"] == 1
+    assert s["top5_share_pct"] == 110.0                     # (10+2+0.5-0.5-1)/10
+    assert s["exp_r_ex_top5"] == -1.0                       # the -1 left over
+    assert s["avg_bars"] == 10.7                            # 64/6
+    assert s["stop_pct"] == 33.3                            # 2/6
+
+
+def test_a_pending_trail_exit_is_a_mark_not_a_result():
+    rows = [{"net_r": 1.0, "exit_date": "2024-01-01", "reason": "trail", "bars": 3},
+            {"net_r": 5.0, "exit_date": "2024-01-02", "reason": "trail", "bars": 3,
+             "pending": True}]
+    s = BT.stats(rows)
+    assert s["n"] == 1 and s["exp_r"] == 1.0
+    assert s["open"] == 1 and s["pending"] == 1 and s["open_mtm_r"] == 5.0
 
 
 def test_max_drawdown_is_walked_in_EXIT_order_not_list_order():
@@ -1180,48 +1197,122 @@ def test_max_drawdown_is_walked_in_EXIT_order_not_list_order():
     assert BT.stats(shuffled)["max_dd_r"] == -2.5
 
 
+def test_same_day_exits_are_netted_before_the_drawdown():
+    """Audit 2026-09-28: sorted by exit date alone, two trades closing on one
+    day kept their (alphabetical) list order and created an intraday peak a
+    daily equity curve never had: -5R one way, -4R the other."""
+    a = [{"net_r": 0.0, "exit_date": "d1", "reason": "trail", "bars": 1},
+         {"net_r": 4.0, "exit_date": "d2", "reason": "trail", "bars": 1},
+         {"net_r": -1.0, "exit_date": "d2", "reason": "stop", "bars": 1},
+         {"net_r": -4.0, "exit_date": "d3", "reason": "stop", "bars": 1}]
+    b = [a[0], a[2], a[1], a[3]]
+    assert BT.stats(a)["max_dd_r"] == BT.stats(b)["max_dd_r"] == -4.0
+
+
 def test_stats_edge_cases():
-    assert BT.stats([]) == {"n": 0, "skipped": 0}
+    assert BT.stats([]) == {"n": 0, "skipped": 0, "open": 0, "open_mtm_r": 0.0,
+                            "open_at_end": 0, "pending": 0}
     losers = [{"net_r": -1.0, "exit_date": "2024-01-0%d" % i, "bars": 1, "reason": "stop"}
               for i in range(1, 4)]
     s = BT.stats(losers)
     assert s["pf"] == 0.0 and s["top5_share_pct"] is None and s["exp_r_ex_top5"] is None
     assert s["max_dd_r"] == -3.0 and s["win_pct"] == 0.0
     winners = [{"net_r": 1.0, "exit_date": "2024-01-01", "bars": 1}]
-    assert BT.stats(winners)["pf"] is None                     # no losses: PF undefined
+    w = BT.stats(winners)
+    assert w["pf"] is None and w["pf_note"] == "no losing trades"   # PF infinite, SAID
+    assert "inf (no losses)" in BT._brief(w)
     zero = [{"net_r": 0.0, "exit_date": "2024-01-01", "bars": 1}]
-    assert BT.stats(zero)["wins"] == 0                         # breakeven is not a win
+    z = BT.stats(zero)
+    assert (z["wins"], z["losses"], z["flat"]) == (0, 0, 1)   # breakeven: neither
+    assert z["pf"] is None and z["pf_note"] is None and z["avg_loss_r"] is None
     nan = [{"net_r": float("nan"), "exit_date": "2024-01-01", "bars": 1},
            {"net_r": None, "exit_date": "2024-01-02", "bars": 1},
            {"net_r": 2.0, "exit_date": "2024-01-03", "bars": 1}]
     assert BT.stats(nan)["n"] == 1
 
 
+BOOT_TRADES = [
+    {"net_r": r, "entry_date": f"2024-{m:02d}-10", "exit_date": f"2024-{m:02d}-20",
+     "reason": "trail", "bars": 5}
+    for m, r in [(1, 3.0), (1, -1.0), (2, -1.0), (3, 6.0), (4, -1.0), (5, 0.5),
+                 (6, -1.0), (7, 2.0), (8, -1.0), (9, 1.5)]]
+
+
 def test_bootstrap_band_is_seeded_and_brackets_the_mean():
-    a = BT.stats(STATS_TRADES, boot=500, seed=11)
-    b = BT.stats(STATS_TRADES, boot=500, seed=11)
-    c = BT.stats(STATS_TRADES, boot=500, seed=12)
+    a = BT.stats(BOOT_TRADES, boot=500, seed=11)
+    b = BT.stats(BOOT_TRADES, boot=500, seed=11)
+    c = BT.stats(BOOT_TRADES, boot=500, seed=12)
     assert a == b
     assert a["exp_r_ci90"] != c["exp_r_ci90"]
     lo, hi = a["exp_r_ci90"]
     assert lo <= a["exp_r"] <= hi
-    assert 0.0 <= a["p_exp_le_0"] <= 1.0
-    assert "exp_r_ci90" not in BT.stats(STATS_TRADES[:4], boot=500, seed=11)   # n < 5
+    assert 0.0 <= a["boot_p_exp_le_0"] <= 1.0
+    assert "cluster" in a["ci_method"]
+    assert "exp_r_ci90" not in BT.stats(BOOT_TRADES[:4], boot=500, seed=11)   # n < 5
+
+
+def test_the_bootstrap_resamples_entry_months_WHOLE():
+    """Alt ignitions bunch in alt seasons, so trades are not independent: a
+    month is resampled as a block. With month A = four +1R trades and month
+    B = one -1R trade, the only achievable means are AA (+1.0), AB (+0.6)
+    and BB (-1.0) -- an iid bootstrap would also produce 0.2, -0.2, ..."""
+    rows = [{"net_r": 1.0, "entry_date": "2024-01-0%d" % i} for i in range(1, 5)]
+    rows.append({"net_r": -1.0, "entry_date": "2024-02-01"})
+    means = BT._boot_means(rows, "net_r", 400, 3)
+    assert set(np.round(means, 6)) <= {1.0, 0.6, -1.0}
+    assert len(set(np.round(means, 6))) == 3
+
+
+def test_versus_is_the_difference_statistic():
+    worse = [{**t, "net_r": t["net_r"] - 1.0} for t in BOOT_TRADES]
+    v = BT.versus(BOOT_TRADES, worse, boot=500, seed=4)
+    assert v["diff_r"] == 1.0 and v["n_primary"] == v["n_baseline"] == 10
+    lo, hi = v["diff_ci90"]
+    assert lo <= 1.0 <= hi and 0.0 <= v["p_diff_le_0"] <= 1.0
+    assert BT.versus(BOOT_TRADES[:3], worse, boot=100, seed=4) == \
+        {"n_primary": 3, "n_baseline": 10}                     # too few: no statistic
+    # open marks are not results on EITHER side
+    opened = BOOT_TRADES + [{"net_r": 50.0, "entry_date": "2024-10-01", "reason": "open"}]
+    assert BT.versus(opened, worse, boot=100, seed=4)["diff_r"] == 1.0
+
+
+def test_random_draws_only_land_on_bars_the_rule_could_have_traded():
+    """Audit 2026-09-28: the baseline used to draw from bar ~60 -- a coin's
+    launch year and its illiquid stretches, regimes the rule can never trade.
+    Every draw must now satisfy the rule's own preconditions (every input
+    exists, both turnover floors pass, the screen could see the bar) and sit
+    in the SAME season as the real trigger."""
+    pr = prepared("gap_up")
+    real = [t for t in BT.trades_for(pr, E.apply_rules(pr.bf, P())) if not t.get("skipped")]
+    draws = BT.random_timing([pr], real, draws=200, seed=9, p=P())
+    bf, p = pr.bf, P()
+    assert draws
+    for d in draws:
+        t0 = d["_t0"]
+        r = bf.iloc[t0]
+        assert all(np.isfinite(r[k]) for k in ("ribbon", "atr_rank", "vol_rank", "drawdown",
+                                                "base_high", "rvol", "ext", "trail"))
+        assert r["turnover_base"] >= p.min_base_turnover
+        assert r["turnover_day"] >= p.min_trigger_turnover
+        assert t0 >= config.IGNITION_MIN_BARS - 1
+        assert abs(t0 - real[0]["_t0"]) <= config.IGNITION_BT_RANDOM_WINDOW
+    anyt = BT.random_timing([pr], real, draws=200, seed=9, p=P(), window=0)
+    assert set(d["_t0"] for d in anyt) <= set(BT.eligible_bars(pr, P()).tolist())
 
 
 def test_random_timing_is_seeded_per_symbol_and_trigger_by_crc32():
     df = fx("gap_up")
     pr = prepared("gap_up")
     real = [t for t in BT.trades_for(pr, E.apply_rules(pr.bf, P())) if not t.get("skipped")]
-    a = BT.random_timing([pr], real, draws=7, seed=5)
-    assert a == BT.random_timing([pr], real, draws=7, seed=5)
-    assert a != BT.random_timing([pr], real, draws=7, seed=6)
+    a = BT.random_timing([pr], real, draws=7, seed=5, p=P())
+    assert a == BT.random_timing([pr], real, draws=7, seed=5, p=P())
+    assert a != BT.random_timing([pr], real, draws=7, seed=6, p=P())
     assert len(a) == 7 and all(r["symbol"] == "QNT" for r in a)
     # the documented seeding, reproduced: identical in ANY process (crc32, not hash())
-    ok = np.flatnonzero(pr.bf["base_high"].notna().to_numpy() & pr.bf["trail"].notna().to_numpy())
-    ok = ok[ok + 1 < len(df)]
+    ok = BT.eligible_bars(pr, P())
+    near = ok[np.abs(ok - real[0]["_t0"]) <= config.IGNITION_BT_RANDOM_WINDOW]
     rng = np.random.default_rng(5 + zlib.crc32(f"QNT|{real[0]['trigger_date']}".encode()))
-    want = [_date(df.index[t0 + 1]) for t0 in rng.choice(ok, size=7, replace=True)]
+    want = [_date(df.index[t0 + 1]) for t0 in rng.choice(near, size=7, replace=True)]
     assert [r["entry_date"] for r in a] == want
     # a symbol the replay never prepared is skipped, not an error
     assert BT.random_timing([pr], [{**real[0], "symbol": "ZZZ"}], draws=3, seed=5) == []
@@ -1270,7 +1361,13 @@ def test_backtest_market_replays_completed_bars_only(bt_payload):
     assert set(bt_payload["exits"]) == set(BT.EXIT_SPECS)
     assert bt_payload["sensitivity"]["full_grid"]["cells"] == 3 ** 5
     assert set(P_["by_btc_regime"]) <= {"btc_above_200", "btc_below_200", "unknown"}
-    assert set(P_["by_split"]) <= {"in_sample", "out_of_sample"}
+    assert set(P_["by_split"]) <= {"in_sample", "out_of_sample", "forward"}
+    assert "forward" in P_["by_split"]
+    assert bt_payload["scoring"]["realised_only"] is True
+    assert set(bt_payload["versus"]) >= {"random_timing", "breakout_only", "no_rvol",
+                                         "random_timing_any", "random_timing_out_of_sample"}
+    assert set(bt_payload["exit_specs"]) == set(BT.EXIT_SPECS)
+    assert all(t["design_case"] is False for t in trades)     # 2022 trigger: before the window
     case = bt_payload["cases"]["QNT"]
     assert case["trades"] == trades
     assert len(case["recent_bars"]) == 30
@@ -1325,8 +1422,8 @@ def test_bar_is_forming_for_a_stock_session_ends_at_its_close():
 
 
 def _fresh_frames():
-    """Frames whose last bar is YESTERDAY in UTC by the real clock -- the
-    staleness gate reads the wall clock, not the injected `now` (see the xfail)."""
+    """Frames whose last bar is YESTERDAY in UTC by the real clock (the tests
+    that use them also pass the real clock as `now`)."""
     end = pd.Timestamp((dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)).date())
     frames = {
         "IGN-USD": redate(fx("base").iloc[:T + 1], end),
@@ -1382,11 +1479,11 @@ def test_screen_market_with_no_frames_is_none():
     assert RUN.screen_market(MARKET, frames={}, rows=[]) is None
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: screen_market() takes an injectable `now` (used for the forming-bar split "
-    "and generated_at) but its staleness gate reads the WALL CLOCK via "
-    "data._frame_age_days, so a screen at an injected time skips every frame dated "
-    "then as 'stale frame' -- the two clocks disagree inside one call."))
+# WAS A BUG (fixed 2026-09-28): screen_market() takes an injectable `now`
+# (used for the forming-bar split and generated_at) but its staleness gate
+# reads the WALL CLOCK via data._frame_age_days, so a screen at an injected
+# time skips every frame dated then as 'stale frame' -- the two clocks
+# disagree inside one call.
 def test_screen_market_judges_staleness_by_the_injected_clock():
     now = dt.datetime(2026, 1, 11, 6, 0, tzinfo=dt.timezone.utc)
     frames = {"IGN-USD": redate(fx("base").iloc[:T + 1], "2026-01-10")}
@@ -1395,12 +1492,12 @@ def test_screen_market_judges_staleness_by_the_injected_clock():
     assert [r["state"] for r in pl["results"]] == ["IGNITING"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: run.py promises 'the page never says nothing is coiling when the truth is "
-    "we could not look' (exit 3, last good file kept), but when EVERY frame is "
-    "refused as stale -- e.g. a multi-day Yahoo outage served from the frame cache "
-    "-- screen_market still returns a payload with 0 screened / 0 results, which "
-    "main() publishes over the last good file."))
+# WAS A BUG (fixed 2026-09-28): run.py promises 'the page never says nothing
+# is coiling when the truth is we could not look' (exit 3, last good file
+# kept), but when EVERY frame is refused as stale -- e.g. a multi-day Yahoo
+# outage served from the frame cache -- screen_market still returns a
+# payload with 0 screened / 0 results, which main() publishes over the last
+# good file.
 def test_every_frame_stale_keeps_the_last_good_file():
     frames = {"OLD-USD": redate(fx("base").iloc[:T + 1], "2021-06-01"),
               "OLE-USD": redate(fx("short").iloc[:400], "2021-06-01")}
@@ -1431,7 +1528,7 @@ def test_main_exit_3_when_screen_market_returns_none(sandbox, monkeypatch):
 
 
 def test_main_exit_3_when_the_download_is_empty(sandbox, monkeypatch):
-    monkeypatch.setattr(RUN, "_load", lambda *a, **k: ([{"yf": "X-USD", "symbol": "X"}], {}, {}))
+    monkeypatch.setattr(RUN, "_download", lambda *a, **k: ([{"yf": "X-USD", "symbol": "X"}], {}))
     assert RUN.main(["--market", MARKET]) == 3
     assert RUN.main(["--market", MARKET, "--backtest"]) == 3
     assert _files(sandbox) == []
@@ -1440,7 +1537,7 @@ def test_main_exit_3_when_the_download_is_empty(sandbox, monkeypatch):
 def test_main_exit_1_on_an_exception(sandbox, monkeypatch, capsys):
     def boom(*a, **k):
         raise RuntimeError("yahoo on fire")
-    monkeypatch.setattr(RUN, "_load", boom)
+    monkeypatch.setattr(RUN, "_download", boom)
     assert RUN.main(["--market", MARKET]) == 1
     assert RUN.main(["--market", MARKET, "--backtest"]) == 1
     assert "::error::" in capsys.readouterr().out
@@ -1449,7 +1546,8 @@ def test_main_exit_1_on_an_exception(sandbox, monkeypatch, capsys):
 
 def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
     frames, rows = _fresh_frames()
-    monkeypatch.setattr(RUN, "_load", lambda *a, **k: (rows, frames, {}))
+    monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames))
+    monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t: (dict(fr), {}))
 
     def no_write(*a, **k):
         raise AssertionError("--dry-run wrote a file")
@@ -1462,7 +1560,8 @@ def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
 
 def test_main_publishes_exactly_one_screen_file(sandbox, monkeypatch):
     frames, rows = _fresh_frames()
-    monkeypatch.setattr(RUN, "_load", lambda *a, **k: (rows, frames, {}))
+    monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames))
+    monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t: (dict(fr), {}))
     assert RUN.main(["--market", MARKET]) == 0
     assert _files(sandbox) == [f"{MARKET}.json"]
     text = (sandbox / f"{MARKET}.json").read_text(encoding="utf-8")

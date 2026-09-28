@@ -211,6 +211,20 @@ IGNITION_BT_RANDOM_DRAWS = 5     # random-timing baseline: draws per real trade
 IGNITION_BT_SEED = 20260928      # every random choice is seeded -> reproducible
 IGNITION_BT_BOOTSTRAP = 2000     # resamples for the expectancy confidence band
 IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
+# THE DESIGN CASES ARE NEVER SCORED. QNT's Sep-2026 chart is the one piece of
+# market data that informed the thresholds above (the ribbon, drawdown and
+# coil-lookback comments quote it), so its triggers from this date on are
+# excluded from EVERY scored number -- primary, splits, baselines, grid -- and
+# reported only under `cases`. Scoring the example a rule was drawn from as
+# evidence for the rule is look-ahead at the research-design level (audit,
+# 2026-09-28). Symbol -> first excluded trigger date.
+IGNITION_BT_DESIGN_CASES = {"QNT": "2026-09-01"}
+IGNITION_BT_REGISTERED_DATE = "2026-09-28"   # triggers from here are the FORWARD bucket
+IGNITION_BT_RANDOM_WINDOW = 182  # random-timing draws: within +/- this many bars of the
+                                 # real trigger -- same coin, same SEASON, random day.
+                                 # Crypto regime is the biggest driver of a long's R;
+                                 # an unmatched draw would test the regime, not the signal.
+IGNITION_BT_GRID_MIN_N = 10      # a grid cell with fewer trades is reported, not counted
 
 # ---------------------------------------------------------------------------
 # VIVEK — 5.0Trading.Bull style: reactions at the 200 SMA on higher timeframes

@@ -63,8 +63,14 @@ def bar_is_forming(market: str, last_idx, now: dt.datetime) -> bool:
         last = pd.Timestamp(last_idx).date()
     except Exception:
         return False
-    if last != local.date():
+    if last < local.date():
         return False
+    if last > local.date():
+        # A bar dated AFTER the clock: the day rolled over while the download
+        # ran (a run that starts at 23:5x UTC and finishes past midnight gets
+        # the new day's minutes-old bar). It is forming by definition -- the
+        # old `!=` test called it completed and screened a partial bar.
+        return True
     sess = config.VIVEK_JOURNAL_SESSION.get(market)
     if not sess:
         return True
@@ -79,24 +85,47 @@ def split_forming(frame: pd.DataFrame, market: str, now: dt.datetime):
     return df, None
 
 
-def _age_days(frame: pd.DataFrame, market: str) -> Optional[int]:
-    tz = getattr(config.MARKETS.get(market), "timezone", None)
-    try:
-        return int(sdata._frame_age_days(frame, tz))
-    except Exception:
+def _age_days(frame: pd.DataFrame, market: str, now: dt.datetime) -> Optional[int]:
+    """Days between the frame's last bar and `now`, in the MARKET's calendar.
+
+    Measured against the SAME clock the rest of the run uses (the injected
+    `now`), never a second reading of the wall clock: two clocks inside one
+    call once made a screen at an injected time call every frame stale. An
+    unreadable frame or zone FAILS CLOSED (a huge age -> skipped), because
+    "unknown" must never be read as "fresh".
+    """
+    df = E.clean(frame)
+    if not len(df):
         return None
+    try:
+        tz = ZoneInfo(getattr(config.MARKETS.get(market), "timezone", "UTC") or "UTC")
+        last = pd.Timestamp(df.index[-1]).date()
+        return max(0, (now.astimezone(tz).date() - last).days)
+    except Exception:
+        return 10 ** 6
 
 
-def _load(market: str, period: str, limit: int, cache_key: Optional[str]):
+def _download(market: str, period: str, limit: int):
     rows = suniverse.load_universe(market)
     if limit:
         rows = rows[:limit]
-    fresh = sdata.download([r["yf"] for r in rows], period=period)
-    stats: dict = {}
-    frames = fresh
-    if cache_key:
-        frames, stats = sdata.merge_with_cache(cache_key, fresh, [r["yf"] for r in rows])
-    return rows, frames, stats
+    return rows, sdata.download([r["yf"] for r in rows], period=period)
+
+
+def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime):
+    """({yf: completed bars}, {yf: forming bar}) -- the forming bar is kept
+    OUT of anything that persists, so the frame cache only ever holds
+    completed bars (a cached mid-day snapshot, re-used the next day when
+    Yahoo drops the ticker, would otherwise be screened as a finished bar)."""
+    done: Dict[str, pd.DataFrame] = {}
+    forming: Dict[str, pd.DataFrame] = {}
+    for yf, f in frames.items():
+        d, fm = split_forming(f, market, now)
+        if len(d):
+            done[yf] = d
+        if fm is not None and len(fm):
+            forming[yf] = fm
+    return done, forming
 
 
 def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = None,
@@ -105,11 +134,18 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
     """Screen one market -> payload, or None when there is no data at all.
     `frames`/`rows` are injectable so everything but the download is testable."""
     started = time.time()
-    now = now or dt.datetime.now(dt.timezone.utc)
     cache_stats: dict = {}
     if frames is None:
-        rows, frames, cache_stats = _load(market, config.IGNITION_DATA_PERIOD, limit,
-                                          f"ignition-{market}")
+        rows, fresh = _download(market, config.IGNITION_DATA_PERIOD, limit)
+        # The clock is read AFTER the download, so "forming" is judged at the
+        # moment the bars are actually in hand (the download takes minutes).
+        now = now or dt.datetime.now(dt.timezone.utc)
+        done, forming = _split_all(fresh, market, now)
+        frames, cache_stats = sdata.merge_with_cache(
+            f"ignition-{market}", done, [r["yf"] for r in rows])
+    else:
+        now = now or dt.datetime.now(dt.timezone.utc)
+        frames, forming = _split_all(frames, market, now)
     rows = rows or []
     if not frames:
         print(f"ignition: no data for {market} (download blocked/empty) - "
@@ -125,22 +161,31 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         meta = by_yf.get(yf, {})
         symbol = meta.get("symbol") or yf.split("-")[0]
         try:
-            age = _age_days(frames[yf], market)
+            done = E.clean(frames[yf])
+            age = _age_days(done, market, now)
             if age is not None and age > config.IGNITION_MAX_DATA_AGE_DAYS:
                 skipped["stale frame"] = skipped.get("stale frame", 0) + 1
                 continue
-            done, forming = split_forming(frames[yf], market, now)
             if len(done) < config.IGNITION_MIN_BARS:
                 skipped["short history"] = skipped.get("short history", 0) + 1
                 continue
             screened += 1
-            row = E.screen_frame(done, market, forming=forming, p=p)
+            row = E.screen_frame(done, market, forming=forming.get(yf), p=p)
             if row is None:
                 continue
             row = {"symbol": symbol, "name": meta.get("name") or symbol, "yf": yf, **row}
             results.append(row)
         except Exception as exc:                          # noqa: BLE001
             errs.record(symbol, exc)
+    if screened == 0:
+        # Frames came back but NONE could be screened (every one stale or
+        # short -- e.g. a multi-day Yahoo outage leaving only cached frames
+        # past the age ceiling). Publishing an empty list would tell the page
+        # "nothing is coiling" when the truth is "we could not look": keep
+        # the last good file instead, exactly like the no-data path.
+        print(f"ignition: nothing screenable for {market} ({skipped}) - "
+              f"keeping the existing file", flush=True)
+        return None
     results.sort(key=E.state_rank)
     counts = {s: sum(1 for r in results if r["state"] == s)
               for s in ("IGNITING", "RUNNING", "CLOSED", "COILED")}
@@ -177,7 +222,7 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "results": results,
         "errors": errs.sample(),
     }
-    print(errs.report(screened), flush=True)
+    errs.report(screened)   # prints its own line
     return payload
 
 
@@ -185,19 +230,15 @@ def backtest_market(market: str, *, limit: int = 0,
                     frames: Optional[Dict[str, pd.DataFrame]] = None,
                     rows: Optional[List[dict]] = None,
                     now: Optional[dt.datetime] = None) -> Optional[dict]:
-    now = now or dt.datetime.now(dt.timezone.utc)
     if frames is None:
-        rows, frames, _ = _load(market, config.IGNITION_BT_PERIOD, limit, None)
+        rows, frames = _download(market, config.IGNITION_BT_PERIOD, limit)
+    now = now or dt.datetime.now(dt.timezone.utc)   # after the download
     rows = rows or []
     if not frames:
         print(f"ignition: backtest has no data for {market} - nothing written", flush=True)
         return None
     # Completed bars only: the forming bar of the run day is not history yet.
-    done = {}
-    for yf, f in frames.items():
-        d, _ = split_forming(f, market, now)
-        if len(d):
-            done[yf] = d
+    done, _ = _split_all(frames, market, now)
     symbols = {r["yf"]: r["symbol"] for r in rows}
     started = time.time()
     payload = bt.backtest(done, market, symbols=symbols,

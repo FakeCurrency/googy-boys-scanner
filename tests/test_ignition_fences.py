@@ -882,15 +882,25 @@ def cli(monkeypatch):
     from scanner.ignition import run
 
     rows = [{"yf": "AAA-USD", "symbol": "AAA", "name": "Aaa"},
-            {"yf": "BBB-USD", "symbol": "BBB", "name": "Bbb"}]
-    frames = {"AAA-USD": _frame(1), "BBB-USD": _frame(2)}
-    state = {"published": [], "raw_writes": [], "load_calls": [], "load": None}
+            {"yf": "BBB-USD", "symbol": "BBB", "name": "Bbb"},
+            {"yf": "CCC-USD", "symbol": "CCC", "name": "Ccc"}]
+    # CCC's last bar is TODAY (UTC): the forming bar, which must be split off
+    # before anything persists it.
+    frames = {"AAA-USD": _frame(1), "BBB-USD": _frame(2), "CCC-USD": _frame(3, days_old=0)}
+    state = {"published": [], "raw_writes": [], "load_calls": [], "load": None,
+             "cache_calls": []}
 
-    def fake_load(market, period, limit, cache_key):
-        state["load_calls"].append((market, period, limit, cache_key))
+    def fake_download(market, period, limit):
+        state["load_calls"].append((market, period, limit))
         if state["load"] is not None:
-            return state["load"](market, period, limit, cache_key)
-        return rows, frames, {}
+            return state["load"](market, period, limit)
+        return rows, frames
+
+    def fake_merge(key, fresh, tickers):
+        # The real merge LOADS and SAVES .cache/frames/<key>.pkl.gz; recorded
+        # here (key + exactly what it was handed) instead of touching disk.
+        state["cache_calls"].append((key, {k: v.copy() for k, v in fresh.items()}, list(tickers)))
+        return dict(fresh), {"fresh": len(fresh), "reused": 0}
 
     def fake_write_json(path, payload, **kw):
         state["published"].append((pathlib.Path(path), payload))
@@ -903,7 +913,8 @@ def cli(monkeypatch):
             state["raw_writes"].append(("open", str(file), mode))
         return real_open(file, mode, *a, **k)
 
-    monkeypatch.setattr(run, "_load", fake_load)
+    monkeypatch.setattr(run, "_download", fake_download)
+    monkeypatch.setattr(run.sdata, "merge_with_cache", fake_merge)
     monkeypatch.setattr(output, "write_json", fake_write_json)
     monkeypatch.setattr(builtins, "open", spy_open)
     monkeypatch.setattr(os, "replace", lambda *a, **k: state["raw_writes"].append(("replace", a)))
@@ -947,7 +958,7 @@ def test_no_data_is_exit_3_and_keeps_the_previous_file(cli):
     ::warning:: -- the previous file stands, because an empty list over it
     would say "nothing is coiling" when the truth is "we could not look"."""
     run = cli["run"]
-    cli["load"] = lambda *a: ([], {}, {})
+    cli["load"] = lambda *a: ([], {})
     assert run.main(["--market", "crypto"]) == 3
     assert run.main(["--market", "crypto", "--backtest"]) == 3
     assert cli["published"] == [] and cli["raw_writes"] == []
@@ -977,12 +988,30 @@ def test_the_lens_frame_cache_can_never_overwrite_the_scan_cache(cli):
     run.main(["--market", "crypto", "--dry-run"])
     run.main(["--market", "crypto", "--backtest", "--dry-run"])
     (screen_call, replay_call) = cli["load_calls"]
-    key = screen_call[3]
-    assert key and key.startswith("ignition-"), key
-    assert key not in config.MARKETS, key
     assert screen_call[1] == config.IGNITION_DATA_PERIOD
     assert replay_call[1] == config.IGNITION_BT_PERIOD
-    assert replay_call[3] is None, "the replay must not read or write the frame cache"
+    assert len(cli["cache_calls"]) == 1, "the replay must not read or write the frame cache"
+    key = cli["cache_calls"][0][0]
+    assert key and key.startswith("ignition-"), key
+    assert key not in config.MARKETS, key
+
+
+def test_the_frame_cache_is_only_ever_handed_completed_bars(cli):
+    """Audit 2026-09-28: the cache used to be handed the RAW download, forming
+    bar included. If Yahoo then dropped that ticker the next day, the cached
+    mid-day snapshot was re-used and screened as a FINISHED daily bar --
+    partial volume and a mid-day close feeding rvol, the breakout and the
+    stop. The forming bar is now split off before anything can persist it."""
+    run = cli["run"]
+    run.main(["--market", "crypto", "--dry-run"])
+    (_, handed, _), = cli["cache_calls"]
+    today = dt.datetime.now(dt.timezone.utc).date()
+    assert set(handed) == {"AAA-USD", "BBB-USD", "CCC-USD"}
+    for yf, df in handed.items():
+        assert pd.Timestamp(df.index[-1]).date() < today, (yf, df.index[-1])
+    # ...and the forming bar was still USED (as `forming`), not thrown away:
+    # CCC's cached frame is exactly one bar shorter than the download.
+    assert len(handed["CCC-USD"]) == len(_frame(3, days_old=0)) - 1
 
 
 def test_the_engine_set_is_what_the_gates_above_actually_inspect():

@@ -50,7 +50,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: ignition
+  # One queue PER BRANCH. GitHub keeps one pending run per group and cancels
+  # the one already waiting, so a single shared group would let main's next
+  # cron evict a feature-branch kick that was queued behind a running cron --
+  # the CLAUDE.md #108/#109 eviction. Runs on different branches write
+  # different branches, so they never need to exclude each other.
+  group: ignition-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -184,14 +189,22 @@ jobs:
             if [ -e "$p" ]; then
               git add -- "$p"
             else
-              echo "::warning::$p is not present - nothing to stage for it"
+              # The scanner REPORTED publishing this path; its absence is lost
+              # output, not a no-op.
+              echo "::error::$p was reported published but is not present"
+              exit 1
             fi
           done
 
-          # The must-change gate. Reached ONLY when the scanner reported a real
-          # publish, and every screen re-stamps generated_at, so an empty index
-          # here means output was silently lost (the 2026-07-20 incident).
-          bash scripts/assert_staged.sh "ignition crypto" public/data/ignition/crypto.json public/data/ignition/crypto_backtest.json
+          # The must-change gate, ONE CALL PER REPORTED PATH. assert_staged.sh
+          # is ANY-OF, so a single call naming both files would pass on the
+          # screen alone while the backtest a kick reported publishing was
+          # lost (audit, 2026-09-28). Every publish re-stamps generated_at, so
+          # a reported path that stages nothing means output was silently
+          # dropped (the 2026-07-20 incident).
+          for p in $PATHS; do
+            bash scripts/assert_staged.sh "ignition $p" "$p"
+          done
 
           if git diff --cached --quiet; then
             echo "No data changes to commit."

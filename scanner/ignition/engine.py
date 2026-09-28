@@ -201,8 +201,15 @@ def apply_rules(bf: pd.DataFrame, p: Params) -> pd.DataFrame:
     coil_open = coiled.astype(float).rolling(max(p.coil_lookback, 1),
                                              min_periods=1).max().fillna(0.0) > 0
 
+    # Every coil INPUT exists (not: the coil holds). Applied to every rule,
+    # so the breakout-only ablation drops the coil CONDITION and nothing else
+    # -- without it the ablation also trades a coin's launch year, which the
+    # rule can never reach, and "does the coil matter?" would mix two effects.
+    inputs_ready = (bf["ribbon"].notna() & bf["atr_rank"].notna()
+                    & bf["vol_rank"].notna() & bf["drawdown"].notna())
     breakout = bf["close"] > bf["base_high"] * (1.0 + p.breakout_tol)
     raw = (breakout
+           & inputs_ready
            & (bf["ext"] <= p.max_ext)
            & (bf["turnover_base"] >= p.min_base_turnover)
            & (bf["turnover_day"] >= p.min_trigger_turnover))
@@ -214,6 +221,7 @@ def apply_rules(bf: pd.DataFrame, p: Params) -> pd.DataFrame:
 
     stop = np.maximum(bf["base_low"], bf["base_high"] - p.stop_atr_mult * bf["atr_prev"])
     return pd.DataFrame({
+        "inputs_ready": inputs_ready,
         "coiled": coiled, "coil_window": coil_window, "coil_open": coil_open,
         "coiled_run": _run_length(coiled),
         "breakout": breakout, "raw_trigger": raw, "trigger": trigger,
@@ -258,12 +266,20 @@ def simulate(o, h, lo, c, trail, *, start: int, entry: float, stop: float,
     mfe, mae = entry, entry
     j = start
     while j < n:
-        mfe = max(mfe, h[j])
-        mae = min(mae, lo[j])
         if lo[j] <= stop:
             px = o[j] if o[j] <= stop else stop
+            # The stop bar: the order of events inside it is unknowable, and
+            # the stop-first rule already assumed the worst. So only the OPEN
+            # (a price certainly traded while held) can lift MFE, and MAE
+            # ends at the FILL -- a low beyond the stop was never lived
+            # through. Counting the bar's high here once booked a gap-to-loss
+            # as "+2R MFE".
+            mfe = max(mfe, o[j])
+            mae = min(mae, px)
             fills.append((remaining, px, j, "stop"))
             return _outcome(fills, entry, stop, j, "stop", mfe, mae, start)
+        mfe = max(mfe, h[j])
+        mae = min(mae, lo[j])
         for k, (frac, price) in enumerate(ladder):
             if not hit[k] and h[j] >= price and remaining > 1e-12:
                 take = min(frac, remaining)
@@ -342,16 +358,33 @@ def _date(idx) -> str:
 
 def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> dict:
     """Everything the page says about a trigger at bar t0, plus how the
-    primary exit rule has treated it since (completed bars only)."""
+    primary exit rule has treated it since (completed bars only).
+
+    THE ENTRY IS THE REPLAY'S ENTRY. Once the bar after the trigger exists,
+    the trade is priced from ITS OPEN -- the fill the backtest books -- so the
+    R on the page and the R in the evidence are one number, not two (the
+    audit measured up to 0.36R between them when the page used the trigger
+    close). Until that bar exists the trigger close is the only reference,
+    and `entry_basis` says which one a row is using. A next open at or under
+    the stop is no trade at all, exactly as the replay skips it.
+    """
     r = feat.iloc[t0]
-    entry, stop = float(r["close"]), float(r["stop"])
-    risk = entry - stop
+    trig_close, stop = float(r["close"]), float(r["stop"])
     o, h, lo, c = (feat[k].to_numpy() for k in ("open", "high", "low", "close"))
     trail = feat["trail"].to_numpy()
     T = len(feat) - 1
+    if T > t0:
+        entry, basis = float(o[t0 + 1]), "next_open"
+    else:
+        entry, basis = trig_close, "trigger_close"
+    risk = entry - stop
+    mm = float(r["mm_target"])
     out = {
         "trigger_date": _date(feat.index[t0]),
-        "trigger_close": _f(entry, 8),
+        "trigger_close": _f(trig_close, 8),
+        "entry": _f(entry, 8),
+        "entry_basis": basis,
+        "entry_date": _date(feat.index[t0 + 1]) if T > t0 else None,
         "bars_since": int(T - t0),
         "rvol": _f(r["rvol"], 2),
         "ext_pct": _f(r["ext"] * 100, 1),
@@ -361,18 +394,27 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
                  "bars": int(config.IGNITION_BASE_BARS),
                  "range_pct": _f((r["base_high"] / r["base_low"] - 1) * 100, 1)},
         "stop": _f(stop, 8),
-        "risk_pct": _f(risk / entry * 100, 1) if entry > 0 else None,
+        "risk_pct": _f(risk / entry * 100, 1) if entry > 0 and risk > 0 else None,
         "wide_stop": bool(entry > 0 and risk / entry * 100 > config.IGNITION_WIDE_STOP_PCT),
-        "mm_target": _f(r["mm_target"], 8),
+        "mm_target": _f(mm, 8),
         # A trigger candle taller than the base overshoots its own measured
         # move; a "target" under the entry is not a target, so say so plainly.
-        "mm_passed": bool(np.isfinite(r["mm_target"]) and r["mm_target"] <= entry),
-        "mm_r": (_f((r["mm_target"] - entry) / risk, 2)
-                 if risk > 0 and np.isfinite(r["mm_target"]) and r["mm_target"] > entry
-                 else None),
+        "mm_passed": bool(np.isfinite(mm) and mm <= entry),
+        "mm_r": (_f((mm - entry) / risk, 2)
+                 if risk > 0 and np.isfinite(mm) and mm > entry else None),
         "coil": _coil_block(feat, max(t0 - 1, 0)),
     }
-    if T > t0 and risk > 0:
+    if not risk > 0:
+        # Gapped to (or through) the stop at the open: the setup failed
+        # before it could be entered. The replay counts it as skipped.
+        out["mfe_r"] = None
+        out["exit_reason"] = "gap_below_stop"
+        out["exit_date"] = out["entry_date"]
+        out["exit_price"] = _f(entry, 8)
+        out["exit_r"] = None
+        out["exit_pending"] = False
+        return out
+    if T > t0:
         sim = simulate(o, h, lo, c, trail, start=t0 + 1, entry=entry, stop=stop)
         out["mfe_r"] = _f(sim["mfe_r"], 2)
         if sim["reason"] in ("stop", "trail"):
@@ -382,7 +424,7 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
             out["exit_r"] = _f(sim["gross_r"], 2)
             out["exit_pending"] = bool(sim["pending"])
     else:
-        out["mfe_r"] = 0.0 if risk > 0 else None
+        out["mfe_r"] = 0.0
     return out
 
 
@@ -455,11 +497,11 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
     row["provisional"] = provisional
     row["last_bar"] = _date(df.index[-1])
     row["price"] = _f(price, 8)
-    if row["state"] in ("IGNITING", "RUNNING", "CLOSED") and row.get("trigger_close"):
-        tc, st = row["trigger_close"], row.get("stop")
-        row["change_pct"] = _f((price / tc - 1) * 100, 1)
-        if st is not None and tc - st > 0:
-            row["r_now"] = _f((price - tc) / (tc - st), 2)
+    if row["state"] in ("IGNITING", "RUNNING", "CLOSED") and row.get("entry"):
+        en, st = row["entry"], row.get("stop")
+        row["change_pct"] = _f((price / en - 1) * 100, 1)
+        if st is not None and en - st > 0:
+            row["r_now"] = _f((price - en) / (en - st), 2)
         row["trail"] = _f(feat["trail"].iloc[-1], 8)
     return row
 
