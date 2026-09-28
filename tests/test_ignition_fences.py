@@ -106,9 +106,14 @@ FORBIDDEN_FOR_LENS = (
 #   scanner.indicators  sma / atr. Pure numpy/pandas and imports nothing from
 #                       the repo (checked transitively below), so it cannot
 #                       reach the bot, a grade table or a published file
+#   scanner.exchange_data  public exchange daily klines (2026-09-28, owner:
+#                       "Can't we use binance/bybit?"). Imports only stdlib,
+#                       pandas and config (checked transitively below), holds
+#                       no credentials and places nothing
 ALLOWED_SCANNER_IMPORTS = frozenset({
     "scanner.config", "scanner.data", "scanner.output",
     "scanner.universe", "scanner.scanerrors", "scanner.indicators",
+    "scanner.exchange_data",
 })
 
 # The tokens that would mean a real reference to the lens, as opposed to the
@@ -894,7 +899,7 @@ def cli(monkeypatch):
         state["load_calls"].append((market, period, limit))
         if state["load"] is not None:
             return state["load"](market, period, limit)
-        return rows, frames
+        return rows, frames, {"source_of": {yf: "binance_vision" for yf in frames}}
 
     def fake_merge(key, fresh, tickers):
         # The real merge LOADS and SAVES .cache/frames/<key>.pkl.gz; recorded
@@ -958,7 +963,7 @@ def test_no_data_is_exit_3_and_keeps_the_previous_file(cli):
     ::warning:: -- the previous file stands, because an empty list over it
     would say "nothing is coiling" when the truth is "we could not look"."""
     run = cli["run"]
-    cli["load"] = lambda *a: ([], {})
+    cli["load"] = lambda *a: ([], {}, {})
     assert run.main(["--market", "crypto"]) == 3
     assert run.main(["--market", "crypto", "--backtest"]) == 3
     assert cli["published"] == [] and cli["raw_writes"] == []

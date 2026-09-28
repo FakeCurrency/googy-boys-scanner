@@ -1528,7 +1528,7 @@ def test_main_exit_3_when_screen_market_returns_none(sandbox, monkeypatch):
 
 
 def test_main_exit_3_when_the_download_is_empty(sandbox, monkeypatch):
-    monkeypatch.setattr(RUN, "_download", lambda *a, **k: ([{"yf": "X-USD", "symbol": "X"}], {}))
+    monkeypatch.setattr(RUN, "_download", lambda *a, **k: ([{"yf": "X-USD", "symbol": "X"}], {}, {}))
     assert RUN.main(["--market", MARKET]) == 3
     assert RUN.main(["--market", MARKET, "--backtest"]) == 3
     assert _files(sandbox) == []
@@ -1546,7 +1546,7 @@ def test_main_exit_1_on_an_exception(sandbox, monkeypatch, capsys):
 
 def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
     frames, rows = _fresh_frames()
-    monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames))
+    monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames, {}))
     monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t: (dict(fr), {}))
 
     def no_write(*a, **k):
@@ -1560,7 +1560,7 @@ def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
 
 def test_main_publishes_exactly_one_screen_file(sandbox, monkeypatch):
     frames, rows = _fresh_frames()
-    monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames))
+    monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames, {}))
     monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t: (dict(fr), {}))
     assert RUN.main(["--market", MARKET]) == 0
     assert _files(sandbox) == [f"{MARKET}.json"]
@@ -1584,3 +1584,49 @@ def test_main_refuses_a_market_the_lens_does_not_cover():
     with pytest.raises(SystemExit) as e:
         RUN.main(["--market", "asx"])
     assert e.value.code == 2
+
+
+# ---------------------------------------------------------------------------
+# bar freshness -- measured, never assumed (first real run, 2026-09-28)
+# ---------------------------------------------------------------------------
+
+def test_bar_freshness_says_when_the_data_is_a_day_behind():
+    """At 02:00 UTC on 28 Sep the first real screen was complete only through
+    26 Sep: Yahoo had not yet served a usable 27 Sep row. The payload must
+    SAY that, so the page can, instead of quietly screening a day late."""
+    def f(end, n=5):
+        idx = pd.date_range(end=end, periods=n, freq="D")
+        return pd.DataFrame({"Open": 1.0, "High": 1.0, "Low": 1.0, "Close": 1.0,
+                             "Volume": 1.0}, index=idx)
+    now = dt.datetime(2026, 9, 28, 2, 0, tzinfo=dt.timezone.utc)
+    frames = {"A-USD": f("2026-09-26"), "B-USD": f("2026-09-26"), "C-USD": f("2026-09-27")}
+    forming = {"A-USD": f("2026-09-28", 1)}
+    b = RUN.bar_freshness(frames, forming, MARKET, now)
+    assert b["expected_completed"] == "2026-09-27"
+    assert b["completed_last"] == "2026-09-27" and b["lagging"] == 2
+    assert b["raw_last"] == "2026-09-28"
+    assert b["completed_dist"] == {"2026-09-27": 1, "2026-09-26": 2}
+    # a stock market's calendar is not this function's business
+    assert RUN.bar_freshness(frames, {}, "asx", now)["expected_completed"] is None
+
+
+def test_the_screen_payload_carries_the_freshness_block():
+    frames, rows = _fresh_frames()
+    pl = RUN.screen_market(MARKET, frames=frames, rows=rows, now=dt.datetime.now(dt.timezone.utc))
+    b = pl["summary"]["bars"]
+    assert set(b) == {"completed_last", "raw_last", "expected_completed", "lagging",
+                      "completed_dist", "raw_dist"}
+
+
+def test_btc_regime_is_context_from_the_last_completed_bar():
+    n = 260
+    idx = pd.date_range(end="2026-09-27", periods=n, freq="D")
+    up = pd.DataFrame({"Open": 1.0, "High": 1.0, "Low": 1.0,
+                       "Close": np.linspace(100, 200, n), "Volume": 1.0}, index=idx)
+    r = RUN.btc_regime({"BTC-USD": up})
+    assert r["btc_above_200"] is True and r["as_of"] == "2026-09-27"
+    assert r["btc_sma200"] == round(float(up["Close"].iloc[-200:].mean()), 2)
+    down = up.assign(Close=np.linspace(200, 100, n))
+    assert RUN.btc_regime({"BTC-USD": down})["btc_above_200"] is False
+    assert RUN.btc_regime({}) is None
+    assert RUN.btc_regime({"BTC-USD": up.iloc[:150]}) is None

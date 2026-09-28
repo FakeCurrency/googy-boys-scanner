@@ -24,12 +24,13 @@ import argparse
 import datetime as dt
 import pathlib
 import time
+from collections import Counter
 from typing import Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from scanner import config, output, scanerrors
+from scanner import config, exchange_data, output, scanerrors
 from scanner import data as sdata
 from scanner import universe as suniverse
 
@@ -105,11 +106,66 @@ def _age_days(frame: pd.DataFrame, market: str, now: dt.datetime) -> Optional[in
         return 10 ** 6
 
 
+def _period_days(period: str) -> Optional[int]:
+    """yfinance-style period -> days for the exchange fetcher ("max" -> None)."""
+    p = str(period or "").strip().lower()
+    if p in ("", "max"):
+        return None
+    n, unit = p[:-1], p[-1]
+    try:
+        k = int(n)
+    except ValueError:
+        return None
+    return k * {"y": 366, "d": 1}.get(unit, 366)
+
+
 def _download(market: str, period: str, limit: int):
+    """(universe rows, {yf: frame}, source report).
+
+    config.IGNITION_DATA_SOURCE = "exchange" (crypto): public exchange daily
+    klines via scanner/exchange_data.py -- exact 00:00 UTC closes, quote
+    volume -- with Yahoo only for the coins no exchange lists. The report says
+    which venue supplied each coin, which venues refused the runner, and how
+    many fell back, so "where did this bar come from" is never a guess."""
     rows = suniverse.load_universe(market)
     if limit:
         rows = rows[:limit]
-    return rows, sdata.download([r["yf"] for r in rows], period=period)
+    if market == "crypto" and str(config.IGNITION_DATA_SOURCE) == "exchange":
+        ex, report = exchange_data.download_klines([r["symbol"] for r in rows],
+                                                   days=_period_days(period))
+        frames: Dict[str, pd.DataFrame] = {}
+        source_of: Dict[str, str] = {}
+        for r in rows:
+            f = ex.get(str(r["symbol"]).upper())
+            if f is not None and len(f):
+                frames[r["yf"]] = f
+                source_of[r["yf"]] = f.attrs.get("source", "exchange")
+        missing = [r["yf"] for r in rows if r["yf"] not in frames]
+        fb: Dict[str, pd.DataFrame] = {}
+        if missing and config.IGNITION_YAHOO_FALLBACK:
+            fb = sdata.download(missing, period=period)
+            for yf, f in fb.items():
+                frames[yf] = f
+                source_of[yf] = "yahoo"
+        report = {**report, "yahoo_fallback": len(fb), "source_of": source_of}
+        return rows, frames, report
+    frames = sdata.download([r["yf"] for r in rows], period=period)
+    return rows, frames, {"by_source": {"yahoo": len(frames)},
+                          "source_of": {yf: "yahoo" for yf in frames}}
+
+
+def _source_summary(report: dict) -> dict:
+    """The published half of the source report (the per-coin map rides on
+    each row instead)."""
+    counts: Dict[str, int] = {}
+    for src in (report.get("source_of") or {}).values():
+        counts[src] = counts.get(src, 0) + 1
+    return {"mode": str(config.IGNITION_DATA_SOURCE),
+            "by_source": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
+            "dead": report.get("dead") or {},
+            "errors": report.get("errors") or {},
+            "no_exchange": (report.get("missing") or [])[:60],
+            "yahoo_fallback": report.get("yahoo_fallback", 0)}
 
 
 def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime):
@@ -128,6 +184,66 @@ def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime):
     return done, forming
 
 
+def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFrame],
+                  market: str, now: dt.datetime) -> dict:
+    """How current the bars really are -- MEASURED, never assumed.
+
+    The first real run (2026-09-28 02:00 UTC) screened through 26 Sep when
+    27 Sep should have been complete: Yahoo had not yet served a usable
+    27 Sep row. A lens whose value is catching a break the morning after it
+    closes has to say when its data is a day behind, so the payload records
+    the distribution of last COMPLETED and last RAW bar dates, the date that
+    should be complete by now (crypto: yesterday UTC; a stock market: None,
+    its calendar is not this function's business), and how many frames lag
+    it. The page reads `lagging` to say so in words.
+    """
+    def day(df):
+        try:
+            return pd.Timestamp(df.index[-1]).strftime("%Y-%m-%d")
+        except Exception:
+            return None
+
+    completed = [day(E.clean(f)) for f in frames.values() if len(f)]
+    raw = [day(forming[yf]) if yf in forming else day(E.clean(f))
+           for yf, f in frames.items() if len(f)]
+    expected = None
+    if not config.VIVEK_JOURNAL_SESSION.get(market):     # 24/7: yesterday is complete
+        tz = ZoneInfo(getattr(config.MARKETS.get(market), "timezone", "UTC") or "UTC")
+        expected = (now.astimezone(tz).date() - dt.timedelta(days=1)).isoformat()
+    dist = lambda xs: dict(sorted(Counter(x for x in xs if x).items(), reverse=True)[:5])
+    return {
+        "completed_last": max((c for c in completed if c), default=None),
+        "raw_last": max((r for r in raw if r), default=None),
+        "expected_completed": expected,
+        "lagging": (sum(1 for c in completed if c and c < expected) if expected else 0),
+        "completed_dist": dist(completed),
+        "raw_dist": dist(raw),
+    }
+
+
+def btc_regime(frames: Dict[str, pd.DataFrame]) -> Optional[dict]:
+    """BTC's last COMPLETED close against its 200-SMA -- CONTEXT, never a gate.
+
+    The first real replay split this way (pre-registered as a reported
+    dimension, not a filter): BTC above its 200-SMA n=59 +1.90R, below n=8
+    -0.46R. Eight trades cannot carry a rule, so nothing is filtered on it;
+    the page states the regime the evidence came from and lets the reader
+    weigh it. None when BTC is not in the frames or lacks 200 bars.
+    """
+    b = frames.get("BTC-USD")
+    if b is None:
+        return None
+    b = E.clean(b)
+    if len(b) < 200:
+        return None
+    sma = float(b["Close"].rolling(200).mean().iloc[-1])
+    close = float(b["Close"].iloc[-1])
+    return {"btc_close": round(close, 2), "btc_sma200": round(sma, 2),
+            "btc_above_200": bool(close > sma),
+            "btc_vs_200_pct": round((close / sma - 1) * 100, 1),
+            "as_of": pd.Timestamp(b.index[-1]).strftime("%Y-%m-%d")}
+
+
 def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = None,
                   rows: Optional[List[dict]] = None, limit: int = 0,
                   now: Optional[dt.datetime] = None) -> Optional[dict]:
@@ -135,8 +251,9 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
     `frames`/`rows` are injectable so everything but the download is testable."""
     started = time.time()
     cache_stats: dict = {}
+    src_report: dict = {}
     if frames is None:
-        rows, fresh = _download(market, config.IGNITION_DATA_PERIOD, limit)
+        rows, fresh, src_report = _download(market, config.IGNITION_DATA_PERIOD, limit)
         # The clock is read AFTER the download, so "forming" is judged at the
         # moment the bars are actually in hand (the download takes minutes).
         now = now or dt.datetime.now(dt.timezone.utc)
@@ -151,6 +268,10 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         print(f"ignition: no data for {market} (download blocked/empty) - "
               f"keeping the existing file", flush=True)
         return None
+    bars = bar_freshness(frames, forming, market, now)
+    print(f"ignition: bars - completed through {bars['completed_last']} "
+          f"(expected {bars['expected_completed']}, {bars['lagging']} lagging), "
+          f"raw through {bars['raw_last']}", flush=True)
     by_yf = {r["yf"]: r for r in rows}
     p = E.Params.from_config(market)
     errs = scanerrors.ErrorLog(f"ignition [{market}]")
@@ -173,7 +294,9 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             row = E.screen_frame(done, market, forming=forming.get(yf), p=p)
             if row is None:
                 continue
-            row = {"symbol": symbol, "name": meta.get("name") or symbol, "yf": yf, **row}
+            row = {"symbol": symbol, "name": meta.get("name") or symbol, "yf": yf,
+                   "source": (src_report.get("source_of") or {}).get(yf, "cache" if src_report else "given"),
+                   **row}
             results.append(row)
         except Exception as exc:                          # noqa: BLE001
             errs.record(symbol, exc)
@@ -201,6 +324,7 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "timeframe": "1d",
         "last_closed_bar": max((r["last_bar"] for r in results), default=None),
         "report_only": True,
+        "regime": btc_regime(frames),
         "params": p.as_dict(),
         "rules": {
             "fresh_bars": config.IGNITION_FRESH_BARS,
@@ -215,6 +339,8 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             "screened": screened,
             "skipped": dict(sorted(skipped.items(), key=lambda kv: -kv[1])),
             "counts": counts,
+            "bars": bars,
+            "sources": _source_summary(src_report),
             "errors": sum(errs.kinds().values()),
             "cache": cache_stats,
             "elapsed_s": round(time.time() - started, 1),
@@ -230,8 +356,9 @@ def backtest_market(market: str, *, limit: int = 0,
                     frames: Optional[Dict[str, pd.DataFrame]] = None,
                     rows: Optional[List[dict]] = None,
                     now: Optional[dt.datetime] = None) -> Optional[dict]:
+    src_report: dict = {}
     if frames is None:
-        rows, frames = _download(market, config.IGNITION_BT_PERIOD, limit)
+        rows, frames, src_report = _download(market, config.IGNITION_BT_PERIOD, limit)
     now = now or dt.datetime.now(dt.timezone.utc)   # after the download
     rows = rows or []
     if not frames:
@@ -244,6 +371,7 @@ def backtest_market(market: str, *, limit: int = 0,
     payload = bt.backtest(done, market, symbols=symbols,
                           universe_size=len(rows) or len(frames), now=now)
     payload["elapsed_s"] = round(time.time() - started, 1)
+    payload["sources"] = _source_summary(src_report)
     return payload
 
 

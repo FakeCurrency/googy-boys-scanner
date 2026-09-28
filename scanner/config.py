@@ -130,6 +130,22 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
+# EXCHANGE KLINES -- scanner/exchange_data.py (2026-09-28)
+# ---------------------------------------------------------------------------
+# Public, KEYLESS daily candles, tried in this order per coin. Binance and
+# Bybit geo-block US IPs and GitHub's runners are US-based, so Binance's
+# market-data mirror leads and US-hosted Coinbase closes. Which answer from a
+# runner is measured and published every run, never assumed. Only the
+# IGNITION lens reads these today (IGNITION_DATA_SOURCE); the VIVEK scan and
+# the bot still read Yahoo -- switching them is a trade change.
+EXCHANGE_KLINE_SOURCES = ("binance_vision", "binance", "bybit", "coinbase")
+EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
+EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
+EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit
+EXCHANGE_DEAD_AFTER_ERRORS = 8   # a venue erroring this often is dropped for the run
+EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
+
+# ---------------------------------------------------------------------------
 # IGNITION -- the coil -> ignition lens (2026-09-28, owner: "build it"). REPORT-ONLY.
 # ---------------------------------------------------------------------------
 # Thesis (the QNT move of 24-27 Sep 2026, 71 -> 373 intraday): a coin that
@@ -155,6 +171,16 @@ IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window 
 IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
 IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
                                  # a fresh-looking signal off a stale bar is the worst output
+
+# WHERE THE BARS COME FROM (2026-09-28, owner: "Can't we use binance/bybit?").
+# "exchange" = scanner/exchange_data.py: public keyless daily klines, exact
+# 00:00 UTC closes served the moment the day ends, quote (USDT/USD) volume,
+# Yahoo only for coins no exchange lists. "yahoo" = scanner/data.py as before.
+# The first real run on Yahoo screened a day late (no usable 27 Sep bar at
+# 02:00 UTC on the 28th) and missed 64 of 201 coins. Report-only lens, so its
+# source can change without touching the VIVEK scan or the bot's marks.
+IGNITION_DATA_SOURCE = "exchange"
+IGNITION_YAHOO_FALLBACK = True   # coins no exchange lists still get screened
 
 # THE COIL -- all four at once, on one bar. Measured on the bar, causally.
 IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
