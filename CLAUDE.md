@@ -48,7 +48,7 @@ agreements get banners everywhere, a permanent ALERTS page log
 | Frontend | Vanilla JS + CSS — static site on **Cloudflare Pages** (`public/`), iOS-style dark theme, PWA with service worker |
 | Backend API | Cloudflare Pages Functions (`functions/api/*.js`) — CF **Workers runtime, NOT Node** (no `require`, no fs; env via `context.env`) |
 | Scheduler | GitHub Actions cron (`.github/workflows/`) |
-| Data source | `yfinance` (pinned) — free, ~15 min delayed, survivor-biased history. Production-grade provider (EODHD/Norgate) is an open owner decision |
+| Data source | Stocks: `yfinance` (pinned) — free, ~15 min delayed, survivor-biased history; production-grade provider (EODHD/Norgate) is an open owner decision. **Crypto (since 2026-09-28): exchange daily klines** — Binance's market-data mirror first, then Coinbase, Yahoo only for coins no exchange lists — via `data.fetch()` (see CRYPTO DATA SOURCE) |
 | Broker | PAPER ONLY. The scalp-era Bybit execution bot (bracket/reconcile/run) and the AI BOT page were REMOVED 2026-09-17 (see AI BOT below). `bybit_client.py`/`alpaca_client.py` survive only as the kill switch's flatten path |
 
 ---
@@ -120,6 +120,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 | ignition.yml | `14 0` UTC (the new completed crypto bar) + `14 1,2` backstops (skip once today's file is on the branch) + `44 5,11,17,21` intraday; push to `.github/ignition-kick`; manual (`backtest`, `dry_run`) | IGNITION lens (REPORT-ONLY, crypto): screens the coil → ignition shape into `public/data/ignition/crypto.json`; a kick or `backtest: true` also replays full history into `crypto_backtest.json`, committed back to the PUSHED branch (never hard-coded main). Own concurrency group per branch, not in the scan mutex; assert_staged per reported path; no WATCHDOG entry by decision. Pins: `tests/test_ignition_workflow.py` |
+| crypto_source_check.yml | manual; push to `.github/crypto-source-kick` | READ-ONLY verification of the crypto data-source switch (see CRYPTO DATA SOURCE): venue reachability from a runner, freshness, close gap to Yahoo (ticker collisions), liquidity-floor effect, and a DRY VIVEK crypto scan on exchange klines diffed against the published one — writes nothing, no bot, no mutex, no assert_staged/WATCHDOG (evidence_brief pattern) |
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
@@ -2252,6 +2253,65 @@ blank on new ledger rows (frozen values on old rows survive under the
 blank-only rule). The three HORIZON/BACKFILL/REGIME sections further down
 are kept as HISTORY of code that no longer exists — do not re-add any of it;
 `git log -- scanner/sectorbreadth.py` at the removal commit has the engines.
+
+## CRYPTO DATA SOURCE — exchange klines, one entry point (2026-09-28, owner-ruled)
+
+Owner: *"Nah make the VIVEK crypto scan and paper bot go to the binance or
+bybit. That way it's all in SYNC."* Until this, EVERY crypto bar (scan, bot
+marks and stops, kill switch, every lens) came from Yahoo's aggregated
+`<SYM>-USD` series; Bybit was wired only as the kill switch's ORDER client.
+
+- **One entry point: `scanner/data.py::fetch(market, tickers, period,
+  interval, ref_prices)`** → `({ticker: frame}, report)`. Crypto with
+  `config.CRYPTO_DATA_SOURCE = "exchange"` → `scanner/exchange_data.py`
+  (public, KEYLESS klines; no credentials, no order paths — test-pinned);
+  every other market → `download()` exactly as before. Callers: `run.py` (the
+  scan download), `scan.py::_bars` (its fallback + the 4H plans' bars),
+  `vivek_run.py` (off-universe stragglers + CLI), `kill_switch._live_marks`,
+  the IGNITION lens. `tests/test_crypto_source_switch.py` fails if any of
+  them stops calling `fetch`. **Revert = one line**: `CRYPTO_DATA_SOURCE =
+  "yahoo"`.
+- **Venues, MEASURED from a GitHub runner (the kick of 2026-09-28):**
+  `data-api.binance.vision` (Binance's market-data mirror) ANSWERS;
+  `api.binance.com` → **451**, `api.bybit.com` → **403** (both geo-block US
+  hosts — GitHub's runners are US); Coinbase answers. Order:
+  `EXCHANGE_KLINE_SOURCES = (binance_vision, binance, bybit, coinbase)`; a
+  venue that refuses or errors on the probe coin is dropped for the run.
+  First run: 117 coins Binance, 15 Coinbase, 36 Yahoo fallback; coverage
+  137 → 168 of 201.
+- **THE IDENTITY CHECK — a ticker is not an identity.** The side-by-side run
+  found Yahoo pricing a DIFFERENT TOKEN under the same ticker: AERO
+  +2,623,839% vs Binance, JUP +96,729%, ARB +35,210%, PRL, SKY, XCN… — so the
+  old Yahoo crypto scan had been scanning the wrong instrument for those
+  names. Every source's latest close must sit within `CRYPTO_IDENTITY_TOL`
+  (0.40) of CoinGecko's current price for the coin (the universe now carries
+  `cg_price`), else that source is rejected for that coin and the next tried;
+  a coin nothing confirms is LEFT OUT, never scanned as a stranger. The
+  report publishes `identity_rejected`.
+- **What moved, measured:** freshness — at 02:15 UTC exchange bars had the
+  prior day complete for 100/100 coins, Yahoo for 0/100 (Yahoo was a day
+  behind); median close gap to Yahoo 0.07% (90th pct 1.27%) where the ticker
+  IS the same coin; **liquidity — one exchange's quote volume is smaller than
+  Yahoo's aggregate: 63/100 coins clear the $3M floor on exchange volume vs
+  85/100 on Yahoo's**, so thin alts leave the deck. The floor itself is
+  untouched (a trade change, the owner's call). Open book at the switch: BNB
+  only; no colliding ticker was ever traded.
+- **Published:** every scan payload gets `data_sources` (mode, per-venue
+  counts, refused venues, identity rejections); crypto rows carry
+  `data_source`. The chart reads it: a Binance-sourced row draws Binance
+  candles + a Binance header quote through `/api/price` / `/api/quote`
+  (`_prices.js` now asks the mirror first and PAGES past Binance's 1000-bar
+  cap, bounded at 4 pages); anything else draws Yahoo as before.
+- **Verification without touching main:** `.github/workflows/
+  crypto_source_check.yml` (read-only; kick `.github/crypto-source-kick`) runs
+  `scripts/crypto_source_compare.py` + `scripts/crypto_scan_dryrun.py` — the
+  REAL crypto scan on exchange klines, writing nothing, diffed against the
+  published scan. crypto_bot.yml is never dispatched from a branch: its
+  commit step pushes to main.
+- **Still on Yahoo, by scope:** PhaseMap (spec-governed provider) and the
+  momentum lens for crypto — including the same wrong-token tickers above.
+  Stocks everywhere. Tests never reach an exchange (`tests/conftest.py`
+  refuses every venue unless a test installs its own fake).
 
 ## IGNITION — the coil → ignition lens (2026-09-28, owner: "build it") — REPORT-ONLY
 

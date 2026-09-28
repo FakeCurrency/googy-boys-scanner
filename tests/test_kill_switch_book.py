@@ -143,18 +143,39 @@ def test_live_marks_suffix_mapping_and_batching(monkeypatch):
         idx = pd.date_range(end="2024-01-02", periods=3, freq="D")
         return pd.DataFrame({"Close": [px] * 3}, index=idx)
 
-    asked = {}
+    asked = []
 
     def fake_download(tickers, period=None, retries=None, **kw):
-        asked["tickers"] = list(tickers)
-        return {"BHP.AX": _frame(42.0), "BTC-USD": _frame(50000.0)}
+        asked.append(list(tickers))
+        px = {"BHP.AX": _frame(42.0), "BTC-USD": _frame(50000.0)}
+        return {t: px[t] for t in tickers if t in px}
 
     monkeypatch.setattr(sdata, "download", fake_download)
     book = _book(open_=[_pos("BHP", "asx"), _pos("BTC", "crypto"),
                         _pos("GHOST", "not_a_market")])
     q = ks._live_marks(book)
     assert q == {("BHP", "asx"): 42.0, ("BTC", "crypto"): 50000.0}
-    assert asked["tickers"] == ["BHP.AX", "BTC-USD"]    # one batch, suffix-mapped
+    # Stocks: one Yahoo batch, suffix-mapped. Crypto: through data.fetch --
+    # the exchange klines the scan marks with (2026-09-28); tests refuse the
+    # exchanges (conftest), so it falls back to Yahoo, as it does live for a
+    # coin no exchange lists.
+    assert asked == [["BHP.AX"], ["BTC-USD"]]
+
+
+def test_live_marks_price_crypto_from_the_exchange_the_scan_uses(monkeypatch):
+    """The kill switch must never measure a crypto position on a different
+    venue's print than the one the scan marked and stopped it on."""
+    import pandas as pd
+
+    import scanner.data as sdata
+    from scanner import exchange_data as ex
+
+    monkeypatch.setattr(sdata, "download", lambda *a, **k: pytest.fail("crypto must not hit Yahoo"))
+    idx_ms = int(pd.Timestamp("2024-01-02").timestamp() * 1000)
+    monkeypatch.setattr(ex, "_get_json", lambda url, timeout: [
+        [idx_ms, "1", "2", "0.5", "51000", "1", idx_ms + 1, "9"]] if "BTCUSDT" in url else [])
+    q = ks._live_marks(_book(open_=[_pos("BTC", "crypto")]))
+    assert q == {("BTC", "crypto"): 51000.0}
 
 
 def test_live_marks_fetch_failure_returns_empty(monkeypatch):

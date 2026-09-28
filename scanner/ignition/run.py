@@ -30,7 +30,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from scanner import config, exchange_data, output, scanerrors
+from scanner import config, output, scanerrors
 from scanner import data as sdata
 from scanner import universe as suniverse
 
@@ -106,66 +106,18 @@ def _age_days(frame: pd.DataFrame, market: str, now: dt.datetime) -> Optional[in
         return 10 ** 6
 
 
-def _period_days(period: str) -> Optional[int]:
-    """yfinance-style period -> days for the exchange fetcher ("max" -> None)."""
-    p = str(period or "").strip().lower()
-    if p in ("", "max"):
-        return None
-    n, unit = p[:-1], p[-1]
-    try:
-        k = int(n)
-    except ValueError:
-        return None
-    return k * {"y": 366, "d": 1}.get(unit, 366)
-
-
 def _download(market: str, period: str, limit: int):
-    """(universe rows, {yf: frame}, source report).
-
-    config.IGNITION_DATA_SOURCE = "exchange" (crypto): public exchange daily
-    klines via scanner/exchange_data.py -- exact 00:00 UTC closes, quote
-    volume -- with Yahoo only for the coins no exchange lists. The report says
-    which venue supplied each coin, which venues refused the runner, and how
-    many fell back, so "where did this bar come from" is never a guess."""
+    """(universe rows, {yf: frame}, source report) through `data.fetch` -- the
+    SAME market-aware entry point the VIVEK scan, the paper bot and the kill
+    switch price through, so this lens can never disagree with them about a
+    price. For crypto that is exchange daily klines (config
+    CRYPTO_DATA_SOURCE) with Yahoo only for coins no exchange lists."""
     rows = suniverse.load_universe(market)
     if limit:
         rows = rows[:limit]
-    if market == "crypto" and str(config.IGNITION_DATA_SOURCE) == "exchange":
-        ex, report = exchange_data.download_klines([r["symbol"] for r in rows],
-                                                   days=_period_days(period))
-        frames: Dict[str, pd.DataFrame] = {}
-        source_of: Dict[str, str] = {}
-        for r in rows:
-            f = ex.get(str(r["symbol"]).upper())
-            if f is not None and len(f):
-                frames[r["yf"]] = f
-                source_of[r["yf"]] = f.attrs.get("source", "exchange")
-        missing = [r["yf"] for r in rows if r["yf"] not in frames]
-        fb: Dict[str, pd.DataFrame] = {}
-        if missing and config.IGNITION_YAHOO_FALLBACK:
-            fb = sdata.download(missing, period=period)
-            for yf, f in fb.items():
-                frames[yf] = f
-                source_of[yf] = "yahoo"
-        report = {**report, "yahoo_fallback": len(fb), "source_of": source_of}
-        return rows, frames, report
-    frames = sdata.download([r["yf"] for r in rows], period=period)
-    return rows, frames, {"by_source": {"yahoo": len(frames)},
-                          "source_of": {yf: "yahoo" for yf in frames}}
-
-
-def _source_summary(report: dict) -> dict:
-    """The published half of the source report (the per-coin map rides on
-    each row instead)."""
-    counts: Dict[str, int] = {}
-    for src in (report.get("source_of") or {}).values():
-        counts[src] = counts.get(src, 0) + 1
-    return {"mode": str(config.IGNITION_DATA_SOURCE),
-            "by_source": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
-            "dead": report.get("dead") or {},
-            "errors": report.get("errors") or {},
-            "no_exchange": (report.get("missing") or [])[:60],
-            "yahoo_fallback": report.get("yahoo_fallback", 0)}
+    frames, report = sdata.fetch(market, [r["yf"] for r in rows], period=period,
+                                 ref_prices={r["yf"]: r.get("cg_price") for r in rows})
+    return rows, frames, report
 
 
 def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime):
@@ -340,7 +292,7 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             "skipped": dict(sorted(skipped.items(), key=lambda kv: -kv[1])),
             "counts": counts,
             "bars": bars,
-            "sources": _source_summary(src_report),
+            "sources": sdata.source_summary(src_report),
             "errors": sum(errs.kinds().values()),
             "cache": cache_stats,
             "elapsed_s": round(time.time() - started, 1),
@@ -371,7 +323,7 @@ def backtest_market(market: str, *, limit: int = 0,
     payload = bt.backtest(done, market, symbols=symbols,
                           universe_size=len(rows) or len(frames), now=now)
     payload["elapsed_s"] = round(time.time() - started, 1)
-    payload["sources"] = _source_summary(src_report)
+    payload["sources"] = sdata.source_summary(src_report)
     return payload
 
 

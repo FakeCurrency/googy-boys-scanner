@@ -116,16 +116,6 @@ jobs:
           restore-keys: |
             ignition-frames-
 
-      # A KICK also measures the data sources side by side (report only, never
-      # fails the run): which exchanges answer a US runner, freshness, the
-      # close gap to Yahoo, and the liquidity-floor effect of exchange volume.
-      - name: Compare crypto data sources
-        if: steps.due.outputs.run == 'true' && github.event_name == 'push'
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          python scripts/crypto_source_compare.py | tee -a "$GITHUB_STEP_SUMMARY"
-
       - name: Screen crypto
         id: scan
         if: steps.due.outputs.run == 'true'

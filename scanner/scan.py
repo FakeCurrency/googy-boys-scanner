@@ -12,7 +12,17 @@ from collections import Counter
 from zoneinfo import ZoneInfo
 
 from . import config, scanerrors   # (pulse import removed 2026-07-20 — module retired & deleted)
-from .data import download, _frame_age_days
+from .data import download, fetch, _frame_age_days
+
+
+def _bars(market_key: str, tickers: list, period: str, interval: str = "1d") -> dict:
+    """The scan's own downloads, market-aware. Crypto goes through
+    `data.fetch` -- the exchange klines the runner, the bot and the kill
+    switch price with (config.CRYPTO_DATA_SOURCE, owner 2026-09-28: "so it's
+    all in SYNC"); stocks keep calling `download` exactly as before."""
+    if market_key == "crypto":
+        return fetch(market_key, tickers, period=period, interval=interval)[0]
+    return download(tickers, period=period, interval=interval)
 from .universe import load_universe
 
 log = logging.getLogger(__name__)
@@ -181,7 +191,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         if progress:
             print(f"  downloading {len(universe)} {market.label} tickers "
                   f"({config.VIVEK_DATA_PERIOD}) for VIVEK ...", flush=True)
-        frames = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
+        frames = _bars(market_key, [u["yf"] for u in universe], config.VIVEK_DATA_PERIOD)
 
     now = dt.datetime.now(ZoneInfo(market.timezone))
     prev_grades = _load_prev_grades(out_root, market_key)   # for grade hysteresis
@@ -558,9 +568,10 @@ def _attach_h4_plans(results: list[dict], market: str) -> None:
     tickers = [r.get("yf") or r["symbol"] for r in rows]
     t0 = time.time()
     try:
-        frames = download(tickers,
-                          period=config.VIVEK_H4_PERIOD,
-                          interval=config.VIVEK_H4_INTERVAL)
+        # Crypto: exchange 4h candles (already in the resampler's bins);
+        # stocks: Yahoo 1h, bucketed to 4h, as before.
+        frames = _bars(market, tickers, config.VIVEK_H4_PERIOD,
+                       "4h" if market == "crypto" else config.VIVEK_H4_INTERVAL)
     except Exception as exc:                       # noqa: BLE001 - see DEGRADES above
         print(f"  h4: download failed ({type(exc).__name__}) - 4H toggles keep the Daily plan")
         return

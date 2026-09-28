@@ -15,8 +15,13 @@
 
 const UA = "Mozilla/5.0 (compatible; VivekBetaScanner/1.0)";
 const YH_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
-const BINANCE_PRICE = "https://api.binance.com/api/v3/ticker/price?symbol=";
-const BINANCE_KLINES = "https://api.binance.com/api/v3/klines";
+// Binance's market-data mirror FIRST (2026-09-28): it is the host the scan
+// engine itself reads (scanner/exchange_data.py) and the one measured to
+// answer from everywhere -- api.binance.com geo-blocks some regions (451 from
+// US hosts). Same klines, same prices; the main API is the fallback.
+const BINANCE_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
+const BINANCE_PAGE = 1000;         // Binance's per-request kline cap
+const BINANCE_MAX_PAGES = 4;       // 4000 bars: 5y daily / ~5.5 months hourly, bounded subrequests
 
 // Common base tickers that are crypto even without a -USD/USDT suffix.
 const KNOWN_CRYPTO = new Set([
@@ -119,29 +124,56 @@ export async function fetchYahooChart(sym, { interval = "1d", range = "1d", time
 
 /** Live Binance spot price (or null on any failure). */
 export async function fetchBinancePrice(sym, timeout = 6000) {
-  try {
-    const r = await timedFetch(BINANCE_PRICE + encodeURIComponent(binanceSymbol(sym)), {}, timeout);
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j && j.price != null ? +j.price : null;
-  } catch (_) { return null; }
+  for (const host of BINANCE_HOSTS) {
+    try {
+      const r = await timedFetch(`${host}/api/v3/ticker/price?symbol=` +
+        encodeURIComponent(binanceSymbol(sym)), {}, timeout);
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (j && j.price != null) return +j.price;
+    } catch (_) { /* next host */ }
+  }
+  return null;
 }
 
-/** Binance klines → candle objects ({time:sec, o,h,l,c,volume}); [] on failure. */
+/** Binance klines → candle objects ({time:sec, o,h,l,c,volume}); [] on failure.
+ *
+ *  PAGED (2026-09-28): one request is capped at 1000 bars, which is ~2.7 years
+ *  of daily candles -- short of the weekly 200-SMA the VIVEK chart reads. Now
+ *  that the crypto scan reads Binance, its chart must too, at full depth: pages
+ *  walk BACKWARD with endTime until `limit` bars or the listing date. */
 export async function fetchBinanceCandles(sym, { interval = "1d", limit = 260, timeout = 9000 } = {}) {
-  try {
-    const url = `${BINANCE_KLINES}?symbol=${encodeURIComponent(binanceSymbol(sym))}` +
-      `&interval=${binanceInterval(interval)}&limit=${Math.min(limit, 1000)}`;
-    const r = await timedFetch(url, {}, timeout);
-    if (!r.ok) return [];
-    const rows = await r.json();
-    if (!Array.isArray(rows)) return [];
-    return rows.map((k) => ({
-      time: Math.floor(k[0] / 1000),
-      open: +k[1], high: +k[2], low: +k[3], close: +k[4],
-      volume: k[5] == null ? 0 : Math.round(+k[5]),
-    }));
-  } catch (_) { return []; }
+  const want = Math.max(1, Math.min(limit, BINANCE_PAGE * BINANCE_MAX_PAGES));
+  for (const host of BINANCE_HOSTS) {
+    try {
+      const got = [];
+      let endTime = null;
+      for (let page = 0; page < BINANCE_MAX_PAGES && got.length < want; page++) {
+        const n = Math.min(BINANCE_PAGE, want - got.length);
+        const url = `${host}/api/v3/klines?symbol=${encodeURIComponent(binanceSymbol(sym))}` +
+          `&interval=${binanceInterval(interval)}&limit=${n}` +
+          (endTime == null ? "" : `&endTime=${endTime}`);
+        const r = await timedFetch(url, {}, timeout);
+        if (!r.ok) break;
+        const rows = await r.json();
+        if (!Array.isArray(rows) || !rows.length) break;
+        got.unshift(...rows);
+        if (rows.length < n) break;                 // reached the listing date
+        endTime = rows[0][0] - 1;
+      }
+      if (!got.length) continue;                   // this host had nothing: try the next
+      const seen = new Set();
+      return got
+        .filter((k) => (seen.has(k[0]) ? false : (seen.add(k[0]), true)))
+        .sort((a, b) => a[0] - b[0])
+        .map((k) => ({
+          time: Math.floor(k[0] / 1000),
+          open: +k[1], high: +k[2], low: +k[3], close: +k[4],
+          volume: k[5] == null ? 0 : Math.round(+k[5]),
+        }));
+    } catch (_) { /* next host */ }
+  }
+  return [];
 }
 
 /* ── DEEP HISTORY (2026-09-19) ────────────────────────────────────────────────

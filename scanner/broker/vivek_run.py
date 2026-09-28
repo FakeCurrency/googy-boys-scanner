@@ -1187,8 +1187,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     if missing:
         yf_missing = {s: s + mkt.suffix for s in missing}
         try:
-            from ..data import download
-            extra = download(list(yf_missing.values()), period="6mo")
+            # data.fetch: crypto from the same exchange klines the scan
+            # used (config.CRYPTO_DATA_SOURCE), stocks from Yahoo as before.
+            from ..data import fetch
+            extra = fetch(market, list(yf_missing.values()), period="6mo")[0]
             priced = sum(1 for v in extra.values() if v is not None and len(v))
             frames = {**frames, **extra}
             yf_map = {**yf_map, **yf_missing}
@@ -1661,7 +1663,7 @@ def main() -> None:
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
 
     from ..universe import load_universe
-    from ..data import download, merge_with_cache
+    from ..data import fetch, merge_with_cache
 
     for market_key in markets:
         pub = ROOT / "public" / "data" / f"{market_key}_vivek.json"
@@ -1690,7 +1692,8 @@ def main() -> None:
             if isinstance(extra, dict):
                 r.update(extra)
         universe = load_universe(market_key, full=True)
-        fresh = download([u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD)
+        fresh, _ = fetch(market_key, [u["yf"] for u in universe], period=config.VIVEK_DATA_PERIOD,
+                         ref_prices={u["yf"]: u.get("cg_price") for u in universe})
         frames, _ = merge_with_cache(market_key, fresh, [u["yf"] for u in universe])
         run_market(market_key, results, frames, universe, dry_run=dry_run)
 

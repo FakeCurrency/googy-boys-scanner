@@ -320,3 +320,94 @@ def download(tickers: list[str], period: str | None = None,
         log.error("download: ZERO tickers returned for %d requested — upstream data source likely down", total)
 
     return frames
+
+
+# ── market-aware bars: the ONE entry point for anything that prices crypto ───
+
+def fetch(market_key: str, tickers: list[str], period: str | None = None,
+          interval: str = "1d", ref_prices: dict | None = None,
+          **kw) -> tuple[dict[str, pd.DataFrame], dict]:
+    """({ticker: frame}, source report) -- what the scan, the paper bot and
+    the kill switch price through, so crypto can never come from two sources
+    depending on which path asked (owner, 2026-09-28: "make the VIVEK crypto
+    scan and paper bot go to the binance or bybit ... so it's all in SYNC").
+
+    crypto with config.CRYPTO_DATA_SOURCE == "exchange": public exchange daily
+    klines per coin (scanner/exchange_data.py -- exact 00:00 UTC closes, quote
+    volume), Yahoo only for the coins no exchange lists (and only when
+    CRYPTO_YAHOO_FALLBACK). Every other market, or "yahoo": `download()`
+    exactly as before. Tickers keep their Yahoo spelling ("QNT-USD") either
+    way, so every caller's keys are unchanged.
+
+    `interval` "1d" (the scan, the bot, the lens) or "4h" (the display-only
+    4H plans). Yahoo has no 4h, so a Yahoo leg asks for 1h and vivek's
+    resampler buckets it -- the same bins an exchange's 4h candles already
+    sit in.
+
+    `ref_prices` {ticker: CoinGecko price} arms the IDENTITY CHECK
+    (config.CRYPTO_IDENTITY_TOL): a source -- exchange OR Yahoo -- whose latest
+    close is not that coin's price is rejected for it, and a coin no source
+    confirms is left out rather than scanned as a same-ticker stranger.
+
+    The report: `source_of` {ticker: venue}, `by_source` counts, `dead`
+    venues (refused the runner), `yahoo_fallback` count, `identity_rejected`.
+    """
+    tickers = list(tickers)
+    yahoo_iv = {"4h": "1h"}.get(interval, interval)
+    # A daily Yahoo leg keeps the exact call shape `download` always had.
+    ykw = dict(kw) if yahoo_iv == "1d" else {**kw, "interval": yahoo_iv}
+    if market_key == "crypto" and str(getattr(config, "CRYPTO_DATA_SOURCE", "yahoo")) == "exchange":
+        from . import exchange_data
+        suffix = config.MARKETS["crypto"].suffix
+        base = {t: (t[:-len(suffix)] if suffix and t.endswith(suffix) else t) for t in tickers}
+        refs = {base[t]: v for t, v in (ref_prices or {}).items() if t in base}
+        ex, rep = exchange_data.download_klines(
+            list(base.values()), days=exchange_data.period_days(period or config.DATA_PERIOD),
+            interval=interval, ref_prices=refs)
+        rejected = {k: list(v) for k, v in (rep.get("identity_rejected") or {}).items()}
+        frames: dict[str, pd.DataFrame] = {}
+        source_of: dict[str, str] = {}
+        for t, b in base.items():
+            f = ex.get(str(b).upper())
+            if f is not None and len(f):
+                frames[t] = f
+                source_of[t] = f.attrs.get("source", "exchange")
+        missing = [t for t in tickers if t not in frames]
+        fb: dict[str, pd.DataFrame] = {}
+        if missing and getattr(config, "CRYPTO_YAHOO_FALLBACK", True):
+            fb = download(missing, period=period, **ykw)
+            for t, f in list(fb.items()):
+                if not exchange_data.same_coin(f, (ref_prices or {}).get(t)):
+                    rejected.setdefault(base[t], []).append("yahoo")
+                    del fb[t]
+                    continue
+                frames[t] = f
+                source_of[t] = "yahoo"
+        report = {"mode": "exchange", "dead": rep.get("dead") or {},
+                  "errors": rep.get("errors") or {}, "no_exchange": rep.get("missing") or [],
+                  "yahoo_fallback": len(fb), "source_of": source_of,
+                  "identity_rejected": dict(sorted(rejected.items()))}
+    else:
+        frames = download(tickers, period=period, **ykw)
+        report = {"mode": "yahoo", "dead": {}, "errors": {}, "no_exchange": [],
+                  "yahoo_fallback": 0, "source_of": {t: "yahoo" for t in frames},
+                  "identity_rejected": {}}
+    by: dict[str, int] = {}
+    for v in report["source_of"].values():
+        by[v] = by.get(v, 0) + 1
+    report["by_source"] = dict(sorted(by.items(), key=lambda kv: -kv[1]))
+    if report["mode"] == "exchange":
+        log.info("fetch [%s]: %s; dead %s; yahoo fallback %d",
+                 market_key, report["by_source"], report["dead"], report["yahoo_fallback"])
+    return frames, report
+
+
+def source_summary(report: dict) -> dict:
+    """The published half of a fetch() report (the per-ticker map stays out:
+    rows carry their own `data_source`)."""
+    return {"mode": report.get("mode"), "by_source": report.get("by_source") or {},
+            "dead": report.get("dead") or {}, "errors": report.get("errors") or {},
+            "no_exchange": list(report.get("no_exchange") or [])[:60],
+            "yahoo_fallback": report.get("yahoo_fallback", 0),
+            "identity_rejected": report.get("identity_rejected") or {}}
+

@@ -299,7 +299,12 @@ def _fetch_crypto(suffix: str, limit: int | None = None) -> list[dict]:
             if not sym or _is_stable(sym) or not sym.isalnum() or sym in seen:
                 continue
             seen.add(sym)
-            items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix})
+            px = coin.get("current_price")
+            # CoinGecko's own price for THIS coin: the identity reference that
+            # stops a same-ticker collision (Yahoo's ARB-USD/JUP-USD/AERO-USD
+            # were different tokens -- 2026-09-28) from being scanned as it.
+            items.append({"symbol": sym, "name": name, "sector": "", "yf": sym + suffix,
+                          "cg_price": float(px) if isinstance(px, (int, float)) and px > 0 else None})
             if len(items) >= limit:
                 break
         # Stop when the target is met, or when CoinGecko ran out of coins (a

@@ -33,6 +33,16 @@
    * measurements. */
   const DAILY_RANGE = "25y";
 
+  // Which venue the VIVEK crypto chart draws (2026-09-28, owner: "make the
+  // VIVEK crypto scan and paper bot go to the binance or bybit ... so it's
+  // all in SYNC"). The scan row names the venue its bars came from
+  // (`data_source`); the chart asks for the SAME one, so candles, levels and
+  // the header price are one series. Only Binance and Yahoo are served by the
+  // price proxy, so a Coinbase- or Yahoo-sourced row draws Yahoo, as before.
+  let VIVEK_CRYPTO_SRC = "yahoo";
+  const cryptoSrcFor = (row) =>
+    /^binance/.test(String((row && row.data_source) || "")) ? "binance" : "yahoo";
+
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const TF_LABEL = { "1H": "1H", "4H": "4H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
   // Per-timeframe tooltips — used to flag the 4H view's honest limitations.
@@ -1151,6 +1161,7 @@
       return;
     }
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
+    VIVEK_CRYPTO_SRC = cryptoSrcFor(m);
     const dir = m.dir || "LONG";
     const cur = m.currency_symbol || (market === "asx" || assetType === "asx" ? "A$" : "$");
     const tfLabel = m.level_tf === "weekly" ? "200 SMA · Weekly" : m.level_tf === "3d" ? "200 SMA · 3D" : "200 SMA · H4";
@@ -1213,10 +1224,11 @@
       return tf;
     };
     const isCrypto = isCryptoMarket(assetType);
-    // Crypto: force the proxy's Yahoo "<base>-USD" series (src=yahoo) so the chart
-    // matches the SCAN's instrument/price exactly. A guessed Binance pair can be
-    // the wrong token (or missing → a same-named stock), which throws the price
-    // scale off and pushes the real levels off-screen.
+    // Crypto: ask the proxy for the SAME venue the scan read (the row's
+    // `data_source`: Binance, else Yahoo "<base>-USD"), so the chart matches the
+    // SCAN's instrument/price exactly. Never a GUESSED Binance pair: the scan
+    // only reports "binance" after its identity check confirmed the pair is the
+    // coin (a same-ticker token otherwise throws the price scale off).
     const dailyP = isCrypto ? vivekCryptoBars(SYM, "5y", "1d", true)
                             : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true);
     const intradayP = (isCrypto ? vivekCryptoBars(SYM, "2y", "1h")
@@ -1262,11 +1274,12 @@
     }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
-  // VIVEK crypto history, forced to the scan-consistent Yahoo <base>-USD series
-  // via the proxy (src=yahoo) — never a guessed Binance pair.
+  // VIVEK crypto history from the venue the SCAN read (VIVEK_CRYPTO_SRC, set
+  // from the row's data_source) — Binance when the scan confirmed the pair,
+  // else the Yahoo <base>-USD series. Never a guessed pair.
   function vivekCryptoBars(sym, range, interval, capture) {
     const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
-    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=yahoo`,
+    return fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=${VIVEK_CRYPTO_SRC}`,
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((j) => {
@@ -2145,10 +2158,12 @@
   function startStockLive(d, SYM) {
     const cur      = d.currency_symbol || "";
     const yf       = yfTickerFor(SYM, d.asset_type);
-    // VIVEK crypto: force Yahoo <base>-USD so the header price matches the chart
-    // (a guessed Binance pair could be a different/colliding token).
+    // VIVEK crypto: the header price comes from the same venue as the chart
+    // (Binance when the scan read Binance -- the quote proxy's default for
+    // crypto -- else forced Yahoo <base>-USD), so it can never be a different/
+    // colliding token from the candles under it.
     const isCryptoQuote = (d.asset_type === "crypto" || market === "crypto");
-    const srcParam = isCryptoQuote ? "&src=yahoo" : "";
+    const srcParam = isCryptoQuote && VIVEK_CRYPTO_SRC !== "binance" ? "&src=yahoo" : "";
     const priceEl  = $("#ct-price");
     const delayEl  = $("#ct-delayed");
     let lastPx = null;

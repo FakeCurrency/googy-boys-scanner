@@ -1,0 +1,55 @@
+name: Crypto source check
+
+# READ-ONLY verification of the crypto data-source switch (2026-09-28, owner:
+# "make the VIVEK crypto scan and paper bot go to the binance or bybit ... so
+# it's all in SYNC"). Runs on a GitHub runner -- the only place the real
+# venues can be measured from (Binance's main API and Bybit geo-block US
+# hosts; Binance's market-data mirror and Coinbase answer):
+#   * scripts/crypto_source_compare.py  venue reachability, freshness, the
+#     close gap to Yahoo (ticker collisions show up here), liquidity floor
+#   * scripts/crypto_scan_dryrun.py     the REAL VIVEK crypto scan on exchange
+#     klines, compared with the published one -- writes nothing, no bot
+# Everything goes to the step summary. It commits nothing, so it needs no
+# assert_staged, no WATCHDOG entry and no mutex (evidence_brief pattern).
+#
+# Triggers: a manual dispatch, or a push touching .github/crypto-source-kick
+# (a cloud session can push but cannot call the dispatch API).
+
+on:
+  push:
+    paths:
+      - ".github/crypto-source-kick"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-source-check-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compare Yahoo with exchange klines
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python scripts/crypto_source_compare.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Dry VIVEK crypto scan on exchange klines
+        run: |
+          set -o pipefail
+          python scripts/crypto_scan_dryrun.py | tee -a "$GITHUB_STEP_SUMMARY"

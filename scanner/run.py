@@ -13,7 +13,7 @@ import json
 import pathlib
 
 from . import config, output, scan
-from .data import download, merge_with_cache
+from .data import download, fetch, merge_with_cache, source_summary
 from .universe import load_universe
 
 DEFAULT_OUT = pathlib.Path(__file__).resolve().parents[1] / "public" / "data"
@@ -106,6 +106,24 @@ def _scan_health(market_key: str, published: bool, send=None) -> int:
         return -1
 
 
+def tag_sources(vk: dict, market_key: str, src_report: dict) -> None:
+    """Where the bars came from, said out loud (additive keys, no schema bump).
+
+    Every payload gets `data_sources` (mode, per-venue counts, venues that
+    refused the runner, the Yahoo-fallback count). Crypto rows also name their
+    own venue in `data_source`, so the chart can draw the SAME series the scan
+    read (2026-09-28, owner: "so it's all in SYNC"); "cache" = the last-good
+    frame cache covered a coin the fetch missed this run. Stock rows are left
+    alone -- one source, and the ASX payload is on a diet."""
+    vk["data_sources"] = source_summary(src_report)
+    if market_key != "crypto":
+        return
+    suffix = config.MARKETS[market_key].suffix
+    src_of = src_report.get("source_of") or {}
+    for r in vk.get("results") or []:
+        r["data_source"] = src_of.get(f"{r.get('symbol')}{suffix}", "cache")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fibonacci-EMA market scanner")
     parser.add_argument(
@@ -161,7 +179,13 @@ def main() -> None:
             # second Yahoo pass either way.
             dl_period = config.VIVEK_DATA_PERIOD
             print(f"  downloading {len(universe)} tickers ({dl_period}) ...", flush=True)
-            fresh = download([u["yf"] for u in universe], period=dl_period)
+            # data.fetch (2026-09-28, owner: "make the VIVEK crypto scan and
+            # paper bot go to the binance or bybit ... so it's all in SYNC"):
+            # crypto from exchange daily klines (config.CRYPTO_DATA_SOURCE),
+            # Yahoo only for coins no exchange lists; stocks unchanged.
+            fresh, src_report = fetch(market_key, [u["yf"] for u in universe],
+                                      period=dl_period,
+                                      ref_prices={u["yf"]: u.get("cg_price") for u in universe})
             # Reuse last-good cached frames for tickers Yahoo dropped this run, so
             # transient throttling no longer shrinks coverage (the cache refreshes
             # with whatever we DID get). Aging is reported honestly per row.
@@ -202,6 +226,7 @@ def main() -> None:
                                         universe=universe, frames=deep_frames,
                                         pulse_data=pulse_data, progress=False,
                                         from_cache=cache_stats["reused"])
+            tag_sources(vk, market_key, src_report)
             # v5 payload split (owner-ruled payload diet): summary + detail
             # sidecar in one publish step. ORDER IS THE FENCE: run_market
             # below receives `vk`'s in-memory rows, and split_vivek never

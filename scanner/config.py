@@ -136,9 +136,25 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
 # Bybit geo-block US IPs and GitHub's runners are US-based, so Binance's
 # market-data mirror leads and US-hosted Coinbase closes. Which answer from a
 # runner is measured and published every run, never assumed. Only the
-# IGNITION lens reads these today (IGNITION_DATA_SOURCE); the VIVEK scan and
-# the bot still read Yahoo -- switching them is a trade change.
+# order is Binance first because it is what the owner charts on.
+# THE SWITCH (owner, 2026-09-28: "make the VIVEK crypto scan and paper bot go
+# to the binance or bybit ... so it's all in SYNC"). "exchange" = every crypto
+# price the scan, the paper bot, the kill switch and the IGNITION lens use
+# comes from these klines via data.fetch(); "yahoo" = the old path, restored
+# in one line. Stocks are untouched either way.
+CRYPTO_DATA_SOURCE = "exchange"
+CRYPTO_YAHOO_FALLBACK = True     # a coin no exchange lists still gets priced
 EXCHANGE_KLINE_SOURCES = ("binance_vision", "binance", "bybit", "coinbase")
+# IDENTITY CHECK. The first side-by-side run (2026-09-28) found Yahoo pricing
+# a DIFFERENT token under the same ticker for AERO (+2,623,839% vs Binance),
+# JUP (+96,729%), ARB (+35,210%), PRL, SKY, XCN... -- so a ticker is not an
+# identity. Every source's latest close must sit within this band of
+# CoinGecko's current price for the coin (universe `cg_price`), or that source
+# is rejected for that coin and the next is tried; a coin no source confirms is
+# dropped for the run rather than scanned as the wrong instrument. 0.40 =
+# [0.71x, 1.40x]: wide enough for minutes of drift in a squeeze, far inside
+# every collision measured (the smallest, MET, was -43%).
+CRYPTO_IDENTITY_TOL = 0.40
 EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit
@@ -171,16 +187,6 @@ IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window 
 IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
 IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
                                  # a fresh-looking signal off a stale bar is the worst output
-
-# WHERE THE BARS COME FROM (2026-09-28, owner: "Can't we use binance/bybit?").
-# "exchange" = scanner/exchange_data.py: public keyless daily klines, exact
-# 00:00 UTC closes served the moment the day ends, quote (USDT/USD) volume,
-# Yahoo only for coins no exchange lists. "yahoo" = scanner/data.py as before.
-# The first real run on Yahoo screened a day late (no usable 27 Sep bar at
-# 02:00 UTC on the 28th) and missed 64 of 201 coins. Report-only lens, so its
-# source can change without touching the VIVEK scan or the bot's marks.
-IGNITION_DATA_SOURCE = "exchange"
-IGNITION_YAHOO_FALLBACK = True   # coins no exchange lists still get screened
 
 # THE COIL -- all four at once, on one bar. Measured on the bar, causally.
 IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
