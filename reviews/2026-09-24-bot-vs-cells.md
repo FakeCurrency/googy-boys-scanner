@@ -44,10 +44,12 @@ min_stop_pct     = 1
 stop_basis       = plan entry, then fill
 min_rr           = 1.5
 exclude_funds    = True
-max_per_sector   = 3
-max_open_total   = 30
+max_per_sector   = 6
+max_open_total   = 60
 max_hold_days    = 28
 ```
+
+*(Block refreshed 2026-09-27 for the owner's 60 x $2,500 resize; the prose in this note still describes the gate as it stood on 2026-09-24: 30 open, 3 per sector.)*
 
 **Gate vs sleeve, one sentence:** the gate is the four cells + weekly/3D level + stop <= 25%, but it reads the 25% off the signal close where #42 read it off the fill, so a fill that moves away from the close can hold a stop over 25%. That is the only way it is wider than the sleeve, and three open positions sit there today.
 

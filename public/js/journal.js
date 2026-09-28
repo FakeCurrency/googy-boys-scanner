@@ -2,8 +2,9 @@
  * written server-side every scan and read-only here. (The manual "Me" book
  * that sat beside it — localStorage + KV sync — was removed 2026-09-21.)
  *
- * The book is sized by the VIVEK bot rules: a fixed $5,000 of notional per
- * position out of a $150,000 book (30 slots). $ P&L uses 1R = the $ risked —
+ * The book is sized by the VIVEK bot rules: a fixed $2,500 of notional per
+ * position out of a $150,000 book (60 slots; 30 × $5,000 from 2026-07-28 until
+ * the owner's 2026-09-27 resize). $ P&L uses 1R = the $ risked —
  * which under fixed sizing VARIES per trade with the stop distance, instead
  * of being the same 0.35% of equity every time.
  *
@@ -89,16 +90,21 @@
   }
 
   // ── VIVEK sizing + cost model (live source: data/bot_rules.json) ───────────
-  // ONE book of 30 slots across all three markets, $5,000 a position, $150,000
-  // total (owner, 2026-07-28). Was 3 × $10k risk-% books; the account is now a
-  // single $150k pool, so starting capital is EQUITY, not 3 × EQUITY (the old
-  // START_CAPITAL constant was exactly that 3× product and is now gone).
+  // ONE book of 60 slots across all three markets, $2,500 a position, $150,000
+  // total (owner, 2026-09-27; 30 × $5,000 from 2026-07-28). Was 3 × $10k risk-%
+  // books before that; the account is now a single $150k pool, so starting
+  // capital is EQUITY, not 3 × EQUITY (the old START_CAPITAL constant was
+  // exactly that 3× product and is now gone).
   // Everything below is an OFFLINE FALLBACK only — loadBotRules() overrides
   // from bot_rules.json (published from scanner/config.py every scan), so this
   // file can never drift from the executing bot silently again.
   const RISK_MIN = 0.25, RISK_MAX = 0.5;
   let EQUITY = 150000;                     // fallback — bot_rules.account_equity wins
-  let POSITION_NOTIONAL = 5000;            // fallback — 0 would mean risk-% mode
+  let POSITION_NOTIONAL = 2500;            // fallback — 0 would mean risk-% mode
+  // True only once bot_rules.json has PUBLISHED position_notional. The
+  // off-scale $ marker (legacySized) keys on it: a marker about SCALE must
+  // never be driven by the hand-typed fallback above.
+  let NOTIONAL_LIVE = false;
   let RISK_PCT = 0.35;                     // only consulted when POSITION_NOTIONAL is 0
   const money0 = (v) => "$" + Math.round(v).toLocaleString();
   // Starting capital shown to the user. Derived, never hardcoded, so it tracks
@@ -134,6 +140,9 @@
           set(j[key]);
         }
       }
+      // Outside the drift loop on purpose: that loop only fires when live and
+      // fallback DIFFER, and since 2026-09-27 they agree (2500 === 2500).
+      if (typeof j.position_notional === "number") NOTIONAL_LIVE = true;
       // The exit ladder (TOP100 #33). These three fractions decide how much of
       // a position each TP books. The page used them for the manual book's R;
       // since that went (2026-09-21) nothing here reads SCALE — every R shown is
@@ -195,7 +204,7 @@
   //   FIXED NOTIONAL (default since 2026-07-28): buy POSITION_NOTIONAL dollars
   //     of the thing. risk_usd falls out of the stop distance instead of being
   //     set by it, so 1R is NOT constant across trades — a tight 2% stop risks
-  //     $100 on a $5,000 position, a wide 12% stop risks $600. R-multiples are
+  //     $50 on a $2,500 position, a wide 12% stop risks $300. R-multiples are
   //     unaffected (they were always stop-relative); the $ column is what now
   //     varies. That is the accepted trade-off of fixed sizing.
   //   RISK % (POSITION_NOTIONAL === 0): the original path, unchanged — risk a
@@ -270,7 +279,11 @@
   // published AUD/USD rate (data/fx.json) so the book's totals stop
   // mixing currencies at face value (~50% overstatement of ASX P&L).
   let FX_AUDUSD = 0.66;                       // fallback until fx.json loads
-  const fxOf = (t) => ((t.market || t.asset_type) === "asx" ? FX_AUDUSD : 1);
+  // The ONE test for "this row's own figures are A$". fxOf converts on it and
+  // faceMoney0 (the off-scale tip) labels on it, so a tip can never call a
+  // figure A$ on a row whose $ cell was not converted, or the reverse.
+  const isAudRow = (t) => (t.market || t.asset_type) === "asx";
+  const fxOf = (t) => (isAudRow(t) ? FX_AUDUSD : 1);
   const dollarsOf = (t) => (t.realized_r != null && t.risk_usd != null
     ? t.realized_r * t.risk_usd * fxOf(t) : null);
   async function loadFx() {
@@ -687,12 +700,36 @@
   // pre-resize cohort. Manual ("Me") rows are hand-sized; no marker.
   // Deliberately the same volume as .jr-stale: a dotted underline + tooltip
   // on the $ cell, no colour, no icon — a legibility fix, not a warning.
-  const legacySized = (t, side) => side === "bot" && t.sizing_mode !== "fixed_notional";
+  //
+  // OFF-SCALE fixed-notional rows (owner, 2026-09-27). The notional moved
+  // $5,000 -> $2,500 (60 slots). The OPEN book is restated to $2,500, the
+  // CLOSED $5,000 rows are not and must not be (same RESIZE rule) — and they
+  // are stamped "fixed_notional", so the sizing_mode test alone cannot see
+  // them. A fixed-notional row is therefore also marked when its own notional
+  // sits more than 1% off the PUBLISHED position_notional, and its tooltip
+  // names both figures. Gated on NOTIONAL_LIVE: the e2e fixture's
+  // bot_rules.json publishes no notional while its fixed_notional rows carry
+  // $36-$872, so an ungated test would underline every row and move the
+  // journal screenshots. Compared at face value, as the bot books it (an ASX
+  // row's $2,500 is A$ — see #61); an FX-converted notional would need this
+  // test revisited. The TIP says so: both of its figures are face value in the
+  // row's own currency, so an ASX row prints "A$" (faceMoney0) while the $ cell
+  // beside it is US$-converted by fxOf — a bare "$" there read as US$ and
+  // overstated an ASX holding by the FX rate.
+  const offNotional = (t) => NOTIONAL_LIVE && POSITION_NOTIONAL > 0
+    && t.notional > 0 && Math.abs(t.notional - POSITION_NOTIONAL) > 0.01 * POSITION_NOTIONAL;
+  const legacySized = (t, side) => side === "bot"
+    && (t.sizing_mode !== "fixed_notional" || offNotional(t));
   const LEGACY_TIP = "Sized under the pre-2026-07-28 rules (risk-% of the old equity, ~$250 notional)"
-    + " - this row's dollars are a different scale from current $5,000 rows and are not"
+    + " - this row's dollars are a different scale from current fixed-notional rows and are not"
     + " like-for-like. Compare R, not dollars.";
-  const legacyCell = (t, side) =>
-    legacySized(t, side) ? { cls: " jr-oldsize", tip: ` title="${esc(LEGACY_TIP)}"` } : { cls: "", tip: "" };
+  const faceMoney0 = (t, v) => (isAudRow(t) ? "A" : "") + money0(v);
+  const offScaleTip = (t) => `Held at ${faceMoney0(t, t.notional)} notional - the book now sizes each`
+    + ` position at ${faceMoney0(t, POSITION_NOTIONAL)}, so this row's dollars are a different scale`
+    + " and are not like-for-like. Compare R, not dollars.";
+  const legacyCell = (t, side) => !legacySized(t, side) ? { cls: "", tip: "" }
+    : { cls: " jr-oldsize",
+        tip: ` title="${esc(t.sizing_mode === "fixed_notional" ? offScaleTip(t) : LEGACY_TIP)}"` };
 
   // UX-20 #13: registry backing the per-row 📤 trade-card buttons — rebuilt on
   // every render so data-card="side:idx" always resolves to the row it sits on.
@@ -1720,7 +1757,10 @@
   // where six closes went missing on 2026-08-07), so the message says queued
   // and points at the book rather than claiming the positions are closed.
 
-  const CLOSE_ALL_MAX = 30;   // /api/close's own batch ceiling (the book cap is 30 too)
+  // /api/close's own batch ceiling = the 60-slot book cap (owner, 2026-09-27;
+  // was 30), so a FULL book closes in one run. tests/test_close_ceiling_parity.py
+  // pins it to close.js, vivek_run CLOSE_BATCH_MAX and config.
+  const CLOSE_ALL_MAX = 60;
   let closeAllBusy = false;
 
   // A bot row's honest close price: its OWN last_mark. Same fail-closed test as
@@ -1752,8 +1792,8 @@
         : "Claude holds no open positions.");
       return;
     }
-    // Deliberately REFUSE rather than truncate: silently sending the first 30 of
-    // 34 is the same failure as the six closes that went missing in 2026-08-07.
+    // Deliberately REFUSE rather than truncate: silently sending the first 60 of
+    // 64 is the same failure as the six closes that went missing in 2026-08-07.
     if (entries.length > CLOSE_ALL_MAX) {
       alert(`${entries.length} closable positions is over the ${CLOSE_ALL_MAX}-per-run limit of /api/close.\n\n` +
             `Nothing was sent. Close them in batches from the stalled strip — that is safer than silently sending only the first ${CLOSE_ALL_MAX}.`);
@@ -1818,10 +1858,15 @@
     if (wp) wp.addEventListener("click", () => { wkOffset++; renderWeeklyDigest(); });
     if (wn) wn.addEventListener("click", () => { if (wkOffset > 0) { wkOffset--; renderWeeklyDigest(); } });
     // Pick up a fresh scan while the page is open: re-pull the bot book + the
-    // scan's prices every few minutes and re-render.
+    // scan's prices every few minutes and re-render. The RULES too (review
+    // RR-2, 2026-09-28): the off-scale marker compares each row's notional to
+    // the published position_notional, so a tab that read the rules once and
+    // then picked up a restated book would mark every restated row against a
+    // size the bot no longer trades. loadBotRules only writes on a change, so
+    // an unchanged file is a no-op.
     setInterval(async () => {
       if (document.hidden) return;
-      await Promise.all([loadBot(), loadScanMeta()]);
+      await Promise.all([loadBot(), loadScanMeta(), loadBotRules()]);
       renderAll();
     }, 180000);
   }

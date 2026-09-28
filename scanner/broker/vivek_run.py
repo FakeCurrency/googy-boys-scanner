@@ -12,10 +12,11 @@ What it does each run, per market:
   1. Loads the persistent book (journal/vivek_bot_book.json) — Gap 1. The book
      survives across runs, so the position caps, short-slot reserve and one-per-
      symbol rules hold over time, not just within a single scan. The book-size
-     ceiling is GLOBAL (config.VIVEK_BOT_MAX_OPEN_TOTAL, 30 open across every
-     market), so this step also counts the sibling markets' canonical book
-     files via `_open_elsewhere` — and refuses new entries outright if any of
-     them is unreadable, rather than guessing low and blowing the cap.
+     ceiling is GLOBAL (config.VIVEK_BOT_MAX_OPEN_TOTAL, 60 open across every
+     market since 2026-09-27; 30 before), so this step also counts the sibling
+     markets' canonical book files via `_open_elsewhere` — and refuses new
+     entries outright if any of them is unreadable, rather than guessing low
+     and blowing the cap.
   2. Marks every OPEN position to the observed intraday price (reusing the
      journal's `_mark` / `manage_position`), booking scale-outs and closing on
      stops — but only during the delay-adjusted market session.
@@ -82,6 +83,16 @@ MAX_CLOSED = 4000                  # per MARKET file now (was: whole book)
 # 9 stored sessions covers it on crypto (7 sessions a week) with slack, and
 # covers it nearly twice over on ASX/NASDAQ (5 a week ~= 13 calendar days).
 _DAY_MARK_KEEP = 9
+# --close-batch ceiling (main()). It TRACKS THE BOOK CAP rather than repeating
+# it (2026-09-27, with the owner's 60-slot resize): the batch was a literal 30
+# while the book was 30, and once the book went to 60 that literal would have
+# refused a close-all of a full book. A batch can never need more rows than the
+# book can hold, so the book cap is the natural bound. With the global cap off
+# (0) the largest possible book is the per-market cap in every market. functions/api/close.js and
+# journal.js CLOSE_ALL_MAX carry the same number as literals (Workers/browser
+# code cannot import config); a parity test pins all three to config.
+CLOSE_BATCH_MAX = (int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0)
+                   or int(config.VIVEK_BOT_MAX_POSITIONS) * len(config.MARKETS))
 
 
 def _market_book_file(market: str) -> pathlib.Path:
@@ -685,6 +696,10 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # without this label the only way to tell a legacy row from a new one is to
     # infer it from the notional, which stops working the moment either number
     # is retuned. Audit field: nothing reads it to make a decision.
+    # 2026-09-27: the fixed amount itself was retuned ($5,000 -> $2,500). Rows
+    # either side both read "fixed_notional", so tell them apart by `notional`,
+    # and an open row restated by scripts/resize_book_notional.py by its
+    # `resized_at` / `notional_before` stamps.
     snap["sizing_mode"] = plan.get("sizing_mode", "")
     # CYCLE MARKER (2026-08-02, w3 gate enablement). Audit-only tag so pre-gate
     # and in-cycle cohorts never blur in later reads - the sizing_mode
@@ -743,18 +758,20 @@ def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
 
     What it is actually for: the owner's choice is not take-or-skip (the bot has
     already taken it, correctly, under rules that are his) but WHOSE position it
-    is. Leave it and it is the bot's, sized $5,000 like everything else. Close
-    it in the book and it is his, sized however he wants. That choice has a
-    shelf life of hours, so it has to arrive as a push and not as a row on a
-    page he might open on Thursday.
+    is. Leave it and it is the bot's, sized at VIVEK_BOT_POSITION_NOTIONAL
+    ($2,500 since 2026-09-27) like everything else. Close it in the book and
+    it is his, sized however he wants. That choice has a shelf life of hours,
+    so it has to arrive as a push and not as a row on a page he might open on
+    Thursday.
 
     Called AFTER `_save_market_book`, deliberately: a dry run returns before
     that line and must stay silent, and pinging about a position that then
     failed to persist would be worse than not pinging at all.
 
     The COMBINED share is the number worth the message on its own. One flagged
-    open at 27% of the daily guard is a judgement call; three in one run at 27%
-    each is 81% of the day gone on three names, and nobody is summing that by
+    open at 13% of the daily guard is a judgement call; three in one run at 13%
+    each is ~40% of the day gone on three names (27% / 81% at the pre-2026-09-27
+    $5,000; a new plan now tops out at 13.9%), and nobody is summing that by
     hand from three separate notifications -- which is the argument for one
     message per run rather than one per position, quite apart from the noise.
 
@@ -833,9 +850,10 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
     Who this catches that the automatic rules never will: MAX_HOLD_DAYS (28)
     time-stops a pre-TP1 stall but says nothing at the half-way mark, and a
     runner past TP1 is exempt from it FOREVER — a +0.1R runner can squat one
-    of 30 scarce slots for months with nothing ever asking about it. "Minimal
-    movement" is |unreal_r| < STALE_PROBE_MAX_ABS_R: a row further red than
-    that is the stop's business, further green is a working position.
+    of the book's scarce slots (30 then, 60 since 2026-09-27) for months with
+    nothing ever asking about it. "Minimal movement" is |unreal_r| <
+    STALE_PROBE_MAX_ABS_R: a row further red than that is the stop's business,
+    further green is a working position.
 
     Dedupe is per POSITION, stamped into the row (`stale_pinged`, a date) so
     it commits with the book and survives the container — the same lesson as
@@ -1351,7 +1369,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # symbols are handed over for the re-entry cooldown.
     _enrich_adv(results, frames, yf_map)
     # Sector merge (2026-07-28, owner-authorised — REFINEMENTS #38). The
-    # 3-per-sector cap exempts rows with no sector, so NASDAQ had no
+    # per-sector cap exempts rows with no sector, so NASDAQ had no
     # correlation control whatsoever: its universe file ships no sector column.
     # data/sector_map.json already covered every scanned NASDAQ row; nothing
     # merged it in. Best-effort by design — a failure here leaves rows exactly
@@ -1420,9 +1438,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                         "counts them as separate buckets: %s (REFINEMENTS #112)",
                         market, len(odd), ", ".join(odd))
         # The per-sector cap is per-MARKET; the position and notional ceilings
-        # are global. So a real sector can sit at 3-per-market across markets
-        # and every check still passes. Reported, never enforced — closing the
-        # gap changes which trades get taken (owner's call, REFINEMENTS #113).
+        # are global. So a real sector can sit at the per-market cap (6 since
+        # 2026-09-27) in every market at once and every check still passes.
+        # Reported, never enforced — closing the gap changes which trades get
+        # taken (owner's call, REFINEMENTS #113).
         heavy = sectorcache.global_sector_load(
             book["open"], int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0))
         if heavy:
@@ -1439,8 +1458,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # this projection, so omitting the field made the $150,000 ceiling count
     # every market's exposure EXCEPT the one it was deciding for — an effective
     # ceiling of $150,000 plus whatever this market already held. Latent while
-    # every position is $5,000 and the 30-slot cap binds first at exactly
-    # $150,000, but it is a risk cap reading a number it believes is complete.
+    # every position is the same size and the slot cap binds first at exactly
+    # $150,000 (30 x $5,000, then 60 x $2,500 from 2026-09-27), but it is a risk
+    # cap reading a number it believes is complete -- and it is NOT latent across
+    # a size cut, when old-size rows can fill the $150,000 with slots to spare.
     # `direction` is READ, not required (2026-07-28, TOP100 #22). It used to be
     # `p["direction"]`, so one row missing the key raised KeyError here and took
     # the WHOLE market run with it — including the mark refresh and the stop
@@ -1637,9 +1658,10 @@ def main() -> None:
             parser.error("--close-batch needs VIVEK_CLOSE_BATCH set to a "
                          "non-empty JSON array")
         # Same ceiling close.js enforces — belt and braces, since this env var
-        # arrives through a workflow input.
-        if len(entries) > 30:
-            parser.error(f"--close-batch capped at 30 entries, got {len(entries)}")
+        # arrives through a workflow input. CLOSE_BATCH_MAX = the book cap.
+        if len(entries) > CLOSE_BATCH_MAX:
+            parser.error(f"--close-batch capped at {CLOSE_BATCH_MAX} entries, "
+                         f"got {len(entries)}")
         closed, failed = close_bot_batch(entries)
         for row in closed:
             print(f"closed {row['symbol']} {row['direction']} [{row['market']}] "

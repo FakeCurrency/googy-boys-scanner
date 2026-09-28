@@ -118,7 +118,21 @@ jobs:
       group: scan
       cancel-in-progress: false
     steps:
+      # Read the book as of ACQUIRING the mutex, not as of being queued
+      # (2026-09-27, found building resize_book.yml). With no `ref`, checkout
+      # uses github.sha -- the commit the run was TRIGGERED on, fixed when the
+      # run is created. This job fires every hour, so it is the sibling most
+      # likely to queue behind another writer; it would then load the older
+      # book, and the push loop below would replay its copy of
+      # journal/vivek_bot_book.crypto.json over the newer one -- silently
+      # reverting a close or the open-book resize. A branch `ref` makes
+      # checkout fetch the branch TIP at job start. Nothing in this job reads
+      # github.sha; scan.py's display-only `code_sha` stamp reads git HEAD
+      # first, GITHUB_SHA only as a fallback (tests/test_code_sha.py). Pinned
+      # in tests/test_workflow_mutex.py.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-python@v5
         with:

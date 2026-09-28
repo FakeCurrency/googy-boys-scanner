@@ -1,0 +1,329 @@
+name: Resize open book
+
+# ONE-SHOT RESTATEMENT of the OPEN paper book at the configured notional
+# (owner, 2026-09-27: $2,500 a position on 60 slots, and restate the 30 open
+# $5,000 rows NOW rather than as they close). The 2026-07-28 resize is the
+# precedent -- read CLAUDE.md "RESIZE" first.
+#
+# What it runs: scripts/resize_book_notional.py --apply --kick .github/resize-kick
+# against the TIP OF MAIN, inside the `scan` mutex every book writer takes. It
+# is a RESTATEMENT, not a trade: units / notional / risk_usd / unreal_usd scale;
+# entry, stop, risk, every R field and every CLOSED row are frozen, and the
+# script refuses to write if one of them moves. It is IDEMPOTENT -- a row
+# already at the target is skipped -- and every safety property below leans on
+# that. The same commit republishes public/data/bot_rules.json from the same
+# checkout's config (scanner.run.bot_rules_payload), so the site never reads
+# the old notional / slot cap / sector cap beside a restated book (2026-09-28).
+#
+# WHY A WORKFLOW AND NOT A COMMITTED FILE. The book files change on main every
+# ~30 min (scan.yml, crypto_bot.yml). A resized journal/*.json carried on a
+# branch either conflicts at merge or, worse, merges over newer marks and
+# closes. So the branch carries only the INTENT (.github/resize-kick) and main
+# computes the restatement from main's own book, under main's own lock.
+#
+# TRIGGERS
+#   push to main that touches .github/resize-kick -- the owner's merge applies
+#     it. The kick's single target= line must equal config
+#     VIVEK_BOT_POSITION_NOTIONAL or the script refuses (exit 2, red, nothing
+#     written). Deleting the kick is a green no-op. THIS FILE IS DELIBERATELY
+#     NOT IN ITS OWN PATH FILTER (dispatch_scan.yml's is): editing the workflow
+#     must never restate the book.
+#   workflow_dispatch -- apply defaults to FALSE, i.e. a dry run that prints
+#     what would move. It doubles as the "is main still at target?" check.
+#     apply = true is accepted only from main.
+#
+# JOBS
+#   preview  OUTSIDE the mutex. Reads main, prints the dry report into the
+#            step summary, decides. A dry run or a no-op never queues in
+#            `scan`: a pending member of that group is deleted by the next
+#            arrival AND deletes whichever member was pending before it, so a
+#            job with nothing to write must not take the slot (the scan.yml
+#            `gate` rule, REFINEMENTS #108).
+#   resize   INSIDE the mutex, JOB-scoped (tests/test_workflow_mutex.py).
+#            Checks out main at JOB START, not the trigger SHA, and on EVERY
+#            attempt resets to origin/main and RE-RUNS the resize. It never
+#            replays a file computed from an older main -- that is the one way
+#            this job could overwrite a scan's marks or a close.
+#   evicted  OUTSIDE the mutex. A resize job evicted from `scan` turns the run
+#            RED with the remedy. Deliberately NOT an auto-redispatch -- the
+#            reasoning is on the job.
+#
+# THE SIBLINGS HAD TO CHANGE TOO (2026-09-27). scan.yml's `scan`, crypto_bot's
+# `crypto` and close_position's `close` jobs used to check out the run's
+# TRIGGER SHA. One that queued in `scan` behind this job would then load the
+# pre-resize book and its push loop would replay that market's stale file over
+# the restatement. They now check out their branch tip at job start
+# (`ref: ${{ github.ref }}`, pinned in tests/test_workflow_mutex.py).
+#
+# No schedule and no WATCHDOG_RUNS entry, on purpose: this is a one-shot, and a
+# run-age alarm on a workflow that never runs again would ring for ever.
+# Pins: tests/test_resize_book_workflow.py.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/resize-kick"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Restate the open book now (false = dry run: print what would move, write nothing)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Two resize runs never overlap; a second waits for the first (a third
+# replaces the waiting second -- same kick, same idempotent intent). This is
+# NOT the `scan` group: that one lives on the resize JOB only, never here.
+concurrency:
+  group: resize-book
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      go: ${{ steps.plan.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Exit-code taxonomy of `--check` (scripts/resize_book_notional.py):
+      #   0 = every open row already at the target -> nothing to do, green
+      #   3 = rows off target                      -> queue the resize (apply)
+      #   4 = an open row off target that the script CANNOT restate (named in
+      #       the plan) -> red; it wins over 3, so no writer is queued for it
+      #   anything else = refused (kick/config mismatch, bad target, usage) or
+      #   a crash -> red. 1 is deliberately NOT "pending": a Python traceback
+      #   exits 1 and must never read as "go ahead".
+      # No `| tee` here: GitHub's shell is `bash -e` WITHOUT pipefail, so a
+      # pipe would report tee's status. Redirect, then read $? immediately.
+      - name: Plan (read-only)
+        id: plan
+        env:
+          APPLY: ${{ github.event_name == 'push' || inputs.apply == true }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          KICK=".github/resize-kick"
+          if [ ! -f "$KICK" ]; then
+            if [ "$EVENT" = "push" ]; then
+              echo "::notice::$KICK is gone from main - nothing is authorised, nothing to do."
+              exit 0
+            fi
+            if [ "$APPLY" = "true" ]; then
+              echo "::error::there is no $KICK on main, so nothing authorises a resize."
+              exit 1
+            fi
+            # A by-hand DRY RUN stays useful after the kick is deleted: it
+            # answers "is every open row at config's notional?" and nothing else.
+            echo "::notice::no $KICK on main - dry run measured against config VIVEK_BOT_POSITION_NOTIONAL."
+            KICK=""
+          fi
+          if [ "$APPLY" = "true" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::apply is only accepted from main (this run is on $GITHUB_REF). The job restates MAIN's book; run it from main so the workflow doing it is the reviewed one."
+            exit 1
+          fi
+          set +e
+          python scripts/resize_book_notional.py --check ${KICK:+--kick "$KICK"} > "$RUNNER_TEMP/plan.txt" 2>&1
+          rc=$?
+          set -e
+          cat "$RUNNER_TEMP/plan.txt"
+          {
+            echo "### Open-book resize - plan (main @ $(git rev-parse --short HEAD))"
+            echo '```'
+            cat "$RUNNER_TEMP/plan.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          case "$rc" in
+            0)
+              echo "Every open row on main is already at the target - nothing to do."
+              echo "**Nothing to resize** - main is already at the target." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            3)
+              if [ "$APPLY" = "true" ]; then
+                echo "go=true" >> "$GITHUB_OUTPUT"
+                echo "Rows are off target and apply was requested - queueing the resize job in the scan mutex."
+              else
+                echo "DRY RUN - nothing written. Dispatch again with apply=true to restate the book."
+                echo "**DRY RUN** - nothing written. Dispatch again with apply = true to restate the book." >> "$GITHUB_STEP_SUMMARY"
+              fi
+              ;;
+            *)
+              echo "::error::resize plan refused or crashed (rc=$rc) - see the log above. Nothing was written."
+              exit "$rc"
+              ;;
+          esac
+
+  resize:
+    needs: preview
+    if: needs.preview.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    # Holds the `scan` mutex, so it is bounded like every other holder (TOP100
+    # #44): a hung push loop must not hold the group for GitHub's 6h default
+    # and evict every scan queued behind it. The real work is ~2 minutes.
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    # JOB-scoped, never workflow-scoped (tests/test_workflow_mutex.py): the
+    # preview above must stay out of the one-slot queue. scan.yml,
+    # crypto_bot.yml and close_position.yml write the same files; one writer
+    # at a time is the whole invariant.
+    concurrency:
+      group: scan
+      cancel-in-progress: false
+    steps:
+      # `ref: main`, NOT the default. The default checks out the SHA the run was
+      # TRIGGERED on; a job that waited in the mutex behind a scan would then
+      # restate a book older than the one on main. The loop below re-fetches
+      # anyway -- this makes attempt 1 honest too.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # REGENERATE, NEVER REPLAY. Every attempt starts from a fresh
+      # origin/main and re-runs the idempotent resize, so attempt 5 runs the
+      # same code on the same kind of tree as attempt 1 and can only ever
+      # publish a restatement of the newest book. (scan.yml's loop replays
+      # its own files instead, which is right for a scan and wrong here: a
+      # resize computed from an older main would carry that main's marks.)
+      #
+      # The must-change gate sits BEHIND the pre-check on purpose. A re-kick
+      # (or a retry whose earlier push really landed) finds every row at the
+      # target, `--check` exits 0, and the run is an honest green no-op --
+      # asserting must-change there would fail on the very idempotence the
+      # script advertises, which is how a gate gets deleted rather than fixed
+      # (the backfill / confluence precedent). Only once rows were PENDING is
+      # "nothing staged" a bug, and then the gate is hard.
+      - name: Resize, verify, commit and push (regenerated on every attempt)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # The CANONICAL per-market files are the track record; the combined
+          # book + public twin are _write_combined() output, and bot_rules.json
+          # is config output (regenerated below). The gate names the canonical
+          # three ONLY: assert_staged is ANY-OF, so listing a derived file
+          # would let it pass on a view regenerated over a canonical file that
+          # failed to stage -- and bot_rules.json changes on EVERY run (its
+          # generated_at), so it would satisfy the gate unconditionally.
+          CANON="journal/vivek_bot_book.asx.json journal/vivek_bot_book.nasdaq.json journal/vivek_bot_book.crypto.json"
+          DERIVED="journal/vivek_bot_book.json public/data/vivek_bot_book.json public/data/bot_rules.json"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            set +e
+            python scripts/resize_book_notional.py --check --kick .github/resize-kick > "$RUNNER_TEMP/pre.txt" 2>&1
+            rc=$?
+            set -e
+            cat "$RUNNER_TEMP/pre.txt"
+            if [ "$rc" = "0" ]; then
+              echo "Attempt $i: every open row on main is already at the target - nothing to write."
+              echo "**Nothing to resize** - main was already at the target (attempt $i)." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$rc" != "3" ]; then
+              echo "::error::resize pre-check refused or crashed (rc=$rc) - nothing written."
+              exit "$rc"
+            fi
+            python scripts/resize_book_notional.py --apply --kick .github/resize-kick
+            # POSTCONDITION, re-read off disk: a fresh dry pass over the files
+            # as written must find nothing left to restate. Catches a write to
+            # the wrong path, a truncated write, an os.replace that did not land.
+            if ! python scripts/resize_book_notional.py --check --kick .github/resize-kick; then
+              echo "::error::--apply ran but a fresh --check still finds rows off target - refusing to commit."
+              exit 1
+            fi
+            python -m scanner.broker.vivek_run --verify
+            # REPUBLISH THE RULES IN THE SAME COMMIT (2026-09-28, review F1).
+            # bot_rules.json is how the site learns the notional, the slot cap
+            # and the sector cap. Left to the next scanner.run (up to ~an hour
+            # away) it would say the OLD size beside the restated book, and
+            # journal.js would mark every restated row "the book now sizes each
+            # position at $5,000". Built by the function run.py's own publish
+            # calls, with the same writer, from THIS attempt's checkout -- so,
+            # like the books, it is regenerated per attempt, never replayed.
+            # After --verify on purpose: nothing is republished for a book that
+            # failed its audit. A failure here is `bash -e` red, nothing pushed.
+            python -c 'import pathlib; from scanner import output, run; output.write_json(pathlib.Path("public/data/bot_rules.json"), run.bot_rules_payload(), newline=True)'
+            # One path per `git add` (TOP100 #52) and NO `|| true`: all six
+            # files exist on every healthy main, so a missing one is a fault
+            # that must stop the run, not a silence to swallow.
+            for p in $CANON $DERIVED; do
+              git add -- "$p"
+            done
+            bash scripts/assert_staged.sh "open-book resize" $CANON
+            if ! git diff --quiet -- $CANON $DERIVED; then
+              echo "::error::a book file is still UNSTAGED after git add - refusing to commit a partial restatement."
+              git status --short
+              exit 1
+            fi
+            TARGET=$(python -c 'from scanner import config; print(int(config.VIVEK_BOT_POSITION_NOTIONAL))')
+            git commit -m "journal: restate open book at \$${TARGET}/position (resize kick)"
+            if git push origin HEAD:main; then
+              echo "Pushed the restated book (attempt $i)."
+              {
+                echo "### Open-book resize - APPLIED (attempt $i)"
+                echo '```'
+                cat "$RUNNER_TEMP/pre.txt"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "push race - retry $i"; sleep $((i * 3))
+          done
+          echo "::error::could not push the restated book after 5 attempts - main is UNCHANGED (still at the old size). Re-run: Actions -> Resize open book -> Run workflow, apply = true."
+          exit 1
+
+  # NOT close_position.yml's auto-redispatch, on purpose. That job exists
+  # because a manual close is a deliberate human act that is LOST if evicted.
+  # Nothing is lost here -- only delayed -- and the delay is fail-safe: until
+  # the resize lands the old-size rows keep counting at their full notional
+  # against VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL, so decide() can only take FEWER
+  # new entries (every one of them already at the new size), never more
+  # exposure. The script is idempotent, so a by-hand re-run is always safe.
+  # Copying the redispatch would add a second WATCHED list, job-name filter
+  # and attempt chain that must track `scan` membership for ever
+  # (test_workflow_mutex's drift class) -- for a workflow expected to run once.
+  # What must NOT happen is a SILENT eviction: a cancelled job does not email
+  # anybody, and GitHub's red-run email is the only alarm this repo has left.
+  # So this job turns the eviction into a failure, with the remedy attached.
+  evicted:
+    needs: [preview, resize]
+    if: always() && needs.resize.result == 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: The resize did not run - say so, loudly
+        run: |
+          echo "::error::The resize job was CANCELLED before it finished - evicted from the scan mutex by a newer scan / crypto / close / confluence arrival (GitHub keeps one pending run per group), cancelled by hand, or stopped at its timeout. It almost certainly pushed nothing, so main's open book is most likely still at the old size. Check with a dry run (Actions -> Resize open book -> Run workflow, apply = false), then finish it with apply = true - it is idempotent, rows already at the target are skipped."
+          {
+            echo "### Open-book resize - NOT applied"
+            echo ""
+            echo "The resize job was cancelled (scan-mutex eviction, a manual cancel, or its timeout). It almost certainly pushed nothing."
+            echo ""
+            echo "Check: **Actions -> Resize open book -> Run workflow, apply = false** prints what is still off target."
+            echo "Finish: **Actions -> Resize open book -> Run workflow, apply = true**. Rows already at the target are skipped."
+            echo ""
+            echo "Until it runs, the old-size rows keep counting at full notional against the portfolio ceiling:"
+            echo "the bot can only take fewer new entries, never more exposure."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

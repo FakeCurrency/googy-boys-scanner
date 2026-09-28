@@ -10,6 +10,12 @@ files.
 decide() only ever sees one market's scan, so vivek_run supplies the count from
 the others. These pin both halves, and pin that the correlation control (3 per
 sector) was deliberately NOT relaxed with it.
+
+Resized 2026-09-27 (owner): 60 total at $2,500 a position. The sector cap moved
+3 -> 6 WITH it, on purpose, to keep the same $15,000 per sector per market -- so
+the correlation control kept its dollars rather than its count. The pin below
+holds both halves of that. Tests that pass an explicit max_open_total=30 are
+self-consistent fixtures of the mechanism, not claims about the live number.
 """
 
 import json
@@ -22,7 +28,7 @@ from scanner.broker import vivek_run as vr
 
 pytestmark = pytest.mark.risk
 
-# 11 distinct GICS-ish sectors so the per-sector cap (3) is not what binds in
+# 11 distinct GICS-ish sectors so the per-sector cap (6) is not what binds in
 # the tests that are about the global cap. One test below deliberately re-uses
 # a single sector to prove that cap is still live.
 SECTORS = ["Banks", "Materials", "Energy", "Utilities", "Real Estate",
@@ -58,13 +64,19 @@ def _held(n, market_sectors=None):
 
 # ── the owner's decision, pinned ─────────────────────────────────────────────
 
-def test_the_book_holds_thirty_total_and_the_sector_cap_is_untouched():
+def test_the_book_holds_sixty_total_and_the_sector_cap_keeps_its_dollars():
     # Change these deliberately (they are the owner's, not an implementation
     # detail) — and update this test in the same commit when you do.
-    assert config.VIVEK_BOT_MAX_OPEN_TOTAL == 30
-    assert config.VIVEK_BOT_MAX_PER_SECTOR == 3
+    # 2026-07-28: 30 total, 3 per sector. 2026-09-27 (owner): 60 and 6.
+    assert config.VIVEK_BOT_MAX_OPEN_TOTAL == 60
+    assert config.VIVEK_BOT_MAX_PER_SECTOR == 6
+    # Why 6 and not 3: 6 x $2,500 = $15,000 per sector per market, the same
+    # dollar concentration 3 x $5,000 allowed before the resize. Retune the
+    # notional without the sector cap (or vice versa) and this fails.
+    assert (config.VIVEK_BOT_MAX_PER_SECTOR * config.VIVEK_BOT_POSITION_NOTIONAL
+            == 15_000)
     # The per-market cap must never be the tighter of the two, or a market
-    # could not hold the whole book and "30 total, flexible" would be a lie.
+    # could not hold the whole book and "60 total, flexible" would be a lie.
     assert config.VIVEK_BOT_MAX_POSITIONS >= config.VIVEK_BOT_MAX_OPEN_TOTAL
 
 
@@ -124,12 +136,13 @@ def test_an_unreadable_sibling_book_stops_new_entries_rather_than_guessing():
 
 
 def test_the_sector_cap_still_binds_inside_the_bigger_book():
-    # 20 setups, all one sector, and 30 slots of global room: the correlation
+    # 20 setups, all one sector, and 60 slots of global room: the correlation
     # control is what must stop this becoming one macro bet, not the book size.
+    # (The cap's own value is pinned once, in the owner's-decision test above.)
     d = vb.decide(_rows(20, sectors=["Materials"]), equity=10_000, market="asx",
-                  open_book=[], max_open_total=30, open_elsewhere=0)
+                  open_book=[], max_open_total=60, open_elsewhere=0)
     assert len(d["plans"]) == config.VIVEK_BOT_MAX_PER_SECTOR
-    assert d["summary"]["skip_reasons"]["sector_cap"] == 17
+    assert d["summary"]["skip_reasons"]["sector_cap"] == 20 - config.VIVEK_BOT_MAX_PER_SECTOR
 
 
 # ── vivek_run._open_elsewhere(): the cross-market count ──────────────────────
@@ -205,7 +218,8 @@ def test_untagged_rows_in_a_sibling_book_are_still_counted(book_dir):
 # ── the correlation control the owner kept, and where it does NOT reach ──────
 #
 # He left the sector cap at 3 precisely so a 30-position book could not become
-# one macro bet. On NASDAQ it cannot do that job: universe._fetch_nasdaq has no
+# one macro bet (and moved it to 6 with the 60-slot $2,500 book on 2026-09-27,
+# the same $15,000 of one sector per market). On NASDAQ it cannot do that job: universe._fetch_nasdaq has no
 # sector column, so every row arrives with sector='' and decide() exempts them.
 # These tests PIN THE HOLE rather than paper over it — fixing it changes which
 # trades get taken (bot risk = owner's call), so when he says go, the first two
@@ -259,8 +273,11 @@ def test_the_dashboard_is_told_about_the_global_cap():
     import inspect
 
     from scanner import run as scanner_run
-    src = inspect.getsource(scanner_run.main)
+    # The payload is built by bot_rules_payload() (2026-09-28): main() and
+    # resize_book.yml both publish it, so that is where the key must live.
+    src = inspect.getsource(scanner_run.bot_rules_payload)
     assert '"max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL' in src
+    assert scanner_run.bot_rules_payload()["max_open_total"] == config.VIVEK_BOT_MAX_OPEN_TOTAL
 
 
 # ── TOP100 #22: the caps count a field they never validated ──────────────────

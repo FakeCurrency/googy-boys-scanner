@@ -124,6 +124,90 @@ def tag_sources(vk: dict, market_key: str, src_report: dict) -> None:
         r["data_source"] = src_of.get(f"{r.get('symbol')}{suffix}", "cache")
 
 
+def bot_rules_payload() -> dict:
+    """The executing bot's rules as published to public/data/bot_rules.json.
+
+    Pure: reads config and the clock, writes nothing. ONE builder, two writers
+    (2026-09-28). main() publishes it after every scan; resize_book.yml's
+    resize loop republishes it in the SAME commit as the restated open book.
+    Before that second writer existed, the restatement landed first and the
+    rules followed at the next scanner.run (up to ~an hour later), and in that
+    window journal.js's off-scale marker told the owner every freshly restated
+    $2,500 row was "held at $2,500 - the book now sizes each position at
+    $5,000", with the deck / status / stalled caps reading 30 of 30. Both
+    writers call this function and output.write_json(..., newline=True), so
+    the two publishes differ only in generated_at.
+    """
+    # Publish the executing bot's ACTUAL rules (scanner/config.py) so the
+    # dashboard risk engine reads the same numbers instead of drifting on its
+    # own JS defaults (2026-07-09 — the two engines had already diverged: at
+    # that time Python risked 0.35%/10 positions while the JS defaults said
+    # 0.25%/5. Both numbers below are read live from config, so don't update
+    # that parenthetical when the caps move — it is a record of the drift that
+    # motivated publishing them, not a statement about today's rules).
+    rules = {
+        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source": "scanner/config.py — single source of truth for bot rules",
+        # 2026-09-21: `grades` + `entry_cells` replace the retired min_grade /
+        # skip_entry_types / prefer_tf trio (the bot trades the deck's four
+        # conviction cells at A/A+). The old keys are NOT republished — a
+        # reader that still wants them is reading a rule that no longer exists.
+        "grades": list(config.VIVEK_BOT_GRADES),
+        "entry_cells": {tf: list(ets) for tf, ets in config.VIVEK_BOT_ENTRY_CELLS.items()},
+        "cycle_tag": config.VIVEK_BOT_CYCLE_TAG,
+        "min_rr": config.VIVEK_BOT_MIN_RR,
+        "allow_shorts": config.VIVEK_BOT_ALLOW_SHORTS,
+        "max_positions": config.VIVEK_BOT_MAX_POSITIONS,
+        "max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL,
+        # Sizing (2026-07-28): position_notional > 0 means FIXED-NOTIONAL mode
+        # and risk_pct is then a derived per-trade figure, not an input. The
+        # journal mirrors these, so publishing them is what keeps the page's
+        # dollar P&L on the same basis as the executing bot.
+        "position_notional": config.VIVEK_BOT_POSITION_NOTIONAL,
+        "max_portfolio_notional": config.VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL,
+        "account_equity": config.VIVEK_BOT_ACCOUNT_EQUITY,
+        "risk_pct": config.VIVEK_BOT_RISK_PCT,
+        "leverage": dict(config.VIVEK_BOT_LEVERAGE),
+        "max_daily_loss_pct": config.VIVEK_BOT_MAX_DAILY_LOSS_PCT,
+        "exclude_funds": config.VIVEK_BOT_EXCLUDE_FUNDS,
+        # Tradeability gates (2026-07: quality-of-fill filters, not strategy)
+        "min_price": dict(config.VIVEK_BOT_MIN_PRICE),
+        "max_stop_pct": config.VIVEK_BOT_MAX_STOP_PCT,
+        "min_stop_pct": config.VIVEK_BOT_MIN_STOP_PCT,
+        "max_per_sector": config.VIVEK_BOT_MAX_PER_SECTOR,
+        # The synthetic crypto buckets _sector_key builds at decide time
+        # (majors -> "crypto-major", the rest -> "crypto-alt"). Published
+        # (2026-08-20) so the deck's sector-cap badge can reproduce the SAME
+        # bucketing the bot blocks on, instead of guessing at it.
+        "crypto_majors": list(config.VIVEK_BOT_CRYPTO_MAJORS),
+        "min_adv": dict(config.VIVEK_BOT_MIN_ADV),
+        "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
+        "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,
+        "reentry_cooldown_days": config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS,
+        "max_data_age_days": config.VIVEK_BOT_MAX_DATA_AGE_DAYS,
+        "earnings_buffer_days": config.VIVEK_BOT_EARNINGS_BUFFER_DAYS,
+        "max_weekly_loss_pct": config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT,
+        # Cost model (bps) — mirrored by the journal + cloud watcher
+        "commission_bps": dict(config.VIVEK_COMMISSION_BPS),
+        "slippage_bps": dict(config.VIVEK_SLIPPAGE_BPS),
+        # Exit ladder (TOP100 #33). public/js/journal.js re-typed these three
+        # fractions as a JS literal and nothing ever compared the two, so the
+        # page's booked-R for every scaled exit rode on a copy that could drift
+        # from the executing ladder without a single test failing. Publishing
+        # them lets the journal ADOPT the real ones and shout when they differ,
+        # which is the same contract every other number here already has.
+        "tp_scale": {
+            "long": list(config.VIVEK_TP_SCALE_LONG),
+            "short": list(config.VIVEK_TP_SCALE_SHORT),
+        },
+        # Portfolio limits the browser-side risk engine re-declared as its own
+        # defaults (TOP100 #34) — published so it can stop guessing.
+        "consec_loss_pause": config.CONSEC_LOSS_PAUSE,
+        "portfolio_heat_limit_pct": round(config.PORTFOLIO_HEAT_LIMIT * 100, 4),
+    }
+    return rules
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fibonacci-EMA market scanner")
     parser.add_argument(
@@ -276,9 +360,9 @@ def main() -> None:
             # Track-record journal RETIRED (owner 2026-07-09): it logged EVERY
             # armed A+/A on every timeframe with no position cap — 200+ open
             # trades whose early expectancy read as noise. The bot book
-            # (A+ only, a 30-position ceiling across all markets, one per
-            # symbol, 3 per sector) is the only track
-            # record now. vivek_journal.py stays: the backtester and the bot
+            # (A/A+ four-cell longs, a 60-position ceiling across all markets
+            # at $2,500 a position since 2026-09-27, one per symbol, 6 per
+            # sector per market) is the only track record now. vivek_journal.py stays: the backtester and the bot
             # runner import its trade-management primitives.
 
             # $0 forward archive (owner order 2026-08-15): persist the day's
@@ -358,74 +442,11 @@ def main() -> None:
     except Exception as e:
         print(f"  fx: skipped ({e})", flush=True)
 
-    # Publish the executing bot's ACTUAL rules (scanner/config.py) so the
-    # dashboard risk engine reads the same numbers instead of drifting on its
-    # own JS defaults (2026-07-09 — the two engines had already diverged: at
-    # that time Python risked 0.35%/10 positions while the JS defaults said
-    # 0.25%/5. Both numbers below are read live from config, so don't update
-    # that parenthetical when the caps move — it is a record of the drift that
-    # motivated publishing them, not a statement about today's rules).
-    rules = {
-        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source": "scanner/config.py — single source of truth for bot rules",
-        # 2026-09-21: `grades` + `entry_cells` replace the retired min_grade /
-        # skip_entry_types / prefer_tf trio (the bot trades the deck's four
-        # conviction cells at A/A+). The old keys are NOT republished — a
-        # reader that still wants them is reading a rule that no longer exists.
-        "grades": list(config.VIVEK_BOT_GRADES),
-        "entry_cells": {tf: list(ets) for tf, ets in config.VIVEK_BOT_ENTRY_CELLS.items()},
-        "cycle_tag": config.VIVEK_BOT_CYCLE_TAG,
-        "min_rr": config.VIVEK_BOT_MIN_RR,
-        "allow_shorts": config.VIVEK_BOT_ALLOW_SHORTS,
-        "max_positions": config.VIVEK_BOT_MAX_POSITIONS,
-        "max_open_total": config.VIVEK_BOT_MAX_OPEN_TOTAL,
-        # Sizing (2026-07-28): position_notional > 0 means FIXED-NOTIONAL mode
-        # and risk_pct is then a derived per-trade figure, not an input. The
-        # journal mirrors these, so publishing them is what keeps the page's
-        # dollar P&L on the same basis as the executing bot.
-        "position_notional": config.VIVEK_BOT_POSITION_NOTIONAL,
-        "max_portfolio_notional": config.VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL,
-        "account_equity": config.VIVEK_BOT_ACCOUNT_EQUITY,
-        "risk_pct": config.VIVEK_BOT_RISK_PCT,
-        "leverage": dict(config.VIVEK_BOT_LEVERAGE),
-        "max_daily_loss_pct": config.VIVEK_BOT_MAX_DAILY_LOSS_PCT,
-        "exclude_funds": config.VIVEK_BOT_EXCLUDE_FUNDS,
-        # Tradeability gates (2026-07: quality-of-fill filters, not strategy)
-        "min_price": dict(config.VIVEK_BOT_MIN_PRICE),
-        "max_stop_pct": config.VIVEK_BOT_MAX_STOP_PCT,
-        "min_stop_pct": config.VIVEK_BOT_MIN_STOP_PCT,
-        "max_per_sector": config.VIVEK_BOT_MAX_PER_SECTOR,
-        # The synthetic crypto buckets _sector_key builds at decide time
-        # (majors -> "crypto-major", the rest -> "crypto-alt"). Published
-        # (2026-08-20) so the deck's sector-cap badge can reproduce the SAME
-        # bucketing the bot blocks on, instead of guessing at it.
-        "crypto_majors": list(config.VIVEK_BOT_CRYPTO_MAJORS),
-        "min_adv": dict(config.VIVEK_BOT_MIN_ADV),
-        "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
-        "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,
-        "reentry_cooldown_days": config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS,
-        "max_data_age_days": config.VIVEK_BOT_MAX_DATA_AGE_DAYS,
-        "earnings_buffer_days": config.VIVEK_BOT_EARNINGS_BUFFER_DAYS,
-        "max_weekly_loss_pct": config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT,
-        # Cost model (bps) — mirrored by the journal + cloud watcher
-        "commission_bps": dict(config.VIVEK_COMMISSION_BPS),
-        "slippage_bps": dict(config.VIVEK_SLIPPAGE_BPS),
-        # Exit ladder (TOP100 #33). public/js/journal.js re-typed these three
-        # fractions as a JS literal and nothing ever compared the two, so the
-        # page's booked-R for every scaled exit rode on a copy that could drift
-        # from the executing ladder without a single test failing. Publishing
-        # them lets the journal ADOPT the real ones and shout when they differ,
-        # which is the same contract every other number here already has.
-        "tp_scale": {
-            "long": list(config.VIVEK_TP_SCALE_LONG),
-            "short": list(config.VIVEK_TP_SCALE_SHORT),
-        },
-        # Portfolio limits the browser-side risk engine re-declared as its own
-        # defaults (TOP100 #34) — published so it can stop guessing.
-        "consec_loss_pause": config.CONSEC_LOSS_PAUSE,
-        "portfolio_heat_limit_pct": round(config.PORTFOLIO_HEAT_LIMIT * 100, 4),
-    }
-    output.write_json(pathlib.Path(args.out) / "bot_rules.json", rules, newline=True)
+    # Publish the executing bot's ACTUAL rules. The payload is built by
+    # bot_rules_payload() (module level, above) so resize_book.yml can
+    # republish the SAME bytes in the commit that restates the book.
+    output.write_json(pathlib.Path(args.out) / "bot_rules.json", bot_rules_payload(),
+                      newline=True)
 
     # TOP100 #67 — the exit, placed HERE rather than inside the loop on purpose.
     # Raising at the throw site would skip the sectors / breadth / HORIZON /

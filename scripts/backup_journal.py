@@ -64,7 +64,7 @@ BACKUP_FILES = [
     # in a different way.
     #
     #   data/sector_map.json          a SIGNAL PATH since REFINEMENTS #38 - it
-    #   public/data/sector_map.json   decides which rows the 3-per-sector cap
+    #   public/data/sector_map.json   decides which rows the per-sector cap
     #                                 can see, so a wipe changes which trades
     #                                 get taken until it refills. It accretes
     #                                 across scans (seeded from the open book)

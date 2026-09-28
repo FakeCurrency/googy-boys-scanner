@@ -61,6 +61,7 @@ scanner/               VIVEK + Specs engines, bot, alerts
   vivek.py             VIVEK 5.0 engine (levels W/3D/D, plans, grading, narrative)
   scan.py              scan_vivek_market → public/data/<m>_vivek.json
   run.py               CLI: python -m scanner.run [--market ...]; publishes bot_rules.json
+                       (`bot_rules_payload()` — resize_book.yml calls it too)
   spec.py + spec_run.py    Specs lens (asx+nasdaq) → <m>_spec.json
   ignition/            IGNITION lens (crypto, REPORT-ONLY): coil -> ignition
                        screen + replay → public/data/ignition/ (see IGNITION)
@@ -75,8 +76,9 @@ scanner/               VIVEK + Specs engines, bot, alerts
   conviction.py        HIGH CONVICTION — the one four-cell definition every
                        Python reader imports; app.js/chart.js carry the same
                        table as a JSON literal, parity test-pinned (2026-09-20)
-  broker/              vivek_bot.py (decision engine: A+ only, 30 open TOTAL
-                       across all markets, one/symbol, 3/sector PER MARKET), vivek_run.py (paper book),
+  broker/              vivek_bot.py (decision engine: A/A+ four-cell longs, 60 open
+                       TOTAL across all markets at $2,500 each, one/symbol, 6/sector
+                       PER MARKET — SIZING 2, live from its merge), vivek_run.py (paper book),
                        kill_switch (+ bybit_client/alpaca_client for its
                        flatten path), alert_router/alert_dispatch, vivek_guard.
                        The scalp-era risk stack (risk_manager, circuit_breaker,
@@ -92,8 +94,9 @@ journal/               bot book + state files committed by Actions
 data_universe/         bundled ticker CSVs (fallbacks)
 scripts/               CI-side one-offs and helpers, NOT imported by the engine
   reco_note.py         daily auto-written commentary (reco_note.yml)
-  resize_book_notional.py      one-off: restates the OPEN book at the current
-                       fixed notional. Dry by default, idempotent, --apply
+  resize_book_notional.py      restates the OPEN book at the current fixed
+                       notional (run 2026-07-28 → $5,000; → $2,500 by resize_book.yml
+                       at the SIZING 2 merge). Dry by default, idempotent, --apply/--check/--kick
 ```
 
 ## Workflows (current)
@@ -101,7 +104,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | Workflow | Schedule | Does |
 |---|---|---|
 | dispatch_scan.yml | on push to itself or `.github/scan-kick` | turns a PUSH into a real `workflow_dispatch` of scan.yml (`market=all`). **The only way a cloud Claude session can trigger a scan** — these sessions can push but cannot reach api.github.com or POST to /api/scan. Touch `.github/scan-kick`, push, done. `permissions: actions: write`; GITHUB_TOKEN-created dispatches DO start runs (the documented exception to the no-recursive-workflows guard) |
-| test.yml | every push/PR | pytest + 15 JS suites + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — **and since 2026-07-28 that rule is a GATE, not a convention** (`test_screenshot_determinism.py::test_every_javascript_suite_has_a_step_in_the_workflow` fails the push instead of letting the suite pass locally and never run) — the newest is `screenshot_sentinel.test.js`. New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) |
+| test.yml | every push/PR | pytest + every `test/*.test.js` suite (24 at 2026-09-28; count them in test.yml, not here) + syntax gate. A new `test/*.test.js` needs its own step here or it never runs — **and since 2026-07-28 that rule is a GATE, not a convention** (`test_screenshot_determinism.py::test_every_javascript_suite_has_a_step_in_the_workflow` fails the push instead of letting the suite pass locally and never run). New `tests/*.py` files need NO registration (`pytest` collects the directory). The path filter now includes `scripts/**`, `pytest.ini`, `public/css/**`, `public/*.html` and `.github/workflows/**` — each was read by a suite that did not run when you edited it (TOP100 #48) — plus `.github/resize-kick` (2026-09-27: `tests/test_resize_book_workflow.py` reads it, and the push that touches it is the one that restates the open book) |
 | scan.yml | **MARKET HOURS ONLY (2026-09-21)** — the crons are a deliberate SUPERSET and the gate job asks the tz database, in the market's own calendar, whether now is inside that market's window (`config.MARKET_SCAN_WINDOWS`: ASX 11:00–16:45 Sydney, NASDAQ 10:30–16:45 New York, weekdays). One STOCK market per run, never `all`, never crypto, nothing outside a session. Delivers 7 ASX scans 11:07→16:30 and 7 NASDAQ 10:37→16:07 local, IDENTICALLY in all four DST regimes. `:47` closing backstops per market | VIVEK scans + bot book + confluence alert |
 | crypto_bot.yml | `:22` + `:52`, EVERY hour, EVERY day (2026-09-21 — the weekday window-ownership gate is GONE; it only existed because scan.yml used to scan crypto too). `:52` is a freshness backstop that skips when fresh | crypto scan + crypto slice of the bot book |
 | confluence.yml | daily 08:45 UTC | post-nightly confluence ping (scan group SOLELY owns the dedupe state) |
@@ -111,8 +114,9 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | lens_backtest.yml | weekly Sun | PhaseMap/Specs/VIVEK replays → owns `public/data/vivek_backtest.json` (Insights reads it) |
 | vivek_backtest.yml | monthly 1st | LONG-ONLY evidence → `vivek_backtest_longonly.json` ONLY |
 | kill_switch.yml | half-hourly 24/7 | loss check on the BOT BOOK per market, open positions re-priced with LIVE quotes (fallback: last-scan marks); broker flatten only if keys set. Hosts the freshness watchdog (scanner/watchdog.py) + a best-effort piggyback /api/tick (2026-08-27, see stop_watcher row) |
-| stop_watcher.yml | */5 cron, TICK LOOP per run | curls /api/tick (cloud watcher for the KV manual journal). REWRITTEN 2026-08-27: GitHub coalesces the 5-min cron to ~31 starts/day (gaps to 115 min, measured), so each run now fires 4 ticks at 5-min spacing (~15 min runner time; repo is public so minutes are free), and kill_switch.yml + crypto_bot.yml each fire a best-effort piggyback tick per run — combined ≈ a tick every ~8 min real-world. Verdict taxonomy unchanged: 503 green+warn (setup gap), 000 green+warn per tick, continue the loop (watchdog owns the alarm), 401/5xx fatal immediately. All behaviourally pinned in `test_workflow_hardening.py` |
-| close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
+| stop_watcher.yml | **REMOVED 2026-09-21** with the manual journal (see MY JOURNAL) — HISTORY: */5 cron, TICK LOOP per run | curls /api/tick (cloud watcher for the KV manual journal). REWRITTEN 2026-08-27: GitHub coalesces the 5-min cron to ~31 starts/day (gaps to 115 min, measured), so each run now fires 4 ticks at 5-min spacing (~15 min runner time; repo is public so minutes are free), and kill_switch.yml + crypto_bot.yml each fire a best-effort piggyback tick per run — combined ≈ a tick every ~8 min real-world. Verdict taxonomy unchanged: 503 green+warn (setup gap), 000 green+warn per tick, continue the loop (watchdog owns the alarm), 401/5xx fatal immediately. All behaviourally pinned in `test_workflow_hardening.py` |
+| close_position.yml | manual | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp = legacy journals. `batch` closes up to 60 in one run (= the book cap since 2026-09-27; was 30 — see SIZING 2). Auto re-dispatches itself (max 3) if the scan mutex evicts it — 2026-07-28, see below |
+| resize_book.yml | push to main touching `.github/resize-kick` + manual (`apply` defaults FALSE = dry run; apply only from main) — NO cron | ONE-SHOT open-book restatement (2026-09-27, owner-approved — see SIZING 2). `preview` job OUTSIDE the mutex runs `resize_book_notional.py --check --kick` into the step summary: 0 = green no-op, 3 = rows pending, anything else red (a traceback's 1 never reads as "pending"; 4 = an off-target row the script cannot restate, named). `resize` job JOB-scoped in `group: scan`, `ref: main`, 5 attempts that each `git fetch` + `reset --hard origin/main` and RE-RUN the idempotent resize (regenerate, never replay), a `--check` postcondition re-read off disk, `vivek_run --verify`, then REPUBLISHES `public/data/bot_rules.json` from the same checkout (`scanner.run.bot_rules_payload()`, run.py's own writer) so the restated book and the rules describing it land in ONE commit (2026-09-28); one-path `git add` with no `\|\| true`, assert_staged on the three CANONICAL books only (the combined pair and bot_rules.json are DERIVED — staged and diff-checked, never gated: bot_rules.json's `generated_at` would satisfy an any-of gate on every run). `evicted` job turns a cancelled/evicted resize RED with the remedy — deliberately NO auto-redispatch (nothing is lost, only delayed, and the delay is fail-safe) and NO WATCHDOG_RUNS entry (a one-shot must not ring for ever). Pins: `tests/test_resize_book_workflow.py` |
 | test_alerts.yml | manual | alert-path self-test: forces one test message through every configured channel (`watchdog --test-alert`); run after any alert-secret change, read the job summary |
 | evidence_brief.yml | daily 21:00 UTC (7am/8am Melb) | runs `scripts/evidence_brief.py` byte-untouched and delivers the printed brief to the step summary (the Discord leg was removed 2026-08-27 with the whole channel). READ-ONLY: contents read, no git, NOT in the scan mutex, no assert_staged/WATCHDOG entry (it commits nothing). The script's exit 1 ("brief names an ISSUE") stays a GREEN run — the issue reaches the owner inside the brief; the watchdog owns staleness alarms. Pins: `tests/test_evidence_brief_workflow.py` |
 | morning_plays.yml | backstop crons in UTC behind the cron-job.org ladder: `50 5`+`50 6` (ASX, ~20 min after the 16:30 market-local closing scan — one per DST regime) plus `50 7`+`50 8` as late backstops · `50 21`+`50 22` (NASDAQ+Crypto, after the post-close scan), Mon–Fri — gated on POST-CLOSE data, see MORNING PLAYS | `scripts/morning_plays.py` posts the day's HIGH-CONVICTION VIVEK 5.0 plays (LONG only, no funds/REITs; clean `SYMBOL -> label` text) to Discord (owner ask 2026-09-08, rescheduled 2026-09-09). TWO market-specific slots ~30 min after each close: ASX in the arvo, NASDAQ+Crypto next morning. DELAY-PROOF (rebuilt 2026-09-10 — the v1 hour-exact gate missed a whole day when GitHub ran the crons 2–5h late): each cron maps to a slot NAME (`--slot`, via `github.event.schedule`) and sends when Melbourne is at/past target AND a per-day marker says it hasn't gone out today, so a late cron still lands and the second DST cron can't double. 7-day ticker de-dup + per-day slot markers share a `.cache` state file (actions/cache, watchdog pattern) — READ-ONLY: reads the COMMITTED `<market>_vivek.json`, no scan/Yahoo/mutex, no git/assert_staged/WATCHDOG (evidence_brief pattern). Its OWN secret `DISCORD_MORNING_WEBHOOK_URL` (NOT the removed alert webhook — see MORNING PLAYS below); absent = warn + exit 0. Delivery failure = exit 1 (loud). Pins: `tests/test_morning_plays.py` |
@@ -124,7 +128,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 
 (Table refreshed 2026-07-20 — discord_digest.yml deleted; notify/alerts/pulse/
 paper_run/bracket_order/reconcile modules deleted. evidence_brief.yml added
-2026-08-01.)
+2026-08-01. resize_book.yml added 2026-09-27.)
 
 ### ALERT DELIVERY — the channel was dead behind TWO stacked failures (2026-08-01)
 
@@ -336,11 +340,17 @@ Python paths shrug it off and now the curl paths do too, but re-pasting it
 clean remains worth doing in the same sitting as any secrets change.
 
 **The `scan` mutex is JOB-scoped, deliberately (2026-07-28 — REFINEMENTS #108,
-#109).** scan.yml, crypto_bot.yml and close_position.yml share concurrency
-`group: scan` so two writers can never touch the paper book at once
-(load-bearing: the 30-position cap is global, so concurrent writers could each
-read "23 open" and both open). That group sits on the *scan* / *crypto* / *close*
-JOBS, not at workflow level. GitHub keeps only ONE pending run per group and
+#109).** scan.yml, crypto_bot.yml, close_position.yml and (2026-09-27)
+resize_book.yml share concurrency `group: scan` so two writers can never touch
+the paper book at once (load-bearing: the position cap — 60 since 2026-09-27 —
+is global, so concurrent writers could each read "59 open" and both open). That
+group sits on the *scan* / *crypto* / *close* / *resize* JOBS, not at workflow
+level (confluence.yml is the one WORKFLOW-level member, and never writes the
+book). `test_workflow_mutex.py::test_every_job_scoped_member_of_the_group_is_listed_here`
+enumerates job-level members from the tree, and
+`test_every_workflow_scoped_member_of_the_group_is_listed_here` does the same
+against `WORKFLOW_SCOPED` (2026-09-28), so a new writer cannot join the group
+at either level without joining the pins. GitHub keeps only ONE pending run per group and
 cancels the previously-pending one, so workflow-level scoping put the cheap gate
 jobs in the same queue — every `:47` ASX backstop was being evicted by the `:52`
 crypto arrival five minutes later, before it could probe, and a manual close
@@ -355,15 +365,51 @@ alive, so the `redispatch` job — deliberately OUTSIDE the group — can see it
 input; only fires when the close executed zero steps (an eviction never starts
 the job, whereas a human Cancel leaves finished steps behind); waits for the
 group's pending slot to clear first so the retry does not evict its evictor.
+Its `WATCHED` list and job-name filter include "Resize open book" / `resize`
+(2026-09-27): the resize's `preview` runs outside the mutex, so its RUN reads
+in_progress while the mutex JOB queues, and an unwatched retry would evict it.
+
+**THE MUTEX SERIALISED THE WRITES, NOT THE READS — writer jobs now check out
+the branch TIP (2026-09-27, found building resize_book.yml).** `actions/checkout`
+with no `ref` checks out `github.sha`, the commit the run was TRIGGERED on,
+fixed when the run is created. A writer job that waited in `scan` behind
+another writer therefore loaded a book OLDER than main's, and scan.yml /
+crypto_bot.yml's push loops replay their copy of `journal/vivek_bot_book.<m>.json`
+over the newer one — silently reverting a manual close, a same-market scan or
+the open-book resize (reproduced in a scratch repo: BNB went back to $5,000
+with `resized_at` gone, and `--verify` still passed, because it checks
+consistency, not whose write won). The `scan`, `crypto` and `close` jobs now
+check out `ref: ${{ github.ref }}` (the branch tip when the job STARTS, i.e.
+after acquiring the mutex; a branch dispatch stays on its branch) and `resize`
+checks out `ref: main`. confluence.yml's job does the same (2026-09-28): as the
+workflow-level member its checkout already runs after the lock, and at the
+trigger SHA its push loop (`git checkout "$SHA" --`) could replay a stale
+`journal/confluence_state.json` / `public/data/phasemap/alert_history.json`
+over scan.yml's newer copy. Pinned for every member, JOB- and WORKFLOW-scoped,
+by `test_a_queued_writer_reads_main_as_of_acquiring_the_mutex_not_as_of_queueing`.
+scan.py's `code_sha` stamp followed (2026-09-28): `_code_sha()` asks
+`git rev-parse HEAD` first and falls back to `GITHUB_SHA`, so the deck's
+"built from" tooltip names the code that ran, not the trigger
+(`tests/test_code_sha.py`). **The one mismatch left is structural:** a queued
+run executes its TRIGGER-SHA workflow steps against TIP code, so a commit that
+renames a scan output path (in code and in a PATHS / assert_staged list) should
+keep the old path written and staged for one cycle — a run queued across that
+commit stages and asserts the OLD list against the NEW code, so it would stage
+too little or fail its gate once.
 
 **Silent-failure protection (2026-07-20, Phase 5; extended 2026-07-28 by TOP100
-Tier 3).** Callers of `scripts/assert_staged.sh`, in full: scan, crypto_bot,
-phasemap, backup_book, reco_note, and — new in Tier 3 — close_position, gated to
+Tier 3).** Callers of `scripts/assert_staged.sh`, in full as of 2026-09-28
+(re-derive with `grep -n "bash scripts/assert_staged.sh" .github/workflows/*.yml`
+— a comment naming it is not a call): scan, crypto_bot, phasemap, backup_book,
+reco_note, alert_returns, momentum, and — new in Tier 3 — close_position, gated to
 `journal_type=bot` only (see "Tier 3" below for why the swing/scalp path must
-stay a green no-op). `confluence.yml` deliberately has NO assert_staged and
-gates on an UNSTAGED working tree instead; `backfill_history.yml` deliberately
-has none at all. Both absences are pinned by tests so they read as decisions
-rather than omissions. Every caller runs it after
+stay a green no-op); and (2026-09-27) resize_book, gated BEHIND its `--check`
+exit-3 discriminator so an already-applied re-kick stays an honest green no-op.
+`confluence.yml` deliberately has NO assert_staged and
+gates on an UNSTAGED working tree instead
+(`test_workflow_hardening.py::test_confluence_gates_on_unstaged_rather_than_on_changed`
+pins that as a decision rather than an omission); `backfill_history.yml`
+deliberately had none at all (it went with HORIZON, 2026-09-20). Every caller runs it after
 staging — a scheduled run that stages none of its must-change outputs FAILS
 loudly instead of finishing green (the Phase 3 staging bug ran green 5x while
 committing nothing). `scanner/watchdog.py` (hosted in kill_switch.yml +
@@ -505,18 +551,22 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
   construction); `journal/vivek_bot_book.json` + the public twin are a DERIVED
   combined view (same old schema; regenerate with
   `python -m scanner.broker.vivek_run --rebuild-combined`; audit with
-  `--verify` — the scan/close workflows run it as a failing gate). A+ only (grade_raw,
-  unsmoothed), **max 30 open across ALL markets combined** (owner, 2026-07-28 —
+  `--verify` — the scan/close workflows run it as a failing gate). A/A+ longs in
+  the four cells (grade_raw, unsmoothed — A+ only until 2026-09-21, see THE BOT
+  TRADES THE FOUR CELLS), **max 60 open across ALL markets combined** (owner,
+  2026-07-28 at 30; 60 since 2026-09-27 — see SIZING 2 —
   `VIVEK_BOT_MAX_OPEN_TOTAL`; the per-market cap is set equal to it so one market
   CAN hold the whole book, and `vivek_run._open_elsewhere` counts the sibling
   market files before each decision — fail-closed if one is unreadable), one per
-  symbol, **3 per sector PER MARKET** (not global — see below), daily+weekly loss
+  symbol, **6 per sector PER MARKET** (3 until 2026-09-27 — $15,000 of one
+  sector either way; not global — see below), daily+weekly loss
   guards, manual close via close_position.yml journal_type=bot.
 - **The correlation cap is the only limit that is still per-market**
-  (REFINEMENTS #113, owner decision). Positions (30), notional ($150,000) and
-  one-per-symbol are all cross-market; `decide()` seeds `sector_counts` from the
-  single market's `open_book`, so 3 ASX financials + 3 NASDAQ financials is six
-  of one real sector with every check passing. Not repaired — tightening what
+  (REFINEMENTS #113, owner decision; the 2026-09-27 resize kept it per-market).
+  Positions (60), notional ($150,000) and one-per-symbol are all cross-market;
+  `decide()` seeds `sector_counts` from the single market's `open_book`, so 6 ASX
+  financials + 6 NASDAQ financials is twelve of one real sector ($30,000 — the
+  same dollars 3 + 3 were at $5,000) with every check passing. Not repaired — tightening what
   gets taken is the owner's call — but `sectorcache.global_sector_load` logs a
   per-scan WARNING naming any sector over the cap once all markets are counted.
   The fix, if wanted, is a `sectors` Counter on `_book_elsewhere` plus a
@@ -547,21 +597,28 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
   `sectorcache.diverging` as a scan warning; NOT repaired, because overwriting
   a non-blank sector is a trade change.
 - **Position sizing is FIXED NOTIONAL** (2026-07-28, owner: "5k position moving
-  forward on each 30 stocks and a cap of 150k"): `VIVEK_BOT_POSITION_NOTIONAL`
-  = $5,000 a position, `VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL` = $150,000 (the dollar
-  twin of the 30-slot cap), `VIVEK_BOT_ACCOUNT_EQUITY` = $150,000. Equity no
+  forward on each 30 stocks and a cap of 150k"; halved to $2,500 × 60 on
+  2026-09-27 — see SIZING 2): `VIVEK_BOT_POSITION_NOTIONAL`
+  = $2,500 a position (was $5,000), `VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL` = $150,000
+  (the dollar twin of the 60-slot cap, as it was of 30 × $5,000),
+  `VIVEK_BOT_ACCOUNT_EQUITY` = $150,000. Equity no
   longer sizes positions — it scales the loss guards and the leverage ceiling,
   which is why it had to move with the book. **The dollars RISKED now vary with
-  the stop distance** (~$50–$1,250, typically $250–$500); position COUNT is the
+  the stop distance** (~$25–$625, typically $125–$250 at $2,500; ~$50–$1,250 /
+  $250–$500 at the old $5,000); position COUNT is the
   risk dial, not position size. Do not "fix" that by re-clamping `risk_pct` in
   fixed mode — see `tests/test_fixed_notional.py`. Set
   `VIVEK_BOT_POSITION_NOTIONAL = 0` to restore the old 0.35%-risk path exactly.
   The `open_book` projection `run_market` hands `decide()` carries `notional`
   (2026-07-28): `decide()` seeds `open_notional` from it, so omitting the field
   made the $150,000 ceiling count every market's exposure EXCEPT the one it was
-  deciding for. Latent while every position is $5,000 and the 30-slot cap binds
-  first at exactly $150,000 — but it is a risk cap reading a number it believes
-  is complete, so it is fixed rather than noted.
+  deciding for. Latent while every position is the same size and the slot cap
+  binds first at exactly $150,000 — but it is a risk cap reading a number it
+  believes is complete, so it is fixed rather than noted. (Not latent across a
+  size cut: on 2026-09-27 the 30 open $5,000 rows filled the $150,000 by
+  themselves, so until the open book is restated this ceiling — not the slots —
+  refuses every $2,500 entry as `notional_cap`. Fail-safe, and the reason the
+  resize runs at merge.)
   - **The book WAS a mixture; the owner chose to end it (2026-07-28).** The
     config landed at 03:34 UTC; the scan already running had checked out before
     it, so the six ASX positions filled at 03:39 were still sized by the old
@@ -574,7 +631,8 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
     `scripts/resize_book_notional.py` — see the RESIZE section below for what it
     restated and what it refused to touch. The book is now uniformly
     `fixed_notional`, 24 × $5,000 = **$120,000 of the $150,000 cap**.
-  - **Dollar P&L is not a like-for-like series across 2026-07-28. R is.** This
+  - **Dollar P&L is not a like-for-like series across 2026-07-28 (nor across
+    the SIZING 2 resize commit). R is.** This
     is not a caveat, it is arithmetic: R divides by the position's own initial
     risk, so scaling the size cancels out of it. The live proof from the resize
     — total open P&L went **+$50.84 → −$715.16 while total open R did not move
@@ -591,6 +649,10 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
     new one once either number is retuned.
 
 ### RESIZE — restating the legacy book (2026-07-28, `scripts/resize_book_notional.py`)
+
+(The figures below are the 2026-07-28 run. The script's second use is
+$5,000 → $2,500 (2026-09-27), applied at merge by resize_book.yml — see SIZING 2
+for what changed in it. The ruling not to pass `--max-stop-pct` still stands.)
 
 - **It is a restatement, not a trade.** Nothing was bought, sold or re-marked.
   Every row kept the price it was actually filled at and the stop it was
@@ -648,6 +710,76 @@ GitHub Actions secret. It is a credential; do not generate or handle one.
 - Tests: `tests/test_resize_book_notional.py` (30). Most of them test what the
   script refuses to do, because that is where its whole defence lives.
 
+### SIZING 2 — $2,500 × 60 (2026-09-27, owner-approved)
+
+Approved 2026-09-27; the config and the restated book reach main AT THE MERGE
+(restated rows carry `resized_at`). "2026-09-27" elsewhere in this file is that
+approval date — main traded 30 × $5,000 until the merge commit.
+
+- **Moved** (`scanner/config.py`): `VIVEK_BOT_POSITION_NOTIONAL` 5,000 → **2,500**;
+  `VIVEK_BOT_MAX_POSITIONS` = `VIVEK_BOT_MAX_OPEN_TOTAL` 30 → **60**;
+  `VIVEK_BOT_MAX_PER_SECTOR` 3 → **6** (owner: keep the DOLLARS — 6 × $2,500 = 3 ×
+  $5,000 = $15,000 of one sector per market); `VIVEK_BOT_REVIEW_DAILY_LOSS_PCT`
+  15.0 → **7.5** (owner: flag the same stops — see REVIEW FLAGS). Still each
+  market's own currency (the 2026-07-29 ruling recorded in config carries).
+- **NOT moved:** equity and `VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL` ($150,000 each;
+  guards $4,500/day, $9,000/week per market), `MAX_STOP_PCT` 25, grades, cells,
+  level gate, cycle tag `hc4-1`. Entry RULES held but CAPACITY did not (fewer
+  `global_cap` / `sector_cap` skips live; `book_full` in `portfolio_sim` /
+  `vivek_parity`): hc4-1 rows opened after the merge come from a less-crowded
+  book, and both sims read the same constants — split any hc4-1 read or
+  slot-bound sim figure at the merge / resize commit, not at the calendar date.
+- **A selection change nobody asked for:** `size_vs_adv` refuses a notional above
+  2% of ADV (`VIVEK_BOT_MAX_NOTIONAL_PCT_ADV`) — below $250,000 ADV at $5,000,
+  below $125,000 now. ASX's $250,000 and NASDAQ's $2,000,000 `VIVEK_BOT_MIN_ADV`
+  floors refuse first; on crypto (floor 0) a name gating at $125k–$250k is newly
+  takeable. That is not a thin coin: the gate reads `vivek_run._enrich_adv`'s
+  mean(Close × Volume), and Yahoo crypto Volume is already USD, so crypto
+  `adv_usd` is price × dollar-volume and cheap coins gate low whatever their
+  liquidity (2026-09-28: XDC trades ~$8.4M a day and gates at ~$252k).
+  - **Open (found 2026-09-28, pre-existing, owner decision):** `_enrich_adv`
+    ignores `volume_is_usd`, which `scan.py::_liquidity`, `vivek_parity._adv_usd_at`
+    and `vivek_backtest` all honour, so live and parity disagree on cheap coins.
+    It can only wrongly REFUSE — scan.py's $3,000,000 crypto `liquidity_min` (real
+    dollar volume) drops a thin coin before the bot sees it — and only coins under
+    ~4c at $2,500 (125,000 ÷ the $3M floor; ~8c at $5,000) — so the cut narrowed
+    the band, and the newly-takeable names above are this bug relenting. The fix (thread `market` in; `mean(Volume)` when `volume_is_usd`; pin it
+    equal to `_adv_usd_at`) only ever ADDS takeable crypto trades, so it is not made.
+- **Owner ruling: restate the open book NOW** (the July precedent) — until the 30
+  open $5,000 rows are restated the $150,000 ceiling is full and every $2,500 entry
+  drops as `notional_cap`. The branch carries only the INTENT, `.github/resize-kick`
+  (one `target=2500` line; the script refuses, exit 2, unless it equals config),
+  and the merge push fires `resize_book.yml` to recompute from MAIN's book under
+  the scan mutex — a committed journal would conflict with or clobber newer marks.
+- **What the second use changed in the script** (tests 30 → 116): it sizes at
+  `signal_entry` (the plan price `decide()` sized at; `entry` fallback) against
+  `entry - risk`, so every row restates by exactly ×0.5; `review` flags are
+  RESCALED, not recomputed (`risk_usd`/`share_pct`/`note`; never added or
+  dropped), the as-taken list kept once in `review_before`; `summary` + `guard`
+  are rewritten via `vivek_run._restamp` for the day the stored guard describes,
+  so no $5,000 guard dollars linger (the "wrote" line says "guard NOT restamped"
+  if `_restamp` swallowed a guard failure); `--check` exits 0 at target /
+  3 pending / 4 stuck (an off-target row it cannot size, named; wins over 3 — `--apply`
+  refuses with 4 before writing anything) / 2 refused; a no-op `--apply` writes
+  nothing. A partial already BANKED on an open row restates with it (dollars are
+  `realized_r × risk_usd`): GLBE's tp1 (25%, banked at $5,000) reads $63.68 →
+  $31.84, R unchanged, and the report names every such row. Dry run 2026-09-28:
+  30 rows, $150,000 → $75,000, open risk $22,400.68 → $11,200.35; a whole-market
+  stop-out is ASX 100.4% / NASDAQ 135.4% / crypto 13.1% of the daily guard.
+- **Dollar P&L is not like-for-like across the resize commit either. R is.** The
+  92 closed $5,000 rows stay as held and read `fixed_notional` too, so journal.js's
+  `.jr-oldsize` marker now also underlines a fixed-notional row >1% off the
+  PUBLISHED `position_notional` — per cell only; $ totals still mix both sizes.
+  ASX rows' tooltip labels both figures A$ (face value, the currency ruling above).
+- **Close ceiling 30 → 60**: `functions/api/close.js`, journal.js `CLOSE_ALL_MAX`,
+  `vivek_run.CLOSE_BATCH_MAX` (= `VIVEK_BOT_MAX_OPEN_TOTAL`) and close_position.yml's
+  "Max 60.", pinned to config by `tests/test_close_ceiling_parity.py` (with status.js
+  `FALLBACK_CAP`, journal.js `POSITION_NOTIONAL`, system.html's rulebook cells).
+  `bot_rules.json` (the evidence brief now reads its cap there) is republished by
+  the resize commit itself (`scanner.run.bot_rules_payload()` → 60 / $2,500 / 6),
+  so the restated book and the rules describing it land together; between the
+  merge push and that commit both still say $5,000, which is consistent.
+
 ### REVIEW FLAGS — "should Claude take this, or should I?" (2026-07-28)
 
 Owner, in the same breath as declining the trim: *"Flag this in the future so i
@@ -664,13 +796,16 @@ can verify whether claude or I should take the position or not."* A plan whose
   `tests/test_review_flags.py::test_a_flagged_plan_is_still_taken_because_a_flag_is_not_a_gate`
   pins it, and is the one test in there that must never be "fixed" to agree with
   a future gate.
-- **`VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0`** — flag when `risk_usd` is ≥ this
+- **`VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 7.5`** (15.0 until 2026-09-27, halved with
+  the notional — owner: flag the same stops) — flag when `risk_usd` is ≥ this
   % of `daily_loss_limit()` ($4,500 = equity × `MAX_DAILY_LOSS_PCT`). The number
   sits between two others and cannot sensibly be moved without checking both:
-  `MAX_STOP_PCT` caps any NEW position at 25% × $5,000 = $1,250 of risk = **27.8%
-  of the guard**, so any threshold ≥ ~28 is dead code that would never fire and
-  nobody would notice; a typical A+ plan runs a 5–12% stop = $250–$600 = 6–13%.
-  15 flags the genuinely wide half without crying wolf. A test asserts
+  `MAX_STOP_PCT` caps any NEW position at 25% × $2,500 = $625 of risk = **13.9%
+  of the guard**, so any threshold ≥ ~14 is dead code that would never fire and
+  nobody would notice; a typical A+ plan runs a 5–12% stop = $125–$300 = 3–7%.
+  7.5 = $337.50 = a **13.5% stop** on $2,500, the same stop width 15.0 ($675)
+  flagged on $5,000 — so the flagged half did not move, and 15.0 left beside
+  $2,500 would have needed a 27% stop the 25% gate never admits. A test asserts
   `0 < threshold < ceiling` so the dead-code case fails loudly. 0 = off.
 - **Three hops, because a flag nobody sees is not a flag.** The ticket carries
   `review` (a list, empty when clean); `_ticket_to_position` copies it onto the
@@ -685,14 +820,16 @@ can verify whether claude or I should take the position or not."* A plan whose
   off). Fires AFTER `_save_market_book`, so a dry run is silent and nothing is
   announced that failed to persist. One message per run, not per position,
   because the number worth the message is the COMBINED share: three flagged
-  opens at 27% each is 80% of the day gone in one run and nobody sums that by
+  opens at 13% each is ~40% of the day gone in one run (27% / 80% at the
+  pre-2026-09-27 $5,000) and nobody sums that by
   hand across three notifications. Rate limit 0 for the same per-EVENT-TYPE
   reason as `sector_run` — markets run sequentially in one job, so a limit could
   only ever drop the second market's flagged open, and losing one is the entire
   failure mode.
 - **The message says the trade is already TAKEN.** The choice on offer is not
-  take-or-skip but *whose position it is*: leave it and it is the bot's at
-  $5,000, or close it in the book and take it yourself sized your own way. A
+  take-or-skip but *whose position it is*: leave it and it is the bot's at the
+  configured notional (the message reads `VIVEK_BOT_POSITION_NOTIONAL` — $2,500
+  since 2026-09-27), or close it in the book and take it yourself sized your own way. A
   message that read like a pre-trade approval request would misdescribe what the
   system actually does, and a test asserts the wording.
 - **Front end:** `reviewChip` in `public/js/journal.js` (`.jr-review`,
@@ -700,7 +837,9 @@ can verify whether claude or I should take the position or not."* A plan whose
   which is a live warning that the chart turned. **It renders on CLOSED rows
   too, on purpose**: the flag records what was known at entry, and how the
   flagged trades actually went is the only evidence that will ever say whether
-  15.0 is set sensibly. An absent `review` key (row written before flags
+  7.5 is set sensibly (15.0 before 2026-09-27 — the same 13.5% stop either side,
+  so the series is continuous; a restated row keeps its as-taken flag in
+  `review_before`). An absent `review` key (row written before flags
   existed) and an empty list (checked, clean) both render nothing but are NOT the
   same thing — do not collapse them by defaulting the key server-side.
 - Tests: `tests/test_review_flags.py` (27) + `test/journal_review.test.js` (9,
@@ -875,9 +1014,11 @@ opening GitHub.
 - **Every threshold is borrowed from the component that already acts on it,
   and the borrowing is pinned.** 4h is `health.js`'s `max_h` default
   (= `WATCHDOG_BOOK_MAX_AGE_H`) — the point the external monitor is told the
-  pipeline is down; 90m is `heartbeat.js`'s `DEFAULT_STALE_MIN`; the 30-position
-  cap is read from `bot_rules.json`. Tests parse those two Functions and fail if
-  either number moves without this one following.
+  pipeline is down; 90m is `heartbeat.js`'s `DEFAULT_STALE_MIN`; the position
+  cap (`max_open_total`, 60 since 2026-09-27) is read from `bot_rules.json`,
+  with status.js's `FALLBACK_CAP` (pinned to config by
+  `tests/test_close_ceiling_parity.py`) only when that fetch fails. Tests parse
+  those two Functions and fail if either number moves without this one following.
 - **A LOSS-GUARD BREACH IS AMBER, NOT RED.** Red means "the evidence you trade
   on is not arriving". A breach is the machine working correctly and refusing
   new entries, and `heartbeat.js` already paid for the lesson that an alarm
@@ -1622,7 +1763,9 @@ accumulate, and in `VIVEK_BOT_REVIEW_DAILY_LOSS_PCT` (an ASX plan's A$ risk is
 compared against a US$ guard, so **ASX under-flags**). The fix is one line —
 divide `fixed` by `_fx_of(market)` before sizing — but it makes every future ASX
 position **~43% larger in units**, in the ringfenced file. That is position SIZE.
-Flagged, not taken.
+Flagged, not taken. (Owner ruling 2026-07-29, recorded in config.py's SIZING
+block: KEPT — the notional is deliberately in each market's own currency; it
+carried unchanged to $2,500 on 2026-09-27.)
 
 **#61 has a front-end twin, found 2026-07-28 and also flagged rather than
 fixed** — `dollarsPerPoint` in `public/js/risk_manager.js` falls back to `1` for
@@ -1656,7 +1799,7 @@ Lighthouse budget was measuring the TAPE" below.
   `ok` / `none` (the profile came back and genuinely carries no sector) /
   `failed` (the fetch raised) — and `refresh` counts all three, WARNING on any
   `failed` and naming the consequence in the same line: **a sector-less row is
-  exempt from the 3-per-sector cap**, so a network flake does not merely lose a
+  exempt from the per-sector cap**, so a network flake does not merely lose a
   label, it quietly widens a correlation limit. Before this, both outcomes were
   the same empty string. What is NOT shipped is caching the `none` verdict:
   `_targets` filters on truthiness, so a cached blank is still "missing" and gets
@@ -2246,8 +2389,8 @@ writes `eli5`/`top_volume` (both left `ENRICHED_KEYS`). `indices` is still
 FETCHED because `_read` builds the "What happened" sentence from it — it is
 just no longer drawn as cards. Pins: `test/hygiene.test.js`,
 `tests/test_sectors_carry.py`. Do not re-add them.
-**The bot's 3-per-sector correlation cap (`sector_map.json` / `sectorcache`)
-is unrelated and stays** — it is a signal path, not a report surface.
+**The bot's per-sector correlation cap (6 per market since 2026-09-27;
+`sector_map.json` / `sectorcache`) is unrelated and stays** — it is a signal path, not a report surface.
 `alert_returns._breadth_series()` now returns `{}` so `breadth200` stays
 blank on new ledger rows (frozen values on old rows survive under the
 blank-only rule). The three HORIZON/BACKFILL/REGIME sections further down
@@ -2507,7 +2650,8 @@ armed. Evidence: bot rule before = +0.094R n=2718 PF 1.18; four cells at
 A/A+ = +0.212R n=2403 PF 1.47 (A+ only +0.216R n=1423). UNCHANGED: long-only,
 the weekly/3d LEVEL gate (`VIVEK_BOT_LEVEL_TF_ALLOW`, the thrice-replicated
 w3 cohort — so a 1D-break plan is only taken on a row reacting at a weekly/3d
-level), every size / R:R / liquidity / sector / loss guard. **Cycle w3-1
+level), every size / R:R / liquidity / sector / loss guard (size, slots and the
+sector cap moved later, 2026-09-27 — see SIZING 2). **Cycle w3-1
 ENDED** with this change: rows it opened keep their `cycle: "w3-1"` tag (the
 journal's w3-1 evidence strip still reads them); new rows carry
 `VIVEK_BOT_CYCLE_TAG = "hc4-1"` (status.js `CYCLE_TAG` follows).
@@ -2758,8 +2902,8 @@ data-provider key, Cloudflare Access.
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                      # full gate (1255 tests / 58 files, 2026-07-30)
-node test/risk_manager.test.js           # + 15 more JS suites, 650 total; see test.yml
+python -m pytest -q                      # full gate (counts drift; read the run)
+node test/status.test.js                 # one of the JS suites; test.yml lists every one
 python -m scanner.run --market asx       # VIVEK scan
 python -m phasemap.run --market asx      # PhaseMap scan
 python -m scanner.spec_run --market asx  # Specs scan

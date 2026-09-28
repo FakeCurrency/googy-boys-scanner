@@ -34,7 +34,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # `ref: github.ref`, NOT the default (2026-09-28). The default checks out
+      # github.sha - the commit the run was TRIGGERED on, fixed when the run
+      # is created. This whole workflow waits in `scan` (workflow-level
+      # member), so a run queued behind a scan.yml run that committed
+      # journal/confluence_state.json or phasemap/alert_history.json would
+      # compute on the older copies, and the push loop below would replay them
+      # over the scan's newer ones: dropped ALERTS rows and a rewound dedupe /
+      # push-owed state. A branch ref checks out the TIP when the job starts,
+      # i.e. after the run acquired the mutex. Nothing below reads
+      # github.sha / GITHUB_SHA ($SHA is this run's own commit). Pinned in
+      # tests/test_workflow_mutex.py (WORKFLOW_SCOPED).
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-python@v5
         with:

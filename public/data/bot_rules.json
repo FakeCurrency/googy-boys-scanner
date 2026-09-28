@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T22:23:24Z",
+  "generated_at": "2026-09-28T04:03:29Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -20,9 +20,9 @@
   "cycle_tag": "hc4-1",
   "min_rr": 1.5,
   "allow_shorts": false,
-  "max_positions": 30,
-  "max_open_total": 30,
-  "position_notional": 5000,
+  "max_positions": 60,
+  "max_open_total": 60,
+  "position_notional": 2500,
   "max_portfolio_notional": 150000,
   "account_equity": 150000,
   "risk_pct": 0.35,
@@ -41,7 +41,7 @@
   },
   "max_stop_pct": 25.0,
   "min_stop_pct": 1.0,
-  "max_per_sector": 3,
+  "max_per_sector": 6,
   "crypto_majors": [
     "BTC",
     "ETH"

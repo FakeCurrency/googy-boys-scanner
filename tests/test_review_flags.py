@@ -17,6 +17,10 @@ suppress a trade it has become a rule change, and rule changes are the owner's.
 test_a_flagged_plan_is_still_taken_because_a_flag_is_not_a_gate pins exactly
 that, and it is the one test in here that must never be "fixed" by making it
 agree with a future gate.
+
+Retuned 2026-09-27 (owner) with the notional: $5,000 -> $2,500 a position and the
+threshold 15.0 -> 7.5 % of the daily guard, so the SAME stop widths are flagged
+(a 13.5% stop is the boundary either way: $675 of $4,500 then, $337.50 now).
 """
 
 import pytest
@@ -70,31 +74,32 @@ def test_a_missing_or_zero_guard_yields_no_limit_and_never_divides_by_it(
 # ── what fires and what does not ─────────────────────────────────────────────
 
 def test_an_ordinary_plan_is_not_flagged():
-    # 4% stop on $5,000 = $200 risk = 4.4% of the $4,500 guard. This is the
+    # 4% stop on $2,500 = $100 risk = 2.2% of the $4,500 guard. This is the
     # common case and it has to stay quiet, or the flag means nothing.
     t = _ticket(entry=100.0, stop=96.0)
-    assert t["risk_usd"] == pytest.approx(200.0)
+    assert t["risk_usd"] == pytest.approx(100.0)
     assert t["review"] == []
 
 
 def test_a_wide_stop_plan_is_flagged():
     # 24% stop — still inside the 25% hard gate, so the bot takes it — but that
-    # is $1,200 of a $4,500 day in one name.
+    # is $600 of a $4,500 day in one name.
     t = _ticket(entry=100.0, stop=76.0)
-    assert t["risk_usd"] == pytest.approx(1_200.0)
+    assert t["risk_usd"] == pytest.approx(600.0)
     assert [f["code"] for f in t["review"]] == ["heavy_risk"]
     f = t["review"][0]
-    assert f["share_pct"] == pytest.approx(26.7, abs=0.1)
+    assert f["share_pct"] == pytest.approx(13.3, abs=0.1)
     assert f["stop_pct"] == pytest.approx(24.0, abs=0.1)
     assert f["limit_usd"] == pytest.approx(4_500.0)
 
 
 def test_the_threshold_is_inclusive_at_the_boundary():
-    # 13.5% stop = $675 = exactly 15.0% of the guard. ">=" not ">", so it fires.
+    # 13.5% stop = $337.50 = exactly 7.5% of the guard. ">=" not ">", so it fires.
+    # (The same 13.5% stop was the boundary at $5,000 / 15.0 too -- by design.)
     t = _ticket(entry=100.0, stop=86.5)
-    assert t["risk_usd"] == pytest.approx(675.0)
-    assert t["review"][0]["share_pct"] == pytest.approx(15.0)
-    # a hair under does not
+    assert t["risk_usd"] == pytest.approx(337.5)
+    assert t["review"][0]["share_pct"] == pytest.approx(7.5)
+    # a hair under ($335 = 7.44%) does not
     assert _ticket(entry=100.0, stop=86.6)["review"] == []
 
 
@@ -154,21 +159,27 @@ def test_every_ticket_carries_the_key_even_when_clean():
 # ── why the threshold is where it is ─────────────────────────────────────────
 
 def test_the_threshold_sits_below_the_ceiling_the_stop_gate_implies():
-    # MAX_STOP_PCT caps any NEW position's risk at 25% x $5,000 = $1,250, which
-    # is 27.8% of the $4,500 guard. A threshold at or above that could never
+    # MAX_STOP_PCT caps any NEW position's risk at 25% x $2,500 = $625, which
+    # is 13.9% of the $4,500 guard. A threshold at or above that could never
     # fire on a plan the bot would actually take — the flag would be dead code
-    # and nobody would notice. This is the test that notices.
+    # and nobody would notice. This is the test that notices. (It did its job on
+    # 2026-09-27: halving the notional to $2,500 halved the ceiling from 27.8,
+    # and the old 15.0 would have sat above it, so the threshold moved to 7.5.)
     ceiling = (config.VIVEK_BOT_MAX_STOP_PCT / 100.0
                * config.VIVEK_BOT_POSITION_NOTIONAL) / vb.daily_loss_limit() * 100.0
-    assert ceiling == pytest.approx(27.8, abs=0.1)
-    assert 0 < config.VIVEK_BOT_REVIEW_DAILY_LOSS_PCT < ceiling
+    assert ceiling == pytest.approx(13.9, abs=0.1)
+    assert 0 < config.VIVEK_BOT_REVIEW_DAILY_LOSS_PCT < ceiling    # 7.5 < 13.9
 
 
 def test_the_note_reads_as_english_and_carries_the_numbers():
     f = _ticket(entry=100.0, stop=76.0)["review"][0]
-    assert "1,200" in f["note"] and "4,500" in f["note"]
-    assert "27%" in f["note"] and "24% stop" in f["note"]
+    assert "$600 " in f["note"] and "4,500" in f["note"]
+    assert "13%" in f["note"] and "24% stop" in f["note"]
     f["note"].encode("cp1252")   # the note reaches logs and Discord
+    # A $2,500 plan can no longer risk four figures, so pin the risk's own
+    # thousands separator directly (risk-% mode or a larger notional can).
+    big = vb.review_flags({"risk_usd": 1_200.0, "entry": 100.0, "stop": 76.0})[0]
+    assert "$1,200 " in big["note"]
 
 
 # ── delivery: the flag has to arrive somewhere the owner looks ───────────────
@@ -180,7 +191,7 @@ def test_the_note_reads_as_english_and_carries_the_numbers():
 # the two hops between "computed" and "read".
 
 
-def _opened(symbol="MDB", entry=100.0, stop=76.0, risk=1_200.0, flagged=True):
+def _opened(symbol="MDB", entry=100.0, stop=76.0, risk=600.0, flagged=True):
     """A book row shaped like the ones _ticket_to_position produces."""
     return {"symbol": symbol, "direction": "long", "entry": entry, "stop": stop,
             "risk_usd": risk, "market": "asx",
@@ -233,9 +244,9 @@ def test_a_run_with_nothing_flagged_is_silent():
 
 
 def test_one_message_per_run_carrying_the_combined_risk():
-    # THE number this exists for. Three flagged opens at 27% each is 80% of the
-    # day committed in one run, and nobody is summing that by hand across three
-    # separate notifications.
+    # THE number this exists for. Three flagged opens at 13% each is 40% of the
+    # day committed in one run (27% / 80% at the pre-2026-09-27 $5,000), and
+    # nobody is summing that by hand across three separate notifications.
     from scanner.broker import vivek_run as vr
     sent = []
     vr._notify_reviews("asx", [_opened("MDB"), _opened("AXON"), _opened("GLBE")],
@@ -243,7 +254,7 @@ def test_one_message_per_run_carrying_the_combined_risk():
     assert len(sent) == 1, "one message per run, not one per position"
     body = sent[0][2]
     assert "MDB" in body and "AXON" in body and "GLBE" in body
-    assert "80% of the $4,500 daily guard" in body
+    assert "40% of the $4,500 daily guard" in body
 
 
 def test_a_single_flagged_open_does_not_get_a_combined_line():

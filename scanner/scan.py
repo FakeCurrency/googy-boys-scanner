@@ -34,19 +34,33 @@ log = logging.getLogger(__name__)
 
 
 def _code_sha() -> str:
-    """Short commit SHA the scan ran at, stamped into output so the frontend can
-    tell whether the data was produced by the current build. GITHUB_SHA is set in
-    Actions; fall back to a local `git rev-parse` for manual runs."""
-    sha = os.environ.get("GITHUB_SHA")
-    if sha:
-        return sha[:7]
+    """Short (7-char) SHA of the commit whose code RAN this scan, stamped into
+    the output for the freshness box's "built from <sha>" tooltip (app.js; the
+    only reader, display-only).
+
+    The checked-out HEAD is asked FIRST, and GITHUB_SHA is only the fallback
+    (2026-09-28). GITHUB_SHA is the commit the run was TRIGGERED on, fixed when
+    the run is created; the scan.yml / crypto_bot.yml writer jobs now check out
+    ``ref: github.ref`` -- the branch tip when the job STARTS -- so a run that
+    queued behind the ``scan`` mutex while main moved executes newer code than
+    GITHUB_SHA names. Preferring GITHUB_SHA would stamp that newer data with an
+    older commit.
+
+    Order: ``git rev-parse HEAD`` in the repo root (3s timeout; any failure,
+    timeout, non-zero exit or non-hex output falls through) -> GITHUB_SHA ->
+    "". The full SHA is sliced to 7 rather than asking for ``--short``, which
+    may return MORE than 7 chars when a prefix is ambiguous -- so both sources
+    produce the same shape the stamp has always had."""
     try:
-        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+        out = subprocess.run(["git", "rev-parse", "HEAD"],
                              capture_output=True, text=True, timeout=3,
                              cwd=pathlib.Path(__file__).resolve().parents[1])
-        return out.stdout.strip() if out.returncode == 0 else ""
-    except Exception:
-        return ""
+        head = out.stdout.strip() if out.returncode == 0 else ""
+        if re.fullmatch(r"[0-9a-f]{7,64}", head):
+            return head[:7]
+    except Exception:                                  # noqa: BLE001
+        pass
+    return (os.environ.get("GITHUB_SHA") or "").strip()[:7]
 
 
 def _fund_tag(info: dict) -> bool:

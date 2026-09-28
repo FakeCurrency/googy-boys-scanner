@@ -36,6 +36,18 @@ JOB_SCOPED = {
     "scan.yml": "scan",
     "crypto_bot.yml": "crypto",
     "close_position.yml": "close",
+    # 2026-09-27: the one-shot open-book resize writes all three canonical
+    # books, so it takes the same lock the same way.
+    "resize_book.yml": "resize",
+}
+
+# The workflows that hold `group: scan` at WORKFLOW level, with the job that
+# writes. A deliberate exception to REFINEMENTS #108: confluence.yml has no
+# cheap gate job to protect from the queue, so the whole run waiting is fine.
+# Its writer still reads files a sibling may have written while it waited, so
+# it needs the same tip checkout as the job-scoped members (2026-09-28, WF-2).
+WORKFLOW_SCOPED = {
+    "confluence.yml": "confluence",
 }
 
 
@@ -343,3 +355,81 @@ def test_redispatch_ignores_a_close_that_had_already_started():
     assert 'select(.name == "close")' in script
     assert '.steps[]?' in script
     assert 'gh run view "$GITHUB_RUN_ID"' in script
+
+
+def test_every_job_scoped_member_of_the_group_is_listed_here():
+    """JOB_SCOPED is hand-listed; the tree is not (2026-09-27).
+
+    Every pin above that walks JOB_SCOPED - the job-level scoping, the
+    no-cancel rule, the wait loop's job-name filter and the checkout ref below
+    - silently skips a writer job that joined `group: scan` without joining
+    this dict. resize_book.yml was the first new member since the dict was
+    written; enumerate from the tree so the next one cannot slip past.
+    """
+    found = {}
+    for path in sorted(WF.glob("*.yml")):
+        for jobname, job in (_load(path.name).get("jobs") or {}).items():
+            if _group(job.get("concurrency")) == "scan":
+                found.setdefault(path.name, []).append(jobname)
+    assert found == {f: [j] for f, j in JOB_SCOPED.items()}, found
+
+
+def test_every_workflow_scoped_member_of_the_group_is_listed_here():
+    """WORKFLOW_SCOPED is hand-listed too; enumerate it from the tree (WF-2).
+
+    The checkout-ref pin below walks JOB_SCOPED and WORKFLOW_SCOPED. A
+    workflow that joined `group: scan` at workflow level without joining this
+    dict would read the files as of when its run was QUEUED and nothing here
+    would say so - confluence.yml sat exactly there until 2026-09-28.
+    """
+    found = {}
+    for path in sorted(WF.glob("*.yml")):
+        wf = _load(path.name)
+        if _group(wf.get("concurrency")) == "scan":
+            found[path.name] = sorted(wf.get("jobs") or {})
+    assert found == {f: [j] for f, j in WORKFLOW_SCOPED.items()}, found
+
+
+def _checkouts(fname, jobname):
+    steps = _load(fname)["jobs"][jobname]["steps"]
+    return [s for s in steps
+            if str(s.get("uses", "")).startswith("actions/checkout")]
+
+
+@pytest.mark.parametrize("fname,jobname",
+                         sorted({**JOB_SCOPED, **WORKFLOW_SCOPED}.items()))
+def test_a_queued_writer_reads_main_as_of_acquiring_the_mutex_not_as_of_queueing(
+        fname, jobname):
+    """The mutex serialised the WRITES but not the READS (found 2026-09-27).
+
+    actions/checkout with no `ref` checks out github.sha - the commit the run
+    was TRIGGERED on, fixed when the run is created. A writer job that waits
+    in the `scan` queue behind another writer therefore loads a book OLDER
+    than main's, and scan.yml / crypto_bot.yml then replay their copy of
+    journal/vivek_bot_book.<m>.json over the newer one in the push loop. That
+    silently reverts whatever the writer ahead committed for that market - a
+    close, a same-market scan, or the open-book resize (which rewrites all
+    three books, so ANY sibling that queued behind it would undo its market).
+    Reproduced in a scratch repo before the fix: BNB went back to $5,000 with
+    `resized_at` gone, and `--verify` still passed, because it checks the
+    book's consistency, not whose write won.
+
+    With `ref` set to a branch, checkout fetches the branch TIP when the job
+    starts, i.e. after the mutex was acquired - the only moment the read can
+    be trusted. `${{ github.ref }}` rather than a literal `main` on the three
+    dispatchable siblings, so a workflow_dispatch from a branch keeps reading
+    that branch, exactly as it did before (only newer).
+
+    confluence.yml (WORKFLOW_SCOPED, 2026-09-28) had the same defect on the
+    confluence state: its push loop replays journal/confluence_state.json and
+    phasemap/alert_history.json, both also committed by scan.yml, so a run
+    queued behind a scan rewound the dedupe state and dropped ALERTS rows.
+    """
+    cos = _checkouts(fname, jobname)
+    assert cos, f"{fname}:{jobname} no longer checks out the repo"
+    for co in cos:
+        ref = (co.get("with") or {}).get("ref")
+        assert ref in ("main", "${{ github.ref }}"), (
+            f"{fname}:{jobname} checks out {ref!r} - without a branch ref it "
+            "reads the book as of when the run was QUEUED, and a sibling that "
+            "wrote while it waited is reverted by this job's push loop")

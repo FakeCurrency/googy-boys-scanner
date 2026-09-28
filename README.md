@@ -32,9 +32,11 @@ if the two drift.
 
 ## The bot book — the only track record
 
-`journal/vivek_bot_book.json` is the record. It takes **A+ only**, at most 30 open
-across all markets combined, one position per symbol, three per sector, behind daily
-loss guards. It is marked to market server-side every scan.
+`journal/vivek_bot_book.json` is the record. It takes **A/A+ longs in the four
+high-conviction cells** (A+ only until 2026-09-21), at most 60 open across all markets
+combined at a fixed $2,500 each (30 x $5,000 until 2026-09-27 — the same $150,000
+book), one position per symbol, six per sector per market, behind daily loss guards.
+It is marked to market server-side every scan.
 
 It is deliberately boring to change. Trade-rule edits need explicit owner sign-off,
 and while a pre-registered cycle is running the rules are frozen — every mid-cycle

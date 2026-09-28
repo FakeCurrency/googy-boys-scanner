@@ -69,7 +69,7 @@ function slice(startMarker, endMarker) {
 // same numbers the offline page would show.
 const ctx = vm.createContext({ console });
 vm.runInContext(
-  "let EQUITY = 150000, POSITION_NOTIONAL = 5000, RISK_PCT = 0.35;\n"
+  "let EQUITY = 150000, POSITION_NOTIONAL = 2500, RISK_PCT = 0.35;\n"
   + "const RISK_MIN = 0.25, RISK_MAX = 0.5;\n"
   + "const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };\n"
   + "let SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };\n"
@@ -86,6 +86,7 @@ vm.runInContext(
   + slice("const rOf = (price, entry, risk, isLong)", ";\n") + "\n"
   + slice("const isVivek = (t) =>", ";\n") + "\n"
   + "let RULES_GEN = 1;\n"
+  + slice("const isAudRow = (t) =>", ";\n") + "\n"
   + slice("const fxOf = (t) =>", ";\n") + "\n"
   + slice("const dollarsOf = (t) =>", ";\n") + "\n"
   + slice("function exitMs(t) {", "\n  }") + "\n"
@@ -511,8 +512,19 @@ test("journal.html requests a journal.js at or past the version these fixes ship
   const html = fs.readFileSync(path.resolve(__dirname, "../public/journal.html"), "utf8");
   const m = html.match(/js\/journal\.js\?v=(\d+)/);
   assert.ok(m, "journal.html no longer version-stamps journal.js");
-  assert.ok(Number(m[1]) >= 66,
-    `journal.js?v=${m[1]} predates the Tier 2 money fixes and the open sort (need >= 66)`);
+  assert.ok(Number(m[1]) >= 89,
+    `journal.js?v=${m[1]} predates the rules refresh in the 3-minute poll (need >= 89)`);
+});
+
+test("the 3-minute refresh re-reads bot_rules.json, not just the book", () => {
+  // Review RR-2 (2026-09-28): a tab that read the rules once at init and then
+  // picked up a restated book marked every restated row "held at $2,500 - the
+  // book now sizes each position at $5,000" until it was reloaded.
+  const i = SRC.indexOf("setInterval(async () => {");
+  assert.ok(i >= 0, "the refresh interval is gone");
+  const body = SRC.slice(i, SRC.indexOf("}, 180000);", i));
+  assert.ok(/loadBotRules\(\)/.test(body), "the refresh no longer re-reads the rules");
+  assert.ok(/loadBot\(\)/.test(body), "the refresh no longer re-reads the book");
 });
 
 test("journal.html requests a journal.css new enough to style the sort control", () => {
@@ -794,25 +806,119 @@ test("the mixed-book decider line carries the shape BESIDE the split, not instea
 
 // ── legacy-sizing marker (2026-08-20) ────────────────────────────────────────
 // The 2026-07-28 resize left CLOSED rows at their real historical size (~$256
-// avg notional) while everything current is $5,000 — the marker is the only
-// on-page admission that those dollars are a different scale. R is comparable;
-// dollars are not.
+// avg notional) while everything current is fixed-notional at the published
+// size — the marker is the only on-page admission that those dollars are a
+// different scale. R is comparable; dollars are not. The 2026-09-27 resize
+// ($5,000 -> $2,500, owner) did the same to the fixed-notional $5,000 closes,
+// which the sizing_mode test cannot see — hence the off-scale half below.
 suite("legacy sizing marker");
 
 const lctx = vm.createContext({ console });
 vm.runInContext(
   "const esc = (s) => String(s);\n"
+  // The PUBLISHED size (as loadBotRules leaves it once bot_rules.json lands).
+  + "let POSITION_NOTIONAL = 2500, NOTIONAL_LIVE = true, FX_AUDUSD = 0.66;\n"
+  + slice("const money0 = (v) =>", ";\n") + "\n"
+  + slice("const isAudRow = (t) =>", ";\n") + "\n"
+  + slice("const fxOf = (t) =>", ";\n") + "\n"
+  + slice("const offNotional = (t) =>", ";\n") + "\n"
   + slice("const legacySized = (t, side)", ";\n") + "\n"
   + slice("const LEGACY_TIP =", ";\n") + "\n"
+  + slice("const faceMoney0 = (t, v) =>", ";\n") + "\n"
+  + slice("const offScaleTip = (t) =>", ";\n") + "\n"
   + slice("const legacyCell = (t, side)", ";\n") + "\n"
+  + "this.setLive = (v) => { NOTIONAL_LIVE = v; };\n"
+  + "this.fxOf = fxOf;\n"
   + "this.legacySized = legacySized; this.legacyCell = legacyCell; this.LEGACY_TIP = LEGACY_TIP;\n",
   lctx);
 
-test("risk_pct and ABSENT sizing_mode both mark a BOT row; fixed_notional never does", () => {
+test("risk_pct and ABSENT sizing_mode both mark a BOT row; fixed_notional AT the published size never does", () => {
   assert.equal(lctx.legacySized({ sizing_mode: "risk_pct" }, "bot"), true);
   assert.equal(lctx.legacySized({}, "bot"), true,
     "absent = written before the field existed = the same pre-resize cohort");
-  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional" }, "bot"), false);
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 2500 }, "bot"), false);
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional" }, "bot"), false,
+    "no notional on the row = no evidence it is off-scale");
+});
+
+test("a fixed_notional row held at a DIFFERENT notional is marked (owner, 2026-09-27)", () => {
+  // The 92 closed $5,000 rows beside a restated $2,500 open book: same mode
+  // stamp, half the scale. Unmarked, their dollars read as like-for-like.
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 5000 }, "bot"), true);
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 1250 }, "bot"), true,
+    "smaller-than-published is off-scale too");
+  // 1% band = $25 at $2,500 — a rounding cent must never light the marker.
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 2525 }, "bot"), false, "at the band edge");
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 2526 }, "bot"), true, "just past it");
+  assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 5000 }, "me"), false,
+    "still bot rows only");
+});
+
+test("the off-scale tip names BOTH figures and is not the pre-2026-07-28 wording", () => {
+  const m = lctx.legacyCell({ sizing_mode: "fixed_notional", notional: 5000 }, "bot");
+  assert.ok(m.cls.includes("jr-oldsize"), "same quiet class as the pre-resize cohort");
+  assert.ok(m.tip.includes("$5,000") && m.tip.includes("$2,500"), m.tip);
+  assert.ok(m.tip.includes("Compare R"), "the tip must say what IS comparable");
+  assert.ok(!m.tip.includes("pre-2026-07-28"), "a $5,000 row was not sized under the risk-% rules");
+  // ...while a risk-% row keeps the old explanation, which must not claim the
+  // current rows are $5,000 any more.
+  const old = lctx.legacyCell({ sizing_mode: "risk_pct" }, "bot");
+  assert.ok(old.tip.includes("pre-2026-07-28"), old.tip);
+  assert.ok(!/\$5,000/.test(lctx.LEGACY_TIP), "LEGACY_TIP still states $5,000 as the current size");
+});
+
+test("an ASX row's off-scale tip labels BOTH figures A$ - they are face value, not the US$ cell beside it", () => {
+  // Review FE-2 (2026-09-28). The $ cell next to the tip is US$-converted
+  // (dollarsOf / unreal_usd x fxOf) and the page header says "$ figures in
+  // US$", but the bot books an ASX row's notional at FACE VALUE in A$ (#61).
+  // A bare "$5,000" there read as US$5,000 - an A$ holding overstated by the
+  // FX rate, beside a cell that had already been converted.
+  for (const row of [{ market: "asx" }, { asset_type: "asx" }]) {
+    const m = lctx.legacyCell({ ...row, sizing_mode: "fixed_notional", notional: 5000 }, "bot");
+    assert.ok(m.cls.includes("jr-oldsize"), JSON.stringify(row));
+    assert.ok(m.tip.includes("Held at A$5,000 notional"), m.tip);
+    assert.ok(m.tip.includes("position at A$2,500,"), `the PUBLISHED size is A$ on an ASX row too: ${m.tip}`);
+    assert.ok(!/[^A]\$\d/.test(m.tip), `a bare $ figure survived on an ASX row: ${m.tip}`);
+  }
+});
+
+test("a NASDAQ (or crypto) row's off-scale tip keeps a bare $ - its figures ARE US$", () => {
+  for (const market of ["nasdaq", "crypto"]) {
+    const m = lctx.legacyCell({ market, sizing_mode: "fixed_notional", notional: 5000 }, "bot");
+    assert.ok(m.tip.includes("Held at $5,000 notional"), m.tip);
+    assert.ok(m.tip.includes("position at $2,500,"), m.tip);
+    assert.ok(!m.tip.includes("A$"), `a ${market} row is not A$: ${m.tip}`);
+  }
+});
+
+test("the tip says A$ exactly when the $ cell is FX-converted - one predicate, two readers", () => {
+  // The label is only honest if it agrees with fxOf, row for row, including
+  // the manual-row asset_type field and a bot market that wins over it.
+  const rows = [
+    { market: "asx" }, { asset_type: "asx" }, { market: "nasdaq" }, { market: "crypto" },
+    { market: "nasdaq", asset_type: "asx" }, { market: "", asset_type: "asx" }, {},
+  ];
+  for (const row of rows) {
+    const tip = lctx.legacyCell({ ...row, sizing_mode: "fixed_notional", notional: 5000 }, "bot").tip;
+    assert.equal(tip.includes("A$"), lctx.fxOf(row) !== 1,
+      `tip and fxOf disagree about ${JSON.stringify(row)}: ${tip}`);
+  }
+  assert.ok(/const fxOf = \(t\) => \(isAudRow\(t\)/.test(SRC)
+    && /const faceMoney0 = \(t, v\) => \(isAudRow\(t\)/.test(SRC),
+    "fxOf and faceMoney0 must both read isAudRow, or the two can drift apart");
+});
+
+test("the off-scale half is OFF until the notional is PUBLISHED (the e2e fixture publishes none)", () => {
+  // The fixture book's fixed_notional rows carry $36-$872; driven by the
+  // hand-typed fallback, every one of them would be underlined and the
+  // journal screenshots would move.
+  lctx.setLive(false);
+  try {
+    assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 36.66 }, "bot"), false);
+    assert.equal(lctx.legacySized({ sizing_mode: "fixed_notional", notional: 5000 }, "bot"), false);
+    assert.equal(lctx.legacySized({ sizing_mode: "risk_pct" }, "bot"), true,
+      "the pre-2026-07-28 cohort is marked unconditionally");
+  } finally { lctx.setLive(true); }
 });
 
 test("manual ('me') rows are hand-sized and NEVER marked", () => {
@@ -1119,6 +1225,52 @@ test("symbol and exit path are escaped before they reach innerHTML", () => {
 });
 
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+// ── loadBotRules sets the off-scale gate (owner, 2026-09-27) ─────────────────
+// The flag must follow the PUBLISHED key, not the drift loop: that loop only
+// writes when live and fallback DIFFER, and from 2026-09-27 they agree (2500),
+// so a flag set inside it would never switch on and the $5,000 closes would
+// sit unmarked beside the $2,500 book. Async, so it runs last.
+async function atest(name, fn) {
+  try { await fn(); console.log(`  ✓  ${name}`); passed++; }
+  catch (e) {
+    const loc = (e.stack || "").split("\n").slice(1).find((l) => l.includes("journal_money.test.js"));
+    console.error(`  ✗  ${name}\n     ${e.message}${loc ? "\n     " + loc.trim() : ""}`);
+    failed++;
+  }
+}
+const rctx = vm.createContext({ console: { warn() {}, log() {}, error() {} } });
+vm.runInContext(
+  "let EQUITY = 150000, POSITION_NOTIONAL = 2500, RISK_PCT = 0.35, NOTIONAL_LIVE = false, RULES_GEN = 1;\n"
+  + "const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };\n"
+  + "const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };\n"
+  + "const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };\n"
+  + "const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };\n"
+  + "let RULES = {};\n"
+  + "const fetch = async () => ({ ok: true, json: async () => RULES });\n"
+  + slice("async function loadBotRules() {", "\n  }") + "\n"
+  + "this.load = async (rules) => { RULES = rules; NOTIONAL_LIVE = false; POSITION_NOTIONAL = 2500;"
+  + " await loadBotRules(); return { live: NOTIONAL_LIVE, notional: POSITION_NOTIONAL }; };",
+  rctx);
+
+(async () => {
+  suite("loadBotRules — the off-scale gate");
+  await atest("a published notional EQUAL to the fallback still switches the gate on", async () => {
+    const r = await rctx.load({ position_notional: 2500 });
+    assert.equal(r.live, true, "live === fallback must still count as published");
+    assert.equal(r.notional, 2500);
+  });
+  await atest("a published notional that differs is adopted AND switches the gate on", async () => {
+    const r = await rctx.load({ position_notional: 5000 });
+    assert.deepEqual([r.live, r.notional], [true, 5000]);
+  });
+  await atest("no published notional (a pre-2026-07-28 file, the e2e fixture) leaves it off", async () => {
+    const r = await rctx.load({ max_open_total: 30 });
+    assert.deepEqual([r.live, r.notional], [false, 2500]);
+    const s = await rctx.load({ position_notional: "2500" });
+    assert.equal(s.live, false, "only a NUMBER is a published notional");
+  });
+
+  console.log(`\n${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+})();
 

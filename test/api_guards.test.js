@@ -249,9 +249,12 @@ const scanTests = async () => {
     }
   });
 
-  await test("batch: capped at 30 and never empty", async () => {
+  await test("batch: capped at 60 (a full book, owner 2026-09-27) and never empty", async () => {
     const S = loadC(ghFetchStub(204));
-    const many = Array.from({ length: 31 }, (_, i) => good("S" + i));
+    const full = Array.from({ length: 60 }, (_, i) => good("S" + i));
+    assert.equal((await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, full)).status, 202,
+      "a full 60-slot book must close in ONE run");
+    const many = Array.from({ length: 61 }, (_, i) => good("S" + i));
     assert.equal((await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, many)).status, 400);
     assert.equal((await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, [])).status, 400);
   });

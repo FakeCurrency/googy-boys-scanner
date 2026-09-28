@@ -34,7 +34,8 @@ on:
           OPTIONAL — JSON array of {symbol, market, direction, price} to close
           MANY bot-book positions in THIS ONE RUN (one checkout, one commit,
           one deploy). When set, the single-close inputs above are display-only.
-          Sent by /api/close for the stalled strip's multi-select. Max 30.
+          Sent by /api/close for the journal's close-all and the stalled strip's
+          multi-select - up to a whole book (was 30 until 2026-09-27). Max 60.
         required: false
         default: ""
 
@@ -74,7 +75,18 @@ jobs:
       group: scan
       cancel-in-progress: false
     steps:
+      # Read the book as of ACQUIRING the mutex, not as of being dispatched
+      # (2026-09-27, found building resize_book.yml). With no `ref`, checkout
+      # uses github.sha -- the commit the run was dispatched at. A close that
+      # queued behind a scan or the open-book resize would then edit a stale
+      # book and fight the `git pull --rebase` below on every attempt (the
+      # resize rewrites every open row), burning the redispatch budget. A
+      # branch `ref` makes checkout fetch the branch TIP at job start; the
+      # redispatch job keeps re-dispatching on github.ref_name, so a branch
+      # dispatch stays on its branch. Pinned in tests/test_workflow_mutex.py.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -364,8 +376,13 @@ jobs:
           #       once simply missing from this list, so a run holding the
           #       mutex was invisible here);
           #   (b) job-level, for the job-scoped members: a started run whose
-          #       scan/crypto/close job has not been picked up yet.
-          WATCHED='"Scheduled scan","Crypto bot (24/7 paper)","Confluence alert (post-nightly)","Close position (manual)"'
+          #       scan/crypto/close/resize job has not been picked up yet.
+          # "Resize open book" / job `resize` joined 2026-09-27 (resize_book.yml,
+          # the one-shot open-book restatement): its preview job runs outside
+          # the mutex, so its RUN reads in_progress while the mutex-holding JOB
+          # queues. Unwatched, a retried close would dispatch straight into the
+          # contested slot and evict the pending resize.
+          WATCHED='"Scheduled scan","Crypto bot (24/7 paper)","Confluence alert (post-nightly)","Close position (manual)","Resize open book"'
           mutex_pending() {
             n=$(gh run list --limit 60 --json status,workflowName \
               --jq "[.[] | select(.status == \"queued\" or .status == \"waiting\"
@@ -381,7 +398,7 @@ jobs:
               [ "$id" = "$GITHUB_RUN_ID" ] && continue
               q=$(gh run view "$id" --json jobs \
                 --jq '[.jobs[] | select(.name == "scan" or .name == "crypto"
-                                        or .name == "close")
+                                        or .name == "close" or .name == "resize")
                               | select(.status == "queued" or .status == "waiting"
                                        or .status == "pending"
                                        or .status == "requested")] | length' \

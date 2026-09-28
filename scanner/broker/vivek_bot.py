@@ -17,17 +17,21 @@ The rules it enforces (locked-in, audited on every decision):
      cells are walked 1W > 3D > 1D and the first armed, complete plan in a
      cell is the one traded; the timeframe is recorded on the ticket. A
      runner can hand in a different cell table (`cells`).
-  4. SIZING: risk 0.25–0.5% of equity per trade; leverage is 5× for stocks
+  4. SIZING: fixed notional — config.VIVEK_BOT_POSITION_NOTIONAL a position
+     ($2,500 since 2026-09-27; $5,000 from 2026-07-28). The original 0.25–0.5%
+     of-equity risk path runs only when that is 0. Leverage is 5× for stocks
      (ASX/NASDAQ) and 3× for crypto. Effective size + leverage are logged.
   5. BOOK: the binding ceiling is GLOBAL — config.VIVEK_BOT_MAX_OPEN_TOTAL open
-     positions across every market combined (30, owner 2026-07-28), free to sit
-     wherever the A+ setups actually are. decide() only ever sees one market, so
-     the runner passes the other markets' count in as `open_elsewhere`; the
-     per-market cap is set equal to the global one and is no longer what binds.
-     One position per symbol, at most config.VIVEK_BOT_MAX_PER_SECTOR (3) per
-     sector — the correlation control that stops the book becoming one macro
-     bet. If VIVEK_BOT_MIN_SHORTS is non-zero the bot also reserves that many
-     short slots and caps longs accordingly (it is 0 today: long-only).
+     positions across every market combined (60 since 2026-09-27; 30 from
+     2026-07-28 — owner both times), free to sit wherever the A/A+ cell setups
+     actually are. decide() only ever sees one market, so the runner passes
+     the other markets' count in as `open_elsewhere`; the per-market cap is
+     set equal to the global one and is no longer what binds. One position
+     per symbol, at most config.VIVEK_BOT_MAX_PER_SECTOR (6 since 2026-09-27,
+     was 3 — the same $15,000 a sector) per sector — the correlation control
+     that stops the book becoming one macro bet. If VIVEK_BOT_MIN_SHORTS is
+     non-zero the bot also reserves that many short slots and caps longs
+     accordingly (it is 0 today: long-only).
 
 Single source of truth: it reads the SAME per-timeframe plans the row, chart and
 journal use (row["plans"][tf]) — it never recomputes a level.
@@ -211,9 +215,10 @@ def size_position(equity: float, entry: float, stop: float,
     the same dollar amount, `VIVEK_BOT_POSITION_NOTIONAL`. Units fall out of the
     price and the DOLLAR RISK becomes the variable — risk_usd = notional x
     (stop_dist / entry) — bounded by the MIN/MAX_STOP_PCT gates to roughly
-    $50–$1,250 on a $5,000 position. `risk_pct` is then a *derived, reported*
-    number, not an input, and is deliberately NOT clamped to the 0.25–0.5 band:
-    clamping a figure nothing consumes would only misreport the real exposure.
+    $25–$625 on a $2,500 position ($50–$1,250 at the 2026-07-28 $5,000).
+    `risk_pct` is then a *derived, reported* number, not an input, and is
+    deliberately NOT clamped to the 0.25–0.5 band: clamping a figure nothing
+    consumes would only misreport the real exposure.
 
     RISK-BASED (the original path, used when VIVEK_BOT_POSITION_NOTIONAL is 0):
     risk a fixed % of equity per trade and let the stop distance set the units.
@@ -253,8 +258,8 @@ def size_position(equity: float, entry: float, stop: float,
         notional = units * entry
 
     # Cap notional so implied leverage never exceeds the per-market max. In
-    # fixed mode this can only bite on an absurdly small equity (a $5,000
-    # position needs just 0.03x of a $150,000 book), but it stays as the
+    # fixed mode this can only bite on an absurdly small equity (a $2,500
+    # position needs just 0.017x of a $150,000 book), but it stays as the
     # backstop that makes the two modes share one invariant.
     max_notional = equity * max_lev
     capped = False
@@ -291,9 +296,10 @@ def size_position(equity: float, entry: float, stop: float,
 #
 # What it measures: a plan's 1R loss against the DAILY LOSS GUARD, not against
 # equity. Equity-relative risk stopped being the interesting number when sizing
-# went fixed-notional — every position is $5,000, so what varies is the stop
-# width, and the stop width is exactly what decides how much of a day's loss
-# budget one name can eat.
+# went fixed-notional — every position is the same VIVEK_BOT_POSITION_NOTIONAL
+# ($2,500 since 2026-09-27), so what varies is the stop width, and the stop
+# width is exactly what decides how much of a day's loss budget one name can
+# eat.
 
 def daily_loss_limit() -> float:
     """Dollars the daily guard trips at: equity x MAX_DAILY_LOSS_PCT.
@@ -629,8 +635,9 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     # carries no sector data has NO correlation control at all -- it merely
     # looks like it does. NASDAQ is exactly that today (universe._fetch_nasdaq
     # has no sector column to read: 0 of ~1,400 names carry one), and that
-    # matters far more since the book became a 30-position ceiling that any
-    # single market is allowed to fill on its own. Report it loudly instead of
+    # matters far more since the book became a global position ceiling (30,
+    # then 60 from 2026-09-27) that any single market is allowed to fill on its
+    # own. Report it loudly instead of
     # letting it stay invisible. This deliberately does NOT change what gets
     # taken -- that is an owner decision on the risk path, not an autonomous one.
     sector_known = sum(1 for r in rows

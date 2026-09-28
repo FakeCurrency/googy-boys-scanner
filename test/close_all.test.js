@@ -179,23 +179,23 @@ test("an empty book says Claude holds nothing, and sends nothing", async () => {
 });
 
 test("over the batch ceiling it REFUSES rather than truncating", async () => {
-  // Silently sending the first 30 of 31 is the 2026-08-07 failure: closes that
+  // Silently sending the first 60 of 61 is the 2026-08-07 failure: closes that
   // nobody was told went missing. Refusing is loud and loses nothing.
-  const many = Array.from({ length: 31 }, (_, i) => botRow({ symbol: "S" + i }));
+  const many = Array.from({ length: 61 }, (_, i) => botRow({ symbol: "S" + i }));
   const { ctx, log } = load({ botOpen: many });
   await ctx.closeAllBot();
   assert.equal(log.posts.length, 0, "nothing may be sent");
   assert.equal(log.confirms.length, 0);
-  assert.match(log.alerts[0], /31 closable positions is over the 30-per-run limit/);
+  assert.match(log.alerts[0], /61 closable positions is over the 60-per-run limit/);
   assert.match(log.alerts[0], /Nothing was sent/);
 });
 
-test("exactly the ceiling is allowed — a full 30-slot book closes in one run", async () => {
-  const many = Array.from({ length: 30 }, (_, i) => botRow({ symbol: "S" + i }));
+test("exactly the ceiling is allowed — a full 60-slot book closes in one run (owner, 2026-09-27)", async () => {
+  const many = Array.from({ length: 60 }, (_, i) => botRow({ symbol: "S" + i }));
   const { ctx, log } = load({ botOpen: many });
   await ctx.closeAllBot();
   assert.equal(log.posts.length, 1);
-  assert.equal(log.posts[0].body.closes.length, 30);
+  assert.equal(log.posts[0].body.closes.length, 60);
 });
 
 test("a rejected dispatch is reported as NOT queued and never claimed as closed", async () => {

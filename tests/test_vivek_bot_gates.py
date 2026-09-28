@@ -57,7 +57,8 @@ def test_adv_floor_blocks_illiquid_names():
 
 def test_size_vs_adv_blocks_oversized_positions():
     # Crypto has no ADV floor, so the %-of-tape cap is the binding gate there:
-    # a 1%-stop plan sizes to ~$3.5k notional, >2% of a $100k/day tail alt.
+    # a fixed $2,500 position (since 2026-09-27) is 2.5% of a $100k/day tail
+    # alt, over the 2% cap.
     row = _row(adv_usd=100_000.0,
                plans={"1W": _plan(stop=99.0, tp1=106.0, tp2=112.0, tp3=120.0, rr=6.0)})
     out = vb.plan_trade(row, equity=10_000, market="crypto")
@@ -96,13 +97,26 @@ def test_cooldown_symbols_from_recent_stop_outs_only():
 
 # ── crypto synthetic sectors ──────────────────────────────────────────────────
 
+# Exactly enough alts to FILL the crypto-alt bucket at the per-sector cap (6
+# since 2026-09-27; three filled it before). Under-filled, both tests below go
+# vacuous: the alt bucket never blocks, so a BTC mis-bucketed as an alt would
+# still get in and nothing would notice. _full_alt_book() asserts the fill.
+ALTS = ("SOL", "AVAX", "LINK", "ADA", "DOT", "XRP")
+
+
+def _full_alt_book():
+    assert len(ALTS) == config.VIVEK_BOT_MAX_PER_SECTOR, (
+        "resize ALTS to the per-sector cap or the alt-bucket tests test nothing")
+    assert not set(ALTS) & set(config.VIVEK_BOT_CRYPTO_MAJORS)
+    return [{"symbol": s, "direction": "long", "sector": ""} for s in ALTS]
+
+
 def test_crypto_alts_share_one_synthetic_sector():
     assert vb._sector_key("BTC", "", "crypto") == "crypto-major"
     assert vb._sector_key("SOL", "", "crypto") == "crypto-alt"
     assert vb._sector_key("XYZ", "", "asx") == ""          # stocks stay exempt when unknown
 
-    open_book = [{"symbol": s, "direction": "long", "sector": ""}
-                 for s in ("SOL", "AVAX", "LINK")]
+    open_book = _full_alt_book()
     d = vb.decide([_row("DOGE", sector="")], 10_000, market="crypto",
                   open_book=open_book)
     assert not d["plans"]
@@ -110,8 +124,7 @@ def test_crypto_alts_share_one_synthetic_sector():
 
 
 def test_crypto_major_not_blocked_by_alt_cap():
-    open_book = [{"symbol": s, "direction": "long", "sector": ""}
-                 for s in ("SOL", "AVAX", "LINK")]
+    open_book = _full_alt_book()
     d = vb.decide([_row("BTC", sector="")], 10_000, market="crypto",
                   open_book=open_book)
     assert len(d["plans"]) == 1

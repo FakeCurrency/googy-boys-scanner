@@ -59,10 +59,11 @@ def _sizing_basis() -> dict:
 
     Worse than uninformative: under ``fixed_notional`` the equity drops out of
     the dollar column ENTIRELY. Units are ``notional / entry``, so EQUITY
-    survives only in the leverage cap — which a $5,000 position on a $150,000
-    book can never reach. ``equity`` alone therefore *reads* like the basis
-    while having no effect on it, which is the failure mode worth naming: a
-    number that looks like the answer to the question a reader is asking.
+    survives only in the leverage cap — which a fixed-notional position
+    ($2,500 today) on a $150,000 book can never reach. ``equity`` alone
+    therefore *reads* like the basis while having no effect on it, which is
+    the failure mode worth naming: a number that looks like the answer to the
+    question a reader is asking.
 
     ``vivek_bot`` already stamps ``sizing_mode`` onto every live book row
     (``tests/test_fixed_notional.py``). This is the same stamp on the report

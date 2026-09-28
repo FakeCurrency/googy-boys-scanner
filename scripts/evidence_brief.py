@@ -136,6 +136,13 @@ def main() -> int:
     # -- paper book delta vs newest backup -----------------------------------
     book = _load(os.path.join(ROOT, "journal", "vivek_bot_book.json")) or {}
     op = book.get("open") or []
+    # The book cap is READ, never typed here: it was a literal "/30" until the
+    # owner's 2026-09-27 resize to 60 slots. The brief may not import
+    # scanner.config, so it takes the number the scan publishes from config
+    # (bot_rules.json max_open_total); unreadable or 0 (off) prints no
+    # denominator rather than a guessed one.
+    cap = (_load(os.path.join(DATA, "bot_rules.json")) or {}).get("max_open_total")
+    cap_txt = f"/{cap}" if isinstance(cap, int) and cap > 0 else ""
     open_r = sum(p.get("unreal_r") or 0 for p in op)
     backups = sorted(glob.glob(os.path.join(ROOT, "backups", "*", "journal", "vivek_bot_book.json")))
     prev_book = _load(backups[-1]) if backups else None
@@ -153,10 +160,10 @@ def main() -> int:
             bat = NOW
         new_stalls = sorted(_stall_syms(book, NOW) - _stall_syms(prev_book, bat))
         prev_r = sum(p.get("unreal_r") or 0 for p in prev_book.get("open") or [])
-        lines.append(f"book: {len(op)}/30 open, R {open_r:+.2f} ({open_r - prev_r:+.2f} vs {bstamp} backup) | "
+        lines.append(f"book: {len(op)}{cap_txt} open, R {open_r:+.2f} ({open_r - prev_r:+.2f} vs {bstamp} backup) | "
                      f"closes since: {closes_txt} | new stalls: {', '.join(new_stalls) or 'none'}")
     else:
-        lines.append(f"book: {len(op)}/30 open, R {open_r:+.2f} | no backup baseline for deltas")
+        lines.append(f"book: {len(op)}{cap_txt} open, R {open_r:+.2f} | no backup baseline for deltas")
 
     # -- cycle w3-1 clock: closes toward the pre-registered n=30 read --------
     # Counted on rows STAMPED cycle=="w3-1" (written at entry by the runner),

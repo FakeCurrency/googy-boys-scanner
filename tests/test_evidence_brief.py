@@ -86,3 +86,17 @@ def test_the_cycle_clock_carries_the_frozen_protocol_numbers():
     # Counted on the entry-time stamp, never inferred from dates — the one
     # rule that keeps pre-gate history out of the cycle read.
     assert 't.get("cycle") == CYCLE' in SRC
+
+
+def test_the_book_line_reads_the_published_cap_not_a_literal():
+    # The book line said "/30 open" as a typed literal and would have kept
+    # saying it after the owner's 2026-09-27 resize to 60 slots. The brief may
+    # not import scanner.config, so it reads the cap the scan PUBLISHES from
+    # config (public/data/bot_rules.json max_open_total).
+    import json
+    assert not re.search(r"\}/\d+ open", SRC), "a hard-coded book cap is back"
+    assert '"bot_rules.json"' in SRC and '"max_open_total"' in SRC
+    cap = json.loads((ROOT / "public" / "data" / "bot_rules.json")
+                     .read_text(encoding="utf-8"))["max_open_total"]
+    book = next(ln for ln in _run().stdout.splitlines() if ln.startswith("book:"))
+    assert f"/{cap} open" in book, book

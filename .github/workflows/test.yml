@@ -84,6 +84,11 @@ on:
       # workflow level, a renamed `name:` that empties the wait-loop filter —
       # are edits to files that used to skip this gate entirely.
       - ".github/workflows/**"
+      # .github/resize-kick (2026-09-27), same rule: tests/test_resize_book_workflow.py
+      # reads it (its target= must equal config VIVEK_BOT_POSITION_NOTIONAL),
+      # and a push touching it is exactly the push that restates the open book
+      # (resize_book.yml) - the one edit that must never ship unchecked.
+      - ".github/resize-kick"
   pull_request:
   workflow_dispatch:
 
