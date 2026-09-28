@@ -9,6 +9,10 @@ name: Crypto source check
 #     close gap to Yahoo (ticker collisions show up here), liquidity floor
 #   * scripts/crypto_scan_dryrun.py     the REAL VIVEK crypto scan on exchange
 #     klines, compared with the published one -- writes nothing, no bot
+#   * scripts/crypto_lens_dryrun.py     the REAL momentum screen and PhaseMap
+#     scan on exchange klines vs the old Yahoo path, same moment, same
+#     universe: identity rejections, wrong-token results, the momentum
+#     turnover floor on one venue's volume -- writes nothing (2026-09-28)
 # Everything goes to the step summary. It commits nothing, so it needs no
 # assert_staged, no WATCHDOG entry and no mutex (evidence_brief pattern).
 #
@@ -31,7 +35,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -53,3 +57,10 @@ jobs:
         run: |
           set -o pipefail
           python scripts/crypto_scan_dryrun.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Dry momentum + PhaseMap crypto, exchange vs Yahoo
+        if: always()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python scripts/crypto_lens_dryrun.py | tee -a "$GITHUB_STEP_SUMMARY"
