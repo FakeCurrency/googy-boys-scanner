@@ -211,6 +211,24 @@ def test_a_coin_nothing_confirms_is_left_out_and_named(monkeypatch):
     assert p.source_of == {"BTC": "yahoo"}
 
 
+def test_a_coin_one_venue_refuses_but_another_confirms_is_SCANNED_not_left_out(monkeypatch):
+    """Measured 2026-09-28: Binance's XMRUSDT is the stale pre-delisting
+    series (refused), Yahoo's XMR-USD is Monero. The coin is served from
+    Yahoo and must not be published as a gap."""
+    def router(url, timeout):
+        if "binance.vision" in url and "XMRUSDT" in url:
+            return _klines(300.0)                     # not Monero's price
+        raise X.SourceDead("HTTP 451")
+    monkeypatch.setattr(X, "_get_json", router)
+    _yahoo_only(monkeypatch)
+    p = FetchProvider("crypto", {"XMR": "XMR-USD"}, ref_prices={"XMR": 7.0})
+    p.fetch_all()
+    assert p.source_of == {"XMR": "yahoo"}
+    assert float(p.get_daily_bars("XMR")["Close"].iloc[-1]) == 7.0
+    assert p.identity_rejected == {}
+    assert p.report["identity_rejected"] == {"XMR": ["binance_vision"]}   # the venue refusal stays on record
+
+
 def test_the_check_holds_even_with_the_venue_switch_reverted(monkeypatch):
     """CRYPTO_DATA_SOURCE = "yahoo" is the one-line revert, and in that mode
     data.fetch checks nothing. The provider re-applies the check itself, so a

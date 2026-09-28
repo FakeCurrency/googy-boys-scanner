@@ -427,6 +427,19 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
     return frames, report
 
 
+def left_out(report: dict) -> list[str]:
+    """The coins the identity check actually LEFT OUT: named in
+    `identity_rejected` AND served by no source. `identity_rejected` itself
+    lists every venue that refused a coin, including coins a later source
+    then confirmed (measured 2026-09-28: Binance's XMR series is the stale
+    pre-delisting one and is refused, Yahoo's XMR-USD is Monero and is used)
+    -- so reading it as "left out" overstates the gap. Base symbols, sorted."""
+    served = {str(t).upper() for t in (report.get("source_of") or {})}
+    suffix = str(getattr(config.MARKETS.get("crypto"), "suffix", "") or "").upper()
+    return sorted(b for b in (report.get("identity_rejected") or {})
+                  if f"{str(b).upper()}{suffix}" not in served and str(b).upper() not in served)
+
+
 def source_summary(report: dict) -> dict:
     """The published half of a fetch() report (the per-ticker map stays out:
     rows carry their own `data_source`)."""

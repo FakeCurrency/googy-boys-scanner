@@ -2357,6 +2357,25 @@ marks and stops, kill switch, every lens) came from Yahoo's aggregated
   `phasemap/tests/test_identity.py`; `phasemap/tests/conftest.py` now refuses
   every exchange (tests/conftest.py never covered this directory — the first
   draft of those tests reached for live Binance).
+- **MEASURED ON A RUNNER before merge (2026-09-28, crypto_source_check run
+  #4, `scripts/crypto_lens_dryrun.py`: each lens's real code, exchange vs the
+  old Yahoo path, same moment, 201 coins).** Coverage 145 → 167 (Binance 120,
+  Coinbase 15, Yahoo fallback 32; Yahoo alone lacks ~56 coins it lists under
+  numbered tickers, e.g. SUI/UNI/PEPE/TAO/HYPE). Yahoo wrong-token list is
+  now **15**: AERO ARB BR DBR EDGE JUP KAG M MET META MNT PRL SKY WLFI XCN.
+  Exchanges collide too — AI, LIT, BTT, and Binance's XMR is the stale
+  pre-delisting series — and the check refuses them. **`identity_rejected`
+  names every VENUE that refused a coin, including coins a later source then
+  confirmed (XMR: Binance refused, Yahoo used)**; `data.left_out(report)` is
+  the coins actually left out, and PhaseMap's snapshot `identity_rejected`
+  now lists only those. MOMENTUM: one venue's turnover is a median **0.12×**
+  Yahoo's aggregate for the same coin, so the $5M floor cleared 112 → 88
+  (43 lose it, incl. ALGO ATOM CRO LDO VET THETA SAND MANA; 19 newly clear,
+  mostly coins Yahoo never carried); screened 110 → 86; at $3M 105 clear, at
+  $2M 115. The floor was NOT changed (owner's call). PHASEMAP: results
+  81 → 98; A+/A {AKT, H, JUP bearish, SOL} → {AKT, CVX, H, HBAR, PEPE, SOL,
+  ZK} — the Yahoo JUP A-tier setup was the WRONG TOKEN (DBR and MET rows
+  likewise); ILLIQUID 6 → 2; 8 coins left out.
 - **Still on Yahoo, by scope:** stocks everywhere. Nothing that prices
   crypto reads Yahoo except as `fetch`'s per-coin fallback. Tests never reach
   an exchange (`tests/conftest.py` and `phasemap/tests/conftest.py` refuse

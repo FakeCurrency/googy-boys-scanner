@@ -234,24 +234,25 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
     }
     if src_report:
         tag_sources(payload, market, src_report)
-        _print_sources(market, payload["data_sources"])
+        _print_sources(market, src_report)
     print(errs.report(screened), flush=True)
     return payload
 
 
-def _print_sources(market: str, ds: dict) -> None:
-    """One line of venue counts, and the identity rejections NAMED -- a coin
-    left out because its only series is a different token is a decision the
-    log should state, not a silent gap in coverage."""
-    if ds.get("mode") != "exchange":
+def _print_sources(market: str, report: dict) -> None:
+    """One line of venue counts, and the coins the identity check LEFT OUT
+    named -- a coin dropped because every series under its ticker is a
+    different token is a decision the log should state, not a silent gap in
+    coverage. A coin one venue refused but another confirmed is scanned, and
+    is not counted as left out (`data.left_out`)."""
+    if report.get("mode") != "exchange":
         return
-    print(f"momentum: {market} sources {ds.get('by_source')}  refused {ds.get('dead')}  "
-          f"yahoo fallback {ds.get('yahoo_fallback', 0)}", flush=True)
-    rej = ds.get("identity_rejected") or {}
-    if rej:
-        print(f"momentum: {market} {len(rej)} coin(s) left out - no source is the "
-              f"coin CoinGecko prices under that ticker: {', '.join(sorted(rej))}",
-              flush=True)
+    print(f"momentum: {market} sources {report.get('by_source')}  refused {report.get('dead')}  "
+          f"yahoo fallback {report.get('yahoo_fallback', 0)}", flush=True)
+    gone = sdata.left_out(report)
+    if gone:
+        print(f"momentum: {market} {len(gone)} coin(s) left out - no source is the "
+              f"coin CoinGecko prices under that ticker: {', '.join(gone)}", flush=True)
 
 
 def backtest_market(market: str, *, rows: Optional[List[dict]] = None,
@@ -344,7 +345,7 @@ def backtest_market(market: str, *, rows: Optional[List[dict]] = None,
     }
     if src_report:
         payload["data_sources"] = sdata.source_summary(src_report)
-        _print_sources(market, payload["data_sources"])
+        _print_sources(market, src_report)
     print(errs.report(replayed), flush=True)
     return payload
 

@@ -284,3 +284,15 @@ def test_every_cache_merge_after_a_crypto_fetch_carries_the_reference_prices(rel
     for c in calls:
         assert any(k.arg == "ref_prices" for k in c.keywords), \
             f"{rel}:{c.lineno}: merge_with_cache without ref_prices"
+
+
+def test_left_out_counts_only_coins_no_source_served():
+    """identity_rejected names every venue that refused a coin -- including a
+    coin a LATER source confirmed. Measured on a runner 2026-09-28: Binance's
+    XMRUSDT is the stale pre-delisting series (refused), Yahoo's XMR-USD is
+    Monero (used). Reading the map as "left out" overstated the gap."""
+    rep = {"identity_rejected": {"XMR": ["binance_vision"], "ARB": ["yahoo"],
+                                 "AI": ["binance_vision", "coinbase"]},
+           "source_of": {"XMR-USD": "yahoo", "BTC-USD": "binance_vision"}}
+    assert data.left_out(rep) == ["AI", "ARB"]
+    assert data.left_out({}) == []

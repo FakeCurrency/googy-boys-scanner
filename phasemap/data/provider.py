@@ -170,7 +170,12 @@ class FetchProvider:
             out.insert(0, "Date", pd.DatetimeIndex(df.index))
             self._cache[t] = out.reset_index(drop=True)
             self.source_of[t] = src
-        self.identity_rejected = dict(sorted(rejected.items()))
+        # LEFT OUT only: a coin one venue refused but a later source confirmed
+        # is served (its data_source says which) -- listing it here would
+        # publish a scanned coin as a gap (XMR: Binance's stale series refused,
+        # Yahoo's Monero used; measured 2026-09-28).
+        self.identity_rejected = dict(sorted((t, v) for t, v in rejected.items()
+                                             if t not in self._cache))
 
     def get_daily_bars(self, ticker: str):
         if not self._fetched:

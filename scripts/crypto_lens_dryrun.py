@@ -98,8 +98,13 @@ def momentum_section(rows, strangers) -> None:
     ds = new["data_sources"]
     print(f"- NEW sources: {ds['by_source']}; refused the runner: {ds['dead']}; "
           f"Yahoo fallback {ds['yahoo_fallback']}")
-    left_out = [k + " (" + "/".join(v) + ")" for k, v in ds["identity_rejected"].items()]
-    print(f"- NEW identity check left out {len(left_out)}: {_list(left_out)}")
+    rej = ds["identity_rejected"]
+    gone = data.left_out(rep)
+    print(f"- NEW identity check LEFT OUT {len(gone)}: "
+          f"{_list(k + ' (' + '/'.join(rej[k]) + ')' for k in gone)}")
+    saved = sorted(set(rej) - set(gone))
+    print(f"- refused by a venue but CONFIRMED by a later source (scanned): "
+          f"{_list(k + ' (refused: ' + '/'.join(rej[k]) + '; used: ' + str(rep['source_of'].get(k + SUFFIX)) + ')' for k in saved)}")
     print(f"- coverage (frames): OLD {len(yh)} -> NEW {len(ex)} of {len(rows)}")
 
     # --- the turnover floor: one venue's volume vs Yahoo's aggregate --------
@@ -183,7 +188,7 @@ def phasemap_section(strangers) -> None:
     print(f"- NEW sources: {ds.get('by_source')}; refused the runner: {ds.get('dead')}; "
           f"Yahoo fallback {ds.get('yahoo_fallback')}")
     left_out = [k + " (" + "/".join(v) + ")" for k, v in (new.get("identity_rejected") or {}).items()]
-    print(f"- NEW identity check left out {len(left_out)}: {_list(left_out)}")
+    print(f"- NEW identity check LEFT OUT {len(left_out)}: {_list(left_out)}")
 
     def keyed(p):
         return {(r["ticker"], r["direction"]): r for r in p["results"]}

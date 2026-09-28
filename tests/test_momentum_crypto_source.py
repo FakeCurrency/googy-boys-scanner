@@ -132,3 +132,13 @@ def test_injected_frames_publish_no_source_block():
     """The injectable path (tests, replays of fixtures) fetched nothing, so it
     must not claim a source it did not use."""
     assert R.screen_market("crypto", frames={}, rows=[]) is None
+
+
+def test_the_log_names_only_coins_actually_left_out(capsys):
+    rep = {"mode": "exchange", "by_source": {"yahoo": 1}, "dead": {}, "yahoo_fallback": 1,
+           "identity_rejected": {"XMR": ["binance_vision"], "ARB": ["yahoo"]},
+           "source_of": {"XMR-USD": "yahoo"}}
+    R._print_sources("crypto", rep)
+    out = capsys.readouterr().out
+    assert "1 coin(s) left out" in out and "ARB" in out.split("left out")[1]
+    assert "XMR" not in out.split("left out")[1]
