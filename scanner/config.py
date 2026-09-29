@@ -206,11 +206,37 @@ EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
 # NOT TRADED, NOT CONFLUENCE: nothing under scanner/broker/ can import the
 # lens and the lens cannot import the bot (tests/test_ignition_fences.py).
 IGNITION_RULESET_VERSION = "1.0.0"
-IGNITION_MARKETS = ("crypto",)   # v1: crypto only. ASX/NASDAQ sub-$0.50 is Specs' ground.
+IGNITION_MARKETS = ("crypto", "asx")   # ASX added 2026-09-29 (owner: "Yes"), see below.
 IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window + warm-up
 IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
 IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
                                  # a fresh-looking signal off a stale bar is the worst output
+
+# ASX (2026-09-29, owner ruling after the DTR miss: "Yes and factor in the
+# converting windows from calendar days to trading days"). PRE-REGISTERED
+# BEFORE THE FIRST ASX REPLAY RAN -- the same rule, re-expressed for a market
+# that trades ~252 days a year instead of 365:
+#   * Windows that stand for CALENDAR TIME ("2 years", "3 years", "a year of
+#     warm-up", "half a year" of holding) are written below in CRYPTO bars and
+#     rescaled per market by scanner/ignition/engine.py bars():
+#     round(n x IGNITION_BARS_PER_YEAR[market] / 365). Crypto is x1 exactly,
+#     so ruleset 1.0.0 is byte-unchanged there. ASX: rank window 730 -> 504,
+#     rank / drawdown warm-up 365 -> 252, drawdown lookback 1095 -> 756,
+#     minimum history 400 -> 276, replay max hold 180 -> 124, random-timing
+#     window 182 -> 126.
+#   * Windows that are CHART CONVENTIONS stay in bars on every market: the
+#     9/26/43/200 SMAs (the owner reads a 200-SMA as 200 trading days on an
+#     ASX chart, like VIVEK does), ATR 14, the 20-bar volume average and
+#     RVOL, the 60-bar base, the 10-bar coil lookback, the 20-bar rearm /
+#     keep, the 9-SMA trail. A "60-bar base" is ~3 months on the ASX vs ~2 on
+#     crypto -- a LONGER base to clear, i.e. stricter, never looser.
+#   * Floors, costs, staleness, the regime index and the forward date are per
+#     market (the *_BY_MARKET dicts; engine.mkt() reads them, crypto falls
+#     through to the scalar).
+# DTR (Dateline Resources, +100% 28-29 Sep 2026) prompted the port and is a
+# DESIGN CASE: never scored, reported as a case study (see below).
+IGNITION_BARS_PER_YEAR = {"crypto": 365, "asx": 252}
+IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET = {"asx": 5}   # Easter: Thu bar read on Tue
 
 # THE COIL -- all four at once, on one bar. Measured on the bar, causally.
 IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
@@ -242,8 +268,11 @@ IGNITION_RVOL_LEN = 20
 IGNITION_RVOL_MIN = 3.0          # trigger-day volume >= 3x its prior 20-day average
 IGNITION_EXT_SMA = 9
 IGNITION_MAX_EXT = 0.60          # not already >60% over the 9-SMA (Specs' latecomer cap)
-IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000}      # 20d avg $ before the trigger
-IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000}   # trigger-day $ (= crypto floor)
+IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000, "asx": 100_000}      # 20d avg $ before the trigger
+IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000, "asx": 300_000}   # trigger-day $ (= crypto floor)
+# ASX (A$, Close x Volume): a crypto-sized $1M/$3M would drop nearly every
+# small cap, which is where these bases live. A$100k is config.MARKETS["asx"]
+# .liquidity_min (the VIVEK scan's own floor); the trigger day asks 3x that.
 IGNITION_REARM_BARS = 20         # one trigger per move, not one per day of it
 
 # THE PLAN -- what the page shows and the backtest trades.
@@ -261,12 +290,16 @@ IGNITION_KEEP_BARS = 20          # then RUNNING / CLOSED stays visible for 20 ba
 # THE BACKTEST (scanner/ignition/backtest.py, dispatched via ignition.yml)
 IGNITION_BT_PERIOD = "max"       # every bar Yahoo has; the regimes are the point
 IGNITION_BT_COST_PCT = 0.30      # round trip: 2 x 0.10% taker + slippage on thin alts
+IGNITION_BT_COST_PCT_BY_MARKET = {"asx": 1.0}   # ASX small caps: retail brokerage
+                                 # both ways + the spread -- under 10c a tick is 0.1c,
+                                 # ~1% of a 9c price (DTR), so 0.30 would flatter it
 IGNITION_BT_MAX_HOLD = 180       # bars; open trades past it exit at the close
 IGNITION_BT_SPLIT_DATE = "2024-01-01"   # in-sample before, out-of-sample from
 IGNITION_BT_RANDOM_DRAWS = 5     # random-timing baseline: draws per real trade
 IGNITION_BT_SEED = 20260928      # every random choice is seeded -> reproducible
 IGNITION_BT_BOOTSTRAP = 2000     # resamples for the expectancy confidence band
 IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
+IGNITION_BT_CASES_BY_MARKET = {"asx": ("DTR",)}
 # THE DESIGN CASES ARE NEVER SCORED. QNT's Sep-2026 chart is the one piece of
 # market data that informed the thresholds above (the ribbon, drawdown and
 # coil-lookback comments quote it), so its triggers from this date on are
@@ -275,7 +308,16 @@ IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
 # evidence for the rule is look-ahead at the research-design level (audit,
 # 2026-09-28). Symbol -> first excluded trigger date.
 IGNITION_BT_DESIGN_CASES = {"QNT": "2026-09-01"}
+# DTR's Sep-2026 move is why the ASX port exists (no threshold was drawn from
+# it, but "the lens would have caught the stock that prompted it" is exactly
+# the claim that must not score itself), so it is excluded the same way.
+IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}}
 IGNITION_BT_REGISTERED_DATE = "2026-09-28"   # triggers from here are the FORWARD bucket
+IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29"}
+# The regime line (CONTEXT, never a filter): the market's own benchmark vs its
+# 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200,
+# fetched beside the universe and never screened.
+IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200")}
 IGNITION_BT_RANDOM_WINDOW = 182  # random-timing draws: within +/- this many bars of the
                                  # real trigger -- same coin, same SEASON, random day.
                                  # Crypto regime is the biggest driver of a long's R;

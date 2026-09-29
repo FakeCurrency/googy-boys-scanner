@@ -20,9 +20,11 @@ backtest can vary one without editing the rule.
 
 The coil (all four on one bar):
     ribbon   max/min of SMA 9/26/43/200 - 1          <= IGNITION_RIBBON_MAX
-    quiet    ATR%-of-price, percentile in its year   <= IGNITION_ATR_PCTL_MAX
-    dry      20d avg volume, percentile in its year  <= IGNITION_VOL_PCTL_MAX
+    quiet    ATR%-of-price, percentile over 2 years  <= IGNITION_ATR_PCTL_MAX
+    dry      20d avg volume, percentile over 2 years <= IGNITION_VOL_PCTL_MAX
     deep     1 - close / 3y max High                 >= IGNITION_MIN_DRAWDOWN
+    ("2 years" / "3 years" are calendar time: `bars()` converts them to each
+    market's own bar count -- 730/1095 on 24/7 crypto, 504/756 on the ASX.)
 
 The trigger (on a completed bar t):
     coiled on any of bars t-L .. t-1 (L = IGNITION_COIL_LOOKBACK)
@@ -52,6 +54,39 @@ from scanner.indicators import atr as calc_atr
 from scanner.indicators import sma
 
 _COLS = ("Open", "High", "Low", "Close", "Volume")
+
+
+# Constants that stand for CALENDAR TIME, written in crypto bars (365 a
+# year) and rescaled per market by `bars()`. Everything else the rule counts
+# in bars is a chart convention and is the same number on every market (see
+# config's ASX block for the split and why).
+CALENDAR_WINDOWS = ("IGNITION_RANK_WINDOW", "IGNITION_RANK_MIN_PERIODS",
+                    "IGNITION_DD_LOOKBACK", "IGNITION_DD_MIN_PERIODS",
+                    "IGNITION_MIN_BARS", "IGNITION_BT_MAX_HOLD",
+                    "IGNITION_BT_RANDOM_WINDOW")
+
+
+def bars(market: str, name: str) -> int:
+    """config.<name> (a calendar window in crypto bars) in THIS market's bars:
+    round(n x bars-per-year / 365). Crypto (365) is the identity, exactly, so
+    the crypto rule cannot move. Read at call time, so a test's monkeypatch of
+    the crypto-bar constant carries through to every market."""
+    if name not in CALENDAR_WINDOWS:
+        raise KeyError(f"{name} is not a calendar window")
+    n = int(getattr(config, name))
+    per_year = config.IGNITION_BARS_PER_YEAR
+    ref = int(per_year["crypto"])              # the bars the constants are written in
+    bpy = int(per_year.get(market, ref))
+    if bpy == ref or n == 0:
+        return n
+    return max(1, int(round(n * bpy / float(ref))))
+
+
+def mkt(market: str, name: str):
+    """config.<name>_BY_MARKET[market] when that market overrides it, else the
+    scalar config.<name> (crypto's value)."""
+    over = getattr(config, name + "_BY_MARKET", None) or {}
+    return over[market] if market in over else getattr(config, name)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -140,14 +175,14 @@ def base_features(df: pd.DataFrame, market: str) -> pd.DataFrame:
 
     a = calc_atr(df, config.IGNITION_ATR_LEN)
     atr_pct = a / c
-    w, mp = config.IGNITION_RANK_WINDOW, config.IGNITION_RANK_MIN_PERIODS
+    w, mp = bars(market, "IGNITION_RANK_WINDOW"), bars(market, "IGNITION_RANK_MIN_PERIODS")
     atr_rank = atr_pct.rolling(w, min_periods=mp).rank(pct=True)
     vavg = v.rolling(config.IGNITION_VOL_AVG_LEN,
                      min_periods=config.IGNITION_VOL_AVG_LEN).mean()
     vol_rank = vavg.rolling(w, min_periods=mp).rank(pct=True)
 
-    hmax = h.rolling(config.IGNITION_DD_LOOKBACK,
-                     min_periods=config.IGNITION_DD_MIN_PERIODS).max()
+    hmax = h.rolling(bars(market, "IGNITION_DD_LOOKBACK"),
+                     min_periods=bars(market, "IGNITION_DD_MIN_PERIODS")).max()
     drawdown = 1.0 - c / hmax
 
     nb = config.IGNITION_BASE_BARS
@@ -448,7 +483,7 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
     """
     p = p or Params.from_config(market)
     df = clean(df)
-    if len(df) < config.IGNITION_MIN_BARS:
+    if len(df) < bars(market, "IGNITION_MIN_BARS"):
         return None
     feat = compute(df, market, p)
     T = len(feat) - 1

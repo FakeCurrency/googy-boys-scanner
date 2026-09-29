@@ -25,7 +25,8 @@ and was REMOVED ENTIRELY — see the TURTLE note near the end.) Two more lenses
 are REPORT-ONLY and outside confluence: **MOMENTUM** (`scanner/momentum/`,
 `momentum.html`, `momentum.yml`) — a 20/50/200-EMA + RSI-divergence screen
 published per market after that market's close — and **IGNITION**
-(`scanner/ignition/`, crypto coil → breakout; see IGNITION below).
+(`scanner/ignition/`, coil → breakout on crypto and, since 2026-09-29, the
+ASX; see IGNITION below).
 
 1. **VIVEK** (`scanner/vivek.py` + `scan.py`) — the core lens. Price
    *reacting* at its 200-SMA on Weekly / 3-Day / Daily(H4-proxy) levels.
@@ -132,6 +133,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | commit_sentinel.yml | every push to main | detection half of branch protection (2026-08-20): checks the AUTHENTICATED PUSHER + every commit's author/committer email against the identity set observed on main's real history (`scripts/commit_sentinel.py`); flags force-pushes and truncated payloads too. DETECTION ONLY — anomaly = green run + step summary + `::warning::` on the run page (the Discord leg was removed 2026-08-27), never blocks/reverts. NOT in the scan mutex, contents: read, no path filter (the quiet-edit scenario IS a data-file edit). Honest limit recorded in both files: the 2026-08-20 incident commit wore the owner's identity end-to-end, so a perfectly disguised integration is branch protection's job, not this one's. Pins: `tests/test_commit_sentinel.py` |
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement; commit skips only when ALL FOUR artefacts print their `*_UNCHANGED` sentinel; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) gated on the Actions API — it skips when a scheduled run already SUCCEEDED today, fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 | ignition.yml | `14 0` UTC (the new completed crypto bar) + `14 1,2` backstops (skip once today's file is on the branch) + `44 5,11,17,21` intraday; push to `.github/ignition-kick`; manual (`backtest`, `dry_run`) | IGNITION lens (REPORT-ONLY, crypto): screens the coil → ignition shape into `public/data/ignition/crypto.json`; a kick or `backtest: true` also replays full history into `crypto_backtest.json`, committed back to the PUSHED branch (never hard-coded main). Own concurrency group per branch, not in the scan mutex; assert_staged per reported path; no WATCHDOG entry by decision. Pins: `tests/test_ignition_workflow.py` |
+| ignition_asx.yml | `24 6` UTC Mon–Fri (after the ASX close in both DST regimes) + `24 7,9` backstops (skip once a file generated after today's close is on the branch — `scripts/ignition_asx_due.py`, stdlib only, runs before pip) + `54 0,2,4` intraday; push to `.github/ignition-asx-kick`; manual (`backtest`, `dry_run`) | IGNITION on the ASX (REPORT-ONLY): the STRUCTURAL TWIN of ignition.yml — same steps, same run blocks with `crypto`→`asx` (test-pinned byte-equal, so the crypto suite's executed shell covers it), own gate, own group `ignition-asx-<ref>`, own cache namespace, 300-min timeout for the ~2,000-name replay. Publishes `public/data/ignition/asx.json` (+ `asx_backtest.json`). Pins: `tests/test_ignition_asx.py` |
 | crypto_source_check.yml | manual; push to `.github/crypto-source-kick` | READ-ONLY verification of the crypto data-source switch (see CRYPTO DATA SOURCE): venue reachability from a runner, freshness, close gap to Yahoo (ticker collisions), liquidity-floor effect, and a DRY VIVEK crypto scan on exchange klines diffed against the published one — writes nothing, no bot, no mutex, no assert_staged/WATCHDOG (evidence_brief pattern) |
 | momentum.yml | `30 6`, `30 21` Mon–Fri + `30 0` daily + a `41 */3` backstop, and after every completed morning_plays.yml run | MOMENTUM lens (REPORT-ONLY): screens ONE market per run — the newest one due per `scripts/momentum_due.py`, read against main — after that market's close, into `public/data/momentum/<market>.json`; nothing else. Own concurrency group (`momentum`), not in the scan mutex; assert_staged on the one path |
 | data_depth.yml | manual only | READ-ONLY probe of how much free daily history each source serves (`scripts/data_depth.py`, stdlib only); the printed table is the deliverable. No git, no assert_staged, no WATCHDOG entry |
@@ -411,7 +413,7 @@ too little or fail its gate once.
 Tier 3).** Callers of `scripts/assert_staged.sh`, in full as of 2026-09-28
 (re-derive with `grep -n "bash scripts/assert_staged.sh" .github/workflows/*.yml`
 — a comment naming it is not a call): scan, crypto_bot, phasemap, backup_book,
-reco_note, alert_returns, momentum, ignition (once per reported path), and —
+reco_note, alert_returns, momentum, ignition + ignition_asx (once per reported path), and —
 new in Tier 3 — close_position, gated to
 `journal_type=bot` only (see "Tier 3" below for why the swing/scalp path must
 stay a green no-op); and (2026-09-27) resize_book, gated BEHIND its `--check`
@@ -2123,6 +2125,32 @@ explicit list is where a new odd-named peg has to be added. Pins:
   hides the panel, resets the pill and re-raises; the deck keeps rendering.
   Tests: `test/ignition.test.js` (mutation-verified),
   `tests/test_ignition_frontend.py` (JS market list == config).
+- **THE ASX PORT (2026-09-29, owner: "Yes and factor in the converting
+  windows from calendar days to trading days and everything else" — after
+  DTR ran 0.063 → 0.127 while only VIVEK flagged it, a session late).** Same
+  rule, same thresholds, `IGNITION_RULESET_VERSION` unchanged (crypto is
+  byte-identical). What differs, all pre-registered before the first ASX
+  replay: (1) CALENDAR windows are written in crypto bars and rescaled by
+  `engine.bars()` = round(n × `IGNITION_BARS_PER_YEAR[m]` / 365): ASX rank
+  window 504, rank/drawdown warm-up 252, drawdown lookback 756, min history
+  276, replay max hold 124, random-timing window 126; crypto ×1 exactly.
+  CHART-CONVENTION windows (SMA 9/26/43/200, ATR 14, 20-bar volume/RVOL,
+  the 60-bar base, coil lookback, rearm, keep, 9-SMA trail) stay in bars —
+  the owner reads a 200-SMA as 200 trading days on an ASX chart; a 60-bar
+  base is ~3 months there (stricter). (2) Floors A$100k base / A$300k
+  trigger day (Close × Volume). (3) Replay cost 1.0% round trip (a tick is
+  ~1% of a 9c price). (4) Data-age ceiling 5 days (Easter). (5) Regime line
+  = the ASX 200 (`^AXJO`) vs its 200-SMA, fetched beside the universe, never
+  screened; the ASX payload's regime block uses generic keys (`label`,
+  `above_200`, …) and the replay groups `by_regime`. (6) DTR is the ASX
+  DESIGN CASE (never scored; reported under `cases`); forward bucket from
+  2026-09-29. (7) The replay drops a name whose turnover never clears both
+  floors on one bar (ASX only — a speed-up that changes no trade, pinned).
+  Per-market values live in `*_BY_MARKET` dicts read by `engine.mkt()`. The
+  deck pill now shows on the ASX deck too; a session market's run-age rule
+  counts WEEKDAY hours against `STALE_SESSION_H` = 50 (a Friday screen is
+  fresh on Monday; a Monday holiday clears; two dead trading days flag).
+  Pins: `tests/test_ignition_asx.py`, `test/ignition.test.js`.
 - **What the replay says (exchange data + peg rule, run of 2026-09-28
   03:09 UTC — report-only, READ AS SUGGESTIVE):** 94 realised trades,
   expectancy **+1.19R**, median **−0.76R**, PF 3.08, 34% winners; versus

@@ -197,6 +197,12 @@ def test_it_has_its_own_concurrency_group_and_is_not_in_the_scan_mutex():
     for path in sorted(WFDIR.glob("*.yml")):
         if path.name == WF.name:
             continue
+        if path.name == "ignition_asx.yml":
+            # The ASX twin has its OWN group, never this one (pinned in
+            # tests/test_ignition_asx.py).
+            other = yaml.safe_load(path.read_text(encoding="utf-8"))
+            assert str(other["concurrency"]["group"]) != group
+            continue
         other = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         groups = [str((other.get("concurrency") or {}).get("group", ""))]
         groups += [str((j.get("concurrency") or {}).get("group", ""))
@@ -944,15 +950,19 @@ def test_there_is_DELIBERATELY_no_watchdog_entry():
 
 
 def test_no_other_workflow_learned_about_the_lens():
-    """Removability, checked at the workflow layer: exactly one workflow may
+    """Removability, checked at the workflow layer: exactly two workflows may
     name the lens's module, data, workflow file, kick file, cache namespace
-    or config prefix, and it is this one. (A `node test/ignition.test.js`
-    step in test.yml names none of those and stays allowed -- the JS suite
-    has to be registered there or it never runs.)"""
+    or config prefix -- this one and its ASX twin, ignition_asx.yml
+    (2026-09-29; tests/test_ignition_asx.py holds it to this file's shape).
+    (A `node test/ignition.test.js` step in test.yml names none of those and
+    stays allowed -- the JS suite has to be registered there or it never
+    runs.)"""
     pattern = re.compile(r"scanner[./]ignition|data/ignition|ignition\.yml|"
-                         r"ignition-kick|ignition-frames|IGNITION_")
+                         r"ignition-kick|ignition-frames|IGNITION_|ignition_asx|"
+                         r"ignition-asx")
     others = [p.name for p in sorted(WFDIR.glob("*.yml"))
-              if p.name != WF.name and pattern.search(p.read_text(encoding="utf-8"))]
+              if p.name not in (WF.name, "ignition_asx.yml")
+              and pattern.search(p.read_text(encoding="utf-8"))]
     assert others == [], others
 
 

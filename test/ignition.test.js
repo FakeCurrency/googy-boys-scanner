@@ -92,9 +92,10 @@ function fnSrc(name, src) {
 }
 
 const CONSTS = ["IGNITION_MARKETS", "esc", "own", "DASH", "LIVE_TTL_MS", "STALE_GEN_H", "STALE_BAR_GRACE_H", "BAR_24_7",
+  "STALE_SESSION_H",
   "STATE_ORDER", "EXIT_TEXT", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK"];
 const FNS = ["isMarket", "liveUrl", "btUrl", "num", "obj", "fmtPx", "signed", "fmtPct", "fmtR", "fmtX",
-  "fmtN", "toneOf", "isDay", "utcDay", "staleOf", "rowRank", "groupRows", "countsOf", "provNote",
+  "fmtN", "toneOf", "isDay", "utcDay", "weekdayHours", "staleOf", "rowRank", "groupRows", "countsOf", "provNote",
   "pillInfo", "loadingInfo", "melb", "utcText", "chartHref", "kv", "tag", "sourceHTML", "cardHead",
   "entryTip", "triggerCardHTML", "coiledCardHTML", "entryStatus", "fmtP", "fmtCI", "evidenceHTML",
   "sourcesText", "regimeHTML", "lagHTML", "headHTML", "sectionHTML", "ignitingHTML", "panelHTML"];
@@ -203,11 +204,11 @@ const noJunkValues = (html, what) => {
 // ════════════════════════════════════════════════════════════════════════════
 suite("markets — mirrored from config.IGNITION_MARKETS");
 
-test("the shipped constant is crypto only, and isMarket reads it", () => {
-  assert.deepEqual(I.IGNITION_MARKETS, ["crypto"]);
+test("the shipped constant is crypto + the ASX, and isMarket reads it", () => {
+  assert.deepEqual(I.IGNITION_MARKETS, ["crypto", "asx"]);
   assert.equal(I.isMarket("crypto"), true);
   assert.equal(I.isMarket("CRYPTO"), true);
-  assert.equal(I.isMarket("asx"), false);
+  assert.equal(I.isMarket("asx"), true);
   assert.equal(I.isMarket("nasdaq"), false);
   assert.equal(I.isMarket(null), false);
 });
@@ -215,6 +216,8 @@ test("the shipped constant is crypto only, and isMarket reads it", () => {
 test("the two URLs are exactly the files scanner/ignition/run.py writes", () => {
   assert.equal(I.liveUrl("crypto"), "data/ignition/crypto.json");
   assert.equal(I.btUrl("crypto"), "data/ignition/crypto_backtest.json");
+  assert.equal(I.liveUrl("asx"), "data/ignition/asx.json");
+  assert.equal(I.btUrl("asx"), "data/ignition/asx_backtest.json");
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -455,6 +458,31 @@ test("the bar rule is for 24/7 markets only; a stock market's weekend is not 'st
   assert.equal(I.staleOf(null, "crypto", NOW), null);
 });
 
+test("a session market (ASX) counts WEEKDAY hours: a Friday screen is fresh on Monday", () => {
+  assert.equal(I.STALE_SESSION_H, 50);
+  // Fri 25 Sep 06:24 UTC post-close run, read Mon 28 Sep 10:00 UTC:
+  // 17.6h Fri + 10h Mon = 27.6 weekday hours (66h of wall clock).
+  const fri = staleP({ generated_at: "2026-09-25T06:24:00Z", last_closed_bar: "2026-09-25" });
+  assert.equal(I.staleOf(fri, "asx", Date.parse("2026-09-28T10:00:00Z")), null);
+  // A Monday public holiday on top still clears it: read Tue 07:00 UTC = 48.6h.
+  assert.equal(I.staleOf(fri, "asx", Date.parse("2026-09-29T07:00:00Z")), null);
+  // Dead from Friday to Wednesday morning: 17.6 + 24 + 24 + 8 = 73.6h, stale.
+  const s = I.staleOf(fri, "asx", Date.parse("2026-09-30T08:00:00Z"));
+  assert.ok(s, "two dead trading days must be stale");
+  assert.match(s.reasons.join(" "), /over 50 weekday hours ago/);
+  // The same 66h wall-clock gap on crypto is stale under the 26h rule.
+  assert.ok(I.staleOf(staleP({ generated_at: "2026-09-25T06:24:00Z" }), "crypto",
+    Date.parse("2026-09-28T10:00:00Z")));
+});
+
+test("weekdayHours skips Saturday and Sunday UTC and nothing else", () => {
+  const h = (a, b) => I.weekdayHours(Date.parse(a), Date.parse(b));
+  assert.equal(h("2026-09-26T00:00:00Z", "2026-09-28T00:00:00Z"), 0, "a whole weekend");
+  assert.equal(h("2026-09-25T12:00:00Z", "2026-09-28T12:00:00Z"), 24);
+  assert.equal(h("2026-09-28T01:00:00Z", "2026-09-28T03:30:00Z"), 2.5);
+  assert.equal(h("2026-09-28T03:00:00Z", "2026-09-28T01:00:00Z"), 0, "backwards is 0");
+});
+
 test("a stale pill carries a visible marker and its title says 'as of <date>'", () => {
   const p = staleP({ last_closed_bar: "2026-09-26" });
   const info = I.pillInfo(p, false, I.staleOf(p, "crypto", NOW));
@@ -659,6 +687,17 @@ test("the header says report-only, not traded, daily bars, and the Melbourne tim
   assert.match(h, /⚡ IGNITION · coil → ignition/);
   assert.match(h, /Report-only · not traded by the bot · daily bars · updated MELB\[2026-09-28T06:00:00\+00:00\]/);
   assert.match(h, /title="Market-local\/UTC: 2026-09-28 06:00 UTC/, "UTC belongs in the tooltip");
+});
+
+test("an ASX header shows the ASX 200 regime from the generic keys", () => {
+  const h = I.headHTML(payload([trig()], undefined, { market: "asx", regime: {
+    index: "^AXJO", label: "ASX 200", close: 8795.4, sma200: 8512.1, above_200: true,
+    vs_200_pct: 3.3, as_of: "2026-09-28" } }), null);
+  assert.match(h, /class="ig-regime is-up" title="Context, not a filter: the market&#39;s own trend[^"]*ASX 200 8,795\.40 vs 200-SMA 8,512\.10, as of 2026-09-28\.">ASX 200 above its 200-SMA \(\+3\.3%\)</);
+  const down = I.headHTML(payload([trig()], undefined, { regime: { label: "ASX 200", above_200: false, vs_200_pct: -2 } }), null);
+  assert.match(down, /class="ig-regime is-down"[^>]*>ASX 200 below its 200-SMA \(-2\.0%\)</);
+  assert.ok(!/ig-regime/.test(I.headHTML(payload([trig()], undefined, { regime: { label: "X" } }), null)),
+    "no verdict, no line");
 });
 
 test("the header shows the BTC regime as CONTEXT, not a filter", () => {
@@ -929,14 +968,14 @@ const both = (live, bt) => (url) => ok200(url.endsWith("_backtest.json") ? bt : 
 test("the module exports window.Ignition and binds one delegated click listener", () => {
   const m = runModule(() => r404());
   assert.deepEqual(Object.keys(m.Ig).sort(), ["MARKETS", "isMarket", "pill", "sync", "toggle"]);
-  assert.deepEqual(m.Ig.MARKETS, ["crypto"]);
+  assert.deepEqual(m.Ig.MARKETS, ["crypto", "asx"]);
   assert.deepEqual(m.listeners.map((l) => l[0]), ["click"]);
 });
 
 test("a non-Ignition market fetches nothing and gets no pill (not even a placeholder)", async () => {
   const m = runModule(() => ok200(SAMPLE));
-  assert.equal(m.Ig.pill("asx", () => {}), null);
   assert.equal(m.Ig.pill("nasdaq", () => {}), null);
+  assert.equal(m.Ig.pill("NYSE", () => {}), null);
   await flush();
   assert.equal(m.calls.length, 0);
 });
@@ -1052,7 +1091,7 @@ test("a market switch CLOSES the panel: coming back does not re-open it unasked"
   m.Ig.sync("crypto");
   await settle();
   assert.equal(m.host.hidden, false);
-  m.Ig.sync("asx");
+  m.Ig.sync("nasdaq");
   assert.equal(m.host.hidden, true, "switching market hides it");
   m.Ig.sync("crypto");
   assert.equal(m.host.hidden, true, "returning to crypto must not re-open the panel");
@@ -1068,7 +1107,7 @@ test("the market-switch LISTENER hides an open panel at once", async () => {
   m.Ig.sync("crypto");
   assert.equal(m.host.hidden, false);
   const click = m.listeners.find((l) => l[0] === "click")[1];
-  const btn = { getAttribute: (k) => (k === "data-market" ? "asx" : null) };
+  const btn = { getAttribute: (k) => (k === "data-market" ? "nasdaq" : null) };
   click({ target: { closest: (sel) => (sel === ".market-btn[data-market]" ? btn : null) } });
   assert.equal(m.host.hidden, true, "the delegated market-switch listener must hide the panel");
   assert.equal(m.host.innerHTML, "");
@@ -1291,7 +1330,7 @@ test("an absent file: placeholder while loading, then NO pill", async () => {
 
 test("a non-Ignition market gets no placeholder and no pill", () => {
   const m = runModule(both(SAMPLE, BT));
-  const d = deckHarness(m.Ig, "asx");
+  const d = deckHarness(m.Ig, "nasdaq");
   d.render();
   assert.ok(!/data-ignition/.test(d.box.html));
   assert.equal(m.calls.length, 0);

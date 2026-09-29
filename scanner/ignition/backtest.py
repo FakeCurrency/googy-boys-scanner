@@ -87,12 +87,13 @@ GRID = {
 
 class Prepared:
     """One symbol's cleaned frame + threshold-free features, computed ONCE."""
-    __slots__ = ("symbol", "df", "bf", "o", "h", "lo", "c", "trail9", "trail26",
+    __slots__ = ("symbol", "market", "df", "bf", "o", "h", "lo", "c", "trail9", "trail26",
                  "btc_up")
 
     def __init__(self, symbol: str, df: pd.DataFrame, market: str,
                  btc_up: Optional[pd.Series] = None):
         self.symbol = symbol
+        self.market = market
         self.df = df
         self.bf = E.base_features(df, market)
         self.o = df["Open"].to_numpy()
@@ -105,9 +106,13 @@ class Prepared:
                        else pd.Series(np.nan, index=df.index))
 
 
-def _btc_regime(frames: Dict[str, pd.DataFrame]) -> Optional[pd.Series]:
-    """1.0 where BTC closed above its 200-SMA, 0.0 below, NaN unknown."""
-    btc = frames.get("BTC-USD")
+def _btc_regime(frames: Dict[str, pd.DataFrame],
+                market: str = "crypto") -> Optional[pd.Series]:
+    """1.0 where the market's regime index (BTC for crypto, the ASX 200 for
+    the ASX -- config.IGNITION_REGIME_INDEX) closed above its 200-SMA, 0.0
+    below, NaN unknown. The name is historical: crypto came first."""
+    idx = (config.IGNITION_REGIME_INDEX.get(market) or ("BTC-USD", "BTC"))[0]
+    btc = frames.get(idx)
     if btc is None:
         return None
     b = E.clean(btc)
@@ -119,17 +124,42 @@ def _btc_regime(frames: Dict[str, pd.DataFrame]) -> Optional[pd.Series]:
 
 
 def prepare(frames: Dict[str, pd.DataFrame], market: str,
-            symbols: Optional[Dict[str, str]] = None) -> List[Prepared]:
-    """Clean every frame, drop the too-short, compute base features once."""
-    btc = _btc_regime(frames)
+            symbols: Optional[Dict[str, str]] = None,
+            regime: Optional[pd.DataFrame] = None) -> List[Prepared]:
+    """Clean every frame, drop the too-short, compute base features once.
+
+    `regime` is the market's regime-index frame when it is NOT one of the
+    screened frames (the ASX 200 is fetched beside the universe, never
+    replayed); crypto's BTC is read out of `frames` itself.
+
+    A symbol whose turnover NEVER clears both floors on the same bar is
+    dropped here: no rule variant, baseline or grid cell can trade it (none
+    of them moves a floor), so replaying it only costs time -- and the ASX
+    universe is ~2,000 names, most of them too thin for either floor."""
+    idx = (config.IGNITION_REGIME_INDEX.get(market) or ("BTC-USD", "BTC"))[0]
+    btc = _btc_regime({**frames, **({idx: regime} if regime is not None else {})}, market)
+    p = E.Params.from_config(market)
     out = []
+    min_bars = E.bars(market, "IGNITION_MIN_BARS")
     for yf in sorted(frames):
+        if yf == idx and market != "crypto":
+            continue
         df = E.clean(frames[yf])
-        if len(df) < config.IGNITION_MIN_BARS:
+        if len(df) < min_bars:
+            continue
+        if market != "crypto" and not _ever_liquid(df, market, p):
             continue
         sym = (symbols or {}).get(yf) or yf.split("-")[0]
         out.append(Prepared(sym, df, market, btc))
     return out
+
+
+def _ever_liquid(df: pd.DataFrame, market: str, p: E.Params) -> bool:
+    """Does any bar clear BOTH turnover floors (the rule's own definitions)?"""
+    dv = E.dollar_volume(df, market)
+    base = dv.shift(1).rolling(config.IGNITION_RVOL_LEN,
+                               min_periods=config.IGNITION_RVOL_LEN).mean()
+    return bool(((base >= p.min_base_turnover) & (dv >= p.min_trigger_turnover)).any())
 
 
 def _ladder(spec: str, entry: float, risk: float, mm: float) -> tuple:
@@ -142,9 +172,17 @@ def _ladder(spec: str, entry: float, risk: float, mm: float) -> tuple:
     return ()
 
 
+def design_cases(market: str) -> dict:
+    """{symbol: first excluded trigger date} for this market."""
+    over = getattr(config, "IGNITION_BT_DESIGN_CASES_BY_MARKET", {}) or {}
+    if market in over:
+        return dict(over[market] or {})
+    return dict(getattr(config, "IGNITION_BT_DESIGN_CASES", {}) or {})
+
+
 def is_design_case(t: dict) -> bool:
     """A trade the thresholds were drawn from -- never scored (see config)."""
-    first = (getattr(config, "IGNITION_BT_DESIGN_CASES", {}) or {}).get(t.get("symbol"))
+    first = design_cases(t.get("_mkt") or "crypto").get(t.get("symbol"))
     return first is not None and (t.get("trigger_date") or "") >= first
 
 
@@ -172,8 +210,8 @@ def trades_for(pr: Prepared, rules: pd.DataFrame, *, exit_spec: str = "trail9",
     IGNITION_MIN_BARS completed bars) is not a trade: the page and the
     evidence must describe the same population.
     """
-    cost_pct = config.IGNITION_BT_COST_PCT if cost_pct is None else cost_pct
-    max_hold = config.IGNITION_BT_MAX_HOLD if max_hold is None else max_hold
+    cost_pct = E.mkt(pr.market, "IGNITION_BT_COST_PCT") if cost_pct is None else cost_pct
+    max_hold = E.bars(pr.market, "IGNITION_BT_MAX_HOLD") if max_hold is None else max_hold
     fixed = entries is not None
     trig = (np.asarray(sorted(entries), dtype=int) if fixed
             else np.flatnonzero(rules["trigger"].to_numpy()))
@@ -182,7 +220,7 @@ def trades_for(pr: Prepared, rules: pd.DataFrame, *, exit_spec: str = "trail9",
     trail = {"trail26": pr.trail26, "hold_20": np.full(len(pr.c), np.nan)}.get(exit_spec, pr.trail9)
     hold = 20 if exit_spec == "hold_20" else max_hold
     n = len(pr.c)
-    min_t0 = int(config.IGNITION_MIN_BARS) - 1
+    min_t0 = E.bars(pr.market, "IGNITION_MIN_BARS") - 1
     out: List[dict] = []
     free_from = 0
     for t0 in trig:
@@ -194,6 +232,7 @@ def trades_for(pr: Prepared, rules: pd.DataFrame, *, exit_spec: str = "trail9",
             continue
         if entry <= stop:
             out.append({"symbol": pr.symbol, "skipped": "gap_below_stop", "_t0": t0,
+                        "_mkt": pr.market,
                         "trigger_date": E._date(pr.df.index[t0])})
             continue
         risk = entry - stop
@@ -206,6 +245,7 @@ def trades_for(pr: Prepared, rules: pd.DataFrame, *, exit_spec: str = "trail9",
         out.append({
             "symbol": pr.symbol,
             "_t0": t0,
+            "_mkt": pr.market,
             "trigger_date": E._date(pr.df.index[t0]),
             "entry_date": E._date(pr.df.index[t0 + 1]),
             "exit_date": E._date(pr.df.index[sim["exit_bar"]]),
@@ -221,7 +261,8 @@ def trades_for(pr: Prepared, rules: pd.DataFrame, *, exit_spec: str = "trail9",
             "bars": sim["bars"],
             "rvol": round(float(r["rvol"]), 2) if np.isfinite(r["rvol"]) else None,
             "ext_pct": round(float(r["ext"]) * 100, 1) if np.isfinite(r["ext"]) else None,
-            "btc_up": None if not np.isfinite(btc) else bool(btc),
+            ("btc_up" if pr.market == "crypto" else "index_up"):
+                None if not np.isfinite(btc) else bool(btc),
         })
         free_from = sim["exit_bar"] + 1
     return out
@@ -240,7 +281,7 @@ def eligible_bars(pr: Prepared, p: E.Params) -> np.ndarray:
           & (bf["turnover_base"] >= p.min_base_turnover)
           & (bf["turnover_day"] >= p.min_trigger_turnover)).to_numpy()
     idx = np.flatnonzero(ok)
-    return idx[(idx >= int(config.IGNITION_MIN_BARS) - 1) & (idx + 1 < len(pr.c))]
+    return idx[(idx >= E.bars(pr.market, "IGNITION_MIN_BARS") - 1) & (idx + 1 < len(pr.c))]
 
 
 def random_timing(prepared: List[Prepared], real: List[dict], *, draws: int,
@@ -251,7 +292,10 @@ def random_timing(prepared: List[Prepared], real: List[dict], *, draws: int,
     the SAME risk % and the SAME trail exit. Seeded per trade (crc32), so the
     baseline is identical on every re-run of the same data. `window=0` draws
     from the coin's whole eligible history (reported as random_timing_any)."""
-    window = config.IGNITION_BT_RANDOM_WINDOW if window is None else window
+    mk = prepared[0].market if prepared else "crypto"
+    window = E.bars(mk, "IGNITION_BT_RANDOM_WINDOW") if window is None else window
+    cost = float(E.mkt(mk, "IGNITION_BT_COST_PCT"))
+    hold = E.bars(mk, "IGNITION_BT_MAX_HOLD")
     by_sym = {pr.symbol: pr for pr in prepared}
     elig: Dict[str, np.ndarray] = {}
     out: List[dict] = []
@@ -262,7 +306,7 @@ def random_timing(prepared: List[Prepared], real: List[dict], *, draws: int,
         if pr is None:
             continue
         if pr.symbol not in elig:
-            elig[pr.symbol] = eligible_bars(pr, p or E.Params.from_config("crypto"))
+            elig[pr.symbol] = eligible_bars(pr, p or E.Params.from_config(pr.market))
         ok = elig[pr.symbol]
         if window and "_t0" in t:
             near = ok[np.abs(ok - int(t["_t0"])) <= window]
@@ -279,9 +323,9 @@ def random_timing(prepared: List[Prepared], real: List[dict], *, draws: int,
             if not (risk > 0):
                 continue
             sim = E.simulate(pr.o, pr.h, pr.lo, pr.c, pr.trail9, start=t0 + 1,
-                             entry=entry, stop=stop, max_hold=config.IGNITION_BT_MAX_HOLD)
-            cost_r = (config.IGNITION_BT_COST_PCT / 100.0) * entry / risk
-            out.append({"symbol": t["symbol"], "_t0": t0,
+                             entry=entry, stop=stop, max_hold=hold)
+            cost_r = (cost / 100.0) * entry / risk
+            out.append({"symbol": t["symbol"], "_t0": t0, "_mkt": pr.market,
                         "trigger_date": E._date(pr.df.index[t0]),
                         "entry_date": E._date(pr.df.index[t0 + 1]),
                         "exit_date": E._date(pr.df.index[sim["exit_bar"]]),
@@ -424,7 +468,7 @@ def _split_key(t: dict) -> str:
 def _by_split(trades: List[dict], *, boot: int, seed: int) -> dict:
     out = _group(trades, _split_key, boot=boot, seed=seed)
     fwd = [t for t in trades if not t.get("skipped")
-           and t["entry_date"] >= config.IGNITION_BT_REGISTERED_DATE]
+           and t["entry_date"] >= E.mkt(t.get("_mkt") or "crypto", "IGNITION_BT_REGISTERED_DATE")]
     out["forward"] = stats(fwd, boot=boot, seed=seed)
     return out
 
@@ -475,7 +519,7 @@ def _case(pr: Prepared, rules: pd.DataFrame, trades: List[dict], bars: int = 30)
         })
     return {"trades": [{**_public(t), "design_case": is_design_case(t)} for t in trades
                        if t["symbol"] == pr.symbol and not t.get("skipped")],
-            "design_case": pr.symbol in (getattr(config, "IGNITION_BT_DESIGN_CASES", {}) or {}),
+            "design_case": pr.symbol in design_cases(pr.market),
             "recent_bars": rows}
 
 
@@ -511,13 +555,19 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
              symbols: Optional[Dict[str, str]] = None,
              universe_size: Optional[int] = None,
              now: Optional[dt.datetime] = None,
-             data_note: Optional[str] = None) -> dict:
+             data_note: Optional[str] = None,
+             regime: Optional[pd.DataFrame] = None) -> dict:
     """The whole replay -> one publishable payload. Deterministic given the
     frames: every random draw is seeded, no clock is read except `now`.
     `data_note` is the caveat line naming where the bars came from (run.py
     writes it from the fetch report; the replay itself cannot know)."""
     p = E.Params.from_config(market)
-    prepared = prepare(frames, market, symbols)
+    prepared = prepare(frames, market, symbols, regime=regime)
+    cost = float(E.mkt(market, "IGNITION_BT_COST_PCT"))
+    max_hold = E.bars(market, "IGNITION_BT_MAX_HOLD")
+    rwin = E.bars(market, "IGNITION_BT_RANDOM_WINDOW")
+    registered = E.mkt(market, "IGNITION_BT_REGISTERED_DATE")
+    rg_idx, rg_label = config.IGNITION_REGIME_INDEX.get(market) or ("BTC-USD", "BTC")
     seed = int(config.IGNITION_BT_SEED)
     boot = int(config.IGNITION_BT_BOOTSTRAP)
 
@@ -531,7 +581,7 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
     stops = {"struct": stats(primary),
              "floor": stats(run_all(prepared, p, rules, entries=entries, stop_spec="floor"))}
     cost_x2 = stats(run_all(prepared, p, rules, entries=entries,
-                            cost_pct=2 * config.IGNITION_BT_COST_PCT))
+                            cost_pct=2 * cost))
 
     draws = int(config.IGNITION_BT_RANDOM_DRAWS)
     rand = random_timing(prepared, primary, draws=draws, seed=seed, p=p)
@@ -567,12 +617,12 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
 
     by_sym = {pr.symbol: (pr, ru) for pr, ru in zip(prepared, rules)}
     cases = {s: _case(*by_sym[s], primary_all)
-             for s in config.IGNITION_BT_CASES if s in by_sym}
+             for s in E.mkt(market, "IGNITION_BT_CASES") if s in by_sym}
 
     starts = [pr.df.index[0] for pr in prepared]
     ends = [pr.df.index[-1] for pr in prepared]
     now = now or dt.datetime.now(dt.timezone.utc)
-    design = dict(getattr(config, "IGNITION_BT_DESIGN_CASES", {}) or {})
+    design = design_cases(market)
     return {
         "schema_version": SCHEMA_VERSION,
         "lens": "ignition",
@@ -590,10 +640,10 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
             "stop": "max(base low, base high - %.1f x ATR(t-1)), intrabar"
                     % config.IGNITION_STOP_ATR_MULT,
             "exit": "next open after a daily close below the %d-SMA" % config.IGNITION_TRAIL_SMA,
-            "cost_pct_round_trip": config.IGNITION_BT_COST_PCT,
-            "max_hold_bars": config.IGNITION_BT_MAX_HOLD,
+            "cost_pct_round_trip": cost,
+            "max_hold_bars": max_hold,
             "split_date": config.IGNITION_BT_SPLIT_DATE,
-            "registered": config.IGNITION_BT_REGISTERED_DATE,
+            "registered": registered,
             "note": "thresholds fixed before the first run; the only market data that "
                     "informed them is the design cases' chart, which is never scored",
         },
@@ -606,30 +656,23 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
                               "+/-%d bars of its trigger, from bars where every rule input exists "
                               "and both turnover floors pass; same risk %%, same 9-SMA trail, "
                               "same costs. random_timing_any: the same, from the whole eligible "
-                              "history." % (draws, config.IGNITION_BT_RANDOM_WINDOW)),
+                              "history." % (draws, rwin)),
             "decision_statistic": "versus.random_timing: primary minus baseline expectancy, "
                                   "cluster-bootstrapped by entry month",
         },
-        "caveats": [
-            "SURVIVORSHIP: today's top ~200 coins only. Coins that pumped INTO the list are "
-            "included with their pump; coins that pumped and died OUT of it are missing. "
-            "Long-breakout results are biased UP -- judge against random_timing, not zero.",
-            "Realised trades only: open and pending trades are shown as marks beside the "
-            "numbers, never inside them.",
-            "QNT's Sep-2026 move informed the thresholds, so it is excluded from every scored "
-            "number and reported only as a case study.",
-            "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no "
-            "capital constraint or position cap.",
-            data_note or "Daily bars; young coins have thin early history.",
-            "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample.",
-        ],
+        "caveats": _caveats(market, data_note, design),
         "primary": {
             **stats(primary, boot=boot, seed=seed),
             "by_split": _by_split(primary, boot=boot, seed=seed),
             "by_year": _group(primary, lambda t: t["entry_date"][:4]),
-            "by_btc_regime": _group(primary, lambda t: {True: "btc_above_200",
-                                                        False: "btc_below_200"}.get(
-                                                            t.get("btc_up"), "unknown")),
+            **({"by_btc_regime": _group(primary, lambda t: {True: "btc_above_200",
+                                                            False: "btc_below_200"}.get(
+                                                                t.get("btc_up"), "unknown"))}
+               if market == "crypto" else
+               {"by_regime": _group(primary, lambda t: {True: "index_above_200",
+                                                        False: "index_below_200"}.get(
+                                                            t.get("index_up"), "unknown")),
+                "regime_index": {"symbol": rg_idx, "label": rg_label}}),
         },
         "versus": vs,
         "exits": exits,
@@ -645,6 +688,46 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
             (t for t in primary_all if not t.get("skipped")),
             key=lambda t: (t["entry_date"], t["symbol"]))],
     }
+
+
+def _caveats(market: str, data_note: Optional[str], design: dict) -> List[str]:
+    """The published honesty block. Crypto's wording is unchanged."""
+    if market == "crypto":
+        return [
+            "SURVIVORSHIP: today's top ~200 coins only. Coins that pumped INTO the list are "
+            "included with their pump; coins that pumped and died OUT of it are missing. "
+            "Long-breakout results are biased UP -- judge against random_timing, not zero.",
+            "Realised trades only: open and pending trades are shown as marks beside the "
+            "numbers, never inside them.",
+            "QNT's Sep-2026 move informed the thresholds, so it is excluded from every scored "
+            "number and reported only as a case study.",
+            "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no "
+            "capital constraint or position cap.",
+            data_note or "Daily bars; young coins have thin early history.",
+            "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample.",
+        ]
+    label = getattr(config.MARKETS.get(market), "label", market.upper())
+    names = ", ".join(sorted(design)) or "none"
+    return [
+        "SURVIVORSHIP: today's %s listings only. A company that broke out and was later "
+        "delisted, suspended or taken over is missing, along with every failed breakout it "
+        "had. Long-breakout results are biased UP -- judge against random_timing, not "
+        "zero." % label,
+        "Realised trades only: open and pending trades are shown as marks beside the "
+        "numbers, never inside them.",
+        "The rule is crypto's, thresholds unchanged; calendar windows are converted to "
+        "%d trading days a year. %s prompted the port, so it is excluded from every scored "
+        "number and reported only as a case study."
+        % (int(config.IGNITION_BARS_PER_YEAR.get(market, 365)), names),
+        "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no "
+        "capital constraint or position cap.",
+        "Costs %.1f%% round trip (brokerage both ways + the spread; under 10c an ASX tick "
+        "is ~1%% of the price). Thin names can move more than that on the open."
+        % float(E.mkt(market, "IGNITION_BT_COST_PCT")),
+        data_note or "Yahoo daily bars (split-adjusted); free history is thinner and "
+        "noisier than a paid provider's.",
+        "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample.",
+    ]
 
 
 def _fmt_pf(s: dict) -> str:
@@ -678,15 +761,17 @@ def summary_lines(payload: dict) -> List[str]:
     sc = payload.get("scoring") or {}
     lines = [
         f"IGNITION backtest [{payload.get('market')}] ruleset {payload.get('ruleset_version')}"
-        f" - {payload.get('symbols_replayed')} coins, {payload.get('date_range')}",
+        f" - {payload.get('symbols_replayed')} "
+        f"{'coins' if payload.get('market') == 'crypto' else 'symbols'}, {payload.get('date_range')}",
         f"scored: realised trades only; design cases excluded "
         f"{sc.get('design_cases_excluded')} ({sc.get('design_trades_excluded')} trade(s))",
         f"primary (pre-registered): {_brief(P)} top5={P.get('top5_share_pct')}% "
         f"ex-top5={P.get('exp_r_ex_top5')}R maxDD={P.get('max_dd_r')}R",
         f"  in-sample: {_brief(sp.get('in_sample'))}",
         f"  out-of-sample: {_brief(sp.get('out_of_sample'))}",
-        f"  forward (from {config.IGNITION_BT_REGISTERED_DATE}): {_brief(sp.get('forward'))}",
-        f"VERSUS random timing (same coin, same season): {_vs(V.get('random_timing'))}",
+        f"  forward (from {(payload.get('pre_registered') or {}).get('registered')}): "
+        f"{_brief(sp.get('forward'))}",
+        f"VERSUS random timing (same symbol, same season): {_vs(V.get('random_timing'))}",
         f"VERSUS random timing, out-of-sample only: {_vs(V.get('random_timing_out_of_sample'))}",
         f"VERSUS random timing (any time): {_vs(V.get('random_timing_any'))}",
         f"VERSUS breakout without the coil: {_vs(V.get('breakout_only'))}",

@@ -106,6 +106,29 @@ def _age_days(frame: pd.DataFrame, market: str, now: dt.datetime) -> Optional[in
         return 10 ** 6
 
 
+def max_age_days(market: str) -> int:
+    """Calendar days a frame's last completed bar may lag before it is skipped:
+    3 on 24/7 crypto, 5 on the ASX (a long weekend, Easter's Thu -> Tue)."""
+    return int(E.mkt(market, "IGNITION_MAX_DATA_AGE_DAYS"))
+
+
+def regime_frame(market: str, period: str) -> Optional[pd.DataFrame]:
+    """The market's regime index when it is NOT in the universe (the ASX 200
+    for the ASX; crypto's BTC is a screened coin and is read from its frames).
+    Best effort: a failed fetch is no regime line, never a failed run."""
+    idx = (config.IGNITION_REGIME_INDEX.get(market) or (None, None))[0]
+    if not idx or market == "crypto":
+        return None
+    try:
+        got, _ = sdata.fetch(market, [idx], period=period)
+        f = got.get(idx)
+        return f if f is not None and len(f) else None
+    except Exception as exc:                              # noqa: BLE001
+        print(f"ignition: regime index {idx} unavailable ({type(exc).__name__}: {exc})",
+              flush=True)
+        return None
+
+
 def _download(market: str, period: str, limit: int):
     """(universe rows, {yf: frame}, source report) through `data.fetch` -- the
     SAME market-aware entry point the VIVEK scan, the paper bot and the kill
@@ -162,7 +185,7 @@ def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFra
     # count), and calling a coin last printed in 2022 "a day behind" was the
     # page overstating what it screens (re-review, 2026-09-28).
     screened = [day(E.clean(f)) for f in frames.values() if len(f)
-                and (_age_days(f, market, now) or 0) <= config.IGNITION_MAX_DATA_AGE_DAYS]
+                and (_age_days(f, market, now) or 0) <= max_age_days(market)]
     raw = [day(forming[yf]) if yf in forming else day(E.clean(f))
            for yf, f in frames.items() if len(f)]
     expected = None
@@ -178,6 +201,24 @@ def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFra
         "completed_dist": dist(completed),
         "raw_dist": dist(raw),
     }
+
+
+def index_regime(frame: Optional[pd.DataFrame], market: str) -> Optional[dict]:
+    """A stock market's benchmark (config.IGNITION_REGIME_INDEX) against its
+    200-SMA -- the same CONTEXT line as btc_regime, generic keys."""
+    idx, label = config.IGNITION_REGIME_INDEX.get(market) or (None, None)
+    if frame is None or not idx:
+        return None
+    b = E.clean(frame)
+    if len(b) < 200:
+        return None
+    sma = float(b["Close"].rolling(200).mean().iloc[-1])
+    close = float(b["Close"].iloc[-1])
+    return {"index": idx, "label": label,
+            "close": round(close, 2), "sma200": round(sma, 2),
+            "above_200": bool(close > sma),
+            "vs_200_pct": round((close / sma - 1) * 100, 1),
+            "as_of": pd.Timestamp(b.index[-1]).strftime("%Y-%m-%d")}
 
 
 def btc_regime(frames: Dict[str, pd.DataFrame]) -> Optional[dict]:
@@ -205,14 +246,17 @@ def btc_regime(frames: Dict[str, pd.DataFrame]) -> Optional[dict]:
 
 def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = None,
                   rows: Optional[List[dict]] = None, limit: int = 0,
-                  now: Optional[dt.datetime] = None) -> Optional[dict]:
+                  now: Optional[dt.datetime] = None,
+                  regime: Optional[pd.DataFrame] = None) -> Optional[dict]:
     """Screen one market -> payload, or None when there is no data at all.
-    `frames`/`rows` are injectable so everything but the download is testable."""
+    `frames`/`rows`/`regime` are injectable so everything but the download is
+    testable."""
     started = time.time()
     cache_stats: dict = {}
     src_report: dict = {}
     if frames is None:
         rows, fresh, src_report = _download(market, config.IGNITION_DATA_PERIOD, limit)
+        regime = regime_frame(market, config.IGNITION_DATA_PERIOD)
         # The clock is read AFTER the download, so "forming" is judged at the
         # moment the bars are actually in hand (the download takes minutes).
         now = now or dt.datetime.now(dt.timezone.utc)
@@ -245,10 +289,10 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         try:
             done = E.clean(frames[yf])
             age = _age_days(done, market, now)
-            if age is not None and age > config.IGNITION_MAX_DATA_AGE_DAYS:
+            if age is not None and age > max_age_days(market):
                 skipped["stale frame"] = skipped.get("stale frame", 0) + 1
                 continue
-            if len(done) < config.IGNITION_MIN_BARS:
+            if len(done) < E.bars(market, "IGNITION_MIN_BARS"):
                 skipped["short history"] = skipped.get("short history", 0) + 1
                 continue
             screened += 1
@@ -285,7 +329,9 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "timeframe": "1d",
         "last_closed_bar": max((r["last_bar"] for r in results), default=None),
         "report_only": True,
-        "regime": btc_regime(frames),
+        "regime": (btc_regime(frames) if market == "crypto"
+                   else index_regime(split_forming(regime, market, now)[0]
+                                     if regime is not None else None, market)),
         "params": p.as_dict(),
         "rules": {
             "fresh_bars": config.IGNITION_FRESH_BARS,
@@ -293,6 +339,8 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             "base_bars": config.IGNITION_BASE_BARS,
             "trail_sma": config.IGNITION_TRAIL_SMA,
             "wide_stop_pct": config.IGNITION_WIDE_STOP_PCT,
+            "bars_per_year": int(config.IGNITION_BARS_PER_YEAR.get(market, 365)),
+            "calendar_windows": {n: E.bars(market, n) for n in E.CALENDAR_WINDOWS},
         },
         "summary": {
             "universe": len(rows) or len(frames),
@@ -318,8 +366,10 @@ def backtest_market(market: str, *, limit: int = 0,
                     rows: Optional[List[dict]] = None,
                     now: Optional[dt.datetime] = None) -> Optional[dict]:
     src_report: dict = {}
+    regime = None
     if frames is None:
         rows, frames, src_report = _download(market, config.IGNITION_BT_PERIOD, limit)
+        regime = regime_frame(market, config.IGNITION_BT_PERIOD)
     now = now or dt.datetime.now(dt.timezone.utc)   # after the download
     rows = rows or []
     if not frames:
@@ -332,18 +382,23 @@ def backtest_market(market: str, *, limit: int = 0,
     started = time.time()
     payload = bt.backtest(done, market, symbols=symbols,
                           universe_size=len(rows) or len(frames), now=now,
-                          data_note=data_note(sources))
+                          data_note=data_note(sources, market),
+                          regime=(split_forming(regime, market, now)[0]
+                                  if regime is not None else None))
     payload["elapsed_s"] = round(time.time() - started, 1)
     payload["sources"] = sources
     return payload
 
 
-def data_note(sources: dict) -> str:
+def data_note(sources: dict, market: str = "crypto") -> str:
     """The backtest caveat naming where the bars came from. On exchange data
     it also says the one consequence a reader could not guess: the volume is
     ONE venue's, smaller than Yahoo's cross-exchange aggregate, so the
     turnover floors bind harder than they did on Yahoo."""
     by = (sources or {}).get("by_source") or {}
+    if market != "crypto":
+        return ("Yahoo daily bars (split-adjusted); free history is thinner and noisier "
+                "than a paid provider's, and delisted names are absent.")
     if (sources or {}).get("mode") != "exchange" or not by:
         return "Yahoo daily crypto bars; young coins have thin early history."
     split = ", ".join("%s %d" % (k, v) for k, v in

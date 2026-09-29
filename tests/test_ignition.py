@@ -1096,7 +1096,7 @@ def test_a_next_open_under_the_stop_is_a_counted_skip_not_a_trade():
     assert df["Open"].iloc[T + 1] < ru["stop"].iloc[T]
     trades = BT.trades_for(pr, ru)
     assert trades == [{"symbol": "QNT", "skipped": "gap_below_stop", "_t0": T,
-                       "trigger_date": _date(df.index[T])}]
+                       "_mkt": "crypto", "trigger_date": _date(df.index[T])}]
     s = BT.stats(trades)
     assert s == {"n": 0, "skipped": 1, "open": 0, "open_mtm_r": 0.0,
                  "open_at_end": 0, "pending": 0}
@@ -1582,7 +1582,7 @@ def test_main_backtest_publishes_only_the_backtest_file(sandbox, monkeypatch, bt
 
 def test_main_refuses_a_market_the_lens_does_not_cover():
     with pytest.raises(SystemExit) as e:
-        RUN.main(["--market", "asx"])
+        RUN.main(["--market", "nasdaq"])
     assert e.value.code == 2
 
 
@@ -1651,7 +1651,7 @@ def test_the_data_caveat_names_the_real_source():
 
 def test_backtest_market_threads_the_data_note_into_the_caveats(monkeypatch):
     frames, rows = _bt_inputs()
-    monkeypatch.setattr(RUN, "data_note", lambda sources: "NOTE-X")
+    monkeypatch.setattr(RUN, "data_note", lambda sources, market="crypto": "NOTE-X")
     payload = RUN.backtest_market(MARKET, frames=frames, rows=rows, now=BT_NOW)
     assert "NOTE-X" in payload["caveats"]
     assert not any("Yahoo daily" in c for c in payload["caveats"])

@@ -1,6 +1,7 @@
 /* ⚡ IGNITION — the coil -> ignition deck pill + panel (2026-09-28). REPORT-ONLY.
 
-   The owner's "QNT-type" crypto play: a coin that goes quiet for months (the
+   The owner's "QNT-type" play (crypto first; the ASX since 2026-09-29, after
+   DTR): a name that goes quiet for months (the
    9/26/43/200 SMAs stacked tight, volatility and volume at multi-year lows,
    far under its old highs) and then CLOSES out of that base on a multiple of
    its normal volume. The engine is scanner/ignition/ and publishes ONE file
@@ -52,7 +53,7 @@
   // tests/test_ignition_frontend.py: a market the engine starts screening
   // cannot stay invisible here, and a pill can never appear for a market the
   // engine does not screen (which would only ever fetch a 404).
-  const IGNITION_MARKETS = ["crypto"];
+  const IGNITION_MARKETS = ["crypto", "asx"];
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -82,6 +83,13 @@
   // behind. A stock market's calendar (weekends, holidays) is not this
   // rule's business — only the generated_at rule applies to one.
   const BAR_24_7 = ["crypto"];
+  // A session market (the ASX) publishes after its close and a few times in
+  // session, weekdays only. Its run-age rule counts WEEKDAY hours (Saturday
+  // and Sunday UTC do not count) against this limit: a Friday screen read on
+  // Monday morning is ~18 weekday hours old, and 50 still clears a Monday
+  // public holiday (~43h) without a false alarm, while a pipeline dead for two
+  // trading days is flagged.
+  const STALE_SESSION_H = 50;
   // Page order, mirroring scanner/ignition/engine.py state_rank.
   const STATE_ORDER = { IGNITING: 0, RUNNING: 1, CLOSED: 2, COILED: 3 };
   const EXIT_TEXT = {
@@ -100,8 +108,8 @@
     binance: "Daily klines from Binance",
     bybit: "Daily klines from Bybit",
     coinbase: "Daily candles from Coinbase",
-    yahoo: "Yahoo's aggregated daily series, the fallback for coins no exchange source served",
-    cache: "Bars from the last good download: this run's fetch did not return this coin",
+    yahoo: "Yahoo's daily series (every ASX name; for crypto, the fallback for coins no exchange source served)",
+    cache: "Bars from the last good download: this run's fetch did not return this symbol",
   };
   const CAVEAT_FALLBACK = "Replayed over today's coin list: coins that pumped " +
     "and then died out of it are missing, so long-breakout results are biased " +
@@ -204,14 +212,29 @@
     return new Date(ms).toISOString().slice(0, 10);
   }
 
+  // Hours between two instants (ms) that fall on a weekday, in UTC.
+  function weekdayHours(from, to) {
+    if (!(to > from)) return 0;
+    let ms = 0;
+    let t = from;
+    while (t < to) {
+      const next = Math.min(to, (Math.floor(t / 86400000) + 1) * 86400000);
+      const dow = new Date(t).getUTCDay();
+      if (dow !== 0 && dow !== 6) ms += next - t;
+      t = next;
+    }
+    return ms / 3600000;
+  }
+
   // Is this screen stale, as of `now` (ms)? null when fresh, else
   // { asOf, reasons[] }. Two independent tests, either one is enough:
   //   * its newest COMPLETED daily bar (last_closed_bar, else
   //     summary.bars.completed_last) is older than UTC-yesterday on a 24/7
   //     market, once STALE_BAR_GRACE_H has passed since 00:00 UTC — the bar
   //     that should be final AND screened by now is not in it;
-  //   * it last ran over STALE_GEN_H hours ago, or it carries no readable
-  //     run time at all (unknown is never read as fresh).
+  //   * it last ran over STALE_GEN_H hours ago (a session market: over
+  //     STALE_SESSION_H WEEKDAY hours ago), or it carries no readable run
+  //     time at all (unknown is never read as fresh).
   // `now` is a parameter so the rule is testable; the module passes the clock.
   function staleOf(payload, market, now) {
     if (!payload || typeof payload !== "object") return null;
@@ -228,10 +251,14 @@
       }
     }
     const gen = Date.parse(payload.generated_at);
+    const is247 = BAR_24_7.indexOf(String(market == null ? "" : market).toLowerCase()) >= 0;
     if (!isFinite(gen)) {
       reasons.push("it carries no readable run time");
-    } else if ((t - gen) / 3600000 > STALE_GEN_H) {
+    } else if (is247 && (t - gen) / 3600000 > STALE_GEN_H) {
       reasons.push("it last ran " + utcText(payload.generated_at) + ", over " + STALE_GEN_H + "h ago");
+    } else if (!is247 && weekdayHours(gen, t) > STALE_SESSION_H) {
+      reasons.push("it last ran " + utcText(payload.generated_at) + ", over " + STALE_SESSION_H +
+        " weekday hours ago");
     }
     if (!reasons.length) return null;
     return { asOf: lastBar || (isFinite(gen) ? utcDay(gen) : null), reasons };
@@ -300,7 +327,7 @@
     if (!(k.confirmed > 0 || k.rows > 0)) return null;
     const asOf = stale ? "STALE, as of " + (stale.asOf || DASH) + ": " + stale.reasons.join("; ") + ". " : "";
     const title = asOf + "IGNITION — report-only, not traded by the bot. " +
-      k.confirmed + " confirmed ignition(s) on the last completed daily bar: a coin " +
+      k.confirmed + " confirmed ignition(s) on the last completed daily bar: a name " +
       "closing out of a months-long quiet base on a multiple of its normal volume. " +
       (k.provisional ? k.provisional + " more forming on today's bar, unconfirmed and not counted. " : "") +
       "Also on the panel: " + k.running + " running, " + k.closed + " closed, " +
@@ -591,19 +618,32 @@
       (nRej ? " · " + nRej + " same-ticker listing(s) rejected as a different coin" : "");
   }
 
-  // BTC against its 200-SMA — CONTEXT, never a filter (the engine gates on
-  // nothing here). Absent when the payload carries no regime block.
+  // The market's benchmark against its 200-SMA — CONTEXT, never a filter
+  // (the engine gates on nothing here). Crypto's block carries btc_* keys;
+  // a stock market's the generic ones (label "ASX 200", above_200, ...).
+  // Absent when the payload carries no regime block.
   function regimeHTML(rg) {
-    if (!rg || typeof rg !== "object" || typeof rg.btc_above_200 !== "boolean") return "";
-    const pct = num(rg.btc_vs_200_pct);
-    const text = "BTC " + (rg.btc_above_200 ? "above" : "below") + " its 200-SMA" +
+    if (!rg || typeof rg !== "object") return "";
+    const btc = typeof rg.btc_above_200 === "boolean";
+    if (!btc && typeof rg.above_200 !== "boolean") return "";
+    const up = btc ? rg.btc_above_200 : rg.above_200;
+    const label = btc ? "BTC" : (typeof rg.label === "string" && rg.label ? rg.label : "Index");
+    const pct = num(btc ? rg.btc_vs_200_pct : rg.vs_200_pct);
+    const close = num(btc ? rg.btc_close : rg.close);
+    const sma = num(btc ? rg.btc_sma200 : rg.sma200);
+    const text = label + " " + (up ? "above" : "below") + " its 200-SMA" +
       (pct == null ? "" : " (" + fmtPct(pct, true) + ")");
-    const tip = "Context, not a filter: the replay's edge came from periods with BTC above its " +
-      "200-SMA, and nothing on this panel is filtered on it." +
-      (num(rg.btc_close) != null ? " BTC " + fmtPx(rg.btc_close) : "") +
-      (num(rg.btc_sma200) != null ? " vs 200-SMA " + fmtPx(rg.btc_sma200) : "") +
+    const tip = (btc
+      ? "Context, not a filter: the replay's edge came from periods with BTC above its " +
+        "200-SMA, and nothing on this panel is filtered on it."
+      : "Context, not a filter: the market's own trend, reported beside the replay's " +
+        "split by it; nothing on this panel is filtered on it.") +
+      (close != null ? " " + label + " " + (btc ? fmtPx(close) : close.toLocaleString("en-US",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : "") +
+      (sma != null ? " vs 200-SMA " + (btc ? fmtPx(sma) : sma.toLocaleString("en-US",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : "") +
       (isDay(rg.as_of) ? ", as of " + rg.as_of : "") + ".";
-    return `<span class="ig-regime ${rg.btc_above_200 ? "is-up" : "is-down"}" title="${esc(tip)}">${esc(text)}</span>`;
+    return `<span class="ig-regime ${up ? "is-up" : "is-down"}" title="${esc(tip)}">${esc(text)}</span>`;
   }
 
   // "N coins behind yesterday's close" when summary.bars says some SCREENED
@@ -634,7 +674,9 @@
       sourcesText(obj(s.sources));
     const badge = stale
       ? ` <span class="ig-stale" title="${esc("This screen is behind: " + stale.reasons.join("; ") +
-          ". It normally refreshes just after 00:00 UTC and several times a day; check the Ignition workflow runs.")}">` +
+          (p.market === "crypto" || p.market == null
+            ? ". It normally refreshes just after 00:00 UTC and several times a day; check the Ignition workflow runs."
+            : ". It normally refreshes just after the close and a few times in session on weekdays; check the Ignition (ASX) workflow runs."))}">` +
         `${esc("⚠ STALE · as of " + (stale.asOf || DASH))}</span>`
       : "";
     const meta = [regimeHTML(p.regime), lagHTML(obj(s.bars))].filter(Boolean);

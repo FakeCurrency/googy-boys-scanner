@@ -1,0 +1,235 @@
+name: Ignition scan (ASX)
+
+# IGNITION on the ASX (2026-09-29, owner: "Yes and factor in the converting
+# windows from calendar days to trading days"). REPORT-ONLY: it publishes
+# public/data/ignition/asx.json (+ asx_backtest.json on demand) and touches
+# nothing else, ever. The crypto screen is ignition.yml; this file is its
+# structural twin (tests/test_ignition_asx_workflow.py holds every step to
+# ignition.yml's shape), differing only where the ASX calendar differs.
+#
+# WHEN IT RUNS. The rule reads COMPLETED daily bars, and an ASX bar completes
+# at the close (the auction prints ~16:10-16:12 Sydney), so the run that
+# matters is the first one after it: 06:24 UTC = 16:24 AEST / 17:24 AEDT, the
+# same instant-after-close in both DST regimes (the offset only moves it LATER
+# in summer). Backed up at 07:24 and 09:24 UTC; the gate skips a backstop once
+# a file generated after today's close is on the branch
+# (scripts/ignition_asx_due.py). The three intraday runs publish breaks on the
+# still-forming bar as "provisional" (never counted) and move RUNNING marks.
+# Weekdays only: there is no ASX bar on a weekend.
+#
+# THE BACKTEST is not scheduled. A manual dispatch with `backtest: true`, or a
+# push touching .github/ignition-asx-kick, runs the screen AND the replay and
+# commits both files back to the PUSHED branch. ~2,000 listings (a name that
+# never clears the turnover floors is dropped before the replay), full Yahoo
+# history: bounded at 300 minutes rather than the crypto job's 60.
+#
+# ITS OWN CONCURRENCY GROUP, separate from the crypto twin's: the two write
+# different files, so they never need to exclude each other, and neither
+# belongs in the `scan` mutex (it writes no book).
+
+on:
+  schedule:
+    - cron: "24 6 * * 1-5"     # just past the ASX close in both DST regimes
+    - cron: "24 7,9 * * 1-5"   # scheduler-drop backstops for the run above
+    - cron: "54 0,2,4 * * 1-5" # intraday: provisional breaks + RUNNING marks
+  push:
+    paths:
+      - ".github/ignition-asx-kick"
+  workflow_dispatch:
+    inputs:
+      backtest:
+        description: "Also replay the lens and publish asx_backtest.json"
+        default: false
+        required: false
+        type: boolean
+      dry_run:
+        description: "Screen (and replay) and print, publish nothing"
+        default: false
+        required: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  # One queue PER BRANCH, and not crypto's queue (see ignition.yml for why a
+  # shared group would let one cron evict another branch's queued kick).
+  group: ignition-asx-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  ignition:
+    runs-on: ubuntu-latest
+    # ~2,000 listings; the 5y screen download is several minutes, the
+    # full-history replay plus its 243-cell grid is the long part (~1.7s a
+    # name over 20y of bars, measured on synthetic frames). Bounded:
+    # an unbounded job holds this group for six hours.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      # THE BACKSTOP GATE. The 07:24 / 09:24 crons exist only to cover a
+      # dropped 06:24; once a file generated AFTER today's ASX close is on the
+      # branch they stop here, before `pip install`, and commit nothing. The
+      # close is read in Sydney time by scripts/ignition_asx_due.py (stdlib
+      # only, the runner's own python3), so DST cannot move it. Read from a
+      # FRESH fetch: a run that sat pending was created at an older SHA.
+      # Every other trigger is due. Unreadable anything FAILS OPEN.
+      - name: Is this run due
+        id: due
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -u
+          if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "24 7,9 * * 1-5" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git fetch --quiet --depth=1 origin "${GITHUB_REF_NAME}" || true
+          STAMP=$(git show "origin/${GITHUB_REF_NAME}:public/data/ignition/asx.json" 2>/dev/null \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('generated_at',''))" 2>/dev/null || true)
+          VERDICT=$(python3 scripts/ignition_asx_due.py "${STAMP}" || echo "run=true")
+          case "$VERDICT" in
+            *run=false*) echo "run=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "run=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+          echo "gate: ${VERDICT} (stamp '${STAMP}')"
+
+      - uses: actions/setup-python@v5
+        if: steps.due.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        if: steps.due.outputs.run == 'true'
+        run: pip install -r requirements.txt
+
+      # Its OWN cache namespace, so it can never mix windows with the scan's
+      # or the momentum lens's frames, and disappears cleanly with the lens.
+      - name: Restore frame cache
+        if: steps.due.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: .cache/frames
+          key: ignition-asx-frames-${{ github.run_id }}
+          restore-keys: |
+            ignition-asx-frames-
+
+      - name: Screen ASX
+        id: scan
+        if: steps.due.outputs.run == 'true'
+        run: |
+          set -u
+          ARGS="--market asx"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          # THREE OUTCOMES, AND THE EXIT CODE IS WHAT TELLS THEM APART.
+          #   0  screened and published
+          #   3  deliberately published nothing (download blocked/empty); the
+          #      previous file stands -- an empty list over it would say
+          #      "nothing is coiling" when the truth is "we could not look"
+          #   *  a real failure
+          RC=0
+          python -m scanner.ignition.run $ARGS || RC=$?
+          echo "rc=$RC"
+          case "$RC" in
+            0) echo "published=true" >> "$GITHUB_OUTPUT" ;;
+            3)
+              echo "published=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::ignition asx published nothing - the download came back empty and the previous file was kept. A REPORTED DECISION, not a fault."
+              ;;
+            *)
+              echo "::error::ignition asx screen failed with exit $RC"
+              exit "$RC"
+              ;;
+          esac
+
+      - name: Backtest ASX
+        id: bt
+        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true)
+        run: |
+          set -u
+          set -o pipefail
+          ARGS="--market asx --backtest"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          RC=0
+          python -m scanner.ignition.run $ARGS | tee -a "$GITHUB_STEP_SUMMARY" || RC=$?
+          case "$RC" in
+            0) echo "published=true" >> "$GITHUB_OUTPUT" ;;
+            3)
+              echo "published=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::ignition backtest had no data - nothing written"
+              ;;
+            *)
+              echo "::error::ignition backtest failed with exit $RC"
+              exit "$RC"
+              ;;
+          esac
+
+      - name: Commit and push
+        if: (steps.scan.outputs.published == 'true' || steps.bt.outputs.published == 'true') && inputs.dry_run != true
+        env:
+          SCAN_PUBLISHED: ${{ steps.scan.outputs.published }}
+          BT_PUBLISHED: ${{ steps.bt.outputs.published }}
+        run: |
+          set -u
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # The branch this run belongs to: main for the schedule, the pushed
+          # branch for a kick. Never hard-coded, so a feature-branch kick can
+          # never write to main.
+          BRANCH="${GITHUB_REF_NAME}"
+
+          # ONLY the files this run reported publishing -- and one pathspec per
+          # `git add`: `git add a b` is ALL-OR-NOTHING and the repo bans it.
+          PATHS=""
+          if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/asx.json"; fi
+          if [ "${BT_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/asx_backtest.json"; fi
+          for p in $PATHS; do
+            if [ -e "$p" ]; then
+              git add -- "$p"
+            else
+              # The scanner REPORTED publishing this path; its absence is lost
+              # output, not a no-op.
+              echo "::error::$p was reported published but is not present"
+              exit 1
+            fi
+          done
+
+          # The must-change gate, ONE CALL PER REPORTED PATH. assert_staged.sh
+          # is ANY-OF, so a single call naming both files would pass on the
+          # screen alone while the backtest a kick reported publishing was
+          # lost (audit, 2026-09-28). Every publish re-stamps generated_at, so
+          # a reported path that stages nothing means output was silently
+          # dropped (the 2026-07-20 incident).
+          for p in $PATHS; do
+            bash scripts/assert_staged.sh "ignition $p" "$p"
+          done
+
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "data: ignition asx $(date -u +'%Y-%m-%d %H:%M UTC')"
+          SHA=$(git rev-parse HEAD)
+
+          # Rebase-and-retry. Only ever REPLACE a path THIS run generated, or a
+          # newer copy pushed meanwhile gets deleted.
+          for i in 1 2 3 4 5; do
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+            for p in $PATHS; do
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+                git checkout "$SHA" -- "$p"
+              fi
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs $BRANCH."; exit 0; fi
+            git commit -m "data: ignition asx $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin "HEAD:$BRANCH"; then
+              echo "Pushed to $BRANCH."
+              exit 0
+            fi
+            echo "Push race - retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1
