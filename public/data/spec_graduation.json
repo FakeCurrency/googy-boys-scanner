@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-09-29T03:03:58+10:00",
+ "updated_at": "2026-09-30T01:04:44+10:00",
  "markets": {
   "asx": {
    "seen": {
@@ -39,12 +39,6 @@
      "price": 0.002,
      "name": "Ausmon Resources",
      "last_seen": "2026-08-10"
-    },
-    "QML": {
-     "first_seen": "2026-07-31",
-     "price": 0.058,
-     "name": "Qmines Limited",
-     "last_seen": "2026-09-01"
     },
     "ABV": {
      "first_seen": "2026-07-31",
@@ -362,12 +356,6 @@
      "first_seen": "2026-08-09",
      "price": 0.44999999,
      "name": "PPK Group Limited",
-     "last_seen": "2026-08-09"
-    },
-    "PNN": {
-     "first_seen": "2026-08-09",
-     "price": 0.16500001,
-     "name": "Power Minerals Limited",
      "last_seen": "2026-08-09"
     },
     "LPE": {
@@ -898,12 +886,6 @@
      "name": "Nexus Minerals Limited",
      "last_seen": "2026-08-21"
     },
-    "BPM": {
-     "first_seen": "2026-08-19",
-     "price": 0.2,
-     "name": "Bpm Minerals Limited",
-     "last_seen": "2026-09-08"
-    },
     "ICE": {
      "first_seen": "2026-08-19",
      "price": 0.039,
@@ -1077,12 +1059,6 @@
      "price": 0.15000001,
      "name": "Li-S Energy Limited",
      "last_seen": "2026-08-26"
-    },
-    "TGN": {
-     "first_seen": "2026-08-26",
-     "price": 0.27500001,
-     "name": "Tungsten Mining Nl",
-     "last_seen": "2026-09-12"
     },
     "M2M": {
      "first_seen": "2026-08-26",
@@ -1274,7 +1250,7 @@
      "first_seen": "2026-08-29",
      "price": 0.021,
      "name": "Mamba Exploration Limited",
-     "last_seen": "2026-09-23"
+     "last_seen": "2026-09-30"
     },
     "CTO": {
      "first_seen": "2026-08-29",
@@ -1834,12 +1810,6 @@
      "name": "Lightning Minerals Ltd",
      "last_seen": "2026-09-23"
     },
-    "ETM": {
-     "first_seen": "2026-09-23",
-     "price": 0.062,
-     "name": "Energy Transition Minerals Ltd",
-     "last_seen": "2026-09-23"
-    },
     "1AD": {
      "first_seen": "2026-09-23",
      "price": 0.004,
@@ -2217,9 +2187,59 @@
      "vivek_price": 0.245,
      "grade": "B+",
      "days": 21
+    },
+    {
+     "symbol": "QML",
+     "name": "Qmines Limited",
+     "first_seen": "2026-07-31",
+     "spec_price": 0.058,
+     "graduated": "2026-09-30",
+     "vivek_price": 0.081,
+     "grade": "A",
+     "days": 61
+    },
+    {
+     "symbol": "PNN",
+     "name": "Power Minerals Limited",
+     "first_seen": "2026-08-09",
+     "spec_price": 0.16500001,
+     "graduated": "2026-09-30",
+     "vivek_price": 0.125,
+     "grade": "B+",
+     "days": 52
+    },
+    {
+     "symbol": "BPM",
+     "name": "Bpm Minerals Limited",
+     "first_seen": "2026-08-19",
+     "spec_price": 0.2,
+     "graduated": "2026-09-30",
+     "vivek_price": 0.215,
+     "grade": "B+",
+     "days": 42
+    },
+    {
+     "symbol": "TGN",
+     "name": "Tungsten Mining Nl",
+     "first_seen": "2026-08-26",
+     "spec_price": 0.27500001,
+     "graduated": "2026-09-30",
+     "vivek_price": 0.245,
+     "grade": "B+",
+     "days": 35
+    },
+    {
+     "symbol": "ETM",
+     "name": "Energy Transition Minerals Ltd",
+     "first_seen": "2026-09-23",
+     "spec_price": 0.062,
+     "graduated": "2026-09-30",
+     "vivek_price": 0.054,
+     "grade": "A",
+     "days": 7
     }
    ],
-   "graduated_total": 34
+   "graduated_total": 39
   },
   "nasdaq": {
    "seen": {},
