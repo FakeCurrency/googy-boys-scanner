@@ -1,35 +1,35 @@
 {
  "schema_version": 1,
- "generated_at": "2026-09-28T00:53:10+00:00",
- "book_updated_at": "2026-09-28T00:06:08+00:00",
- "n_long": 30,
+ "generated_at": "2026-09-29T02:04:21+00:00",
+ "book_updated_at": "2026-09-29T01:43:51+00:00",
+ "n_long": 43,
  "n_short_untouched": 0,
- "n_skipped_unpriced": 0,
- "base_unreal_r": -3.83,
+ "n_skipped_unpriced": 6,
+ "base_unreal_r": -5.05,
  "shocks": [
   {
    "shock_pct": 3.0,
    "stopped": 1,
-   "unreal_r": -10.59,
-   "given_back_r": 6.76
+   "unreal_r": -16.01,
+   "given_back_r": 10.96
   },
   {
    "shock_pct": 5.0,
-   "stopped": 2,
-   "unreal_r": -14.91,
-   "given_back_r": 11.08
+   "stopped": 6,
+   "unreal_r": -22.29,
+   "given_back_r": 17.24
   },
   {
    "shock_pct": 8.0,
-   "stopped": 7,
-   "unreal_r": -19.57,
-   "given_back_r": 15.74
+   "stopped": 9,
+   "unreal_r": -29.28,
+   "given_back_r": 24.24
   },
   {
    "shock_pct": 10.0,
-   "stopped": 10,
-   "unreal_r": -22.13,
-   "given_back_r": 18.3
+   "stopped": 15,
+   "unreal_r": -33.23,
+   "given_back_r": 28.18
   }
  ],
  "method": "uniform beta-1 shock on every long's last_mark vs its real stop; a stopped position realises its stop's R; no correlations, no betas - the honest floor of sophistication"
