@@ -816,9 +816,10 @@ def test_the_ruleset_is_versioned():
 
     assert re.fullmatch(r"\d+\.\d+\.\d+", config.IGNITION_RULESET_VERSION)
     assert ignition.RULESET_VERSION == config.IGNITION_RULESET_VERSION
-    assert tuple(config.IGNITION_MARKETS) == ("crypto",), (
-        "v1 screens crypto only; widening the market set is an owner decision "
-        "(and ignition.yml, the page and these fences all assume crypto)")
+    assert tuple(config.IGNITION_MARKETS) == ("crypto", "asx"), (
+        "crypto + the ASX (owner, 2026-09-29); widening the market set further is "
+        "an owner decision, and each market needs its own workflow "
+        "(ignition.yml, ignition_asx.yml) and page support")
 
 
 # ---------------------------------------------------------------------------
