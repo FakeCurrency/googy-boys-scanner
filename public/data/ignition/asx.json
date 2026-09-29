@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-09-29T04:31:06+00:00",
+  "generated_at": "2026-09-29T05:16:29+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-09-28",
@@ -51,8 +51,8 @@
   },
   "summary": {
     "universe": 2047,
-    "downloaded": 1736,
-    "screened": 1654,
+    "downloaded": 1737,
+    "screened": 1655,
     "skipped": {
       "short history": 82
     },
@@ -60,7 +60,7 @@
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 1,
-      "COILED": 72,
+      "COILED": 73,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -70,11 +70,11 @@
       "expected_completed": null,
       "lagging": 0,
       "completed_dist": {
-        "2026-09-28": 1736
+        "2026-09-28": 1737
       },
       "raw_dist": {
-        "2026-09-29": 1326,
-        "2026-09-28": 410
+        "2026-09-29": 1362,
+        "2026-09-28": 375
       }
     },
     "sources": {
@@ -94,14 +94,14 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1736,
+      "fresh": 1737,
       "reused": 0,
-      "merged": 1736,
+      "merged": 1737,
       "universe": 2047,
       "stale_dropped": 0,
       "refused": 0
     },
-    "elapsed_s": 462.8
+    "elapsed_s": 331.8
   },
   "results": [
     {
@@ -148,9 +148,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.06,
-      "change_pct": 13.2,
-      "r_now": 1.52,
+      "price": 0.059,
+      "change_pct": 11.3,
+      "r_now": 1.31,
       "trail": 0.05822222
     },
     {
@@ -576,7 +576,7 @@
       "breakout_level": 0.093,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.081
+      "price": 0.079
     },
     {
       "symbol": "HCF",
@@ -1201,7 +1201,7 @@
       "breakout_level": 0.34999999,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.29499999
+      "price": 0.29699999
     },
     {
       "symbol": "G88",
@@ -1426,7 +1426,7 @@
       "breakout_level": 0.78138701,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.667
+      "price": 0.66500002
     },
     {
       "symbol": "LIS",
@@ -1601,7 +1601,7 @@
       "breakout_level": 0.056,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.037
+      "price": 0.036
     },
     {
       "symbol": "ADH",
@@ -1626,7 +1626,7 @@
       "breakout_level": 1.50149093,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 1.23199999
+      "price": 1.222
     },
     {
       "symbol": "LEG",
@@ -1776,7 +1776,7 @@
       "breakout_level": 0.05,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.033
+      "price": 0.038
     },
     {
       "symbol": "KFM",
@@ -1851,7 +1851,7 @@
       "breakout_level": 0.33000001,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.27000001
+      "price": 0.26699999
     },
     {
       "symbol": "GNM",
@@ -1902,6 +1902,31 @@
       "provisional": false,
       "last_bar": "2026-09-28",
       "price": 0.5
+    },
+    {
+      "symbol": "E25",
+      "name": "Element 25 Limited",
+      "yf": "E25.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 22.54,
+        "atr_pctl": 6.2,
+        "vol_pctl": 10.7,
+        "drawdown_pct": 58.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-18"
+      },
+      "base": {
+        "high": 0.29499999,
+        "low": 0.20999999,
+        "bars": 60
+      },
+      "breakout_level": 0.29499999,
+      "provisional": false,
+      "last_bar": "2026-09-28",
+      "price": 0.235
     },
     {
       "symbol": "TSL",
