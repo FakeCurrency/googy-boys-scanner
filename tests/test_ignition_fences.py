@@ -110,10 +110,13 @@ FORBIDDEN_FOR_LENS = (
 #                       "Can't we use binance/bybit?"). Imports only stdlib,
 #                       pandas and config (checked transitively below), holds
 #                       no credentials and places nothing
+#   scanner.marketcaps  the shared cap cache, READ-ONLY, used only by mcap.py
+#                       for a display field stamped after the sort (pinned in
+#                       tests/test_ignition_mcap.py)
 ALLOWED_SCANNER_IMPORTS = frozenset({
     "scanner.config", "scanner.data", "scanner.output",
     "scanner.universe", "scanner.scanerrors", "scanner.indicators",
-    "scanner.exchange_data",
+    "scanner.exchange_data", "scanner.marketcaps",
 })
 
 # The tokens that would mean a real reference to the lens, as opposed to the
@@ -502,9 +505,11 @@ def test_the_lens_publishes_only_through_output_write_json():
 # forming-bar split), the network (the shared downloader) and the filesystem
 # (the publish). backtest.py is the REPLAY: offline, but it stamps its own
 # payload's generated_at when the runner did not inject a `now` -- a single,
-# pinned exception (see below). Everything else in the package is ENGINE and
-# must need none of those three.
-_NOT_ENGINE = ("run.py", "__init__.py", "backtest.py")
+# pinned exception (see below). mcap.py is the runner's market-cap helper: it
+# reads a file and asks Yahoo, and its display field is stamped after the
+# screen sorts, so the rule never sees it. Everything else in the package is
+# ENGINE and must need none of those three.
+_NOT_ENGINE = ("run.py", "__init__.py", "backtest.py", "mcap.py")
 _NETWORK = ("requests", "urllib", "urllib3", "http", "socket", "yfinance",
             "aiohttp", "httpx", "ccxt", "websocket")
 _CLOCK_ATTRS = frozenset({"now", "utcnow", "today"})
@@ -877,6 +882,27 @@ def _frame(seed: int, n: int = 520, days_old: int = 1) -> pd.DataFrame:
                          "Volume": rng.uniform(4e6, 8e6, n)}, index=idx)
 
 
+def record_writes(monkeypatch) -> list:
+    """Record every write-mode `open`, `os.replace` and `Path.write_*` from
+    here on, so a write set is proven by running the code, not by reading it.
+    tests/test_ignition_mcap.py reuses it for the ASX run."""
+    writes = []
+    real_open = builtins.open
+
+    def spy_open(file, mode="r", *a, **k):
+        if any(c in str(mode) for c in "wax+"):
+            writes.append(("open", str(file), mode))
+        return real_open(file, mode, *a, **k)
+
+    monkeypatch.setattr(builtins, "open", spy_open)
+    monkeypatch.setattr(os, "replace", lambda *a, **k: writes.append(("replace", a)))
+    monkeypatch.setattr(pathlib.Path, "write_text",
+                        lambda self, *a, **k: writes.append(("write_text", str(self))))
+    monkeypatch.setattr(pathlib.Path, "write_bytes",
+                        lambda self, *a, **k: writes.append(("write_bytes", str(self))))
+    return writes
+
+
 @pytest.fixture
 def cli(monkeypatch):
     """The real CLI with only its two edges stubbed: the downloader (the
@@ -893,8 +919,7 @@ def cli(monkeypatch):
     # CCC's last bar is TODAY (UTC): the forming bar, which must be split off
     # before anything persists it.
     frames = {"AAA-USD": _frame(1), "BBB-USD": _frame(2), "CCC-USD": _frame(3, days_old=0)}
-    state = {"published": [], "raw_writes": [], "load_calls": [], "load": None,
-             "cache_calls": []}
+    state = {"published": [], "load_calls": [], "load": None, "cache_calls": []}
 
     def fake_download(market, period, limit):
         state["load_calls"].append((market, period, limit))
@@ -912,22 +937,10 @@ def cli(monkeypatch):
         state["published"].append((pathlib.Path(path), payload))
         return pathlib.Path(path)
 
-    real_open = builtins.open
-
-    def spy_open(file, mode="r", *a, **k):
-        if any(c in str(mode) for c in "wax+"):
-            state["raw_writes"].append(("open", str(file), mode))
-        return real_open(file, mode, *a, **k)
-
     monkeypatch.setattr(run, "_download", fake_download)
     monkeypatch.setattr(run.sdata, "merge_with_cache", fake_merge)
     monkeypatch.setattr(output, "write_json", fake_write_json)
-    monkeypatch.setattr(builtins, "open", spy_open)
-    monkeypatch.setattr(os, "replace", lambda *a, **k: state["raw_writes"].append(("replace", a)))
-    monkeypatch.setattr(pathlib.Path, "write_text",
-                        lambda self, *a, **k: state["raw_writes"].append(("write_text", str(self))))
-    monkeypatch.setattr(pathlib.Path, "write_bytes",
-                        lambda self, *a, **k: state["raw_writes"].append(("write_bytes", str(self))))
+    state["raw_writes"] = record_writes(monkeypatch)
     state["run"] = run
     return state
 
@@ -1023,10 +1036,10 @@ def test_the_frame_cache_is_only_ever_handed_completed_bars(cli):
 def test_the_engine_set_is_what_the_gates_above_actually_inspect():
     """Names the files the engine gates cover, so a new module cannot land
     somewhere they do not look. `_NOT_ENGINE` is the only escape hatch and
-    holds exactly three files, each for a stated reason; a fourth name would
+    holds exactly four files, each for a stated reason; a fifth name would
     silently exempt a real engine module from the offline, no-clock and
     no-magic-number gates, which is the one edit here worth making noisy."""
-    assert _NOT_ENGINE == ("run.py", "__init__.py", "backtest.py")
+    assert _NOT_ENGINE == ("run.py", "__init__.py", "backtest.py", "mcap.py")
     present = {p.name for p in _py(LENS)}
     covered = {p.name for p in _engine_modules()}
     assert "engine.py" in covered

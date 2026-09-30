@@ -73,7 +73,7 @@ scanner/               VIVEK + Specs engines, bot, alerts
   run.py               CLI: python -m scanner.run [--market ...]; publishes bot_rules.json
                        (`bot_rules_payload()` — resize_book.yml calls it too)
   spec.py + spec_run.py    Specs lens (asx+nasdaq) → <m>_spec.json
-  ignition/            IGNITION lens (crypto, REPORT-ONLY): coil -> ignition
+  ignition/            IGNITION lens (crypto + ASX, REPORT-ONLY): coil -> ignition
                        screen + replay → public/data/ignition/ (see IGNITION)
   confluence_alert.py  multi-lens confluence engine: ALERTS page history log
                        + push-owed state (delivery removed 2026-08-27)
@@ -2151,6 +2151,27 @@ explicit list is where a new odd-named peg has to be added. Pins:
   counts WEEKDAY hours against `STALE_SESSION_H` = 50 (a Friday screen is
   fresh on Monday; a Monday holiday clears; two dead trading days flag).
   Pins: `tests/test_ignition_asx.py`, `test/ignition.test.js`.
+- **MARKET CAP + THE READABLE PANEL (2026-09-30, owner: "VERY HARD on the
+  eyes to read ... I need a MARKET cap on each box" and "keep the code clean /
+  simple / easy to change").** Caps are DISPLAY only, stamped after the sort
+  by `scanner/ignition/mcap.py` (one small module, two functions): every row
+  carries `mcap` (market's own currency) / `mcap_asof` / `mcap_src`, never 0.
+  Crypto = CoinGecko's cap on the universe row (`cg_mcap`, undated when the
+  universe is a `cg_stale` snapshot). ASX = newest of the SHARED cap cache
+  (`marketcaps.load_cache()`, READ only — scan.yml's refresh stays its one
+  writer) and this lens's previous file, plus ONE Yahoo `marketcaps.fetch_caps`
+  call BEFORE the frame download (Yahoo throttles after it) for previous-file
+  names whose cap is missing or older than `marketcaps.MAX_AGE_DAYS`; a cap
+  failure never fails the run. `scanner.marketcaps` is on the fence
+  allowlist. The panel (design chosen by a judged 3-way comparison, then cut
+  down for simplicity): trigger cards lead with one big outcome number
+  (exit R / R now / "no trade"), a "cap A$198M" chip and 2-3 plain sentences;
+  COILED is a table on desktop / two-line rows under 1000px, sorted largest
+  cap first (no-cap rows after, engine order) — nothing dropped, no sort
+  buttons, no row expansion (phones lose the quiet diagnostics; desktop has
+  them in the row tooltip). tabular-nums only inside `.ig-tbl` (it detached
+  minus signs in prose). Pins: `tests/test_ignition_mcap.py`,
+  `test/ignition.test.js`.
 - **What the replay says (exchange data + peg rule, run of 2026-09-28
   03:09 UTC — report-only, READ AS SUGGESTIVE):** 94 realised trades,
   expectancy **+1.19R**, median **−0.76R**, PF 3.08, 34% winners; versus

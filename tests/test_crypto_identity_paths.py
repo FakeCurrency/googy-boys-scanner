@@ -552,8 +552,12 @@ def _held_row(**kw):
     plan = {"stop": 0.50, "tp1": 1.5, "tp2": 1.8, "tp3": 2.0,
             "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "reclaim",
             "armed": True, "trigger_bar": None}
-    pos = _snapshot(row, "1W", plan, "crypto", 1.0, "2026-09-01")
-    pos.update(market="crypto", risk_usd=500.0, last_mark=1.0, opened_at="2026-09-01")
+    # Opened a few days ago, never on a fixed date: a hard-coded 2026-09-01
+    # aged past the 28-day time stop on 2026-09-29 and the position closed
+    # before the test could read it (both tests below went red on main).
+    opened = _yday(5)
+    pos = _snapshot(row, "1W", plan, "crypto", 1.0, opened)
+    pos.update(market="crypto", risk_usd=500.0, last_mark=1.0, opened_at=opened)
     pos.update(kw)
     return pos
 
