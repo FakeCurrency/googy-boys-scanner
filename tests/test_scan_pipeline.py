@@ -271,6 +271,10 @@ def _spiky_frame(close=100.0, hist_vol=1_000.0, today_vol=5_000.0):
 
 def _run_arriving(monkeypatch, tmp_path, frames, uni=None):
     uni = uni or [{"yf": "THN.AX", "symbol": "THN", "name": "Thin Co", "sector": "Energy"}]
+    # No live 4H download: the display-only 4H plans fetch real Yahoo bars, so
+    # two back-to-back runs during an ASX session saw BHP move and the identity
+    # fence below failed on data, not code (CI, 2026-09-30).
+    monkeypatch.setattr(scan.config, "VIVEK_H4_PLANS", False)
     out = scan.scan_vivek_market("asx", universe=uni, frames=frames,
                                  pulse_data=[], progress=False, out_root=str(tmp_path))
     import json as _json
