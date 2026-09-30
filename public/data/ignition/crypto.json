@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-09-29T21:34:23+00:00",
+  "generated_at": "2026-09-30T00:47:50+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-09-28",
+  "last_closed_bar": "2026-09-29",
   "report_only": true,
   "regime": {
-    "btc_close": 83500.01,
-    "btc_sma200": 71173.97,
+    "btc_close": 83663.66,
+    "btc_sma200": 71237.64,
     "btc_above_200": true,
-    "btc_vs_200_pct": 17.3,
-    "as_of": "2026-09-28"
+    "btc_vs_200_pct": 17.4,
+    "as_of": "2026-09-29"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -57,23 +57,24 @@
     },
     "counts": {
       "IGNITING": 1,
-      "RUNNING": 3,
-      "CLOSED": 4,
+      "RUNNING": 1,
+      "CLOSED": 6,
       "COILED": 22,
       "provisional": 0,
       "igniting_confirmed": 1
     },
     "bars": {
-      "completed_last": "2026-09-28",
-      "raw_last": "2026-09-29",
-      "expected_completed": "2026-09-28",
-      "lagging": 0,
+      "completed_last": "2026-09-29",
+      "raw_last": "2026-09-30",
+      "expected_completed": "2026-09-29",
+      "lagging": 32,
       "completed_dist": {
-        "2026-09-28": 166,
+        "2026-09-29": 134,
+        "2026-09-28": 32,
         "2025-10-27": 1
       },
       "raw_dist": {
-        "2026-09-29": 167
+        "2026-09-30": 167
       }
     },
     "sources": {
@@ -210,7 +211,7 @@
       "stale_dropped": 0,
       "refused": 8
     },
-    "elapsed_s": 146.2
+    "elapsed_s": 145.0
   },
   "results": [
     {
@@ -252,9 +253,9 @@
       "state": "IGNITING",
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 0.03320139,
-      "change_pct": -4.0,
-      "r_now": -0.89,
+      "price": 0.03343298,
+      "change_pct": -3.3,
+      "r_now": -0.74,
       "trail": 0.03088622
     },
     {
@@ -267,7 +268,7 @@
       "entry": 98.68,
       "entry_basis": "next_open",
       "entry_date": "2026-09-26",
-      "bars_since": 3,
+      "bars_since": 4,
       "rvol": 12.91,
       "ext_pct": 35.7,
       "turnover_trigger": 14438727.0,
@@ -295,99 +296,11 @@
       "mfe_r": 22.42,
       "state": "RUNNING",
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 268.36,
-      "change_pct": 171.9,
-      "r_now": 13.87,
-      "trail": 125.85888889
-    },
-    {
-      "symbol": "LTC",
-      "name": "Litecoin",
-      "yf": "LTC-USD",
-      "source": "binance_vision",
-      "trigger_date": "2026-09-24",
-      "trigger_close": 71.95,
-      "entry": 71.96,
-      "entry_basis": "next_open",
-      "entry_date": "2026-09-25",
-      "bars_since": 4,
-      "rvol": 6.08,
-      "ext_pct": 20.0,
-      "turnover_trigger": 150509970.0,
-      "turnover_base": 24745385.0,
-      "base": {
-        "high": 64.64,
-        "low": 43.39,
-        "bars": 60,
-        "range_pct": 49.0
-      },
-      "stop": 61.70584229,
-      "risk_pct": 14.2,
-      "wide_stop": false,
-      "mm_target": 85.89,
-      "mm_passed": false,
-      "mm_r": 1.36,
-      "coil": {
-        "ribbon_pct": 14.03,
-        "atr_pctl": 42.2,
-        "vol_pctl": 35.2,
-        "drawdown_pct": 57.9,
-        "coiled": false,
-        "coiled_bars": 0
-      },
-      "mfe_r": 0.3,
-      "state": "RUNNING",
-      "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 67.25,
-      "change_pct": -6.5,
-      "r_now": -0.46,
-      "trail": 67.02444444
-    },
-    {
-      "symbol": "TAO",
-      "name": "Bittensor",
-      "yf": "TAO-USD",
-      "source": "binance_vision",
-      "trigger_date": "2026-09-21",
-      "trigger_close": 319.4,
-      "entry": 319.4,
-      "entry_basis": "next_open",
-      "entry_date": "2026-09-22",
-      "bars_since": 7,
-      "rvol": 3.41,
-      "ext_pct": 28.8,
-      "turnover_trigger": 92348987.0,
-      "turnover_base": 27083085.0,
-      "base": {
-        "high": 277.0,
-        "low": 183.5,
-        "bars": 60,
-        "range_pct": 51.0
-      },
-      "stop": 260.23885664,
-      "risk_pct": 18.5,
-      "wide_stop": false,
-      "mm_target": 370.5,
-      "mm_passed": false,
-      "mm_r": 0.86,
-      "coil": {
-        "ribbon_pct": 6.19,
-        "atr_pctl": 14.8,
-        "vol_pctl": 31.9,
-        "drawdown_pct": 79.0,
-        "coiled": true,
-        "coiled_bars": 5
-      },
-      "mfe_r": 0.37,
-      "state": "RUNNING",
-      "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 301.3,
-      "change_pct": -5.7,
-      "r_now": -0.31,
-      "trail": 305.17777778
+      "last_bar": "2026-09-29",
+      "price": 267.96,
+      "change_pct": 171.5,
+      "r_now": 13.84,
+      "trail": 148.37444444
     },
     {
       "symbol": "AXS",
@@ -399,7 +312,7 @@
       "entry": 1.188,
       "entry_basis": "next_open",
       "entry_date": "2026-09-26",
-      "bars_since": 3,
+      "bars_since": 4,
       "rvol": 6.89,
       "ext_pct": 12.3,
       "turnover_trigger": 9670080.0,
@@ -432,11 +345,60 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 1.142,
-      "change_pct": -3.9,
+      "last_bar": "2026-09-29",
+      "price": 1.147,
+      "change_pct": -3.5,
+      "r_now": -0.45,
+      "trail": 1.124
+    },
+    {
+      "symbol": "LTC",
+      "name": "Litecoin",
+      "yf": "LTC-USD",
+      "source": "binance_vision",
+      "trigger_date": "2026-09-24",
+      "trigger_close": 71.95,
+      "entry": 71.96,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-25",
+      "bars_since": 5,
+      "rvol": 6.08,
+      "ext_pct": 20.0,
+      "turnover_trigger": 150509970.0,
+      "turnover_base": 24745385.0,
+      "base": {
+        "high": 64.64,
+        "low": 43.39,
+        "bars": 60,
+        "range_pct": 49.0
+      },
+      "stop": 61.70584229,
+      "risk_pct": 14.2,
+      "wide_stop": false,
+      "mm_target": 85.89,
+      "mm_passed": false,
+      "mm_r": 1.36,
+      "coil": {
+        "ribbon_pct": 14.03,
+        "atr_pctl": 42.2,
+        "vol_pctl": 35.2,
+        "drawdown_pct": 57.9,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.3,
+      "exit_reason": "trail",
+      "exit_date": "2026-09-29",
+      "exit_price": 66.83,
+      "exit_r": -0.5,
+      "exit_pending": true,
+      "state": "CLOSED",
+      "provisional": false,
+      "last_bar": "2026-09-29",
+      "price": 66.78,
+      "change_pct": -7.2,
       "r_now": -0.51,
-      "trail": 1.10933333
+      "trail": 67.92333333
     },
     {
       "symbol": "HBAR",
@@ -448,7 +410,7 @@
       "entry": 0.0991,
       "entry_basis": "next_open",
       "entry_date": "2026-09-23",
-      "bars_since": 6,
+      "bars_since": 7,
       "rvol": 3.27,
       "ext_pct": 20.5,
       "turnover_trigger": 32928568.0,
@@ -481,11 +443,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.10349,
-      "change_pct": 4.4,
-      "r_now": 0.44,
-      "trail": 0.09663111
+      "last_bar": "2026-09-29",
+      "price": 0.10151,
+      "change_pct": 2.4,
+      "r_now": 0.24,
+      "trail": 0.09839556
     },
     {
       "symbol": "PEPE",
@@ -497,7 +459,7 @@
       "entry": 4.77e-06,
       "entry_basis": "next_open",
       "entry_date": "2026-09-22",
-      "bars_since": 7,
+      "bars_since": 8,
       "rvol": 4.85,
       "ext_pct": 26.5,
       "turnover_trigger": 135423567.0,
@@ -530,11 +492,60 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-09-28",
+      "last_bar": "2026-09-29",
       "price": 4.25e-06,
       "change_pct": -10.9,
       "r_now": -1.06,
-      "trail": 4.44e-06
+      "trail": 4.47e-06
+    },
+    {
+      "symbol": "TAO",
+      "name": "Bittensor",
+      "yf": "TAO-USD",
+      "source": "binance_vision",
+      "trigger_date": "2026-09-21",
+      "trigger_close": 319.4,
+      "entry": 319.4,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-22",
+      "bars_since": 8,
+      "rvol": 3.41,
+      "ext_pct": 28.8,
+      "turnover_trigger": 92348987.0,
+      "turnover_base": 27083085.0,
+      "base": {
+        "high": 277.0,
+        "low": 183.5,
+        "bars": 60,
+        "range_pct": 51.0
+      },
+      "stop": 260.23885664,
+      "risk_pct": 18.5,
+      "wide_stop": false,
+      "mm_target": 370.5,
+      "mm_passed": false,
+      "mm_r": 0.86,
+      "coil": {
+        "ribbon_pct": 6.19,
+        "atr_pctl": 14.8,
+        "vol_pctl": 31.9,
+        "drawdown_pct": 79.0,
+        "coiled": true,
+        "coiled_bars": 5
+      },
+      "mfe_r": 0.37,
+      "exit_reason": "trail",
+      "exit_date": "2026-09-29",
+      "exit_price": 300.7,
+      "exit_r": -0.32,
+      "exit_pending": true,
+      "state": "CLOSED",
+      "provisional": false,
+      "last_bar": "2026-09-29",
+      "price": 299.0,
+      "change_pct": -6.4,
+      "r_now": -0.34,
+      "trail": 309.51111111
     },
     {
       "symbol": "AVAX",
@@ -546,7 +557,7 @@
       "entry": 10.093,
       "entry_basis": "next_open",
       "entry_date": "2026-09-20",
-      "bars_since": 9,
+      "bars_since": 10,
       "rvol": 4.23,
       "ext_pct": 29.1,
       "turnover_trigger": 85017237.0,
@@ -573,17 +584,17 @@
       },
       "mfe_r": 0.8,
       "exit_reason": "trail",
-      "exit_date": "2026-09-28",
-      "exit_price": 10.616,
+      "exit_date": "2026-09-29",
+      "exit_price": 10.617,
       "exit_r": 0.25,
-      "exit_pending": true,
+      "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 11.405,
-      "change_pct": 13.0,
-      "r_now": 0.62,
-      "trail": 10.81588889
+      "last_bar": "2026-09-29",
+      "price": 11.385,
+      "change_pct": 12.8,
+      "r_now": 0.61,
+      "trail": 10.82955556
     },
     {
       "symbol": "SUN",
@@ -592,13 +603,13 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.56,
-        "atr_pctl": 5.3,
-        "vol_pctl": 9.7,
-        "drawdown_pct": 61.4,
+        "ribbon_pct": 5.47,
+        "atr_pctl": 6.6,
+        "vol_pctl": 10.0,
+        "drawdown_pct": 62.0,
         "coiled": true,
-        "coiled_bars": 22,
-        "last_coiled": "2026-09-28"
+        "coiled_bars": 23,
+        "last_coiled": "2026-09-29"
       },
       "base": {
         "high": 0.01838,
@@ -607,8 +618,8 @@
       },
       "breakout_level": 0.01838,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.01706
+      "last_bar": "2026-09-29",
+      "price": 0.01702
     },
     {
       "symbol": "CFX",
@@ -617,13 +628,13 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.98,
-        "atr_pctl": 11.5,
-        "vol_pctl": 13.0,
-        "drawdown_pct": 90.2,
+        "ribbon_pct": 11.71,
+        "atr_pctl": 11.2,
+        "vol_pctl": 13.3,
+        "drawdown_pct": 90.1,
         "coiled": true,
-        "coiled_bars": 12,
-        "last_coiled": "2026-09-28"
+        "coiled_bars": 13,
+        "last_coiled": "2026-09-29"
       },
       "base": {
         "high": 0.05784,
@@ -632,8 +643,8 @@
       },
       "breakout_level": 0.05784,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.05447
+      "last_bar": "2026-09-29",
+      "price": 0.05458
     },
     {
       "symbol": "GNO",
@@ -642,13 +653,13 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 1.66,
-        "atr_pctl": 10.3,
-        "vol_pctl": 15.8,
-        "drawdown_pct": 73.0,
+        "ribbon_pct": 1.95,
+        "atr_pctl": 13.4,
+        "vol_pctl": 17.3,
+        "drawdown_pct": 73.8,
         "coiled": true,
-        "coiled_bars": 10,
-        "last_coiled": "2026-09-28"
+        "coiled_bars": 11,
+        "last_coiled": "2026-09-29"
       },
       "base": {
         "high": 146.28,
@@ -657,8 +668,8 @@
       },
       "breakout_level": 146.28,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 117.33
+      "last_bar": "2026-09-29",
+      "price": 117.35
     },
     {
       "symbol": "FLR",
@@ -667,13 +678,13 @@
       "source": "coinbase",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.19,
-        "atr_pctl": 21.0,
-        "vol_pctl": 30.7,
-        "drawdown_pct": 87.2,
+        "ribbon_pct": 7.52,
+        "atr_pctl": 21.8,
+        "vol_pctl": 32.9,
+        "drawdown_pct": 86.6,
         "coiled": true,
-        "coiled_bars": 7,
-        "last_coiled": "2026-09-28"
+        "coiled_bars": 8,
+        "last_coiled": "2026-09-29"
       },
       "base": {
         "high": 0.00825,
@@ -682,8 +693,8 @@
       },
       "breakout_level": 0.00825,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.007501
+      "last_bar": "2026-09-29",
+      "price": 0.007555
     },
     {
       "symbol": "LUNC",
@@ -692,13 +703,13 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.06,
-        "atr_pctl": 24.9,
-        "vol_pctl": 15.1,
-        "drawdown_pct": 80.9,
+        "ribbon_pct": 11.0,
+        "atr_pctl": 24.1,
+        "vol_pctl": 15.2,
+        "drawdown_pct": 81.1,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-09-28"
+        "coiled_bars": 6,
+        "last_coiled": "2026-09-29"
       },
       "base": {
         "high": 6.406e-05,
@@ -707,33 +718,8 @@
       },
       "breakout_level": 6.406e-05,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 5.273e-05
-    },
-    {
-      "symbol": "SHIB",
-      "name": "Shiba Inu",
-      "yf": "SHIB-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.08,
-        "atr_pctl": 37.8,
-        "vol_pctl": 15.3,
-        "drawdown_pct": 87.6,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-09-21"
-      },
-      "base": {
-        "high": 6.27e-06,
-        "low": 4.35e-06,
-        "bars": 60
-      },
-      "breakout_level": 6.27e-06,
-      "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 5.74e-06
+      "last_bar": "2026-09-29",
+      "price": 5.285e-05
     },
     {
       "symbol": "FLOKI",
@@ -742,10 +728,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.09,
-        "atr_pctl": 29.2,
-        "vol_pctl": 17.9,
-        "drawdown_pct": 92.3,
+        "ribbon_pct": 10.08,
+        "atr_pctl": 27.0,
+        "vol_pctl": 18.1,
+        "drawdown_pct": 92.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-27"
@@ -757,8 +743,8 @@
       },
       "breakout_level": 3.131e-05,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 2.752e-05
+      "last_bar": "2026-09-29",
+      "price": 2.738e-05
     },
     {
       "symbol": "DOGE",
@@ -767,9 +753,9 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.11,
-        "atr_pctl": 38.9,
-        "vol_pctl": 25.1,
+        "ribbon_pct": 10.26,
+        "atr_pctl": 36.6,
+        "vol_pctl": 24.7,
         "drawdown_pct": 80.6,
         "coiled": false,
         "coiled_bars": 0,
@@ -782,33 +768,33 @@
       },
       "breakout_level": 0.10589,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.09387
+      "last_bar": "2026-09-29",
+      "price": 0.09343
     },
     {
-      "symbol": "SYRUP",
-      "name": "Maple Finance",
-      "yf": "SYRUP-USD",
+      "symbol": "SHIB",
+      "name": "Shiba Inu",
+      "yf": "SHIB-USD",
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.26,
-        "atr_pctl": 32.1,
-        "vol_pctl": 25.0,
-        "drawdown_pct": 76.9,
+        "ribbon_pct": 10.66,
+        "atr_pctl": 38.2,
+        "vol_pctl": 15.6,
+        "drawdown_pct": 87.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-21"
       },
       "base": {
-        "high": 0.2395,
-        "low": 0.1473,
+        "high": 6.27e-06,
+        "low": 4.35e-06,
         "bars": 60
       },
-      "breakout_level": 0.2395,
+      "breakout_level": 6.27e-06,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.2345
+      "last_bar": "2026-09-29",
+      "price": 5.75e-06
     },
     {
       "symbol": "FARTCOIN",
@@ -817,10 +803,10 @@
       "source": "coinbase",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.27,
-        "atr_pctl": 43.7,
-        "vol_pctl": 25.7,
-        "drawdown_pct": 90.1,
+        "ribbon_pct": 13.99,
+        "atr_pctl": 35.6,
+        "vol_pctl": 26.3,
+        "drawdown_pct": 89.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-26"
@@ -832,8 +818,33 @@
       },
       "breakout_level": 0.22344,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.18187
+      "last_bar": "2026-09-29",
+      "price": 0.17808
+    },
+    {
+      "symbol": "SYRUP",
+      "name": "Maple Finance",
+      "yf": "SYRUP-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 14.19,
+        "atr_pctl": 41.2,
+        "vol_pctl": 32.9,
+        "drawdown_pct": 76.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-21"
+      },
+      "base": {
+        "high": 0.2395,
+        "low": 0.1473,
+        "bars": 60
+      },
+      "breakout_level": 0.2563,
+      "provisional": false,
+      "last_bar": "2026-09-29",
+      "price": 0.2364
     },
     {
       "symbol": "MANA",
@@ -842,10 +853,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 14.97,
-        "atr_pctl": 14.0,
-        "vol_pctl": 17.1,
-        "drawdown_pct": 89.5,
+        "ribbon_pct": 15.03,
+        "atr_pctl": 17.1,
+        "vol_pctl": 17.9,
+        "drawdown_pct": 89.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-24"
@@ -857,33 +868,8 @@
       },
       "breakout_level": 0.0934,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.0888
-    },
-    {
-      "symbol": "VIRTUAL",
-      "name": "Virtuals Protocol",
-      "yf": "VIRTUAL-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 15.12,
-        "atr_pctl": 11.9,
-        "vol_pctl": 20.1,
-        "drawdown_pct": 68.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-09-26"
-      },
-      "base": {
-        "high": 0.8504,
-        "low": 0.515,
-        "bars": 60
-      },
-      "breakout_level": 0.8538,
-      "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.7726
+      "last_bar": "2026-09-29",
+      "price": 0.0881
     },
     {
       "symbol": "APE",
@@ -892,9 +878,9 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 15.5,
-        "atr_pctl": 34.2,
-        "vol_pctl": 15.2,
+        "ribbon_pct": 16.2,
+        "atr_pctl": 34.7,
+        "vol_pctl": 16.2,
         "drawdown_pct": 94.5,
         "coiled": false,
         "coiled_bars": 0,
@@ -907,8 +893,8 @@
       },
       "breakout_level": 0.1728,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.1494
+      "last_bar": "2026-09-29",
+      "price": 0.1489
     },
     {
       "symbol": "ADA",
@@ -917,23 +903,48 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 15.7,
-        "atr_pctl": 36.2,
-        "vol_pctl": 34.5,
-        "drawdown_pct": 81.4,
+        "ribbon_pct": 16.62,
+        "atr_pctl": 39.2,
+        "vol_pctl": 34.7,
+        "drawdown_pct": 81.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-22"
       },
       "base": {
         "high": 0.2654,
-        "low": 0.1615,
+        "low": 0.1665,
         "bars": 60
       },
       "breakout_level": 0.2654,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.2438
+      "last_bar": "2026-09-29",
+      "price": 0.243
+    },
+    {
+      "symbol": "VIRTUAL",
+      "name": "Virtuals Protocol",
+      "yf": "VIRTUAL-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 16.7,
+        "atr_pctl": 22.2,
+        "vol_pctl": 21.8,
+        "drawdown_pct": 70.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-26"
+      },
+      "base": {
+        "high": 0.8538,
+        "low": 0.515,
+        "bars": 60
+      },
+      "breakout_level": 0.8538,
+      "provisional": false,
+      "last_bar": "2026-09-29",
+      "price": 0.7653
     },
     {
       "symbol": "1INCH",
@@ -942,9 +953,9 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 17.1,
-        "atr_pctl": 18.6,
-        "vol_pctl": 23.8,
+        "ribbon_pct": 17.41,
+        "atr_pctl": 23.0,
+        "vol_pctl": 25.5,
         "drawdown_pct": 85.6,
         "coiled": false,
         "coiled_bars": 0,
@@ -955,10 +966,10 @@
         "low": 0.0795,
         "bars": 60
       },
-      "breakout_level": 0.1059,
+      "breakout_level": 0.1063,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.1016
+      "last_bar": "2026-09-29",
+      "price": 0.1011
     },
     {
       "symbol": "AKT",
@@ -967,23 +978,23 @@
       "source": "coinbase",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 19.85,
-        "atr_pctl": 31.4,
-        "vol_pctl": 60.5,
-        "drawdown_pct": 90.5,
+        "ribbon_pct": 20.45,
+        "atr_pctl": 34.5,
+        "vol_pctl": 61.0,
+        "drawdown_pct": 90.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-20"
       },
       "base": {
         "high": 0.7734,
-        "low": 0.428,
+        "low": 0.434,
         "bars": 60
       },
       "breakout_level": 0.7734,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.67
+      "last_bar": "2026-09-29",
+      "price": 0.6534
     },
     {
       "symbol": "COMP",
@@ -992,10 +1003,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 21.71,
-        "atr_pctl": 27.1,
-        "vol_pctl": 17.9,
-        "drawdown_pct": 83.7,
+        "ribbon_pct": 22.97,
+        "atr_pctl": 28.5,
+        "vol_pctl": 21.0,
+        "drawdown_pct": 82.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-23"
@@ -1005,10 +1016,10 @@
         "low": 15.87,
         "bars": 60
       },
-      "breakout_level": 25.61,
+      "breakout_level": 25.74,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 24.79
+      "last_bar": "2026-09-29",
+      "price": 24.88
     },
     {
       "symbol": "EIGEN",
@@ -1017,10 +1028,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 24.79,
-        "atr_pctl": 25.4,
-        "vol_pctl": 26.7,
-        "drawdown_pct": 95.5,
+        "ribbon_pct": 25.39,
+        "atr_pctl": 28.5,
+        "vol_pctl": 27.3,
+        "drawdown_pct": 95.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-22"
@@ -1032,33 +1043,8 @@
       },
       "breakout_level": 0.2858,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.2528
-    },
-    {
-      "symbol": "PENGU",
-      "name": "Pudgy Penguins",
-      "yf": "PENGU-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 27.7,
-        "atr_pctl": 36.4,
-        "vol_pctl": 33.5,
-        "drawdown_pct": 86.5,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-09-23"
-      },
-      "base": {
-        "high": 0.011163,
-        "low": 0.005744,
-        "bars": 60
-      },
-      "breakout_level": 0.011163,
-      "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.009914
+      "last_bar": "2026-09-29",
+      "price": 0.2511
     },
     {
       "symbol": "TIA",
@@ -1067,9 +1053,9 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 29.96,
-        "atr_pctl": 39.9,
-        "vol_pctl": 28.6,
+        "ribbon_pct": 30.46,
+        "atr_pctl": 44.0,
+        "vol_pctl": 32.1,
         "drawdown_pct": 97.9,
         "coiled": false,
         "coiled_bars": 0,
@@ -1082,8 +1068,33 @@
       },
       "breakout_level": 0.5382,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 0.4439
+      "last_bar": "2026-09-29",
+      "price": 0.4401
+    },
+    {
+      "symbol": "PENGU",
+      "name": "Pudgy Penguins",
+      "yf": "PENGU-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 30.6,
+        "atr_pctl": 34.5,
+        "vol_pctl": 34.1,
+        "drawdown_pct": 85.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-23"
+      },
+      "base": {
+        "high": 0.011163,
+        "low": 0.00585,
+        "bars": 60
+      },
+      "breakout_level": 0.011163,
+      "provisional": false,
+      "last_bar": "2026-09-29",
+      "price": 0.009955
     },
     {
       "symbol": "SUI",
@@ -1092,10 +1103,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 31.05,
-        "atr_pctl": 44.1,
-        "vol_pctl": 42.1,
-        "drawdown_pct": 78.2,
+        "ribbon_pct": 32.7,
+        "atr_pctl": 45.3,
+        "vol_pctl": 42.5,
+        "drawdown_pct": 78.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-09-21"
@@ -1107,8 +1118,8 @@
       },
       "breakout_level": 1.2947,
       "provisional": false,
-      "last_bar": "2026-09-28",
-      "price": 1.1507
+      "last_bar": "2026-09-29",
+      "price": 1.1456
     },
     {
       "symbol": "HTX",
@@ -1133,7 +1144,7 @@
       "breakout_level": 2e-06,
       "provisional": false,
       "last_bar": "2026-09-28",
-      "price": 1.71e-06
+      "price": 1.7e-06
     }
   ],
   "errors": []
