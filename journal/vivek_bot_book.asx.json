@@ -93,7 +93,8 @@
       "units_before": 6211.18004707,
       "risk_usd_before": 813.53,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "stale_pinged": "2026-10-01"
+      "stale_pinged": "2026-10-01",
+      "unpriced_runs": 1
     },
     {
       "id": "SUL:long:1W:2026-09-17",
@@ -167,7 +168,8 @@
       "units_before": 395.56960961,
       "risk_usd_before": 613.3,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "stale_pinged": "2026-10-01"
+      "stale_pinged": "2026-10-01",
+      "unpriced_runs": 1
     },
     {
       "id": "GWA:long:1W:2026-09-17",
@@ -752,7 +754,8 @@
       "notional_before": 5000.0,
       "units_before": 10989.01074749,
       "risk_usd_before": 992.71,
-      "resized_at": "2026-09-28T04:03:28+00:00"
+      "resized_at": "2026-09-28T04:03:28+00:00",
+      "unpriced_runs": 1
     },
     {
       "id": "SNL:long:3D:2026-09-21",
@@ -825,7 +828,8 @@
       "notional_before": 5000.0,
       "units_before": 144.96954933,
       "risk_usd_before": 607.93,
-      "resized_at": "2026-09-28T04:03:28+00:00"
+      "resized_at": "2026-09-28T04:03:28+00:00",
+      "unpriced_runs": 1
     },
     {
       "id": "NGI:long:3D:2026-09-21",
@@ -916,7 +920,8 @@
       "notional_before": 5000.0,
       "units_before": 2155.17247882,
       "risk_usd_before": 737.43,
-      "resized_at": "2026-09-28T04:03:28+00:00"
+      "resized_at": "2026-09-28T04:03:28+00:00",
+      "unpriced_runs": 1
     },
     {
       "id": "EVT:long:3D:2026-09-22",
@@ -1266,7 +1271,8 @@
         "2026-10-01": 10.93999958
       },
       "unreal_r": 0.265,
-      "unreal_usd": 29.96
+      "unreal_usd": 29.96,
+      "unpriced_runs": 1
     },
     {
       "id": "YAL:long:3D:2026-09-29",
@@ -1328,7 +1334,8 @@
         "2026-10-01": 6.01999998
       },
       "unreal_r": 0.846,
-      "unreal_usd": 161.53
+      "unreal_usd": 161.53,
+      "unpriced_runs": 1
     },
     {
       "id": "ASX:long:1W:2026-09-29",
@@ -1523,7 +1530,8 @@
         "2026-10-01": 38.93000031
       },
       "unreal_r": 0.014,
-      "unreal_usd": 2.57
+      "unreal_usd": 2.57,
+      "unpriced_runs": 1
     },
     {
       "id": "PPM:long:3D:2026-09-30",
@@ -5300,20 +5308,29 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 282.25,
+      "week_usd": 55.17,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
-      "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 81.52,
-      "worst_week_usd": 282.25,
+      "week_unpriced_worst_usd": -2572.35,
+      "worst_session_usd": -2717.91,
+      "worst_week_usd": -2517.18,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 81.52,
-      "session_usd": 81.52,
-      "unpriced": [],
-      "unpriced_worst_usd": 0.0,
+      "unrealised_usd": 72.05,
+      "session_usd": 72.05,
+      "unpriced": [
+        "NIC",
+        "SUL",
+        "PMT",
+        "SNL",
+        "NGI",
+        "ORG",
+        "YAL",
+        "NAB"
+      ],
+      "unpriced_worst_usd": -2789.96,
       "open": 21,
-      "open_total_usd": 387.76,
+      "open_total_usd": -26.34,
       "notified": ""
     }
   },
@@ -5322,5 +5339,5 @@
     "unreal_usd": 425.48,
     "updated_day": "2026-10-01"
   },
-  "updated_at": "2026-09-30T17:34:19+00:00"
+  "updated_at": "2026-09-30T22:32:55+00:00"
 }
