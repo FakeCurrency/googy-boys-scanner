@@ -1,15 +1,12 @@
-/* ⚡ IGNITION — the coil -> ignition deck pill + panel (2026-09-28). REPORT-ONLY.
+/* ⚡ IGNITION — the coil -> ignition deck pill + panel. REPORT-ONLY.
    Rendered by js/ignition.js; the pill is placed by app.js renderDeckPills.
 
-   Colours are the styles.css :root tokens only. The site ships ONE theme
-   (html { color-scheme: dark }), so "both themes" means: nothing here names a
-   raw surface or text colour, every one is a token, and the lens's own yellow
-   is a token too (--ema-21, the 21-EMA line) with its soft fills derived from
-   it by color-mix. A future light :root re-skins this panel with it; the
+   Colours are the styles.css :root tokens only. The lens's yellow is a token
+   too (--ema-21, the 21-EMA line) with its soft fills mixed from it; the
    rgba() lines are only the fallback for a browser without color-mix.
 
-   Mobile-first: cards and label/value grids, never a wide table, so the panel
-   has no horizontal scroll at 390px (checked by a Playwright probe). */
+   Tabular figures go ONLY on the COILED table's numeric cells: on prose the
+   sans's tabular hyphen detaches a minus from its number ("- 0.74R"). */
 
 .fpill.ig, .ig-panel {
   --ig: var(--ema-21, #ffd23f);
@@ -25,18 +22,12 @@
 
 /* ── the deck pill ─────────────────────────────────────────────────────── */
 .fpill.ig { color: var(--ig); background: var(--ig-soft); border-color: var(--ig-line); }
-/* "+N forming": provisional breaks on the still-forming bar. NOT part of the
-   count, so it is drawn as an outlined afterthought, never as a second number.
-   It is visible TEXT (not only a title) so touch and screen readers get it. */
+/* "+N forming": NOT part of the count, so an outlined afterthought. Its
+   negative block margins keep the pill as tall as the placeholder. */
 .ig-pmark {
   font: 800 10px/1 var(--mono); letter-spacing: 0.02em; white-space: nowrap;
   padding: 2px 5px; border: 1px dashed currentColor; border-radius: 6px; opacity: 0.85;
-  cursor: help;
-  /* The box is 16px tall inside a 13px line: the negative block margins keep
-     its layout footprint at 12px, so a pill that gains the marker (or the
-     stale glyph) is exactly as tall as the placeholder it replaced — the
-     desktop deck measured 3px taller without them. */
-  margin: -2px 0 -2px -3px;
+  cursor: help; margin: -2px 0 -2px -3px;
 }
 /* Stale data: a visible warning glyph on the pill (its title says "as of"). */
 .ig-smark { font: 800 12px/1 var(--sans); color: var(--orange); margin: -1px 0 -1px -3px; cursor: help; }
@@ -49,73 +40,68 @@
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
-/* ── the panel ─────────────────────────────────────────────────────────── */
+/* ── the panel + its head ─────────────────────────────────────────────── */
 /* A full row inside the deck's wrapping flex line, directly under the pills. */
 .ig-panel {
   flex: 1 1 100%; width: 100%; min-width: 0; box-sizing: border-box;
-  padding: 12px; border: 1px solid var(--ig-line); border-radius: var(--radius-sm);
+  padding: 14px 16px; border: 1px solid var(--ig-line); border-radius: var(--radius-sm);
   background: var(--panel-2); color: var(--text);
 }
 /* [hidden] must win over the display this class would otherwise give it. */
 .ig-panel[hidden] { display: none; }
 
-.ig-title { font: 800 12px/1.25 var(--sans); letter-spacing: 0.08em; color: var(--ig); }
-.ig-sub { margin-top: 3px; font: 500 11.5px/1.4 var(--sans); color: var(--muted-2); cursor: help; }
-/* STALE: the screen is behind (bars older than UTC-yesterday, or no run for
-   26h). Red on purpose: the evidence this lens trades on is not current. */
+.ig-title { font: 800 13px/1.25 var(--sans); letter-spacing: 0.06em; color: var(--ig); }
+.ig-sub { margin-top: 4px; font: 500 12.5px/1.45 var(--sans); color: var(--muted); cursor: help; }
+/* STALE is red on purpose: the evidence this lens reads is not current. */
 .ig-stale {
-  display: inline-block; margin-left: 6px; padding: 3px 6px; border-radius: 6px;
-  font: 800 10px/1.2 var(--sans); letter-spacing: 0.04em;
-  color: var(--red); background: var(--red-soft); cursor: help;
+  display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 6px;
+  font: 800 12px/1.2 var(--sans); color: var(--red); background: var(--red-soft); cursor: help;
 }
-/* BTC regime + "N coins behind yesterday's close": context lines under the
-   sub-line. The lag line keeps the muted colour on purpose: Yahoo-fallback
-   coins land a day late on most runs, so it is context, not an alarm. */
+/* Regime + "N coins behind": context, so the lag line stays muted. */
 .ig-meta {
-  display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 4px;
-  font: 600 11.5px/1.4 var(--sans); color: var(--muted-2);
+  display: flex; flex-wrap: wrap; gap: 3px 14px; margin-top: 4px;
+  font: 600 12.5px/1.45 var(--sans); color: var(--muted);
 }
 .ig-meta > span { cursor: help; min-width: 0; overflow-wrap: anywhere; }
 .ig-regime.is-up { color: var(--green); }
 .ig-regime.is-down { color: var(--orange); }
 
+/* ── the evidence line: the backtest's own numbers, printed ──────────────── */
 .ig-ev {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
-  margin: 10px 0 2px; padding: 8px 10px;
-  font: 500 11.5px/1.45 var(--sans); color: var(--muted);
-  background: var(--fill-2); border: 1px solid var(--border-soft); border-radius: 8px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 16px;
+  margin: 12px 0 2px; padding: 10px 12px;
+  font: 500 13px/1.5 var(--sans); color: var(--muted);
+  background: var(--fill-2); border: 1px solid var(--border-soft); border-radius: 10px;
 }
-.ig-ev b { font: 700 11.5px/1.45 var(--mono); color: var(--text); }
-.ig-ev-k { font-weight: 800; color: var(--text-2); letter-spacing: 0.04em; cursor: help; }
+.ig-ev b { font-weight: 700; color: var(--text); }
+.ig-ev-k { font-weight: 800; color: var(--text-2); cursor: help; }
+.ig-ev-i[title] { cursor: help; }
 .ig-ev-cav { color: var(--orange); cursor: help; }
 .ig-ev-warn { color: var(--red); font-weight: 700; }
 .ig-ev.is-pending { color: var(--muted-2); font-style: italic; }
 /* The decision number (edge over random timing) is set apart from the rest. */
-.ig-ev-i[title] { cursor: help; }
 .ig-ev-dec {
-  color: var(--text-2); padding: 1px 6px; border-radius: 6px;
+  color: var(--text-2); padding: 1px 7px; border-radius: 6px;
   background: var(--ig-soft); border: 1px solid var(--ig-line);
 }
 
-.ig-sec { margin-top: 12px; }
+/* ── sections ──────────────────────────────────────────────────────────── */
+.ig-sec { margin-top: 18px; }
 .ig-h {
-  margin: 0 0 8px; font: 800 11px/1.3 var(--sans); letter-spacing: 0.08em;
+  margin: 0 0 9px; font: 800 12.5px/1.3 var(--sans); letter-spacing: 0.06em;
   text-transform: uppercase; color: var(--text-2);
 }
-.ig-h b { font: 800 11.5px/1 var(--mono); color: var(--ig); margin-left: 2px; }
+.ig-h b { font: 800 13.5px/1 var(--sans); color: var(--ig); margin-left: 3px; }
 .ig-note {
-  font: 500 11px/1.3 var(--sans); letter-spacing: 0; text-transform: none;
-  color: var(--muted-2); margin-left: 4px;
+  font: 500 13px/1.3 var(--sans); letter-spacing: 0; text-transform: none;
+  color: var(--muted-2); margin-left: 6px;
 }
-.ig-empty { margin: 0; font: 500 12px/1.4 var(--sans); color: var(--muted-2); }
+.ig-empty { margin: 0; font: 500 13.5px/1.45 var(--sans); color: var(--muted); }
 .ig-prov-note { color: var(--orange); white-space: nowrap; }
 /* Forming-bar breaks: listed under their own label, never counted. */
-.ig-subh {
-  margin: 10px 0 6px; font: 700 10.5px/1.3 var(--sans); letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--orange);
-}
+.ig-subh { margin: 12px 0 7px; font: 700 13px/1.3 var(--sans); color: var(--orange); }
 
-details.ig-coiled { margin-top: 12px; }
+details.ig-coiled { margin-top: 20px; }
 details.ig-coiled > summary { cursor: pointer; list-style: none; }
 details.ig-coiled > summary::-webkit-details-marker { display: none; }
 details.ig-coiled > summary::before {
@@ -124,43 +110,25 @@ details.ig-coiled > summary::before {
 }
 details.ig-coiled[open] > summary::before { transform: rotate(90deg); }
 details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+/* What a trigger IS, in one line, under the COILED heading. */
+.ig-explain { max-width: 1120px; margin: 0 0 10px; font: 500 13px/1.5 var(--sans); color: var(--muted); }
 
-/* Cards: one column on a phone, as many ~300px columns as fit on a desk.
-   auto-FIT, not auto-fill: a lone card stretches across the row and its own
-   label/value grid flows into one or two lines, instead of sitting in a
-   300px column beside empty tracks and stacking ten rows tall. */
-.ig-cards {
-  display: grid; gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-}
-.ig-card {
-  min-width: 0; box-sizing: border-box; padding: 10px 11px;
-  background: var(--panel); border: 1px solid var(--border-soft);
-  border-left: 3px solid var(--ig); border-radius: 10px;
-}
-.ig-card.ig-running { border-left-color: var(--green); }
-.ig-card.ig-closed { border-left-color: var(--muted-2); }
-.ig-card.ig-coiled { border-left-color: var(--teal); }
-/* Unconfirmed: the same card, visibly provisional. */
-.ig-card.is-prov { border-style: dashed; border-left-style: dashed; }
-
-.ig-card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+/* ── shared: symbol, name, source, tags, market cap ───────────────────────── */
 .ig-sym {
-  font: 800 14px/1.2 var(--sans); color: var(--text); text-decoration: none;
+  font: 800 14.5px/1.25 var(--sans); color: var(--text); text-decoration: none;
   overflow-wrap: anywhere; min-width: 0;
 }
 .ig-sym:hover { color: var(--blue); text-decoration: underline; }
 .ig-sym:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
-.ig-name { font: 500 11.5px/1.2 var(--sans); color: var(--muted-2); overflow-wrap: anywhere; min-width: 0; }
-/* Where the bars came from (Binance / Coinbase / Yahoo / Cached). Muted. */
+.ig-name { font: 500 13px/1.3 var(--sans); color: var(--muted); min-width: 0; }
+/* Where the bars came from (Binance / Coinbase / Yahoo / Cached). */
 .ig-src {
-  font: 600 9.5px/1.2 var(--sans); letter-spacing: 0.03em; color: var(--muted-2);
+  font: 600 11.5px/1.2 var(--sans); color: var(--muted-2);
   padding: 1px 5px; border: 1px solid var(--border-soft); border-radius: 5px;
-  cursor: help; min-width: 0; overflow-wrap: anywhere;
+  cursor: help; white-space: nowrap;
 }
-.ig-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; min-width: 0; }
 .ig-tag {
-  font: 700 10px/1.2 var(--sans); padding: 2px 6px; border-radius: 6px;
+  font: 700 11.5px/1.25 var(--sans); padding: 2px 7px; border-radius: 6px;
   color: var(--text-2); background: var(--fill); cursor: default;
   /* A long tag wraps inside the card instead of pushing it wider. */
   max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere;
@@ -168,31 +136,127 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
 .ig-tag[title] { cursor: help; }
 .ig-tag.is-prov { color: var(--orange); background: var(--orange-soft); }
 .ig-tag.is-wide { color: var(--red); background: var(--red-soft); }
-.ig-tag.is-pend { color: var(--orange); background: var(--orange-soft); }
-.ig-tag.is-coil { color: var(--teal); }
+.ig-tag.is-flat { color: var(--muted-2); background: transparent; border: 1px dashed var(--border-2); font-weight: 600; }
+/* Market cap: plain, one colour. Nearly every coiled ASX name is small, so a
+   size colour would read as hype on a report-only lens. */
+.ig-cap { font-weight: 700; color: var(--text-2); white-space: nowrap; cursor: help; }
+.ig-cap-k { font-weight: 600; color: var(--muted-2); }
 
-.ig-grid {
-  display: grid; gap: 6px 10px; margin: 8px 0 0;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+/* ── trigger cards: IGNITING / RUNNING / CLOSED ───────────────────────────── */
+.ig-cards {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
 }
-.ig-kv { min-width: 0; }
-.ig-kv[title] { cursor: help; }
-.ig-kv dt {
-  font: 600 9.5px/1.2 var(--sans); letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--muted-2);
+/* A lone card gets one wider track instead of a third of the panel. */
+.ig-cards.is-solo { grid-template-columns: minmax(0, 760px); }
+.ig-card {
+  min-width: 0; box-sizing: border-box; padding: 12px 14px;
+  background: var(--panel); border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--ig); border-radius: 12px;
 }
-.ig-kv dd { margin: 2px 0 0; font: 700 12px/1.25 var(--mono); color: var(--text); overflow-wrap: anywhere; }
-.ig-kv.is-up dd { color: var(--green); }
-.ig-kv.is-down dd { color: var(--red); }
+.ig-card.ig-running { border-left-color: var(--green); }
+.ig-card.ig-closed { border-left-color: var(--muted-2); }
+.ig-card.is-prov { border-style: dashed; }
 
-.ig-exit {
-  display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 8px; padding-top: 7px;
+.ig-card-top { display: flex; align-items: flex-start; gap: 12px; }
+.ig-id { flex: 1 1 auto; min-width: 0; }
+.ig-id-l1 { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.ig-card .ig-sym { font-size: 17px; }
+.ig-state {
+  font: 700 12px/1 var(--sans); padding: 4px 7px; border-radius: 6px;
+  color: var(--ig); background: var(--ig-soft);
+}
+.ig-card.ig-running .ig-state { color: var(--green); background: var(--green-soft); }
+.ig-card.ig-closed .ig-state { color: var(--muted); background: var(--fill); }
+.ig-card .ig-cap { font-size: 12.5px; padding: 3px 7px; border-radius: 6px; background: var(--fill-2); }
+/* No cap on file: a quiet dash, not a figure's weight or chip. */
+.ig-cap.is-none, .ig-card .ig-cap.is-none { font-weight: 500; color: var(--muted-2); background: none; }
+.ig-card .ig-name { display: block; margin-top: 3px; overflow-wrap: anywhere; }
+/* The one outcome number: exit R on a closed trade, R now otherwise. */
+.ig-out { flex: 0 0 auto; text-align: right; cursor: help; }
+.ig-out b { display: block; font: 800 24px/1.1 var(--sans); color: var(--text); white-space: nowrap; }
+.ig-out.is-up b { color: var(--green); }
+.ig-out.is-down b { color: var(--red); }
+.ig-out span { display: block; margin-top: 3px; font: 600 12px/1.25 var(--sans); color: var(--muted-2); white-space: nowrap; }
+.ig-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 6px; margin-top: 8px; }
+
+/* What happened, in two or three plain sentences. */
+.ig-story p { margin: 7px 0 0; font: 500 14px/1.5 var(--sans); color: var(--text-2); }
+.ig-story b { font-weight: 650; color: var(--text); }
+.ig-story b.is-up { color: var(--green); }
+.ig-story b.is-down { color: var(--red); }
+
+.ig-levels {
+  display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 10px 0 0; padding-top: 10px;
   border-top: 1px solid var(--border-soft);
-  font: 600 11.5px/1.4 var(--sans); color: var(--text-2);
 }
-.ig-exit b { font: 800 12px/1.4 var(--mono); }
-.ig-exit b.is-up { color: var(--green); }
-.ig-exit b.is-down { color: var(--red); }
+.ig-levels > div { display: flex; align-items: baseline; gap: 6px; }
+.ig-levels > div[title] { cursor: help; }
+.ig-levels dt { font: 500 12.5px/1.45 var(--sans); color: var(--muted-2); }
+.ig-levels dd { margin: 0; font: 650 13.5px/1.45 var(--sans); color: var(--text); }
+.ig-levels dd span { font-weight: 600; color: var(--muted); }
+.ig-card-foot { margin: 8px 0 0; font: 500 12px/1.4 var(--sans); color: var(--muted-2); }
+.ig-card-foot .ig-src { padding: 0; border: 0; font: inherit; }
+
+/* ── COILED: one table (two-line rows on a phone, below) ─────────────────── */
+.ig-tbl {
+  width: 100%; max-width: 1120px; border-collapse: collapse;
+  font: 500 14px/1.4 var(--sans); color: var(--text);
+}
+.ig-tbl th {
+  padding: 7px 12px; text-align: right; white-space: nowrap; cursor: help;
+  font: 600 12.5px/1.3 var(--sans); color: var(--muted-2); border-bottom: 1px solid var(--border);
+}
+.ig-tbl td { padding: 8px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border-soft); }
+.ig-tbl td:not(.c-sym) { font-variant-numeric: tabular-nums; }
+.ig-tbl tbody tr:nth-child(even) { background: var(--fill-2); }
+.ig-tbl tbody tr:hover { background: var(--fill); }
+/* The name column takes the slack; max-width:0 lets the name ellipsise
+   instead of widening the table. */
+.ig-tbl .c-sym { text-align: left; padding-left: 10px; }
+.ig-tbl td.c-sym { width: 36%; max-width: 0; }
+.ig-symcell { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ig-symcell .ig-sym { flex: 0 0 auto; }
+.ig-symcell .ig-name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ig-symcell .ig-tag, .ig-symcell .ig-src { flex: 0 0 auto; align-self: center; }
+.ig-tbl td.c-gap { font-weight: 650; }
+.ig-tbl td.c-bars, .ig-tbl td.c-dd { color: var(--text-2); }
+.ig-tbl td.c-q, .ig-tbl td.c-gap.is-at, .ig-tbl tr.is-ended td.c-bars { color: var(--muted); font-weight: 500; }
+/* A one-price base still AT its level: its numbers carry no coil information. */
+.ig-tbl tr.is-dim td:not(.c-sym):not(.c-cap) { color: var(--muted-2); }
+/* Phone-only inline labels; on a desk the column heads say it. */
+.ig-ml, .ig-tbl .ig-cap-k { display: none; }
+
+/* ── phones and tablets: the table folds into two-line rows ──────────────
+   The 8-column table needs ~1000px. Line 1: symbol, name, cap. Line 2:
+   price → breakout, distance, bars coiled. The two quiet columns stay on the
+   desk: at 390px they would push a third line. The heads are hidden
+   visually, kept for screen readers. */
+@media (max-width: 1000px) {
+  .ig-panel { padding: 12px 10px; }
+  .ig-card { padding: 11px 12px; }
+  .ig-out b { font-size: 20px; }
+  .ig-tbl, .ig-tbl tbody { display: block; }
+  .ig-tbl thead {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0;
+  }
+  .ig-tbl tr {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px;
+    padding: 9px 4px; border-bottom: 1px solid var(--border-soft);
+  }
+  .ig-tbl td { display: block; padding: 0; border: 0; text-align: left; font-size: 12.5px; }
+  .ig-tbl td.c-sym { order: 1; flex: 1 1 0; width: auto; max-width: none; min-width: 0; padding: 0; }
+  .ig-tbl td.c-cap { order: 2; font-size: 13.5px; }
+  .ig-tbl tr::after { content: ""; order: 3; flex-basis: 100%; height: 0; }
+  .ig-tbl td:not(.c-sym):not(.c-cap) { order: 4; }
+  .ig-tbl td.c-dd, .ig-tbl td.c-q { display: none; }
+  .ig-tbl td.c-brk, .ig-tbl td.c-gap { margin-left: -4px; }
+  /* Sub-$0.001 prices are long: step the figures down to keep two lines. */
+  .ig-tbl tr.is-longpx td:not(.c-sym):not(.c-cap) { font-size: 11.5px; letter-spacing: -0.01em; }
+  .ig-ml, .ig-tbl .ig-cap-k { display: inline; }
+  .ig-ml { font-weight: 500; color: var(--muted-2); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   details.ig-coiled > summary::before { transition: none; }

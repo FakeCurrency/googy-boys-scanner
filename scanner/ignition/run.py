@@ -7,6 +7,7 @@ with --backtest it replays the market and publishes
 THE WRITE-SET IS THE FENCE. This module writes those two paths and nothing
 else; `tests/test_ignition_fences.py` reads it to prove that -- it may not name
 another lens's artefact, the bot book, the alert history or the funnel ledger.
+Market caps (mcap.py) only READ the shared cap cache and this lens's own file.
 
 A MARKET WITH NO DATA KEEPS ITS LAST GOOD FILE (the momentum lens's rule):
 an empty download is a REPORTED decision -- exit 3, nothing written -- so the
@@ -36,6 +37,7 @@ from scanner import universe as suniverse
 
 from . import backtest as bt
 from . import engine as E
+from . import mcap
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "public" / "data" / "ignition"
@@ -254,7 +256,10 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
     started = time.time()
     cache_stats: dict = {}
     src_report: dict = {}
+    caps: dict = {}
     if frames is None:
+        # before the download: Yahoo throttles its quote endpoint after it
+        caps = mcap.known(market, out_path(market), now or dt.datetime.now(dt.timezone.utc))
         rows, fresh, src_report = _download(market, config.IGNITION_DATA_PERIOD, limit)
         regime = regime_frame(market, config.IGNITION_DATA_PERIOD)
         # The clock is read AFTER the download, so "forming" is judged at the
@@ -320,6 +325,8 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
     counts["provisional"] = sum(1 for r in results if r.get("provisional"))
     counts["igniting_confirmed"] = sum(1 for r in results if r["state"] == "IGNITING"
                                        and not r.get("provisional"))
+    # Display only, and after the sort: a cap cannot move a row, a state or a count.
+    mcap_summary = mcap.stamp(market, results, rows, caps, now.date().isoformat())
     payload = {
         "schema_version": SCHEMA_VERSION,
         "lens": "ignition",
@@ -352,6 +359,7 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             "sources": sdata.source_summary(src_report),
             "errors": sum(errs.kinds().values()),
             "cache": cache_stats,
+            "mcap": mcap_summary,
             "elapsed_s": round(time.time() - started, 1),
         },
         "results": results,

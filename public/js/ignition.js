@@ -1,104 +1,65 @@
-/* ⚡ IGNITION — the coil -> ignition deck pill + panel (2026-09-28). REPORT-ONLY.
+/* ⚡ IGNITION — the coil -> ignition deck pill + panel. REPORT-ONLY.
 
-   The owner's "QNT-type" play (crypto first; the ASX since 2026-09-29, after
-   DTR): a name that goes quiet for months (the
-   9/26/43/200 SMAs stacked tight, volatility and volume at multi-year lows,
-   far under its old highs) and then CLOSES out of that base on a multiple of
-   its normal volume. The engine is scanner/ignition/ and publishes ONE file
-   per market, data/ignition/<market>.json, plus a replay the lead engineer
-   pre-registered before it ever ran, data/ignition/<market>_backtest.json.
+   A name goes quiet for months (SMAs stacked tight, volatility and volume at
+   multi-year lows, far under its old highs), then CLOSES out of that base on
+   a multiple of its normal volume. scanner/ignition/ publishes
+   data/ignition/<market>.json and a pre-registered replay,
+   data/ignition/<market>_backtest.json. This file only RENDERS them: it
+   writes, posts and stores nothing, and the bot does not trade this lens, so
+   every surface says so in words. app.js only places the pill.
 
-   WHAT THIS FILE IS, AND IS NOT.
-     * It RENDERS those two files. It writes nothing, posts nothing, stores
-       nothing, and knows nothing about the paper book, the confluence
-       machinery or the HIGH CONVICTION rule. The bot does not trade this lens
-       and every surface here says so in words, because a lightning bolt on
-       the deck reads like a trade signal unless it is told not to.
-     * app.js only PLACES the pill (third, straight after "A", so a phone
-       sees it without swiping) and calls in here. Every rule — which
-       markets, what the count means, when the pill shows, when the data is
-       stale, what the panel says — lives in this file so
-       test/ignition.test.js can slice the shipped functions and run them.
+   Rules the tests pin (test/ignition.test.js slices these functions):
+     1. The pill's N is summary.counts.igniting_confirmed (a COMPLETED bar). A
+        break on today's forming bar is a separate "+N forming" note, never in
+        N; the IGNITING heading prints the same N. The pill still shows at
+        N = 0 when rows exist, so the coiled list is one tap away.
+     2. CLOSED rows stay on purpose: a list of survivors is the bias this lens
+        exists to catch.
+     3. Absent data hides silently. The live file loads lazily (a placeholder
+        pill holds the slot), the backtest only when the panel opens, and the
+        .catch() covers only the fetch and parse: a render fault is re-raised
+        to window.onerror, never mistaken for a missing file (TOP100 #88).
+     4. A stale screen says "as of <date>" on the pill and the panel head.
+     5. The evidence line READS the backtest; it never computes a statistic.
 
-   THE RULES THE TESTS PIN.
-     1. The pill's number is `summary.counts.igniting_confirmed`: triggers on a
-        COMPLETED daily bar. A break on today's still-forming bar is not a
-        trigger until the bar closes (a poke above the base that closes back
-        inside it never counts), so it is a separate "+N forming" marker,
-        never part of N — and the panel's IGNITING heading prints the SAME N.
-        The pill still shows when N is 0 but rows exist, so the coiled
-        watchlist is one tap away on a quiet day.
-     2. CLOSED rows are shown ON PURPOSE. A list of only the survivors is the
-        survivorship bias this lens exists to stop fooling us with.
-     3. Absent data hides silently. The live file is fetched lazily, only on
-        an Ignition market (a placeholder pill holds its slot while the FIRST
-        fetch is in flight, so the deck does not reflow when it lands); the
-        backtest only when the panel opens. The `.catch()` is scoped to the
-        FETCH AND THE PARSE (HANDOFF 17.6, TOP100 #88): a missing file is
-        "nothing to show", while a fault in anything that renders is
-        re-raised asynchronously to window.onerror instead of disguising
-        itself as a missing file for weeks.
-     4. STALE IS SAID OUT LOUD. A screen whose newest completed bar is older
-        than UTC-yesterday (24/7 markets), or that last ran over STALE_GEN_H
-        hours ago, marks the pill and the panel header "as of <date>". The
-        whole value of this lens is catching a break the morning after it
-        closes; a day-old screen presented as today's is the failure.
-     5. The evidence line READS the backtest file; it never computes a
-        statistic. The decision number is `versus.random_timing` — the
-        primary's edge OVER random timing on the same coins, not over zero. */
+   Layout (2026-09-30, owner: "very hard on the eyes"): trigger cards say what
+   happened in plain sentences; COILED is one table, largest cap first, that
+   folds into two-line rows on a phone. */
 (() => {
   "use strict";
 
-  // Mirrored from scanner/config.py IGNITION_MARKETS and pinned to it by
-  // tests/test_ignition_frontend.py: a market the engine starts screening
-  // cannot stay invisible here, and a pill can never appear for a market the
-  // engine does not screen (which would only ever fetch a 404).
+  // Mirrors scanner/config.py IGNITION_MARKETS (pinned by
+  // tests/test_ignition_frontend.py), so a pill never fetches a 404.
   const IGNITION_MARKETS = ["crypto", "asx"];
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  // An OWN key only. A payload value is looked up in the tables below, and a
-  // state/reason/source of "toString", "constructor" or "__proto__" must read
-  // as unknown — not as Object.prototype's member (which used to throw).
+  // An OWN key only, so a payload value like "toString" or "__proto__" reads
+  // as unknown in the tables below instead of hitting Object.prototype.
   const own = (o, k) => o != null && typeof k === "string" && Object.prototype.hasOwnProperty.call(o, k);
+  const lookup = (t, k, dflt) => (own(t, k) ? t[k] : dflt);
 
   const DASH = "—";
-  // The deck auto-refreshes every 5 minutes; the live file is re-read on the
-  // same cadence (the engine publishes a handful of times a day).
-  const LIVE_TTL_MS = 5 * 60 * 1000;
-  // A screen that last RAN more than this long ago is stale whatever its bars
-  // say: the workflow runs just past 00:00 UTC plus backstops and four
-  // intraday passes, so 26h is a whole missed day with slack for a late cron.
+  const LIVE_TTL_MS = 5 * 60 * 1000;   // the deck's own refresh cadence
+  // A 24/7 screen that last RAN over this long ago is stale: a missed day,
+  // with slack for a late cron.
   const STALE_GEN_H = 26;
-  // Yesterday's bar closes at 00:00 UTC, but the screen that reads it runs at
-  // 00:14 with backstops at 01:14 / 02:14, and GitHub has delivered crons
-  // 2-5h late. Flagging from 00:00 would light STALE every morning (10-11am
-  // Melbourne) for a run that is simply due — a daily alarm that trains the
-  // reader to ignore it. So the bar rule waits this long past 00:00 UTC; a
-  // pipeline that is really dead is still caught by STALE_GEN_H.
+  // Yesterday's bar closes at 00:00 UTC but its screen runs 00:14 (crons land
+  // up to 5h late), so the bar rule waits this long; flagging from 00:00
+  // would light STALE every morning and train the reader to ignore it.
   const STALE_BAR_GRACE_H = 6;
-  // Markets that trade 24/7: yesterday's UTC daily bar is complete at 00:00
-  // UTC, so a screen whose newest completed bar is older than that is a day
-  // behind. A stock market's calendar (weekends, holidays) is not this
-  // rule's business — only the generated_at rule applies to one.
+  // Markets whose daily bar closes at 00:00 UTC every day. A stock market's
+  // weekends and holidays are not the bar rule's business.
   const BAR_24_7 = ["crypto"];
-  // A session market (the ASX) publishes after its close and a few times in
-  // session, weekdays only. Its run-age rule counts WEEKDAY hours (Saturday
-  // and Sunday UTC do not count) against this limit: a Friday screen read on
-  // Monday morning is ~18 weekday hours old, and 50 still clears a Monday
-  // public holiday (~43h) without a false alarm, while a pipeline dead for two
-  // trading days is flagged.
+  // A session market's run-age limit in WEEKDAY hours: a Friday screen read
+  // Monday is ~18h old, a Monday holiday ~43h; two dead trading days flag.
   const STALE_SESSION_H = 50;
   // Page order, mirroring scanner/ignition/engine.py state_rank.
   const STATE_ORDER = { IGNITING: 0, RUNNING: 1, CLOSED: 2, COILED: 3 };
-  const EXIT_TEXT = {
-    trail: "closed under the 9-SMA",
-    stop: "stop hit",
-    gap_below_stop: "gapped under the stop at the open - no trade",
-  };
-  // Where a row's bars came from (engine row `source`). binance_vision is
-  // Binance's public market-data mirror — the same candles as Binance.
+  const STATE_LABEL = { IGNITING: "Igniting", RUNNING: "Running", CLOSED: "Closed" };
+  const SMA9 = "9\u2011SMA";   // a non-breaking hyphen: "9-SMA" never splits over two lines
+  // Where a row's bars came from (engine row `source`).
   const SOURCE_LABEL = {
     binance_vision: "Binance", binance: "Binance", bybit: "Bybit",
     coinbase: "Coinbase", yahoo: "Yahoo", cache: "Cached",
@@ -114,43 +75,46 @@
   const CAVEAT_FALLBACK = "Replayed over today's coin list: coins that pumped " +
     "and then died out of it are missing, so long-breakout results are biased " +
     "UP. Judge them against the random-timing baseline, not against zero.";
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // Market cap: the engine row's `mcap`, in the market's OWN currency (the
+  // paper book's face-value convention), with `mcap_asof` / `mcap_src`.
+  // Context only — nothing is filtered on it.
+  const CAP_CCY = { asx: "A$", crypto: "US$" };
+  const CAP_SRC = { coingecko: "CoinGecko", yahoo: "Yahoo", cache: "the shared cap cache", previous: "the previous run" };
+  const CAP_UNITS = [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"], [1, ""]];
+  // A coiled row whose price text is longer than this (sub-$0.001 coins)
+  // gets a smaller phone font, so the row still fits two lines at 390px.
+  const LONG_PX_CHARS = 9;
+  // A gap under this many % would print as "0.0%", so the row says "at level".
+  const AT_LEVEL_PCT = 0.05;
+  // The COILED table's columns: [cell class, head, head tooltip].
+  const COIL_COLS = [
+    ["c-sym", "Name", "Symbol and company. Hover a row for its quiet readings in words."],
+    ["c-cap", "Mkt cap", "Market cap, in the market's own currency (A$ on the ASX, US$ on crypto). Context, not a filter."],
+    ["c-px", "Price", "The latest price the screen read"],
+    ["c-brk", "Breakout", "The top of the base: a daily close above it, on enough volume, would be a trigger"],
+    ["c-gap", "To breakout", "How far the price sits under the breakout level"],
+    ["c-bars", "Coiled", "Quiet bars in a row up to the last completed bar; \"last <date>\" = the coil ended after that bar"],
+    ["c-dd", "Under high", "How far under its 3-year high"],
+    ["c-q", "ATR pctl", "How quiet: ATR as a % of price, as a percentile of its own 2-year history (low = quiet)"],
+  ];
 
   // ── pure helpers (sliced and executed by test/ignition.test.js) ──────────
 
-  function isMarket(m) {
-    return IGNITION_MARKETS.indexOf(String(m == null ? "" : m).toLowerCase()) >= 0;
-  }
+  function isMarket(m) { return IGNITION_MARKETS.indexOf(String(m == null ? "" : m).toLowerCase()) >= 0; }
+  function liveUrl(market) { return `data/ignition/${market}.json`; }
+  function btUrl(market) { return `data/ignition/${market}_backtest.json`; }
 
-  function liveUrl(market) {
-    return `data/ignition/${market}.json`;
-  }
+  // A number the payload carries, or null: NaN/Infinity/strings are missing,
+  // never coerced, so a missing field renders a dash, not a 0.
+  function num(v) { return (typeof v === "number" && isFinite(v)) ? v : null; }
+  // A plain object, or {}: a field read off a missing block is undefined, never a throw.
+  function obj(v) { return (v && typeof v === "object" && !Array.isArray(v)) ? v : {}; }
 
-  function btUrl(market) {
-    return `data/ignition/${market}_backtest.json`;
-  }
-
-  // A number the payload actually carries, or null. NaN/Infinity/strings are
-  // "missing", never coerced — a missing field renders as a dash, not a 0.
-  function num(v) {
-    return (typeof v === "number" && isFinite(v)) ? v : null;
-  }
-
-  // A plain object the payload carries, or {} — so a field read off a missing
-  // or malformed block is simply undefined, never a throw.
-  function obj(v) {
-    return (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
-  }
-
-  // A price, legible at every magnitude this lens meets:
-  //   >= $1,000   thousands separator, 2 dp        $84,472.00
-  //   $10–$1,000  2 dp                             $319.40
-  //   $1–$10      3 dp = 4 significant figures     $1.189 vs a $1.098 stop
-  //   under $1    4 significant figures, a PLAIN decimal (never an exponent),
-  //               trailing zeros trimmed           $0.0991, $0.000000912
-  // The band is chosen off the value ROUNDED at the lower band's precision,
-  // so a price that rounds across a boundary (999.996, 9.9996, 0.99996) is
-  // printed in the format of the side it lands on: "$1,000.00", never
-  // "$1000.00".
+  // A price at every magnitude this lens meets: $84,472.00 · $319.40 ·
+  // $1.189 (4 significant figures under $10) · $0.0991, $0.50, $0.000000912
+  // (a plain decimal, never an exponent, never under 2 decimals). The band is
+  // picked off the ROUNDED value, so 999.996 prints "$1,000.00", never "$1000.00".
   function fmtPx(v) {
     const x = num(v);
     if (x == null) return DASH;
@@ -159,13 +123,23 @@
     const a = Math.abs(x);
     if (a < 1) {
       const d = Math.min(100, Math.max(0, 3 - Math.floor(Math.log10(a))));
-      const s = a.toFixed(d);
-      if (Number(s) < 1) return sign + "$" + (s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
+      const s = a.toFixed(d), t = s.replace(/0+$/, "");
+      if (Number(s) < 1) return sign + "$" + (/\.\d\d/.test(t) ? t : a.toFixed(2));
     }
     if (Number(a.toFixed(3)) < 10) return sign + "$" + a.toFixed(3);
     const r2 = Number(a.toFixed(2));
     if (r2 < 1000) return sign + "$" + a.toFixed(2);
     return sign + "$" + r2.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Two prices at ONE precision, so a row compares like with like:
+  // "$0.04 → $0.058" reads "$0.040 → $0.058". The shorter one is zero-padded.
+  function fmtPxPair(a, b) {
+    const s = [fmtPx(a), fmtPx(b)];
+    const dp = (t) => (t.indexOf(".") < 0 ? 0 : t.length - t.indexOf(".") - 1);
+    const want = Math.max(dp(s[0]), dp(s[1]));
+    return s.map((t) => (t === DASH || dp(t) === want ? t
+      : t + (dp(t) ? "" : ".") + "0".repeat(want - dp(t))));
   }
 
   // `dp` decimals with an explicit "+" on a positive value. A value that
@@ -184,32 +158,19 @@
     return (sign && x > 0 ? "+" : "") + s + "%";
   }
 
-  function fmtR(v) {
-    const x = num(v);
-    return x == null ? DASH : signed(x, 2) + "R";
-  }
+  function fmtR(v) { const x = num(v); return x == null ? DASH : signed(x, 2) + "R"; }
+  function fmtX(v) { const x = num(v); return x == null ? DASH : x.toFixed(1) + "×"; }
+  function fmtN(v, dp) { const x = num(v); return x == null ? DASH : x.toFixed(dp || 0); }
+  function toneOf(v) { const x = num(v); return x == null || x === 0 ? "" : (x > 0 ? "is-up" : "is-down"); }
+  function isDay(s) { return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+  function utcDay(ms) { return new Date(ms).toISOString().slice(0, 10); }
 
-  function fmtX(v) {
-    const x = num(v);
-    return x == null ? DASH : x.toFixed(1) + "×";
-  }
-
-  function fmtN(v, dp) {
-    const x = num(v);
-    return x == null ? DASH : x.toFixed(dp || 0);
-  }
-
-  function toneOf(v) {
-    const x = num(v);
-    return x == null || x === 0 ? "" : (x > 0 ? "is-up" : "is-down");
-  }
-
-  function isDay(s) {
-    return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
-  }
-
-  function utcDay(ms) {
-    return new Date(ms).toISOString().slice(0, 10);
+  // "2026-09-04" -> "4 Sep". A daily bar's date, not an instant, so no
+  // timezone applies.
+  function shortDay(s) {
+    if (!isDay(s)) return DASH;
+    const m = MONTHS[Number(s.slice(5, 7)) - 1];
+    return m ? Number(s.slice(8, 10)) + " " + m : s;
   }
 
   // Hours between two instants (ms) that fall on a weekday, in UTC.
@@ -226,24 +187,19 @@
     return ms / 3600000;
   }
 
-  // Is this screen stale, as of `now` (ms)? null when fresh, else
-  // { asOf, reasons[] }. Two independent tests, either one is enough:
-  //   * its newest COMPLETED daily bar (last_closed_bar, else
-  //     summary.bars.completed_last) is older than UTC-yesterday on a 24/7
-  //     market, once STALE_BAR_GRACE_H has passed since 00:00 UTC — the bar
-  //     that should be final AND screened by now is not in it;
-  //   * it last ran over STALE_GEN_H hours ago (a session market: over
-  //     STALE_SESSION_H WEEKDAY hours ago), or it carries no readable run
-  //     time at all (unknown is never read as fresh).
-  // `now` is a parameter so the rule is testable; the module passes the clock.
+  // null when fresh, else { asOf, reasons[] }. Stale when a 24/7 market's
+  // newest COMPLETED bar is older than UTC-yesterday (after the grace), or the
+  // screen last ran too long ago, or its run time is unreadable (unknown is
+  // never fresh). `now` is a parameter so the rule is testable.
   function staleOf(payload, market, now) {
     if (!payload || typeof payload !== "object") return null;
     const t = num(now) == null ? Date.now() : now;
     const bars = obj(obj(payload.summary).bars);
     const lastBar = isDay(payload.last_closed_bar) ? payload.last_closed_bar
       : (isDay(bars.completed_last) ? bars.completed_last : null);
+    const is247 = BAR_24_7.indexOf(String(market == null ? "" : market).toLowerCase()) >= 0;
     const reasons = [];
-    if (lastBar && BAR_24_7.indexOf(String(market == null ? "" : market).toLowerCase()) >= 0) {
+    if (lastBar && is247) {
       const want = utcDay(t - 86400000 - STALE_BAR_GRACE_H * 3600000);
       if (lastBar < want) {
         reasons.push("its newest completed daily bar is " + lastBar + ", but " + want +
@@ -251,7 +207,6 @@
       }
     }
     const gen = Date.parse(payload.generated_at);
-    const is247 = BAR_24_7.indexOf(String(market == null ? "" : market).toLowerCase()) >= 0;
     if (!isFinite(gen)) {
       reasons.push("it carries no readable run time");
     } else if (is247 && (t - gen) / 3600000 > STALE_GEN_H) {
@@ -266,7 +221,6 @@
 
   // Sort key for one row, or null for a state this page does not know (a
   // future engine state is dropped, never mis-filed into a known section).
-  // OWN keys only: "toString" / "constructor" / "__proto__" are unknown.
   function rowRank(r) {
     if (!r || typeof r !== "object" || !own(STATE_ORDER, r.state)) return null;
     const st = STATE_ORDER[r.state];
@@ -279,9 +233,8 @@
     return [st, 0, -(num(c.coiled_bars) || 0), rib == null ? 99 : rib];
   }
 
-  // IGNITING (confirmed first, then provisional) · RUNNING · CLOSED · COILED,
-  // freshest / strongest first inside each — the engine's own order, re-derived
-  // so a hand-edited or older payload still reads the same way.
+  // IGNITING (confirmed, then forming) · RUNNING · CLOSED · COILED, freshest
+  // first inside each — the engine's order, re-derived for older payloads.
   function groupRows(results) {
     const rows = (Array.isArray(results) ? results : []).filter((r) => rowRank(r));
     rows.sort((a, b) => {
@@ -314,13 +267,10 @@
     };
   }
 
-  function provNote(n) {
-    return "+" + n + " forming";
-  }
+  function provNote(n) { return "+" + n + " forming"; }
 
-  // What the deck pill shows, or null for "no pill". `mark` is finished,
-  // escaped HTML for app.js's pill() helper to append after the count.
-  // `stale` is staleOf()'s verdict (null = fresh).
+  // What the deck pill shows, or null for no pill. `mark` is escaped HTML
+  // that app.js appends after the count; `stale` is staleOf()'s verdict.
   function pillInfo(payload, open, stale) {
     if (!payload || typeof payload !== "object" || !Array.isArray(payload.results)) return null;
     const k = countsOf(payload);
@@ -346,8 +296,7 @@
     return { n: k.confirmed, provisional: k.provisional, title, mark, open: !!open, stale: !!stale };
   }
 
-  // The placeholder app.js draws while the FIRST fetch is in flight, so the
-  // pill's slot is held and the deck does not reflow when the file lands.
+  // The placeholder pill while the FIRST fetch is in flight (no reflow).
   function loadingInfo() {
     return {
       loading: true, n: "…", provisional: 0, mark: "", open: false, stale: false,
@@ -366,20 +315,16 @@
     return new Date(t).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   }
 
-  // `src=ignition` (2026-09-28): the chart's back-link reads it, and chart.js
-  // reads the VENUE off this lens's row for a coin VIVEK has no row for —
-  // TAO (Bittensor) is Binance-sourced here and is NOT Yahoo's "TAO-USD", so
-  // a bare m+s link dead-ended on "No chart data".
+  // `src=ignition`: chart.js reads the VENUE off this lens's row for a coin
+  // VIVEK has no row for (Binance's TAO is not Yahoo's "TAO-USD").
   function chartHref(market, sym) {
     return "chart.html?m=" + encodeURIComponent(market) + "&s=" + encodeURIComponent(sym) + "&src=ignition";
   }
 
-  // One label/value cell. Both are TEXT, escaped here — nothing reaches the
-  // page through a cell unescaped. `tone` is one of a fixed set of classes.
-  function kv(label, text, tone, tip) {
-    const cls = tone === "is-up" || tone === "is-down" ? " " + tone : "";
-    return `<div class="ig-kv${cls}"${tip ? ` title="${esc(tip)}"` : ""}>` +
-      `<dt>${esc(label)}</dt><dd>${esc(text)}</dd></div>`;
+  function symLink(market, symbol) {
+    const sym = String(symbol == null ? "" : symbol);
+    return `<a class="ig-sym" href="${esc(chartHref(market, sym))}" title="${esc("Open the " + sym + " chart")}">` +
+      `${esc(sym || DASH)}</a>`;
   }
 
   function tag(text, cls, tip) {
@@ -391,20 +336,81 @@
   // is shown as itself (escaped) rather than hidden; no source, no label.
   function sourceHTML(src) {
     if (typeof src !== "string" || !src) return "";
-    const label = own(SOURCE_LABEL, src) ? SOURCE_LABEL[src] : src;
-    const tip = "Data: " + (own(SOURCE_TIP, src) ? SOURCE_TIP[src] : src);
-    return `<span class="ig-src" title="${esc(tip)}">${esc(label)}</span>`;
+    return `<span class="ig-src" title="${esc("Data: " + lookup(SOURCE_TIP, src, src))}">` +
+      `${esc(lookup(SOURCE_LABEL, src, src))}</span>`;
   }
 
-  function cardHead(r, market, tags) {
-    const sym = String(r.symbol == null ? "" : r.symbol);
-    return `<div class="ig-card-head">` +
-      `<a class="ig-sym" href="${esc(chartHref(market, sym))}" title="${esc("Open the " + sym + " chart")}">${esc(sym || DASH)}</a>` +
-      (r.name ? `<span class="ig-name">${esc(r.name)}</span>` : "") +
-      sourceHTML(r.source) +
-      (tags.length ? `<span class="ig-tags">${tags.join("")}</span>` : "") +
-      `</div>`;
+  // The source most rows share (Yahoo for every ASX name), or null. A coiled
+  // row names its source only when it differs from this: the same word on
+  // 77 rows buries the one "Cached" worth seeing.
+  function mainSource(rows) {
+    const n = new Map();
+    let best = null;
+    (Array.isArray(rows) ? rows : []).forEach((r) => {
+      const s = r && typeof r.source === "string" && r.source ? r.source : null;
+      if (!s) return;
+      n.set(s, (n.get(s) || 0) + 1);
+      if (best == null || n.get(s) > n.get(best)) best = s;
+    });
+    return best;
   }
+
+  // ── market cap ────────────────────────────────────────────────────────────
+
+  // A cap only when it is a real, positive figure; anything else is "none".
+  function capOf(v) { const x = num(v); return x != null && x > 0 ? x : null; }
+  function ccy(market) { return lookup(CAP_CCY, market, "$"); }
+
+  // Two to three significant figures: A$2.8M, A$94M, A$445M, US$1.2B. A value
+  // that rounds across a unit (999.96M) prints in the unit it lands in
+  // (1.0B, never 1000M). Missing, zero or junk is a dash — never "0".
+  function fmtCap(v, market) {
+    const x = capOf(v);
+    if (x == null) return DASH;
+    let i = CAP_UNITS.findIndex((u) => x >= u[0]);
+    if (i < 0) i = CAP_UNITS.length - 1;
+    const txt = (k) => {
+      const s = x / CAP_UNITS[k][0];
+      return Number(s.toFixed(1)) < 10 ? s.toFixed(1) : s.toFixed(0);
+    };
+    let t = txt(i);
+    if (Number(t) >= 1000 && i > 0) t = txt(--i);
+    return ccy(market) + t + CAP_UNITS[i][1];
+  }
+
+  // "as of 29 Sep, from CoinGecko" — how old the cap is and where it came
+  // from; "" when the row says neither.
+  function capProv(r) {
+    const src = typeof r.mcap_src === "string" && r.mcap_src ? r.mcap_src : "";
+    return [isDay(r.mcap_asof) ? "as of " + shortDay(r.mcap_asof) : "",
+      src ? "from " + lookup(CAP_SRC, src, src) : ""].filter(Boolean).join(", ");
+  }
+
+  function capTip(r, market) {
+    const x = capOf(r.mcap);
+    if (x == null) return "No market cap on file";
+    const prov = capProv(r);
+    return "Market cap " + ccy(market) + Math.round(x).toLocaleString("en-US") +
+      (prov ? ", " + prov : "") + ". Context, not a filter.";
+  }
+
+  // "cap A$198M" / "cap —". The word "cap" is hidden where a column head
+  // already says it (the desk table). A missing cap (is-none) is drawn quiet.
+  function capHTML(r, market) {
+    const none = capOf(r.mcap) == null ? " is-none" : "";
+    return `<span class="ig-cap${none}" title="${esc(capTip(r, market))}"><span class="ig-cap-k">cap </span>` +
+      `${esc(fmtCap(r.mcap, market))}</span>`;
+  }
+
+  // Largest market cap first; rows without one follow in the order they came
+  // (the engine's). Array sort is stable, so equal caps keep that order too.
+  function sortByCap(rows) {
+    const has = (r) => capOf(r.mcap) != null;
+    return rows.filter(has).sort((a, b) => capOf(b.mcap) - capOf(a.mcap))
+      .concat(rows.filter((r) => !has(r)));
+  }
+
+  // ── trigger cards: IGNITING / RUNNING / CLOSED ───────────────────────────
 
   // What the entry price IS, in words — the engine's `entry_basis`.
   function entryTip(r) {
@@ -418,121 +424,250 @@
     return "The price R is measured from";
   }
 
-  // IGNITING / RUNNING / CLOSED — one trigger, and what the exit rule has
-  // done with it since.
-  function triggerCardHTML(r, market, rules) {
-    const st = String(r.state == null ? "" : r.state);
-    const prov = !!r.provisional;
-    const gap = r.exit_reason === "gap_below_stop";
+  // The ONE number a card leads with: a closed trade's exit R (a gap under
+  // the stop is NO TRADE, so a dash even if a stray number rides along),
+  // otherwise today's R against the entry and stop.
+  function outcomeOf(r) {
+    if (r.state !== "CLOSED") {
+      return { text: fmtR(r.r_now), tone: toneOf(r.r_now), cap: "R now", tip: "Measured from the entry against the stop" };
+    }
+    if (r.exit_reason === "gap_below_stop") {
+      return { text: DASH, tone: "", cap: "no trade", tip: "It opened under the stop, so the replay books no trade and no R" };
+    }
+    return { text: fmtR(r.exit_r), tone: toneOf(r.exit_r), cap: "exit R",
+      tip: "The trade's result: the exit against the entry and stop" +
+        (r.exit_pending ? " (priced at the close; the exit fills at the next open)" : "") };
+  }
+
+  // A figure inside a sentence: bold, toned when given a tone. "" when the
+  // value is missing, so the clause around it drops itself.
+  function fig(text, tone) {
+    if (text === DASH) return "";
+    return `<b${tone === "is-up" || tone === "is-down" ? ` class="${tone}"` : ""}>${esc(text)}</b>`;
+  }
+
+  // "Broke out 25 Sep at $1.189 on 6.9× normal volume, 12.3% over its 9-SMA."
+  function breakoutLine(r) {
+    const d = shortDay(r.trigger_date), px = fig(fmtPx(r.trigger_close)), vol = fig(fmtX(r.rvol));
+    const ext = num(r.ext_pct);
+    const head = r.provisional ? "Breaking out on the forming " + (d === DASH ? "" : d + " ") + "bar"
+      : "Broke out" + (d === DASH ? "" : " " + d);
+    return esc(head) + (px ? " at " + px : "") +
+      (vol ? " on " + vol + " normal volume" + (r.provisional ? " so far" : "") : "") +
+      (ext == null ? "" : ", " + fig(fmtPct(Math.abs(ext))) + (ext < 0 ? " under" : " over") + " its " + SMA9) + ".";
+  }
+
+  // An open trigger: "Now $267.96, +171.5% since the 26 Sep open. Best so far +22.42R."
+  function sinceLine(r) {
+    const px = fig(fmtPx(r.price)), chg = fig(fmtPct(r.change_pct, true), toneOf(r.change_pct));
+    const best = fig(fmtR(r.mfe_r), toneOf(r.mfe_r));
+    const since = r.entry_basis !== "next_open" ? "the trigger close"
+      : (isDay(r.entry_date) ? "the " + shortDay(r.entry_date) + " open" : "the entry");
+    return (px ? "Now " + px + (chg ? ", " + chg + " since " + esc(since) : "") + ". " : "") +
+      (best ? "Best so far " + best + "." : "");
+  }
+
+  // How a closed trigger ended. A gap under the stop is no trade.
+  function exitLine(r) {
+    const d = shortDay(r.exit_date), on = d === DASH ? "" : " " + esc(d);
+    const px = fig(fmtPx(r.exit_price)), at = px ? " at " + px : "";
+    const best = fig(fmtR(r.mfe_r), toneOf(r.mfe_r));
+    const tail = best ? " Best while held " + best + "." : "";
+    if (r.exit_reason === "gap_below_stop") {
+      const stop = fig(fmtPx(r.stop));
+      return "Opened" + on + at + (stop ? ", under the " + stop + " stop" : "") + ": no trade.";
+    }
+    if (r.exit_reason === "stop") return "Stopped out" + on + at + "." + tail;
+    if (r.exit_reason === "trail" && r.exit_pending) {
+      return "Closed under the " + SMA9 + (on ? " on" + on : "") + at + "; the exit fills at the next open." + tail;
+    }
+    if (r.exit_reason === "trail") return "Exited" + on + at + ", the open after a close under the " + SMA9 + "." + tail;
+    const why = typeof r.exit_reason === "string" && r.exit_reason ? r.exit_reason : "closed";
+    return "Closed" + on + at + " (" + esc(why) + ")." + tail;
+  }
+
+  // A closed row's r_now is today's price against the entry — NOT its result
+  // (that is the exit R), so it is named for what it is.
+  function heldLine(r) {
+    const px = fig(fmtPx(r.price)), held = fig(fmtR(r.r_now), toneOf(r.r_now));
+    if (!px && !held) return "";
+    return (px ? "Now " + px + (held ? "; " : ".") : "") + (held ? held + " had it been held." : "");
+  }
+
+  function storyHTML(r) {
+    const p = (html) => (html ? `<p>${html}</p>` : "");
+    if (r.state !== "CLOSED") return `<div class="ig-story">${p(breakoutLine(r))}${p(sinceLine(r))}</div>`;
+    return `<div class="ig-story">${p(breakoutLine(r))}${p(exitLine(r))}` +
+      (r.exit_reason === "gap_below_stop" ? "" : p(heldLine(r))) + `</div>`;
+  }
+
+  // One pair of the levels list, escaped here. `note` is a quieter second
+  // value (a stop's distance, a measured move's R).
+  function level(label, value, tip, note) {
+    return `<div${tip ? ` title="${esc(tip)}"` : ""}><dt>${esc(label)}</dt><dd>${esc(value)}` +
+      (note && note !== DASH ? ` <span>${esc(note)}</span>` : "") + `</dd></div>`;
+  }
+
+  function levelsHTML(r) {
+    const risk = num(r.risk_pct);
+    const mm = r.mm_passed
+      ? level("Measured move", "passed", "The trigger candle already overshot the base's measured move (" +
+          fmtPx(r.mm_target) + " sits at or under the entry), so there is nothing left of it above.")
+      : level("Measured move", fmtPx(r.mm_target), "The base's height projected up from its top", fmtR(r.mm_r));
+    const trail = r.state !== "CLOSED" && num(r.trail) != null
+      ? level("Exit line", fmtPx(r.trail), "The 9-SMA trail: a daily close under it exits at the next open") : "";
+    return `<dl class="ig-levels">` +
+      level("Entry", fmtPx(r.entry), entryTip(r)) +
+      level("Stop", fmtPx(r.stop), "The stop, and its distance under the entry (the risk)",
+        risk == null ? "" : fmtPct(-Math.abs(risk))) +
+      mm + trail + `</dl>`;
+  }
+
+  // Where the card's numbers came from, as visible text (a tooltip never
+  // reaches a phone): "Bars from Binance · cap as of 29 Sep, from CoinGecko".
+  function footHTML(r) {
+    const src = sourceHTML(r.source);
+    const cap = capOf(r.mcap) == null ? "no market cap on file" : "cap " + (capProv(r) || "on file");
+    return `<p class="ig-card-foot">${src ? "Bars from " + src + " · " : ""}${esc(cap)}</p>`;
+  }
+
+  function tagsHTML(r, rules) {
     const tags = [];
     const bs = num(r.bars_since);
     if (bs != null) tags.push(tag("day " + (bs + 1), "is-day", (bs + 1) + " daily bar(s) since the trigger, counting the trigger bar"));
-    if (prov) {
+    if (r.provisional) {
       tags.push(tag("forming bar · unconfirmed", "is-prov",
         "Triggered on today's still-forming daily bar. It is not a trigger until the bar closes: " +
         "a break that closes back inside the base never counts. Not in the IGNITING count."));
     }
     if (r.wide_stop) {
       const w = num(rules && rules.wide_stop_pct);
-      tags.push(tag("wide stop", "is-wide",
-        "Risk " + fmtPct(r.risk_pct) + " of the entry" +
-        (w == null ? "" : " — over the " + fmtPct(w) + " wide-stop flag") +
-        ". Flagged, never skipped."));
+      tags.push(tag("wide stop", "is-wide", "Risk " + fmtPct(r.risk_pct) + " of the entry" +
+        (w == null ? "" : " — over the " + fmtPct(w) + " wide-stop flag") + ". Flagged, never skipped."));
     }
-    if (st === "CLOSED" && r.exit_pending) tags.push(tag("exits next open", "is-pend"));
-
-    const mm = r.mm_passed
-      ? kv("Measured move", "passed", "", "The trigger candle already overshot the base's measured move (" +
-          fmtPx(r.mm_target) + " sits at or under the entry), so there is no target left above it.")
-      : kv("Measured move", fmtPx(r.mm_target) + (num(r.mm_r) == null ? "" : " · " + fmtR(r.mm_r)));
-    const hasEntry = num(r.entry) != null;
-    const cells = [
-      kv("Triggered", r.trigger_date || DASH),
-      kv("Trigger close", fmtPx(r.trigger_close)),
-      kv("Entry", fmtPx(r.entry), "", entryTip(r)),
-      kv("Price", fmtPx(r.price)),
-      hasEntry
-        ? kv("Since entry", fmtPct(r.change_pct, true), toneOf(r.change_pct), "Today's price against the entry")
-        : kv("Since trigger", fmtPct(r.change_pct, true), toneOf(r.change_pct)),
-      // On a CLOSED row r_now is today's price against the entry, NOT the
-      // trade's result (that is the exit R below) — so it is named for what it is.
-      st === "CLOSED"
-        ? kv("R if held", fmtR(r.r_now), toneOf(r.r_now),
-            "Today's price against the entry and stop, had it not been exited. The trade's result is the exit R.")
-        : kv("R now", fmtR(r.r_now), toneOf(r.r_now), "Measured from the entry against the stop"),
-      kv("Stop", fmtPx(r.stop)),
-      kv("Risk", fmtPct(r.risk_pct), "", "Stop distance as a % of the entry"),
-      kv("RVOL", fmtX(r.rvol), "", "Trigger-day volume over its prior 20-day average"),
-      kv("Over 9-SMA", fmtPct(r.ext_pct, true), "", "How far the trigger close sat above its 9-SMA"),
-      kv("MFE", fmtR(r.mfe_r), "", "Best excursion since the entry, in R"),
-      mm,
-    ];
-    if (st !== "CLOSED" && num(r.trail) != null) {
-      cells.push(kv("9-SMA trail", fmtPx(r.trail), "", "The exit line: a daily close under it exits at the next open"));
-    }
-    let exit = "";
-    if (st === "CLOSED") {
-      const reason = own(EXIT_TEXT, r.exit_reason) ? EXIT_TEXT[r.exit_reason]
-        : String(typeof r.exit_reason === "string" && r.exit_reason ? r.exit_reason : "closed");
-      // A gap under the stop is NO TRADE: it never had an R, so the R is a
-      // dash even if a stray number rides along, and its price is the open.
-      exit = `<div class="ig-exit">` +
-        `<span>${esc("Closed · " + reason)}</span>` +
-        `<span>${esc(r.exit_date || DASH)}</span>` +
-        `<span>${esc((gap ? "opened " : "exit ") + fmtPx(r.exit_price))}</span>` +
-        (gap ? `<b>${esc(DASH)}</b>` : `<b class="${esc(toneOf(r.exit_r))}">${esc(fmtR(r.exit_r))}</b>`) +
-        (r.exit_pending ? `<span>${esc("(fills at the next open)")}</span>` : "") +
-        `</div>`;
-    }
-    return `<article class="ig-card ig-${esc(st.toLowerCase())}${prov ? " is-prov" : ""}">` +
-      cardHead(r, market, tags) +
-      `<dl class="ig-grid">${cells.join("")}</dl>` + exit + `</article>`;
+    return tags.join("");
   }
 
-  // COILED — a quiet base one bar from a trigger. No plan exists yet, so no
-  // stop, no R and no target are shown: only how quiet it is and the level.
-  function coiledCardHTML(r, market) {
-    const c = obj(r.coil);
-    const tags = [];
-    if (c.coiled) tags.push(tag("coiled " + fmtN(c.coiled_bars) + " bars", "is-coil"));
-    else if (c.last_coiled) tags.push(tag("last coiled " + c.last_coiled, "is-coil"));
+  // One trigger and what the exit rule has done with it since: a headline
+  // (symbol, state, name, the one outcome number), a meta line (cap first,
+  // then the tags), two or three plain sentences, the levels, and where the
+  // numbers came from. The cap leads the meta line so it sits in one place at
+  // every width, never wrapping between a ticker and its name.
+  function triggerCardHTML(r, market, rules) {
+    const st = String(r.state == null ? "" : r.state);
+    const out = outcomeOf(r);
+    return `<article class="ig-card ig-${esc(st.toLowerCase())}${r.provisional ? " is-prov" : ""}">` +
+      `<div class="ig-card-top"><div class="ig-id"><div class="ig-id-l1">` + symLink(market, r.symbol) +
+      `<span class="ig-state">${esc(lookup(STATE_LABEL, st, st))}</span></div>` +
+      (r.name ? `<div class="ig-name">${esc(r.name)}</div>` : "") + `</div>` +
+      `<div class="ig-out${out.tone ? " " + out.tone : ""}" title="${esc(out.tip)}">` +
+      `<b>${esc(out.text)}</b><span>${esc(out.cap)}</span></div></div>` +
+      `<div class="ig-card-meta">${capHTML(r, market)}${tagsHTML(r, rules)}</div>` +
+      storyHTML(r) + levelsHTML(r) + footHTML(r) + `</article>`;
+  }
+
+  // ── COILED: one table, largest market cap first ─────────────────────────
+
+  // How far the price sits under the breakout level, in %, or null.
+  function coilGap(r) {
     const lvl = num(r.breakout_level), px = num(r.price);
-    const gap = lvl != null && px != null && px > 0 ? (lvl / px - 1) * 100 : null;
-    const cells = [
-      kv("Ribbon", fmtN(c.ribbon_pct, 2) + (num(c.ribbon_pct) == null ? "" : "%"), "",
-        "Spread of the 9/26/43/200 SMAs: highest over lowest, minus one"),
-      kv("ATR pctl", fmtN(c.atr_pctl, 1), "", "ATR as a % of price, as a percentile of its own history (low = quiet)"),
-      kv("Vol pctl", fmtN(c.vol_pctl, 1), "", "20-day average volume as a percentile of its own history (low = quiet)"),
-      kv("Drawdown", fmtPct(c.drawdown_pct) + (num(c.drawdown_pct) == null ? "" : " off high")),
-      kv("Coiled bars", fmtN(c.coiled_bars)),
-      kv("Breakout", fmtPx(lvl), "", "A daily close above this, on enough volume, would be a trigger"),
-      kv("Price", fmtPx(px)),
-      kv("To breakout", fmtPct(gap, true)),
-    ];
-    return `<article class="ig-card ig-coiled">` + cardHead(r, market, tags) +
-      `<dl class="ig-grid">${cells.join("")}</dl></article>`;
+    return lvl != null && px != null && px > 0 ? (lvl / px - 1) * 100 : null;
   }
+
+  // A base that never left one price: the name has barely traded, so its
+  // quiet readings measure no trading, not a base tightening. Tagged, never
+  // dropped.
+  function isFlatBase(r) {
+    const b = obj(r.base);
+    const hi = num(b.high), lo = num(b.low);
+    return hi != null && lo != null && hi <= lo;
+  }
+
+  // The "flat base" tag; its tooltip says which side of the level the price
+  // sits on now, unless it is still at it.
+  function flatTag(r, gap, at) {
+    const b = obj(r.base);
+    const now = at || gap == null ? ""
+      : " The price now, " + fmtPx(r.price) + ", sits " + (gap > 0 ? "under" : "over") + " that level.";
+    return tag("flat base", "is-flat", "Every bar of the " + (num(b.bars) == null ? "" : b.bars + "-bar ") +
+      "base traded at one price (" + fmtPx(b.high) + "): it has barely traded, so its quiet readings " +
+      "measure no trading, not a base tightening. Shown, not filtered." + now);
+  }
+
+  // The row's quiet readings in words, for its hover tooltip.
+  function coilTip(r) {
+    const c = obj(r.coil), b = obj(r.base);
+    const rib = num(c.ribbon_pct);
+    return [
+      String(r.symbol == null ? "" : r.symbol) + (r.name ? " · " + r.name : ""),
+      "SMA spread " + (rib == null ? DASH : rib.toFixed(2) + "%") + " (the 9/26/43/200 SMAs, highest over lowest)",
+      "Volatility pctl " + fmtN(c.atr_pctl, 1) + " · volume pctl " + fmtN(c.vol_pctl, 1) +
+        " (of its own 2-year history; low = quiet)",
+      fmtPct(c.drawdown_pct) + " under its 3-year high",
+      "Base " + fmtPx(b.low) + " – " + fmtPx(b.high) + (num(b.bars) == null ? "" : " over " + b.bars + " bars"),
+      c.coiled ? "Coiled " + fmtN(c.coiled_bars) + " bar(s) in a row, up to the last completed bar"
+        : (isDay(c.last_coiled) ? "The coil ended after " + c.last_coiled : ""),
+      typeof r.source === "string" && r.source ? "Bars from " + lookup(SOURCE_LABEL, r.source, r.source) : "",
+    ].filter(Boolean).join("\n");
+  }
+
+  function coiledRowHTML(r, market, srcMain) {
+    const c = obj(r.coil);
+    const gap = coilGap(r);
+    const at = gap != null && Math.abs(gap) < AT_LEVEL_PCT;
+    const flat = isFlatBase(r);
+    const [px, brk] = fmtPxPair(r.price, r.breakout_level);
+    const atr = num(c.atr_pctl), dd = num(c.drawdown_pct);
+    const bars = c.coiled
+      ? (num(c.coiled_bars) == null ? DASH : c.coiled_bars + (c.coiled_bars === 1 ? " bar" : " bars"))
+      : (isDay(c.last_coiled) ? "last " + shortDay(c.last_coiled) : DASH);
+    const flag = flat ? flatTag(r, gap, at) : "";
+    const cls = ["ig-tr", c.coiled ? "" : "is-ended", flat && at ? "is-dim" : "",
+      Math.max(px.length, brk.length) > LONG_PX_CHARS ? "is-longpx" : ""].filter(Boolean).join(" ");
+    return `<tr class="${cls}" title="${esc(coilTip(r))}">` +
+      `<td class="c-sym"><div class="ig-symcell">${symLink(market, r.symbol)}` +
+      (r.name ? `<span class="ig-name">${esc(r.name)}</span>` : "") + flag +
+      (r.source !== srcMain ? sourceHTML(r.source) : "") + `</div></td>` +
+      `<td class="c-cap">${capHTML(r, market)}</td>` +
+      `<td class="c-px">${esc(px)}</td>` +
+      `<td class="c-brk"><span class="ig-ml" aria-hidden="true">→\u00a0</span>${esc(brk)}</td>` +
+      `<td class="c-gap${at ? " is-at" : ""}">${esc(gap == null ? DASH : (at ? "at level" : fmtPct(gap, true)))}</td>` +
+      `<td class="c-bars">${esc(bars)}</td>` +
+      `<td class="c-dd">${esc(dd == null ? DASH : dd.toFixed(0) + "%")}</td>` +
+      `<td class="c-q">${esc(atr == null ? DASH : (atr < 1 ? "<1" : String(Math.round(atr))))}</td></tr>`;
+  }
+
+  function coiledTableHTML(rows, market, srcMain) {
+    return `<table class="ig-tbl"><thead><tr>` +
+      COIL_COLS.map(([cls, label, tip]) => `<th scope="col" class="${cls}" title="${esc(tip)}">${esc(label)}</th>`).join("") +
+      `</tr></thead><tbody>${sortByCap(rows).map((r) => coiledRowHTML(r, market, srcMain)).join("")}</tbody></table>`;
+  }
+
+  // One line under the COILED heading saying what a trigger IS, read off the
+  // payload's own params. A definition, never an instruction.
+  function coilNote(params) {
+    const p = obj(params);
+    const rvol = num(p.rvol_min), ext = num(p.max_ext), look = num(p.coil_lookback);
+    return "A trigger is a daily close above the breakout level" +
+      (rvol == null ? "" : " on at least " + fmtX(rvol) + " normal volume") +
+      (ext == null ? "" : ", no more than " + fmtN(ext * 100) + "% over its " + SMA9) +
+      ", with the turnover floors met. A \"last\" date under Coiled means the coil ended after that bar" +
+      (look == null ? "" : "; a break within " + fmtN(look) + " bars of it still counts") + ".";
+  }
+
+  // ── the evidence line ───────────────────────────────────────────────────
 
   // "loading" until the fetch settles, then "ok" or "absent".
-  function entryStatus(e) {
-    if (!e || e.at == null) return "loading";
-    return e.data ? "ok" : "absent";
-  }
-
-  function fmtP(v) {
-    const x = num(v);
-    return x == null ? DASH : x.toFixed(3);
-  }
+  function entryStatus(e) { return !e || e.at == null ? "loading" : (e.data ? "ok" : "absent"); }
+  function fmtP(v) { const x = num(v); return x == null ? DASH : x.toFixed(3); }
 
   function fmtCI(v) {
     return Array.isArray(v) && v.length === 2 && num(v[0]) != null && num(v[1]) != null
       ? signed(v[0], 2) + ".." + signed(v[1], 2) : DASH;
   }
 
-  // The evidence line. Every number is read off the backtest file; a field
-  // it does not carry is a dash. Nothing here computes a statistic — not the
-  // CI, not the P, not a difference. Schema 1 files (no `versus`, no
-  // `scoring`, no `open`) still render, with dashes where the new fields go.
+  // Every number is read off the backtest file; a field it lacks is a dash.
+  // Nothing here computes a statistic (not the CI, the P or a difference).
   function evidenceHTML(status, bt, live) {
     if (status === "loading") return `<div class="ig-ev is-pending">${esc("Backtest loading…")}</div>`;
     if (status !== "ok" || !bt || typeof bt !== "object") {
@@ -603,12 +738,13 @@
       drift + `</div>`;
   }
 
-  // "Bars: Binance 117 · Yahoo 36 · …" for the header tooltip, read off
-  // summary.sources. Empty when the payload predates it.
+  // ── the panel head ──────────────────────────────────────────────────────
+
+  // "bars: Binance 117 · Yahoo 36 · …" for the header tooltip.
   function sourcesText(src) {
     const by = obj(src.by_source);
     const parts = Object.keys(by).filter((k) => num(by[k]) != null)
-      .map((k) => (own(SOURCE_LABEL, k) ? SOURCE_LABEL[k] : k) + " " + by[k]);
+      .map((k) => lookup(SOURCE_LABEL, k, k) + " " + by[k]);
     const dead = obj(src.dead);
     const deadTxt = Object.keys(dead).map((k) => k + " (" + String(dead[k]) + ")");
     const rej = obj(src.identity_rejected);
@@ -618,10 +754,8 @@
       (nRej ? " · " + nRej + " same-ticker listing(s) rejected as a different coin" : "");
   }
 
-  // The market's benchmark against its 200-SMA — CONTEXT, never a filter
-  // (the engine gates on nothing here). Crypto's block carries btc_* keys;
-  // a stock market's the generic ones (label "ASX 200", above_200, ...).
-  // Absent when the payload carries no regime block.
+  // The market's benchmark against its 200-SMA — context, never a filter.
+  // Crypto's block carries btc_* keys; a stock market's the generic ones.
   function regimeHTML(rg) {
     if (!rg || typeof rg !== "object") return "";
     const btc = typeof rg.btc_above_200 === "boolean";
@@ -646,10 +780,8 @@
     return `<span class="ig-regime ${up ? "is-up" : "is-down"}" title="${esc(tip)}">${esc(text)}</span>`;
   }
 
-  // "N coins behind yesterday's close" when summary.bars says some SCREENED
-  // coins' source had not served that bar when the screen ran (the engine
-  // counts only frames it screens; one too old to screen is its own skip).
-  // Context, not an alarm: Yahoo-fallback coins routinely land a day late.
+  // "N coins behind yesterday's close": screened coins whose source had not
+  // served that bar yet. Context, not an alarm (Yahoo coins often land late).
   function lagHTML(bars) {
     const n = num(bars.lagging);
     if (n == null || n <= 0) return "";
@@ -688,11 +820,20 @@
       `</div>`;
   }
 
+  // ── sections + the whole panel ──────────────────────────────────────────
+
+  // A grid of trigger cards. A lone card gets a wider track (is-solo) so it
+  // does not sit in a third of the panel.
+  function cardsHTML(rows, cardFn, extra) {
+    return `<div class="ig-cards${extra ? " " + extra : ""}${rows.length === 1 ? " is-solo" : ""}">` +
+      `${rows.map(cardFn).join("")}</div>`;
+  }
+
   function sectionHTML(cls, label, note, rows, cardFn) {
     return `<section class="ig-sec ${esc(cls)}">` +
       `<h4 class="ig-h">${esc(label)} <b>${esc(rows.length)}</b>` +
       (note ? ` <span class="ig-note">${esc(note)}</span>` : "") + `</h4>` +
-      `<div class="ig-cards">${rows.map(cardFn).join("")}</div></section>`;
+      cardsHTML(rows, cardFn) + `</section>`;
   }
 
   // IGNITING: the heading prints the CONFIRMED count — the pill's N, the same
@@ -707,12 +848,12 @@
       (k.provisional ? ` <span class="ig-note ig-prov-note">${esc(provNote(k.provisional) + " (unconfirmed)")}</span>` : "") +
       `</h4>`;
     h += conf.length
-      ? `<div class="ig-cards">${conf.map(trig).join("")}</div>`
+      ? cardsHTML(conf, trig)
       : `<p class="ig-empty">${esc(prov.length ? "Nothing confirmed on the last completed daily bar."
           : "Nothing igniting on the last completed daily bar.")}</p>`;
     if (prov.length) {
       h += `<p class="ig-subh">${esc("Forming bar · unconfirmed · not in the count")}</p>` +
-        `<div class="ig-cards ig-cards-prov">${prov.map(trig).join("")}</div>`;
+        cardsHTML(prov, trig, "ig-cards-prov");
     }
     return h + `</section>`;
   }
@@ -720,9 +861,10 @@
   // The whole panel, as one string. `coiledOpen` carries the COILED
   // disclosure's state across a repaint (the backtest landing, a refresh).
   function panelHTML(payload, btStatus, bt, market, coiledOpen, stale) {
-    const g = groupRows(payload && payload.results);
+    const p = obj(payload);
+    const g = groupRows(p.results);
     const k = countsOf(payload);
-    const rules = (payload && payload.rules) || {};
+    const rules = p.rules || {};
     const trig = (r) => triggerCardHTML(r, market, rules);
     let h = headHTML(payload, stale) + evidenceHTML(btStatus, bt, payload);
     h += ignitingHTML(g, k, trig);
@@ -734,7 +876,8 @@
       h += `<details class="ig-coiled"${coiledOpen ? " open" : ""}>` +
         `<summary class="ig-h">${esc("Coiled")} <b>${esc(g.COILED.length)}</b> ` +
         `<span class="ig-note">${esc("quiet bases one close from a trigger")}</span></summary>` +
-        `<div class="ig-cards">${g.COILED.map((r) => coiledCardHTML(r, market)).join("")}</div></details>`;
+        `<p class="ig-explain">${esc(coilNote(p.params))}</p>` +
+        coiledTableHTML(g.COILED, market, mainSource(p.results)) + `</details>`;
     }
     return h;
   }

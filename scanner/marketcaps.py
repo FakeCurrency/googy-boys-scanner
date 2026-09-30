@@ -43,7 +43,7 @@ _SCAN_FILES = [
 
 # Only cache caps for tradeable grades — that's all the alerts ever show.
 _CACHE_GRADES = {"A+", "A"}
-_MAX_AGE_DAYS = 4          # refresh entries older than this
+MAX_AGE_DAYS  = 4          # refresh entries older than this
 _CHUNK        = 100        # symbols per bulk quote request
 _RETRIES      = 3
 
@@ -135,8 +135,9 @@ def _fetch_bulk_once(yf_syms: list[str]) -> dict[str, float]:
     return out
 
 
-def _fetch_with_retries(yf_syms: list[str]) -> dict[str, float]:
-    """Fetch caps, retrying the symbols still missing with back-off."""
+def fetch_caps(yf_syms: list[str]) -> dict[str, float]:
+    """Fetch caps, retrying the symbols still missing with back-off. Saves
+    nothing: refresh() is the cache's one writer (the IGNITION lens reads)."""
     remaining = list(yf_syms)
     got: dict[str, float] = {}
     for attempt in range(_RETRIES):
@@ -157,7 +158,7 @@ def _stale(entry: dict, now: dt.datetime) -> bool:
         return True
     try:
         age = now - dt.datetime.fromisoformat(ts)
-        return age > dt.timedelta(days=_MAX_AGE_DAYS)
+        return age > dt.timedelta(days=MAX_AGE_DAYS)
     except Exception:
         return True
 
@@ -181,7 +182,7 @@ def refresh(only_stale: bool = True) -> dict:
         yf_map = {_yf_sym(market, s): s for s in targets}
         print(f"  marketcaps: {market.upper()} — fetching {len(yf_map)} caps "
               f"({len(symbols)} signals total) ...")
-        got = _fetch_with_retries(list(yf_map))
+        got = fetch_caps(list(yf_map))
         for ysym, mc in got.items():
             plain = yf_map.get(ysym)
             if plain:

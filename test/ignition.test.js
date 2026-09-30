@@ -48,6 +48,7 @@ const readReal = (name) => {
 };
 const REAL_LIVE = readReal("crypto.json");
 const REAL_BT = readReal("crypto_backtest.json");
+const REAL_ASX = readReal("asx.json");
 
 let passed = 0, failed = 0;
 const pending = [];
@@ -91,14 +92,18 @@ function fnSrc(name, src) {
   throw new Error(`could not slice function ${name}`);
 }
 
-const CONSTS = ["IGNITION_MARKETS", "esc", "own", "DASH", "LIVE_TTL_MS", "STALE_GEN_H", "STALE_BAR_GRACE_H", "BAR_24_7",
-  "STALE_SESSION_H",
-  "STATE_ORDER", "EXIT_TEXT", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK"];
-const FNS = ["isMarket", "liveUrl", "btUrl", "num", "obj", "fmtPx", "signed", "fmtPct", "fmtR", "fmtX",
-  "fmtN", "toneOf", "isDay", "utcDay", "weekdayHours", "staleOf", "rowRank", "groupRows", "countsOf", "provNote",
-  "pillInfo", "loadingInfo", "melb", "utcText", "chartHref", "kv", "tag", "sourceHTML", "cardHead",
-  "entryTip", "triggerCardHTML", "coiledCardHTML", "entryStatus", "fmtP", "fmtCI", "evidenceHTML",
-  "sourcesText", "regimeHTML", "lagHTML", "headHTML", "sectionHTML", "ignitingHTML", "panelHTML"];
+const CONSTS = ["IGNITION_MARKETS", "esc", "own", "lookup", "DASH", "LIVE_TTL_MS", "STALE_GEN_H", "STALE_BAR_GRACE_H",
+  "BAR_24_7", "STALE_SESSION_H", "STATE_ORDER", "STATE_LABEL", "SMA9", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK",
+  "MONTHS", "CAP_CCY", "CAP_SRC", "CAP_UNITS", "LONG_PX_CHARS", "AT_LEVEL_PCT", "COIL_COLS"];
+const FNS = ["isMarket", "liveUrl", "btUrl", "num", "obj", "fmtPx", "fmtPxPair", "signed", "fmtPct", "fmtR", "fmtX",
+  "fmtN", "toneOf", "isDay", "utcDay", "shortDay", "weekdayHours", "staleOf", "rowRank", "groupRows", "countsOf",
+  "provNote", "pillInfo", "loadingInfo", "melb", "utcText", "chartHref", "symLink", "tag", "sourceHTML", "mainSource",
+  "capOf", "ccy", "fmtCap", "capProv", "capTip", "capHTML", "sortByCap",
+  "entryTip", "outcomeOf", "fig", "breakoutLine", "sinceLine", "exitLine", "heldLine", "storyHTML",
+  "level", "levelsHTML", "footHTML", "tagsHTML", "triggerCardHTML",
+  "coilGap", "isFlatBase", "flatTag", "coilTip", "coiledRowHTML", "coiledTableHTML", "coilNote",
+  "entryStatus", "fmtP", "fmtCI", "evidenceHTML",
+  "sourcesText", "regimeHTML", "lagHTML", "headHTML", "cardsHTML", "sectionHTML", "ignitingHTML", "panelHTML"];
 const build = (win) => new Function("window",
   CONSTS.map(sliceConst).join("\n") + "\n" + FNS.map((n) => fnSrc(n)).join("\n") +
   `\nreturn { ${CONSTS.concat(FNS).join(", ")} };`)(win);
@@ -254,7 +259,7 @@ test("a state that is not an OWN key (toString, __proto__, constructor, ...) is 
 test("exit reasons and sources are own-key lookups too (no Object.prototype member leaks)", () => {
   const h = I.triggerCardHTML(trig({ state: "CLOSED", exit_reason: "toString", exit_date: "2026-09-20",
     exit_price: 66.4, exit_r: -1.01, source: "constructor" }), "crypto", {});
-  assert.match(h, /Closed · toString/);
+  assert.ok(text(h).includes("(toString)."), "an unknown exit reason is printed as itself");
   assert.ok(!/function|native code/.test(h), "a prototype member rendered as text");
   assert.match(h, /class="ig-src"[^>]*>constructor</);
 });
@@ -520,61 +525,65 @@ test("lagging > 0 says 'N coins behind yesterday's close', with the detail in th
 // ════════════════════════════════════════════════════════════════════════════
 suite("trigger rows");
 
-test("a trigger card carries every field the owner reads", () => {
+test("a trigger card says what happened in sentences, then the levels, then where the numbers came from", () => {
   const h = I.triggerCardHTML(trig(), "crypto", { wide_stop_pct: 35 });
-  for (const s of ["Triggered", "2026-09-27", "Trigger close", "$83.18", "Price", "$103.97",
-                   "Since trigger", "+25.0%", "R now", "+1.24R", "Stop", "$66.47", "Risk", "20.1%",
-                   "RVOL", "5.8×", "Over 9-SMA", "+23.6%", "MFE", "0.00R", "Measured move",
-                   "day 1", "9-SMA trail", "$67.30", "Entry"]) {
-    assert.ok(h.includes(s), `trigger card lost "${s}"`);
+  const t = text(h);
+  for (const s of ["QNT", "Igniting", "cap —", "+1.24R", "R now", "day 1",
+                   "Broke out 27 Sep at $83.18 on 5.8× normal volume, 23.6% over its 9\u2011SMA.",
+                   "Now $103.97, +25.0% since the trigger close. Best so far 0.00R.",
+                   "Entry", "Stop$66.47 -20.1%", "Measured movepassed", "Exit line$67.30", "no market cap on file"]) {
+    assert.ok(t.includes(s), `trigger card lost "${s}"`);
   }
+  assert.match(h, /<span class="ig-state">Igniting<\/span>/, "the state chip is sentence case");
   noJunk(h, "trigger card");
 });
 
-test("schema 2: Entry is shown with its basis; R now / Risk are measured from the entry", () => {
+test("schema 2: Entry is shown with its basis; R now and the story are measured from the entry", () => {
   const h = I.triggerCardHTML(trig2(), "crypto", {});
   assert.match(h, /title="Entry: the next open after the trigger \(2026-09-26\)[^"]*"><dt>Entry<\/dt><dd>\$1\.188<\/dd>/);
-  assert.match(h, /title="Measured from the entry against the stop"><dt>R now<\/dt><dd>-0\.33R/);
-  assert.match(h, /title="Stop distance as a % of the entry"><dt>Risk<\/dt>/);
-  assert.match(h, /<dt>Since entry<\/dt><dd>-2\.5%<\/dd>/, "change_pct is measured from the entry now");
+  assert.match(h, /class="ig-out is-down" title="Measured from the entry against the stop"><b>-0\.33R<\/b><span>R now<\/span>/);
+  assert.match(h, /<dt>Stop<\/dt><dd>\$1\.098 <span>-7\.6%<\/span><\/dd>/, "the stop carries its risk %");
+  assert.match(text(h), /Now \$1\.158, -2\.5% since the 26 Sep open\./, "change_pct is measured from the entry");
   const tc = I.triggerCardHTML(trig2({ entry: 1.189, entry_basis: "trigger_close", entry_date: null }), "crypto", {});
   assert.match(tc, /title="Entry: the trigger close, until the next bar opens[^"]*"><dt>Entry<\/dt>/);
-  assert.match(I.triggerCardHTML(trig2({ state: "CLOSED", exit_reason: "trail" }), "crypto", {}),
-    /title="Today&#39;s price against the entry and stop, had it not been exited/);
+  assert.match(text(tc), /since the trigger close/);
   const wide = I.triggerCardHTML(trig2({ wide_stop: true, risk_pct: 41.2 }), "crypto", { wide_stop_pct: 35 });
   assert.match(wide, /Risk 41\.2% of the entry/);
 });
 
 test("AXS: a $1.19 trigger and a $1.10 stop are distinguishable (4 significant figures under $10)", () => {
   const h = I.triggerCardHTML(trig2(), "crypto", {});
-  assert.match(h, /<dt>Trigger close<\/dt><dd>\$1\.189<\/dd>/);
-  assert.match(h, /<dt>Stop<\/dt><dd>\$1\.098<\/dd>/);
+  assert.match(h, /Broke out 25 Sep at <b>\$1\.189<\/b>/, "the trigger close is on the card face");
+  assert.match(h, /<dt>Stop<\/dt><dd>\$1\.098 /);
 });
 
 test("gap_below_stop renders as 'no trade' with the R as a dash — even if a number rides along", () => {
   const row = trig2({ state: "CLOSED", exit_reason: "gap_below_stop", exit_date: "2026-09-26",
     exit_price: 1.05, exit_r: -1.5, exit_pending: false, mfe_r: null, risk_pct: null, r_now: undefined });
   const h = I.triggerCardHTML(row, "crypto", {});
-  assert.match(h, /Closed · gapped under the stop at the open - no trade/);
-  const ex = h.slice(h.indexOf('class="ig-exit"'));
-  assert.match(ex, /opened \$1\.050/);
-  assert.match(ex, /<b>—<\/b>/, "a gap is no trade: its R is a dash");
-  assert.ok(!/-1\.50R/.test(ex), "a stray exit_r must not print for a gap");
-  assert.match(h, /<dt>R if held<\/dt><dd>—<\/dd>/);
+  assert.match(h, /<b>—<\/b><span>no trade<\/span>/, "a gap is no trade: its R is a dash");
+  assert.match(text(h), /Opened 26 Sep at \$1\.050, under the \$1\.098 stop: no trade\./);
+  assert.ok(!/-1\.50R/.test(h), "a stray exit_r must not print for a gap");
+  assert.ok(!/had it been held/.test(h), "no 'had it been held' line for a trade that never filled");
   noJunk(h, "gap card");
 });
 
-test("each row shows its data source compactly; absent source, no label", () => {
+test("a card names its source in the footer; a coiled row only when it differs from the file's usual one", () => {
   const cases = { binance_vision: "Binance", binance: "Binance", bybit: "Bybit", coinbase: "Coinbase",
                   yahoo: "Yahoo", cache: "Cached" };
   for (const [src, label] of Object.entries(cases)) {
     const h = I.triggerCardHTML(trig2({ source: src }), "crypto", {});
-    assert.match(h, new RegExp(`<span class="ig-src" title="Data: [^"]+">${label}</span>`), src);
-    assert.match(I.coiledCardHTML(coiled({ source: src }), "crypto"), new RegExp(`class="ig-src"[^>]*>${label}<`));
+    assert.match(h, new RegExp(`<p class="ig-card-foot">Bars from <span class="ig-src" title="Data: [^"]+">${label}</span>`), src);
+    assert.match(I.coiledRowHTML(coiled({ source: src }), "crypto", "kraken"), new RegExp(`class="ig-src"[^>]*>${label}<`));
+    assert.ok(!/ig-src/.test(I.coiledRowHTML(coiled({ source: src }), "crypto", src)), "the usual source is not repeated");
   }
   assert.match(I.triggerCardHTML(trig2({ source: "kraken" }), "crypto", {}), /class="ig-src"[^>]*>kraken</,
     "an unknown source is shown as itself, not hidden");
   assert.ok(!/ig-src/.test(I.triggerCardHTML(trig(), "crypto", {})), "no source field, no label");
+  assert.equal(I.mainSource([{ source: "yahoo" }, { source: "cache" }, { source: "yahoo" }, {}, null]), "yahoo");
+  assert.equal(I.mainSource([]), null);
+  assert.equal(I.mainSource(JSON.parse('[{"source":"__proto__"},{"source":"__proto__"},{"source":"yahoo"}]')), "__proto__",
+    "a hostile source string is counted like any other, never a prototype lookup");
 });
 
 test("the symbol links to chart.js's real query params (m + s), not ?symbol=", () => {
@@ -602,21 +611,23 @@ test("wide stop is flagged (with the published threshold), never hidden", () => 
 });
 
 test("measured move: 'passed' when mm_passed, else the target and its R", () => {
-  assert.match(I.triggerCardHTML(trig(), "crypto", {}), /<dd>passed<\/dd>/);
+  assert.match(I.triggerCardHTML(trig(), "crypto", {}), /<dt>Measured move<\/dt><dd>passed<\/dd>/);
   const h = I.triggerCardHTML(trig({ mm_passed: false, mm_target: 120.5, mm_r: 2.2 }), "crypto", {});
-  assert.match(h, /\$120\.50 · \+2\.20R/);
+  assert.match(h, /<dt>Measured move<\/dt><dd>\$120\.50 <span>\+2\.20R<\/span><\/dd>/);
 });
 
 test("'day N' is bars_since + 1", () => {
   assert.match(I.triggerCardHTML(RUNNING, "crypto", {}), />day 9</);
 });
 
-test("missing numbers render as a dash, never 0/NaN/null", () => {
+test("missing numbers render as a dash or drop their clause, never 0/NaN/null", () => {
   const bare = { symbol: "BARE", state: "RUNNING" };
   const h = I.triggerCardHTML(bare, "crypto", {});
   noJunk(h, "bare trigger card");
-  assert.ok((h.match(/—/g) || []).length >= 8, "missing fields must read as dashes");
+  assert.ok((h.match(/—/g) || []).length >= 5, "missing levels, cap and R must read as dashes");
   assert.ok(!/\$0|0\.00R/.test(h), "a missing value must never read as a plausible zero");
+  assert.match(text(h), /Broke out\./, "a sentence with nothing to say keeps only its words");
+  noJunk(I.triggerCardHTML({ symbol: "B2", state: "CLOSED", exit_reason: "stop" }, "crypto", {}), "bare closed card");
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -643,7 +654,9 @@ test("fmtPx: sub-dollar keeps 4 significant figures as a plain decimal, never an
   assert.equal(I.fmtPx(0.0991), "$0.0991");
   assert.equal(I.fmtPx(0.08911224), "$0.08911");
   assert.equal(I.fmtPx(0.01838), "$0.01838");
-  assert.equal(I.fmtPx(0.5), "$0.5");
+  assert.equal(I.fmtPx(0.5), "$0.50", "never a one-decimal price");
+  assert.equal(I.fmtPx(0.06), "$0.06");
+  assert.equal(I.fmtPx(-0.5), "-$0.50");
   assert.equal(I.fmtPx(0.9999), "$0.9999");
   assert.equal(I.fmtPx(0.99996), "$1.000", "rounds up into the $1 band");
   assert.equal(I.fmtPx(4.77e-6), "$0.00000477");
@@ -665,6 +678,165 @@ test("fmtPct / fmtR never print a negative (or signed) zero", () => {
   assert.equal(I.fmtR(0.004), "0.00R");
   assert.equal(I.fmtR(-0.33), "-0.33R");
   assert.equal(I.fmtR(1.317), "+1.32R");
+});
+
+test("fmtPxPair: price and breakout share one precision, the shorter zero-padded", () => {
+  assert.deepEqual(I.fmtPxPair(0.5, 0.55), ["$0.50", "$0.55"]);
+  assert.deepEqual(I.fmtPxPair(0.04, 0.058), ["$0.040", "$0.058"]);
+  assert.deepEqual(I.fmtPxPair(0.0325, 0.043), ["$0.0325", "$0.0430"]);
+  assert.deepEqual(I.fmtPxPair(1.22, 1.501), ["$1.220", "$1.501"]);
+  assert.deepEqual(I.fmtPxPair(1.7e-6, 2e-6), ["$0.0000017", "$0.0000020"]);
+  assert.deepEqual(I.fmtPxPair(1234.5, 999.5), ["$1,234.50", "$999.50"]);
+  assert.deepEqual(I.fmtPxPair(0, 0.25), ["$0.00", "$0.25"]);
+  assert.deepEqual(I.fmtPxPair(null, 0.25), ["—", "$0.25"], "a missing price stays a dash");
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+suite("market cap — on every box, in the market's own currency");
+
+test("fmtCap: 2-3 significant figures, T/B/M/K, currency by market", () => {
+  assert.equal(I.fmtCap(445.2e6, "asx"), "A$445M");
+  assert.equal(I.fmtCap(94.4e6, "asx"), "A$94M");
+  assert.equal(I.fmtCap(2.84e6, "asx"), "A$2.8M");
+  assert.equal(I.fmtCap(1.2e9, "crypto"), "US$1.2B");
+  assert.equal(I.fmtCap(3.1e12, "crypto"), "US$3.1T");
+  assert.equal(I.fmtCap(158e3, "asx"), "A$158K");
+  assert.equal(I.fmtCap(512, "asx"), "A$512");
+  assert.equal(I.fmtCap(5e6, "nasdaq"), "$5.0M", "an unknown market gets a bare $");
+});
+
+test("fmtCap: a value that rounds across a unit prints in the unit it lands in", () => {
+  assert.equal(I.fmtCap(999.96e6, "crypto"), "US$1.0B");
+  assert.equal(I.fmtCap(999.4e6, "crypto"), "US$999M");
+  assert.equal(I.fmtCap(9.96e6, "asx"), "A$10M");
+  assert.equal(I.fmtCap(999.6, "asx"), "A$1.0K");
+});
+
+test("fmtCap: missing, zero, negative or junk is a dash — never '0'", () => {
+  for (const v of [undefined, null, 0, -5e6, NaN, Infinity, -Infinity, "445000000", {}, [], true]) {
+    assert.equal(I.fmtCap(v, "asx"), "—", `fmtCap(${String(v)})`);
+  }
+});
+
+test("the cap tooltip gives the full figure, the as-of date and the source in words", () => {
+  const r = { mcap: 445123456, mcap_asof: "2026-09-29", mcap_src: "coingecko" };
+  assert.equal(I.capTip(r, "crypto"),
+    "Market cap US$445,123,456, as of 29 Sep, from CoinGecko. Context, not a filter.");
+  assert.match(I.capTip({ mcap: 5e6, mcap_src: "cache" }, "asx"), /A\$5,000,000, from the shared cap cache\./);
+  assert.match(I.capTip({ mcap: 5e6, mcap_asof: "2026-09-28", mcap_src: "previous" }, "asx"), /as of 28 Sep, from the previous run/);
+  assert.equal(I.capTip({}, "asx"), "No market cap on file");
+  assert.equal(I.capTip({ mcap: 0, mcap_asof: "2026-09-29" }, "asx"), "No market cap on file");
+  // An unknown or hostile source is shown as itself, never as a prototype member.
+  assert.match(I.capTip({ mcap: 5e6, mcap_src: "toString" }, "asx"), /from toString\./);
+  assert.match(I.capTip({ mcap: 5e6, mcap_src: "__proto__", mcap_asof: "garbage" }, "asx"), /A\$5,000,000, from __proto__\./);
+});
+
+test("a card labels its cap 'cap' on its face, and its footer says how old and from where", () => {
+  const h = I.triggerCardHTML(trig2({ mcap: 198e6, mcap_asof: "2026-09-29", mcap_src: "yahoo", source: "yahoo" }), "asx", {});
+  assert.match(h, /<span class="ig-cap" title="Market cap A\$198,000,000[^"]*"><span class="ig-cap-k">cap <\/span>A\$198M<\/span>/);
+  assert.match(text(h), /Bars from Yahoo · cap as of 29 Sep, from Yahoo$/);
+  const none = I.triggerCardHTML(trig2(), "asx", {});
+  assert.match(none, /<span class="ig-cap is-none"[^>]*><span class="ig-cap-k">cap <\/span>—<\/span>/,
+    "a missing cap reads 'cap —', drawn quiet");
+  assert.match(text(none), /no market cap on file$/);
+});
+
+test("COILED orders by market cap, largest first; rows without one follow in engine order (stable)", () => {
+  const rows = [coiled({ symbol: "N1" }), coiled({ symbol: "S", mcap: 5e6 }), coiled({ symbol: "N2", mcap: 0 }),
+    coiled({ symbol: "L", mcap: 9e8 }), coiled({ symbol: "T1", mcap: 5e6 }), coiled({ symbol: "N3", mcap: NaN }),
+    coiled({ symbol: "T2", mcap: 5e6 })];
+  assert.deepEqual(I.sortByCap(rows).map((r) => r.symbol), ["L", "S", "T1", "T2", "N1", "N2", "N3"]);
+  assert.deepEqual(rows.map((r) => r.symbol), ["N1", "S", "N2", "L", "T1", "N3", "T2"], "the caller's array is untouched");
+  const noCaps = [coiled({ symbol: "A" }), coiled({ symbol: "B" })];
+  assert.deepEqual(I.sortByCap(noCaps).map((r) => r.symbol), ["A", "B"], "no caps at all: engine order");
+  const h = I.panelHTML(payload([coiled({ symbol: "SMALL", mcap: 1e6 }), coiled({ symbol: "BIG", mcap: 1e9 })]),
+    "ok", BT, "asx", true, null);
+  assert.ok(h.indexOf(">BIG</a>") < h.indexOf(">SMALL</a>"), "the table is drawn in cap order");
+});
+
+test("every row of both LIVE payloads draws exactly one cap, with or without caps on file", () => {
+  for (const [market, live] of [["crypto", REAL_LIVE], ["asx", REAL_ASX]]) {
+    if (!live) { console.log(`     (no public/data/ignition/${market}.json — skipped)`); continue; }
+    const drawn = live.results.filter((r) => I.rowRank(r)).length;
+    const withCaps = Object.assign({}, live, { results: live.results.map((r, i) =>
+      Object.assign({}, r, i % 4 ? { mcap: 1e6 * (i + 1), mcap_asof: "2026-09-29", mcap_src: "yahoo" }
+        : { mcap: null, mcap_asof: null, mcap_src: null })) });
+    for (const p of [live, withCaps]) {
+      const h = I.panelHTML(p, "absent", null, market, true, null);
+      assert.equal((h.match(/class="ig-cap[ "]/g) || []).length, drawn, market + ": one cap per row");
+      assert.ok(!/undefined|NaN|null/.test(h.replace(/title="[^"]*"/g, "")), market + ": a junk value printed");
+      const caps = [...h.matchAll(/<span class="ig-cap-k">cap <\/span>([^<]*)<\/span>/g)].map((m) => m[1]);
+      assert.ok(caps.every((c) => c === "—" || /^(A|US)\$\d/.test(c)), market + ": a cap is a figure or a dash, never 0");
+    }
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+suite("COILED — one plain table");
+
+test("the explainer says what a trigger IS, from the payload's own params", () => {
+  const p = payload([coiled()], undefined, { params: { rvol_min: 3.0, max_ext: 0.6, coil_lookback: 10 } });
+  const h = I.panelHTML(p, "ok", BT, "crypto", true, null);
+  assert.match(h, /<p class="ig-explain">A trigger is a daily close above the breakout level on at least 3\.0× normal volume, no more than 60% over its 9\u2011SMA, with the turnover floors met\. [^<]*a break within 10 bars of it still counts\.<\/p>/);
+  assert.equal(I.coilNote(null), "A trigger is a daily close above the breakout level, with the turnover floors met. " +
+    "A \"last\" date under Coiled means the coil ended after that bar.", "missing params drop their clauses");
+});
+
+test("a flat base is tagged; its numbers dim only when the price still sits AT the level", () => {
+  const flatAt = coiled({ base: { high: 0.008, low: 0.008, bars: 60 }, breakout_level: 0.008, price: 0.008 });
+  const h = I.coiledRowHTML(flatAt, "asx", null);
+  assert.match(h, /class="ig-tr is-dim"/);
+  assert.match(h, /class="ig-tag is-flat" title="Every bar of the 60-bar base traded at one price \(\$0\.008\)[^"]*Shown, not filtered\.">flat base</);
+  assert.match(h, /<td class="c-gap is-at">at level<\/td>/);
+  const flatLeft = coiled({ base: { high: 2e-6, low: 2e-6, bars: 60 }, breakout_level: 2e-6, price: 1.7e-6 });
+  const h2 = I.coiledRowHTML(flatLeft, "crypto", null);
+  assert.ok(!/is-dim/.test(h2), "a price that has left the level keeps normal numbers");
+  assert.match(h2, /The price now, \$0\.0000017, sits under that level\./);
+  const flatOver = coiled({ base: { high: 0.008, low: 0.008, bars: 60 }, breakout_level: 0.008, price: 0.009 });
+  assert.match(I.coiledRowHTML(flatOver, "asx", null), /The price now, \$0\.009, sits over that level\./);
+  assert.ok(!/flat base/.test(I.coiledRowHTML(coiled(), "crypto", null)), "a ranged base is not tagged");
+});
+
+test("a very long sub-cent price marks its row so the phone font can step down", () => {
+  assert.match(I.coiledRowHTML(coiled({ price: 2.738e-5, breakout_level: 3.131e-5 }), "crypto", null), /class="ig-tr is-longpx"/);
+  assert.ok(!/is-longpx/.test(I.coiledRowHTML(coiled(), "crypto", null)));
+});
+
+test("no sort bar, no expand rows, no controls of any kind in the panel", () => {
+  const h = I.panelHTML(SAMPLE, "ok", BT2, "crypto", true, null);
+  assert.ok(!/<button|data-ig-sort|aria-expanded|ig-more/.test(h));
+});
+
+test("'under high', never 'off high' (a sale tag)", () => {
+  const h = I.panelHTML(SAMPLE, "ok", BT2, "crypto", true, null);
+  assert.ok(!/off high/i.test(h));
+  assert.match(h, /<th scope="col" class="c-dd"[^>]*>Under high</);
+});
+
+test("a section holding one trigger card lets it span wider (is-solo)", () => {
+  const one = I.panelHTML(payload([RUNNING]), "ok", BT, "crypto", false, null);
+  assert.match(one, /<div class="ig-cards is-solo">/);
+  const two = I.panelHTML(payload([RUNNING, trig({ symbol: "R2", state: "RUNNING" })]), "ok", BT, "crypto", false, null);
+  assert.ok(!/is-solo/.test(two));
+});
+
+test("INERT: the rendered panel never reads like an instruction", () => {
+  const banned = /\b(buy|sell|enter|go long|target price|trigger above)\b/i;
+  const panels = [I.panelHTML(SAMPLE, "ok", BT2, "crypto", true, null),
+    I.panelHTML(payload([PROV, CLOSED, trig2({ state: "CLOSED", exit_reason: "gap_below_stop" })],
+      undefined, { params: { rvol_min: 3, max_ext: 0.6, coil_lookback: 10 } }), "ok", BT, "crypto", true, null)];
+  if (REAL_LIVE) panels.push(I.panelHTML(REAL_LIVE, "ok", REAL_BT, "crypto", true, null));
+  if (REAL_ASX) panels.push(I.panelHTML(REAL_ASX, "absent", null, "asx", true, null));
+  for (const h of panels) {
+    const m = banned.exec(h);
+    assert.ok(!m, `the panel says "${m && m[0]}": ${m && h.slice(Math.max(0, m.index - 80), m.index + 40)}`);
+  }
+});
+
+test("tabular figures only on the table's numeric cells (on prose they detach a minus)", () => {
+  const rules = [...CSS.matchAll(/([^{}]+)\{[^}]*tabular-nums[^}]*\}/g)].map((m) => m[1].trim());
+  assert.ok(rules.length && rules.every((r) => r.split(",").every((x) => x.trim().startsWith(".ig-tbl"))), rules);
+  assert.ok(!/!important/.test(CSS), "no !important");
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -721,18 +893,21 @@ test("the header tooltip names where the bars came from", () => {
 test("CLOSED rows are drawn with reason, date, exit price and exit R — and say why they are there", () => {
   const h = I.panelHTML(SAMPLE, "ok", BT, "crypto", false);
   assert.match(h, /kept on purpose so misses stay visible/);
-  const card = h.slice(h.indexOf("ig-card ig-closed"));
-  assert.match(card, /Closed · closed under the 9-SMA/);
-  assert.match(card, /2026-09-27/);
-  assert.match(card, /exit \$151\.62/);
-  assert.match(card, /\+4\.85R/);
-  assert.match(card, /R if held/, "a closed row's r_now is not its result and must not read as 'R now'");
-  assert.ok(!/<dt>R now<\/dt>/.test(card.slice(0, card.indexOf("</article>"))));
+  const card = h.slice(h.indexOf("ig-card ig-closed"), h.indexOf("</article>", h.indexOf("ig-card ig-closed")));
+  assert.match(text(card), /Exited 27 Sep at \$151\.62, the open after a close under the 9\u2011SMA\. Best while held \+8\.52R\./);
+  assert.match(card, /<b>\+4\.85R<\/b><span>exit R<\/span>/);
+  assert.match(text(card), /Now \$103\.97; \+3\.44R had it been held\./,
+    "a closed row's r_now is not its result and must not read as 'R now'");
+  assert.ok(!/R now/.test(card));
+  assert.ok(!/since the/.test(text(card)), "a since-entry % under a closed trade reads as since the exit");
   const stop = I.triggerCardHTML(trig({ state: "CLOSED", exit_reason: "stop", exit_date: "2026-09-20",
-    exit_price: 66.4, exit_r: -1.01, exit_pending: true }), "crypto", {});
-  assert.match(stop, /stop hit/);
-  assert.match(stop, /class="is-down">-1\.01R/);
-  assert.match(stop, /exits next open/);
+    exit_price: 66.4, exit_r: -1.01 }), "crypto", {});
+  assert.match(text(stop), /Stopped out 20 Sep at \$66\.40\./);
+  assert.match(stop, /class="ig-out is-down"[^>]*><b>-1\.01R<\/b><span>exit R<\/span>/, "the caption stays one short line");
+  const trail = I.triggerCardHTML(trig({ state: "CLOSED", exit_reason: "trail", exit_date: "2026-09-29",
+    exit_price: 66.83, exit_r: -0.5, exit_pending: true }), "crypto", {});
+  assert.match(text(trail), /Closed under the 9\u2011SMA on 29 Sep at \$66\.83; the exit fills at the next open\./);
+  assert.ok(!/exits next open/.test(trail), "the pending exit is said once, in the sentence");
 });
 
 test("COILED sits in a collapsed <details> with its count; the open state survives a repaint", () => {
@@ -741,15 +916,21 @@ test("COILED sits in a collapsed <details> with its count; the open state surviv
   assert.match(I.panelHTML(SAMPLE, "ok", BT, "crypto", true), /<details class="ig-coiled" open>/);
 });
 
-test("a COILED card shows ribbon, ATR/vol percentiles, drawdown, coiled bars, breakout", () => {
-  const h = I.coiledCardHTML(coiled(), "crypto");
-  for (const s of ["Ribbon", "1.50%", "ATR pctl", "1.4", "Vol pctl", "0.3", "Drawdown", "83.8% off high",
-                   "Coiled bars", "16", "Breakout", "$68.64", "To breakout", "+5.1%", "coiled 16 bars"]) {
-    assert.ok(h.includes(s), `coiled card lost "${s}"`);
+test("a COILED row: name, cap, price → breakout at one precision, distance, bars, under high, ATR pctl", () => {
+  const h = I.coiledRowHTML(coiled({ mcap: 445e6, mcap_asof: "2026-09-29", mcap_src: "yahoo" }), "asx", "yahoo");
+  const cells = [...h.matchAll(/<td class="([\w-]+)[^"]*">([\s\S]*?)<\/td>/g)].map((m) => [m[1], text(m[2])]);
+  assert.deepEqual(cells.map((c) => c[0]), ["c-sym", "c-cap", "c-px", "c-brk", "c-gap", "c-bars", "c-dd", "c-q"]);
+  assert.deepEqual(cells.slice(1).map((c) => c[1]),
+    ["cap A$445M", "$65.32", "→ $68.64", "+5.1%", "16 bars", "84%", "1"]);
+  const tip = (/<tr class="[^"]*" title="([^"]*)"/.exec(h) || [])[1] || "";
+  for (const s of ["SMA spread 1.50%", "Volatility pctl 1.4 · volume pctl 0.3", "83.8% under its 3-year high",
+                   "Base $62.72 – $68.64 over 60 bars", "Coiled 16 bar(s) in a row"]) {
+    assert.ok(tip.includes(s), `the row tooltip lost "${s}"`);
   }
-  assert.match(I.coiledCardHTML(coiled({ coil: { coiled: false, last_coiled: "2026-09-26" } }), "crypto"),
-    /last coiled 2026-09-26/);
-  noJunk(I.coiledCardHTML({ symbol: "X", state: "COILED" }, "crypto"), "bare coiled card");
+  const ended = I.coiledRowHTML(coiled({ coil: { coiled: false, last_coiled: "2026-09-26" } }), "crypto", null);
+  assert.match(ended, /<td class="c-bars">last 26 Sep<\/td>/);
+  assert.match(ended, /class="ig-tr is-ended"/);
+  noJunk(I.coiledRowHTML({ symbol: "X", state: "COILED" }, "crypto", null), "bare coiled row");
 });
 
 test("no IGNITING rows says so in words rather than dropping the section", () => {
@@ -759,17 +940,20 @@ test("no IGNITING rows says so in words rather than dropping the section", () =>
   assert.ok(!/ig-sec-running|ig-sec-closed/.test(h), "empty RUNNING/CLOSED sections are omitted");
 });
 
-test("the REAL committed screen renders without a junk value, every row drawn", () => {
-  if (!REAL_LIVE) { console.log("     (no public/data/ignition/crypto.json — skipped)"); return; }
-  const stale = I.staleOf(REAL_LIVE, "crypto", NOW);
-  const h = I.panelHTML(REAL_LIVE, "ok", REAL_BT, "crypto", true, stale);
-  noJunkValues(h, "real panel");
-  for (const r of REAL_LIVE.results) {
-    if (I.rowRank(r)) assert.ok(h.includes(`>${I.esc(r.symbol)}</a>`), `real row ${r.symbol} not drawn`);
+test("the REAL committed screens render without a junk value, every row drawn", () => {
+  for (const [market, live, bt] of [["crypto", REAL_LIVE, REAL_BT], ["asx", REAL_ASX, null]]) {
+    if (!live) { console.log(`     (no public/data/ignition/${market}.json — skipped)`); continue; }
+    const h = I.panelHTML(live, bt ? "ok" : "absent", bt, market, true, I.staleOf(live, market, NOW));
+    noJunkValues(h, "real " + market + " panel");
+    for (const r of live.results) {
+      if (I.rowRank(r)) assert.ok(h.includes(`>${I.esc(r.symbol)}</a>`), `real row ${r.symbol} not drawn`);
+    }
+    if (live.regime && typeof live.regime.btc_above_200 === "boolean") assert.match(h, /class="ig-regime/);
+    const main = I.mainSource(live.results);
+    const want = live.results.filter((r) => typeof r.source === "string" && r.source &&
+      I.rowRank(r) && (r.state !== "COILED" || r.source !== main)).length;
+    assert.equal((h.match(/class="ig-src"/g) || []).length, want, "every card names its source; a coiled row only when unusual");
   }
-  if (REAL_LIVE.regime && typeof REAL_LIVE.regime.btc_above_200 === "boolean") assert.match(h, /class="ig-regime/);
-  const withSrc = REAL_LIVE.results.filter((r) => typeof r.source === "string" && r.source).length;
-  assert.equal((h.match(/class="ig-src"/g) || []).length, withSrc, "every row with a source shows it");
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -778,9 +962,10 @@ suite("escaping — every interpolated value goes through esc");
 test("a hostile symbol and name cannot open a tag or break an attribute", () => {
   const evil = `<img src=x onerror=alert(1)>"'&`;
   const rows = [trig({ symbol: evil, name: evil, trigger_date: evil, exit_reason: evil, source: evil,
-                       entry_basis: "next_open", entry_date: evil }),
-                trig({ symbol: evil, state: "CLOSED", exit_reason: evil, exit_date: evil }),
-                coiled({ symbol: evil, name: evil, coil: { coiled: false, last_coiled: evil } })];
+                       entry_basis: "next_open", entry_date: evil, mcap: 5e6, mcap_src: evil, mcap_asof: evil }),
+                trig({ symbol: evil, state: "CLOSED", exit_reason: evil, exit_date: evil, source: evil }),
+                coiled({ symbol: evil, name: evil, source: evil, mcap: 7e6, mcap_src: evil,
+                         coil: { coiled: false, last_coiled: evil } })];
   const p = payload(rows, undefined, { regime: { btc_above_200: true, as_of: evil } });
   p.summary.bars = { lagging: 3, expected_completed: evil, completed_dist: { [evil]: 3 } };
   p.summary.sources = { by_source: { [evil]: 3 }, dead: { [evil]: evil } };
@@ -1401,10 +1586,10 @@ test("index.html loads ignition.css and ignition.js (before app.js) and hosts th
   assert.match(HTML, /<div class="ig-panel" id="ignition-panel" hidden/);
 });
 
-test("the asset versions moved with this change (?v= floor: ignition.js/css 2, app.js 139)", () => {
+test("the asset versions moved with this change (?v= floor: ignition.js 5, ignition.css 3, app.js 139)", () => {
   const v = (re) => Number((re.exec(HTML) || [])[1] || 0);
-  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 2, "ignition.js edited without a ?v= bump");
-  assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 2, "ignition.css edited without a ?v= bump");
+  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 5, "ignition.js edited without a ?v= bump");
+  assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 3, "ignition.css edited without a ?v= bump");
   assert.ok(v(/js\/app\.js\?v=(\d+)/) >= 139, "app.js edited without a ?v= bump");
 });
 
