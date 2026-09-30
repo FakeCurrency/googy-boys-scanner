@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-09-30T12:21:56+10:00",
+  "generated_at": "2026-09-30T14:04:34+10:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "SSO",
-      "name": "State Street Spdr S&P/Asx Small Ordinaries Etf",
-      "sector": "Not Applic",
-      "dir": "SHORT",
-      "price": 14.22999954,
-      "turnover_avg20": 33339,
-      "turnover_today": 156288,
-      "rvol": 4.8,
-      "adv_usd": 33339.98,
-      "fund": true,
-      "is_product": true
-    },
     {
       "symbol": "MCY",
       "name": "Mercury Nz Limited",
