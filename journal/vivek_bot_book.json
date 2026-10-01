@@ -93,7 +93,7 @@
       "risk_usd_before": 813.53,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-01",
-      "unpriced_runs": 3
+      "unpriced_runs": 4
     },
     {
       "id": "SUL:long:1W:2026-09-17",
@@ -168,7 +168,7 @@
       "risk_usd_before": 613.3,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-01",
-      "unpriced_runs": 1
+      "unpriced_runs": 2
     },
     {
       "id": "GWA:long:1W:2026-09-17",
@@ -754,7 +754,7 @@
       "units_before": 10989.01074749,
       "risk_usd_before": 992.71,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "unpriced_runs": 4
+      "unpriced_runs": 5
     },
     {
       "id": "SNL:long:3D:2026-09-21",
@@ -919,7 +919,7 @@
       "units_before": 2155.17247882,
       "risk_usd_before": 737.43,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "unpriced_runs": 3
+      "unpriced_runs": 4
     },
     {
       "id": "EVT:long:3D:2026-09-22",
@@ -1331,7 +1331,8 @@
         "2026-10-01": 6.01999998
       },
       "unreal_r": -0.247,
-      "unreal_usd": -47.22
+      "unreal_usd": -47.22,
+      "unpriced_runs": 1
     },
     {
       "id": "ASX:long:1W:2026-09-29",
@@ -1588,7 +1589,7 @@
       },
       "unreal_r": -0.112,
       "unreal_usd": -21.61,
-      "unpriced_runs": 4
+      "unpriced_runs": 5
     },
     {
       "id": "ELD:long:3D:2026-10-01",
@@ -1778,7 +1779,7 @@
       },
       "unreal_r": 0.0,
       "unreal_usd": 0.0,
-      "unpriced_runs": 4
+      "unpriced_runs": 5
     },
     {
       "id": "PGNY:long:1W:2026-09-17",
@@ -4449,7 +4450,7 @@
       "level_tf": "3d",
       "signal_entry": 738.00195312,
       "fill_slip_bps": 206.6,
-      "last_mark": 769.84,
+      "last_mark": 767.85,
       "day_marks": {
         "2026-09-23": 787.91998291,
         "2026-09-24": 767.34997559,
@@ -4461,8 +4462,8 @@
         "2026-09-30": 758.02,
         "2026-10-01": 767.76
       },
-      "unreal_r": 0.088,
-      "unreal_usd": 51.66,
+      "unreal_r": 0.077,
+      "unreal_usd": 45.46,
       "review_before": [
         {
           "code": "heavy_risk",
@@ -13180,27 +13181,28 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -756.94,
+      "week_usd": -709.73,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
-      "week_unpriced_worst_usd": -2308.1,
-      "worst_session_usd": -3265.77,
-      "worst_week_usd": -3065.04,
+      "week_unpriced_worst_usd": -2499.05,
+      "worst_session_usd": -3409.51,
+      "worst_week_usd": -3208.78,
       "realised_usd": 0.0,
       "open_realised_usd": -6.32,
-      "unrealised_usd": -996.98,
-      "session_usd": -1003.31,
+      "unrealised_usd": -788.23,
+      "session_usd": -794.56,
       "unpriced": [
         "NIC",
         "SUL",
         "PMT",
         "NGI",
+        "YAL",
         "PPM",
         "NCK"
       ],
-      "unpriced_worst_usd": -2262.46,
+      "unpriced_worst_usd": -2614.95,
       "open": 24,
-      "open_total_usd": -842.95,
+      "open_total_usd": -793.75,
       "notified": ""
     },
     "nasdaq": {
@@ -13233,27 +13235,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 7.75,
+      "week_usd": 1.56,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 6.48,
-      "worst_week_usd": 7.75,
+      "worst_session_usd": 0.28,
+      "worst_week_usd": 1.56,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 6.48,
-      "session_usd": 6.48,
+      "unrealised_usd": 0.28,
+      "session_usd": 0.28,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 1,
-      "open_total_usd": 48.37,
+      "open_total_usd": 42.17,
       "notified": ""
     }
   },
   "summary": {
     "open": 60,
-    "unreal_usd": -2803.38,
+    "unreal_usd": -2809.58,
     "updated_day": "2026-10-01"
   },
-  "updated_at": "2026-10-01T11:24:52+00:00"
+  "updated_at": "2026-10-01T13:08:15+00:00"
 }
