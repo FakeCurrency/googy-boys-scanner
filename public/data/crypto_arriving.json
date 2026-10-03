@@ -1,11 +1,25 @@
 {
   "schema_version": 1,
   "market": "crypto",
-  "generated_at": "2026-10-02T22:21:44+00:00",
+  "generated_at": "2026-10-03T00:50:00+00:00",
   "rule": {
     "floor": 3000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "CVX",
+      "name": "Convex Finance",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 2.228,
+      "turnover_avg20": 1154467,
+      "turnover_today": 8282377,
+      "rvol": 3.2,
+      "adv_usd": 1154467.03,
+      "fund": false,
+      "is_product": false
+    }
+  ]
 }
