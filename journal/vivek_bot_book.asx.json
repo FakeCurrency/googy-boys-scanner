@@ -167,7 +167,8 @@
       "units_before": 395.56960961,
       "risk_usd_before": 613.3,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "stale_pinged": "2026-10-01"
+      "stale_pinged": "2026-10-01",
+      "unpriced_runs": 1
     },
     {
       "id": "GWA:long:1W:2026-09-17",
@@ -681,7 +682,7 @@
       "units_before": 10989.01074749,
       "risk_usd_before": 992.71,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "SNL:long:3D:2026-09-21",
@@ -754,7 +755,8 @@
       "notional_before": 5000.0,
       "units_before": 144.96954933,
       "risk_usd_before": 607.93,
-      "resized_at": "2026-09-28T04:03:28+00:00"
+      "resized_at": "2026-09-28T04:03:28+00:00",
+      "unpriced_runs": 1
     },
     {
       "id": "NGI:long:3D:2026-09-21",
@@ -846,7 +848,7 @@
       "units_before": 2155.17247882,
       "risk_usd_before": 737.43,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "EVT:long:3D:2026-09-22",
@@ -1209,7 +1211,7 @@
       },
       "unreal_r": 0.072,
       "unreal_usd": 8.17,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "YAL:long:3D:2026-09-29",
@@ -1274,7 +1276,8 @@
         "2026-10-04": 5.71000004
       },
       "unreal_r": 0.039,
-      "unreal_usd": 7.46
+      "unreal_usd": 7.46,
+      "unpriced_runs": 1
     },
     {
       "id": "ASX:long:1W:2026-09-29",
@@ -1479,7 +1482,7 @@
       },
       "unreal_r": -0.212,
       "unreal_usd": -39.12,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "PPM:long:3D:2026-09-30",
@@ -1544,7 +1547,7 @@
       },
       "unreal_r": -0.075,
       "unreal_usd": -14.41,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "ELD:long:3D:2026-10-01",
@@ -1743,7 +1746,7 @@
       },
       "unreal_r": 0.176,
       "unreal_usd": 58.81,
-      "unpriced_runs": 1
+      "unpriced_runs": 2
     },
     {
       "id": "JBH:long:1W:2026-10-02",
@@ -5614,27 +5617,30 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -163.5,
+      "week_usd": -378.65,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
-      "week_unpriced_worst_usd": -1613.29,
-      "worst_session_usd": -1461.92,
-      "worst_week_usd": -1776.79,
+      "week_unpriced_worst_usd": -2346.1,
+      "worst_session_usd": -2409.86,
+      "worst_week_usd": -2724.75,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
       "unrealised_usd": -0.0,
       "session_usd": -0.0,
       "unpriced": [
+        "SUL",
         "PMT",
+        "SNL",
         "NGI",
         "ORG",
+        "YAL",
         "NAB",
         "PPM",
         "NCK"
       ],
-      "unpriced_worst_usd": -1461.92,
+      "unpriced_worst_usd": -2409.86,
       "open": 24,
-      "open_total_usd": -236.29,
+      "open_total_usd": -377.18,
       "notified": ""
     }
   },
@@ -5643,5 +5649,5 @@
     "unreal_usd": -430.92,
     "updated_day": "2026-10-04"
   },
-  "updated_at": "2026-10-04T02:42:29+00:00"
+  "updated_at": "2026-10-04T04:23:30+00:00"
 }
