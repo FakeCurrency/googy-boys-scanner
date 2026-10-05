@@ -15,7 +15,7 @@
  * calling it twice is a harmless no-op, and GitHub's own late cron becomes a
  * no-op once this has delivered — no duplicate for the reader. The script
  * also waits (marking nothing) until the market's committed scan is a
- * POST-CLOSE one and that market's session is no longer running
+ * POST-CLOSE one and the session that slot owes is no longer running
  * (config.MORNING_PLAYS_SLOT_GATE), so schedule the pinger as a LADDER of
  * attempts after the close scans, not one wall-clock ping: the first attempt
  * that finds post-close data sends, the per-day marker silences the rest. (A

@@ -344,6 +344,13 @@ def slot_markets(now_local: dt.datetime, force: bool):
     return tuple(slot) if slot else None
 
 
+def _slot_floor(slot_name: str, now_local: dt.datetime) -> dt.datetime:
+    """The slot's floor (config.MORNING_PLAYS_SLOTS) on `now_local`'s own date."""
+    slot = config.MORNING_PLAYS_SLOTS[slot_name]
+    return now_local.replace(hour=int(slot["hour"]), minute=int(slot.get("minute", 0)),
+                             second=0, microsecond=0)
+
+
 def slot_due(slot_name: str, now_local: dt.datetime, slots_sent: dict[str, str]):
     """(due, reason) for a named slot on this run.
 
@@ -352,10 +359,7 @@ def slot_due(slot_name: str, now_local: dt.datetime, slots_sent: dict[str, str])
     send; the per-day marker is what stops the slot's other DST cron (or any
     repeat run) from double-sending. reason is for the log: before / done / due.
     """
-    slot = config.MORNING_PLAYS_SLOTS[slot_name]
-    target = now_local.replace(hour=int(slot["hour"]), minute=int(slot.get("minute", 0)),
-                               second=0, microsecond=0)
-    if now_local < target:
+    if now_local < _slot_floor(slot_name, now_local):
         return False, "before"                       # too early (wrong-DST early cron)
     if slots_sent.get(slot_name) == now_local.date().isoformat():
         return False, "done"                         # already sent today
@@ -375,8 +379,8 @@ def latest_close(gate: dict, now_utc: dt.datetime) -> dt.datetime:
     back to Friday's too. (A holiday Monday reads as a Monday close -- scan.yml
     still runs and stamps a Monday generated_at, so the gate passes; harmless.)
     Before today's close this is the PREVIOUS session's close, so it only means
-    "the close this slot owes" while the market is shut -- scan_is_post_close
-    refuses first while today's session is still running (session_in_progress).
+    "the close this slot owes" once that session is over -- scan_is_post_close
+    refuses first while the owed session is still running (session_in_progress).
     """
     local = now_utc.astimezone(ZoneInfo(gate["tz"]))
     close = _close_on(local, gate)
@@ -387,31 +391,41 @@ def latest_close(gate: dict, now_utc: dt.datetime) -> dt.datetime:
     return close
 
 
-def session_in_progress(gate: dict, now_utc: dt.datetime) -> bool:
-    """True while the gated market's session TODAY is still running: a weekday,
-    at/after its open (config.VIVEK_JOURNAL_SESSION) and before today's close gate.
+def session_in_progress(slot_name: str, now_utc: dt.datetime) -> bool:
+    """True while the session this slot OWES is still running: a weekday in the
+    gated market's zone, at/after its open (config.VIVEK_JOURNAL_SESSION), before
+    today's close gate, and opened at/before the slot's floor on today's
+    Melbourne date.
 
     Without this the gate compared a mid-session scan with YESTERDAY's close and
     passed it: under AEDT+EST the 20:15 UTC ladder rung is 07:15 Melbourne (past
     the 06:30 floor) but 15:15 New York, so the US digest went out on a
     mid-session list and marked itself done before the post-close scan landed.
-    A market with no session table entry (24/7) is never "in progress".
+
+    A session that opened AFTER the floor belongs to TOMORROW's slot: under
+    AEST+EDT, 23:30-23:59 Melbourne is 09:30-09:59 New York on the same date,
+    and tonight's slot still owes the previous, closed session.
+    An ungated slot or a market with no session table entry (24/7) is never
+    "in progress".
     """
-    session = config.VIVEK_JOURNAL_SESSION.get(gate["market"])
+    gate = config.MORNING_PLAYS_SLOT_GATE.get(slot_name) or {}
+    session = config.VIVEK_JOURNAL_SESSION.get(gate.get("market"))
     if not session:
         return False
     local = now_utc.astimezone(ZoneInfo(gate["tz"]))
     opened = local.replace(hour=int(session[0]), minute=int(session[1]),
                            second=0, microsecond=0)
-    return local.weekday() < 5 and opened <= local < _close_on(local, gate)
+    floor = _slot_floor(slot_name, now_utc.astimezone(ZoneInfo(config.MORNING_PLAYS_TZ)))
+    return (local.weekday() < 5 and opened <= floor
+            and opened <= local < _close_on(local, gate))
 
 
 def scan_is_post_close(slot_name: str, generated_at: str | None,
                        now_utc: dt.datetime) -> tuple[bool, str]:
     """(ok, why): may this slot send off a scan stamped `generated_at`?
 
-    ok iff the gating market's session today is NOT still in progress AND the
-    scan was generated AT/AFTER its latest weekday close
+    ok iff the session this slot owes is NOT still in progress AND the scan was
+    generated AT/AFTER the gating market's latest weekday close
     (config.MORNING_PLAYS_SLOT_GATE). A slot with no gate is always ok.
     No / unreadable timestamp is NOT ok: sending a mid-session list because the
     stamp was missing is the exact failure the gate exists to stop.
@@ -419,7 +433,7 @@ def scan_is_post_close(slot_name: str, generated_at: str | None,
     gate = config.MORNING_PLAYS_SLOT_GATE.get(slot_name)
     if not gate:
         return True, "ungated"
-    if session_in_progress(gate, now_utc):
+    if session_in_progress(slot_name, now_utc):
         local = now_utc.astimezone(ZoneInfo(gate["tz"]))
         return False, (f"{gate['market']} session in progress ({local:%a %H:%M} "
                        f"{gate['tz']}, close gate {_close_on(local, gate):%H:%M})")
