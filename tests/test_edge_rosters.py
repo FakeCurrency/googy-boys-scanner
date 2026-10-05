@@ -105,6 +105,55 @@ def test_roster_returns_stamp_and_freeze_via_the_shared_machinery():
     assert abs(led["entries"][0]["fwd"]["5"] - 0.05) < 1e-9
 
 
+def test_the_roster_never_freezes_a_forming_bar_either():
+    """2026-10-05: the roster ledger stamps through the SAME ar.stamp, so the
+    completed-bars guard covers it - an ASX A+ row from Friday 2026-10-02 is
+    not stamped off Monday's forming bar at 12:03 Monday Sydney (AEDT)."""
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    led = er._fresh()
+    led["entries"].append({"market": "asx", "ticker": "BHP", "side": "long",
+                           "base_day": "2026-10-02", "base_close": None,
+                           "fwd": {str(h): None for h in er.HORIZONS}})
+    idx = pd.to_datetime(["2026-10-01", "2026-10-02", "2026-10-05"])
+    frames = {"BHP.AX": pd.DataFrame({"Close": [99.0, 100.0, 104.0]}, index=idx)}
+    syd = ZoneInfo("Australia/Sydney")
+    midday = dt.datetime(2026, 10, 5, 12, 3, tzinfo=syd).astimezone(dt.timezone.utc)
+    want = er.ar.wanting_prices(led, midday.date())
+    assert "BHP.AX" in want
+    er.ar.stamp(led, frames, want, midday)
+    assert led["entries"][0]["base_close"] == 100.0 and led["entries"][0]["fwd"]["1"] is None
+    evening = dt.datetime(2026, 10, 5, 17, 0, tzinfo=syd).astimezone(dt.timezone.utc)
+    er.ar.stamp(led, frames, want, evening)
+    assert led["entries"][0]["fwd"]["1"] == 0.04
+
+
+def test_main_hands_stamp_a_clock_taken_before_the_download(tmp_path, monkeypatch):
+    import time
+    import scanner.data
+    ledger = tmp_path / "rosters.json"
+    ledger.write_text(json.dumps({"schema_version": 1, "updated_at": "", "entries": [
+        {"key": "k", "market": "asx", "ticker": "BHP", "side": "long", "base_day": "2026-08-03",
+         "base_close": None, "fwd": {str(h): None for h in er.HORIZONS}}]}), encoding="utf-8")
+    monkeypatch.setattr(er, "LEDGER", str(ledger))
+    monkeypatch.setattr(er, "ROOT", str(tmp_path))      # no scans: nothing ingested
+    seen = {}
+
+    def download(syms, period=None):
+        seen["asked"] = time.time()
+        return {}
+
+    def stamp(led, frames, want, now=None):
+        seen["now"] = now
+        return 0
+
+    monkeypatch.setattr(scanner.data, "download", download)
+    monkeypatch.setattr(er.ar, "stamp", stamp)
+    assert er.main(["--dry-run"]) == 0
+    assert seen["now"] is not None and seen["now"].tzinfo is not None, "ar.stamp got no clock"
+    assert seen["now"].timestamp() <= seen["asked"]
+
+
 def test_trim_uses_the_roster_cap_and_never_drops_unmatured(monkeypatch):
     led = er._fresh()
     for i in range(4):

@@ -1126,6 +1126,18 @@ ALERT_RETURNS_HORIZONS = (1, 5, 10, 20)   # 1-session added 2026-08-20: the
 # entry would silently un-measure the feature). ~57 alignments/day today, so
 # 20,000 is roughly a year of memory.
 ALERT_RETURNS_CAP = 20000
+# FORWARD-RETURN BAR FINALITY (2026-10-05). A return is FROZEN at first
+# measurement, so stamp() may only read a daily bar whose close is final.
+# Yahoo's daily series carries the session's still-forming bar while it trades,
+# and the ledger runs land late (00:00-03:00 UTC), inside the ASX session in
+# AEST and AEDT alike, so ASX horizons were frozen at a late-morning price.
+# Market-local (hour, minute) from which TODAY's bar counts as final: the
+# closing print (ASX auction ~16:10-16:12, the NASDAQ closing cross by 16:00:xx)
+# plus the ~15-20 min delayed feed, rounded up. Read in MARKETS[m].timezone, so
+# DST on either side needs no handling. A market with no entry trades 24/7
+# (crypto, UTC daily bars): its today's bar is NEVER final. Later is always
+# safe; the only cost is a stamp waiting for the next daily run.
+ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": (16, 30)}
 # Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
 # single-lens BASELINE cohort, stamped with the same forward returns on the
 # same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps

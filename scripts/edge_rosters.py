@@ -127,13 +127,16 @@ def main(argv=None) -> int:
     ledger = load_ledger()
     added = ingest_today(ledger)
 
-    today = dt.datetime.now(dt.timezone.utc).date()
+    # Taken BEFORE the download: a bar is judged final against the clock
+    # when the prices were asked for, never a later one.
+    now = dt.datetime.now(dt.timezone.utc)
+    today = now.date()
     want = ar.wanting_prices(ledger, today)
     stamped = 0
     if want:
         from scanner.data import download
         frames = download(sorted(want), period="3mo")
-        stamped = ar.stamp(ledger, frames, want)
+        stamped = ar.stamp(ledger, frames, want, now)
     dropped = ar.trim(ledger, cap=CAP)
 
     entries = ledger["entries"]

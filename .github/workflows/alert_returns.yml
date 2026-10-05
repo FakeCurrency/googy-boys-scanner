@@ -31,19 +31,17 @@ on:
     # firing ENTIRELY — no run of any conclusion — in the same 21:00–23:00
     # window that dropped backup_book's cron and delayed evidence_brief 3h
     # (same class as the documented 2026-07-24 / 2026-07-30 drops). The gate
-    # step skips this cron when a scheduled run already SUCCEEDED today, so a
-    # healthy scheduler costs zero extra Yahoo walks and a ghosted 22:20 is
-    # healed within 90 minutes instead of leaving the ledgers a day stale.
+    # step skips this cron when a pass has already LANDED on main since this
+    # slot opened (22:00 UTC), so a healthy scheduler costs no extra Yahoo walk
+    # and a ghosted 22:20 is healed the same night instead of leaving the
+    # ledgers a day stale.
     - cron: "50 23 * * *"
   workflow_dispatch: {}
 
 permissions:
+  # No `actions: read` (2026-10-05): the backstop gate reads the ledgers on
+  # main, not the Actions API -- the gate step says why.
   contents: write
-  # The backstop gate asks the Actions API whether today's scheduled run
-  # already succeeded — read-only, and the only honest signal on a shallow
-  # checkout (git log can't see past the tip, and artefact timestamps go
-  # quiet on legitimately-unchanged days).
-  actions: read
 
 jobs:
   returns:
@@ -52,26 +50,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The backstop cron's freshness gate. Fail-OPEN: an unreadable API
-      # answer reads as "no run today" and the backstop runs — every script
-      # below is idempotent and the commit step already skips on the
-      # *_UNCHANGED sentinels, so a redundant pass costs minutes, while a
-      # skipped needed pass is the exact hole the backstop exists to close.
+      # The backstop cron's freshness gate: has a pass LANDED ON MAIN since
+      # this backstop's slot opened? The slot is the most recent 22:00 UTC
+      # (the primary fires 22:20), NOT the UTC calendar date: the scheduler
+      # runs both crons hours late, so the previous slot's runs land after
+      # 00:00 UTC, and a calendar-date check paired an on-time 23:50 with
+      # YESTERDAY's late runs and skipped a day whose 22:20 never ran
+      # (2026-10-05 audit). The evidence is the ledgers' own updated_at on a
+      # FRESH fetch of main (a run that sat queued was created at an older
+      # SHA). Only a pass that did the work AND pushed can write it, so a
+      # backstop skip-run, or a run that failed before its push, can never
+      # count as a pass -- both read as "scheduled success" to the Actions API.
+      # Fail-OPEN: an unreadable ledger reads as "no pass yet" and the backstop
+      # runs. Every script below is idempotent and the commit step skips on
+      # the *_UNCHANGED sentinels, so a redundant pass costs minutes (the one
+      # case this cannot see: a pass that legitimately changed nothing), while
+      # a skipped needed pass is the exact hole the backstop exists to close.
       - id: gate
         name: Backstop freshness gate
         env:
           SCHEDULE: ${{ github.event.schedule }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "$SCHEDULE" = "50 23 * * *" ]; then
-            TODAY=$(date -u +%Y-%m-%d)
-            N=$(curl -sS -m 20 -H "Authorization: Bearer ${GH_TOKEN}"               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/alert_returns.yml/runs?event=schedule&status=success&created=%3E%3D${TODAY}&per_page=5"               | python3 -c "import json,sys; print(len(json.load(sys.stdin).get('workflow_runs', [])))" 2>/dev/null) || N=0
-            echo "backstop 23:50 - successful scheduled runs today: ${N:-0}"
-            if [ "${N:-0}" -gt 0 ] 2>/dev/null; then
-              echo "The 22:20 run already landed. Skipping."
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+          if [ "${SCHEDULE:-}" != "50 23 * * *" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NOW=$(date -u +%s)
+          SLOT=$(( NOW - (NOW - 22 * 3600) % 86400 ))   # the most recent 22:00 UTC
+          git fetch --quiet --depth=1 origin main || true
+          LANDED=0
+          for p in data/alert_forward_returns.json data/edge_rosters.json; do
+            T=$(git show "origin/main:$p" 2>/dev/null \
+              | python3 -c "import datetime as d,json,sys; print(int(d.datetime.fromisoformat(json.load(sys.stdin)['updated_at']).timestamp()))" 2>/dev/null) || T=0
+            if [ "${T:-0}" -gt "$LANDED" ] 2>/dev/null; then LANDED=$T; fi
+          done
+          SEEN=never
+          if [ "$LANDED" -gt 0 ]; then SEEN=$(date -u -d "@$LANDED" '+%Y-%m-%d %H:%M UTC'); fi
+          echo "backstop 23:50 - slot opened $(date -u -d "@$SLOT" '+%Y-%m-%d %H:%M UTC'); newest ledger write on main: $SEEN"
+          if [ "$LANDED" -ge "$SLOT" ]; then
+            echo "A pass already landed on main since the 22:00 UTC slot opened. Skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           echo "run=true" >> "$GITHUB_OUTPUT"
 

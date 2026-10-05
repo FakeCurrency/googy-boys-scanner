@@ -33,7 +33,9 @@ RETURNS ARE RAW, UNSIGNED moves: close[base + N sessions] / close[base] - 1,
 where base is the alert session's own close in the market's calendar. Sign at
 analysis time - a SHORT alert's edge is a NEGATIVE forward return. A ticker
 Yahoo does not return today is left unstamped and retried next run: never 0,
-never a guess.
+never a guess. COMPLETED BARS ONLY (2026-10-05): Yahoo's daily series carries
+the session's still-forming bar, and a stamp is frozen, so a bar that may still
+be forming (final_bar_cutoff) is never read as a base or a horizon.
 
 Prints ALERT_RETURNS_UNCHANGED when the run changed nothing, so the workflow
 skips its commit - the reco_note pattern; a quiet day is a legitimate no-op,
@@ -237,13 +239,34 @@ def wanting_prices(ledger: dict, today: dt.date) -> dict:
     return want
 
 
-def stamp(ledger: dict, frames: dict, want: dict) -> int:
+def final_bar_cutoff(market: str, now: dt.datetime) -> dt.date:
+    """The first bar date that may still be FORMING for `market` at `now`
+    (an aware datetime); stamp() reads only bars dated before it.
+
+    Judged in the market's own zone: today's bar is final once the local clock
+    reaches config.ALERT_RETURNS_BAR_FINAL (closing print + delayed feed), so
+    the cutoff moves to tomorrow; before that it is today. A market with no
+    entry trades 24/7 (crypto, UTC daily bars), so its today's bar is never
+    final. An unknown market reads as UTC and 24/7: the strict answer."""
+    tz = config.MARKETS[market].timezone if market in config.MARKETS else "UTC"
+    local = now.astimezone(ZoneInfo(tz))
+    final = config.ALERT_RETURNS_BAR_FINAL.get(market)
+    if final is not None and (local.hour, local.minute) >= tuple(final):
+        return local.date() + dt.timedelta(days=1)
+    return local.date()
+
+
+def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None) -> int:
     """Fill matured horizons from downloaded daily bars. Returns stamps made.
 
     base = the first bar ON or AFTER base_day (an alert fires during its own
     session, so this is normally that session's close); horizon N = the close
-    N bars later. A missing frame or a not-yet-existing bar leaves the horizon
-    None for the next run."""
+    N bars later. Only COMPLETED bars count: a bar dated on/after
+    final_bar_cutoff(market, now) may still be forming, and a base or horizon
+    read from it would freeze an intraday price for good. A missing frame, a
+    not-yet-existing bar or a still-forming one leaves the horizon None for
+    the next run."""
+    now = now or dt.datetime.now(dt.timezone.utc)
     stamped = 0
     for sym, entries in want.items():
         df = frames.get(sym)
@@ -256,7 +279,9 @@ def stamp(ledger: dict, frames: dict, want: dict) -> int:
                 base_day = dt.date.fromisoformat(e["base_day"])
             except (KeyError, ValueError):
                 continue
-            bi = next((i for i, d in enumerate(days) if d >= base_day), None)
+            cutoff = final_bar_cutoff(e.get("market", ""), now)
+            done = sum(1 for d in days if d < cutoff)    # bars are date-ascending
+            bi = next((i for i, d in enumerate(days[:done]) if d >= base_day), None)
             if bi is None:
                 continue
             base_close = float(closes.iloc[bi])
@@ -269,7 +294,7 @@ def stamp(ledger: dict, frames: dict, want: dict) -> int:
                 key = str(h)
                 if e["fwd"].get(key) is not None:
                     continue                       # frozen at first measurement
-                if bi + h < len(days):
+                if bi + h < done:
                     e["fwd"][key] = round(float(closes.iloc[bi + h]) / base_close - 1.0, 6)
                     stamped += 1
     return stamped
@@ -306,13 +331,16 @@ def main(argv=None) -> int:
     added = ingest(ledger, hist)
     enriched = enrich(ledger)
 
-    today = dt.datetime.now(dt.timezone.utc).date()
+    # Taken BEFORE the download: a bar is judged final against the clock
+    # when the prices were asked for, never a later one.
+    now = dt.datetime.now(dt.timezone.utc)
+    today = now.date()
     want = wanting_prices(ledger, today)
     stamped = 0
     if want:
         from scanner.data import download
         frames = download(sorted(want), period="3mo")
-        stamped = stamp(ledger, frames, want)
+        stamped = stamp(ledger, frames, want, now)
     dropped = trim(ledger)
 
     entries = ledger["entries"]
