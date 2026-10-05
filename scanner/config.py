@@ -1504,23 +1504,35 @@ MORNING_PLAYS_SLOTS = {
 # close -- the 2026-09-11 06:35 US digest ran on time and read a 1:43pm New York
 # MID-SESSION scan (the post-close scan committed at 07:06 Melbourne), so it
 # missed the three names that set up in the last hours of trade and posted
-# "nothing new". Keyed on the payload's own `generated_at` in the market's own
-# zone, so DST on either side is irrelevant. Before the gate passes the run is a
+# "nothing new". Keyed on the payload's own `generated_at` and the clock, both
+# read in the market's own zone (never a fixed UTC offset -- the two sides
+# change DST on different dates). Before the gate passes the run is a
 # silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
 # cron-job.org jobs are a ladder of attempts every 30 min after the close, and
 # the first post-close one sends (the per-day marker silences the rest).
 #   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
-#                            is pre-close. scan.yml's 05:07 UTC cron generates
-#                            ~16:0x-16:28 AEST; its 06:37 UTC closing cron ~17:4x.
+#                            is pre-close. scan.yml's last hourly ASX scan is
+#                            16:07 Sydney (refused); its CLOSING scan is 16:30
+#                            Sydney in either regime (05:30 UTC under AEDT, 06:30
+#                            under AEST), stamped when that run actually starts.
 #   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
-#                            16:00:xx. NOT 16:15: scan.yml's LAST NASDAQ cron is
-#                            21:07 UTC, which is 16:07 New York under EST, so a
-#                            later gate would refuse every winter session's only
-#                            post-close scan and the US digest would never send
-#                            Nov-Mar. Under EDT the 20:07 UTC hourly (16:07 NY)
-#                            passes too and the digest lands an hour earlier.
+#                            16:00:xx. NOT 16:15: scan.yml's only post-close
+#                            NASDAQ scan is its hourly at 16:07 New York (20:07
+#                            UTC under EDT, 21:07 UTC under EST -- the 16:45
+#                            window shuts the next hourly out), so a later gate
+#                            would refuse every session's one post-close scan
+#                            and the US digest would never send.
+# SESSION IN PROGRESS (2026-10-05). Before today's close the "latest close" is
+# YESTERDAY's, so any scan from earlier in today's session used to pass. Under
+# AEDT+EST the US slot's 06:30 Melbourne floor is 14:30 New York and the
+# ladder's 20:15/20:45 UTC rungs are 15:15/15:45 New York -- the digest went out
+# mid-session and marked itself done. So the gate also refuses while the gated
+# market is on a weekday between its OPEN (VIVEK_JOURNAL_SESSION, the canonical
+# session table: ASX 10:00 Sydney, NASDAQ 09:30 New York) and the close above.
+# The ASX slot's 16:30 floor is always past 16:12 Sydney (Melbourne and Sydney
+# share their DST dates), so that half never bites the ASX in practice.
 # crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
-# gate reads (`<market>_vivek.json`'s generated_at).
+# gate reads (`<market>_vivek.json`'s generated_at) and the session it waits on.
 MORNING_PLAYS_SLOT_GATE = {
     "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},

@@ -475,8 +475,6 @@ def test_a_dry_run_never_posts_and_records_nothing(tmp_path, monkeypatch):
 # York MID-SESSION scan and missed MDLZ/ASO/SWKS, which only set up in the last
 # hours of trade. A slot now waits for a scan GENERATED after the session close.
 
-NY = dt.timezone(dt.timedelta(hours=-4))          # EDT, the offset the real payload carried
-
 
 def test_latest_close_is_the_most_recent_weekday_close():
     gate = config.MORNING_PLAYS_SLOT_GATE["us"]
@@ -577,6 +575,164 @@ def test_force_and_dry_run_ignore_the_gate(tmp_path, monkeypatch):
     assert mp.main(["--force", "--data-dir", data_dir, "--seen-file", _seen(tmp_path)],
                    now=at_0635) == 0
     assert posts and "MDLZ" in posts[0], "--force is a manual test and sends what is there"
+
+
+# ── session in progress (2026-10-05) ────────────────────────────────────────
+# Before today's close, latest_close() is YESTERDAY's close, so a scan from
+# earlier in today's session passed the gate. Under AEDT+EST (2026-11-02 ..
+# 2027-03-12) the ladder's 20:15/20:45 UTC rungs are 07:15/07:45 Melbourne --
+# past the 06:30 floor -- but 15:15/15:45 New York, still trading: the US digest
+# went out on a mid-session list and marked itself done before the post-close
+# scan landed. These run on the REAL Melbourne clock (no _utc_tz), and every
+# local instant is built with zoneinfo, never a fixed offset.
+
+NEW_YORK = ZoneInfo(config.MORNING_PLAYS_SLOT_GATE["us"]["tz"])
+SYDNEY = ZoneInfo(config.MORNING_PLAYS_SLOT_GATE["asx"]["tz"])
+MELBOURNE = ZoneInfo(config.MORNING_PLAYS_TZ)
+
+
+def _at(tz, *when):
+    return dt.datetime(*when, tzinfo=tz)
+
+
+def _utc(*when):
+    return dt.datetime(*when, tzinfo=dt.timezone.utc)
+
+
+def _fake_discord(monkeypatch):
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    return posts
+
+
+def _run_slot(tmp_path, slot, now, market, stamp, symbols):
+    """main() --slot <slot> at `now`, with <market>'s scan stamped `stamp`."""
+    d = tmp_path / "public" / "data"
+    if not d.exists():
+        _fixtures(tmp_path)
+    (d / f"{market}_vivek.json").write_text(json.dumps({
+        "generated_at": stamp.isoformat(),
+        "results": [_row(s, grade="A+") for s in symbols]}))
+    return mp.main(["--slot", slot, "--data-dir", str(d), "--seen-file", _seen(tmp_path)],
+                   now=now)
+
+
+def test_the_winter_ladder_waits_out_the_session_then_sends_the_post_close_list(
+        tmp_path, monkeypatch, capsys):
+    """2026-11-02, the first AEDT+EST weekday: the 20:15Z and 20:45Z rungs find a
+    Mon 14:48 EST scan; both must post nothing and mark nothing, so the 21:45Z
+    rung delivers the 16:07 EST post-close list, late setups included."""
+    posts = _fake_discord(monkeypatch)
+    mid = _at(NEW_YORK, 2026, 11, 2, 14, 48)
+    for rung in (_utc(2026, 11, 2, 20, 15), _utc(2026, 11, 2, 20, 45)):
+        assert rung.astimezone(MELBOURNE) >= _at(MELBOURNE, 2026, 11, 3, 6, 30), \
+            "the rung is past the US floor, so only the data gate can hold it"
+        assert _run_slot(tmp_path, "us", rung, "nasdaq", mid, ["EARLY"]) == 0
+    assert not posts, "a mid-session NASDAQ list must not go out as the digest"
+    assert mp.load_state(_seen(tmp_path))["slots"].get("us") is None, "nothing marked -> retried"
+    assert "session in progress" in capsys.readouterr().out
+
+    post_close = _at(NEW_YORK, 2026, 11, 2, 16, 7, 30)
+    assert _run_slot(tmp_path, "us", _utc(2026, 11, 2, 21, 45), "nasdaq", post_close,
+                     ["EARLY", "LATEBREAK"]) == 0
+    assert len(posts) == 1 and "EARLY" in posts[0] and "LATEBREAK" in posts[0]
+    assert mp.load_state(_seen(tmp_path))["slots"].get("us") == "2026-11-03"
+
+
+def test_the_winter_20_15z_rung_does_not_resend_fridays_list_on_a_monday(
+        tmp_path, monkeypatch, capsys):
+    """With no Monday scan committed yet, Friday's post-close stamp is past the
+    'latest close' (Friday's) -- it used to re-post Friday and bury Monday."""
+    posts = _fake_discord(monkeypatch)
+    friday = _at(NEW_YORK, 2026, 10, 30, 16, 7, 30)               # still EDT that day
+    assert _run_slot(tmp_path, "us", _utc(2026, 11, 2, 20, 15), "nasdaq", friday,
+                     ["FRI"]) == 0
+    assert not posts
+    assert mp.load_state(_seen(tmp_path))["slots"].get("us") is None
+    assert "session in progress" in capsys.readouterr().out
+
+
+def test_the_gate_refuses_while_new_york_trades_in_either_regime():
+    # AEDT+EST: the 20:15 / 20:45 UTC rungs, and the bell-to-gate gap at 16:02
+    for now in (_utc(2026, 11, 2, 20, 15), _utc(2026, 11, 2, 20, 45),
+                _utc(2026, 11, 2, 21, 2)):
+        for stamp in (_at(NEW_YORK, 2026, 11, 2, 14, 48), _at(NEW_YORK, 2026, 10, 30, 16, 7)):
+            ok, why = mp.scan_is_post_close("us", stamp.isoformat(), now)
+            assert ok is False and "session in progress" in why, (now, stamp)
+    # AEDT+EDT (live today): 06:45 Melbourne is 15:45 New York -- the latent window
+    now = _utc(2026, 10, 5, 19, 45)
+    assert now.astimezone(MELBOURNE).strftime("%a %H:%M") == "Tue 06:45"
+    ok, why = mp.scan_is_post_close("us", _at(NEW_YORK, 2026, 10, 5, 14, 48).isoformat(), now)
+    assert ok is False and "session in progress" in why
+    # the winter post-close scan still passes once the session is over
+    ok, _ = mp.scan_is_post_close("us", _at(NEW_YORK, 2026, 11, 2, 16, 7, 30).isoformat(),
+                                  _utc(2026, 11, 2, 21, 45))
+    assert ok is True
+
+
+@pytest.mark.parametrize("day", [dt.date(2026, 10, 5),       # AEDT+EDT
+                                 dt.date(2026, 11, 2),       # AEDT+EST, first day
+                                 dt.date(2026, 12, 18),      # AEDT+EST, a Friday
+                                 dt.date(2027, 4, 7)])       # AEST+EDT
+def test_a_mid_session_scan_never_passes_the_gate_for_its_own_session(day):
+    """Property: a NASDAQ scan stamped an hour after the open can never be the
+    digest, at any minute from its stamp to the next day's open."""
+    open_h, open_m = config.VIVEK_JOURNAL_SESSION["nasdaq"][:2]
+    stamp = _at(NEW_YORK, day.year, day.month, day.day, open_h, open_m) + dt.timedelta(hours=1)
+    now = stamp.astimezone(dt.timezone.utc)
+    while now < stamp + dt.timedelta(hours=23):
+        ok, why = mp.scan_is_post_close("us", stamp.isoformat(), now)
+        assert ok is False, f"{now.astimezone(NEW_YORK):%a %H:%M %Z}: {why}"
+        now += dt.timedelta(minutes=5)
+
+
+def test_the_session_open_comes_from_the_canonical_session_table(monkeypatch):
+    now = _utc(2026, 11, 2, 20, 15)                                # 15:15 EST
+    friday = _at(NEW_YORK, 2026, 10, 30, 16, 7).isoformat()
+    assert mp.scan_is_post_close("us", friday, now)[0] is False
+    monkeypatch.setitem(config.VIVEK_JOURNAL_SESSION, "nasdaq", (15, 30, 16, 0))
+    assert mp.scan_is_post_close("us", friday, now)[0] is True, \
+        "before a (patched) 15:30 open the previous close is the one owed"
+
+
+def test_edt_on_time_delivery_is_unchanged(tmp_path, monkeypatch):
+    """AEDT+EDT: the first US rung (20:15Z = 16:15 EDT) is after the close and
+    after the 16:07 post-close scan -- it still delivers on time."""
+    posts = _fake_discord(monkeypatch)
+    now = _utc(2026, 10, 5, 20, 15)
+    assert mp.scan_is_post_close("us", _at(NEW_YORK, 2026, 10, 5, 14, 48).isoformat(),
+                                 now)[1].startswith("nasdaq scan Mon 14:48 predates")
+    assert _run_slot(tmp_path, "us", now, "nasdaq", _at(NEW_YORK, 2026, 10, 5, 16, 7, 30),
+                     ["EDTNAME"]) == 0
+    assert len(posts) == 1 and "EDTNAME" in posts[0]
+    assert mp.load_state(_seen(tmp_path))["slots"].get("us") == "2026-10-06"
+
+
+@pytest.mark.parametrize("day", [dt.date(2026, 9, 16), dt.date(2026, 10, 5)])   # AEST, AEDT
+def test_the_asx_slot_is_unchanged_its_floor_is_always_after_the_sydney_close(
+        day, tmp_path, monkeypatch):
+    """The ASX slot's 16:30 Melbourne floor is always past 16:12 Sydney (the two
+    zones share DST dates), so 'session in progress' can never hold it: same
+    verdicts as before at every minute it is due, and the 16:30 closing scan
+    still sends."""
+    gate = config.MORNING_PLAYS_SLOT_GATE["asx"]
+    floor = _at(MELBOURNE, day.year, day.month, day.day, config.MORNING_PLAYS_SLOTS["asx"]["hour"],
+                config.MORNING_PLAYS_SLOTS["asx"]["minute"])
+    now = floor
+    while now.date() == day:
+        assert mp.session_in_progress(gate, now.astimezone(dt.timezone.utc)) is False, now
+        now += dt.timedelta(minutes=5)
+    after = (floor + dt.timedelta(minutes=20)).astimezone(dt.timezone.utc)
+    pre_auction = _at(SYDNEY, day.year, day.month, day.day, 16, 7, 30)
+    ok, why = mp.scan_is_post_close("asx", pre_auction.isoformat(), after)
+    assert ok is False and "predates" in why
+    posts = _fake_discord(monkeypatch)
+    closing = _at(SYDNEY, day.year, day.month, day.day, 16, 30, 40)
+    assert _run_slot(tmp_path, "asx", after, "asx", closing, ["ASXNAME"]) == 0
+    assert len(posts) == 1 and "ASXNAME" in posts[0]
+    assert mp.load_state(_seen(tmp_path))["slots"].get("asx") == day.isoformat()
 
 
 def test_the_workflow_crons_fire_after_the_close_scans_and_each_maps_to_a_slot():
