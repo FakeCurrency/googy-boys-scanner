@@ -221,7 +221,10 @@ export async function onRequestGet(context) {
   const ref = env.GH_REF || "main";
   // Transport + the cooldown refund rule live in _dispatch.js. `reason` marks
   // the row this dispatch produces as a HEAL in funnel_history (scan.yml
-  // declares the input; default "manual").
+  // declares the input; default "manual"). It also tells scan.yml's gate
+  // (scripts/scan_gate.py) to narrow a heal to crypto plus any stock market
+  // that is open or owes its closing scan, so market=all never rescans a shut
+  // market (2026-10-05).
   const r = await dispatchWorkflow({
     token, repo, workflow, ref,
     inputs: { market, reason: "heartbeat" },

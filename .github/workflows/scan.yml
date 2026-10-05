@@ -28,14 +28,16 @@ on:
     # UTC hour of either session slides by an hour twice a year and by TWO
     # relative to each other. Every attempt to write that as fixed UTC hours
     # has been wrong for part of the year. So these fire more often than
-    # needed and the gate job asks the tz database, in the MARKET's own
-    # calendar, whether now is inside that market's window:
+    # needed and the gate job (scripts/scan_gate.py) asks the tz database, in
+    # the MARKET's own calendar, whether now is inside that market's window:
     #     ASX     11:00 .. 16:45 Australia/Sydney   (open 10:00 + 1h .. close + auction)
     #     NASDAQ  10:30 .. 16:45 America/New_York   (open 09:30 + 1h .. close + settle)
     # Anything outside every window is skipped, so weekends and overnight cost
-    # one ~5-second gate job and nothing else. The two windows never overlap in
-    # UTC, so a run scans exactly one market and `all` never happens on a
-    # schedule again.
+    # one short gate job and nothing else. The one exception is a market shut
+    # since today's close with no scan since: that is the missed closing scan,
+    # and any cron or heal after the close catches it up once. The two windows
+    # never overlap in UTC, so a scheduled run scans one market and never
+    # crypto.
     #
     # The 16:45 tails are load-bearing, not slack: the ASX closing auction
     # prints ~16:10-16:12 and the morning_plays digest refuses to send until it
@@ -53,10 +55,10 @@ on:
     - cron: "7 0-6 * * 1-5"       # ASX hourly superset (00:07-06:07 UTC covers
                                   # 11:07-16:07 local under AEDT and AEST both)
     - cron: "30 5,6 * * 1-5"      # ASX CLOSING scan, 16:30 local in either regime
-    - cron: "47 5,6 * * 1-5"      # ASX closing BACKSTOP — freshness-gated, see below
+    - cron: "47 5,6 * * 1-5"      # ASX closing BACKSTOP — runs only if no scan since the close
     - cron: "37 14,15 * * 1-5"    # NASDAQ first scan, ~10:37 local in either regime
     - cron: "7 16-21 * * 1-5"     # NASDAQ hourly through the close + post-close
-    - cron: "47 20,21 * * 1-5"    # NASDAQ closing BACKSTOP — freshness-gated
+    - cron: "47 20,21 * * 1-5"    # NASDAQ closing BACKSTOP — runs only if no scan since the close
   workflow_dispatch:
     inputs:
       market:
@@ -87,121 +89,68 @@ permissions:
 # block: it re-breaks every freshness backstop in this repo at once.
 
 jobs:
-  # Markets are closed on weekends, so scheduled stock scans there are pointless.
-  # GitHub's scheduler can also fire delayed/batched runs into Saturday/Sunday —
-  # this gate skips those. Manual (workflow_dispatch / SCAN button) runs are
-  # always allowed, any day. Crypto stays live 24/7 via crypto_scalp.yml.
+  # THE GATE decides which markets this run scans: scripts/scan_gate.py, one
+  # small stdlib-only script that reads config.MARKET_SCAN_WINDOWS and the
+  # plays digest's close (MORNING_PLAYS_SLOT_GATE) in each market's own
+  # calendar, so daylight saving cannot move it and there is no inline copy of
+  # the table to drift. In short:
+  #   schedule   the stock market in session, or one shut since today's close
+  #              with no scan since (the missed closing scan). Never crypto.
+  #   heartbeat  crypto (24/7) plus any requested stock market that is due.
+  #              Never a shut market (until 2026-10-05 every heal rescanned
+  #              ASX + NASDAQ round the clock).
+  #   otherwise  a person or the SCAN button: exactly what was asked.
+  # Behaviour and the four DST regimes are pinned in tests/test_scan_windows.py.
   gate:
     runs-on: ubuntu-latest
-    # TOP100 #44 - the gate only checks the clock and the freshness probe.
-    # It is outside the mutex, but a hung curl here blocks the scan job
-    # behind `needs:` just as effectively.
+    # TOP100 #44 - a sparse checkout and one python3 call. It is outside the
+    # mutex, but a hang here blocks the scan job behind `needs:` just as well.
     timeout-minutes: 5
     # TOP100 #56 (2026-07-28) - the workflow-level `contents: write` above is
-    # for the SCAN job, which commits. This job checks out nothing, writes
-    # nothing but $GITHUB_OUTPUT, and its one network call is a curl to the
-    # public /api/health - yet it was handed a token that can push to main.
-    # Every scheduled fire of this workflow runs it, which makes it the most
-    # frequently-executed job in the repo and the cheapest place to take the
-    # write bit away. `read` rather than `none` deliberately: a future step
-    # here would almost certainly start with actions/checkout, and a checkout
-    # failing on permissions is the kind of error someone fixes by putting the
-    # write back.
+    # for the SCAN job, which commits. This job writes nothing but
+    # $GITHUB_OUTPUT and runs on every scheduled fire, the most frequently
+    # executed job in the repo, so it does not get a token that can push.
     permissions:
       contents: read
     outputs:
       run: ${{ steps.check.outputs.run }}
-      market_override: ${{ steps.check.outputs.market_override }}
+      markets: ${{ steps.check.outputs.markets }}
     steps:
+      # Four small files, not the ~60 MB tree: the script, the stdlib-only
+      # config it reads, and the two stamps of when each stock market was last
+      # scanned. The branch TIP when the job starts (a branch `ref`, the
+      # 2026-09-27 rule), not the commit the run was triggered on.
+      - uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: ${{ github.ref }}
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/scan_gate.py
+            scanner/__init__.py
+            scanner/config.py
+            public/data/asx_prices.json
+            public/data/nasdaq_prices.json
       - id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHED: ${{ github.event.schedule }}
+          REASON: ${{ github.event.inputs.reason }}
+          MARKET: ${{ github.event.inputs.market }}
         run: |
-          SCHED="${{ github.event.schedule }}"
-
-          # A manual dispatch means a human (or the heartbeat healer) asked for
-          # a specific scan. The session window does not apply — that is the
-          # whole point of being able to ask.
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "Manual dispatch — running whatever was asked for."
+          if python3 scripts/scan_gate.py --event "$EVENT" --schedule "$SCHED" \
+              --reason "$REASON" --market "$MARKET" > gate.out; then
+            cat gate.out >> "$GITHUB_OUTPUT"
+          else
+            # FAIL OPEN: an extra scan costs one run; a session with no scan
+            # costs the day.
+            M="${MARKET:-all}"
+            [ "$M" = "all" ] && M="asx nasdaq crypto"
+            echo "::warning::scan gate crashed - scanning $M (fail open)"
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "market_override=" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "markets=$M" >> "$GITHUB_OUTPUT"
           fi
-
-          # THE WHOLE SCHEDULE DECISION, in the MARKET's own calendar (owner,
-          # 2026-09-21). Ask the tz database rather than hardcoding UTC hours:
-          # the changeover dates move, Melbourne and New York move on different
-          # ones, and hardcoded offsets are what made every previous version of
-          # this wrong for part of the year.
-          #
-          # Returns the market whose session window contains "now", or empty
-          # for "no market is open — skip". The windows cannot overlap, so a
-          # scheduled run now scans exactly ONE market and never `all`.
-          # (one line, because `python3 -c` rejects a leading-indented block)
-          MARKET=$(python3 -c "import datetime as dt; from zoneinfo import ZoneInfo; W=[('asx','Australia/Sydney',11*60,16*60+45),('nasdaq','America/New_York',10*60+30,16*60+45)]; now=lambda tz: dt.datetime.now(ZoneInfo(tz)); ok=lambda n,lo,hi: n.weekday()<5 and lo<=n.hour*60+n.minute<=hi; print(next((m+' '+str(now(tz).hour*60+now(tz).minute) for m,tz,lo,hi in W if ok(now(tz),lo,hi)), ''))" 2>/dev/null || echo "PROBE_FAILED")
-
-          # FAIL OPEN, same rule as the freshness backstops: an unusable tz
-          # database must not silently stop the pipeline. An extra out-of-hours
-          # scan costs one run; a session with no scan costs the day.
-          if [ "$MARKET" = "PROBE_FAILED" ]; then
-            echo "::warning::scan gate — session probe failed; scanning all markets (fail open)"
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "market_override=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ -z "$MARKET" ]; then
-            echo "Outside every market session (weekend, overnight, or pre-open) — nothing to scan."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "market_override=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          LOCAL_MIN="${MARKET##* }"        # minute-of-day in the MARKET's zone
-          MARKET="${MARKET%% *}"
-
-          # THE CLOSING CRONS ONLY COUNT AFTER THE CLOSE. Each closing slot is
-          # written twice (05/06 UTC for the ASX, 20/21 for NASDAQ) because the
-          # right one depends on daylight saving; the OTHER one lands an hour
-          # before the close, inside the session, and would run as an ordinary
-          # extra scan. Under AEST that was two surplus full ASX scans a day.
-          # 960 = 16:00 market-local, both markets' close.
-          case "$SCHED" in
-            "30 5,6 * * 1-5"|"47 5,6 * * 1-5"|"47 20,21 * * 1-5")
-              if [ "$LOCAL_MIN" -lt 960 ]; then
-                echo "Closing slot [$SCHED] fired at $((LOCAL_MIN/60)):$(printf %02d $((LOCAL_MIN%60))) $MARKET-local — the other DST regime owns it. Skipping."
-                echo "run=false" >> "$GITHUB_OUTPUT"
-                echo "market_override=" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-              ;;
-          esac
-
-          # CLOSING BACKSTOPS (:47). GitHub silently drops crons — it dropped
-          # every ASX morning run on 2026-07-24 and created no run at all — and
-          # the one scan whose loss is expensive is the CLOSING scan, because
-          # the Discord plays digest will not send without it. These fire ~17
-          # min after the closing scan and ask the LIVE site whether that
-          # market's data landed within the hour; fresh = skip, stale OR
-          # unreachable = run it (fail open: a broken probe must never leave
-          # the site stale). Scoped to the market by ?market= — without it the
-          # probe reads the COMBINED book, whose timestamp moves whenever any
-          # market commits, and answers a question nobody asked (2026-07-28).
-          case "$SCHED" in
-            "47 5,6 * * 1-5"|"47 20,21 * * 1-5")
-              HEALTH=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/api/health?market=$MARKET&max_h=1" || echo "")
-              echo "closing backstop [$MARKET] health probe: $HEALTH"
-              if echo "$HEALTH" | grep -Eq '"ok": ?true'; then
-                echo "Backstop :47 — a $MARKET scan already landed this hour. Skipping."
-                echo "run=false" >> "$GITHUB_OUTPUT"
-                echo "market_override=" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-              echo "Backstop :47 — $MARKET data stale or probe failed. Running the missed closing scan."
-              ;;
-          esac
-
-          echo "In session: $MARKET"
-          echo "run=true" >> "$GITHUB_OUTPUT"
-          echo "market_override=$MARKET" >> "$GITHUB_OUTPUT"
 
   # THE "scan" MUTEX LIVES HERE, NOT AT WORKFLOW LEVEL (2026-07-28).
   #
@@ -340,43 +289,36 @@ jobs:
           TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
           # Free-text input via env, never ${{ }} in run: (2026-07-20 security pass)
           ARGS: ${{ github.event.inputs.args }}
+          MARKETS: ${{ needs.gate.outputs.markets }}
           # What started this run — cron fire, heartbeat heal, or a human
           # dispatch. funnelhistory.trigger_from_env() stamps it on the row.
           SCAN_TRIGGER: ${{ github.event_name == 'schedule' && 'cron' || (github.event.inputs.reason == 'heartbeat' && 'heartbeat' || 'manual') }}
         run: |
           set +e
-          MARKET="${{ github.event.inputs.market }}"
-          MARKET="${MARKET:-${{ needs.gate.outputs.market_override }}}"
-          MARKET="${MARKET:-all}"     # scheduled runs have no input -> full cycle
-          # Tell the schema gate which files THIS run rewrote (2026-07-20):
-          # a partial run must only be judged on its own output files.
-          echo "SCANNED_MARKET=$MARKET" >> "$GITHUB_ENV"
+          # The gate's verdict, e.g. "asx" or "nasdaq crypto". Tell the schema
+          # gate and the commit step which files THIS run rewrote (2026-07-20):
+          # a partial run must only be judged, and stage, its own output.
+          echo "SCANNED_MARKET=$MARKETS" >> "$GITHUB_ENV"
 
-          if [ "$MARKET" != "all" ]; then
-            # Single-market scan (fast path) — just the one the user asked for.
-            echo "Single-market scan: $MARKET"
-            python -m scanner.run --market "$MARKET" $ARGS
-            exit $?
-          fi
-
-          # Full cycle — SEQUENTIAL, never parallel (2026-07-20, review C1).
-          # Each scanner.run rewrites the ENTIRE shared bot book
-          # (journal/vivek_bot_book.json): parallel `&` processes here raced
-          # load→modify→write and the last writer erased the other market's
-          # closes and realised P&L from the only track record. Do NOT
-          # re-parallelise without first giving the book per-market files or
-          # a cross-process lock. Small markets first, ASX (the big download)
-          # last — same Yahoo-friendly order as before, one at a time.
-          python -m scanner.run --market nasdaq $ARGS
-          RC_NAS=$?
-          python -m scanner.run --market crypto $ARGS
-          RC_CRY=$?
-          echo "small markets done — nasdaq=$RC_NAS crypto=$RC_CRY; now ASX"
-          python -m scanner.run --market asx $ARGS
-          RC_ASX=$?
-          echo "scan rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
-          # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
-          [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
+          # SEQUENTIAL, never parallel (2026-07-20, review C1). Each
+          # scanner.run rewrites the shared bot book: parallel `&` processes
+          # raced load->modify->write and the last writer erased the other
+          # market's closes and realised P&L from the only track record. Do NOT
+          # re-parallelise without a cross-process lock. Small markets first,
+          # ASX (the big download) last, one at a time.
+          RC=0
+          for m in nasdaq crypto asx; do
+            case " $MARKETS " in *" $m "*) ;; *) continue ;; esac
+            python -m scanner.run --market "$m" $ARGS
+            rc=$?
+            echo "scan rc: $m=$rc"
+            # Crypto is best-effort beside a stock market (keyless feeds can be
+            # flaky); on its own it is the whole job.
+            if [ "$rc" -ne 0 ] && { [ "$m" != "crypto" ] || [ "$MARKETS" = "crypto" ]; }; then
+              RC=$rc
+            fi
+          done
+          exit $RC
 
       # Schema gate: every freshly written *_vivek.json must carry the current
       # schema_version. Catches a code/data drift (the bug that hid the entry-type
@@ -394,7 +336,7 @@ jobs:
           # way. Full cycles still verify all three.
           market = os.environ.get("SCANNED_MARKET", "all")
           files = (sorted(glob.glob("public/data/*_vivek.json")) if market == "all"
-                   else [f"public/data/{market}_vivek.json"])
+                   else [f"public/data/{m}_vivek.json" for m in market.split()])
           bad = []
           for f in files:
               try:

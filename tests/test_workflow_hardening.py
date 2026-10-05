@@ -376,9 +376,9 @@ def test_the_test_workflow_cannot_push():
 
 
 def test_the_scan_gate_job_does_not_inherit_write():
-    """The workflow needs write for the SCAN job. The gate checks out nothing,
-    curls a public health endpoint and writes only $GITHUB_OUTPUT — and it runs
-    on every scheduled fire, so it is the most frequently executed job here."""
+    """The workflow needs write for the SCAN job. The gate reads a sparse
+    checkout and writes only $GITHUB_OUTPUT — and it runs on every scheduled
+    fire, so it is the most frequently executed job here."""
     doc = _load("scan.yml")
     assert doc["permissions"] == {"contents": "write"}, (
         "the scan job commits; this is expected to stay write"
