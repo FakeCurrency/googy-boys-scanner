@@ -1,23 +1,89 @@
 {
- "generated_at": "2026-10-05T01:25:27+11:00",
+ "generated_at": "2026-10-06T04:25:02+11:00",
  "market": "asx",
  "setup_type": "spec",
  "currency_symbol": "A$",
  "universe_size": 2048,
  "results": [
   {
-   "symbol": "C29",
-   "name": "C29 Metals Limited",
+   "symbol": "M24",
+   "name": "Mamba Exploration Limited",
    "sector": "Materials",
    "setup_type": "spec",
    "grade": "A+",
    "score": 8,
    "score_max": 11,
    "chips": [
-    "VOLUME 3.9× SPIKE",
+    "VOLUME 7.0× SPIKE",
     "NEW 3-MONTH HIGH",
-    "9 › 26 RECLAIM",
-    "RSI TURNING UP"
+    "9 › 26 RECLAIM"
+   ],
+   "price": 0.071,
+   "entry": 0.071,
+   "stop": 0.02079,
+   "target": 0.22163001,
+   "rr": 3.0,
+   "low_rr": false,
+   "spike_ratio": 7.0,
+   "off_high_pct": 13.9,
+   "detail": {
+    "setup_type": "spec",
+    "sma9": 0.04522222,
+    "sma9_pct": -36.3,
+    "sma26": 0.02919231,
+    "sma26_pct": -58.9,
+    "sma43": 0.0245814,
+    "sma43_pct": -65.4,
+    "sma200": 0.02174,
+    "sma200_pct": -69.4,
+    "cross_up": true,
+    "rsi": 95.8,
+    "rsi_ma": 79.8,
+    "rsi_up": true,
+    "volume_ratio": 2.2,
+    "volume_today": 4724044,
+    "volume_avg": 4503580,
+    "volume_surge": true,
+    "off_high_pct": 13.9,
+    "base_high": 0.054,
+    "base_high_pct": -23.9,
+    "broken": true,
+    "swing_low": 0.021,
+    "swing_low_pct": -70.4,
+    "trailing_stop": 0.05732,
+    "trailing_label": "SuperTrend 3× ATR",
+    "trailing_pct": -19.3,
+    "structure": {
+     "trend": "Mixed / consolidating",
+     "swing_highs": [
+      0.019,
+      0.023,
+      0.02
+     ],
+     "swing_lows": [
+      0.02,
+      0.02,
+      0.02
+     ]
+    },
+    "risk_pct": 70.7,
+    "spike_ratio": 7.0,
+    "new_high_long": true
+   },
+   "analysis": "M24 just fired a speculative volume-spike breakout — volume hit 7.0× its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 — short-term momentum is up. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0710, stop A$0.0208, target A$0.2216 (3.00:1) — then trail it."
+  },
+  {
+   "symbol": "C29",
+   "name": "C29 Metals Limited",
+   "sector": "Materials",
+   "setup_type": "spec",
+   "grade": "A",
+   "score": 7,
+   "score_max": 11,
+   "chips": [
+    "VOLUME 4.0× SPIKE",
+    "NEW 3-MONTH HIGH",
+    "9 › 26 RECLAIM"
    ],
    "price": 0.027,
    "entry": 0.027,
@@ -25,25 +91,25 @@
    "target": 0.032,
    "rr": 1.54,
    "low_rr": false,
-   "spike_ratio": 3.9,
+   "spike_ratio": 4.0,
    "off_high_pct": 32.5,
    "detail": {
     "setup_type": "spec",
-    "sma9": 0.02566667,
-    "sma9_pct": -4.9,
-    "sma26": 0.0235,
-    "sma26_pct": -13.0,
-    "sma43": 0.01953488,
-    "sma43_pct": -27.6,
-    "sma200": 0.02416,
-    "sma200_pct": -10.5,
+    "sma9": 0.02588889,
+    "sma9_pct": -4.1,
+    "sma26": 0.02392308,
+    "sma26_pct": -11.4,
+    "sma43": 0.01988372,
+    "sma43_pct": -26.4,
+    "sma200": 0.024195,
+    "sma200_pct": -10.4,
     "cross_up": true,
     "rsi": 72.4,
     "rsi_ma": 68.9,
-    "rsi_up": true,
-    "volume_ratio": 1.8,
-    "volume_today": 732300,
-    "volume_avg": 1533238,
+    "rsi_up": false,
+    "volume_ratio": 1.7,
+    "volume_today": 0,
+    "volume_avg": 1504839,
     "volume_surge": true,
     "off_high_pct": 32.5,
     "base_high": 0.027,
@@ -55,23 +121,23 @@
     "trailing_label": "SuperTrend 3× ATR",
     "trailing_pct": -11.0,
     "structure": {
-     "trend": "HH/HL — Uptrend",
+     "trend": "Mixed / consolidating",
      "swing_highs": [
       0.024,
       0.027,
       0.027
      ],
      "swing_lows": [
-      0.024,
+      0.025,
       0.025,
       0.025
      ]
     },
     "risk_pct": 12.0,
-    "spike_ratio": 3.9,
+    "spike_ratio": 4.0,
     "new_high_long": true
    },
-   "analysis": "C29 just fired a speculative volume-spike breakout — volume hit 3.9× its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 — short-term momentum is up. RSI has turned up through its signal line. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0270, stop A$0.0238, target A$0.0320 (1.54:1) — then trail it."
+   "analysis": "C29 just fired a speculative volume-spike breakout — volume hit 4.0× its 20-day average as price broke out of its base. The breakout cleared a fresh 3-month high. The 9-SMA has reclaimed the 26 — short-term momentum is up. These are high-risk speculative names — they move fast both ways, so size small and respect the stop. Trade idea: entry A$0.0270, stop A$0.0238, target A$0.0320 (1.54:1) — then trail it."
   }
  ],
  "errors": 0,
