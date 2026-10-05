@@ -94,7 +94,7 @@
       "risk_usd_before": 813.53,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-01",
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "SUL:long:1W:2026-09-17",
@@ -169,7 +169,7 @@
       "risk_usd_before": 613.3,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-01",
-      "unpriced_runs": 4
+      "unpriced_runs": 5
     },
     {
       "id": "GWA:long:1W:2026-09-17",
@@ -656,7 +656,7 @@
       "level_tf": "3d",
       "signal_entry": 0.45500001,
       "fill_slip_bps": 0.0,
-      "last_mark": 0.42500001,
+      "last_mark": 0.435,
       "day_marks": {
         "2026-09-28": 0.44499999,
         "2026-09-29": 0.45500001,
@@ -668,8 +668,8 @@
         "2026-10-05": 0.41499999,
         "2026-10-06": 0.42500001
       },
-      "unreal_r": -0.332,
-      "unreal_usd": -164.83,
+      "unreal_r": -0.221,
+      "unreal_usd": -109.89,
       "review_before": [
         {
           "code": "heavy_risk",
@@ -684,8 +684,7 @@
       "units_before": 10989.01074749,
       "risk_usd_before": 992.71,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "stale_pinged": "2026-10-05",
-      "unpriced_runs": 6
+      "stale_pinged": "2026-10-05"
     },
     {
       "id": "SNL:long:3D:2026-09-21",
@@ -759,7 +758,8 @@
       "units_before": 144.96954933,
       "risk_usd_before": 607.93,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "stale_pinged": "2026-10-05"
+      "stale_pinged": "2026-10-05",
+      "unpriced_runs": 1
     },
     {
       "id": "NGI:long:3D:2026-09-21",
@@ -852,7 +852,7 @@
       "risk_usd_before": 737.43,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-05",
-      "unpriced_runs": 1
+      "unpriced_runs": 2
     },
     {
       "id": "EVT:long:3D:2026-09-22",
@@ -1223,7 +1223,8 @@
         "2026-10-06": 10.85000038
       },
       "unreal_r": 0.024,
-      "unreal_usd": 2.72
+      "unreal_usd": 2.72,
+      "unpriced_runs": 1
     },
     {
       "id": "YAL:long:3D:2026-09-29",
@@ -1501,7 +1502,7 @@
       },
       "unreal_r": -0.247,
       "unreal_usd": -45.53,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "PPM:long:3D:2026-09-30",
@@ -1568,7 +1569,7 @@
       },
       "unreal_r": -0.075,
       "unreal_usd": -14.41,
-      "unpriced_runs": 6
+      "unpriced_runs": 7
     },
     {
       "id": "ELD:long:3D:2026-10-01",
@@ -1708,7 +1709,7 @@
       },
       "unreal_r": -0.069,
       "unreal_usd": -13.58,
-      "unpriced_runs": 6
+      "unpriced_runs": 7
     },
     {
       "id": "NCK:long:1W:2026-10-01",
@@ -1774,7 +1775,7 @@
       },
       "unreal_r": 0.082,
       "unreal_usd": 27.31,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "JBH:long:1W:2026-10-02",
@@ -5647,36 +5648,37 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -85.12,
+      "week_usd": -284.71,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
-      "week_unpriced_worst_usd": -2403.38,
-      "worst_session_usd": -2111.7,
-      "worst_week_usd": -2488.5,
+      "week_unpriced_worst_usd": -2305.09,
+      "worst_session_usd": -2213.01,
+      "worst_week_usd": -2589.8,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 8.17,
-      "session_usd": 8.17,
+      "unrealised_usd": 54.94,
+      "session_usd": 54.94,
       "unpriced": [
         "NIC",
         "SUL",
-        "PMT",
+        "SNL",
         "NGI",
+        "ORG",
         "NAB",
         "PPM",
         "NHF",
         "NCK"
       ],
-      "unpriced_worst_usd": -2119.87,
+      "unpriced_worst_usd": -2267.95,
       "open": 24,
-      "open_total_usd": -102.48,
+      "open_total_usd": -281.14,
       "notified": ""
     }
   },
   "summary": {
     "open": 24,
-    "unreal_usd": -441.38,
+    "unreal_usd": -386.44,
     "updated_day": "2026-10-06"
   },
-  "updated_at": "2026-10-05T16:04:56+00:00"
+  "updated_at": "2026-10-05T17:57:36+00:00"
 }
