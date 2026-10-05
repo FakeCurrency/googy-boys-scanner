@@ -1912,7 +1912,8 @@ test("an ABSENT flag degrades to the keyword heuristic — old payloads keep wor
 //
 // The builders slice whatever the SHIPPED file declares and skip a helper it
 // does not, so the old literal-label code still evaluates and fails on the
-// LABEL rather than on a missing name.
+// LABEL rather than on a missing name. The NEWS page test runs the whole
+// shipped sectors.js, so it needs no builder at all.
 // ---------------------------------------------------------------------------
 const SECTORS = fs.readFileSync(path.join(__dirname, "..", "public", "js", "sectors.js"), "utf8");
 function sliceIf(src, kind, name) {
@@ -1982,15 +1983,50 @@ test("NEWS calendar: a July Sydney event time is labelled AEST", () => {
   assert.ok(macroCard(evAt(JUL_SYD, "10:07am")).includes("10:07am AEST"));
 });
 
-test("NEWS 'Read updated' line: Sydney digits with the instant's abbreviation, whatever the browser zone", () => {
-  const updatedLine = build(SECTORS, [["const", "SYD"], ["const", "sydAbbr"],
-                                      ["function", "updatedLine"]], "updatedLine");
+// The NEWS page as the browser runs it: the WHOLE shipped sectors.js against a
+// stub document, so what is asserted is the text the fetch handler puts on the
+// page -- not a helper the handler could stop calling (a review found the
+// pre-fix inline line could come back with every suite green). The fetch stub
+// settles synchronously because this runner does not await; its then/catch
+// keep a real promise's routing, so a throw in the handler lands in the page's
+// own .catch ("Couldn't reach sector data") and fails the assertions below.
+function runNewsPage(payload) {
+  const els = {};
+  const el = (id) => els[id] || (els[id] = { textContent: "", innerHTML: "", firstChild: { appendChild() {} } });
+  const document = { getElementById: el, createElement: () => ({}), querySelectorAll: () => [] };
+  const attempt = (f, v) => { try { return settled(true, f(v)); } catch (e) { return settled(false, e); } };
+  const settled = (ok, v) => ({
+    then: (f) => (ok ? attempt(f, v) : settled(ok, v)),
+    catch: (f) => (ok ? settled(ok, v) : attempt(f, v)),
+  });
+  const fetch = () => settled(true, { ok: true, json: () => payload });
+  new Function("document", "fetch", "window", "setInterval", "clearInterval", SECTORS)(
+    document, fetch, {}, () => 0, () => {});
+  return el;   // look an element up by id, as the page would
+}
+
+test("NEWS page: 'Read updated' prints Sydney's date, digits and abbreviation, whatever the browser zone", () => {
   const was = process.env.TZ;
-  process.env.TZ = "America/Los_Angeles";   // a reader nowhere near Sydney
+  // A reader nowhere near Sydney: in Los Angeles both instants are still TUESDAY
+  // (Jan 19 16:07, Jul 14 17:07), so a date or time formatted in the browser's
+  // zone fails here. tz_label "AEST" is the old payload's fixed label; the page
+  // must not print it beside a summer time.
+  process.env.TZ = "America/Los_Angeles";
   try {
-    const jan = updatedLine(JAN_SYD), jul = updatedLine(JUL_SYD);
-    assert.ok(/11:07/.test(jan) && /AEDT/.test(jan) && !/AEST/.test(jan), jan);
-    assert.ok(/10:07/.test(jul) && /AEST/.test(jul), jul);
+    const page = (iso, markets) => runNewsPage({ generated_at: iso, tz_label: "AEST", markets: markets || {} });
+    const janPage = page(JAN_SYD, { asx: evAt(JAN_SYD, "11:07am") });
+    const jan = janPage("sec-sub").textContent;
+    assert.ok(/^Read updated /.test(jan), `the fetch handler must write the updated line: ${jan}`);
+    assert.ok(/\bWed\b/.test(jan) && /\b20\b/.test(jan) && !/\bTue\b|\b19\b/.test(jan),
+      `Sydney's date is Wed 20 Jan: ${jan}`);
+    assert.ok(/\b11:07\b/.test(jan) && /\bAEDT\b/.test(jan) && !/AEST/.test(jan),
+      `Sydney's clock is 11:07 AEDT: ${jan}`);
+    assert.ok(janPage("col-asx").innerHTML.includes("11:07am AEDT"),
+      "the rendered calendar card must carry the instant's abbreviation");
+    const jul = page(JUL_SYD)("sec-sub").textContent;
+    assert.ok(/\bWed\b/.test(jul) && /\b15\b/.test(jul) && !/\bTue\b|\b14\b/.test(jul),
+      `Sydney's date is Wed 15 Jul: ${jul}`);
+    assert.ok(/\b10:07\b/.test(jul) && /\bAEST\b/.test(jul), `Sydney's clock is 10:07 AEST: ${jul}`);
   } finally {
     if (was === undefined) delete process.env.TZ; else process.env.TZ = was;
   }
