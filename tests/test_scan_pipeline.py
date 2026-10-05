@@ -12,6 +12,8 @@ these tests pin the PIPELINE contract, not detection maths:
   * vivek_bot buys off grade_raw, never the smoothed grade
 """
 
+import datetime as dt
+
 import pandas as pd
 import pytest
 
@@ -209,6 +211,31 @@ def test_funnel_is_additive_not_a_schema_bump(monkeypatch):
     out = _run_full(monkeypatch)
     assert out["schema_version"] == config.VIVEK_SCHEMA_VERSION
     assert isinstance(out["funnel"], dict)
+
+
+# ── tz_label: the zone's abbreviation AT the scan instant (2026-10-05) ───────
+# config carried a fixed tz_label ("AEST", "ET"), so every summer ASX payload
+# said AEST beside a +11:00 generated_at. January = AEDT/EST, July = AEST/EDT.
+
+@pytest.mark.parametrize("market, ticker, instant, label, offset", [
+    ("asx",    "BHP.AX",  "2027-01-20T00:07:00+00:00", "AEDT", "+11:00"),
+    ("asx",    "BHP.AX",  "2026-07-15T00:07:00+00:00", "AEST", "+10:00"),
+    ("nasdaq", "AAPL",    "2027-01-20T15:00:00+00:00", "EST",  "-05:00"),
+    ("nasdaq", "AAPL",    "2026-07-15T14:00:00+00:00", "EDT",  "-04:00"),
+    ("crypto", "BTC-USD", "2027-01-20T00:07:00+00:00", "UTC",  "+00:00"),
+])
+def test_tz_label_names_the_zone_at_the_scan_instant(monkeypatch, freeze_now, market,
+                                                     ticker, instant, label, offset):
+    _stub_engine(monkeypatch, {})
+    monkeypatch.setattr(vivek, "evaluate", lambda df: None)    # no rows, nothing fetched
+    at = dt.datetime.fromisoformat(instant)
+    freeze_now(scan, at)
+    out = scan.scan_vivek_market(
+        market, universe=[{"yf": ticker, "symbol": ticker, "name": ticker, "sector": ""}],
+        frames={ticker: _frame()}, pulse_data=[], progress=False)
+    assert out["tz_label"] == label
+    assert out["generated_at"].endswith(offset)
+    assert dt.datetime.fromisoformat(out["generated_at"]) == at
 
 
 def test_illiquid_sample_carries_volume_context(monkeypatch):

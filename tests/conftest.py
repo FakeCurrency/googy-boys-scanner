@@ -5,8 +5,10 @@ invoked from anywhere) and provides small factory fixtures for building the
 position / journal dicts the risk, breaker, journal and pre-trade tests need.
 """
 
+import datetime as dt
 import pathlib
 import sys
+import types
 
 import pytest
 
@@ -49,6 +51,27 @@ def _no_exchange_network(monkeypatch):
         raise _ex.SourceDead("network disabled in tests")
 
     monkeypatch.setattr(_ex, "_get_json", _refuse)
+
+
+@pytest.fixture
+def freeze_now(monkeypatch):
+    """Pin ``<module>.dt.datetime.now(tz)`` to one aware instant, for ONE module.
+
+    For modules that ``import datetime as dt`` and read the clock as
+    ``dt.datetime.now(tz)``. The module gets its own ``dt`` whose ``datetime``
+    answers ``now`` with the instant in the asked-for zone; every other
+    attribute is the real one, and nothing outside that module moves.
+    """
+    def _freeze(module, instant):
+        class _Frozen(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return instant.astimezone(tz)
+        shim = types.SimpleNamespace(**{k: getattr(dt, k) for k in dir(dt)
+                                        if not k.startswith("__")})
+        shim.datetime = _Frozen
+        monkeypatch.setattr(module, "dt", shim)
+    return _freeze
 
 
 @pytest.fixture

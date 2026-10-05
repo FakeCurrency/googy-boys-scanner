@@ -501,7 +501,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         "currency": market.currency,
         "currency_symbol": market.currency_symbol,
         "timezone": market.timezone,
-        "tz_label": market.tz_label,
+        # The zone's abbreviation at the scan instant (AEDT in summer, AEST in
+        # winter; EDT/EST); app.js reads it only as a key to the zone.
+        "tz_label": now.tzname(),
         "generated_at": now.isoformat(timespec="seconds"),
         "scanned": scanned,
         "downloaded": downloaded,

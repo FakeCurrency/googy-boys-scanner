@@ -1392,8 +1392,10 @@ class MarketConfig:
     suffix: str            # yfinance ticker suffix (".AX" ASX, "" NASDAQ, "-USD" crypto)
     currency: str
     currency_symbol: str
-    timezone: str          # IANA tz for the "scanned at" timestamp
-    tz_label: str          # short label shown in the UI
+    timezone: str          # IANA tz for the "scanned at" timestamp. The scan
+                           # publishes its abbreviation AT THAT INSTANT as
+                           # tz_label (AEDT/AEST, EDT/EST, UTC) -- never a
+                           # fixed string: "AEST" was wrong half the year.
     liquidity_min: float   # minimum average daily turnover, in local currency
     volume_is_usd: bool = False   # crypto: Yahoo volume is already USD dollar-volume
 
@@ -1402,19 +1404,19 @@ MARKETS = {
     "asx": MarketConfig(
         key="asx", label="ASX", suffix=".AX",
         currency="AUD", currency_symbol="A$",
-        timezone="Australia/Sydney", tz_label="AEST",
+        timezone="Australia/Sydney",
         liquidity_min=100_000,
     ),
     "nasdaq": MarketConfig(
         key="nasdaq", label="NASDAQ", suffix="",
         currency="USD", currency_symbol="$",
-        timezone="America/New_York", tz_label="ET",
+        timezone="America/New_York",
         liquidity_min=1_000_000,
     ),
     "crypto": MarketConfig(
         key="crypto", label="CRYPTO", suffix="-USD",
         currency="USD", currency_symbol="$",
-        timezone="UTC", tz_label="UTC",
+        timezone="UTC",
         # $3M/20d turnover. Since the exchange-klines switch (2026-09-28) this
         # reads ONE venue's volume, not Yahoo's aggregate, so fewer thin alts
         # clear it (65/108 vs 91/108 measured). Put to the owner the same day:

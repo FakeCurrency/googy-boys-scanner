@@ -1902,5 +1902,99 @@ test("an ABSENT flag degrades to the keyword heuristic — old payloads keep wor
     "the word-boundary NFLX fix must survive the flag wiring");
 });
 
+// ---------------------------------------------------------------------------
+// Zone abbreviations (2026-10-05). The deck's Market-local tooltip and the
+// NEWS page printed a literal "AEST" beside Sydney wall-clock digits all year,
+// so from 4 Oct to 4 Apr (AEDT) every such time was labelled an hour wrong --
+// the same failure as a stale paint: an untrue stamp that looks normal. The
+// label is now read off the zone AT THE INSTANT and tz_label is only a key to
+// the zone. A January instant is AEDT/EST, a July one AEST/EDT.
+//
+// The builders slice whatever the SHIPPED file declares and skip a helper it
+// does not, so the old literal-label code still evaluates and fails on the
+// LABEL rather than on a missing name.
+// ---------------------------------------------------------------------------
+const SECTORS = fs.readFileSync(path.join(__dirname, "..", "public", "js", "sectors.js"), "utf8");
+function sliceIf(src, kind, name) {
+  if (kind === "const") {
+    const s = extractConst(src, name);
+    return s ? `const ${name} = ${s};\n` : "";
+  }
+  return new RegExp(`\\bfunction\\s+${name}\\s*\\(`).test(src) ? fnSrc(src, name) + "\n" : "";
+}
+function build(src, parts, ret) {
+  const body = parts.map(([kind, name]) => sliceIf(src, kind, name)).join("");
+  return new Function(`${body}return ${ret};`)();
+}
+const JAN_SYD = "2027-01-20T00:07:00Z";   // Wed 11:07 AEDT (UTC+11)
+const JUL_SYD = "2026-07-15T00:07:00Z";   // Wed 10:07 AEST (UTC+10)
+const JAN_NY  = "2027-01-20T15:00:00Z";   // 10:00 EST (UTC-5)
+const JUL_NY  = "2026-07-15T14:00:00Z";   // 10:00 EDT (UTC-4)
+
+const tzFmt = build(APP, [["const", "TZ_MAP"], ["const", "TZ_ABBR_LOCALE"],
+                          ["function", "tzAbbr"], ["function", "fmtTime"]], "fmtTime");
+
+test("Market-local tooltip: an old ASX payload ('AEST') in January reads AEDT, not AEST", () => {
+  const out = tzFmt(JAN_SYD, "AEST");
+  assert.ok(/11:07/.test(out), `digits must be Sydney wall time: ${out}`);
+  assert.ok(/ AEDT$/.test(out), `January in Sydney is AEDT: ${out}`);
+  assert.ok(!/AEST/.test(out), `a summer time must not be labelled AEST: ${out}`);
+});
+
+test("Market-local tooltip: the same payload key in July reads AEST", () => {
+  const out = tzFmt(JUL_SYD, "AEST");
+  assert.ok(/10:07/.test(out) && / AEST$/.test(out), `July in Sydney is 10:07 AEST: ${out}`);
+});
+
+test("Market-local tooltip: tz_label is only a key -- AEDT/AEST both mean Sydney, the instant picks the name", () => {
+  assert.ok(/ AEST$/.test(tzFmt(JUL_SYD, "AEDT")), tzFmt(JUL_SYD, "AEDT"));
+  assert.ok(/ AEDT$/.test(tzFmt(JAN_SYD, "AEDT")), tzFmt(JAN_SYD, "AEDT"));
+});
+
+test("Market-local tooltip: New York reads EST in January and EDT in July, old 'ET' key or new", () => {
+  for (const key of ["ET", "EST", "EDT"]) {
+    const jan = tzFmt(JAN_NY, key), jul = tzFmt(JUL_NY, key);
+    assert.ok(/10:00/.test(jan) && / EST$/.test(jan), `${key} January: ${jan}`);
+    assert.ok(/10:00/.test(jul) && / EDT$/.test(jul), `${key} July: ${jul}`);
+  }
+});
+
+test("Market-local tooltip: crypto stays UTC all year", () => {
+  assert.ok(/ UTC$/.test(tzFmt(JAN_NY, "UTC")) && / UTC$/.test(tzFmt(JUL_NY, "UTC")));
+});
+
+test("Market-local tooltip: an unknown key is never echoed beside digits it did not produce", () => {
+  assert.ok(!/XYZ/.test(tzFmt(JAN_SYD, "XYZ")), tzFmt(JAN_SYD, "XYZ"));
+});
+
+const macroCard = build(SECTORS, [["const", "esc"], ["const", "SYD"], ["const", "sydAbbr"],
+                                  ["function", "nextEvent"], ["function", "macroCardHTML"]],
+                        "macroCardHTML");
+const evAt = (when, time) => ({ upcoming: [{ when, date: "Wed", time, title: "RBA", impact: "High" }] });
+
+test("NEWS calendar: a January Sydney event time is labelled AEDT", () => {
+  const html = macroCard(evAt(JAN_SYD, "11:07am"));
+  assert.ok(html.includes("11:07am AEDT"), html);
+  assert.ok(!html.includes("AEST"), "a summer event must not be labelled AEST");
+});
+
+test("NEWS calendar: a July Sydney event time is labelled AEST", () => {
+  assert.ok(macroCard(evAt(JUL_SYD, "10:07am")).includes("10:07am AEST"));
+});
+
+test("NEWS 'Read updated' line: Sydney digits with the instant's abbreviation, whatever the browser zone", () => {
+  const updatedLine = build(SECTORS, [["const", "SYD"], ["const", "sydAbbr"],
+                                      ["function", "updatedLine"]], "updatedLine");
+  const was = process.env.TZ;
+  process.env.TZ = "America/Los_Angeles";   // a reader nowhere near Sydney
+  try {
+    const jan = updatedLine(JAN_SYD), jul = updatedLine(JUL_SYD);
+    assert.ok(/11:07/.test(jan) && /AEDT/.test(jan) && !/AEST/.test(jan), jan);
+    assert.ok(/10:07/.test(jul) && /AEST/.test(jul), jul);
+  } finally {
+    if (was === undefined) delete process.env.TZ; else process.env.TZ = was;
+  }
+});
+
 
 console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
