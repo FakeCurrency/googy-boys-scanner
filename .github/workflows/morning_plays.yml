@@ -34,10 +34,12 @@ name: Morning plays (Discord)
 # are a LADDER OF ATTEMPTS after the close scans, not a single wall-clock time:
 # the first post-close attempt sends, the per-day marker silences the rest.
 #
-# The gate also refuses while the gated market's session TODAY is still running
-# (open per config.VIVEK_JOURNAL_SESSION .. the close above): under AEDT+EST the
-# US slot's 06:30 Melbourne floor is 14:30 New York, and a mid-session list used
-# to pass against YESTERDAY's close and mark the slot done.
+# The gate also refuses while the session the slot OWES is still running (open
+# per config.VIVEK_JOURNAL_SESSION .. the close above, for the session open at
+# the slot's floor): under AEDT+EST the US slot's 06:30 Melbourne floor is 14:30
+# New York, and a mid-session list used to pass against YESTERDAY's close and
+# mark the slot done. A session that opens after the floor (AEST+EDT: 23:30
+# Melbourne = 09:30 New York) is the next slot's and does not hold this one.
 #
 # The close scans these follow (scan.yml, read in each market's own zone):
 #   ASX closing scan     16:30 Sydney   = 05:30 UTC (AEDT) / 06:30 UTC (AEST)

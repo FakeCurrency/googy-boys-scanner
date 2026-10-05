@@ -697,6 +697,49 @@ def test_the_session_open_comes_from_the_canonical_session_table(monkeypatch):
         "before a (patched) 15:30 open the previous close is the one owed"
 
 
+def test_a_session_that_opens_after_the_floor_is_the_next_slots(tmp_path, monkeypatch):
+    """AEST+EDT: 23:30-23:59 Melbourne is 09:30-09:59 New York on the SAME date.
+    That session is TOMORROW's digest; tonight's US slot still owes Monday's,
+    which is closed and has its 16:07 post-close scan committed. A late run
+    (manual slot=us, a ping, a very late cron) must send it -- no later trigger
+    exists that Melbourne day."""
+    monday_post_close = _at(NEW_YORK, 2027, 4, 12, 16, 7, 30)
+    now = _at(MELBOURNE, 2027, 4, 13, 23, 30)                        # Tue AEST
+    while now.date() == dt.date(2027, 4, 13):
+        utc = now.astimezone(dt.timezone.utc)
+        ny = now.astimezone(NEW_YORK)
+        assert ny.date() == now.date() and ny.strftime("%H:%M") >= "09:30", \
+            "premise: New York's next session is already trading"
+        assert mp.session_in_progress("us", utc) is False, now
+        ok, why = mp.scan_is_post_close("us", monday_post_close.isoformat(), utc)
+        assert ok is True and "past the Mon 16:05 close" in why, (now, why)
+        ok, why = mp.scan_is_post_close(
+            "us", _at(NEW_YORK, 2027, 4, 12, 14, 48).isoformat(), utc)
+        assert ok is False and "predates" in why, "a Monday mid-session scan still waits"
+        now += dt.timedelta(minutes=1)
+    # ...and Tuesday's session is the one Wednesday's slot owes
+    assert mp.session_in_progress("us", _utc(2027, 4, 13, 14, 30)) is True   # Wed 00:30 AEST
+
+    posts = _fake_discord(monkeypatch)
+    late = _utc(2027, 4, 13, 13, 40)                                 # Tue 23:40 AEST
+    assert _run_slot(tmp_path, "us", late, "nasdaq", monday_post_close, ["MONNAME"]) == 0
+    assert len(posts) == 1 and "MONNAME" in posts[0]
+    assert mp.load_state(_seen(tmp_path))["slots"].get("us") == "2027-04-13"
+
+
+def test_a_new_york_weekend_is_never_a_session_in_progress():
+    """Saturday / Sunday daytime in New York is not trading. Sunday 15:00 EST is
+    Monday 07:00 AEDT, past the US floor, so a manual slot=us there reaches the
+    gate -- it is gated on Friday's close, not refused as 'in progress'."""
+    friday = _at(NEW_YORK, 2026, 10, 30, 16, 7, 30).isoformat()
+    for when in (_at(NEW_YORK, 2026, 10, 31, 14, 0),                 # Sat EDT
+                 _at(NEW_YORK, 2026, 11, 1, 15, 0)):                 # Sun EST
+        utc = when.astimezone(dt.timezone.utc)
+        assert mp.session_in_progress("us", utc) is False, when
+        ok, why = mp.scan_is_post_close("us", friday, utc)
+        assert ok is True and "past the Fri 16:05 close" in why, (when, why)
+
+
 def test_edt_on_time_delivery_is_unchanged(tmp_path, monkeypatch):
     """AEDT+EDT: the first US rung (20:15Z = 16:15 EDT) is after the close and
     after the 16:07 post-close scan -- it still delivers on time."""
@@ -717,12 +760,11 @@ def test_the_asx_slot_is_unchanged_its_floor_is_always_after_the_sydney_close(
     zones share DST dates), so 'session in progress' can never hold it: same
     verdicts as before at every minute it is due, and the 16:30 closing scan
     still sends."""
-    gate = config.MORNING_PLAYS_SLOT_GATE["asx"]
     floor = _at(MELBOURNE, day.year, day.month, day.day, config.MORNING_PLAYS_SLOTS["asx"]["hour"],
                 config.MORNING_PLAYS_SLOTS["asx"]["minute"])
     now = floor
     while now.date() == day:
-        assert mp.session_in_progress(gate, now.astimezone(dt.timezone.utc)) is False, now
+        assert mp.session_in_progress("asx", now.astimezone(dt.timezone.utc)) is False, now
         now += dt.timedelta(minutes=5)
     after = (floor + dt.timedelta(minutes=20)).astimezone(dt.timezone.utc)
     pre_auction = _at(SYDNEY, day.year, day.month, day.day, 16, 7, 30)

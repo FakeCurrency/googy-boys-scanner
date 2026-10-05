@@ -1526,9 +1526,13 @@ MORNING_PLAYS_SLOTS = {
 # YESTERDAY's, so any scan from earlier in today's session used to pass. Under
 # AEDT+EST the US slot's 06:30 Melbourne floor is 14:30 New York and the
 # ladder's 20:15/20:45 UTC rungs are 15:15/15:45 New York -- the digest went out
-# mid-session and marked itself done. So the gate also refuses while the gated
-# market is on a weekday between its OPEN (VIVEK_JOURNAL_SESSION, the canonical
-# session table: ASX 10:00 Sydney, NASDAQ 09:30 New York) and the close above.
+# mid-session and marked itself done. So the gate also refuses while the session
+# the slot OWES is running: a weekday between the gated market's OPEN
+# (VIVEK_JOURNAL_SESSION, the canonical session table: ASX 10:00 Sydney, NASDAQ
+# 09:30 New York) and the close above, for a session that opened at/before the
+# slot's floor on that Melbourne date. One that opened after the floor is the
+# NEXT slot's: under AEST+EDT, 23:30-23:59 Melbourne is 09:30-09:59 New York on
+# the same date, and that evening's US slot still owes the previous session.
 # The ASX slot's 16:30 floor is always past 16:12 Sydney (Melbourne and Sydney
 # share their DST dates), so that half never bites the ASX in practice.
 # crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
