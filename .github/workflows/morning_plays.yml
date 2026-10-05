@@ -34,13 +34,31 @@ name: Morning plays (Discord)
 # are a LADDER OF ATTEMPTS after the close scans, not a single wall-clock time:
 # the first post-close attempt sends, the per-day marker silences the rest.
 #
-# These crons are GitHub's own late backstop and are anchored to scan.yml's
-# close-scan crons in UTC (ASX closing scan 06:37 UTC, NASDAQ post-close 21:07
-# UTC), one attempt an hour apart each. The on-time delivery is the external
-# cron-job.org ladder (every 30 min after the close scan, see
-# functions/api/morning_plays.js) -- when it has delivered, these no-op.
-#   ASX:            07:50 + 08:50 UTC  = 17:50/18:50 AEST, 18:50/19:50 AEDT
-#   NASDAQ+Crypto:  21:50 + 22:50 UTC  = 07:50/08:50 AEST, 08:50/09:50 AEDT
+# The gate also refuses while the gated market's session TODAY is still running
+# (open per config.VIVEK_JOURNAL_SESSION .. the close above): under AEDT+EST the
+# US slot's 06:30 Melbourne floor is 14:30 New York, and a mid-session list used
+# to pass against YESTERDAY's close and mark the slot done.
+#
+# The close scans these follow (scan.yml, read in each market's own zone):
+#   ASX closing scan     16:30 Sydney   = 05:30 UTC (AEDT) / 06:30 UTC (AEST)
+#   NASDAQ post-close    16:07 New York = 20:07 UTC (EDT)  / 21:07 UTC (EST)
+#
+# The ON-TIME delivery is the external cron-job.org ladder (cron-job.org's
+# timezone set to UTC; Mon-Fri; see functions/api/morning_plays.js):
+#   ASX  06:15..10:45 UTC every 30 min = 16:15..20:45 AEST / 17:15..21:45 AEDT
+#        (16:15 AEST is before the 16:30 floor -> no-op)
+#   US   20:15..23:45 UTC every 30 min = 06:15..09:45 AEST / 07:15..10:45 AEDT
+#        = 16:15..19:45 EDT / 15:15..18:45 EST in New York (06:15 AEST is before
+#        the floor; 15:15/15:45 EST are mid-session -> the gate waits)
+#
+# The crons below are GitHub's own backstop -- when the ladder has delivered,
+# they no-op. Local times by regime (Melbourne = Sydney all year):
+#   50 5  UTC  ASX  15:50 AEST (before the floor) / 16:50 AEDT
+#   50 6  UTC  ASX  16:50 AEST                     / 17:50 AEDT
+#   50 7  UTC  ASX  17:50 AEST                     / 18:50 AEDT
+#   50 8  UTC  ASX  18:50 AEST                     / 19:50 AEDT
+#   50 21 UTC  US   07:50 AEST / 08:50 AEDT; 17:50 EDT / 16:50 EST New York
+#   50 22 UTC  US   08:50 AEST / 09:50 AEDT; 18:50 EDT / 17:50 EST New York
 
 on:
   schedule:
@@ -54,7 +72,9 @@ on:
     - cron: "50 6 * * 1-5"    # ASX, ~20 min after the 16:30 AEST closing scan
     - cron: "50 7 * * 1-5"    # ASX backstop
     - cron: "50 8 * * 1-5"    # ASX backstop, an hour later
-    - cron: "50 21 * * 1-5"   # NASDAQ+Crypto, after the 21:07 UTC post-close scan
+    # US. After the 16:07 New York post-close scan in either regime (20:07 UTC
+    # under EDT, 21:07 UTC under EST): 17:50 EDT / 16:50 EST New York.
+    - cron: "50 21 * * 1-5"   # NASDAQ+Crypto backstop
     - cron: "50 22 * * 1-5"   # NASDAQ+Crypto backstop, an hour later
   workflow_dispatch:
     inputs:

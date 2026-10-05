@@ -13,10 +13,14 @@
  * --slot path: at/past-target check + the per-day marker + 7-day ticker
  * dedup, and it WRITES state. So calling this early is a harmless no-op,
  * calling it twice is a harmless no-op, and GitHub's own late cron becomes a
- * no-op once this has delivered — no duplicate for the reader. Schedule the
- * pinger a few minutes AFTER the target (16:35 / 06:35 Melbourne), never
- * before, because before-target is a no-op and the day would then wait on
- * GitHub's cron.
+ * no-op once this has delivered — no duplicate for the reader. The script
+ * also waits (marking nothing) until the market's committed scan is a
+ * POST-CLOSE one and that market's session is no longer running
+ * (config.MORNING_PLAYS_SLOT_GATE), so schedule the pinger as a LADDER of
+ * attempts after the close scans, not one wall-clock ping: the first attempt
+ * that finds post-close data sends, the per-day marker silences the rest. (A
+ * single 16:35 / 06:35 Melbourne ping, the 2026-09-10 design, lasted one
+ * morning: 06:35 AEDT is 14:35-15:35 in New York, mid-session.)
  *
  * The GitHub token is the EXISTING GH_DISPATCH_TOKEN (it already dispatches
  * scan.yml from /api/scan) — it never leaves Cloudflare and never has to be
@@ -35,9 +39,18 @@
  *   1. Cloudflare Pages → googy-boys-scanner → Settings → Environment variables
  *        MORNING_PLAYS_TRIGGER_SECRET = <any long random string you make up>
  *      (GH_DISPATCH_TOKEN is already there.)
- *   2. In a free pinger (cron-job.org), two jobs, timezone Australia/Melbourne:
- *        16:35 daily → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=asx&key=<that string>
- *        06:35 daily → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=us&key=<that string>
+ *   2. In a free pinger (cron-job.org), two jobs with the job TIMEZONE SET TO
+ *      UTC (the close scans are fixed in each market's own zone, so a UTC
+ *      ladder long enough to cover both DST regimes is simpler than any
+ *      Melbourne-time one), Mon-Fri, every 30 minutes:
+ *        ASX  06:15..10:45 UTC → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=asx&key=<that string>
+ *        US   20:15..23:45 UTC → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=us&key=<that string>
+ *      In local time: ASX 16:15..20:45 AEST / 17:15..21:45 AEDT (after the
+ *      16:30 Sydney closing scan = 06:30 UTC AEST / 05:30 UTC AEDT); US
+ *      06:15..09:45 AEST / 07:15..10:45 AEDT Melbourne = 16:15..19:45 EDT /
+ *      15:15..18:45 EST New York (after the 16:07 New York post-close scan =
+ *      20:07 UTC EDT / 21:07 UTC EST). Rungs before the 16:30 / 06:30
+ *      Melbourne floor, or while New York is still trading, are no-ops.
  */
 
 import { dispatchWorkflow } from "./_dispatch.js";
