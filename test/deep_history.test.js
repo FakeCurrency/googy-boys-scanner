@@ -420,6 +420,235 @@ test("the constant documents how to reverse it", () => {
   assert.match(block, /CHART_MAX_YEARS/, "the revert path must be written where the knob is");
 });
 
+// ═══════════════ daily stock bars on the exchange's calendar ══════════════════
+// 2026-10-05, the first ASX Monday under AEDT. Yahoo stamps a daily bar at the
+// session OPEN in UTC: 10:00 Sydney was 00:00Z until 4 Oct and is 23:00Z the
+// PREVIOUS day until April; 09:30 New York is 13:30Z / 14:30Z. Every daily
+// reader on the chart reads the UTC date, so an ASX Monday read as Sunday
+// (markers a session late, Mondays tinted as weekend, 3D candles off the
+// engine's), and in a Melbourne browser a NASDAQ session's labels read the next
+// day. yahooBars now re-stamps daily bars at 00:00Z on the exchange date. These
+// run the SHIPPED functions, sliced out of chart.js, against a fake network.
+suite("daily stock bars carry their EXCHANGE date (AEDT, 2026-10-05)");
+
+function chartFn(name) {                      // parser-bounded, like momentum.test.js
+  const at = CHART.indexOf(`function ${name}(`);
+  assert.ok(at > 0, `chart.js no longer defines ${name}`);
+  for (let i = CHART.indexOf("{", at); i < CHART.length; i++) {
+    if (CHART[i] !== "}") continue;
+    const cand = CHART.slice(at, i + 1);
+    try { new Function("return (" + cand + ");"); return cand; } catch (_) { /* keep walking */ }
+  }
+  throw new Error("slice " + name);
+}
+function chartConst(name) {
+  const at = CHART.indexOf(`const ${name} = `);
+  assert.ok(at > 0, `chart.js no longer declares ${name}`);
+  for (let i = CHART.indexOf(";", at); i > 0; i = CHART.indexOf(";", i + 1)) {
+    const cand = CHART.slice(at, i + 1);
+    try { new Function(cand); return cand; } catch (_) { /* keep walking */ }
+  }
+  throw new Error("slice const " + name);
+}
+const DATE_FNS = ["sessionClock", "exchangeDay", "tickerSession", "toExchangeDates", "yahooBars",
+  "barAtDate", "barDateStr", "shadeRows", "bucketBars", "resampleWeekly", "sessionWeeks",
+  "yfTickerFor", "checkRecentDividend"];
+function dateHarness({ candles = [], market = "asx", recentDiv = null, el = null } = {}) {
+  const calls = [];
+  const fetch = (url) => {
+    calls.push(url);
+    return Promise.resolve({ ok: true, status: 200,
+      json: () => Promise.resolve({ ok: true, candles, recent_div: recentDiv }) });
+  };
+  const $ = (sel) => (sel === "#ct-divadj" ? el : null);
+  const body = ["MOM_SESSION", "_sessFmt", "DAILY_UP_INTERVAL", "INTRADAY_TF", "YF_TICKER"].map(chartConst)
+    .concat(DATE_FNS.map(chartFn)).join("\n");
+  const api = new Function("fetch", "market", "$",
+    `let DATA_META = null;\n${body}\nreturn { ${DATE_FNS.join(", ")}, MOM_SESSION };`)(fetch, market, $);
+  return { api, calls };
+}
+const isoOf = (t) => new Date(t * 1000).toISOString().replace(".000Z", "Z");
+const dayOf = (t) => new Date(t * 1000).toISOString().slice(0, 10);
+const bar = (iso, close) => ({ time: Date.parse(iso) / 1000, open: close, high: close + 0.5,
+  low: close - 0.5, close, volume: 100 });
+// Three ASX weeks as Yahoo serves them: 10:00 Sydney in UTC (stamps checked
+// with python zoneinfo), close = the session's day of the month. AEST for the
+// first week, AEDT from Monday 5 October.
+const ASX_SESSIONS = [
+  ["2026-09-28", "2026-09-28T00:00:00Z"], ["2026-09-29", "2026-09-29T00:00:00Z"],
+  ["2026-09-30", "2026-09-30T00:00:00Z"], ["2026-10-01", "2026-10-01T00:00:00Z"],
+  ["2026-10-02", "2026-10-02T00:00:00Z"],
+  ["2026-10-05", "2026-10-04T23:00:00Z"], ["2026-10-06", "2026-10-05T23:00:00Z"],
+  ["2026-10-07", "2026-10-06T23:00:00Z"], ["2026-10-08", "2026-10-07T23:00:00Z"],
+  ["2026-10-09", "2026-10-08T23:00:00Z"],
+  ["2026-10-12", "2026-10-11T23:00:00Z"], ["2026-10-13", "2026-10-12T23:00:00Z"],
+  ["2026-10-14", "2026-10-13T23:00:00Z"], ["2026-10-15", "2026-10-14T23:00:00Z"],
+  ["2026-10-16", "2026-10-15T23:00:00Z"],
+];
+const asxRaw = () => ASX_SESSIONS.map(([d, iso]) => bar(iso, +d.slice(8)));
+const asxDaily = async () => {
+  const h = dateHarness({ candles: asxRaw() });
+  return { h, bars: await h.api.yahooBars("BHP.AX", "25y", "1d", true) };
+};
+// Reader timezone for the label tests (the owner's, unless a test says
+// otherwise). Restored afterwards so no other test runs on a borrowed clock.
+async function inTZ(tz, fn) {
+  const was = process.env.TZ;
+  process.env.TZ = tz;
+  try { return await fn(); }
+  finally { if (was === undefined) delete process.env.TZ; else process.env.TZ = was; }
+}
+const inMelbourne = (fn) => inTZ("Australia/Melbourne", fn);
+
+test("an AEDT ASX Monday (2026-10-04T23:00Z) is stamped 2026-10-05 00:00Z", async () => {
+  const { bars } = await asxDaily();
+  const mon = bars.find((b) => b.close === 5);
+  assert.equal(isoOf(mon.time), "2026-10-05T00:00:00Z");
+  assert.deepEqual(bars.map((b) => dayOf(b.time)), ASX_SESSIONS.map(([d]) => d),
+    "every session, AEST and AEDT alike, carries its Sydney date");
+  assert.ok(bars.every((b) => b.time % 86400 === 0), "all at 00:00Z");
+  assert.ok(bars.every((b, i) => i === 0 || b.time > bars[i - 1].time), "strictly ascending");
+});
+
+test("barAtDate puts each engine marker on its own session -- 2026-10-05 hits Monday", async () => {
+  const { h, bars } = await asxDaily();
+  assert.equal(h.api.barAtDate(bars, "2026-10-05").close, 5,
+    "the old raw stamp put a 2026-10-05 marker on Tuesday's candle");
+  for (const [d] of ASX_SESSIONS) {
+    assert.equal(h.api.barAtDate(bars, d).close, +d.slice(8), `marker ${d} landed on another session`);
+  }
+});
+
+test("no ASX session is tinted as a weekend -- AEDT Mondays included", async () => {
+  const { h, bars } = await asxDaily();
+  const tc = bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }));
+  assert.deepEqual(h.api.shadeRows(tc, "1D"), [], "stocks have no weekend bars to tint");
+});
+
+test("3D candles hold the ENGINE's sessions (scanner/vivek.py _resample_3day_ohlc)", async () => {
+  const { h, bars } = await asxDaily();
+  // The engine's 72h epoch buckets for these sessions, read off the shipped
+  // _resample_3day_ohlc on naive Sydney dates (2026-10-05): open / close /
+  // session count per bucket. The raw stamps put Wed 7 Oct in the 10-04
+  // candle, Tue 13 in 10-10 and Fri 16 in 10-13.
+  const ENGINE = [["2026-09-28", 28, 30, 3], ["2026-10-01", 1, 2, 2], ["2026-10-04", 5, 6, 2],
+    ["2026-10-07", 7, 9, 3], ["2026-10-10", 12, 12, 1], ["2026-10-13", 13, 15, 3], ["2026-10-16", 16, 16, 1]];
+  const d3 = h.api.bucketBars(bars, 3 * 86400);
+  assert.deepEqual(d3.map((b) => [dayOf(b.time), b.open, b.close, b.volume / 100]), ENGINE);
+});
+
+test("weeks end on their Sydney Friday, AEDT weeks included", async () => {
+  const { h, bars } = await asxDaily();
+  const wk = h.api.resampleWeekly(bars);
+  assert.deepEqual(wk.map((b) => [dayOf(b.time), b.open, b.close]),
+    [["2026-10-02", 28, 2], ["2026-10-09", 5, 9], ["2026-10-16", 12, 16]], "the engine's W-FRI weeks");
+});
+
+test("a NASDAQ session at 2026-10-05T13:30Z labels as 5 Oct in a Melbourne browser", () => inMelbourne(async () => {
+  const h = dateHarness({ market: "nasdaq", candles: [bar("2026-10-02T13:30:00Z", 2), bar("2026-10-05T13:30:00Z", 5)] });
+  const bars = await h.api.yahooBars("AAPL", "25y", "1d", true);
+  assert.equal(isoOf(bars[1].time), "2026-10-05T00:00:00Z");
+  const opt = { day: "numeric", month: "short" };
+  const want = new Date(Date.UTC(2026, 9, 5)).toLocaleDateString(undefined, Object.assign({ timeZone: "UTC" }, opt));
+  const nextDay = new Date(Date.UTC(2026, 9, 6)).toLocaleDateString(undefined, Object.assign({ timeZone: "UTC" }, opt));
+  for (const tf of ["1D", "3D", "1W"]) assert.equal(h.api.barDateStr(bars[1].time, tf, opt), want, tf);
+  // The pre-fix label: the raw 13:30Z stamp on the reader's clock is 00:30 on 6 Oct.
+  assert.equal(new Date(Date.parse("2026-10-05T13:30:00Z")).toLocaleDateString(undefined, opt), nextDay,
+    "the harness really is reading on Melbourne's clock");
+  // Intraday labels are untouched: still the reader's local clock.
+  const raw = Date.parse("2026-10-05T13:30:00Z") / 1000;
+  assert.equal(h.api.barDateStr(raw, "4H", opt), nextDay, "4H keeps the local date, as before");
+}));
+
+test("a daily label names the exchange date in a reader's timezone WEST of UTC too", () => inTZ("America/Los_Angeles", async () => {
+  // 00:00Z is the previous evening in Los Angeles: formatting a daily bar on
+  // the reader's clock would print 4 Oct under a 5 Oct candle.
+  const h = dateHarness({ candles: asxRaw() });
+  const bars = await h.api.yahooBars("BHP.AX", "25y", "1d");
+  const mon = bars.find((b) => b.close === 5);
+  const opt = { day: "numeric", month: "short", year: "2-digit" };
+  const want = new Date(Date.UTC(2026, 9, 5)).toLocaleDateString(undefined, Object.assign({ timeZone: "UTC" }, opt));
+  assert.equal(h.api.barDateStr(mon.time, "1D", opt), want);
+  assert.notEqual(new Date(mon.time * 1000).toLocaleDateString(undefined, opt), want,
+    "the harness really is reading on Los Angeles' clock");
+  const t4 = Date.parse("2026-10-05T03:00:00Z") / 1000;   // an ASX 4H bar, 14:00 Sydney
+  assert.equal(h.api.barDateStr(t4, "4H", opt), new Date(t4 * 1000).toLocaleDateString(undefined, opt),
+    "intraday stays on the reader's clock");
+}));
+
+test("the replay, ruler and forecast labels all go through barDateStr", () => {
+  assert.match(CHART, /const dstr = barDateStr\(sec, curTF, \{ weekday:/, "forecast projFmt");
+  assert.match(CHART, /const d = barDateStr\(sec, curTF, \{ day:/, "ruler fmtDT");
+  assert.match(CHART, /posLbl\.textContent = `\$\{idx\}\/\$\{c\.length\} · ` \+\s*barDateStr\(tCut, curTF,/, "replay position");
+  assert.equal((CHART.match(/toLocaleDateString\(undefined/g) || []).length, 1,
+    "a bar date formatted on the browser's clock outside barDateStr would split the chart's dates again");
+});
+
+test("the DIV-ADJ chip names the ex-date on the exchange's calendar", () => inMelbourne(async () => {
+  const run = async (market, symbol, iso) => {
+    const el = { textContent: "", title: "", hidden: true };
+    const h = dateHarness({ market, el, recentDiv: { date: Date.parse(iso) / 1000, amount: 0.26 } });
+    h.api.checkRecentDividend({ symbol, asset_type: null });
+    await new Promise((r) => setTimeout(r, 0));
+    return { el, calls: h.calls };
+  };
+  const nq = await run("nasdaq", "AAPL", "2026-10-05T13:30:00Z");   // Tue 00:30 in Melbourne
+  assert.equal(nq.el.textContent, "Ⓓ DIV-ADJ 5 Oct");
+  assert.match(nq.el.title, /^Went ex-dividend 5 Oct /);
+  assert.equal(nq.el.hidden, false);
+  assert.deepEqual(nq.calls, ["/api/price?symbol=AAPL&range=1mo&interval=1d"]);
+  const winter = await run("nasdaq", "AAPL", "2026-12-16T14:30:00Z");   // AEDT + EST
+  assert.equal(winter.el.textContent, "Ⓓ DIV-ADJ 16 Dec");
+  const asx = await run("asx", "BHP", "2026-10-04T23:00:00Z");
+  assert.equal(asx.el.textContent, "Ⓓ DIV-ADJ 5 Oct");
+  assert.deepEqual(asx.calls, ["/api/price?symbol=BHP.AX&range=1mo&interval=1d"]);
+}));
+
+test("Momentum's exchange weeks still cut on Monday once NASDAQ bars sit at 00:00Z", async () => {
+  // 00:00Z is 20:00 the evening BEFORE in New York, so reading a re-stamped
+  // bar on New York's clock would file every Monday under the previous week.
+  const days = ["2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06", "2026-10-09", "2026-10-12"];
+  const h = dateHarness({ market: "nasdaq", candles: days.map((d) => bar(d + "T13:30:00Z", +d.slice(8))) });
+  const bars = await h.api.yahooBars("AAPL", "25y", "1d");
+  const w = h.api.sessionWeeks(bars, h.api.MOM_SESSION.nasdaq);
+  assert.deepEqual(w.map((b) => [dayOf(b.time), b.open, b.close]),
+    [["2026-10-01", 1, 2], ["2026-10-05", 5, 9], ["2026-10-12", 12, 12]]);
+});
+
+test("the re-stamp is idempotent: a 00:00Z bar is already a calendar date", () => {
+  const { api } = dateHarness();
+  const NQ = api.MOM_SESSION.nasdaq;
+  const eod = [bar("2026-10-02T00:00:00Z", 2), bar("2026-10-05T00:00:00Z", 5)];   // the EODHD / saved-file shape
+  assert.deepEqual(api.toExchangeDates(eod, NQ).map((b) => dayOf(b.time)), ["2026-10-02", "2026-10-05"],
+    "New York's clock must not move a calendar date back a day");
+  const once = api.toExchangeDates(asxRaw(), api.MOM_SESSION.asx);
+  assert.deepEqual(api.toExchangeDates(once, api.MOM_SESSION.asx), once);
+  assert.equal(api.exchangeDay(Date.parse("2026-10-04T23:00:00Z") / 1000, "Australia/Sydney"), "2026-10-05");
+});
+
+test("a repeated live session collapses to one bar, the later one", () => {
+  const { api } = dateHarness();
+  const live = [bar("2026-10-04T23:00:00Z", 5), bar("2026-10-05T23:00:00Z", 6), bar("2026-10-06T03:12:00Z", 7)];
+  const out = api.toExchangeDates(live, api.MOM_SESSION.asx);
+  assert.deepEqual(out.map((b) => [dayOf(b.time), b.close]), [["2026-10-05", 5], ["2026-10-06", 7]]);
+  assert.deepEqual(live.map((b) => b.close), [5, 6, 7], "the caller's bars are not mutated");
+});
+
+test("intraday, crypto and futures bars are left exactly as served", async () => {
+  const raw = [bar("2026-10-04T23:00:00Z", 5), bar("2026-10-05T00:00:00Z", 6)];
+  let h = dateHarness({ candles: raw });
+  assert.deepEqual(await h.api.yahooBars("BHP.AX", "2y", "1h"), raw, "hourly keeps its real clock");
+  for (const yf of ["BTC-USD", "GC=F", "^N225"]) {
+    h = dateHarness({ candles: raw });
+    assert.deepEqual(await h.api.yahooBars(yf, "1y", "1d"), raw, yf);
+  }
+  const s = dateHarness().api.tickerSession;
+  assert.equal(s("BHP.AX").tz, "Australia/Sydney");
+  assert.equal(s("^AXJO").tz, "Australia/Sydney", "the ASX compare index is dated like the ASX chart");
+  assert.equal(s("SPY").tz, "America/New_York");
+  assert.equal(s("BRK-B").tz, "America/New_York");
+});
+
 runQueue().then(() => {
   console.log(`\ndeep_history.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
