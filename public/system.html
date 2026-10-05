@@ -47,6 +47,16 @@
       border-radius: 10px; padding: 10px 13px; margin-top: 10px; }
     .pill-g { color: var(--grade-aplus); font-weight: 800; } .pill-a { color: var(--grade-a); font-weight: 800; }
     .pill-b { color: var(--grade-b); font-weight: 800; } .pill-w { color: var(--grade-c); font-weight: 800; }
+    /* PHONES (2026-10-05): at 390px the page scrolled 109px sideways. The
+       nowrap <code> above (file names, the PhaseMap state chain) and the
+       backtest table's nowrap headers were wider than the panel. Let them
+       wrap here; desktop keeps the one-line look. */
+    @media (max-width: 600px) {
+      section.sys { padding: 16px 14px; }
+      .sys-t th, .sys-t td { padding-left: 7px; padding-right: 7px; }
+      .sys-t code, section.sys code { white-space: normal; overflow-wrap: anywhere; }
+      .sys-t.bt-t th:nth-child(n+2) { white-space: normal; }
+    }
   </style>
 </head>
 <body>
