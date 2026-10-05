@@ -34,10 +34,9 @@ on:
     #     NASDAQ  10:30 .. 16:45 America/New_York   (open 09:30 + 1h .. close + settle)
     # Anything outside every window is skipped, so weekends and overnight cost
     # one short gate job and nothing else. The one exception is a market shut
-    # since today's close with no scan since: that is the missed closing scan,
-    # and any cron or heal after the close catches it up once. The two windows
-    # never overlap in UTC, so a scheduled run scans one market and never
-    # crypto.
+    # since today's close with no scan since: it owes its closing scan, and the
+    # first cron or heal after the close (with no other market live) catches it
+    # up. A scheduled run scans at most one stock market and never crypto.
     #
     # The 16:45 tails are load-bearing, not slack: the ASX closing auction
     # prints ~16:10-16:12 and the morning_plays digest refuses to send until it
@@ -85,8 +84,8 @@ permissions:
 
 # NOTE: the "scan" mutex now lives on the `scan` JOB, not here at workflow
 # level. See the comment on that job — moving it is what lets the gate below
-# actually reach its own curl. Do not re-add a workflow-level concurrency
-# block: it re-breaks every freshness backstop in this repo at once.
+# always run and decide. Do not re-add a workflow-level concurrency block: it
+# re-breaks every freshness backstop in this repo at once.
 
 jobs:
   # THE GATE decides which markets this run scans: scripts/scan_gate.py, one
@@ -94,13 +93,14 @@ jobs:
   # plays digest's close (MORNING_PLAYS_SLOT_GATE) in each market's own
   # calendar, so daylight saving cannot move it and there is no inline copy of
   # the table to drift. In short:
-  #   schedule   the stock market in session, or one shut since today's close
-  #              with no scan since (the missed closing scan). Never crypto.
-  #   heartbeat  crypto (24/7) plus any requested stock market that is due.
-  #              Never a shut market (until 2026-10-05 every heal rescanned
-  #              ASX + NASDAQ round the clock).
+  #   schedule   the stock market in session or, when none is, the one shut
+  #              since today's close with no scan since (the missed closing
+  #              scan). One stock market at most, never crypto.
+  #   heartbeat  crypto (24/7) plus the due stock market. Never a shut market
+  #              (until 2026-10-05 every heal rescanned ASX + NASDAQ round the
+  #              clock).
   #   otherwise  a person or the SCAN button: exactly what was asked.
-  # Behaviour and the four DST regimes are pinned in tests/test_scan_windows.py.
+  # Behaviour in all three DST regimes is pinned in tests/test_scan_windows.py.
   gate:
     runs-on: ubuntu-latest
     # TOP100 #44 - a sparse checkout and one python3 call. It is outside the
@@ -116,12 +116,15 @@ jobs:
       run: ${{ steps.check.outputs.run }}
       markets: ${{ steps.check.outputs.markets }}
     steps:
-      # Four small files, not the ~60 MB tree: the script, the stdlib-only
+      # Five small files, not the ~60 MB tree: the script, the stdlib-only
       # config it reads, and the two stamps of when each stock market was last
       # scanned. The branch TIP when the job starts (a branch `ref`, the
-      # 2026-09-27 rule), not the commit the run was triggered on.
+      # 2026-09-27 rule), not the commit the run was triggered on. Its own
+      # timeout: git has none, and a stalled fetch that ran into the job's
+      # would skip the scan instead of reaching the fail-open below.
       - uses: actions/checkout@v4
         continue-on-error: true
+        timeout-minutes: 2
         with:
           ref: ${{ github.ref }}
           filter: blob:none
@@ -144,9 +147,10 @@ jobs:
             cat gate.out >> "$GITHUB_OUTPUT"
           else
             # FAIL OPEN: an extra scan costs one run; a session with no scan
-            # costs the day.
+            # costs the day. A schedule still never scans crypto.
             M="${MARKET:-all}"
             [ "$M" = "all" ] && M="asx nasdaq crypto"
+            [ "$EVENT" = "schedule" ] && M="asx nasdaq"
             echo "::warning::scan gate crashed - scanning $M (fail open)"
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "markets=$M" >> "$GITHUB_OUTPUT"
@@ -172,7 +176,7 @@ jobs:
   # curl. That is the self-defeating shape: adding crons to a saturated
   # one-slot queue makes cancellation MORE likely, not less.
   #
-  # The fix: gate jobs are cheap (one curl, ~15 s) and write nothing, so they
+  # The fix: gate jobs are cheap (seconds) and write nothing, so they
   # no longer belong in the mutex. They now always execute and decide; only
   # this job — the one that actually scans and commits — queues. A backstop
   # that decides "fresh, skip" now costs zero queue slots instead of evicting
@@ -472,11 +476,11 @@ jobs:
           #       while the journal's advanced. `--verify` cannot see this: it
           #       compares the working tree, not what got committed.
           #
-          # CRYPTO IS EXEMPT, but only as one leg of a FULL cycle - which is
+          # CRYPTO IS EXEMPT, but only beside another market - which is
           # exactly where the scan step itself declines to gate on it ("crypto
-          # is best-effort, keyless feeds can be flaky"; only RC_ASX and RC_NAS
-          # gate the job). On a crypto-only weekend run crypto IS the gating
-          # market and is asserted like any other. Making the gate stricter than
+          # is best-effort beside a stock market"; only stock markets set the
+          # job's exit code). On a crypto-only run crypto IS the gating market
+          # and is asserted like any other. Making the gate stricter than
           # the step it is gating would fail whole cycles over a flaky feed and
           # resurrect the failure-email problem.
           # 2026-07-28 incident. A market whose download comes back fully empty
@@ -509,13 +513,13 @@ jobs:
             for m in $MK; do
               if skipped "$m"; then
                 echo "::warning::${m}: no data downloaded and no cache to fall back on - scan deliberately published nothing, so ${m} data is UNCHANGED from the previous run. Not a staging failure."
-              elif [ "$m" = "crypto" ] && [ "$M" = "all" ]; then
+              elif [ "$m" = "crypto" ] && [ "$M" != "crypto" ]; then
                 bash scripts/assert_staged.sh "scan output [crypto]" \
                   "public/data/crypto_vivek.json" \
-                  || echo "::warning::crypto scan output not staged - best-effort leg of a full cycle"
+                  || echo "::warning::crypto scan output not staged - best-effort beside a stock market"
                 bash scripts/assert_staged.sh "bot book [crypto]" \
                   "journal/vivek_bot_book.crypto.json" \
-                  || echo "::warning::crypto book not staged - best-effort leg of a full cycle"
+                  || echo "::warning::crypto book not staged - best-effort beside a stock market"
               else
                 bash scripts/assert_staged.sh "scan output [$m]" "public/data/${m}_vivek.json"
                 bash scripts/assert_staged.sh "bot book [$m]" "journal/vivek_bot_book.${m}.json"

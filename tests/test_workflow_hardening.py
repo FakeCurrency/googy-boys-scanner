@@ -482,7 +482,7 @@ def _gate_block() -> str:
 
 
 def _run_gate(tmp_path, *, skipped=(), staged_ok=False,
-              market="all", mk="asx nasdaq crypto", event="schedule"):
+              market="asx nasdaq crypto", mk="asx nasdaq crypto", event="schedule"):
     """Run the real gate shell with a stubbed assert_staged. Returns (rc, out).
 
     `staged_ok` is what the stub reports for EVERY path, which is the only two
@@ -556,6 +556,25 @@ def test_only_an_all_skipped_cycle_relaxes_the_combined_books(tmp_path):
     rc, out = _run_gate(tmp_path, skipped=("asx", "nasdaq"), staged_ok=False)
     assert rc != 0, out
     assert "ASSERT-CALLED: combined book (journal)" in out
+
+
+@pytest.mark.parametrize("market,hard", [("crypto", True), ("nasdaq crypto", False),
+                                         ("asx nasdaq crypto", False)])
+def test_crypto_is_best_effort_beside_a_stock_market_and_gating_alone(tmp_path, market, hard):
+    """The same rule as the scan step's exit code. Keyed on `all` until
+    2026-10-05, when the gate stopped emitting `all` -- which made the
+    exemption unreachable and a flaky crypto leg discard a fail-open run's
+    ASX and NASDAQ output."""
+    stub = tmp_path / "scripts" / "assert_staged.sh"
+    stub.parent.mkdir(parents=True)
+    stub.write_text('#!/usr/bin/env bash\necho "ASSERT-CALLED: $1"\n'
+                    'case "$1" in *crypto*) exit 1 ;; esac\nexit 0\n', encoding="utf-8")
+    script = tmp_path / "gate.sh"
+    script.write_text(f'GITHUB_EVENT_NAME="schedule"\nM="{market}"\nMK="{market}"\n'
+                      + _gate_block(), encoding="utf-8")
+    p = subprocess.run(["bash", "-e", str(script)], cwd=tmp_path, capture_output=True, text=True)
+    assert "ASSERT-CALLED: scan output [crypto]" in p.stdout, p.stdout + p.stderr
+    assert (p.returncode != 0) is hard, p.stdout + p.stderr
 
 
 def test_a_normal_run_is_untouched_by_any_of_this(tmp_path):
