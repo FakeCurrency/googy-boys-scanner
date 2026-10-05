@@ -1,8 +1,8 @@
 name: Confluence alert (post-nightly)
 
 # Multi-lens confluence engine (ALERTS log + push-owed state; delivery
-# removed 2026-08-27), 15 min after the PhaseMap/Specs
-# nightly lands (2026-07-20, review H6). This workflow exists so the
+# removed 2026-08-27), run when the PhaseMap/Specs nightly
+# finishes (2026-07-20, review H6). This workflow exists so the
 # confluence dedupe state (journal/confluence_state.json +
 # public/data/phasemap/alert_history.json) has a SINGLE committing owner:
 # the "scan" concurrency group. Previously phasemap.yml (its own group)
@@ -16,8 +16,25 @@ on:
   # for EVERY cron in this repo after ~01:15 UTC — the same window in which
   # GitHub's ref backend was erroring (crypto_bot #255, "fatal error in
   # commit_refs"). This touch re-registers all schedules (2026-07-24 precedent).
+  #
+  # WAKE ON THE NIGHTLY'S COMPLETION, not on a clock (2026-10-05). The cron
+  # alone was "15 min after phasemap.yml's 08:30", but GitHub fires both hours
+  # late and squeezes the gap to ~3-6 min while phasemap takes 6-14, so on 12
+  # of 15 nights (09-21..10-05) this ran BEFORE phasemap committed and read
+  # the previous night's files; the alignments waited for the next scan.yml.
+  # workflow_run fires once phasemap.yml ends, success or failure (its gate
+  # commits whatever staged even when it goes red). No `branches:` filter:
+  # phasemap pushes to main from any branch, and this run reads main either
+  # way (see the checkout below). A late, duplicate or no-op run is harmless
+  # - the engine is idempotent and the commit step stages nothing on a quiet
+  # night. The cron stays as the BACKSTOP in case GitHub drops the
+  # workflow_run event the way it drops crons; on a night it lands after
+  # phasemap's commit it does the work itself, otherwise it is a no-op.
+  workflow_run:
+    workflows: ["PhaseMap nightly scan"]   # phasemap.yml's `name:`, exactly
+    types: [completed]
   schedule:
-    - cron: "45 8 * * *"     # daily, 15 min after phasemap.yml's 08:30 UTC
+    - cron: "45 8 * * *"     # backstop; nominally 15 min after phasemap.yml's 08:30 UTC
   workflow_dispatch:
 
 permissions:
@@ -45,6 +62,11 @@ jobs:
       # i.e. after the run acquired the mutex. Nothing below reads
       # github.sha / GITHUB_SHA ($SHA is this run's own commit). Pinned in
       # tests/test_workflow_mutex.py (WORKFLOW_SCOPED).
+      # Under workflow_run (2026-10-05) github.ref is the DEFAULT branch,
+      # refs/heads/main, exactly as under schedule - so that run also reads
+      # main's tip, never the phasemap run's head_sha (the commit phasemap
+      # STARTED from, which predates the data it just pushed). Pinned in
+      # tests/test_workflow_hardening.py.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}

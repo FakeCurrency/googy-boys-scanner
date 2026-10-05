@@ -12,11 +12,18 @@ list cannot drift away from the backed-up list, and `verify()` actually bites
 on each of the three ways a file in a finished backup can be useless.
 """
 
+import datetime as _dt
 import importlib.util
 import json
+import os
 import pathlib
+import re
+import shutil
+import subprocess
+import tempfile
 
 import pytest
+import yaml
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 _SPEC = importlib.util.spec_from_file_location(
@@ -197,3 +204,172 @@ def test_the_manifest_is_not_what_verify_trusts(live):
     assert "data/sector_map.json" in manifest["files"]
     (dest / "data" / "sector_map.json").unlink()   # manifest still claims it
     assert bj.verify() == 1
+
+
+# --------------------------------------------------------------------------
+# the backstop cron's freshness gate (backup_book.yml), EXECUTED
+# --------------------------------------------------------------------------
+# The gate is shell inside the workflow, so these tests slice the SHIPPED
+# `run:` block out of the YAML and run it in bash against a temp backups/ dir,
+# with the clock faked by a `date` shim on PATH: a call without -d/--date gets
+# `-d @$FAKE_NOW` prepended, so every reading of "now" is the test's.
+#
+# Why (2026-10-05 audit): the gate used to match the UTC CALENDAR date
+# (`grep "^$(date -u +%Y-%m-%d)T"`). Both crons fire hours late, so the 21:35
+# primary now lands after 00:00Z, and that match read the previous cycle's
+# snapshot as tonight's: a dropped primary with an on-time backstop would have
+# skipped and left a ~48h hole (watchdog backup_stale is 26h). And a primary
+# landing BEFORE midnight was invisible to a backstop after it, so every night
+# 09-05..09-28 took two snapshots.
+
+_WF_DOC = yaml.safe_load(
+    (_ROOT / ".github" / "workflows" / "backup_book.yml").read_text(encoding="utf-8"))
+_GATE = next(s for s in _WF_DOC["jobs"]["backup"]["steps"]
+             if s.get("name") == "Backstop freshness gate")
+_CRONS = [c["cron"] for c in (_WF_DOC.get("on") or _WF_DOC[True])["schedule"]]
+PRIMARY, BACKSTOP = "35 21 * * *", "35 23 * * *"
+_SHELLS = [("bash", "-e"), ("bash", "-eo", "pipefail")]   # GitHub's default; and stricter
+
+
+def _epoch(when: _dt.datetime) -> int:
+    return int(when.replace(tzinfo=_dt.timezone.utc).timestamp())
+
+
+def _utc(stamp: str) -> _dt.datetime:
+    return _dt.datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ")
+
+
+def _shim(tmp_path) -> pathlib.Path:
+    d = tmp_path / "shimbin"
+    if not d.exists():
+        d.mkdir()
+        real = shutil.which("date")
+        (d / "date").write_text(
+            "#!/bin/bash\n"
+            'for a in "$@"; do case "$a" in -d|-d*|--date|--date=*) '
+            f'exec {real} "$@";; esac; done\n'
+            f'exec {real} -d "@$FAKE_NOW" "$@"\n')
+        (d / "date").chmod(0o755)
+    return d
+
+
+def _env(tmp_path, now: _dt.datetime, **extra) -> dict:
+    return {**os.environ, **extra,
+            "PATH": f"{_shim(tmp_path)}{os.pathsep}{os.environ['PATH']}",
+            "FAKE_NOW": str(_epoch(now))}
+
+
+def _run_gate(tmp_path, now: str, snapshots=(), schedule=BACKSTOP,
+              shell=_SHELLS[0], make_dir=True) -> str:
+    """Run the shipped gate in a fresh checkout dir; return its `run` value."""
+    work = pathlib.Path(tempfile.mkdtemp(dir=tmp_path))
+    if make_dir:
+        (work / "backups").mkdir()
+        for name in snapshots:
+            (work / "backups" / name).mkdir()
+    (work / "gate.sh").write_text(_GATE["run"])
+    out = work / "github_output"
+    out.write_text("")
+    p = subprocess.run(
+        [*shell, "gate.sh"], cwd=work, capture_output=True, text=True,
+        env=_env(tmp_path, _utc(now), SCHEDULE=schedule, GITHUB_OUTPUT=str(out)))
+    assert p.returncode == 0, f"the gate must never fail the job:\n{p.stderr}"
+    runs = re.findall(r"^run=(\w+)$", out.read_text(), re.M)
+    assert len(runs) == 1, f"exactly one run= line expected, got {runs}"
+    return runs[0]
+
+
+def test_the_shim_really_fakes_the_clock(tmp_path):
+    """Every verdict below depends on this; without it they test today."""
+    p = subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], capture_output=True,
+                       text=True, check=True,
+                       env=_env(tmp_path, _utc("2020-01-02T03:04:05Z")))
+    assert p.stdout.strip() == "2020-01-02T03:04:05Z"
+
+
+def test_the_gate_keys_on_the_backstop_cron_it_is_written_for():
+    assert _GATE["env"]["SCHEDULE"] == "${{ github.event.schedule }}"
+    assert PRIMARY in _CRONS and BACKSTOP in _CRONS
+    assert f'"$SCHEDULE" = "{BACKSTOP}"' in _GATE["run"]
+
+
+def test_the_slot_hour_is_the_primary_crons_hour():
+    """SLOT_H ties the gate to the 21:35 cron. Move the cron without it and
+    the gate measures a slot nothing fires in."""
+    m = re.search(r"^SLOT_H=(\d+)", _GATE["run"], re.M)
+    assert m, "the gate lost its SLOT_H"
+    assert m.group(1) == PRIMARY.split()[1]
+
+
+@pytest.mark.parametrize("shell", _SHELLS)
+def test_a_primary_that_landed_after_utc_midnight_satisfies_the_backstop(tmp_path, shell):
+    """The live pattern since 09-29: Oct 4's 21:35 ran at 00:07Z on Oct 5 and
+    the backstop at 02:20Z. One snapshot for the cycle, not two."""
+    assert _run_gate(tmp_path, "2026-10-05T02:20:08Z",
+                     ["2026-10-04T00-00-10", "2026-10-05T00-07-02"],
+                     shell=shell) == "false"
+
+
+@pytest.mark.parametrize("shell", _SHELLS)
+def test_a_primary_before_midnight_satisfies_a_backstop_after_it(tmp_path, shell):
+    """09-05..09-28: primary 23:47Z, backstop 01:39Z the next UTC day. The
+    calendar match missed it and took a second snapshot every night."""
+    assert _run_gate(tmp_path, "2026-09-17T01:39:36Z",
+                     ["2026-09-16T01-36-34", "2026-09-16T23-47-15"],
+                     shell=shell) == "false"
+
+
+@pytest.mark.parametrize("shell", _SHELLS)
+def test_only_the_previous_cycles_snapshot_means_the_backstop_runs(tmp_path, shell):
+    """The hole: Oct 5's 21:35 dropped, the backstop on time at 23:35Z. The
+    newest snapshot (00:07Z the same UTC day) is Oct 4's slot, so tonight has
+    none - run. The calendar match skipped here."""
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z",
+                     ["2026-10-04T00-00-10", "2026-10-05T00-07-02"],
+                     shell=shell) == "true"
+
+
+def test_a_late_backstop_after_a_dropped_primary_runs(tmp_path):
+    """Same drop, the backstop landing after midnight (its usual lateness)."""
+    assert _run_gate(tmp_path, "2026-10-06T02:20:00Z",
+                     ["2026-10-04T00-00-10", "2026-10-05T00-07-02"]) == "true"
+
+
+def test_the_slot_boundary_is_inclusive(tmp_path):
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z",
+                     ["2026-10-05T21-00-00"]) == "false"
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z",
+                     ["2026-10-05T20-59-59"]) == "true"
+
+
+@pytest.mark.parametrize("shell", _SHELLS)
+def test_fail_open_without_a_backups_dir(tmp_path, shell):
+    """An absent/unreadable dir reads as no snapshot and must not abort the
+    step, even under pipefail (ls exits 2, grep exits 1)."""
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z", make_dir=False,
+                     shell=shell) == "true"
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z", shell=shell) == "true"
+
+
+def test_stray_entries_are_not_snapshots(tmp_path):
+    """Only fixed-width stamp dirs count - the rule _dated_dirs() applies."""
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z",
+                     ["README", "2026-10-05T23-00-00-hand-made",
+                      "2026-10-04T00-00-10"]) == "true"
+
+
+@pytest.mark.parametrize("schedule", [PRIMARY, ""])
+def test_the_gate_never_holds_back_the_primary_or_a_manual_run(tmp_path, schedule):
+    assert _run_gate(tmp_path, "2026-10-05T23:35:00Z", ["2026-10-05T22-00-00"],
+                     schedule=schedule) == "true"
+
+
+def test_the_gate_recognises_what_backup_journal_actually_writes(live, tmp_path):
+    """The names come from backup_journal._ts(). With the clock set to the
+    snapshot's own instant it is at/after the latest slot by definition, so a
+    format drift between the writer and the gate's filter fails here instead
+    of making every backstop run."""
+    dest = bj.backup()
+    taken = _dt.datetime.strptime(dest.name, "%Y-%m-%dT%H-%M-%S")
+    assert _run_gate(tmp_path, taken.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                     [dest.name]) == "false"
