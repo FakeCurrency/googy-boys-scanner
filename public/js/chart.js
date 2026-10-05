@@ -480,7 +480,10 @@
   // DATA HONESTY metadata from the DAILY pull (basis / flat padding / interval
   // degradation) — captured only when the caller asks (capture=true on the
   // series that drives the chart), rendered by renderDataHonesty() below.
+  // Daily-and-above stock bars leave here stamped 00:00Z on their EXCHANGE
+  // date (toExchangeDates, below); intraday bars are passed through as served.
   let DATA_META = null;
+  const DAILY_UP_INTERVAL = /^\d+(d|wk|mo)$/;     // 1d / 5d / 1wk / 1mo -- not 1h, 15m, 60m
   function yahooBars(yfTicker, range, interval, capture) {
     return fetch(`/api/price?symbol=${encodeURIComponent(yfTicker)}&range=${range}&interval=${interval}`,
       { cache: "no-store" })
@@ -490,7 +493,9 @@
           DATA_META = { bars: j.bars || 0, flat: j.flat || 0,
                         basis: j.basis || null, degraded: !!j.degraded };
         }
-        return (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
+        const bars = (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
+        const sess = DAILY_UP_INTERVAL.test(interval) ? tickerSession(yfTicker) : null;
+        return sess ? toExchangeDates(bars, sess) : bars;
       });
   }
 
@@ -568,7 +573,8 @@
 
   // ── EXCHANGE-SESSION BARS (Momentum only, 2026-09-23) ─────────────────────
   // bucketBars / resampleWeekly group on UTC arithmetic, which is right for the
-  // 5.0 chart (it must agree with the engine) and for 24/7 crypto, but it is not
+  // 5.0 chart (it must agree with the engine, and its daily bars carry their
+  // exchange date at 00:00Z -- see toExchangeDates) and for 24/7 crypto, but it is not
   // how TradingView builds an exchange's bars, and the Momentum chart is
   // checked against TradingView. Measured on ELS (reviews/2026-09-23-tf-align.md):
   //   * 4H: UTC 00/04/08 buckets only coincide with the 10:00 / 14:00 Sydney
@@ -585,7 +591,8 @@
   //     single session. TradingView counts trading sessions.
   //   * Daily bars arrive stamped at the session open in UTC, so an AEDT Monday
   //     carries a SUNDAY UTC date. Anything grouping by date must use the
-  //     exchange's own calendar date.
+  //     exchange's own calendar date -- which yahooBars now hands every chart
+  //     (toExchangeDates, 2026-10-05).
   const MOM_SESSION = {
     asx:    { tz: "Australia/Sydney", open: 10 * 60,      close: 16 * 60 },
     nasdaq: { tz: "America/New_York", open: 9 * 60 + 30,  close: 16 * 60 },
@@ -599,6 +606,50 @@
     const p = {};
     for (const x of f.formatToParts(new Date(t * 1000))) p[x.type] = x.value;
     return { day: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute };
+  }
+
+  // ── DAILY STOCK BARS ON THE EXCHANGE'S CALENDAR (2026-10-05) ──────────────
+  // Yahoo stamps a daily stock bar at its session OPEN in UTC: 10:00 Sydney is
+  // 00:00Z under AEST but 23:00Z the PREVIOUS day under AEDT; 09:30 New York is
+  // 13:30Z / 14:30Z. Everything daily on this chart reads the UTC date --
+  // barAtDate against the engine's exchange-date markers, the 3D buckets, the
+  // weekly resample, the weekend tint, Lightweight Charts' UTC axis -- so under
+  // AEDT an ASX Monday read as Sunday: markers one session late, Mondays tinted
+  // as weekend, 3D candles built from other sessions than the engine's plan.
+  // yahooBars re-stamps daily-and-above bars ONCE, at 00:00Z on the exchange
+  // date (what the saved scan files and the EODHD path already serve), so
+  // every one of those readers gets the exchange date. Intraday is untouched.
+  //
+  // A stamp at exactly 00:00Z is ALREADY a calendar date and is read as UTC:
+  // re-reading it on New York's clock would move it back a day (00:00Z is
+  // 20:00 the evening before there). That keeps the re-stamp idempotent.
+  function exchangeDay(t, tz) {
+    return t % 86400 === 0 ? new Date(t * 1000).toISOString().slice(0, 10)
+                           : sessionClock(t, tz).day;
+  }
+  // The exchange a Yahoo ticker's daily bars are dated on, read off the ticker
+  // so a compare overlay (SPY on an ASX chart) is dated on ITS exchange: ".AX"
+  // and the ASX indices (^AXJO) are Sydney, a bare symbol is a US listing.
+  // Crypto ("-USD", already UTC days), futures ("=F"), other exchanges'
+  // indices and suffixes are left as served.
+  function tickerSession(yf) {
+    const t = String(yf || "").toUpperCase();
+    if (t.endsWith(".AX") || t.startsWith("^AX")) return MOM_SESSION.asx;
+    if (/^[A-Z][A-Z0-9-]*$/.test(t) && !t.endsWith("-USD")) return MOM_SESSION.nasdaq;
+    return null;
+  }
+  // Daily-and-above bars -> stamped 00:00Z on the exchange date. A second bar
+  // on the same date (a repeated live session) replaces the first, so the
+  // series stays strictly ascending, as Lightweight Charts requires.
+  function toExchangeDates(bars, sess) {
+    const out = [];
+    for (const b of bars) {
+      const bar = Object.assign({}, b,
+        { time: Date.parse(exchangeDay(b.time, sess.tz) + "T00:00:00Z") / 1000 });
+      if (out.length && out[out.length - 1].time === bar.time) out[out.length - 1] = bar;
+      else out.push(bar);
+    }
+    return out;
   }
   // Intraday bars -> `widthMin` bars anchored on the session OPEN in the
   // exchange's clock, ending at the session CLOSE. Each bar is stamped at its
@@ -645,7 +696,7 @@
   function sessionWeeks(bars, sess) {
     const out = []; let cur = null, curKey = null;
     for (const b of bars) {
-      const d = new Date(sessionClock(b.time, sess.tz).day + "T00:00:00Z");
+      const d = new Date(exchangeDay(b.time, sess.tz) + "T00:00:00Z");
       const key = d.getTime() / 1000 - ((d.getUTCDay() + 6) % 7) * 86400;   // that week's Monday
       if (key !== curKey) {
         if (cur) out.push(cur);
@@ -680,7 +731,9 @@
   }
 
   // Find the drawn bar matching a Python marker's ISO date. Exact match for daily;
-  // for weekly we snap to the bar on/just before the date.
+  // for weekly we snap to the bar on/just before the date. The marker dates are
+  // the engine's exchange dates, and daily bars carry theirs at 00:00Z
+  // (toExchangeDates), so the bar's UTC date IS its session date.
   function barAtDate(bars, dateStr) {
     let best = null;
     for (const b of bars) {
@@ -1068,10 +1121,19 @@
   // UTC-day banding (day boundaries read at a glance) with weekend bars a
   // shade heavier (crypto's weekend chop stands out); daily/3D charts tint
   // weekend bars only (stocks have none — crypto does). Weekly+ stays clean.
-  const SHADE_INTRADAY = { "15M": 1, "30M": 1, "1H": 1, "4H": 1 };
+  const INTRADAY_TF = { "15M": 1, "30M": 1, "1H": 1, "4H": 1 };
+  // A bar's date for an on-chart label (replay position, ruler, forecast).
+  // Daily-and-above bars carry their exchange date (crypto: UTC date) at
+  // 00:00Z -- toExchangeDates -- so they are formatted in UTC: the label then
+  // names the same session as Lightweight Charts' UTC axis, in any reader's
+  // timezone. Intraday bars keep the reader's local clock, as before.
+  function barDateStr(sec, tfKey, opts) {
+    return new Date(sec * 1000).toLocaleDateString(undefined,
+      INTRADAY_TF[tfKey] ? opts : Object.assign({ timeZone: "UTC" }, opts));
+  }
   function shadeRows(candles, key) {
     const out = [];
-    const intraday = !!SHADE_INTRADAY[key];
+    const intraday = !!INTRADAY_TF[key];
     const daily = key === "1D" || key === "3D";
     if (!intraday && !daily) return out;
     for (const c of candles || []) {
@@ -1239,7 +1301,8 @@
       if (!daily || daily.length < 6) throw new Error("thin");
       d.timeframes["1D"] = makeTF(daily, "1D", dailyPlan);
       // 3-Day (3D) view: epoch-anchored 3-calendar-day candles (bucketBars), which
-      // line up with the engine's "72h" 3-Day resample. If the scan emitted a real
+      // line up with the engine's "72h" 3-Day resample because the daily bars
+      // carry their exchange date (toExchangeDates). If the scan emitted a real
       // 3-Day plan it gets its OWN levels (a first-class timeframe like Daily /
       // Weekly); on older data with no 3-Day plan it falls back to the Daily plan
       // as a labelled reference (approx=true), like the 4H view.
@@ -1968,16 +2031,23 @@
   // Dividend honesty: scan levels come from a dividend-ADJUSTED series, so a
   // recent ex-div means every level differs from the raw prices your broker
   // shows. Best-effort, stocks only (the proxy edge-caches this request).
+  // The ex-date is named on the EXCHANGE's calendar, as the broker shows it:
+  // Yahoo stamps it at the session open, which under AEDT is the NEXT day in
+  // Melbourne for every NASDAQ name.
   function checkRecentDividend(d) {
     const el = $("#ct-divadj");
     if (!el || d.asset_type === "crypto" || !d.symbol) return;
-    fetch(`/api/price?symbol=${encodeURIComponent(yfTickerFor(String(d.symbol).toUpperCase(), d.asset_type))}&range=1mo&interval=1d`)
+    const yf = yfTickerFor(String(d.symbol).toUpperCase(), d.asset_type);
+    fetch(`/api/price?symbol=${encodeURIComponent(yf)}&range=1mo&interval=1d`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         const div = j && j.recent_div;
         if (!div || !div.date) return;
-        const when = new Date(div.date * 1000).toLocaleDateString("en-AU",
-          { day: "numeric", month: "short", timeZone: "Australia/Melbourne" });
+        const sess = tickerSession(yf);
+        const day = sess ? exchangeDay(div.date, sess.tz)
+                         : new Date(div.date * 1000).toISOString().slice(0, 10);
+        const when = new Date(day + "T00:00:00Z").toLocaleDateString("en-AU",
+          { day: "numeric", month: "short", timeZone: "UTC" });
         el.textContent = `Ⓓ DIV-ADJ ${when}`;
         el.title = `Went ex-dividend ${when} (${div.amount ? "$" + div.amount : "amount n/a"}). ` +
           `Chart prices and levels are dividend-adjusted — your broker's raw prices ` +
@@ -3087,7 +3157,7 @@
     el.appendChild(fc);
     const projFmt = (sec) => {
       const dt = new Date(sec * 1000);
-      const dstr = dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      const dstr = barDateStr(sec, curTF, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
       return curTF === "4H"
         ? dstr + " · " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
         : dstr;
@@ -3495,7 +3565,7 @@
       const fmtDT = (sec) => {
         if (sec == null) return "—";
         const dt = new Date(sec * 1000);
-        const d = dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+        const d = barDateStr(sec, curTF, { day: "numeric", month: "short", year: "2-digit" });
         return (curTF === "4H" || curTF === "1H")
           ? d + " " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
           : d;
@@ -3911,9 +3981,8 @@
         chart.timeScale().fitContent();
         drawRedraw();
         slider.value = String(idx);
-        const dt = new Date(tCut * 1000);
         posLbl.textContent = `${idx}/${c.length} · ` +
-          dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+          barDateStr(tCut, curTF, { day: "numeric", month: "short", year: "2-digit" });
         if (idx >= c.length) stopPlay();
       }
 

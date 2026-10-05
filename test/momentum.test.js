@@ -1297,7 +1297,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
     const MOM_MA_DEFAULTS = { ma_type: "EMA", fast_len: 20, mid_len: 50, slow_len: 200 };
     ${constSrc("TV_PLAN")} ${constSrc("MOM_SESSION")} ${constSrc("_sessFmt")}
     ${["emaPine", "rmaPine", "rsiPine", "macdPine", "atrPine", "momentumPlan", "bucketBars",
-       "resampleWeekly", "sessionClock", "sessionBars", "sessionGroups", "sessionWeeks"].map(fnSrc).join("\n")}
+       "resampleWeekly", "sessionClock", "exchangeDay", "sessionBars", "sessionGroups", "sessionWeeks"].map(fnSrc).join("\n")}
     return { momentumPlan, bucketBars, resampleWeekly, sessionClock, sessionBars,
              sessionGroups, sessionWeeks, MOM_SESSION };`)();
   const FX = path.join(__dirname, "fixtures", "momentum");
