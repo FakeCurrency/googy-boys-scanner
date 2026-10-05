@@ -166,7 +166,8 @@
       "units_before": 395.56960961,
       "risk_usd_before": 613.3,
       "resized_at": "2026-09-28T04:03:28+00:00",
-      "stale_pinged": "2026-10-01"
+      "stale_pinged": "2026-10-01",
+      "unpriced_runs": 1
     },
     {
       "id": "GWA:long:1W:2026-09-17",
@@ -682,7 +683,7 @@
       "risk_usd_before": 992.71,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-05",
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "SNL:long:3D:2026-09-21",
@@ -757,7 +758,7 @@
       "risk_usd_before": 607.93,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-05",
-      "unpriced_runs": 5
+      "unpriced_runs": 6
     },
     {
       "id": "NGI:long:3D:2026-09-21",
@@ -850,7 +851,7 @@
       "risk_usd_before": 737.43,
       "resized_at": "2026-09-28T04:03:28+00:00",
       "stale_pinged": "2026-10-05",
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "EVT:long:3D:2026-09-22",
@@ -1217,7 +1218,7 @@
       },
       "unreal_r": -0.048,
       "unreal_usd": -5.45,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "YAL:long:3D:2026-09-29",
@@ -1479,7 +1480,7 @@
       "level_tf": "3d",
       "signal_entry": 39.11999893,
       "fill_slip_bps": -2.6,
-      "last_mark": 38.49000168,
+      "last_mark": 38.40000153,
       "day_marks": {
         "2026-09-29": 39.11000061,
         "2026-09-30": 39.11000061,
@@ -1489,9 +1490,8 @@
         "2026-10-04": 38.5,
         "2026-10-05": 38.5
       },
-      "unreal_r": -0.216,
-      "unreal_usd": -39.76,
-      "unpriced_runs": 2
+      "unreal_r": -0.247,
+      "unreal_usd": -45.53
     },
     {
       "id": "PPM:long:3D:2026-09-30",
@@ -1557,7 +1557,7 @@
       },
       "unreal_r": -0.075,
       "unreal_usd": -14.41,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "ELD:long:3D:2026-10-01",
@@ -1695,7 +1695,7 @@
       },
       "unreal_r": -0.069,
       "unreal_usd": -13.58,
-      "unpriced_runs": 2
+      "unpriced_runs": 3
     },
     {
       "id": "NCK:long:1W:2026-10-01",
@@ -1750,7 +1750,7 @@
       "level_tf": "weekly",
       "signal_entry": 14.06999969,
       "fill_slip_bps": -206.1,
-      "last_mark": 13.92000008,
+      "last_mark": 13.90999985,
       "day_marks": {
         "2026-10-01": 13.77999973,
         "2026-10-02": 13.77999973,
@@ -1758,9 +1758,8 @@
         "2026-10-04": 14.06000042,
         "2026-10-05": 14.06000042
       },
-      "unreal_r": 0.088,
-      "unreal_usd": 29.41,
-      "unpriced_runs": 2
+      "unreal_r": 0.082,
+      "unreal_usd": 27.31
     },
     {
       "id": "JBH:long:1W:2026-10-02",
@@ -4586,7 +4585,7 @@
       "level_tf": "3d",
       "signal_entry": 738.00195312,
       "fill_slip_bps": 206.6,
-      "last_mark": 788.65,
+      "last_mark": 788.09,
       "day_marks": {
         "2026-09-27": 772.80999756,
         "2026-09-28": 776.57000732,
@@ -4598,8 +4597,8 @@
         "2026-10-04": 788.68,
         "2026-10-05": 797.07
       },
-      "unreal_r": 0.188,
-      "unreal_usd": 110.22,
+      "unreal_r": 0.185,
+      "unreal_usd": 108.48,
       "review_before": [
         {
           "code": "heavy_risk",
@@ -13402,29 +13401,28 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -206.42,
+      "week_usd": -315.63,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
-      "week_unpriced_worst_usd": -2105.72,
-      "worst_session_usd": -1997.26,
-      "worst_week_usd": -2312.14,
+      "week_unpriced_worst_usd": -1834.16,
+      "worst_session_usd": -1834.9,
+      "worst_week_usd": -2149.79,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 76.48,
-      "session_usd": 76.48,
+      "unrealised_usd": 60.32,
+      "session_usd": 60.32,
       "unpriced": [
+        "SUL",
         "PMT",
         "SNL",
         "NGI",
         "ORG",
-        "NAB",
         "PPM",
-        "NHF",
-        "NCK"
+        "NHF"
       ],
-      "unpriced_worst_usd": -2073.74,
+      "unpriced_worst_usd": -1895.22,
       "open": 24,
-      "open_total_usd": -265.59,
+      "open_total_usd": -317.5,
       "notified": ""
     },
     "nasdaq": {
@@ -13457,27 +13455,27 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 37.61,
+      "week_usd": 35.87,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -26.22,
-      "worst_week_usd": 37.61,
+      "worst_session_usd": -27.96,
+      "worst_week_usd": 35.87,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": -26.22,
-      "session_usd": -26.22,
+      "unrealised_usd": -27.96,
+      "session_usd": -27.96,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 1,
-      "open_total_usd": 106.93,
+      "open_total_usd": 105.19,
       "notified": ""
     }
   },
   "summary": {
     "open": 60,
-    "unreal_usd": -1825.39,
+    "unreal_usd": -1835.0,
     "updated_day": "2026-10-05"
   },
-  "updated_at": "2026-10-05T09:02:32+00:00"
+  "updated_at": "2026-10-05T10:48:59+00:00"
 }
