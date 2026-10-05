@@ -123,8 +123,10 @@ jobs:
       # was committed from TWO concurrency groups (phasemap + scan), so the
       # groups could revert each other's state — duplicate @here pings or lost
       # alerts. The scan-group now solely owns confluence: intraday runs in
-      # scan.yml, plus the tiny confluence.yml at 08:45 UTC (right after this
-      # nightly's data lands) to pick up fresh PhaseMap/Specs alignments.
+      # scan.yml, plus the tiny confluence.yml, which a workflow_run trigger
+      # starts when THIS workflow completes (2026-10-05; its 08:45 UTC cron is
+      # only a backstop) to pick up fresh PhaseMap/Specs alignments. It
+      # matches on this file's `name:` - renaming it silently unhooks it.
 
       # Schema gate: every freshly published snapshot must pass the writer's own
       # validator (zones are bands, states/tiers legal, current ruleset version)

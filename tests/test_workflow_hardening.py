@@ -224,6 +224,45 @@ def test_confluence_gates_on_unstaged_rather_than_on_changed():
     )
 
 
+def test_confluence_wakes_when_the_phasemap_nightly_completes():
+    """2026-10-05 audit: the 08:45 cron alone ran BEFORE phasemap.yml's commit
+    on 12 of 15 nights (both crons fire hours late, squeezing the 15-min gap
+    to 3-6 min while phasemap takes 6-14), so it read the previous night's
+    files and the alignments waited for the next scan.yml. workflow_run on the
+    nightly's completion fixes the ORDER; the cron stays as the backstop.
+
+    workflow_run matches the other workflow's `name:` - a typo or a rename is
+    a trigger that silently never fires, hence the lookup against the tree."""
+    doc = _load("confluence.yml")
+    on = doc.get("on") or doc[True]
+    wr = on["workflow_run"]
+    assert wr["types"] == ["completed"], (
+        "completed, not success: phasemap's gate commits whatever staged and "
+        "THEN goes red, so a failed run can still carry fresh data")
+    assert "branches" not in wr, (
+        "phasemap pushes to main from any branch, and this run reads main")
+    names = {_load(f.name).get("name"): f.name for f in ALL_WF}
+    assert [names.get(w) for w in wr["workflows"]] == ["phasemap.yml"]
+    assert [c["cron"] for c in on["schedule"]] == ["45 8 * * *"], (
+        "the cron is the backstop for a dropped workflow_run event")
+    assert "workflow_dispatch" in on
+
+
+def test_a_workflow_run_confluence_reads_main_not_the_nightlys_start_commit():
+    """Under workflow_run GitHub sets github.ref to the DEFAULT branch, so the
+    `${{ github.ref }}` checkout reads main's tip once the run holds the scan
+    mutex - exactly as under schedule. The tempting 'precise' edit, checking
+    out github.event.workflow_run.head_sha, would read the commit phasemap
+    STARTED from: before the data it just pushed, and (in the push loop)
+    replayed over newer confluence state. Pinned so nobody makes it."""
+    steps = _load("confluence.yml")["jobs"]["confluence"]["steps"]
+    cos = [s for s in steps if str(s.get("uses", "")).startswith("actions/checkout")]
+    assert cos and all((s.get("with") or {}).get("ref") in ("main", "${{ github.ref }}")
+                       for s in cos)
+    code = "\n".join(l for _, l in _code(_text("confluence.yml")))
+    assert "github.event.workflow_run" not in code
+
+
 def _close_commit_body() -> str:
     return _step(_load("close_position.yml"), "close", "Commit updated journal")["run"]
 
@@ -687,6 +726,11 @@ def test_the_daily_writers_carry_scheduler_drop_backstops():
     bb = (WF / "backup_book.yml").read_text(encoding="utf-8")
     assert '"35 23 * * *"' in bb, "backup_book lost its backstop cron"
     assert "Backstop freshness gate" in bb
-    assert 'grep -q "^$(date -u +%Y-%m-%d)T"' in bb, (
-        "the local snapshot-exists check is the gate; without it the backstop "
-        "doubles every night's snapshot")
+    # The local snapshot-exists check is the gate; without it the backstop
+    # doubles every night's snapshot. It keys on the 21:00Z SLOT, not the UTC
+    # date (2026-10-05: both crons land after midnight, so a date match read
+    # the previous cycle's snapshot) - executed against a faked clock in
+    # tests/test_backup_completeness.py.
+    assert "SLOT_H=21" in bb and "ls backups" in bb
+    assert "date -u +%Y-%m-%d)T" not in bb, (
+        "the UTC calendar-date match is back; see test_backup_completeness")
