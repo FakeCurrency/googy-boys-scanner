@@ -402,5 +402,7 @@ def fetch() -> dict:
                         "latest_event": cal["latest"].get(key)}
 
     now = dt.datetime.now(ZoneInfo("Australia/Sydney"))
-    return {"generated_at": now.isoformat(timespec="seconds"), "tz_label": "AEST",
+    # The abbreviation at THIS instant: AEDT in summer, AEST in winter (it was
+    # a literal "AEST" all year until 2026-10-05).
+    return {"generated_at": now.isoformat(timespec="seconds"), "tz_label": now.tzname(),
             "markets": markets}

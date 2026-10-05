@@ -16,6 +16,7 @@ the NEWS page (owner: "I don't need it"), so enrich() stopped computing
 that a file published BEFORE the removal cannot carry them back in.
 """
 
+import datetime as dt
 import json
 
 import pytest
@@ -106,3 +107,20 @@ def test_removed_keys_are_neither_computed_nor_carried_back_in():
     m = {}
     sectors.enrich(m, {}, [], 1_000_000, market_key="asx")
     assert "eli5" not in m and "top_volume" not in m
+
+
+@pytest.mark.parametrize("instant, label, offset", [
+    ("2027-01-20T00:07:00+00:00", "AEDT", "+11:00"),     # January: daylight time
+    ("2026-07-15T00:07:00+00:00", "AEST", "+10:00"),     # July: standard time
+])
+def test_the_published_tz_label_is_sydneys_abbreviation_at_that_instant(
+        monkeypatch, freeze_now, instant, label, offset):
+    # 2026-10-05: fetch() wrote a literal "AEST" all year, beside a +11:00
+    # generated_at every summer.
+    monkeypatch.setattr(sectors, "_calendar", lambda: {"upcoming": {}, "latest": {}})
+    monkeypatch.setattr(sectors, "_fetch", lambda rows: [])
+    monkeypatch.setattr(sectors, "_read", lambda label, secs, idx: ("", ""))
+    freeze_now(sectors, dt.datetime.fromisoformat(instant))
+    out = sectors.fetch()
+    assert out["tz_label"] == label
+    assert out["generated_at"].endswith(offset)

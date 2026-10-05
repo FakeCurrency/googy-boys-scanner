@@ -42,6 +42,18 @@
   // parsed as markup. Now the same five characters every other page escapes.
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // sectors.py writes every calendar time and the "Read updated" stamp in
+  // Sydney's zone. The abbreviation is read off that zone AT THE INSTANT --
+  // AEDT in summer, AEST in winter -- never typed (it was a literal "AEST" all
+  // year until 2026-10-05). Only en-AU names these zones; en-US prints GMT+11.
+  const SYD = "Australia/Sydney";
+  const sydAbbr = (when) => {
+    try {
+      const part = new Intl.DateTimeFormat("en-AU", { timeZone: SYD, timeZoneName: "short" })
+        .formatToParts(new Date(when)).find((p) => p.type === "timeZoneName");
+      return part ? part.value : "";
+    } catch (_) { return ""; }
+  };
   const fmtPct = (v) => v == null ? "" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
   const cls = (v) => (v >= 0 ? "sec-up" : "sec-down");
   const fmtMoney = (v) => {
@@ -69,7 +81,7 @@
       html += `<div class="macro-card next">
         <div class="macro-label">⏳ Next market-moving event</div>
         <div class="macro-title">${esc(ev.title)}</div>
-        <div class="macro-when">${esc(ev.date)}${ev.time ? ` · ${esc(ev.time)} AEST` : ""}</div>
+        <div class="macro-when">${esc(ev.date)}${ev.time ? ` · ${esc(`${ev.time} ${sydAbbr(ev.when)}`.trim())}` : ""}</div>
         <div class="macro-countdown" data-countdown="${esc(ev.when)}">—</div>
         <div class="macro-exp">${exp}</div>
       </div>`;
@@ -248,13 +260,21 @@
     window._cdTimer = setInterval(tickCountdowns, 1000);
   }
 
+  // The digits AND the label in Sydney's zone. The digits used to be the
+  // browser's own zone beside a fixed "AEST", so away from Sydney/Melbourne
+  // the two did not even describe the same clock.
+  function updatedLine(iso) {
+    const dt = new Date(iso);
+    const day = dt.toLocaleDateString(undefined, { timeZone: SYD, weekday: "short", day: "numeric", month: "short" });
+    const time = dt.toLocaleTimeString(undefined, { timeZone: SYD, hour: "numeric", minute: "2-digit" });
+    return `Read updated ${day}, ${time} ${sydAbbr(dt)} · calendar & countdown are live`;
+  }
+
   fetch("data/sectors.json", { cache: "no-cache" })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((d) => {
       try {
-        const dt = new Date(d.generated_at);
-        document.getElementById("sec-sub").textContent =
-          `Read updated ${dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}, ${dt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} ${d.tz_label || ""} · calendar & countdown are live`;
+        document.getElementById("sec-sub").textContent = updatedLine(d.generated_at);
       } catch (_) {}
       render(d);
     })

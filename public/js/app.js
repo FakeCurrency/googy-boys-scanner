@@ -550,7 +550,25 @@
   }
   const mcapOf = (sym) => state.caps[`${state.market}:${sym}`] || 0;
 
-  const TZ_MAP = { AEST: "Australia/Sydney", ET: "America/New_York", UTC: "UTC" };
+  // tz_label is only a KEY to the market's zone, never the text shown: the
+  // abbreviation is read off the zone AT THE INSTANT, so Sydney says AEDT in
+  // summer and AEST in winter, New York EDT/EST (until 2026-10-05 the ASX
+  // label was a literal "AEST" all year). Old payloads carry AEST/ET; new
+  // ones carry the abbreviation itself.
+  const TZ_MAP = { AEST: "Australia/Sydney", AEDT: "Australia/Sydney",
+                   ET: "America/New_York", EST: "America/New_York", EDT: "America/New_York",
+                   UTC: "UTC" };
+  // Only en-AU names Sydney's zones (en-US prints "GMT+11") and only en-US
+  // names New York's (en-AU prints "GMT-4").
+  const TZ_ABBR_LOCALE = { "Australia/Sydney": "en-AU" };
+  function tzAbbr(d, zone) {
+    try {
+      const part = new Intl.DateTimeFormat(TZ_ABBR_LOCALE[zone] || "en-US",
+        { timeZone: zone, timeZoneName: "short" }).formatToParts(d)
+        .find((p) => p.type === "timeZoneName");
+      return part ? part.value : "";
+    } catch (_) { return ""; }
+  }
   function fmtTime(iso, tz) {
     try {
       const d = new Date(iso);
@@ -560,7 +578,9 @@
         hour: "numeric", minute: "2-digit",
         ...(zone ? { timeZone: zone } : {}),
       };
-      return `${d.toLocaleString(undefined, opts)} ${tz || ""}`.trim();
+      // The label names the zone the digits were computed in: the market's
+      // when the key is known, the browser's own otherwise.
+      return `${d.toLocaleString(undefined, opts)} ${tzAbbr(d, zone)}`.trim();
     } catch (_) { return iso; }
   }
 
