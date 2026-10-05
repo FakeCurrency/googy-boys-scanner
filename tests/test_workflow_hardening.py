@@ -674,9 +674,16 @@ def test_the_daily_writers_carry_scheduler_drop_backstops():
     ar = (WF / "alert_returns.yml").read_text(encoding="utf-8")
     assert '"50 23 * * *"' in ar, "alert_returns lost its backstop cron"
     assert "Backstop freshness gate" in ar
-    assert "status=success" in ar, (
-        "the gate must key on a SUCCESSFUL scheduled run — a failed 22:20 "
-        "still needs the backstop")
+    # 2026-10-05: the gate keys on a pass that LANDED ON MAIN (the ledgers'
+    # updated_at), never on "a scheduled run succeeded" - a backstop skip-run
+    # is one of those too - and on the 22:00 UTC slot, never the UTC calendar
+    # date the late-landing previous slot shares. A failed 22:20 pushes
+    # nothing, so it still leaves the backstop due. Executed in
+    # tests/test_alert_returns.py.
+    gate = _step(_load("alert_returns.yml"), "returns", "Backstop freshness gate")["run"]
+    assert 'git show "origin/main:$p"' in gate and "updated_at" in gate
+    assert "(NOW - 22 * 3600) % 86400" in gate, "the gate lost its 22:00 UTC slot anchor"
+    assert "date -u +%Y-%m-%d" not in gate and "status=success" not in gate
     bb = (WF / "backup_book.yml").read_text(encoding="utf-8")
     assert '"35 23 * * *"' in bb, "backup_book lost its backstop cron"
     assert "Backstop freshness gate" in bb
