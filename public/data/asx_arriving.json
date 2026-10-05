@@ -1,11 +1,25 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-05T18:14:36+11:00",
+  "generated_at": "2026-10-05T20:01:28+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "SEG",
+      "name": "Sports Entertainment Group Limited",
+      "sector": "Media & Entertainment",
+      "dir": "SHORT",
+      "price": 0.25,
+      "turnover_avg20": 13179,
+      "turnover_today": 129750,
+      "rvol": 10.0,
+      "adv_usd": 13179.32,
+      "fund": false,
+      "is_product": false
+    }
+  ]
 }
