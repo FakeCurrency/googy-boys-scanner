@@ -336,7 +336,7 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   live (window to 16:45) and the download starts after Yahoo shows the auction;
   committed ~16:50, the ladder's 17:15 rung sends the digest in both DST
   regimes. Its one gap: a scan landing 16:26–16:39 is too fresh to heal at
-  16:40 yet pre-auction. That is what **job `ASX close heal probe`** covers:
+  16:40 yet pre-auction. That is what **job 8587683 `scan ASX close probe (Sydney)`** covers:
   17:20 Sydney Mon–Fri, `/api/heartbeat?market=asx&stale_min=40` (17:20 − 40 =
   16:40, so it heals exactly when no scan stamped at/after the close has
   landed; an over-heal is a gate skip). Further backstops: scan.yml `41 5,6`
