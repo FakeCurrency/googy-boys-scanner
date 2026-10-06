@@ -1542,7 +1542,7 @@ MORNING_PLAYS_SLOTS = {
 #                            cron-job.org POST to /api/scan at 16:41 Sydney
 #                            (GitHub has not delivered scan.yml's closing crons
 #                            since 18 Sep), backed by scan.yml's "41 5,6" and
-#                            "47 5,6" crons, heals and a 17:20 Sydney heal probe.
+#                            "57 5,6" crons, heals and a 17:20 Sydney heal probe.
 #   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
 #                            16:00:xx. NOT 16:15: scan.yml's only post-close
 #                            NASDAQ scan is its hourly at 16:07 New York (20:07

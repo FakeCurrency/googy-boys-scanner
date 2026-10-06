@@ -58,8 +58,8 @@ name: Morning plays (Discord)
 #
 # The crons below are GitHub's own backstop -- when the ladder has delivered,
 # they no-op. Local times by regime (Melbourne = Sydney all year):
-#   50 5  UTC  ASX  15:50 AEST (before the floor) / 16:50 AEDT
-#   50 6  UTC  ASX  16:50 AEST                     / 17:50 AEDT
+#   58 5  UTC  ASX  15:58 AEST (before the floor) / 16:58 AEDT
+#   58 6  UTC  ASX  16:58 AEST                     / 17:58 AEDT
 #   50 7  UTC  ASX  17:50 AEST                     / 18:50 AEDT
 #   50 8  UTC  ASX  18:50 AEST                     / 19:50 AEDT
 #   50 21 UTC  US   07:50 AEST / 08:50 AEDT; 17:50 EDT / 16:50 EST New York
@@ -70,12 +70,12 @@ on:
     # ASX. The closing scan moved to 16:30 market-local on 2026-09-21 (owner:
     # "make the last scan 16:30 then trigger the discord to send shortly there
     # after"), and to 16:41 on 2026-10-06 once Yahoo's ~20 min ASX delay was
-    # measured (the close now counts from 16:40). :50 in hours 5 and 6 is 16:50
-    # local in one regime -- usually just before that scan commits, so a no-op
-    # then -- and the wrong-regime one is a silent no-op too. These crons are
-    # backstops behind the cron-job.org ladder; 07/08 are the late ones.
-    - cron: "50 5 * * 1-5"    # ASX, 16:50 AEDT (backstop; the ladder normally sends)
-    - cron: "50 6 * * 1-5"    # ASX, 16:50 AEST (backstop; the ladder normally sends)
+    # measured (the close now counts from 16:40). :58 in hours 5 and 6 is 16:58
+    # local in one regime, after that scan commits (~16:52), and the
+    # wrong-regime one is a silent no-op. These crons are backstops behind the
+    # cron-job.org ladder; 07/08 (:50) are the late ones.
+    - cron: "58 5 * * 1-5"    # ASX, 16:58 AEDT (backstop; the ladder normally sends)
+    - cron: "58 6 * * 1-5"    # ASX, 16:58 AEST (backstop; the ladder normally sends)
     - cron: "50 7 * * 1-5"    # ASX backstop
     - cron: "50 8 * * 1-5"    # ASX backstop, an hour later
     # US. After the 16:07 New York post-close scan in either regime (20:07 UTC
@@ -160,7 +160,7 @@ jobs:
             fi
           else
             case "$SCHEDULE" in
-              "50 5 * * 1-5"|"50 6 * * 1-5"| \
+              "58 5 * * 1-5"|"58 6 * * 1-5"| \
               "50 7 * * 1-5"|"50 8 * * 1-5")   ARGS="--slot asx" ;;   # after the ASX closing scan
               "50 21 * * 1-5"|"50 22 * * 1-5") ARGS="--slot us"  ;;   # after the NASDAQ post-close scan
               *) echo "morning_plays: unmapped schedule '$SCHEDULE' - no-op."; exit 0 ;;

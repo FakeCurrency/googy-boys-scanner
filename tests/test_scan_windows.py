@@ -85,18 +85,21 @@ def scans_on(day: dt.date, keep=lambda t, cron: True) -> list[tuple[str, str]]:
     """[(market, local HH:MM), ...] the schedule delivers over the UTC day
     `day` if every cron fires on time, except those `keep` rejects (a dropped
     cron). Each scan stamps the market LAND minutes after its cron, and the
-    gate sees every earlier stamp -- the backstops depend on exactly that.
+    gate sees every stamp that has LANDED by then -- the backstops depend on
+    exactly that, and a gate must not see a stamp from its own future (a scan
+    still running when the next cron fires has not committed anything yet).
     Both markets start the day stamped 00:00 UTC: after New York's previous
     close (so yesterday is covered) and before Sydney's next one."""
     start = dt.datetime(day.year, day.month, day.day, tzinfo=UTC)
-    last = {m: start for m in GATE.STOCK}
+    landed = {m: [start] for m in GATE.STOCK}
     fires = sorted((t, cron) for cron in _crons("scan.yml")
                    for t in _fires(cron, day) if keep(t, cron))
     out = []
     for t, cron in fires:
+        last = {m: max(s for s in landed[m] if s <= t) for m in GATE.STOCK}
         markets, _why = GATE.decide("schedule", cron, "", "", t, last)
         for m in markets:
-            last[m] = t + LAND
+            landed[m].append(t + LAND)
             out.append((m, _local(m, t).strftime("%H:%M")))
     return sorted(out)
 
@@ -151,12 +154,12 @@ def test_the_gate_follows_config_rather_than_a_copy_of_it(monkeypatch):
     # ~16:10-16:12 but Yahoo's ASX feed shows it ~20 min late. 16:32:36 is the
     # real 2026-10-05 stamp whose prices were still pre-auction on 19% of names
     # (download from 16:28:52); the digest and the gate wait for 16:40.
-    ("asx", "2026-10-06T05:32:36+00:00", "2026-10-06T05:41:00+00:00", "2026-10-06T05:47:00+00:00"),
+    ("asx", "2026-10-06T05:32:36+00:00", "2026-10-06T05:41:00+00:00", "2026-10-06T05:57:00+00:00"),
     # New York's gate is 16:05, not later (the winter 21:07 UTC scan is 16:07).
     ("nasdaq", "2026-10-05T20:02:00+00:00", "2026-10-05T20:06:00+00:00", "2026-10-05T20:47:00+00:00"),
 ])
 def test_the_closing_scan_is_the_digests_close_not_the_bell(market, before, after, backstop):
-    cron = "47 5,6 * * 1-5" if market == "asx" else "47 20,21 * * 1-5"
+    cron = "57 5,6 * * 1-5" if market == "asx" else "47 20,21 * * 1-5"
     assert GATE.decide("schedule", cron, "", "", _t(backstop), {market: _t(before)})[0] == [market]
     assert GATE.decide("schedule", cron, "", "", _t(backstop), {market: _t(after)})[0] == []
 
@@ -247,7 +250,7 @@ def test_the_closing_crons_in_the_script_are_the_ones_in_scan_yml():
     crons = _crons("scan.yml")
     for c in GATE.CLOSING_CRONS:
         assert c in crons, f"scan_gate.CLOSING_CRONS names {c!r}, which scan.yml no longer has"
-    assert {c for c in crons if c.split()[0] in ("41", "47")} == set(GATE.CLOSING_CRONS)
+    assert {c for c in crons if c.split()[0] in ("41", "47", "57")} == set(GATE.CLOSING_CRONS)
 
 
 def test_the_windows_are_open_plus_one_hour_to_after_the_close():
@@ -307,16 +310,25 @@ def test_a_full_session_is_covered_roughly_hourly(label):
 @pytest.mark.parametrize("label", sorted(DAYS))
 @pytest.mark.parametrize("market", ["asx", "nasdaq"])
 def test_a_missed_closing_scan_is_caught_up_exactly_once_by_the_backstop(label, market):
-    """The defect: the :47 backstops land at 16:47 local, past the window, and
-    the old gate skipped them as out of session in EVERY regime. Drop the
-    crons between the bell and the end of the window (the 16:07 hourly and
-    the 16:30 closing slot) and the first cron after the close -- the :47
-    backstop -- catches the close up; every later cron stays quiet."""
+    """The defect: the backstops land past the window (ASX 16:57, NASDAQ 16:47
+    local), and the old gate skipped them as out of session in EVERY regime.
+    Drop the crons between the bell and the end of the window (the 16:07
+    hourly and the 16:41 ASX closing slot) and the first cron after the close
+    -- the backstop -- catches the close up; every later cron stays quiet."""
     def keep(t, cron):
         return not 16 * 60 <= _local(market, t).hour * 60 + _local(market, t).minute <= 16 * 60 + 45
 
     late = [t for m, t in scans_on(DAYS[label], keep) if m == market and t >= "16:00"]
-    assert late == ["16:47"], f"{label}: {market} after the close: {late}"
+    want = {"asx": "16:57", "nasdaq": "16:47"}[market]
+    assert late == [want], f"{label}: {market} after the close: {late}"
+
+
+@pytest.mark.parametrize("label", sorted(DAYS))
+def test_an_on_time_asx_closing_scan_is_not_run_again_by_its_backstop(label):
+    """The 16:41 closing scan commits ~16:52; the backstop fires at 16:57 and
+    must see it and stay quiet (at :47 it fired first and re-ran the close)."""
+    asx = [t for m, t in scans_on(DAYS[label]) if m == "asx" and t >= "16:00"]
+    assert asx == ["16:07", "16:41"], f"{label}: {asx}"
 
 
 def test_no_stock_market_is_scanned_on_its_own_weekend():
@@ -351,7 +363,9 @@ def test_a_closing_cron_that_lands_mid_session_is_skipped_not_run():
     after-the-close guard the wrong one is an ordinary extra full scan an hour
     before the close -- two surplus ASX scans a day for half the year."""
     asx = [t for m, t in scans_on(DAYS["AEST + EDT (Sep)"]) if m == "asx"]
-    assert "15:30" not in asx and "15:47" not in asx, asx
+    for c in GATE.CLOSING_CRONS:
+        if c.split()[1] == "5,6":                    # the ASX pair: 05:mm UTC = 15:mm AEST
+            assert f"15:{c.split()[0]}" not in asx, (c, asx)
     nas = [t for m, t in scans_on(DAYS["AEDT + EST (Dec)"]) if m == "nasdaq"]
     assert "15:47" not in nas, nas
 
@@ -436,8 +450,8 @@ def test_the_cli_reads_the_stamps_and_prints_github_output_lines(tmp_path, capsy
         assert GATE.main(["--data", str(tmp_path), *extra]) == 0
         return capsys.readouterr().out.splitlines()
 
-    backstop = ["--event", "schedule", "--schedule", "47 5,6 * * 1-5",
-                "--now", "2026-10-06T05:47:00+00:00"]                   # Tue 16:47 AEDT
+    backstop = ["--event", "schedule", "--schedule", "57 5,6 * * 1-5",
+                "--now", "2026-10-06T05:57:00+00:00"]                   # Tue 16:57 AEDT
     stamp = tmp_path / "asx_prices.json"
     stamp.write_text('{"generated_at": "2026-10-06T15:20:00+11:00"}')
     assert cli(*backstop) == ["run=true", "markets=asx"]

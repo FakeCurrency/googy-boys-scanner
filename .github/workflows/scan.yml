@@ -45,7 +45,8 @@ on:
     # window that ended at 16:00 would silently kill the afternoon Discord ping.
     # GitHub has not delivered the ASX closing crons below since 18 Sep, so the
     # on-time closing scan is a cron-job.org POST to /api/scan at 16:41 Sydney;
-    # these crons and the heals are its backstops.
+    # these crons and the heals are its backstops. If GitHub ever delivers the
+    # :41 cron on time it duplicates that 16:41 scan (waste, not wrong data).
     #
     # OFF-:00 MINUTES: GitHub's scheduler is most congested at the top of the
     # hour — their own docs recommend a random minute — and this repo has
@@ -58,7 +59,8 @@ on:
     - cron: "7 0-6 * * 1-5"       # ASX hourly superset (00:07-06:07 UTC covers
                                   # 11:07-16:07 local under AEDT and AEST both)
     - cron: "41 5,6 * * 1-5"      # ASX CLOSING scan, 16:41 local in either regime (after the 16:40 close)
-    - cron: "47 5,6 * * 1-5"      # ASX closing BACKSTOP — runs only if no scan since the close
+    - cron: "57 5,6 * * 1-5"      # ASX closing BACKSTOP — runs only if no scan since the close
+                                  # (:57, not :47: the 16:41 closing scan commits ~16:52)
     - cron: "37 14,15 * * 1-5"    # NASDAQ first scan, ~10:37 local in either regime
     - cron: "7 16-21 * * 1-5"     # NASDAQ hourly through the close + post-close
     - cron: "47 20,21 * * 1-5"    # NASDAQ closing BACKSTOP — runs only if no scan since the close
