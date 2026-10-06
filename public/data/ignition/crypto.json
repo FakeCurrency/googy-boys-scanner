@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-10-06T06:15:37+00:00",
+  "generated_at": "2026-10-06T12:15:09+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-05",
@@ -49,10 +49,10 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 172,
+    "downloaded": 171,
     "screened": 141,
     "skipped": {
-      "short history": 30,
+      "short history": 29,
       "stale frame": 1
     },
     "counts": {
@@ -67,14 +67,13 @@
       "completed_last": "2026-10-05",
       "raw_last": "2026-10-06",
       "expected_completed": "2026-10-05",
-      "lagging": 32,
+      "lagging": 0,
       "completed_dist": {
-        "2026-10-05": 139,
-        "2026-10-04": 32,
+        "2026-10-05": 170,
         "2025-10-27": 1
       },
       "raw_dist": {
-        "2026-10-06": 172
+        "2026-10-06": 171
       }
     },
     "sources": {
@@ -82,7 +81,7 @@
       "by_source": {
         "binance_vision": 122,
         "yahoo": 33,
-        "coinbase": 17
+        "coinbase": 16
       },
       "dead": {
         "binance": "HTTP 451",
@@ -98,6 +97,7 @@
         "BGB",
         "BORG",
         "BP",
+        "BR",
         "BSV",
         "BTSE",
         "BTT",
@@ -148,11 +148,13 @@
         "ULTIMA",
         "USX",
         "VSN",
-        "WBT",
-        "XDC"
+        "WBT"
       ],
       "yahoo_fallback": 33,
       "identity_rejected": {
+        "BR": [
+          "yahoo"
+        ],
         "EDGE": [
           "coinbase",
           "yahoo"
@@ -183,6 +185,7 @@
         ]
       },
       "refused": [
+        "BR-USD",
         "EDGE-USD",
         "KAG-USD",
         "LIT-USD",
@@ -195,18 +198,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 172,
+      "fresh": 171,
       "reused": 0,
-      "merged": 172,
+      "merged": 171,
       "universe": 201,
       "stale_dropped": 0,
-      "refused": 6
+      "refused": 7
     },
     "mcap": {
       "rows": 22,
       "have": 22
     },
-    "elapsed_s": 132.7
+    "elapsed_s": 129.1
   },
   "results": [
     {
@@ -248,11 +251,11 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 256.1,
-      "change_pct": 159.5,
-      "r_now": 12.87,
+      "price": 253.43,
+      "change_pct": 156.8,
+      "r_now": 12.65,
       "trail": 259.54333333,
-      "mcap": 3718175267.0,
+      "mcap": 3691913192.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -266,7 +269,7 @@
       "entry": 0.034589,
       "entry_basis": "next_open",
       "entry_date": "2026-09-29",
-      "bars_since": 6,
+      "bars_since": 7,
       "rvol": 4.42,
       "ext_pct": 12.0,
       "turnover_trigger": 38985582.0,
@@ -299,12 +302,12 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-04",
-      "price": 0.03376986,
-      "change_pct": -2.4,
-      "r_now": -0.52,
-      "trail": 0.033266,
-      "mcap": 673368242.0,
+      "last_bar": "2026-10-05",
+      "price": 0.03408178,
+      "change_pct": -1.5,
+      "r_now": -0.32,
+      "trail": 0.03359078,
+      "mcap": 680288549.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -352,11 +355,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 1.288,
-      "change_pct": 8.4,
-      "r_now": 1.11,
+      "price": 1.279,
+      "change_pct": 7.7,
+      "r_now": 1.01,
       "trail": 1.20288889,
-      "mcap": 224861204.0,
+      "mcap": 224091390.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -404,11 +407,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 69.47,
-      "change_pct": -3.5,
-      "r_now": -0.24,
+      "price": 70.44,
+      "change_pct": -2.1,
+      "r_now": -0.15,
       "trail": 69.3,
-      "mcap": 5396087568.0,
+      "mcap": 5471773625.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -456,11 +459,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.10034,
-      "change_pct": 1.3,
-      "r_now": 0.12,
+      "price": 0.10157,
+      "change_pct": 2.5,
+      "r_now": 0.25,
       "trail": 0.10420111,
-      "mcap": 4414463191.0,
+      "mcap": 4471862617.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -508,11 +511,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 4.29e-06,
-      "change_pct": -10.1,
-      "r_now": -0.98,
+      "price": 4.38e-06,
+      "change_pct": -8.2,
+      "r_now": -0.8,
       "trail": 4.32e-06,
-      "mcap": 1805230226.0,
+      "mcap": 1836986530.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -560,11 +563,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 299.4,
-      "change_pct": -6.3,
-      "r_now": -0.34,
+      "price": 303.1,
+      "change_pct": -5.1,
+      "r_now": -0.28,
       "trail": 304.72222222,
-      "mcap": 3395047121.0,
+      "mcap": 3443448984.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -612,11 +615,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 11.239,
-      "change_pct": 11.4,
-      "r_now": 0.54,
+      "price": 11.678,
+      "change_pct": 15.7,
+      "r_now": 0.74,
       "trail": 11.00455556,
-      "mcap": 4974388640.0,
+      "mcap": 5175040243.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -643,8 +646,8 @@
       "breakout_level": 0.01838,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.01711,
-      "mcap": 328962553.0,
+      "price": 0.01709,
+      "mcap": 328474604.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -671,8 +674,8 @@
       "breakout_level": 0.05784,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.05452,
-      "mcap": 285919387.0,
+      "price": 0.05548,
+      "mcap": 290931254.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -699,8 +702,8 @@
       "breakout_level": 146.28,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 121.9,
-      "mcap": 321136063.0,
+      "price": 121.64,
+      "mcap": 321829808.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -727,8 +730,36 @@
       "breakout_level": 6.406e-05,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 5.269e-05,
-      "mcap": 290690916.0,
+      "price": 5.292e-05,
+      "mcap": 291680909.0,
+      "mcap_asof": "2026-10-06",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "BORG",
+      "name": "SwissBorg",
+      "yf": "BORG-USD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 3.28,
+        "atr_pctl": 20.8,
+        "vol_pctl": 29.0,
+        "drawdown_pct": 74.7,
+        "coiled": true,
+        "coiled_bars": 3,
+        "last_coiled": "2026-10-05"
+      },
+      "base": {
+        "high": 0.194515,
+        "low": 0.12999099,
+        "bars": 60
+      },
+      "breakout_level": 0.194515,
+      "provisional": false,
+      "last_bar": "2026-10-05",
+      "price": 0.17501771,
+      "mcap": 171855367.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -755,36 +786,8 @@
       "breakout_level": 3.131e-05,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 2.859e-05,
-      "mcap": 275660156.0,
-      "mcap_asof": "2026-10-06",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "BORG",
-      "name": "SwissBorg",
-      "yf": "BORG-USD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 3.23,
-        "atr_pctl": 21.4,
-        "vol_pctl": 29.5,
-        "drawdown_pct": 74.3,
-        "coiled": true,
-        "coiled_bars": 2,
-        "last_coiled": "2026-10-04"
-      },
-      "base": {
-        "high": 0.194515,
-        "low": 0.12999099,
-        "bars": 60
-      },
-      "breakout_level": 0.194515,
-      "provisional": false,
-      "last_bar": "2026-10-04",
-      "price": 0.17321414,
-      "mcap": 169925984.0,
+      "price": 2.921e-05,
+      "mcap": 281753493.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -811,8 +814,8 @@
       "breakout_level": 0.00825,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.007187,
-      "mcap": 625972826.0,
+      "price": 0.007247,
+      "mcap": 630866688.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -839,8 +842,8 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.0942,
-      "mcap": 14708949242.0,
+      "price": 0.09575,
+      "mcap": 14956979468.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -867,8 +870,36 @@
       "breakout_level": 0.22344,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.17093,
-      "mcap": 170732747.0,
+      "price": 0.1764,
+      "mcap": 176301438.0,
+      "mcap_asof": "2026-10-06",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "BTSE",
+      "name": "BTSE Token",
+      "yf": "BTSE-USD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.51,
+        "atr_pctl": 23.0,
+        "vol_pctl": 14.1,
+        "drawdown_pct": 60.7,
+        "coiled": true,
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-05"
+      },
+      "base": {
+        "high": 1.09507895,
+        "low": 0.68445998,
+        "bars": 60
+      },
+      "breakout_level": 1.09507895,
+      "provisional": false,
+      "last_bar": "2026-10-05",
+      "price": 0.98605126,
+      "mcap": 159766226.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -895,36 +926,8 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 5.83e-06,
-      "mcap": 3436272559.0,
-      "mcap_asof": "2026-10-06",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "BTSE",
-      "name": "BTSE Token",
-      "yf": "BTSE-USD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.23,
-        "atr_pctl": 24.5,
-        "vol_pctl": 14.2,
-        "drawdown_pct": 61.0,
-        "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-10-04"
-      },
-      "base": {
-        "high": 1.09507895,
-        "low": 0.68445998,
-        "bars": 60
-      },
-      "breakout_level": 1.09507895,
-      "provisional": false,
-      "last_bar": "2026-10-04",
-      "price": 0.97667187,
-      "mcap": 158267461.0,
+      "price": 5.9e-06,
+      "mcap": 3473427318.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -951,8 +954,8 @@
       "breakout_level": 0.2777,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.2492,
-      "mcap": 144891906.0,
+      "price": 0.2588,
+      "mcap": 149997961.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -979,8 +982,8 @@
       "breakout_level": 0.8861,
       "provisional": false,
       "last_bar": "2026-10-05",
-      "price": 0.8391,
-      "mcap": 552287640.0,
+      "price": 0.8513,
+      "mcap": 561689066.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     },
@@ -993,7 +996,7 @@
       "coil": {
         "ribbon_pct": 0.0,
         "atr_pctl": 0.1,
-        "vol_pctl": 52.7,
+        "vol_pctl": 62.7,
         "drawdown_pct": 50.0,
         "coiled": false,
         "coiled_bars": 0,
@@ -1006,9 +1009,9 @@
       },
       "breakout_level": 2e-06,
       "provisional": false,
-      "last_bar": "2026-10-04",
+      "last_bar": "2026-10-05",
       "price": 1.71e-06,
-      "mcap": 1537017616.0,
+      "mcap": 1533150064.0,
       "mcap_asof": "2026-10-06",
       "mcap_src": "coingecko"
     }
