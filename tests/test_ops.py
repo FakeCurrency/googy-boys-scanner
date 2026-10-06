@@ -2,9 +2,12 @@
 this file tests what the script refuses to print."""
 import importlib.util
 import json
+import os
 import pathlib
+import subprocess
 
 import pytest
+import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("ops", ROOT / "scripts" / "ops.py")
@@ -257,3 +260,112 @@ def test_site_probe_paths_are_get_only_same_host_and_summarised(monkeypatch):
     assert ok["source"] == "binance" and ok["bars"] == 900 and ok["last_close"] == 304.2
     assert "candles" not in ok, "the summary never dumps the series"
     assert bad1["error"].startswith("refused") and bad2["error"].startswith("refused")
+
+
+# --------------------------------------------------------------------------
+# a failed action is a GREEN run that says so (2026-10-06)
+# --------------------------------------------------------------------------
+# Only Claude dispatches ops.yml and Claude reads the log either way, so a red
+# run did nothing but mail the owner "Run failed: Ops" about Claude's own slip
+# (run #32: "job_id" for "id"). These run the workflow's REAL step bodies
+# under `bash -e` -- GitHub's default shell -- rather than grepping for them.
+
+
+def _step(name):
+    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "ops.yml").read_text())
+    (step,) = [s for s in wf["jobs"]["ops"]["steps"] if s.get("name") == name]
+    return step
+
+
+def _run_step(tmp_path, *, rc=None, env_extra=None, cwd=None):
+    """Run "Run the action" under bash -e. rc=None runs the real ops.py; an int
+    puts a stub python3 first on PATH that prints a line and exits with it."""
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path),
+           "RUNNER_TEMP": str(tmp_path), "GITHUB_OUTPUT": str(tmp_path / "gh_output"),
+           "ACTION": "cronjob-get", "ARGS": "{}"}
+    if rc is not None:
+        stub = tmp_path / "bin"
+        stub.mkdir()
+        (stub / "python3").write_text(f'#!/usr/bin/env bash\necho "ops: stub said {rc}"\nexit {rc}\n')
+        (stub / "python3").chmod(0o755)
+        env["PATH"] = f"{stub}:{env['PATH']}"
+    env.update(env_extra or {})
+    body = _step("Run the action")["run"]
+    p = subprocess.run(["bash", "-e", "-c", body], cwd=cwd or tmp_path, env=env,
+                       capture_output=True, text=True)
+    return p.returncode, p.stdout + p.stderr
+
+
+@pytest.mark.parametrize("rc", [1, 2, 3, 127])
+def test_a_failed_action_exits_green_and_says_failed_where_claude_reads(tmp_path, rc):
+    code, out = _run_step(tmp_path, rc=rc)
+    assert code == 0, out                                   # no red run, no email
+    assert f"OPS RESULT: FAILED (exit {rc})" in out          # the log
+    assert "::error title=ops cronjob-get failed::" in out   # the run page
+    saved = (tmp_path / "ops.txt").read_text()
+    assert f"ops: stub said {rc}" in saved and f"OPS RESULT: FAILED (exit {rc})" in saved
+    assert (tmp_path / "gh_output").read_text() == f"rc={rc}\n"
+
+
+def test_a_good_action_says_ok_and_raises_no_annotation(tmp_path):
+    code, out = _run_step(tmp_path, rc=0)
+    assert code == 0 and "OPS RESULT: OK" in out
+    assert "::error" not in out and "FAILED" not in out
+    assert (tmp_path / "gh_output").read_text() == "rc=0\n"
+
+
+def test_the_real_script_failing_is_still_a_green_run(tmp_path):
+    """The real ops.py with no CRONJOB_API_KEY: refused before any network
+    call, exit 2 -- the shape of run #32's failure."""
+    code, out = _run_step(tmp_path, cwd=ROOT)
+    assert code == 0, out
+    assert "CRONJOB_API_KEY is not set" in out
+    assert "OPS RESULT: FAILED (exit 2)" in out
+
+
+def test_the_annotation_never_carries_the_args(tmp_path):
+    """ARGS can hold a secret (cf-set-var's value, a job URL with key=) and an
+    ::error:: annotation is printed raw, outside ops.py's redaction."""
+    body = _step("Run the action")["run"]
+    (line,) = [l for l in body.splitlines() if "::error" in l]
+    assert "ARGS" not in line
+    secret = "callervalue-FAKE-SECRET-999"
+    code, out = _run_step(tmp_path, rc=1, env_extra={"ARGS": json.dumps({"value": secret})})
+    annotations = [l for l in out.splitlines() if l.startswith("::error")]
+    assert annotations and not any(secret in l for l in annotations)
+
+
+def test_the_step_summary_shows_the_result_line(tmp_path):
+    _run_step(tmp_path, rc=2)
+    summary = tmp_path / "summary.md"
+    env = {"PATH": os.environ["PATH"], "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_STEP_SUMMARY": str(summary)}
+    p = subprocess.run(["bash", "-e", "-c", _step("Step summary")["run"]], env=env,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stderr
+    assert "OPS RESULT: FAILED (exit 2)" in summary.read_text()
+    assert _step("Step summary").get("if") == "always()"
+
+
+@pytest.mark.parametrize("key", ["id", "job_id", "jobId"])
+def test_a_job_id_is_read_under_any_of_its_names(monkeypatch, key):
+    seen = {}
+
+    def fake_call(method, url, headers=None, body=None, raw_body=None):
+        seen.update(method=method, url=url)
+        return 200, {}
+
+    monkeypatch.setattr(ops, "call", fake_call)
+    ops.run("cronjob-history", {key: 8587588}, env=ENV)
+    assert seen["url"] == ops.CRONJOB_API + "/jobs/8587588/history"
+
+
+def test_id_wins_over_its_aliases_and_a_missing_id_is_still_refused(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(ops, "call", lambda m, u, *a, **k: (seen.update(url=u), (200, {}))[1])
+    ops.run("cronjob-delete", {"id": 1, "job_id": 2}, env=ENV)
+    assert seen["url"].endswith("/jobs/1")
+    monkeypatch.setattr(ops, "call", lambda *a, **k: pytest.fail("must not call out"))
+    for bad in ({}, {"job_id": "x"}, {"jobid": 3}):
+        with pytest.raises(ops.OpsError, match='integer "id"'):
+            ops.run("cronjob-get", bad, env=ENV)
