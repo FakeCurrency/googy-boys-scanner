@@ -15,7 +15,7 @@ Stdlib only (urllib + json). No scanner imports, no repo writes, no git.
 
 ACTIONS
     cronjob-list                       every job on the account
-    cronjob-get      {"id": N}
+    cronjob-get      {"id": N}         ("job_id" / "jobId" accepted too)
     cronjob-history  {"id": N}         recent executions + predictions
     cronjob-create   {"title","url","minutes":[35],"hours":[6],"wdays":[-1],
                       "timezone":"Australia/Melbourne","enabled":true,
@@ -155,11 +155,17 @@ def cronjob_body(args):
     return {"job": job}
 
 
+# "job_id" and "jobId" (the name cron-job.org's own responses use) are read
+# as "id" too: ops run #32 (2026-10-06) failed on exactly that slip.
+_ID_KEYS = ("id", "job_id", "jobId")
+
+
 def _need_id(args):
+    key = next((k for k in _ID_KEYS if k in args), "id")
     try:
-        return int(args["id"])
+        return int(args[key])
     except (KeyError, TypeError, ValueError):
-        raise OpsError('args needs an integer "id"')
+        raise OpsError('args needs an integer "id" (or "job_id" / "jobId")')
 
 
 def do_cronjob(action, args, env):

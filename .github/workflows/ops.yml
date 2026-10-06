@@ -14,6 +14,16 @@
 # in the `scan` group, no assert_staged / WATCHDOG entry (commits nothing).
 # The three secrets are the owner's to create once; absent = the script says
 # which one and exits 2.
+#
+# A FAILED ACTION IS A GREEN RUN, on purpose (2026-10-06). Only Claude
+# dispatches this, and Claude reads the result off the log either way. A red
+# run did one more thing: it mailed the owner "Run failed: Ops" about Claude's
+# own mistake (run #32 passed "job_id" where the script wanted "id"), which he
+# cannot act on. So the step keeps the exit code but not the red: an
+# `OPS RESULT: OK` / `OPS RESULT: FAILED (exit N)` line ends the log and the
+# step summary, a failure also raises an ::error:: annotation on the run page,
+# and the code is the step output `rc`. Read the RESULT line, not the colour.
+# A broken runner (checkout, setup-python) still fails red: that is GitHub's.
 
 name: Ops
 
@@ -62,7 +72,12 @@ jobs:
 
       # stdlib-only: no pip install. Inputs travel through env, never ${{ }}
       # inside the run block (2026-07-20 security pass).
+      # Exits 0 whatever the action did -- see "A FAILED ACTION IS A GREEN
+      # RUN" above. The ::error:: line names the action only: ARGS can carry
+      # a secret (a var value, a job URL with key=) and annotations are not
+      # redacted by ops.py.
       - name: Run the action
+        id: ops
         env:
           ACTION: ${{ github.event.inputs.action }}
           ARGS: ${{ github.event.inputs.args }}
@@ -72,7 +87,16 @@ jobs:
           CF_PAGES_PROJECT: googy-boys-scanner
         run: |
           set -o pipefail
-          python3 scripts/ops.py "$ACTION" "$ARGS" 2>&1 | tee /tmp/ops.txt
+          OUT="${RUNNER_TEMP:-/tmp}/ops.txt"
+          rc=0
+          python3 scripts/ops.py "$ACTION" "$ARGS" 2>&1 | tee "$OUT" || rc=$?
+          if [ "$rc" = "0" ]; then
+            echo "OPS RESULT: OK" | tee -a "$OUT"
+          else
+            echo "OPS RESULT: FAILED (exit $rc)" | tee -a "$OUT"
+            echo "::error title=ops ${ACTION} failed::exit $rc -- read the log. Green on purpose: only Claude dispatches ops, so a red run would only mail the owner."
+          fi
+          echo "rc=$rc" >> "${GITHUB_OUTPUT:-/dev/null}"
 
       - name: Step summary
         if: always()
@@ -80,6 +104,6 @@ jobs:
           {
             echo '### Ops'
             echo '```'
-            cat /tmp/ops.txt 2>/dev/null || echo '(no output)'
+            cat "${RUNNER_TEMP:-/tmp}/ops.txt" 2>/dev/null || echo '(no output)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
