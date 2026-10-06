@@ -1,13 +1,39 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-06T16:15:10+11:00",
+  "generated_at": "2026-10-06T16:49:10+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "EDE",
+      "name": "Eden Innovations Ltd",
+      "sector": "Energy",
+      "dir": "SHORT",
+      "price": 0.065,
+      "turnover_avg20": 72370,
+      "turnover_today": 756571,
+      "rvol": 10.1,
+      "adv_usd": 72370.87,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "LTP",
+      "name": "Ltr Pharma Limited",
+      "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
+      "dir": "LONG",
+      "price": 0.5,
+      "turnover_avg20": 80910,
+      "turnover_today": 359627,
+      "rvol": 4.1,
+      "adv_usd": 80910.36,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "KSC",
       "name": "K & S Corporation Limited",
@@ -22,6 +48,32 @@
       "is_product": false
     },
     {
+      "symbol": "NNL",
+      "name": "Nordic Resources Ltd",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.19,
+      "turnover_avg20": 43162,
+      "turnover_today": 171805,
+      "rvol": 4.0,
+      "adv_usd": 43163.0,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "CDP",
+      "name": "Carindale Property Trust",
+      "sector": "Equity Real Estate Investment Trusts (REITs)",
+      "dir": "LONG",
+      "price": 5.4000001,
+      "turnover_avg20": 27857,
+      "turnover_today": 137781,
+      "rvol": 5.0,
+      "adv_usd": 27857.38,
+      "fund": true,
+      "is_product": true
+    },
+    {
       "symbol": "SEG",
       "name": "Sports Entertainment Group Limited",
       "sector": "Media & Entertainment",
@@ -33,19 +85,6 @@
       "adv_usd": 13179.32,
       "fund": false,
       "is_product": false
-    },
-    {
-      "symbol": "CDP",
-      "name": "Carindale Property Trust",
-      "sector": "Equity Real Estate Investment Trusts (REITs)",
-      "dir": "LONG",
-      "price": 5.42000008,
-      "turnover_avg20": 25985,
-      "turnover_today": 100351,
-      "rvol": 3.9,
-      "adv_usd": 25985.89,
-      "fund": true,
-      "is_product": true
     }
   ]
 }
