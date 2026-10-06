@@ -70,7 +70,13 @@ const DEFAULT_STALE_MIN = 90;
 // the same run twice — but a shared DAILY budget would let an automated healer
 // silently eat the owner's manual SCAN button on a bad scheduler day, which is
 // the one control he reaches for when he notices something is wrong.
-const HEAL_DAILY_CAP = 24;
+//
+// PER MARKET since 2026-10-06. cron-job.org now pings this endpoint hourly per
+// market (?market=asx|nasdaq|crypto) as the real scheduler, because GitHub's
+// own crons ran only 5 of 35 ASX, 8 of 35 NASDAQ and 41 of ~168 crypto scans
+// in the week to 5 Oct. One shared 24/day budget would be spent by crypto
+// alone by midnight; each market (and UptimeRobot's market=all) gets its own.
+const HEAL_DAILY_CAP = 30;
 
 // HEAL-ONLY COOLDOWN (2026-08-28) — the budget-burn fix, measured live.
 // A dispatched scan takes ~13-18 min to become a fresh asset (10-15 min run
@@ -192,7 +198,7 @@ export async function onRequestGet(context) {
         // system is doing the right thing, so the monitor stays green.
         return json(200, { ok: true, healthy: false, action: "cooling_down", ...base });
       }
-      const dayKey = `ratelimit:heal:day:${new Date().toISOString().slice(0, 10)}`;
+      const dayKey = `ratelimit:heal:day:${market}:${new Date().toISOString().slice(0, 10)}`;
       const used = parseInt((await env.JOURNAL_KV.get(dayKey)) || "0", 10);
       if (used >= HEAL_DAILY_CAP) {
         // Healing this often means something is wrong that healing cannot fix

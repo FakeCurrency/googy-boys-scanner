@@ -394,7 +394,7 @@ const hbTests = async () => {
     let hits = 0;
     const H = load(async (...a) => { hits++; return ghFetchStub(204)(...a); });
     const day = new Date().toISOString().slice(0, 10);
-    const kv = fakeKV({ ["ratelimit:heal:day:" + day]: "24" });
+    const kv = fakeKV({ ["ratelimit:heal:day:all:" + day]: "30" });
     const r = await call(H, envFor(STALE, { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv }));
     assert.equal(r.status, 503);
     assert.equal((await r.json()).action, "heal_cap_reached");
