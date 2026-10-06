@@ -1169,7 +1169,14 @@ rows are named in a WARNING, not just counted.
   traded at) — beside, not instead of, the row-level `VIVEK_BOT_MAX_DATA_AGE_DAYS`
   gate. Scan grading/display is untouched. `0` = off. The first run after the
   deploy reads a cache with no stamps, so any held name reused on that run is
-  unpriced once. Pins: `tests/test_stale_cache_marks.py`.
+  unpriced once. **A held name the download starved is REFETCHED first
+  (2026-10-06):** Yahoo throttled the same ASX batches run after run and PMT
+  sat unpriced 7 runs (stop untested all session), so `run_market` now
+  fetches held in-universe names whose frame is missing or past the limit
+  in the same small direct `data.fetch` as the off-universe stragglers
+  (`held_price_kwargs` checks included); only a non-empty frame replaces
+  the cached one, so a failed refetch leaves the rule above in charge.
+  Pins: `tests/test_stale_cache_marks.py`.
 - Tests: `tests/test_data_download.py` (17) + `test/journal_stale.test.js` (13,
   which slices the real helpers out of the shipped file rather than mirroring
   them). **`_ohlc()` in the download tests defaults to TODAY** — it used to be a
