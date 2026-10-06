@@ -203,7 +203,7 @@ const cases = [
     assert.equal(second.status, 200, "still green — the system already acted");
     assert.equal(second.body.action, "heal_in_flight");
     assert.equal(dispatches, 1, "the same episode must not spend a second heal");
-    assert.equal(store["ratelimit:heal:day:" + new Date().toISOString().slice(0, 10)], "1",
+    assert.equal(store["ratelimit:heal:day:asx:" + new Date().toISOString().slice(0, 10)], "1",
       "exactly one unit of the daily cap spent");
   }],
 
@@ -249,6 +249,25 @@ const cases = [
     const { body } = await call("?market=crypto&stale_min=90", { assets: staleCrypto, kv });
     assert.equal(body.action, "dispatched");
     assert.equal(seenBody.inputs.market, "crypto");
+  }],
+
+  ["the DAILY budget is per market too — hourly crypto pings cannot starve ASX", async () => {
+    // cron-job.org pings each market hourly (2026-10-06); crypto alone spends
+    // up to 24 a day, which used to exhaust the one shared budget.
+    const day = new Date().toISOString().slice(0, 10);
+    const store = { ["ratelimit:heal:day:crypto:" + day]: "30" };
+    const kv = fakeKV(store);
+    currentFetch = async () => new Response(null, { status: 204 });
+    const staleBoth = {
+      ...MIXED,
+      "/data/crypto_prices.json": { generated_at: minsAgo(200) },
+      "/data/asx_prices.json": { generated_at: minsAgo(200) },
+    };
+    const crypto = await call("?market=crypto&stale_min=45", { assets: staleBoth, kv });
+    assert.equal(crypto.body.action, "heal_cap_reached");
+    const asx = await call("?market=asx&stale_min=15", { assets: staleBoth, kv });
+    assert.equal(asx.body.action, "dispatched", "crypto's spent budget must not block ASX");
+    assert.equal(store["ratelimit:heal:day:asx:" + day], "1");
   }],
 ];
 
