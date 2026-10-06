@@ -42,13 +42,16 @@ name: Morning plays (Discord)
 # Melbourne = 09:30 New York) is the next slot's and does not hold this one.
 #
 # The close scans these follow (scan.yml, read in each market's own zone):
-#   ASX closing scan     16:30 Sydney   = 05:30 UTC (AEDT) / 06:30 UTC (AEST)
+#   ASX closing scan     16:41 Sydney (cron-job.org POST to /api/scan; scan.yml
+#                        "41 5,6" behind it), committed ~16:52. The ASX close
+#                        counts from 16:40 Sydney, when Yahoo shows the auction.
 #   NASDAQ post-close    16:07 New York = 20:07 UTC (EDT)  / 21:07 UTC (EST)
 #
 # The ON-TIME delivery is the external cron-job.org ladder (cron-job.org's
 # timezone set to UTC; Mon-Fri; see functions/api/morning_plays.js):
 #   ASX  06:15..10:45 UTC every 30 min = 16:15..20:45 AEST / 17:15..21:45 AEDT
-#        (16:15 AEST is before the 16:30 floor -> no-op)
+#        (16:15 and 16:45 AEST come before the closing scan lands -> no-op, so
+#        the digest sends at ~17:15 in both regimes)
 #   US   20:15..23:45 UTC every 30 min = 06:15..09:45 AEST / 07:15..10:45 AEDT
 #        = 16:15..19:45 EDT / 15:15..18:45 EST in New York (06:15 AEST is before
 #        the floor; 15:15/15:45 EST are mid-session -> the gate waits)
@@ -66,12 +69,13 @@ on:
   schedule:
     # ASX. The closing scan moved to 16:30 market-local on 2026-09-21 (owner:
     # "make the last scan 16:30 then trigger the discord to send shortly there
-    # after"), which is 05:30 UTC under AEDT and 06:30 under AEST — so :50 in
-    # BOTH those hours is ~20 min after it commits, and the wrong-regime one is
-    # a silent no-op (the post-close data gate refuses a pre-close scan). The
-    # 07/08 slots stay as late backstops for a dropped cron.
-    - cron: "50 5 * * 1-5"    # ASX, ~20 min after the 16:30 AEDT closing scan
-    - cron: "50 6 * * 1-5"    # ASX, ~20 min after the 16:30 AEST closing scan
+    # after"), and to 16:41 on 2026-10-06 once Yahoo's ~20 min ASX delay was
+    # measured (the close now counts from 16:40). :50 in hours 5 and 6 is 16:50
+    # local in one regime -- usually just before that scan commits, so a no-op
+    # then -- and the wrong-regime one is a silent no-op too. These crons are
+    # backstops behind the cron-job.org ladder; 07/08 are the late ones.
+    - cron: "50 5 * * 1-5"    # ASX, 16:50 AEDT (backstop; the ladder normally sends)
+    - cron: "50 6 * * 1-5"    # ASX, 16:50 AEST (backstop; the ladder normally sends)
     - cron: "50 7 * * 1-5"    # ASX backstop
     - cron: "50 8 * * 1-5"    # ASX backstop, an hour later
     # US. After the 16:07 New York post-close scan in either regime (20:07 UTC

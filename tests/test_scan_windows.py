@@ -147,9 +147,11 @@ def test_the_gate_follows_config_rather_than_a_copy_of_it(monkeypatch):
 
 
 @pytest.mark.parametrize("market,before,after,backstop", [
-    # A scan stamped 16:08 Sydney (the 16:07 hourly cron) is NOT the closing
-    # scan: the auction prints ~16:10-16:12 and the digest gates on 16:12.
-    ("asx", "2026-10-06T05:08:00+00:00", "2026-10-06T05:13:00+00:00", "2026-10-06T05:47:00+00:00"),
+    # A scan stamped 16:32 Sydney is NOT the closing scan: the auction prints
+    # ~16:10-16:12 but Yahoo's ASX feed shows it ~20 min late. 16:32:36 is the
+    # real 2026-10-05 stamp whose prices were still pre-auction on 19% of names
+    # (download from 16:28:52); the digest and the gate wait for 16:40.
+    ("asx", "2026-10-06T05:32:36+00:00", "2026-10-06T05:41:00+00:00", "2026-10-06T05:47:00+00:00"),
     # New York's gate is 16:05, not later (the winter 21:07 UTC scan is 16:07).
     ("nasdaq", "2026-10-05T20:02:00+00:00", "2026-10-05T20:06:00+00:00", "2026-10-05T20:47:00+00:00"),
 ])
@@ -245,7 +247,7 @@ def test_the_closing_crons_in_the_script_are_the_ones_in_scan_yml():
     crons = _crons("scan.yml")
     for c in GATE.CLOSING_CRONS:
         assert c in crons, f"scan_gate.CLOSING_CRONS names {c!r}, which scan.yml no longer has"
-    assert {c for c in crons if c.split()[0] in ("30", "47")} == set(GATE.CLOSING_CRONS)
+    assert {c for c in crons if c.split()[0] in ("41", "47")} == set(GATE.CLOSING_CRONS)
 
 
 def test_the_windows_are_open_plus_one_hour_to_after_the_close():
@@ -363,7 +365,9 @@ def _t(iso):
 # (now UTC, last ASX scan, last NASDAQ scan, want) -- real calendar instants
 HEALS = [
     # Mon 5 Oct 2026, 20:00 AEDT / 05:00 EDT: both shut, both closes covered
-    ("2026-10-05T09:00:00+00:00", "2026-10-05T05:35:00+00:00", "2026-10-02T20:20:00+00:00", ["crypto"]),
+    ("2026-10-05T09:00:00+00:00", "2026-10-05T05:45:00+00:00", "2026-10-02T20:20:00+00:00", ["crypto"]),
+    # ...but an ASX scan stamped 16:32 (pre-auction on Yahoo) did NOT cover it
+    ("2026-10-05T09:00:00+00:00", "2026-10-05T05:32:36+00:00", "2026-10-02T20:20:00+00:00", ["asx", "crypto"]),
     # Sun 11 Oct, midday Sydney (Sat night New York): the weekend is crypto only
     ("2026-10-11T01:00:00+00:00", None, None, ["crypto"]),
     # Sat 10 Oct, midday Sydney = FRIDAY 21:00 New York: Friday's close counts
@@ -397,7 +401,7 @@ def test_a_heartbeat_heal_scans_crypto_plus_only_the_due_stock_market(now, asx, 
 def test_a_heal_for_one_shut_stock_market_is_a_skip():
     markets, _ = GATE.decide("workflow_dispatch", "", "heartbeat", "asx",
                              _t("2026-10-05T09:00:00+00:00"),
-                             {"asx": _t("2026-10-05T05:35:00+00:00")})
+                             {"asx": _t("2026-10-05T05:45:00+00:00")})
     assert markets == []
 
 
@@ -415,8 +419,8 @@ def test_a_late_closing_cron_still_runs_when_nothing_landed_after_the_close():
     t = _t("2026-10-06T06:10:00+00:00")                       # 17:10 AEDT
     before = {"asx": _t("2026-10-06T04:20:00+00:00")}          # 15:20
     after = {"asx": _t("2026-10-06T05:40:00+00:00")}           # 16:40
-    assert GATE.decide("schedule", "30 5,6 * * 1-5", "", "", t, before)[0] == ["asx"]
-    assert GATE.decide("schedule", "30 5,6 * * 1-5", "", "", t, after)[0] == []
+    assert GATE.decide("schedule", "41 5,6 * * 1-5", "", "", t, before)[0] == ["asx"]
+    assert GATE.decide("schedule", "41 5,6 * * 1-5", "", "", t, after)[0] == []
 
 
 def test_an_unreadable_stamp_counts_as_never_scanned(tmp_path):

@@ -39,9 +39,13 @@ on:
     # up. A scheduled run scans at most one stock market and never crypto.
     #
     # The 16:45 tails are load-bearing, not slack: the ASX closing auction
-    # prints ~16:10-16:12 and the morning_plays digest refuses to send until it
-    # has a scan stamped at/after it (MORNING_PLAYS_SLOT_GATE). A window that
-    # ended at 16:00 would silently kill the afternoon Discord ping.
+    # prints ~16:10-16:12 but Yahoo's ASX feed only shows it ~20 min later, so
+    # an ASX scan counts as the close only once it is stamped at/after 16:40
+    # Sydney (MORNING_PLAYS_SLOT_GATE), and the digest waits for that scan. A
+    # window that ended at 16:00 would silently kill the afternoon Discord ping.
+    # GitHub has not delivered the ASX closing crons below since 18 Sep, so the
+    # on-time closing scan is a cron-job.org POST to /api/scan at 16:41 Sydney;
+    # these crons and the heals are its backstops.
     #
     # OFF-:00 MINUTES: GitHub's scheduler is most congested at the top of the
     # hour — their own docs recommend a random minute — and this repo has
@@ -53,7 +57,7 @@ on:
     # existed because this one used to scan crypto too.
     - cron: "7 0-6 * * 1-5"       # ASX hourly superset (00:07-06:07 UTC covers
                                   # 11:07-16:07 local under AEDT and AEST both)
-    - cron: "30 5,6 * * 1-5"      # ASX CLOSING scan, 16:30 local in either regime
+    - cron: "41 5,6 * * 1-5"      # ASX CLOSING scan, 16:41 local in either regime (after the 16:40 close)
     - cron: "47 5,6 * * 1-5"      # ASX closing BACKSTOP — runs only if no scan since the close
     - cron: "37 14,15 * * 1-5"    # NASDAQ first scan, ~10:37 local in either regime
     - cron: "7 16-21 * * 1-5"     # NASDAQ hourly through the close + post-close

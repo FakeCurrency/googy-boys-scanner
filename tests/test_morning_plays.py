@@ -503,14 +503,25 @@ def test_the_real_2026_09_10_scans_mid_session_fails_post_close_passes():
     assert ok is True and "past" in why
 
 
-def test_the_asx_gate_refuses_a_scan_inside_the_closing_auction():
-    """ASX's closing auction prints ~16:10-16:12; a 16:09 scan has no close.
-    Both stamps are real ones from the 2026-09-08 / 2026-09-07 sessions."""
+def test_the_asx_gate_refuses_a_scan_before_yahoo_shows_the_auction():
+    """ASX's closing auction prints ~16:10-16:12, but Yahoo's ASX feed shows it
+    ~20 min late and generated_at is stamped after a ~4-5 min download. So a
+    scan only carries the close once it is stamped at/after 16:40 Sydney.
+    Real stamps: 2026-09-08 16:09:58 / 17:54:01 and 2026-09-07 16:14:13 (AEST),
+    and 2026-10-05 16:32:36 (AEDT) -- whose prices were still pre-auction on
+    332 of 1,739 names when compared with that evening's 18:14 scan."""
     now = dt.datetime(2026, 9, 8, 7, 0, tzinfo=dt.timezone.utc)          # 17:00 AEST Tue
     assert mp.scan_is_post_close("asx", "2026-09-08T16:09:58+10:00", now)[0] is False
     assert mp.scan_is_post_close("asx", "2026-09-08T17:54:01+10:00", now)[0] is True
     now = dt.datetime(2026, 9, 7, 7, 0, tzinfo=dt.timezone.utc)
-    assert mp.scan_is_post_close("asx", "2026-09-07T16:14:13+10:00", now)[0] is True
+    assert mp.scan_is_post_close("asx", "2026-09-07T16:14:13+10:00", now)[0] is False
+    now = dt.datetime(2026, 10, 5, 7, 15, tzinfo=dt.timezone.utc)        # 18:15 AEDT Mon
+    assert mp.scan_is_post_close("asx", "2026-10-05T16:32:36+11:00", now)[0] is False
+    assert mp.scan_is_post_close("asx", "2026-10-05T18:14:00+11:00", now)[0] is True
+    g = config.MORNING_PLAYS_SLOT_GATE["asx"]
+    lo, hi = config.MARKET_SCAN_WINDOWS["asx"][1:]
+    assert (16, 33) <= (g["hour"], g["minute"]), "a 16:32 stamp was measured pre-auction"
+    assert g["hour"] * 60 + g["minute"] < hi, "the close must fall inside the scan window"
 
 
 def test_the_us_gate_accepts_the_winter_21_07_scan_or_the_digest_never_sends():
@@ -754,24 +765,28 @@ def test_edt_on_time_delivery_is_unchanged(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("day", [dt.date(2026, 9, 16), dt.date(2026, 10, 5)])   # AEST, AEDT
-def test_the_asx_slot_is_unchanged_its_floor_is_always_after_the_sydney_close(
+def test_the_asx_slot_waits_for_the_16_40_close_then_sends_the_closing_scan(
         day, tmp_path, monkeypatch):
-    """The ASX slot's 16:30 Melbourne floor is always past 16:12 Sydney (the two
-    zones share DST dates), so 'session in progress' can never hold it: same
-    verdicts as before at every minute it is due, and the 16:30 closing scan
-    still sends."""
+    """The ASX slot's 16:30 Melbourne floor sits before the 16:40 Sydney close
+    (the two zones share DST dates): a rung from 16:30 to 16:39 is refused as
+    'session in progress', every minute from 16:40 is not, a scan stamped
+    16:32 (pre-auction on Yahoo) is refused, and the closing scan dispatched at
+    16:41 -- stamped ~16:52 -- sends."""
     floor = _at(MELBOURNE, day.year, day.month, day.day, config.MORNING_PLAYS_SLOTS["asx"]["hour"],
                 config.MORNING_PLAYS_SLOTS["asx"]["minute"])
+    close = _at(SYDNEY, day.year, day.month, day.day, 16, 40)
     now = floor
     while now.date() == day:
-        assert mp.session_in_progress("asx", now.astimezone(dt.timezone.utc)) is False, now
+        held = mp.session_in_progress("asx", now.astimezone(dt.timezone.utc))
+        assert held is (now < close), now
         now += dt.timedelta(minutes=5)
-    after = (floor + dt.timedelta(minutes=20)).astimezone(dt.timezone.utc)
-    pre_auction = _at(SYDNEY, day.year, day.month, day.day, 16, 7, 30)
-    ok, why = mp.scan_is_post_close("asx", pre_auction.isoformat(), after)
-    assert ok is False and "predates" in why
+    after = (floor + dt.timedelta(minutes=45)).astimezone(dt.timezone.utc)
+    for pre in ((16, 7, 30), (16, 32, 36)):
+        ok, why = mp.scan_is_post_close(
+            "asx", _at(SYDNEY, day.year, day.month, day.day, *pre).isoformat(), after)
+        assert ok is False and "predates" in why, pre
     posts = _fake_discord(monkeypatch)
-    closing = _at(SYDNEY, day.year, day.month, day.day, 16, 30, 40)
+    closing = _at(SYDNEY, day.year, day.month, day.day, 16, 52, 10)
     assert _run_slot(tmp_path, "asx", after, "asx", closing, ["ASXNAME"]) == 0
     assert len(posts) == 1 and "ASXNAME" in posts[0]
     assert mp.load_state(_seen(tmp_path))["slots"].get("asx") == day.isoformat()
@@ -791,7 +806,7 @@ def test_the_workflow_crons_fire_after_the_close_scans_and_each_maps_to_a_slot()
     wf = (ROOT / ".github" / "workflows" / "morning_plays.yml").read_text()
     crons = re.findall(r'- cron: "([^"]+)"', wf)
     assert len(crons) == 6
-    asx_scan_hours = {5, 6}          # scan.yml's "30 5,6 * * 1-5" closing scan
+    asx_scan_hours = {5, 6}          # scan.yml's "41 5,6 * * 1-5" closing scan
     assert asx_scan_hours <= {int(c.split()[1]) for c in crons}, \
         "no ASX digest cron fires in the hour the closing scan lands"
     for c in crons:

@@ -362,12 +362,20 @@ def test_the_asx_triggers_gate_group_cache_and_timeout():
 
 
 def test_the_post_close_cron_is_after_the_close_in_both_dst_regimes():
+    """The close is 16:40 Sydney (Yahoo shows the auction ~20 min late). Under
+    AEDT the 06:24 UTC primary is past it; under AEST it is 16:24, so the
+    GATED 07:24 UTC backstop is the first run past the close and re-screens
+    (the gate sees a file generated before the close)."""
     from zoneinfo import ZoneInfo
     syd = ZoneInfo("Australia/Sydney")
-    for day in ("2026-07-15", "2026-12-15"):             # AEST, AEDT
-        utc = dt.datetime.fromisoformat(day + "T06:24:00+00:00")
-        local = utc.astimezone(syd)
-        assert (local.hour, local.minute) >= (16, 12), day
+    g = config.MORNING_PLAYS_SLOT_GATE["asx"]
+    close = (g["hour"], g["minute"])
+    def local(day, hhmm):
+        t = dt.datetime.fromisoformat(f"{day}T{hhmm}:00+00:00").astimezone(syd)
+        return (t.hour, t.minute)
+    assert local("2026-12-15", "06:24") >= close                   # AEDT primary
+    assert local("2026-07-15", "06:24") < close <= local("2026-07-15", "07:24")   # AEST
+    assert _due("2026-07-15T06:24:00+00:00", "2026-07-15T07:24:00+00:00") == "run=true"
 
 
 def test_the_asx_kick_is_neither_the_scan_kick_nor_the_crypto_kick():
@@ -391,15 +399,17 @@ def _due(stamp, now):
 
 
 @pytest.mark.parametrize("stamp,now,want", [
-    # AEST (UTC+10): close 16:12 = 06:12 UTC
-    ("2026-07-15T06:30:00+00:00", "2026-07-15T07:24:00+00:00", "run=false"),
+    # AEST (UTC+10): close 16:40 = 06:40 UTC
+    ("2026-07-15T06:45:00+00:00", "2026-07-15T07:24:00+00:00", "run=false"),
+    ("2026-07-15T06:30:00+00:00", "2026-07-15T07:24:00+00:00", "run=true"),
     ("2026-07-15T04:54:00+00:00", "2026-07-15T07:24:00+00:00", "run=true"),
     ("2026-07-14T06:30:00+00:00", "2026-07-15T07:24:00+00:00", "run=true"),
-    # AEDT (UTC+11): close 16:12 = 05:12 UTC
-    ("2026-12-15T05:30:00+00:00", "2026-12-15T07:24:00+00:00", "run=false"),
+    # AEDT (UTC+11): close 16:40 = 05:40 UTC
+    ("2026-12-15T05:45:00+00:00", "2026-12-15T07:24:00+00:00", "run=false"),
+    ("2026-12-15T05:30:00+00:00", "2026-12-15T07:24:00+00:00", "run=true"),
     ("2026-12-15T05:00:00+00:00", "2026-12-15T07:24:00+00:00", "run=true"),
     # Monday before the close: the last close is FRIDAY's
-    ("2026-09-25T06:30:00+00:00", "2026-09-28T01:00:00+00:00", "run=false"),
+    ("2026-09-25T06:45:00+00:00", "2026-09-28T01:00:00+00:00", "run=false"),
     # unreadable -> fail OPEN
     ("", "2026-07-15T07:24:00+00:00", "run=true"),
     ("garbage", "2026-07-15T07:24:00+00:00", "run=true"),
