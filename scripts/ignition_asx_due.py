@@ -8,8 +8,10 @@ would re-screen the same completed bar, re-stamp generated_at and commit a
 pointless Cloudflare deploy.
 
 The close is the morning digest's own gate (config.MORNING_PLAYS_SLOT_GATE
-["asx"], 16:12 Sydney -- the closing auction prints ~16:10-16:12), read in the
-market's own calendar so both DST regimes are right by construction.
+["asx"], 16:40 Sydney -- the auction prints ~16:10-16:12 but Yahoo's ASX feed
+shows it ~20 min later), read in the market's own calendar so both DST
+regimes are right by construction. Under AEST the 06:24 UTC primary is 16:24
+Sydney, before that close, so the 07:24 UTC backstop re-screens on final bars.
 
     python3 scripts/ignition_asx_due.py <generated_at or ""> [--now ISO]
 

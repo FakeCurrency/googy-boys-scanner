@@ -46,11 +46,14 @@
  *        ASX  06:15..10:45 UTC → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=asx&key=<that string>
  *        US   20:15..23:45 UTC → https://googy-boys-scanner.pages.dev/api/morning_plays?slot=us&key=<that string>
  *      In local time: ASX 16:15..20:45 AEST / 17:15..21:45 AEDT (after the
- *      16:30 Sydney closing scan = 06:30 UTC AEST / 05:30 UTC AEDT); US
+ *      16:41 Sydney closing scan -- a third cron-job.org job POSTs
+ *      {"market":"asx"} to /api/scan then, Australia/Sydney time; the ASX
+ *      close counts from 16:40, when Yahoo shows the auction); US
  *      06:15..09:45 AEST / 07:15..10:45 AEDT Melbourne = 16:15..19:45 EDT /
  *      15:15..18:45 EST New York (after the 16:07 New York post-close scan =
  *      20:07 UTC EDT / 21:07 UTC EST). Rungs before the 16:30 / 06:30
- *      Melbourne floor, or while New York is still trading, are no-ops.
+ *      Melbourne floor, before the closing scan lands, or while New York is
+ *      still trading, are no-ops.
  */
 
 import { dispatchWorkflow } from "./_dispatch.js";

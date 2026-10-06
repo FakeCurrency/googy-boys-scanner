@@ -1524,11 +1524,25 @@ MORNING_PLAYS_SLOTS = {
 # silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
 # cron-job.org jobs are a ladder of attempts every 30 min after the close, and
 # the first post-close one sends (the per-day marker silences the rest).
-#   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
-#                            is pre-close. scan.yml's last hourly ASX scan is
-#                            16:07 Sydney (refused); its CLOSING scan is 16:30
-#                            Sydney in either regime (05:30 UTC under AEDT, 06:30
-#                            under AEST), stamped when that run actually starts.
+#   asx    16:40 Sydney   -- NOT the auction time. The closing auction prints
+#                            ~16:10-16:12, but Yahoo's ASX feed runs ~20 min
+#                            behind and `generated_at` is stamped AFTER a ~4-5
+#                            min download. Measured 2026-10-05: the scan stamped
+#                            16:32 (download from 16:28:52) still held the
+#                            pre-auction price on 332 of 1,739 names (19%) and
+#                            one digest name changed; 25 Sep (download from
+#                            16:31) was final; 21 Sep (stamp 16:36) still had
+#                            ~11% pre-final. Until 2026-10-06 this was 16:12,
+#                            harmless only while evening heals rescanned the
+#                            ASX; since scan_gate.py (2026-10-05) the first scan
+#                            past this time IS the day's close and nothing
+#                            rescans it, so it must mean "the data is final".
+#                            16:40 = download from ~16:35, still inside the
+#                            16:45 scan window. The on-time closing scan is a
+#                            cron-job.org POST to /api/scan at 16:41 Sydney
+#                            (GitHub has not delivered scan.yml's closing crons
+#                            since 18 Sep), backed by scan.yml's "41 5,6" and
+#                            "47 5,6" crons, heals and a 17:20 Sydney heal probe.
 #   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
 #                            16:00:xx. NOT 16:15: scan.yml's only post-close
 #                            NASDAQ scan is its hourly at 16:07 New York (20:07
@@ -1547,12 +1561,13 @@ MORNING_PLAYS_SLOTS = {
 # slot's floor on that Melbourne date. One that opened after the floor is the
 # NEXT slot's: under AEST+EDT, 23:30-23:59 Melbourne is 09:30-09:59 New York on
 # the same date, and that evening's US slot still owes the previous session.
-# The ASX slot's 16:30 floor is always past 16:12 Sydney (Melbourne and Sydney
-# share their DST dates), so that half never bites the ASX in practice.
+# The ASX slot's 16:30 floor sits before the 16:40 Sydney close (Melbourne and
+# Sydney share their DST dates), so a rung between 16:30 and 16:40 is refused
+# as "session running" and the next rung retries -- harmless.
 # crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
 # gate reads (`<market>_vivek.json`'s generated_at) and the session it waits on.
 MORNING_PLAYS_SLOT_GATE = {
-    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
+    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 40},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only

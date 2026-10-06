@@ -13,7 +13,9 @@ name: Ignition scan (ASX)
 # same instant-after-close in both DST regimes (the offset only moves it LATER
 # in summer). Backed up at 07:24 and 09:24 UTC; the gate skips a backstop once
 # a file generated after today's close is on the branch
-# (scripts/ignition_asx_due.py). The three intraday runs publish breaks on the
+# (scripts/ignition_asx_due.py). That close is 16:40 Sydney (2026-10-06):
+# Yahoo shows the auction ~20 min late, so under AEST the 16:24 run can read
+# pre-auction bars and the 07:24 backstop re-screens. The three intraday runs publish breaks on the
 # still-forming bar as "provisional" (never counted) and move RUNNING marks.
 # Weekdays only: there is no ASX bar on a weekend.
 #
