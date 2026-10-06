@@ -360,6 +360,10 @@ def main(argv=None):
     except urllib.error.URLError as e:
         print(f"ops: network error: {redact(e, extra=extra)}")
         return 3
+    except Exception as e:  # noqa: BLE001 -- a raw traceback would skip redact()
+        # e.g. http.client.InvalidURL quotes the whole path, key= and all.
+        print(f"ops: {type(e).__name__}: {redact(e, extra=extra)}")
+        return 4
     text = json.dumps(result, indent=2, sort_keys=True) if not isinstance(result, str) else result
     print(f"ops: {action} -> HTTP {status}")
     print(redact(text, extra=extra))

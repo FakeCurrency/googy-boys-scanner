@@ -4,7 +4,9 @@ import importlib.util
 import json
 import os
 import pathlib
+import re
 import subprocess
+import uuid
 
 import pytest
 import yaml
@@ -279,45 +281,74 @@ def _step(name):
 
 def _run_step(tmp_path, *, rc=None, env_extra=None, cwd=None):
     """Run "Run the action" under bash -e. rc=None runs the real ops.py; an int
-    puts a stub python3 first on PATH that prints a line and exits with it."""
+    puts a stub python3 first on PATH that prints a line to stdout and one to
+    stderr -- each carrying a marker unique to this call, so a stale ops.txt
+    from any earlier run can never satisfy an assertion -- and exits with it.
+    Returns (exit code, combined output, marker)."""
+    marker = uuid.uuid4().hex
     env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path),
-           "RUNNER_TEMP": str(tmp_path), "GITHUB_OUTPUT": str(tmp_path / "gh_output"),
-           "ACTION": "cronjob-get", "ARGS": "{}"}
+           "RUNNER_TEMP": str(tmp_path), "ACTION": "cronjob-get", "ARGS": "{}"}
     if rc is not None:
         stub = tmp_path / "bin"
         stub.mkdir()
-        (stub / "python3").write_text(f'#!/usr/bin/env bash\necho "ops: stub said {rc}"\nexit {rc}\n')
+        (stub / "python3").write_text(
+            "#!/usr/bin/env bash\n"
+            f'echo "ops: stub said {rc} {marker}"\n'
+            f'echo "stub stderr {marker}" >&2\n'
+            f"exit {rc}\n")
         (stub / "python3").chmod(0o755)
         env["PATH"] = f"{stub}:{env['PATH']}"
     env.update(env_extra or {})
     body = _step("Run the action")["run"]
     p = subprocess.run(["bash", "-e", "-c", body], cwd=cwd or tmp_path, env=env,
                        capture_output=True, text=True)
-    return p.returncode, p.stdout + p.stderr
+    return p.returncode, p.stdout + p.stderr, marker
 
 
-@pytest.mark.parametrize("rc", [1, 2, 3, 127])
+def _summary(tmp_path):
+    summary = tmp_path / "summary.md"
+    env = {"PATH": os.environ["PATH"], "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_STEP_SUMMARY": str(summary)}
+    p = subprocess.run(["bash", "-e", "-c", _step("Step summary")["run"]], env=env,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stderr
+    return summary.read_text()
+
+
+@pytest.mark.parametrize("rc", [1, 2, 3, 4, 127])
 def test_a_failed_action_exits_green_and_says_failed_where_claude_reads(tmp_path, rc):
-    code, out = _run_step(tmp_path, rc=rc)
+    code, out, marker = _run_step(tmp_path, rc=rc)
     assert code == 0, out                                   # no red run, no email
     assert f"OPS RESULT: FAILED (exit {rc})" in out          # the log
     assert "::error title=ops cronjob-get failed::" in out   # the run page
     saved = (tmp_path / "ops.txt").read_text()
-    assert f"ops: stub said {rc}" in saved and f"OPS RESULT: FAILED (exit {rc})" in saved
-    assert (tmp_path / "gh_output").read_text() == f"rc={rc}\n"
+    assert f"ops: stub said {rc} {marker}" in saved
+    assert f"stub stderr {marker}" in saved                  # 2>&1: tracebacks reach the summary
+    assert saved.rstrip().endswith(f"OPS RESULT: FAILED (exit {rc})")
 
 
 def test_a_good_action_says_ok_and_raises_no_annotation(tmp_path):
-    code, out = _run_step(tmp_path, rc=0)
+    code, out, marker = _run_step(tmp_path, rc=0)
     assert code == 0 and "OPS RESULT: OK" in out
     assert "::error" not in out and "FAILED" not in out
-    assert (tmp_path / "gh_output").read_text() == "rc=0\n"
+    saved = (tmp_path / "ops.txt").read_text()
+    assert f"ops: stub said 0 {marker}" in saved             # the result is kept, not overwritten
+    assert saved.rstrip().endswith("OPS RESULT: OK")
+
+
+@pytest.mark.parametrize("rc,result", [(0, "OPS RESULT: OK"), (2, "OPS RESULT: FAILED (exit 2)")])
+def test_the_step_summary_shows_the_output_and_the_result_line(tmp_path, rc, result):
+    _, _, marker = _run_step(tmp_path, rc=rc)
+    text = _summary(tmp_path)
+    assert f"ops: stub said {rc} {marker}" in text
+    assert text.rstrip().rstrip("`").rstrip().endswith(result)
+    assert _step("Step summary").get("if") == "always()"
 
 
 def test_the_real_script_failing_is_still_a_green_run(tmp_path):
     """The real ops.py with no CRONJOB_API_KEY: refused before any network
     call, exit 2 -- the shape of run #32's failure."""
-    code, out = _run_step(tmp_path, cwd=ROOT)
+    code, out, _ = _run_step(tmp_path, cwd=ROOT)
     assert code == 0, out
     assert "CRONJOB_API_KEY is not set" in out
     assert "OPS RESULT: FAILED (exit 2)" in out
@@ -330,21 +361,36 @@ def test_the_annotation_never_carries_the_args(tmp_path):
     (line,) = [l for l in body.splitlines() if "::error" in l]
     assert "ARGS" not in line
     secret = "callervalue-FAKE-SECRET-999"
-    code, out = _run_step(tmp_path, rc=1, env_extra={"ARGS": json.dumps({"value": secret})})
+    code, out, _ = _run_step(tmp_path, rc=1, env_extra={"ARGS": json.dumps({"value": secret})})
     annotations = [l for l in out.splitlines() if l.startswith("::error")]
     assert annotations and not any(secret in l for l in annotations)
 
 
-def test_the_step_summary_shows_the_result_line(tmp_path):
-    _run_step(tmp_path, rc=2)
-    summary = tmp_path / "summary.md"
-    env = {"PATH": os.environ["PATH"], "RUNNER_TEMP": str(tmp_path),
-           "GITHUB_STEP_SUMMARY": str(summary)}
-    p = subprocess.run(["bash", "-e", "-c", _step("Step summary")["run"]], env=env,
-                       capture_output=True, text=True)
-    assert p.returncode == 0, p.stderr
-    assert "OPS RESULT: FAILED (exit 2)" in summary.read_text()
-    assert _step("Step summary").get("if") == "always()"
+def test_an_odd_action_name_cannot_become_a_workflow_command(tmp_path):
+    """GitHub enforces the choice list today; this holds even if it stops."""
+    evil = "cronjob-get\n::add-mask::x\n::error title=x,file=y::z"
+    code, out, _ = _run_step(tmp_path, rc=2, env_extra={"ACTION": evil})
+    assert code == 0
+    commands = [l for l in out.splitlines() if l.startswith("::")]
+    assert len(commands) == 1, commands                      # nothing injected
+    name = re.match(r"::error title=ops (\S*) failed::", commands[0]).group(1)
+    assert re.fullmatch(r"[a-z-]+", name) and name.startswith("cronjob-get")
+
+
+def test_an_unexpected_exception_is_redacted_not_a_raw_traceback(monkeypatch, capsys):
+    """A traceback goes out raw, past redact(): http.client.InvalidURL quotes
+    the whole path, key= included."""
+    def boom(action, args, env=None):
+        raise ValueError("URL can't contain control characters. '/api/x?key=TRIGGER-SECRET-123 x' "
+                         + args["value"])
+    monkeypatch.setattr(ops, "run", boom)
+    rc = ops.main(["site-probe", json.dumps({"value": "callervalue-FAKE-000004"})])
+    out = capsys.readouterr()
+    assert rc == 4
+    assert "ops: ValueError:" in out.out and "key=***" in out.out
+    assert "TRIGGER-SECRET-123" not in out.out + out.err
+    assert "callervalue-FAKE-000004" not in out.out + out.err
+    assert "Traceback" not in out.out + out.err
 
 
 @pytest.mark.parametrize("key", ["id", "job_id", "jobId"])
