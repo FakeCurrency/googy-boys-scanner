@@ -127,7 +127,7 @@
       <h2>2 · What runs when <span class="who">(GitHub Actions cron, UTC — best-effort ±few min)</span></h2>
       <table class="sys-t">
         <tr><th>Job</th><th>When</th><th>Does</th></tr>
-        <tr><td>Stock scans + bot</td><td>Market hours only, weekdays, in each market’s own calendar: ASX ~hourly 11:07→16:30 Sydney · NASDAQ ~hourly 10:37→16:07 New York (plus a closing backstop)</td><td>Scan one stock market per run, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
+        <tr><td>Stock scans + bot</td><td>Market hours only, weekdays, in each market’s own calendar: ASX ~hourly 11:07→16:07 plus the 16:41 Sydney closing scan (the close counts from 16:40, once Yahoo shows the auction) · NASDAQ ~hourly 10:37→16:07 New York (plus a closing backstop)</td><td>Scan one stock market per run, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
         <tr><td>Crypto bot</td><td>:22 and :52 every hour, 24/7 (:52 skips when the scan is fresh)</td><td>Crypto scan + the crypto slice of the bot book</td></tr>
         <tr><td>PhaseMap nightly</td><td>08:30 UTC daily</td><td>PhaseMap states for all markets + per-symbol chart data</td></tr>
         <tr><td>Kill-switch check</td><td>:15 and :45, 24/7</td><td>Loss check on the bot book per market, open positions re-priced with live quotes</td></tr>

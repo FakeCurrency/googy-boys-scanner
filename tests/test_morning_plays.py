@@ -22,6 +22,12 @@ from scanner import config
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
+
+def _scan_gate():
+    """scan.yml's gate script: it owns the closing-cron list the digest follows."""
+    from scripts import scan_gate
+    return scan_gate
+
 pytestmark = pytest.mark.risk
 
 
@@ -814,7 +820,14 @@ def test_the_workflow_crons_fire_after_the_close_scans_and_each_maps_to_a_slot()
         h = int(hour)
         assert f'"{c}"' in wf.split("case \"$SCHEDULE\" in")[1], f"{c} is not mapped to a slot"
         assert h in (5, 6, 7, 8, 21, 22), c
-        assert int(minute) == 50, f"{c} must land after the closing scan commits, not with it"
+        if h in (5, 6):
+            # the on-time ASX pair: after the closing scan COMMITS (~11 min
+            # after its cron; scan_gate.CLOSING_CRONS[0] is that cron)
+            closing_min = int(_scan_gate().CLOSING_CRONS[0].split()[0])
+            assert int(minute) >= closing_min + 12, \
+                f"{c} must land after the {closing_min}-past closing scan commits"
+        else:
+            assert int(minute) == 50, f"{c} must land after the closing scan commits, not with it"
         if h in (5, 6, 7, 8):
             assert f'"{c}"' in wf.split('ARGS="--slot asx"')[0].split("case")[-1]
         else:

@@ -57,7 +57,7 @@ from scanner import config  # noqa: E402  (stdlib-only module)
 STOCK = tuple(config.MARKET_SCAN_WINDOWS)            # ("asx", "nasdaq")
 ALL = STOCK + ("crypto",)
 # scan.yml's closing slots, each written once per DST regime.
-CLOSING_CRONS = ("41 5,6 * * 1-5", "47 5,6 * * 1-5", "47 20,21 * * 1-5")
+CLOSING_CRONS = ("41 5,6 * * 1-5", "57 5,6 * * 1-5", "47 20,21 * * 1-5")
 
 
 def _local(market: str, now: dt.datetime) -> dt.datetime:
