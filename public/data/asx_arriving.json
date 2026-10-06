@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-06T15:16:37+11:00",
+  "generated_at": "2026-10-06T16:15:10+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "KSC",
+      "name": "K & S Corporation Limited",
+      "sector": "Transportation",
+      "dir": "SHORT",
+      "price": 3.20000005,
+      "turnover_avg20": 27429,
+      "turnover_today": 225379,
+      "rvol": 8.0,
+      "adv_usd": 27429.85,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "SEG",
       "name": "Sports Entertainment Group Limited",
@@ -20,6 +33,19 @@
       "adv_usd": 13179.32,
       "fund": false,
       "is_product": false
+    },
+    {
+      "symbol": "CDP",
+      "name": "Carindale Property Trust",
+      "sector": "Equity Real Estate Investment Trusts (REITs)",
+      "dir": "LONG",
+      "price": 5.42000008,
+      "turnover_avg20": 25985,
+      "turnover_today": 100351,
+      "rvol": 3.9,
+      "adv_usd": 25985.89,
+      "fund": true,
+      "is_product": true
     }
   ]
 }
