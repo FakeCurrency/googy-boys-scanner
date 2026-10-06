@@ -42,9 +42,11 @@ name: Morning plays (Discord)
 # Melbourne = 09:30 New York) is the next slot's and does not hold this one.
 #
 # The close scans these follow (scan.yml, read in each market's own zone):
-#   ASX closing scan     16:41 Sydney (cron-job.org POST to /api/scan; scan.yml
-#                        "41 5,6" behind it), committed ~16:52. The ASX close
-#                        counts from 16:40 Sydney, when Yahoo shows the auction.
+#   ASX closing scan     16:40 Sydney (cron-job.org's 'scan ASX close' job
+#                        pings /api/heartbeat?market=asx; scan.yml "41 5,6" and
+#                        a 17:20 Sydney heal probe behind it), committed ~16:50.
+#                        The ASX close counts from 16:40, when Yahoo shows the
+#                        auction.
 #   NASDAQ post-close    16:07 New York = 20:07 UTC (EDT)  / 21:07 UTC (EST)
 #
 # The ON-TIME delivery is the external cron-job.org ladder (cron-job.org's
@@ -69,7 +71,7 @@ on:
   schedule:
     # ASX. The closing scan moved to 16:30 market-local on 2026-09-21 (owner:
     # "make the last scan 16:30 then trigger the discord to send shortly there
-    # after"), and to 16:41 on 2026-10-06 once Yahoo's ~20 min ASX delay was
+    # after"), and to ~16:40 on 2026-10-06 once Yahoo's ~20 min ASX delay was
     # measured (the close now counts from 16:40). :58 in hours 5 and 6 is 16:58
     # local in one regime, after that scan commits (~16:52), and the
     # wrong-regime one is a silent no-op. These crons are backstops behind the

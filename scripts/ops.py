@@ -20,8 +20,6 @@ ACTIONS
     cronjob-create   {"title","url","minutes":[35],"hours":[6],"wdays":[-1],
                       "timezone":"Australia/Melbourne","enabled":true,
                       "saveResponses":true}
-                     a POST job adds "requestMethod":1 and
-                      "extendedData":{"headers":{...},"body":"..."}
     cronjob-update   {"id": N, ...any of the create fields}
     cronjob-delete   {"id": N}
     cf-list-vars                       production env var NAMES + types only
@@ -136,10 +134,7 @@ def _cj_headers(env):
     return {"Authorization": f"Bearer {key}"}
 
 
-# extendedData = {"headers": {...}, "body": "..."}: what a POST job sends
-# (2026-10-06: the 16:41 Sydney ASX closing scan POSTs {"market":"asx"} to
-# /api/scan, which reads only a JSON body).
-_JOB_FIELDS = ("title", "url", "enabled", "saveResponses", "requestMethod", "extendedData")
+_JOB_FIELDS = ("title", "url", "enabled", "saveResponses", "requestMethod")
 _SCHED_FIELDS = ("timezone", "minutes", "hours", "mdays", "months", "wdays", "expiresAt")
 
 
