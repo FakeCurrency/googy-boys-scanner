@@ -777,7 +777,7 @@ def test_the_asx_slot_waits_for_the_16_40_close_then_sends_the_closing_scan(
     (the two zones share DST dates): a rung from 16:30 to 16:39 is refused as
     'session in progress', every minute from 16:40 is not, a scan stamped
     16:32 (pre-auction on Yahoo) is refused, and the closing scan dispatched at
-    16:41 -- stamped ~16:52 -- sends."""
+    16:40 -- stamped ~16:52 -- sends."""
     floor = _at(MELBOURNE, day.year, day.month, day.day, config.MORNING_PLAYS_SLOTS["asx"]["hour"],
                 config.MORNING_PLAYS_SLOTS["asx"]["minute"])
     close = _at(SYDNEY, day.year, day.month, day.day, 16, 40)

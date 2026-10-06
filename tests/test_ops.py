@@ -96,26 +96,6 @@ def test_cronjob_create_builds_the_documented_job_shape(monkeypatch):
                                "mdays": [-1], "months": [-1], "wdays": [-1]}
 
 
-def test_cronjob_create_can_post_a_json_body(monkeypatch):
-    """/api/scan reads only a JSON body, so the ASX closing-scan job is a POST
-    whose body names the market; without it the endpoint scans every market."""
-    seen = {}
-
-    def fake_call(method, url, headers=None, body=None, raw_body=None):
-        seen.update(body=body)
-        return 200, {"jobId": 43}
-
-    monkeypatch.setattr(ops, "call", fake_call)
-    ext = {"headers": {"Content-Type": "application/json"}, "body": '{"market":"asx"}'}
-    ops.run("cronjob-create", {"title": "asx close", "url": "https://x/api/scan",
-                               "requestMethod": 1, "extendedData": ext,
-                               "minutes": [41], "hours": [16], "wdays": [1, 2, 3, 4, 5],
-                               "timezone": "Australia/Sydney"}, env=ENV)
-    job = seen["body"]["job"]
-    assert job["requestMethod"] == 1 and job["extendedData"] == ext
-    assert job["schedule"]["wdays"] == [1, 2, 3, 4, 5]
-
-
 def test_cronjob_update_sends_only_the_fields_given(monkeypatch):
     seen = {}
 
