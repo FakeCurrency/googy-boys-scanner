@@ -1250,8 +1250,26 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # handful at most, best-effort, never breaks the run.
     missing = sorted({p["symbol"] for p in book["open"]
                       if p.get("market") == market and p["symbol"] not in yf_map})
-    if missing:
+
+    # Held positions IN the universe whose frame is absent or only a cache
+    # older than VIVEK_BOT_MAX_MARK_AGE_H (2026-10-06). Yahoo throttles the
+    # ~2,000-ticker ASX download in 120-ticker batches, and a starved batch
+    # starves the same names run after run: PMT went unpriced for 7 runs on
+    # 2026-10-06 (its stop untested all session) while 3 of 7 recovery
+    # batches came back empty. One small direct fetch of just these names
+    # usually gets through; one that does not leaves them exactly as before.
+    def _unfresh(sym):
+        f = frames.get(yf_map[sym])
+        if f is None or len(f) == 0:
+            return True
+        return bool(max_mark_h) and mark_age_h(f, now) > max_mark_h
+
+    refetch = sorted({p["symbol"] for p in book["open"]
+                      if p.get("market") == market and p["symbol"] in yf_map
+                      and _unfresh(p["symbol"])})
+    if missing or refetch:
         yf_missing = {s: s + mkt.suffix for s in missing}
+        want = {**yf_missing, **{s: yf_map[s] for s in refetch}}
         try:
             # data.fetch: crypto from the same exchange klines the scan
             # used (config.CRYPTO_DATA_SOURCE), stocks from Yahoo as before.
@@ -1260,18 +1278,29 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             # day_marks anchor) or its last mark -- never priced on whichever
             # venue lists the ticker first, which can be a different token.
             held = [p for p in book["open"]
-                    if p.get("market") == market and p["symbol"] in yf_missing]
-            extra = fetch(market, list(yf_missing.values()), period="6mo",
+                    if p.get("market") == market and p["symbol"] in want]
+            extra = fetch(market, list(want.values()), period="6mo",
                           **held_price_kwargs(held))[0]
-            priced = sum(1 for v in extra.values() if v is not None and len(v))
-            frames = {**frames, **extra}
+            # Only a frame that came back replaces anything: a failed refetch
+            # must not blank the cached frame the stale-mark rule reads.
+            got = {t: v for t, v in extra.items() if v is not None and len(v)}
+            frames = {**frames, **got}
             yf_map = {**yf_map, **yf_missing}
-            log.info("vivek_run [%s]: %d open position(s) no longer in the "
-                     "universe — fetched directly (%d priced): %s",
-                     market, len(missing), priced, ", ".join(missing))
+            if missing:
+                log.info("vivek_run [%s]: %d open position(s) no longer in the "
+                         "universe — fetched directly (%d priced): %s",
+                         market, len(missing),
+                         sum(1 for s in missing if yf_missing[s] in got),
+                         ", ".join(missing))
+            if refetch:
+                log.info("vivek_run [%s]: %d held position(s) had no fresh frame "
+                         "from the scan download — refetched directly (%d priced): %s",
+                         market, len(refetch),
+                         sum(1 for s in refetch if yf_map[s] in got),
+                         ", ".join(refetch))
         except Exception as e:
-            log.warning("vivek_run [%s]: could not fetch off-universe book "
-                        "symbols %s: %s", market, ", ".join(missing), e)
+            log.warning("vivek_run [%s]: could not fetch book symbols %s: %s",
+                        market, ", ".join(missing + refetch), e)
 
     # 1) manage open positions for THIS market — mark to the observed price.
     closed_now = 0

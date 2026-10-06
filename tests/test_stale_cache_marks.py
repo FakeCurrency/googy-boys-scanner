@@ -55,6 +55,17 @@ def _enable(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "VIVEK_BOT_ENABLED", True)
     monkeypatch.setattr(config, "VIVEK_BOT_DRY_RUN", False)
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_MARK_AGE_H", 2.0)
+    # A held name with no fresh frame is refetched directly (section 5). By
+    # default that refetch gets nothing back -- a throttled source -- so the
+    # tests above it still exercise the stale-mark rule itself.
+    calls = []
+
+    def _no_refetch(market, tickers, **kw):
+        calls.append(list(tickers))
+        return {}, {}
+
+    monkeypatch.setattr(data, "fetch", _no_refetch)
+    return calls
 
 
 def _held(symbol="BHP", entry=100.0):
@@ -236,3 +247,112 @@ def test_fills_off_a_reused_frame_only_with_the_limit_off(tmp_path, monkeypatch)
 
 def test_the_shipped_limit_tolerates_one_missed_run_and_no_more():
     assert 1.0 < config.VIVEK_BOT_MAX_MARK_AGE_H <= 3.0
+
+
+# ── 5. a held name the scan download starved is refetched directly ─────────────
+# 2026-10-06: Yahoo throttled the same ASX batches run after run and PMT sat
+# unpriced for 7 runs (its stop untested all session). A small direct fetch of
+# just the held names the download missed usually gets through.
+
+def _refetching(monkeypatch, frames):
+    calls = []
+
+    def _fetch(market, tickers, **kw):
+        calls.append(list(tickers))
+        return {t: frames.get(t) for t in tickers}, {}
+
+    monkeypatch.setattr(data, "fetch", _fetch)
+    return calls
+
+
+def _book(tmp_path):
+    (tmp_path / "vivek_bot_book.asx.json").write_text(json.dumps(
+        {"version": 2, "mode": "paper", "market": "asx", "open": [_held()], "closed": []}),
+        encoding="utf-8")
+
+
+def test_a_held_name_on_a_stale_cache_is_refetched_and_managed_off_the_live_price(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    calls = _refetching(monkeypatch, {"BHP.AX": _frame(95.0)})
+    _book(tmp_path)
+    bk = vr.run_market("asx", [], {"BHP.AX": _reused(100.0, hours_old=5)},
+                       [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+    assert calls == [["BHP.AX"]]
+    assert bk["open"] == [] and bk["closed"][0]["symbol"] == "BHP"   # the stop was tested
+
+
+def test_a_held_name_the_download_returned_nothing_for_is_refetched(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    calls = _refetching(monkeypatch, {"BHP.AX": _frame(95.0)})
+    _book(tmp_path)
+    bk = vr.run_market("asx", [], {}, [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+    assert calls == [["BHP.AX"]]
+    assert bk["open"] == [] and bk["closed"][0]["symbol"] == "BHP"
+
+
+def test_a_failed_refetch_keeps_the_cached_frame_and_the_stale_rule(tmp_path, monkeypatch, caplog):
+    """An empty refetch must not blank the cached frame: the position stays
+    exactly as the stale-mark rule left it (unpriced, counted), not vanished."""
+    _enable(monkeypatch, tmp_path)
+    calls = _refetching(monkeypatch, {"BHP.AX": _frame(95.0).iloc[0:0]})
+    _book(tmp_path)
+    bk = vr.run_market("asx", [], {"BHP.AX": _reused(95.0, hours_old=5)},
+                       [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+    assert calls == [["BHP.AX"]]
+    (pos,) = bk["open"]
+    assert bk["closed"] == [] and pos["unpriced_runs"] == 1
+    # still read off the cached frame, so the WARNING still names its age
+    assert any("stale_cache" in r.message and "BHP" in r.message for r in caplog.records)
+
+
+def test_a_refetch_that_raises_never_breaks_the_run(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+
+    def _boom(market, tickers, **kw):
+        raise RuntimeError("throttled")
+
+    monkeypatch.setattr(data, "fetch", _boom)
+    _book(tmp_path)
+    bk = vr.run_market("asx", [], {"BHP.AX": _reused(95.0, hours_old=5)},
+                       [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+    assert bk["closed"] == [] and bk["open"][0]["unpriced_runs"] == 1
+
+
+def test_a_fresh_or_in_limit_frame_is_not_refetched(tmp_path, monkeypatch):
+    for frame in (_frame(100.0), _reused(100.0, hours_old=1)):
+        _enable(monkeypatch, tmp_path)
+        calls = _refetching(monkeypatch, {"BHP.AX": _frame(95.0)})
+        _book(tmp_path)
+        bk = vr.run_market("asx", [], {"BHP.AX": frame},
+                           [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+        assert calls == []
+        assert [p["symbol"] for p in bk["open"]] == ["BHP"]   # 100 is above the 96 stop
+
+
+def test_with_the_limit_off_only_a_missing_frame_is_refetched(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_MARK_AGE_H", 0)
+    calls = _refetching(monkeypatch, {"BHP.AX": _frame(95.0)})
+    _book(tmp_path)
+    vr.run_market("asx", [], {"BHP.AX": _reused(100.0, hours_old=50)},
+                  [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+    assert calls == []
+
+
+def test_a_refetched_held_name_is_checked_against_its_own_history(tmp_path, monkeypatch):
+    """The refetch goes through the same held-price checks as the off-universe
+    fetch (data.held_price_kwargs), so a crypto refetch can never price a
+    held coin off a same-ticker stranger."""
+    _enable(monkeypatch, tmp_path)
+    seen = {}
+
+    def _fetch(market, tickers, **kw):
+        seen.update(kw)
+        return {}, {}
+
+    monkeypatch.setattr(data, "fetch", _fetch)
+    monkeypatch.setattr(data, "held_price_kwargs",
+                        lambda positions: {"held_probe": [p["symbol"] for p in positions]})
+    _book(tmp_path)
+    vr.run_market("asx", [], {}, [{"symbol": "BHP", "yf": "BHP.AX"}], now=NOW)
+    assert seen.get("held_probe") == ["BHP"]
