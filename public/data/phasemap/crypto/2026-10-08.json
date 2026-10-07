@@ -1,0 +1,5212 @@
+{
+  "run_date": "2026-10-08",
+  "ruleset_version": "1.3.1",
+  "universe_size": 201,
+  "results": [
+    {
+      "ticker": "H",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.1511,
+          "high": 0.1686,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-08-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1686,
+          "high": 0.1754,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-08-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.1124,
+          "high": 0.114,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0827,
+          "high": 0.0991,
+          "status": "UNTESTED",
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0455,
+          "high": 0.0939,
+          "status": "TESTED",
+          "confluence": 4,
+          "sources": [
+            "equal_lows",
+            "box_low",
+            "fib_ext_10",
+            "quarterly_open"
+          ],
+          "created_date": "2026-08-19"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": -0.0048,
+          "high": 0.0365,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-08-19"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1197,
+        "dist_to_yearly_open_pct": -0.5802,
+        "avg_turnover_20d": 4271354,
+        "close": 0.0697,
+        "sweep_date": "2026-08-16",
+        "sweep_depth_pct": 0.1156,
+        "displacement_date": "2026-08-19"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Humanity",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2026-08-19. First draw is the 0.0455–0.0939 zone (a shelf of equal lows + the bottom of the range + the 1.0–1.272 extension of the leg + the quarterly open); beyond that, -0.0048–0.0365 (the 1.618–2.0 extension of the leg + a prior swing low). The continuation thesis stays valid while bounces hold below the 0.112–0.114 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 0.175. Historically this pattern reached its first target zone within 20 sessions 46% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "bounces staying below 0.112–0.114; next objective the 0.0455–0.0939 zone (T1)"
+    },
+    {
+      "ticker": "ONDO",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.589,
+          "high": 0.6048,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.6048,
+          "high": 0.6246,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.5388,
+          "high": 0.5496,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.5039,
+          "high": 0.5232,
+          "status": "UNTESTED",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.471,
+          "high": 0.5173,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.3974,
+          "high": 0.4571,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.2842,
+          "high": 0.3823,
+          "status": "UNTESTED",
+          "confluence": 6,
+          "sources": [
+            "equal_lows",
+            "quarterly_open",
+            "box_low",
+            "prior_yearly_close",
+            "yearly_open",
+            "prior_low"
+          ],
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1407,
+        "dist_to_yearly_open_pct": 0.3701,
+        "avg_turnover_20d": 326537608,
+        "close": 0.4913,
+        "sweep_date": "2026-09-28",
+        "sweep_depth_pct": 0.0268,
+        "displacement_date": "2026-09-28"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ondo",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2026-09-28. First draw is the 0.471–0.517 zone (the 1.0–1.272 extension of the leg); beyond that, 0.397–0.457 (a prior swing low + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while bounces hold below the 0.539–0.550 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 0.625. Historically this pattern reached its first target zone within 20 sessions 46% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "bounces staying below 0.539–0.550; next objective the 0.471–0.517 zone (T1)"
+    },
+    {
+      "ticker": "SHFL",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A+",
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.6383,
+          "high": 0.7197,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.7197,
+          "high": 0.7367,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.5455,
+          "high": 0.5589,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.4536,
+          "high": 0.5044,
+          "status": "UNTESTED",
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.4534,
+          "high": 0.5267,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.23,
+          "high": 0.4018,
+          "status": "RESPECTED",
+          "confluence": 6,
+          "sources": [
+            "equal_lows",
+            "yearly_open",
+            "prior_yearly_close",
+            "quarterly_open",
+            "box_low",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1101,
+        "dist_to_yearly_open_pct": 0.5119,
+        "avg_turnover_20d": 1371896,
+        "close": 0.4098,
+        "sweep_date": "2026-09-28",
+        "sweep_depth_pct": 0.1275,
+        "displacement_date": "2026-09-29"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Shuffle",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2026-09-29. First draw is the 0.453–0.527 zone (the 1.0–1.272 extension of the leg); beyond that, 0.230–0.402 (a shelf of equal lows + the yearly open + the prior yearly close + the quarterly open + the bottom of the range + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while bounces hold below the 0.545–0.559 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 0.737. Historically this pattern reached its first target zone within 20 sessions 46% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "bounces staying below 0.545–0.559; next objective the 0.230–0.402 zone (T2)"
+    },
+    {
+      "ticker": "1INCH",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0859,
+          "high": 0.0881,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.084,
+          "high": 0.0859,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0959,
+          "high": 0.097,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0996,
+          "high": 0.1029,
+          "status": "UNTESTED",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0962,
+          "high": 0.1016,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "equal_highs",
+            "fib_ext_10",
+            "box_high"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.1036,
+          "high": 0.1099,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.1393,
+          "high": 0.1433,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-18"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2109,
+        "dist_to_yearly_open_pct": -0.268,
+        "avg_turnover_20d": 8421424,
+        "close": 0.1034,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0245,
+        "displacement_date": "2026-09-18"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "1INCH",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2026-09-18. First draw is the 0.0962–0.102 zone (a shelf of equal highs + the 1.0–1.272 extension of the leg + the top of the range); beyond that, 0.104–0.110 (the 1.618–2.0 extension of the leg). The continuation thesis stays valid while pullbacks hold above the 0.0959–0.0970 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 0.0840. Historically this pattern reached its first target zone within 20 sessions 46% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 0.0959–0.0970; next objective the 0.104–0.110 zone (T2)"
+    },
+    {
+      "ticker": "CAKE",
+      "direction": "bearish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.7962,
+          "high": 2.8383,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.8383,
+          "high": 2.9147,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 2.6054,
+          "high": 2.6404,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 2.4824,
+          "high": 2.5504,
+          "status": "UNTESTED",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 2.4521,
+          "high": 2.603,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 2.2529,
+          "high": 2.4339,
+          "status": "TESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 2.1209,
+          "high": 2.1975,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 2.0337,
+          "high": 2.1103,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0372,
+        "dist_to_yearly_open_pct": 0.2687,
+        "avg_turnover_20d": 66034432,
+        "close": 2.3898,
+        "sweep_date": "2026-09-25",
+        "sweep_depth_pct": 0.015,
+        "displacement_date": "2026-09-28"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "PancakeSwap",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2026-09-28. First draw is the 2.45–2.60 zone (the 1.0–1.272 extension of the leg); beyond that, 2.25–2.43 (the 1.618–2.0 extension of the leg + a prior swing low). The continuation thesis stays valid while bounces hold below the 2.61–2.64 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close above 2.91. Historically this pattern reached its first target zone within 20 sessions 46% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "bounces staying below 2.61–2.64; next objective the 2.25–2.43 zone (T2)"
+    },
+    {
+      "ticker": "SOL",
+      "direction": "bullish",
+      "state": "RUNNING",
+      "tier": "A",
+      "tags": [],
+      "regime": "EXPANSION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 96.2255,
+          "high": 98.6259,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 94.0831,
+          "high": 96.2255,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 109.2321,
+          "high": 110.4215,
+          "status": "UNTESTED",
+          "rule": "touch",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 113.7717,
+          "high": 117.9169,
+          "status": "UNTESTED",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 112.9062,
+          "high": 120.0629,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 122.1785,
+          "high": 133.0459,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-18"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1349,
+        "dist_to_yearly_open_pct": -0.0297,
+        "avg_turnover_20d": 3820598741,
+        "close": 120.7876,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0243,
+        "displacement_date": "2026-09-18"
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Solana",
+      "sector": "Crypto",
+      "narration": "Displacement confirmed on 2026-09-18. First draw is the 112.91–120.06 zone (the 1.0–1.272 extension of the leg); beyond that, 122.18–133.05 (the prior yearly close + the yearly open + the 1.618–2.0 extension of the leg). The continuation thesis stays valid while pullbacks hold above the 109.23–110.42 area — one touch of that zone and this becomes a rotation candidate instead. Structural invalidation only on a daily close below 94.08. Historically this pattern reached its first target zone within 20 sessions 46% of the time on the CRYPTO. Analysis only — not financial advice.",
+      "next": "pullbacks staying above 109.23–110.42; next objective the 122.18–133.05 zone (T2)"
+    },
+    {
+      "ticker": "AAVE",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 186.6675,
+          "high": 187.2941,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 187.2941,
+          "high": 192.6754,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0657,
+        "dist_to_yearly_open_pct": 0.2314,
+        "avg_turnover_20d": 394729217,
+        "close": 179.9173,
+        "sweep_date": "2026-10-06",
+        "sweep_depth_pct": 0.0034,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Aave",
+      "sector": "Crypto",
+      "narration": "AAVE ran the 186.67–187.29 highs on 2026-10-06 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "ADA",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.2759,
+          "high": 0.2813,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.2813,
+          "high": 0.2891,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1029,
+        "dist_to_yearly_open_pct": -0.1963,
+        "avg_turnover_20d": 668786666,
+        "close": 0.2675,
+        "sweep_date": "2026-10-06",
+        "sweep_depth_pct": 0.0196,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Cardano",
+      "sector": "Crypto",
+      "narration": "ADA ran the 0.276–0.281 highs on 2026-10-06 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "AKT",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.8032,
+          "high": 0.8506,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.8506,
+          "high": 0.8787,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1537,
+        "dist_to_yearly_open_pct": 1.1488,
+        "avg_turnover_20d": 10117519,
+        "close": 0.7602,
+        "sweep_date": "2026-10-05",
+        "sweep_depth_pct": 0.0591,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Akash Network",
+      "sector": "Crypto",
+      "narration": "AKT ran the 0.803–0.851 highs on 2026-10-05 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "ATOM",
+      "direction": "bullish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 1.6505,
+          "high": 1.6882,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.5965,
+          "high": 1.6505,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-10-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3169,
+        "dist_to_yearly_open_pct": -0.0749,
+        "avg_turnover_20d": 45478509,
+        "close": 1.7825,
+        "sweep_date": "2026-10-03",
+        "sweep_depth_pct": 0.0223,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Cosmos Hub",
+      "sector": "Crypto",
+      "narration": "ATOM ran the 1.651–1.688 lows on 2026-10-03 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small lower wick, close near its high. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small lower wick, close near its high — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "BAT",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0979,
+          "high": 0.1046,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1046,
+          "high": 0.1075,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7439,
+        "dist_to_yearly_open_pct": -0.5126,
+        "avg_turnover_20d": 9976464,
+        "close": 0.1006,
+        "sweep_date": "2026-10-02",
+        "sweep_depth_pct": 0.0689,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Basic Attention",
+      "sector": "Crypto",
+      "narration": "BAT ran the 0.0979–0.105 highs on 2026-10-02 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "BNB",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 806.5251,
+          "high": 808.4329,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 808.4329,
+          "high": 819.0946,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0463,
+        "dist_to_yearly_open_pct": -0.0969,
+        "avg_turnover_20d": 1614616526,
+        "close": 779.616,
+        "sweep_date": "2026-10-05",
+        "sweep_depth_pct": 0.0024,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "BNB",
+      "sector": "Crypto",
+      "narration": "BNB ran the 806.53–808.43 highs on 2026-10-05 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "DCR",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 19.3772,
+          "high": 19.4071,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 19.4071,
+          "high": 19.8878,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0819,
+        "dist_to_yearly_open_pct": 0.0929,
+        "avg_turnover_20d": 1601963,
+        "close": 18.2558,
+        "sweep_date": "2026-10-03",
+        "sweep_depth_pct": 0.0015,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Decred",
+      "sector": "Crypto",
+      "narration": "DCR ran the 19.38–19.41 highs on 2026-10-03 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "FET",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.2588,
+          "high": 0.259,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.259,
+          "high": 0.2693,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4741,
+        "dist_to_yearly_open_pct": 0.2035,
+        "avg_turnover_20d": 201963815,
+        "close": 0.239,
+        "sweep_date": "2026-10-04",
+        "sweep_depth_pct": 0.0008,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Artificial Superintelligence Alliance",
+      "sector": "Crypto",
+      "narration": "FET ran the 0.259–0.259 highs on 2026-10-04 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "FLUID",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.2295,
+          "high": 2.2354,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.2354,
+          "high": 2.3,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0923,
+        "dist_to_yearly_open_pct": -0.262,
+        "avg_turnover_20d": 4359269,
+        "close": 1.9308,
+        "sweep_date": "2026-10-06",
+        "sweep_depth_pct": 0.0026,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Fluid",
+      "sector": "Crypto",
+      "narration": "FLUID ran the 2.23–2.24 highs on 2026-10-06 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "GNO",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 117.5903,
+          "high": 121.3612,
+          "status": "TESTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open",
+            "monthly_open"
+          ],
+          "created_date": "2026-10-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 121.3612,
+          "high": 123.2503,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.9506,
+        "dist_to_yearly_open_pct": -0.0527,
+        "avg_turnover_20d": 1099182,
+        "close": 121.0724,
+        "sweep_date": "2026-10-02",
+        "sweep_depth_pct": 0.0321,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Gnosis",
+      "sector": "Crypto",
+      "narration": "GNO ran the 117.59–121.36 highs on 2026-10-02 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "JST",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.1407,
+          "high": 0.1414,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1414,
+          "high": 0.1439,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.9443,
+        "dist_to_yearly_open_pct": 2.3775,
+        "avg_turnover_20d": 42316821,
+        "close": 0.141,
+        "sweep_date": "2026-10-05",
+        "sweep_depth_pct": 0.0048,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "JUST",
+      "sector": "Crypto",
+      "narration": "JST ran the 0.141–0.141 highs on 2026-10-05 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "KAIA",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0408,
+          "high": 0.0412,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0412,
+          "high": 0.0423,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2563,
+        "dist_to_yearly_open_pct": -0.2821,
+        "avg_turnover_20d": 7155084,
+        "close": 0.0397,
+        "sweep_date": "2026-10-06",
+        "sweep_depth_pct": 0.01,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Kaia",
+      "sector": "Crypto",
+      "narration": "KAIA ran the 0.0408–0.0412 highs on 2026-10-06 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "MANA",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.1105,
+          "high": 0.1155,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1155,
+          "high": 0.1185,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2601,
+        "dist_to_yearly_open_pct": -0.157,
+        "avg_turnover_20d": 29941207,
+        "close": 0.1023,
+        "sweep_date": "2026-10-03",
+        "sweep_depth_pct": 0.0447,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Decentraland",
+      "sector": "Crypto",
+      "narration": "MANA ran the 0.111–0.116 highs on 2026-10-03 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "MON",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0352,
+          "high": 0.0358,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0358,
+          "high": 0.037,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-02"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0216,
+        "dist_to_yearly_open_pct": 0.2499,
+        "avg_turnover_20d": 327655,
+        "close": 0.0284,
+        "sweep_date": "2026-10-02",
+        "sweep_depth_pct": 0.0157,
+        "bars_remaining": 0
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Monad",
+      "sector": "Crypto",
+      "narration": "MON ran the 0.0352–0.0358 highs on 2026-10-02 and closed back inside the range. The trap has been sprung. The market now has 0 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 0 sessions, or the setup expires"
+    },
+    {
+      "ticker": "NIGHT",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0497,
+          "high": 0.0525,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0525,
+          "high": 0.0541,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7465,
+        "dist_to_yearly_open_pct": -0.4352,
+        "avg_turnover_20d": 2192618,
+        "close": 0.0502,
+        "sweep_date": "2026-10-03",
+        "sweep_depth_pct": 0.0566,
+        "bars_remaining": 1
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Midnight",
+      "sector": "Crypto",
+      "narration": "NIGHT ran the 0.0497–0.0525 highs on 2026-10-03 and closed back inside the range. The trap has been sprung. The market now has 1 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 1 sessions, or the setup expires"
+    },
+    {
+      "ticker": "PENDLE",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.4519,
+          "high": 2.5881,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.5881,
+          "high": 2.6819,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0943,
+        "dist_to_yearly_open_pct": 0.2682,
+        "avg_turnover_20d": 47977896,
+        "close": 2.3867,
+        "sweep_date": "2026-10-05",
+        "sweep_depth_pct": 0.0556,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Pendle",
+      "sector": "Crypto",
+      "narration": "PENDLE ran the 2.45–2.59 highs on 2026-10-05 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "RENDER",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.0904,
+          "high": 2.1069,
+          "status": "TESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-05"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.1069,
+          "high": 2.1715,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-05"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.2411,
+        "dist_to_yearly_open_pct": 0.6685,
+        "avg_turnover_20d": 54599392,
+        "close": 2.1427,
+        "sweep_date": "2026-10-05",
+        "sweep_depth_pct": 0.0079,
+        "bars_remaining": 3
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Render",
+      "sector": "Crypto",
+      "narration": "RENDER ran the 2.09–2.11 highs on 2026-10-05 and closed back inside the range. The trap has been sprung. The market now has 3 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 3 sessions, or the setup expires"
+    },
+    {
+      "ticker": "THETA",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.2387,
+          "high": 0.245,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-06"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.245,
+          "high": 0.2526,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-06"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5061,
+        "dist_to_yearly_open_pct": -0.1042,
+        "avg_turnover_20d": 7068821,
+        "close": 0.2362,
+        "sweep_date": "2026-10-06",
+        "sweep_depth_pct": 0.0264,
+        "bars_remaining": 4
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Theta Network",
+      "sector": "Crypto",
+      "narration": "THETA ran the 0.239–0.245 highs on 2026-10-06 and closed back inside the range. The trap has been sprung. The market now has 4 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 4 sessions, or the setup expires"
+    },
+    {
+      "ticker": "VIRTUAL",
+      "direction": "bearish",
+      "state": "SWEPT",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.8507,
+          "high": 0.8724,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.8724,
+          "high": 0.9005,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-10-04"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.217,
+        "dist_to_yearly_open_pct": 0.2469,
+        "avg_turnover_20d": 120265530,
+        "close": 0.8044,
+        "sweep_date": "2026-10-04",
+        "sweep_depth_pct": 0.0255,
+        "bars_remaining": 2
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Virtuals Protocol",
+      "sector": "Crypto",
+      "narration": "VIRTUAL ran the 0.851–0.872 highs on 2026-10-04 and closed back inside the range. The trap has been sprung. The market now has 2 sessions to prove it with a displacement candle — range at least 1.75× normal, small upper wick, close near its low. No displacement, no setup. Analysis only — not financial advice.",
+      "next": "a displacement candle — range at least 1.75× normal, small upper wick, close near its low — within 2 sessions, or the setup expires"
+    },
+    {
+      "ticker": "BGB",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.4254,
+        "avg_turnover_20d": 16076807,
+        "close": 2.0,
+        "bars_in_box": 8,
+        "box_low": 1.865,
+        "box_high": 2.1801,
+        "box_height_pct": 0.169,
+        "cluster_low": 1.865,
+        "cluster_high": 1.8951
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Bitget Token",
+      "sector": "Crypto",
+      "narration": "BGB has spent 8 sessions inside a 16.9% range. Equal lows are resting at 1.865–1.895 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 1.865–1.895 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "BORG",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2782,
+        "avg_turnover_20d": 300335,
+        "close": 0.1753,
+        "bars_in_box": 9,
+        "box_low": 0.1583,
+        "box_high": 0.1945,
+        "box_height_pct": 0.229,
+        "cluster_low": 0.1899,
+        "cluster_high": 0.1945
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "SwissBorg",
+      "sector": "Crypto",
+      "narration": "BORG has spent 9 sessions inside a 22.9% range. Equal highs are resting at 0.190–0.195 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.190–0.195 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "BORG",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2782,
+        "avg_turnover_20d": 300335,
+        "close": 0.1753,
+        "bars_in_box": 9,
+        "box_low": 0.1583,
+        "box_high": 0.1945,
+        "box_height_pct": 0.229,
+        "cluster_low": 0.1583,
+        "cluster_high": 0.1621
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "SwissBorg",
+      "sector": "Crypto",
+      "narration": "BORG has spent 9 sessions inside a 22.9% range. Equal lows are resting at 0.158–0.162 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.158–0.162 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "BTC",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0223,
+        "avg_turnover_20d": 31187162064,
+        "close": 85557.5625,
+        "bars_in_box": 7,
+        "box_low": 74944.5938,
+        "box_high": 87363.7578,
+        "box_height_pct": 0.1657,
+        "cluster_low": 87146.3516,
+        "cluster_high": 87363.7578
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Bitcoin",
+      "sector": "Crypto",
+      "narration": "BTC has spent 7 sessions inside a 16.6% range. Equal highs are resting at 87146.35–87363.76 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 87146.35–87363.76 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "CFX",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2244,
+        "avg_turnover_20d": 11200683,
+        "close": 0.0544,
+        "bars_in_box": 56,
+        "box_low": 0.0435,
+        "box_high": 0.0576,
+        "box_height_pct": 0.3255,
+        "cluster_low": 0.0435,
+        "cluster_high": 0.0435
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Conflux",
+      "sector": "Crypto",
+      "narration": "CFX has spent 56 sessions inside a 32.6% range. Equal lows are resting at 0.0435–0.0435 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.0435–0.0435 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "CHZ",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.6074,
+        "avg_turnover_20d": 30660885,
+        "close": 0.0166,
+        "bars_in_box": 8,
+        "box_low": 0.0131,
+        "box_high": 0.018,
+        "box_height_pct": 0.3759,
+        "cluster_low": 0.0131,
+        "cluster_high": 0.0134
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Chiliz",
+      "sector": "Crypto",
+      "narration": "CHZ has spent 8 sessions inside a 37.6% range. Equal lows are resting at 0.0131–0.0134 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.0131–0.0134 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "CRV",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0049,
+        "avg_turnover_20d": 68886409,
+        "close": 0.3605,
+        "bars_in_box": 7,
+        "box_low": 0.2916,
+        "box_high": 0.4126,
+        "box_height_pct": 0.415,
+        "cluster_low": 0.2916,
+        "cluster_high": 0.3015
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Curve DAO",
+      "sector": "Crypto",
+      "narration": "CRV has spent 7 sessions inside a 41.5% range. Equal lows are resting at 0.292–0.301 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.292–0.301 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "DCR",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.0929,
+        "avg_turnover_20d": 1601963,
+        "close": 18.2558,
+        "bars_in_box": 6,
+        "box_low": 13.5537,
+        "box_high": 19.4071,
+        "box_height_pct": 0.4319,
+        "cluster_low": 13.5537,
+        "cluster_high": 13.6423
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Decred",
+      "sector": "Crypto",
+      "narration": "DCR has spent 6 sessions inside a 43.2% range. Equal lows are resting at 13.55–13.64 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 13.55–13.64 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "ENS",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2845,
+        "avg_turnover_20d": 25290182,
+        "close": 6.7533,
+        "bars_in_box": 6,
+        "box_low": 5.1856,
+        "box_high": 7.3899,
+        "box_height_pct": 0.4251,
+        "cluster_low": 7.2259,
+        "cluster_high": 7.3899
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ethereum Name Service",
+      "sector": "Crypto",
+      "narration": "ENS has spent 6 sessions inside a 42.5% range. Equal highs are resting at 7.23–7.39 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 7.23–7.39 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "ENS",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2845,
+        "avg_turnover_20d": 25290182,
+        "close": 6.7533,
+        "bars_in_box": 6,
+        "box_low": 5.1856,
+        "box_high": 7.3899,
+        "box_height_pct": 0.4251,
+        "cluster_low": 5.1856,
+        "cluster_high": 5.2118
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ethereum Name Service",
+      "sector": "Crypto",
+      "narration": "ENS has spent 6 sessions inside a 42.5% range. Equal lows are resting at 5.19–5.21 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 5.19–5.21 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "ETH",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0908,
+        "avg_turnover_20d": 13408217949,
+        "close": 2697.5164,
+        "bars_in_box": 8,
+        "box_low": 2356.1882,
+        "box_high": 2805.499,
+        "box_height_pct": 0.1907,
+        "cluster_low": 2356.1882,
+        "cluster_high": 2357.9592
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Ethereum",
+      "sector": "Crypto",
+      "narration": "ETH has spent 8 sessions inside a 19.1% range. Equal lows are resting at 2356.19–2357.96 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 2356.19–2357.96 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "FARTCOIN",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3644,
+        "avg_turnover_20d": 20714209,
+        "close": 0.1704,
+        "bars_in_box": 21,
+        "box_low": 0.1322,
+        "box_high": 0.2201,
+        "box_height_pct": 0.6646,
+        "cluster_low": 0.218,
+        "cluster_high": 0.2201
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Fartcoin",
+      "sector": "Crypto",
+      "narration": "FARTCOIN has spent 21 sessions inside a 66.5% range. Equal highs are resting at 0.218–0.220 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.218–0.220 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "FARTCOIN",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3644,
+        "avg_turnover_20d": 20714209,
+        "close": 0.1704,
+        "bars_in_box": 74,
+        "box_low": 0.1322,
+        "box_high": 0.2201,
+        "box_height_pct": 0.6646,
+        "cluster_low": 0.1322,
+        "cluster_high": 0.1368
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Fartcoin",
+      "sector": "Crypto",
+      "narration": "FARTCOIN has spent 74 sessions inside a 66.5% range. Equal lows are resting at 0.132–0.137 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.132–0.137 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "FLR",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.2859,
+        "avg_turnover_20d": 4008625,
+        "close": 0.0073,
+        "bars_in_box": 8,
+        "box_low": 0.0062,
+        "box_high": 0.008,
+        "box_height_pct": 0.288,
+        "cluster_low": 0.0062,
+        "cluster_high": 0.0063
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Flare",
+      "sector": "Crypto",
+      "narration": "FLR has spent 8 sessions inside a 28.8% range. Equal lows are resting at 0.0062–0.0063 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.0062–0.0063 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "LDO",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [
+        "ANCHOR_CAUTION"
+      ],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.1767,
+        "avg_turnover_20d": 72626333,
+        "close": 0.4743,
+        "bars_in_box": 8,
+        "box_low": 0.3276,
+        "box_high": 0.5024,
+        "box_height_pct": 0.5335,
+        "cluster_low": 0.502,
+        "cluster_high": 0.5024
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Lido DAO",
+      "sector": "Crypto",
+      "narration": "LDO has spent 8 sessions inside a 53.3% range. Equal highs are resting at 0.502–0.502 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.502–0.502 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "LDO",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.1767,
+        "avg_turnover_20d": 72626333,
+        "close": 0.4743,
+        "bars_in_box": 8,
+        "box_low": 0.3276,
+        "box_high": 0.5024,
+        "box_height_pct": 0.5335,
+        "cluster_low": 0.3276,
+        "cluster_high": 0.3455
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Lido DAO",
+      "sector": "Crypto",
+      "narration": "LDO has spent 8 sessions inside a 53.3% range. Equal lows are resting at 0.328–0.345 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.328–0.345 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "LUNC",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 0.2619,
+        "avg_turnover_20d": 12855370,
+        "close": 0.0001,
+        "bars_in_box": 22,
+        "box_low": 0.0,
+        "box_high": 0.0001,
+        "box_height_pct": 0.234,
+        "cluster_low": 0.0001,
+        "cluster_high": 0.0001
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Terra Luna Classic",
+      "sector": "Crypto",
+      "narration": "LUNC has spent 22 sessions inside a 23.4% range. Equal highs are resting at 0.0001–0.0001 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.0001–0.0001 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "PIEVERSE",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": 1.515,
+        "avg_turnover_20d": 118222148,
+        "close": 1.3186,
+        "bars_in_box": 3,
+        "box_low": 0.9942,
+        "box_high": 1.9856,
+        "box_height_pct": 0.9972,
+        "cluster_low": 0.9942,
+        "cluster_high": 1.0083
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Pieverse",
+      "sector": "Crypto",
+      "narration": "PIEVERSE has spent 3 sessions inside a 99.7% range. Equal lows are resting at 0.994–1.008 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.994–1.008 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "SNX",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.3761,
+        "avg_turnover_20d": 13648466,
+        "close": 0.2558,
+        "bars_in_box": 15,
+        "box_low": 0.1952,
+        "box_high": 0.2745,
+        "box_height_pct": 0.4061,
+        "cluster_low": 0.1952,
+        "cluster_high": 0.2026
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Synthetix",
+      "sector": "Crypto",
+      "narration": "SNX has spent 15 sessions inside a 40.6% range. Equal lows are resting at 0.195–0.203 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.195–0.203 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "SOL",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0297,
+        "avg_turnover_20d": 3820598741,
+        "close": 120.7876,
+        "bars_in_box": 4,
+        "box_low": 96.2255,
+        "box_high": 124.6174,
+        "box_height_pct": 0.2951,
+        "cluster_low": 123.479,
+        "cluster_high": 124.6174
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Solana",
+      "sector": "Crypto",
+      "narration": "SOL has spent 4 sessions inside a 29.5% range. Equal highs are resting at 123.48–124.62 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 123.48–124.62 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "THETA",
+      "direction": "bullish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.1042,
+        "avg_turnover_20d": 7068821,
+        "close": 0.2362,
+        "bars_in_box": 7,
+        "box_low": 0.1645,
+        "box_high": 0.2387,
+        "box_height_pct": 0.4512,
+        "cluster_low": 0.1645,
+        "cluster_high": 0.1719
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "Theta Network",
+      "sector": "Crypto",
+      "narration": "THETA has spent 7 sessions inside a 45.1% range. Equal lows are resting at 0.165–0.172 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back above it. Analysis only — not financial advice.",
+      "next": "a run of the 0.165–0.172 lows that closes back above them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "WIF",
+      "direction": "bearish",
+      "state": "TRAP_SET",
+      "tier": "Watch",
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [],
+      "metrics": {
+        "retrace_pct": null,
+        "dist_to_yearly_open_pct": -0.0899,
+        "avg_turnover_20d": 83631723,
+        "close": 0.2455,
+        "bars_in_box": 6,
+        "box_low": 0.1744,
+        "box_high": 0.2778,
+        "box_height_pct": 0.5925,
+        "cluster_low": 0.2682,
+        "cluster_high": 0.2778
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "dogwifhat",
+      "sector": "Crypto",
+      "narration": "WIF has spent 6 sessions inside a 59.2% range. Equal highs are resting at 0.268–0.278 — that's where the stops are sitting. Nothing to do yet: the setup only begins if that area is swept and price closes back below it. Analysis only — not financial advice.",
+      "next": "a run of the 0.268–0.278 highs that closes back below them, then a displacement candle within 5 sessions"
+    },
+    {
+      "ticker": "1INCH",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.1045,
+          "high": 0.1056,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1056,
+          "high": 0.1078,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.101,
+          "high": 0.1021,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0986,
+          "high": 0.0999,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0945,
+          "high": 0.0988,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0848,
+          "high": 0.094,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.0786,
+          "high": 0.0846,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "box_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.0634,
+          "high": 0.0719,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "quarterly_open",
+            "equal_lows"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.767,
+        "dist_to_yearly_open_pct": -0.268,
+        "avg_turnover_20d": 8421424,
+        "close": 0.1034,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0103,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "1INCH",
+      "sector": "Crypto",
+      "narration": "1INCH touched the 50% area at 0.101–0.102. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.108, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "2Z",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0605,
+          "high": 0.0664,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-30"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0664,
+          "high": 0.0689,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-30"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0538,
+          "high": 0.0552,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-30"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0471,
+          "high": 0.0508,
+          "status": "UNTESTED",
+          "created_date": "2026-09-30"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.049,
+          "high": 0.0608,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_1618",
+            "equal_lows",
+            "fib_ext_10",
+            "prior_low"
+          ],
+          "created_date": "2026-09-30"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0435,
+          "high": 0.0486,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "box_low",
+            "equal_lows"
+          ],
+          "created_date": "2026-09-30"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0064,
+        "dist_to_yearly_open_pct": -0.6581,
+        "avg_turnover_20d": 18530751,
+        "close": 0.0414,
+        "sweep_date": "2026-09-30",
+        "sweep_depth_pct": 0.0976,
+        "displacement_date": "2026-09-30"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "DoubleZero",
+      "sector": "Crypto",
+      "narration": "2Z touched the 50% area at 0.0538–0.0552. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.0689, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "AAVE",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 120.5744,
+          "high": 120.6385,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-15"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 117.185,
+          "high": 120.5744,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-15"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 151.2436,
+          "high": 153.9342,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 161.8072,
+          "high": 171.5482,
+          "status": "UNTESTED",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 137.9092,
+          "high": 149.7939,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "prior_high",
+            "fib_ext_10",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 152.3112,
+          "high": 163.8693,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-18"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.1106,
+        "dist_to_yearly_open_pct": 0.2314,
+        "avg_turnover_20d": 394729217,
+        "close": 179.9173,
+        "sweep_date": "2026-09-15",
+        "sweep_depth_pct": 0.0005,
+        "displacement_date": "2026-09-18"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Aave",
+      "sector": "Crypto",
+      "narration": "AAVE touched the 50% area at 151.24–153.93. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 117.19, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "AKT",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.5163,
+          "high": 0.5222,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.4999,
+          "high": 0.5163,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.6688,
+          "high": 0.6835,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.7229,
+          "high": 0.7717,
+          "status": "UNTESTED",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.6699,
+          "high": 0.7331,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.7706,
+          "high": 0.8518,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.8839,
+          "high": 0.9028,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.9377,
+          "high": 0.9566,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-21"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2705,
+        "dist_to_yearly_open_pct": 1.1488,
+        "avg_turnover_20d": 10117519,
+        "close": 0.7602,
+        "sweep_date": "2026-09-18",
+        "sweep_depth_pct": 0.0112,
+        "displacement_date": "2026-09-21"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Akash Network",
+      "sector": "Crypto",
+      "narration": "AKT touched the 50% area at 0.669–0.683. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.500, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ALGO",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.139,
+          "high": 0.1401,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1401,
+          "high": 0.1446,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.131,
+          "high": 0.1333,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.1262,
+          "high": 0.1289,
+          "status": "UNTESTED",
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.1174,
+          "high": 0.1262,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.1057,
+          "high": 0.1163,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.1009,
+          "high": 0.1053,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-29"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.0735,
+          "high": 0.0906,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "equal_lows",
+            "box_low",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-29"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0891,
+        "dist_to_yearly_open_pct": 0.1204,
+        "avg_turnover_20d": 122905188,
+        "close": 0.1235,
+        "sweep_date": "2026-09-29",
+        "sweep_depth_pct": 0.008,
+        "displacement_date": "2026-09-29"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Algorand",
+      "sector": "Crypto",
+      "narration": "ALGO touched the 50% area at 0.131–0.133. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.145, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "APE",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.1615,
+          "high": 0.1654,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1654,
+          "high": 0.1695,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.154,
+          "high": 0.1569,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.1479,
+          "high": 0.1513,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.1184,
+          "high": 0.1493,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "box_low",
+            "equal_lows",
+            "fib_ext_1618",
+            "fib_ext_10",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.1126,
+          "high": 0.1172,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6754,
+        "dist_to_yearly_open_pct": -0.1969,
+        "avg_turnover_20d": 8983,
+        "close": 0.158,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0242,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "ApeCoin",
+      "sector": "Crypto",
+      "narration": "APE touched the 50% area at 0.154–0.157. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.170, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "AVAX",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 11.4126,
+          "high": 11.7733,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 11.7733,
+          "high": 12.04,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 10.8791,
+          "high": 11.0779,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 10.407,
+          "high": 10.6681,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 9.5727,
+          "high": 10.3128,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 8.3996,
+          "high": 9.317,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 6.898,
+          "high": 7.332,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 5.5426,
+          "high": 6.8284,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "equal_lows",
+            "box_low",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.917,
+        "dist_to_yearly_open_pct": -0.0553,
+        "avg_turnover_20d": 657051710,
+        "close": 11.6249,
+        "sweep_date": "2026-09-21",
+        "sweep_depth_pct": 0.0316,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Avalanche",
+      "sector": "Crypto",
+      "narration": "AVAX touched the 50% area at 10.88–11.08. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 12.04, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "B",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.1246,
+          "high": 0.1272,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1193,
+          "high": 0.1246,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-03"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.1806,
+          "high": 0.1843,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-07"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.1984,
+          "high": 0.2159,
+          "status": "UNTESTED",
+          "created_date": "2026-09-07"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.1978,
+          "high": 0.3165,
+          "status": "RESPECTED",
+          "confluence": 6,
+          "sources": [
+            "box_high",
+            "prior_high",
+            "quarterly_open",
+            "fib_ext_10",
+            "equal_highs",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-07"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.4053,
+          "high": 0.4133,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-07"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.7577,
+          "high": 0.7656,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5786,
+        "dist_to_yearly_open_pct": 0.3136,
+        "avg_turnover_20d": 5333649,
+        "close": 0.1749,
+        "sweep_date": "2026-09-03",
+        "sweep_depth_pct": 0.0206,
+        "displacement_date": "2026-09-07"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "BUILDon",
+      "sector": "Crypto",
+      "narration": "B touched the 50% area at 0.181–0.184. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.119, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "BCH",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 233.3518,
+          "high": 241.4238,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 226.7324,
+          "high": 233.3518,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 293.6577,
+          "high": 298.5528,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 313.9403,
+          "high": 332.979,
+          "status": "UNTESTED",
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 342.0857,
+          "high": 381.8023,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 412.0416,
+          "high": 464.2099,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-22"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 590.0301,
+          "high": 607.8865,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open"
+          ],
+          "created_date": "2026-09-22"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3977,
+        "dist_to_yearly_open_pct": -0.4793,
+        "avg_turnover_20d": 362722272,
+        "close": 311.893,
+        "sweep_date": "2026-09-18",
+        "sweep_depth_pct": 0.0334,
+        "displacement_date": "2026-09-22"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Bitcoin Cash",
+      "sector": "Crypto",
+      "narration": "BCH touched the 50% area at 293.66–298.55. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 226.73, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "BONK",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0,
+          "high": 0.0,
+          "status": "TESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0,
+          "high": 0.0,
+          "status": "TESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0,
+          "high": 0.0,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0,
+          "high": 0.0,
+          "status": "UNTESTED",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0,
+          "high": 0.0,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0,
+          "high": 0.0,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 1.0,
+        "dist_to_yearly_open_pct": -0.4286,
+        "avg_turnover_20d": 78475736,
+        "close": 0.0,
+        "sweep_date": "2026-09-28",
+        "sweep_depth_pct": 0.0,
+        "displacement_date": "2026-09-28"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Bonk",
+      "sector": "Crypto",
+      "narration": "BONK touched the 50% area at 0.0000–0.0000. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.0000, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "BSV",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 15.5022,
+          "high": 15.6605,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 15.1686,
+          "high": 15.5022,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 19.6723,
+          "high": 19.943,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 20.991,
+          "high": 22.2878,
+          "status": "UNTESTED",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 18.1828,
+          "high": 19.312,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "prior_high"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 19.9482,
+          "high": 21.3917,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-21"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4764,
+        "dist_to_yearly_open_pct": 0.1644,
+        "avg_turnover_20d": 16403012,
+        "close": 20.153,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0101,
+        "displacement_date": "2026-09-21"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Bitcoin SV",
+      "sector": "Crypto",
+      "narration": "BSV touched the 50% area at 19.67–19.94. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 15.17, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "CFX",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0552,
+          "high": 0.0558,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0558,
+          "high": 0.0571,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0534,
+          "high": 0.0541,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0521,
+          "high": 0.0528,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0492,
+          "high": 0.0517,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0397,
+          "high": 0.0488,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "equal_lows",
+            "box_low",
+            "quarterly_open",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.0369,
+          "high": 0.0382,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7139,
+        "dist_to_yearly_open_pct": -0.2244,
+        "avg_turnover_20d": 11200683,
+        "close": 0.0544,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.011,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Conflux",
+      "sector": "Crypto",
+      "narration": "CFX touched the 50% area at 0.0534–0.0541. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.0571, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "CHZ",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.0171,
+          "high": 0.0174,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0174,
+          "high": 0.0178,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0163,
+          "high": 0.0165,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0158,
+          "high": 0.0161,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0149,
+          "high": 0.0158,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0129,
+          "high": 0.0147,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "equal_lows",
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.0123,
+          "high": 0.0128,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.0115,
+          "high": 0.0123,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "box_low",
+            "equal_lows"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6331,
+        "dist_to_yearly_open_pct": -0.6074,
+        "avg_turnover_20d": 30660885,
+        "close": 0.0166,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0132,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Chiliz",
+      "sector": "Crypto",
+      "narration": "CHZ touched the 50% area at 0.0163–0.0165. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.0178, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "CRO",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.069,
+          "high": 0.069,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.069,
+          "high": 0.0707,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0647,
+          "high": 0.0656,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0624,
+          "high": 0.0636,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0518,
+          "high": 0.0617,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_1618",
+            "quarterly_open",
+            "equal_lows",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0494,
+          "high": 0.0512,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "box_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.0448,
+          "high": 0.047,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.7114,
+        "dist_to_yearly_open_pct": -0.2661,
+        "avg_turnover_20d": 13140619,
+        "close": 0.0665,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Cronos",
+      "sector": "Crypto",
+      "narration": "CRO touched the 50% area at 0.0647–0.0656. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.0707, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "CRO",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0547,
+          "high": 0.0562,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.053,
+          "high": 0.0547,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0628,
+          "high": 0.0638,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0659,
+          "high": 0.0686,
+          "status": "UNTESTED",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0654,
+          "high": 0.0706,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "box_high",
+            "prior_high",
+            "fib_ext_10",
+            "equal_highs"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0731,
+          "high": 0.0792,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.089,
+          "high": 0.0922,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open"
+          ],
+          "created_date": "2026-09-21"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3486,
+        "dist_to_yearly_open_pct": -0.2661,
+        "avg_turnover_20d": 13140619,
+        "close": 0.0665,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0275,
+        "displacement_date": "2026-09-21"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Cronos",
+      "sector": "Crypto",
+      "narration": "CRO touched the 50% area at 0.0628–0.0638. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.0530, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "CVX",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 2.024,
+          "high": 2.1823,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.9636,
+          "high": 2.024,
+          "status": "RESPECTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 2.1702,
+          "high": 2.2056,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 2.2484,
+          "high": 2.3014,
+          "status": "UNTESTED",
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 2.2184,
+          "high": 2.3399,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 2.3572,
+          "high": 2.52,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "prior_high",
+            "equal_highs"
+          ],
+          "created_date": "2026-09-27"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4291,
+        "dist_to_yearly_open_pct": 0.389,
+        "avg_turnover_20d": 8015311,
+        "close": 2.2313,
+        "sweep_date": "2026-09-27",
+        "sweep_depth_pct": 0.0726,
+        "displacement_date": "2026-09-27"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Convex Finance",
+      "sector": "Crypto",
+      "narration": "CVX touched the 50% area at 2.17–2.21. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 1.964, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "EIGEN",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.2841,
+          "high": 0.2852,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.2852,
+          "high": 0.2951,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.2614,
+          "high": 0.2668,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.2489,
+          "high": 0.2558,
+          "status": "UNTESTED",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.1596,
+          "high": 0.2504,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "equal_lows",
+            "box_low",
+            "quarterly_open",
+            "fib_ext_1618",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.1479,
+          "high": 0.1584,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_low"
+          ],
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.3184,
+        "dist_to_yearly_open_pct": -0.2727,
+        "avg_turnover_20d": 29446576,
+        "close": 0.2528,
+        "sweep_date": "2026-09-27",
+        "sweep_depth_pct": 0.0037,
+        "displacement_date": "2026-09-28"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "EigenCloud (prev. EigenLayer)",
+      "sector": "Crypto",
+      "narration": "EIGEN touched the 50% area at 0.261–0.267. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.295, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ETC",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 9.4779,
+          "high": 9.6488,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 9.6488,
+          "high": 9.9056,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 9.0891,
+          "high": 9.2198,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 8.7936,
+          "high": 8.957,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 8.2822,
+          "high": 8.8038,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 7.5735,
+          "high": 8.2022,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 6.1946,
+          "high": 7.2488,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 5.89,
+          "high": 6.1468,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "box_low",
+            "prior_low"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.2768,
+        "dist_to_yearly_open_pct": -0.2287,
+        "avg_turnover_20d": 70533788,
+        "close": 8.8392,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.018,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Ethereum Classic",
+      "sector": "Crypto",
+      "narration": "ETC touched the 50% area at 9.09–9.22. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 9.91, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "GRAM",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 1.8173,
+          "high": 1.837,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-07-04"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.837,
+          "high": 1.8845,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-07-04"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 1.5625,
+          "high": 1.582,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 1.4176,
+          "high": 1.4978,
+          "status": "UNTESTED",
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 1.3721,
+          "high": 1.642,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_1618",
+            "quarterly_open",
+            "equal_lows",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-07-07"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": -0.0472,
+          "high": 0.0527,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close",
+            "equal_lows",
+            "box_low"
+          ],
+          "created_date": "2026-07-07"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4304,
+        "dist_to_yearly_open_pct": 553.4995,
+        "avg_turnover_20d": 100147055,
+        "close": 1.5243,
+        "sweep_date": "2026-07-04",
+        "sweep_depth_pct": 0.0108,
+        "displacement_date": "2026-07-07"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Gram (prev. Toncoin)",
+      "sector": "Crypto",
+      "narration": "GRAM touched the 50% area at 1.562–1.582. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 1.885, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "H",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0562,
+          "high": 0.0564,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0525,
+          "high": 0.0562,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0665,
+          "high": 0.0681,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0709,
+          "high": 0.0743,
+          "status": "UNTESTED",
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0774,
+          "high": 0.1045,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "quarterly_open",
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.1621,
+          "high": 0.1705,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open",
+            "box_high",
+            "prior_high"
+          ],
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.6256,
+          "high": 0.6295,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-25"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.8483,
+          "high": 0.8554,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_highs"
+          ],
+          "created_date": "2026-09-25"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4321,
+        "dist_to_yearly_open_pct": -0.5802,
+        "avg_turnover_20d": 4271354,
+        "close": 0.0697,
+        "sweep_date": "2026-09-24",
+        "sweep_depth_pct": 0.0029,
+        "displacement_date": "2026-09-25"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Humanity",
+      "sector": "Crypto",
+      "narration": "H touched the 50% area at 0.0665–0.0681. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.0525, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "JASMY",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0042,
+          "high": 0.0043,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.004,
+          "high": 0.0042,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0051,
+          "high": 0.0052,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0054,
+          "high": 0.0057,
+          "status": "UNTESTED",
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0054,
+          "high": 0.0059,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-27"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0062,
+          "high": 0.0068,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-27"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5146,
+        "dist_to_yearly_open_pct": -0.0838,
+        "avg_turnover_20d": 20223260,
+        "close": 0.0051,
+        "sweep_date": "2026-09-24",
+        "sweep_depth_pct": 0.0257,
+        "displacement_date": "2026-09-27"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "JasmyCoin",
+      "sector": "Crypto",
+      "narration": "JASMY touched the 50% area at 0.0051–0.0052. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.0040, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "JUP",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT",
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.2861,
+          "high": 0.2887,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.2887,
+          "high": 0.3031,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.1443,
+          "high": 0.1559,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0681,
+          "high": 0.1103,
+          "status": "UNTESTED",
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": -0.0852,
+          "high": 0.0146,
+          "status": "TESTED",
+          "confluence": 4,
+          "sources": [
+            "fib_ext_10",
+            "quarterly_open",
+            "equal_lows",
+            "box_low"
+          ],
+          "created_date": "2026-09-24"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": -0.2951,
+          "high": -0.1705,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-24"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.0011,
+        "dist_to_yearly_open_pct": -0.5031,
+        "avg_turnover_20d": 72,
+        "close": 0.0003,
+        "sweep_date": "2026-09-24",
+        "sweep_depth_pct": 0.009,
+        "displacement_date": "2026-09-24"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Jupiter",
+      "sector": "Crypto",
+      "narration": "JUP touched the 50% area at 0.144–0.156. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.303, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "KITE",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.1401,
+          "high": 0.1538,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.1538,
+          "high": 0.1583,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.1433,
+          "high": 0.146,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.1377,
+          "high": 0.1408,
+          "status": "UNTESTED",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0951,
+          "high": 0.1365,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "equal_lows",
+            "quarterly_open",
+            "prior_low",
+            "fib_ext_1618",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0852,
+          "high": 0.094,
+          "status": "UNTESTED",
+          "confluence": 4,
+          "sources": [
+            "prior_yearly_close",
+            "yearly_open",
+            "box_low",
+            "equal_lows"
+          ],
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4255,
+        "dist_to_yearly_open_pct": 0.5818,
+        "avg_turnover_20d": 22795487,
+        "close": 0.1417,
+        "sweep_date": "2026-09-28",
+        "sweep_depth_pct": 0.0979,
+        "displacement_date": "2026-09-28"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Kite",
+      "sector": "Crypto",
+      "narration": "KITE touched the 50% area at 0.143–0.146. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.158, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "MET",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.4513,
+          "high": 0.455,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.4452,
+          "high": 0.4513,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.5843,
+          "high": 0.5921,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.6254,
+          "high": 0.6665,
+          "status": "UNTESTED",
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.4703,
+          "high": 0.4854,
+          "status": "CONSUMED",
+          "confluence": 4,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close",
+            "fib_ext_10",
+            "prior_high"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.4878,
+          "high": 0.5033,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "prior_high"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.5322,
+          "high": 0.5383,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-16"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 0.5458,
+          "high": 0.5526,
+          "status": "CONSUMED",
+          "confluence": 2,
+          "sources": [
+            "equal_highs",
+            "box_high"
+          ],
+          "created_date": "2026-09-16"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.6516,
+        "dist_to_yearly_open_pct": 0.1533,
+        "avg_turnover_20d": 9903,
+        "close": 0.5494,
+        "sweep_date": "2026-09-16",
+        "sweep_depth_pct": 0.0082,
+        "displacement_date": "2026-09-16"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Meteora",
+      "sector": "Crypto",
+      "narration": "MET touched the 50% area at 0.584–0.592. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.445, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "NEO",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 2.651,
+          "high": 2.6777,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 2.6777,
+          "high": 2.739,
+          "status": "RESPECTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 2.5596,
+          "high": 2.5944,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 2.4973,
+          "high": 2.5318,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 2.3467,
+          "high": 2.4722,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 2.1199,
+          "high": 2.3262,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_low",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 1.9602,
+          "high": 2.1056,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t4",
+          "type": "TARGET",
+          "low": 1.7569,
+          "high": 1.9466,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4097,
+        "dist_to_yearly_open_pct": -0.2757,
+        "avg_turnover_20d": 5463036,
+        "close": 2.5383,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0101,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "NEO",
+      "sector": "Crypto",
+      "narration": "NEO touched the 50% area at 2.56–2.59. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 2.74, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "NEXO",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "FAST_FLIP",
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.8519,
+          "high": 0.883,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "sweep_wick",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.883,
+          "high": 0.8973,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.8539,
+          "high": 0.8615,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.8385,
+          "high": 0.847,
+          "status": "UNTESTED",
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.8034,
+          "high": 0.8331,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_10",
+            "equal_lows"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.7618,
+          "high": 0.7979,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "fib_ext_1618",
+            "equal_lows"
+          ],
+          "created_date": "2026-09-28"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.6835,
+          "high": 0.7474,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "box_low",
+            "equal_lows",
+            "quarterly_open"
+          ],
+          "created_date": "2026-09-28"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4778,
+        "dist_to_yearly_open_pct": -0.0343,
+        "avg_turnover_20d": 6480209,
+        "close": 0.8526,
+        "sweep_date": "2026-09-28",
+        "sweep_depth_pct": 0.0365,
+        "displacement_date": "2026-09-28"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "NEXO",
+      "sector": "Crypto",
+      "narration": "NEXO touched the 50% area at 0.854–0.862. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.897, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "NEXO",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ANCHOR_CONTEXT"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.8081,
+          "high": 0.827,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.7965,
+          "high": 0.8081,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.8459,
+          "high": 0.8535,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.8642,
+          "high": 0.8775,
+          "status": "UNTESTED",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.8708,
+          "high": 0.9141,
+          "status": "RESPECTED",
+          "confluence": 4,
+          "sources": [
+            "yearly_open",
+            "prior_yearly_close",
+            "equal_highs",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.9269,
+          "high": 0.9713,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "prior_high",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-21"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5101,
+        "dist_to_yearly_open_pct": -0.0343,
+        "avg_turnover_20d": 6480209,
+        "close": 0.8526,
+        "sweep_date": "2026-09-18",
+        "sweep_depth_pct": 0.0229,
+        "displacement_date": "2026-09-21"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "NEXO",
+      "sector": "Crypto",
+      "narration": "NEXO touched the 50% area at 0.846–0.854. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.796, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "TIA",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 0.5159,
+          "high": 0.5356,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.5356,
+          "high": 0.5532,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.4784,
+          "high": 0.4883,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.4482,
+          "high": 0.4649,
+          "status": "UNTESTED",
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.427,
+          "high": 0.4728,
+          "status": "RESPECTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_10",
+            "yearly_open",
+            "prior_yearly_close"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.3326,
+          "high": 0.4175,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "equal_lows",
+            "quarterly_open",
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-23"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.2712,
+          "high": 0.3302,
+          "status": "UNTESTED",
+          "confluence": 2,
+          "sources": [
+            "equal_lows",
+            "box_low"
+          ],
+          "created_date": "2026-09-23"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5961,
+        "dist_to_yearly_open_pct": 0.075,
+        "avg_turnover_20d": 50759801,
+        "close": 0.4894,
+        "sweep_date": "2026-09-23",
+        "sweep_depth_pct": 0.0383,
+        "displacement_date": "2026-09-23"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Celestia",
+      "sector": "Crypto",
+      "narration": "TIA touched the 50% area at 0.478–0.488. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact below 0.553, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "XRP",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 1.2922,
+          "high": 1.3808,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "sweep_wick",
+            "monthly_open"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 1.2565,
+          "high": 1.2922,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 1.455,
+          "high": 1.4729,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 1.5156,
+          "high": 1.5683,
+          "status": "UNTESTED",
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 1.5272,
+          "high": 1.6646,
+          "status": "RESPECTED",
+          "confluence": 2,
+          "sources": [
+            "prior_high",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 1.665,
+          "high": 1.7025,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "prior_high"
+          ],
+          "created_date": "2026-09-21"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 1.7234,
+          "high": 1.8774,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_1618",
+            "prior_yearly_close",
+            "yearly_open"
+          ],
+          "created_date": "2026-09-21"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4325,
+        "dist_to_yearly_open_pct": -0.1862,
+        "avg_turnover_20d": 3990255920,
+        "close": 1.4973,
+        "sweep_date": "2026-09-18",
+        "sweep_depth_pct": 0.0641,
+        "displacement_date": "2026-09-21"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "XRP",
+      "sector": "Crypto",
+      "narration": "XRP touched the 50% area at 1.455–1.473. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 1.256, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "ZAMA",
+      "direction": "bullish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0476,
+          "high": 0.0499,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-17"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.0456,
+          "high": 0.0476,
+          "status": "UNTESTED",
+          "rule": "close_below_low",
+          "created_date": "2026-09-17"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 0.0745,
+          "high": 0.0772,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 0.0842,
+          "high": 0.0928,
+          "status": "UNTESTED",
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 0.0613,
+          "high": 0.0676,
+          "status": "CONSUMED",
+          "confluence": 3,
+          "sources": [
+            "fib_ext_10",
+            "equal_highs",
+            "box_high"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 0.0704,
+          "high": 0.0784,
+          "status": "CONSUMED",
+          "confluence": 1,
+          "sources": [
+            "fib_ext_1618"
+          ],
+          "created_date": "2026-09-18"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 0.1562,
+          "high": 0.1608,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "yearly_open"
+          ],
+          "created_date": "2026-09-18"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.4034,
+        "dist_to_yearly_open_pct": -0.477,
+        "avg_turnover_20d": 76929990,
+        "close": 0.0829,
+        "sweep_date": "2026-09-17",
+        "sweep_depth_pct": 0.046,
+        "displacement_date": "2026-09-18"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Zama",
+      "sector": "Crypto",
+      "narration": "ZAMA touched the 50% area at 0.0745–0.0772. The expansion thesis is finished — this is no longer a continuation setup. Structure is still intact above 0.0456, so it moves to the rotation watchlist where deep-retracement logic applies. Analysis only — not financial advice.",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
+      "ticker": "2Z",
+      "direction": "bullish",
+      "state": "DEAD",
+      "tier": null,
+      "tags": [],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "demand",
+          "type": "DEMAND",
+          "low": 0.0447,
+          "high": 0.0448,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-10-03"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 0.042,
+          "high": 0.0447,
+          "status": "VIOLATED",
+          "rule": "close_below_low",
+          "created_date": "2026-10-03"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 2.2785,
+        "dist_to_yearly_open_pct": -0.6581,
+        "avg_turnover_20d": 18530751,
+        "close": 0.0414,
+        "sweep_date": "2026-10-03",
+        "sweep_depth_pct": 0.001
+      },
+      "smt": null,
+      "route_to": null,
+      "name": "DoubleZero",
+      "sector": "Crypto",
+      "narration": "2Z closed below 0.0420, through the floor of the 0.0420–0.0447 structural invalidation zone. The swept low did not hold, so the setup is void — wicks into that zone were tests, but a daily close through it is the kill rule. Back to neutral. Analysis only — not financial advice.",
+      "next": "a new trap to build — the swept low failed on a closing basis"
+    }
+  ]
+}
