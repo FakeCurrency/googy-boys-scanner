@@ -14,6 +14,7 @@
     data: null, grade: "all", q: "", view: "results", sort: "default",
     confOnly: false,   // deck pill: only rows with 2+ lens alignment
     confl: null,
+    dataMarket: null,  // the market state.data was loaded for (#83)
     market: (() => {
       try {
         const m = localStorage.getItem("sp-market");
@@ -38,7 +39,10 @@
     const ci = alignedOf(r);
     const gc = GRADE_VAR[r.grade] || "var(--grade-c)";
     const fund = PM.isFundReit({ name: r.name, sector: r.sector, ticker: r.symbol });
-    const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs&flt=${encodeURIComponent(state.grade + "~" + state.sort)}`;
+    // The market the rows were LOADED for (#83): while the next market loads,
+    // the previous market's rows are still on screen and a re-render must not
+    // point them at the new market's chart (m=nasdaq&s=<ASX ticker>).
+    const chartHref = `chart.html?m=${state.dataMarket || state.market}&s=${encodeURIComponent(r.symbol)}&mode=spec&src=specs&flt=${encodeURIComponent(state.grade + "~" + state.sort)}`;
     const chips = [
       fund ? `<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund">⚠ FUND / REIT</span>` : "",
       ci ? PM.confluenceChipHTML(ci, "SPECS") : "",
@@ -250,6 +254,7 @@
       const data = await res.json();
       if (stale()) return;
       state.data = data;
+      state.dataMarket = market;
       $("#sp-title").textContent =
         `SPECS · ${market.toUpperCase()} · ${data.results.length} setups`;
       $("#sp-sub").innerHTML = PM.esc(

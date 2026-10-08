@@ -216,7 +216,9 @@
     list.className = `pm-list pm-density-${state.density}`;
     renderActiveChips();
     renderSinceBanner();
-    if (!state.data) { list.innerHTML = ""; return; }
+    // No scan in hand: load() has already drawn the skeleton or the failure
+    // (with its retry button), and a filter click must not blank either.
+    if (!state.data) return;
     const rows = filtered();
     const shown = rows.slice(0, state.shown);
     list.innerHTML = shown.length
@@ -543,6 +545,11 @@
     state.data = null;
     state.confl = null;
     state.sinceInfo = null;
+    // ...and the previous market's multi-lens and catch-up banners go with it,
+    // or a load that then FAILS leaves them under this market's tab for good.
+    renderConfBanner();
+    renderSinceBanner();
+    $("#pm-more").hidden = true;
     $("#pm-sub").textContent = "Loading latest scan…";
     $("#pm-list").innerHTML = SKELETON.repeat(4);   // shimmer, not a blank page
     try {
@@ -557,6 +564,7 @@
       if (stale()) return;
       try {
         let nj = narrRes && narrRes.ok ? await narrRes.json() : null;
+        if (stale()) return;   // the sidecar body can take a while on a slow link
         // The pair ships together but is fetched in parallel — a deploy landing
         // between the two requests can leave the sidecar on the PREVIOUS scan
         // (review H5). run_date-match the pair and refetch the sidecar once,

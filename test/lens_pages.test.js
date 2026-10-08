@@ -55,6 +55,15 @@ function makeNet() {
     fetch,
     waiting: (url) => pending.filter((p) => p.url === url).length,
     ok(url, body, last) { pick(url, last).resolve(reply(200, body)); },
+    // A 200 whose BODY arrives only when the test calls the returned function
+    // (res.json() on a slow link waits for the whole body to download).
+    slow(url, body, last) {
+      let done;
+      const gate = new Promise((r) => { done = r; });
+      pick(url, last).resolve({ ok: true, status: 200,
+        json: () => gate.then(() => JSON.parse(JSON.stringify(body))) });
+      return () => done();
+    },
     status(url, code, last) { pick(url, last).resolve(reply(code, {})); },
   };
 }
@@ -73,7 +82,7 @@ function makeDom(groups) {
     const on = {};
     const cls = new Set();
     const e = {
-      key, innerHTML: "", textContent: "", className: "", title: "", value: "",
+      key, className: "", title: "", value: "",
       hidden: false, disabled: false, dataset: {}, style: {},
       classList: {
         toggle: (c, force) => ((force === undefined ? !cls.has(c) : force) ? cls.add(c) : cls.delete(c)),
@@ -92,6 +101,16 @@ function makeDom(groups) {
       remove() { e.innerHTML = ""; },
       focus() {}, blur() {}, select() {}, scrollIntoView() {},
     };
+    // innerHTML and textContent share ONE backing store, as in a browser:
+    // writing either replaces what the other reads, so a failure message
+    // written as textContent cannot hide behind an older innerHTML.
+    let html = "";
+    Object.defineProperty(e, "innerHTML", {
+      get: () => html, set: (v) => { html = String(v); }, enumerable: true });
+    Object.defineProperty(e, "textContent", {
+      get: () => html.replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"),
+      set: (v) => { html = String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); },
+      enumerable: true });
     els.set(key, e);
     return e;
   };
@@ -294,6 +313,50 @@ test("while the next market loads, a re-render does not draw the previous market
   p.tab("all");                            // any filter click calls render()
   assert.ok(!/ASXA|ASXB/.test(p.list()),
     "ASX cards must not be redrawn under the CRYPTO tab (their links would read m=crypto)");
+  assert.ok(/pm-skel/.test(p.list()), "the loading shimmer stays: nothing has loaded, nothing is blank");
+});
+
+test("a failed load keeps its error and retry button through a filter click", async () => {
+  const p = pmBoot();
+  p.net.status("data/phasemap/asx/latest.json", 503);
+  p.net.status("data/phasemap/asx/narrations.json", 503);
+  await flush();
+  assert.ok(/pm-retry-load/.test(p.list()), "the failure offers a retry");
+  p.tab("all");
+  assert.ok(/pm-retry-load/.test(p.list()), "a filter click must not blank the failure and its retry");
+});
+
+test("the previous market's banners do not survive under a market whose load FAILS", async () => {
+  const p = pmBoot({ "pm-seen:asx": JSON.stringify({ run_date: "2026-10-07", states: {} }) });
+  p.land("asx", pmScan("2026-10-08", 1923, [pmRec("AS1")]));
+  await flush();
+  p.net.ok("data/asx_vivek.json", { results: [{ symbol: "AS1", dir: "LONG", grade: "A" }] });
+  p.net.ok("data/phasemap/asx/latest.json", pmScan("2026-10-08", 1923, [pmRec("AS1")]));
+  p.net.ok("data/asx_spec.json", { results: [] });
+  await flush();
+  assert.ok(/AS1/.test(p.el("#conf-banner").innerHTML), "ASX shows its multi-lens banner");
+  assert.ok(/SINCE YOU LAST CHECKED/.test(p.el("#pm-since").innerHTML), "and its catch-up banner");
+  p.click("crypto");
+  p.net.status("data/phasemap/crypto/latest.json", 503);
+  p.net.status("data/phasemap/crypto/narrations.json", 503);
+  await flush();
+  assert.ok(/Couldn't load the CRYPTO/.test(p.sub()));
+  assert.ok(!/AS1/.test(p.el("#conf-banner").innerHTML),
+    "ASX's multi-lens names must not sit under the CRYPTO tab after crypto failed");
+  assert.ok(!/SINCE YOU LAST CHECKED/.test(p.el("#pm-since").innerHTML),
+    "nor ASX's catch-up banner");
+});
+
+test("a switch while the sidecar body is still downloading does not refetch it", async () => {
+  const p = pmBoot();
+  p.net.ok("data/phasemap/asx/latest.json", ASX_SCAN);
+  const finish = p.net.slow("data/phasemap/asx/narrations.json", NARR("2026-10-07"));
+  await flush();
+  p.click("crypto");                       // ASX's sidecar body has not arrived yet
+  finish();
+  await flush();
+  assert.equal(p.net.waiting("data/phasemap/asx/narrations.json"), 0,
+    "nobody is looking at ASX any more — no second request for its sidecar");
 });
 
 suite("#52 PhaseMap: FLASHED is the scan's newest bar, not the Melbourne run date");
@@ -398,6 +461,20 @@ test("an older NASDAQ confluence landing late does not strip ASX's multi-lens ma
   await flush();
   assert.ok(/Multi-lens <b>1<\/b>/.test(p.pills()), `the pill must stay ASX's: ${p.pills()}`);
   assert.ok(/2-LENS/.test(p.list()), "and CXZ keeps its 2-LENS chip");
+});
+
+test("while the next market loads, the rows on screen keep their OWN market's chart links", async () => {
+  const p = spBoot("asx");
+  p.net.ok("data/asx_spec.json", ASX_SPEC);
+  await flush();
+  p.click("nasdaq");                       // NASDAQ in flight; ASX rows still on screen
+  p.el("#sp-search").fire("input", { target: { value: "" } });   // any re-render
+  assert.ok(/CXZ/.test(p.list()));
+  assert.ok(/chart\.html\?m=asx&s=CXZ/.test(p.list()) && !/m=nasdaq&s=CXZ/.test(p.list()),
+    "an ASX row must not link to chart.html?m=nasdaq&s=CXZ");
+  p.net.ok("data/nasdaq_spec.json", NAS_SPEC);
+  await flush();
+  assert.ok(/chart\.html\?m=nasdaq&s=NVX/.test(p.list()), "NASDAQ's own rows link to NASDAQ");
 });
 
 test("a late NASDAQ failure does not wipe the loaded ASX page", async () => {
