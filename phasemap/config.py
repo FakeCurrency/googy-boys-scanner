@@ -14,7 +14,21 @@ from dataclasses import dataclass
 
 
 PRODUCT_NAME = "PhaseMap"          # working name — swappable, keep in this one constant
-RULESET_VERSION = "1.3.1"          # 1.3.1: backtest FILL REALISM — entry_mid is only
+RULESET_VERSION = "1.3.2"          # 1.3.2 (2026-10-08 audit batch, owner: "Do it all"):
+#                                    #8 equities drop a still-forming bar too
+#                                    (scanner.config.daily_bar_forming); #9 an
+#                                    outage/collapse never replaces latest.json;
+#                                    #24 the box never outlives its setup; #25
+#                                    the day-of DISPLACED record gets anchor
+#                                    context (A+) like the harness; #26 a
+#                                    zero-width DEMAND/SUPPLY is padded and the
+#                                    gate needs low < high; #27 no zone edge at
+#                                    or below zero; #28 sub-$0.10 prices keep 4
+#                                    significant figures; #29 bars_remaining
+#                                    counts the last accepted session. Stats
+#                                    artefacts regenerate at this version before
+#                                    {stats} speaks again.
+#                                    1.3.1: backtest FILL REALISM — entry_mid is only
 #                                    credited when price actually trades through it;
 #                                    gappers fill at the signal close (review H4).
 #                                    Detection maths unchanged; stats artefacts

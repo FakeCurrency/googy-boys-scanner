@@ -70,6 +70,25 @@ tests/          synth.py fixture builders + the 8 M1 acceptance fixtures
    tracks internally without one.
 6. Data: yfinance is the prototyping provider only. Production needs
    EODHD/Norgate (full microcap coverage + delisted history for M4).
+7. Ruleset 1.3.2 (2026-10-08 audit, owner-approved "Do it all"):
+   - every market scans CLOSED daily bars only: a stock's newest bar is
+     dropped while `scanner.config.daily_bar_forming()` says it is forming
+     (ASX 16:40 Sydney, NASDAQ 16:05 New York), crypto's until UTC midnight
+     — the nightly cron runs hours late, sometimes mid-session;
+   - a run that fetched nothing, or whose results collapse below half the
+     previous `latest.json` (full-universe runs), writes and prunes nothing
+     (`run.publish_refusal`, `::error::` annotation, exit 0 so the night's
+     healthy markets still commit; the scheduled must-change gate goes red);
+   - the 40-bar box belongs to one setup (cleared on reset / trap exit);
+   - the day-of DISPLACED record carries anchor context (A+) like the harness;
+   - a zero-width DEMAND/SUPPLY (equal lows/highs on one exact tick, tapped
+     exactly) is padded by half a buffer on its key side, and the validator
+     requires `low < high` for every zone;
+   - no zone edge at or below zero (clamped at one tick; a fib band whose far
+     edge is <= 0 is dropped);
+   - published prices keep 4 significant figures below $0.10 (sub-cent crypto
+     was publishing 0.0), and a band is never rounded into one price;
+   - `bars_remaining` counts the last session the engine still accepts.
 
 ## Guardrails (non-negotiable, from the spec)
 
