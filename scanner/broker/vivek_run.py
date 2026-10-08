@@ -209,14 +209,32 @@ def _book_elsewhere(market: str) -> dict | None:
     is worse than one that pauses. That state is never quiet -- the owning
     market's own run aborts on a corrupt book and fires a CRITICAL alert.
     """
-    total, notional = 0, 0.0
+    rows, bad = _sibling_open_rows(market)
+    if bad:
+        for name, e in bad:             # logged; the caller fails closed
+            log.error("vivek_run [%s]: cannot read %s for the global position "
+                      "cap (%s) - taking no new entries until it is readable",
+                      market, name, e)
+        return None
+    notional = sum(float(p.get("notional") or 0) for p in rows)
+    return {"count": len(rows), "notional": round(notional, 2)}
 
-    def _add(rows) -> None:
-        nonlocal total, notional
-        for p in rows:
-            total += 1
-            notional += float(p.get("notional") or 0)
 
+def _sibling_open_rows(market: str) -> tuple[list[dict], list[tuple[str, Exception]]]:
+    """Every OPEN row every market except `market` holds, read straight from the
+    canonical per-market files (plus open unassigned entries), and the
+    (file name, error) of each file that could not be parsed.
+
+    The one reader of the sibling books, for two consumers that want opposite
+    things from an unreadable file: `_book_elsewhere` feeds risk CAPS and so
+    fails closed on any (returns None), while the report-only cross-market
+    sector warning (audit #18) counts what it can read and says what it could
+    not. Never raises: a missing file is a fresh clone (0 open), and nothing
+    here goes through `_read_json_or_abort`, so a corrupt SIBLING can never
+    abort this market's run before its own book is saved.
+    """
+    rows: list[dict] = []
+    bad: list[tuple[str, Exception]] = []
     for m in config.MARKETS:
         if m == market:
             continue
@@ -225,15 +243,13 @@ def _book_elsewhere(market: str) -> dict | None:
             continue                    # fresh clone / never scanned -> 0 open
         try:
             mb = json.loads(p.read_text(encoding="utf-8"))
-        except Exception as e:          # noqa: BLE001 - logged; caller fails closed
-            log.error("vivek_run [%s]: cannot read %s for the global position "
-                      "cap (%s) - taking no new entries until it is readable",
-                      market, p.name, e)
-            return None
+        except Exception as e:          # noqa: BLE001 - reported to the caller
+            bad.append((p.name, e))
+            continue
         # Count every open row in the file rather than filtering on the market
         # tag: the file IS that market's book, and an untagged row must not go
         # uncounted against a risk cap. Matches how _combined_view merges them.
-        _add(mb.get("open") or [])
+        rows += list(mb.get("open") or [])
     # Positions whose market is not in config.MARKETS live in UNASSIGNED_FILE.
     # They show on the journal page as open risk, and they belong to no market's
     # own open_book, so without this they would be invisible to the ceiling.
@@ -241,13 +257,11 @@ def _book_elsewhere(market: str) -> dict | None:
     if UNASSIGNED_FILE.exists():
         try:
             stray = json.loads(UNASSIGNED_FILE.read_text(encoding="utf-8"))
-        except Exception as e:          # noqa: BLE001 - same fail-closed rule
-            log.error("vivek_run [%s]: cannot read %s for the global position "
-                      "cap (%s) - taking no new entries until it is readable",
-                      market, UNASSIGNED_FILE.name, e)
-            return None
-        _add([p for p in stray.get("entries", []) if p.get("status") == "open"])
-    return {"count": total, "notional": round(notional, 2)}
+        except Exception as e:          # noqa: BLE001 - same rule
+            bad.append((UNASSIGNED_FILE.name, e))
+        else:
+            rows += [p for p in stray.get("entries", []) if p.get("status") == "open"]
+    return rows, bad
 
 
 def _open_elsewhere(market: str) -> int | None:
@@ -1551,15 +1565,24 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # 2026-09-27) in every market at once and every check still passes.
         # Reported, never enforced — closing the gap changes which trades get
         # taken (owner's call, REFINEMENTS #113).
-        heavy = sectorcache.global_sector_load(
-            book["open"], int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0))
+        # EVERY market's open rows, not book["open"] (audit #18, 2026-10-08):
+        # since book layout v2 that is this market's canonical file alone, which
+        # decide() already holds at or under the cap, so the warning could never
+        # fire -- live, 4 ASX + 4 NASDAQ "Financial Services" (8 > 6) said
+        # nothing. Siblings come from the one lenient reader: an unreadable one
+        # is named and skipped, never a reason to fail this run.
+        sector_cap = int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0)
+        elsewhere, unread = _sibling_open_rows(market)
+        heavy = sectorcache.global_sector_load(book["open"] + elsewhere, sector_cap)
+        if unread:
+            log.warning("vivek_run [%s]: cross-market sector load read without "
+                        "%s (unreadable) - it may undercount (REFINEMENTS #113)",
+                        market, ", ".join(n for n, _e in unread))
         if heavy:
             log.warning("vivek_run [%s]: %d sector(s) exceed the %d-per-sector cap "
                         "once ALL markets are counted together (the cap is enforced "
                         "per market): %s (REFINEMENTS #113)",
-                        market, len(heavy),
-                        int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0),
-                        ", ".join(heavy))
+                        market, len(heavy), sector_cap, ", ".join(heavy))
     except Exception as e:                                       # noqa: BLE001
         log.warning("vivek_run [%s]: sector merge skipped (%s) - the per-sector "
                     "cap will only bind on rows that already carry one", market, e)

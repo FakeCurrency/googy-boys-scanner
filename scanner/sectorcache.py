@@ -171,6 +171,11 @@ def global_sector_load(positions, cap: int = 0) -> list[str]:
     buckets, which are per-market by construction and cannot collide with an
     equity sector name.
 
+    `positions` must be EVERY market's open rows: one market's book is already
+    held at or under the cap by `decide()`, so a single-market list can never
+    report anything (audit #18, 2026-10-08 -- run_market passed exactly that
+    for months; it now adds `vivek_run._sibling_open_rows`).
+
     Returns ``sector=count(markets)`` strings, worst first, for logging.
     """
     if not positions or cap <= 0:
