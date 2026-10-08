@@ -18,10 +18,12 @@ PUBLISH_AFTER_CLOSE_MIN) and the instant the feed shows that day's FINAL bar
 (scanner.config.DAILY_BAR_FINAL -- the ASX at 16:40 Sydney, the 2026-10-06
 close ruling; audit #66 found the ASX due at 16:30, on pre-auction closes) on
 a weekday until the NEXT session opens. Never inside a session -- spec 5.11:
-the screen does not drop a forming bar, so a run during trading would screen a
-bar that is still moving. If a whole window is missed the market waits for the
-next close; the page's own "generated" stamp says how old the file is.
-Crypto is due from 00:30 UTC daily and has no session to avoid.
+the screen does not drop a forming EQUITY bar, so a run during trading would
+screen a bar that is still moving. If a whole window is missed the market waits
+for the next close; the page's own "generated" stamp says how old the file is.
+Crypto is due from 00:30 UTC daily and has no session to avoid; its
+in-progress UTC candle is dropped by the screen itself (momentum.run
+.drop_forming, audit #85).
 
 ONE market per run, the one whose due instant is NEWEST. Newest-first means a
 market that keeps failing (it stays due, because a failure leaves its

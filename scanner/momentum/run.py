@@ -27,10 +27,11 @@ import argparse
 import datetime as dt
 import pathlib
 import time
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import pandas as pd
 
+from scanner import config as scfg
 from scanner import data as sdata
 from scanner import output
 from scanner import scanerrors
@@ -79,6 +80,42 @@ def _frame_age_days(frame: pd.DataFrame, market: str) -> Optional[int]:
         return None
 
 
+def drop_forming(frames: Mapping[str, pd.DataFrame], market: str, now: dt.datetime,
+                 since: Optional[dt.datetime] = None) -> Tuple[Dict[str, pd.DataFrame], int]:
+    """({yf: frame}, n dropped): a 24/7 market's still-forming daily bar removed.
+
+    screen_symbol's contract is CLOSED bars only, and on crypto that means
+    dropping the in-progress UTC day. Nothing did (audit #85, an owner call
+    the 2026-09-23 scan-honesty review deferred, approved 2026-10-08): the run
+    is due from 00:30 UTC, Yahoo's daily series already carries the candle
+    that opened 30 minutes earlier, and the file published it as
+    `last_closed_bar` -- the 2026-10-08 hit fired on a 73-minute-old bar.
+    `scanner.config.daily_bar_forming` is the one answer to "is it final?",
+    asked at the clock after the download AND, when given, the one before it
+    (a run that straddles 00:00 UTC fetched its first coins on the old day).
+
+    Equity markets are left alone here on purpose: momentum_due never makes
+    one due inside its session (spec 5.11), so a scheduled screen only ever
+    sees final equity bars. Runs BEFORE the frame cache is written, so the
+    cache never holds a partial candle either.
+    """
+    if scfg.VIVEK_JOURNAL_SESSION.get(market):
+        return dict(frames), 0
+    out: Dict[str, pd.DataFrame] = {}
+    dropped = 0
+    for yf, f in frames.items():
+        if f is None or not len(f):
+            continue
+        last = pd.Timestamp(f.index[-1])
+        if (scfg.daily_bar_forming(market, last, now)
+                or (since is not None and scfg.daily_bar_forming(market, last, since))):
+            f = f.iloc[:-1]
+            dropped += 1
+        if len(f):
+            out[yf] = f
+    return out, dropped
+
+
 def _last_bar(frame: pd.DataFrame) -> Optional[str]:
     try:
         return str(pd.Timestamp(frame.index[-1]).date())
@@ -88,12 +125,14 @@ def _last_bar(frame: pd.DataFrame) -> Optional[str]:
 
 def screen_market(market: str, *, cfg=None, limit: int = 0,
                   frames: Optional[Dict[str, pd.DataFrame]] = None,
-                  rows: Optional[List[dict]] = None) -> Optional[dict]:
+                  rows: Optional[List[dict]] = None,
+                  now: Optional[dt.datetime] = None) -> Optional[dict]:
     """Screen one market and return the payload, or None when there is no data.
 
-    `frames` and `rows` are injectable so the whole path is testable without a
-    network call -- the download is the only part that cannot be exercised in
-    CI, so it is the only part left out.
+    `frames`, `rows` and `now` (the clock that judges a forming bar) are
+    injectable so the whole path is testable without a network call -- the
+    download is the only part that cannot be exercised in CI, so it is the
+    only part left out.
     """
     cfg = (cfg or config.DEFAULTS).validate().assert_screenable()
     started = time.time()
@@ -106,10 +145,16 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
 
     cache_stats: Dict[str, Any] = {}
     if frames is None:
+        since = now or dt.datetime.now(dt.timezone.utc)      # before the download
         fresh = sdata.download([r["yf"] for r in rows], period=config.DATA_PERIOD,
                                interval=TIMEFRAME)
+        now = now or dt.datetime.now(dt.timezone.utc)        # bars in hand
+        fresh, forming = drop_forming(fresh, market, now, since)
         frames, cache_stats = sdata.merge_with_cache(
             f"momentum-{market}", fresh, [r["yf"] for r in rows])
+    else:
+        frames, forming = drop_forming(frames, market,
+                                       now or dt.datetime.now(dt.timezone.utc))
 
     if not frames:
         # Nothing fresh AND nothing cached: the source is fully blocked. Keep
@@ -176,6 +221,8 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
             "skipped_gates": sum(skipped.values()),
             "skipped_by_reason": dict(sorted(skipped.items(), key=lambda kv: -kv[1])),
             "stale_frames": stale,
+            # 24/7 markets: frames whose in-progress daily bar was dropped (#85)
+            "forming_dropped": forming,
             "hits": len(hits),
             "hits_rule_a": sum(1 for r in hits if r.get("rule_a")),
             "hits_rule_b": sum(1 for r in hits if r.get("rule_b")),
