@@ -274,15 +274,23 @@ class SetupEngine:
                 self.swept_below_anchor[name] = (c > v) if self.bull else (c < v)
 
         created = d.isoformat()
+        # A zone is a band, never a single price (v1.3.2, audit #26): equal
+        # lows/highs printed on ONE exact tick and tapped exactly on it made
+        # [extreme, key_level] zero wide (live: DUN demand 0.048-0.048). Such
+        # a band is padded by half a buffer -- the target padding -- on its
+        # key side, toward price and away from the invalidation zone.
+        half = 0.5 * buf
         if self.bull:
+            dem_high = key_level if key_level > extreme else extreme + half
             self.demand = Zone(id="demand", type="DEMAND", low=extreme,
-                               high=key_level, side="below",
+                               high=dem_high, side="below",
                                sources=["sweep_wick"], created_date=created)
             self.inv_hard = Zone(id="inv_hard", type="INVALIDATION_HARD",
                                  low=extreme - buf, high=extreme, side="below",
                                  rule="close_below_low", created_date=created)
         else:
-            self.demand = Zone(id="supply", type="SUPPLY", low=key_level,
+            sup_low = key_level if key_level < extreme else extreme - half
+            self.demand = Zone(id="supply", type="SUPPLY", low=sup_low,
                                high=extreme, side="above",
                                sources=["sweep_wick"], created_date=created)
             self.inv_hard = Zone(id="inv_hard", type="INVALIDATION_HARD",

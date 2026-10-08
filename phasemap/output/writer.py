@@ -53,8 +53,12 @@ def _validate_result(r: dict, required_keys: tuple) -> None:
             raise ValueError(f"invalid zone type: {z['type']}")
         if z["status"] not in VALID_ZONE_STATUS:
             raise ValueError(f"invalid zone status: {z['status']}")
+        # strictly low < high: every zone is a BAND, never a single price
+        # (v1.3.2, audit #26 -- `<=` let 42 zero-width DEMAND/SUPPLY zones
+        # publish). The engine pads every zone and band_round never collapses
+        # one in the published rounding, so a hit here is a real defect.
         if not (isinstance(z["low"], (int, float)) and
-                isinstance(z["high"], (int, float)) and z["low"] <= z["high"]):
+                isinstance(z["high"], (int, float)) and z["low"] < z["high"]):
             raise ValueError(
                 f"zone {z['id']} band invalid: {z['low']}..{z['high']}")
 
