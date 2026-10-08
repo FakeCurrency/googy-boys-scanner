@@ -90,3 +90,44 @@ def test_equity_frames_are_left_to_momentum_due_by_design():
     mid_session = dt.datetime(2026, 10, 8, 2, 0, tzinfo=UTC)      # 13:00 Sydney
     out, n = R.drop_forming({"Z.AX": f}, "asx", mid_session)
     assert n == 0 and out["Z.AX"] is not None and len(out["Z.AX"]) == 300
+
+
+def test_the_live_run_asks_the_clock_before_the_download_too(monkeypatch):
+    """screen_market reads the clock before AND after the download and hands
+    both to drop_forming: a run fetching 23:58 -> 00:03 UTC got its coins
+    while 2026-10-08's candle was still open, and the after-download clock
+    alone calls that candle completed."""
+    import types
+    d = dt.date(2026, 10, 8)
+    ticks = iter([dt.datetime(2026, 10, 8, 23, 58, tzinfo=UTC)])
+    after = dt.datetime(2026, 10, 9, 0, 3, tzinfo=UTC)
+
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return next(ticks, after)
+    monkeypatch.setattr(R, "dt", types.SimpleNamespace(
+        datetime=Clock, timezone=dt.timezone, timedelta=dt.timedelta, date=dt.date))
+    monkeypatch.setattr(R.sdata, "download", lambda tickers, **kw: {"AAA-USD": _coin(d)})
+    saved = {}
+
+    def merge(key, fresh, tickers, **kw):
+        saved.update(fresh)
+        return dict(fresh), {}
+    monkeypatch.setattr(R.sdata, "merge_with_cache", merge)
+    p = R.screen_market("crypto", rows=[{"yf": "AAA-USD", "symbol": "AAA", "name": "Aaa"}])
+    assert pd.Timestamp(saved["AAA-USD"].index[-1]).date() == d - dt.timedelta(days=1)
+    assert p["summary"]["forming_dropped"] == 1
+
+
+def test_an_undatable_last_bar_does_not_sink_the_market():
+    """drop_forming runs outside the per-symbol try, so one frame whose last
+    index is NaT must be kept (daily_bar_forming's contract) rather than
+    raise and take every other coin's screen down with it."""
+    bad = _coin(dt.date(2026, 10, 7))
+    bad.index = bad.index[:-1].append(pd.DatetimeIndex([pd.NaT]))
+    good = _coin(dt.date(2026, 10, 8))
+    out, n = R.drop_forming({"BAD-USD": bad, "GOOD-USD": good}, "crypto",
+                            dt.datetime(2026, 10, 8, 1, 0, tzinfo=UTC))
+    assert len(out["BAD-USD"]) == len(bad)
+    assert n == 1 and out["GOOD-USD"].index[-1].date() == dt.date(2026, 10, 7)

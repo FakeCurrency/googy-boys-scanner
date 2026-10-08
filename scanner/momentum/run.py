@@ -106,9 +106,16 @@ def drop_forming(frames: Mapping[str, pd.DataFrame], market: str, now: dt.dateti
     for yf, f in frames.items():
         if f is None or not len(f):
             continue
-        last = pd.Timestamp(f.index[-1])
-        if (scfg.daily_bar_forming(market, last, now)
-                or (since is not None and scfg.daily_bar_forming(market, last, since))):
+        try:
+            last = pd.Timestamp(f.index[-1])
+            forming = (scfg.daily_bar_forming(market, last, now)
+                       or (since is not None and scfg.daily_bar_forming(market, last, since)))
+        except Exception:                             # noqa: BLE001
+            # An undatable last bar (NaT) is kept, as daily_bar_forming's own
+            # contract says, and left to the per-symbol path: this runs outside
+            # it, so a raise here would sink the whole market's screen.
+            forming = False
+        if forming:
             f = f.iloc[:-1]
             dropped += 1
         if len(f):
