@@ -16,7 +16,9 @@ DESIGN DECISIONS (each deliberate):
   byte-identical files (no commit churn from intraday marks). A frame the
   frame cache back-filled is yesterday's RAW download, so its bars are judged
   final at the instant it was FETCHED (audit 2026-10-08 #59), and a same-day
-  rewrite is skipped only when the last bar's values match too.
+  rewrite is skipped only when the last bar's values match too. A back-filled
+  frame that ends before the file never rebuilds it (it would cut stored
+  final bars off the end); only a fresh frame does.
 - ADJUSTED BASIS, SPLICE-EXTENDED: yfinance auto_adjust re-bases the WHOLE
   series on every dividend/split, so yesterday's stored bars and today's frame
   can sit on different bases. On every write the file is REBUILT from today's
@@ -164,6 +166,12 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
             # a bar a later scan corrects must not wait a day to be stored).
             if old.get("updated") == today.isoformat() and old["bars"] and old["bars"][-1] == bars[-1]:
                 continue                   # same session already archived — no-op
+            # A back-filled frame that now ends BEFORE the file (its forming-at-
+            # fetch bar dropped above) is older than what is stored: it has
+            # nothing to add, and the rebuild below would cut the stored final
+            # bars off the end. Only a fresh frame may rebuild the file.
+            if _fetch_instant(df) is not None and str(old["bars"][-1][0]) > bars[-1][0]:
+                continue
             merged, suspect = _splice(old["bars"], bars, drift)
         else:
             merged, suspect = bars, False

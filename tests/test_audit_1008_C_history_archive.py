@@ -108,3 +108,42 @@ def test_a_same_day_identical_bar_is_still_a_byte_level_noop(tmp_path):
     before = p.read_text()
     out = history_archive.update("asx", [{"symbol": "RML"}], {"RML.AX": df}, root=tmp_path)
     assert out["written"] == 0 and p.read_text() == before
+
+
+def test_an_older_reused_frame_never_cuts_final_bars_off_the_file(tmp_path):
+    """Review of #59: a reused frame now drops its forming-at-fetch bar, so it
+    can END before the file. If the file already holds that session's FINAL
+    bar (stored from a fresh frame), the rebuild must not truncate it -- the
+    frame cache can hand back an older download than the archive saw (an
+    actions/cache entry restored out of order), and for a name that never
+    returns that cut would be permanent."""
+    base = tmp_path / "asx"
+    base.mkdir(parents=True)
+    d2 = (YDAY - dt.timedelta(days=2)).isoformat()
+    d1 = (YDAY - dt.timedelta(days=1)).isoformat()
+    stored = {"symbol": "RML", "market": "asx", "basis": "adj", "updated": TODAY.isoformat(),
+              "last_seen": TODAY.isoformat(), "splice_suspect": False,
+              "bars": [[d2, 1.0, 1.0, 1.0, 1.0, 100], [d1, 1.0, 1.0, 1.0, 1.0, 100],
+                       [YDAY.isoformat(), 0.9, 0.9, 0.9, 0.9, 100]]}   # YDAY's FINAL close
+    (base / "RML.json").write_text(json.dumps(stored))
+    before = (base / "RML.json").read_text()
+    noon = dt.datetime.combine(YDAY, dt.time(12, 0), SYD)
+    df = _reused(_df([1.0, 1.0, 1.10]), noon)                    # an older, mid-session copy
+    out = history_archive.update("asx", [{"symbol": "RML"}], {"RML.AX": df}, root=tmp_path)
+    assert out["written"] == 0 and (base / "RML.json").read_text() == before
+
+
+def test_a_fresh_frame_still_rebuilds_a_file_that_runs_past_it(tmp_path):
+    """The guard above is for back-filled frames only: a FRESH frame is the
+    newest truth and rebuilds the file as before (a bar Yahoo withdrew goes)."""
+    base = tmp_path / "asx"
+    base.mkdir(parents=True)
+    d1 = (YDAY - dt.timedelta(days=1)).isoformat()
+    stored = {"symbol": "RML", "market": "asx", "basis": "adj", "updated": YDAY.isoformat(),
+              "last_seen": YDAY.isoformat(), "splice_suspect": False,
+              "bars": [[d1, 1.0, 1.0, 1.0, 1.0, 100], [YDAY.isoformat(), 5.0, 5.0, 5.0, 5.0, 100]]}
+    (base / "RML.json").write_text(json.dumps(stored))
+    out = history_archive.update("asx", [{"symbol": "RML"}],
+                                 {"RML.AX": _df([1.0, 1.0], end=YDAY - dt.timedelta(days=1))},
+                                 root=tmp_path)
+    assert out["written"] == 1 and _bars(tmp_path)[-1][0] == d1

@@ -180,6 +180,17 @@ def test_quantization_is_judged_on_completed_bars_only():
     assert X.quantized(_frame(closes, pd.date_range(end=TODAY, periods=301)))
 
 
+def test_the_live_row_never_counts_toward_the_distinct_closes():
+    """Four grid levels in the last 20 COMPLETED closes is quantized; the live
+    row's full-precision fifth value must not lift it over the bar (counting
+    the raw tail would read 5 distinct and let the junk history through)."""
+    grid = [1e-06, 2e-06, 3e-06, 4e-06]
+    closes = [2e-06] * 280 + [grid[i % 4] for i in range(20)] + [1.71e-06]
+    df = _frame(closes, pd.date_range(end=TODAY, periods=301))
+    assert df["Close"].iloc[-20:].nunique() == 5, "precondition: the raw tail reads 5"
+    assert X.quantized(df)
+
+
 def test_a_short_frame_is_not_judged(monkeypatch):
     """The kill switch asks for 5d: four completed bars cannot show a grid."""
     df = _frame([2e-06] * 4 + [1.71e-06], pd.date_range(end=TODAY, periods=5))
