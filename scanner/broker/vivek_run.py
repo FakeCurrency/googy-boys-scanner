@@ -856,7 +856,8 @@ def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
     return syms
 
 
-def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
+def _stale_probe(market: str, book: dict, day: str, send=None,
+                 priced: set | None = None) -> list[str]:
     """Ping the owner about positions that have sat still long enough to need
     a human decision. REPORT-ONLY: it closes nothing and takes nothing.
 
@@ -876,9 +877,16 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
     it commits with the book and survives the container — the same lesson as
     every other alert memory in this repo. Re-pings every REPEAT_DAYS while
     the row still qualifies; a row that starts moving loses its stamp, so a
-    later re-stall is a fresh episode. Rows without `unreal_r` (unpriced this
-    run) are SKIPPED, not flagged — no price means no movement claim, and the
-    unpriced-runs warning above already owns that failure.
+    later re-stall is a fresh episode. Rows UNPRICED this run are SKIPPED, not
+    flagged — no price means no movement claim, and the unpriced-runs warning
+    above already owns that failure. `priced` is the set of symbols the run
+    actually marked (after the stale-cache rule and _mark_sanity); a row
+    outside it is skipped whole, its stamp neither renewed nor cleared. It has
+    to be passed in because `unreal_r` cannot say it (audit #58, 2026-10-08):
+    run_market only ever WRITES unreal_r when a price exists and never clears
+    it, so an unpriced or frozen row still carries the last priced run's value
+    and read as "sitting still" off a fossil R. None (a direct caller) keeps
+    the old reading: every row with an `unreal_r` counts.
 
     Called after `_save_market_book`; re-saves iff a stamp changed. A save
     that then fails re-pings next run — for a reminder, failing toward
@@ -900,6 +908,8 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
     for pos in book.get("open") or []:
         if pos.get("status") != "open" or pos.get("market", market) != market:
             continue
+        if priced is not None and pos.get("symbol") not in priced:
+            continue                               # no price this run: no claim (#58)
         held = _held_days(pos, day)
         ur = pos.get("unreal_r")
         qualifies = (held is not None and held >= days_min
@@ -1677,7 +1687,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
              added, closed_now, book_open, book_short)
 
     _notify_reviews(market, opened_events)
-    _stale_probe(market, book, day)
+    # Only rows the run actually priced may be called "sitting still" (#58).
+    _stale_probe(market, book, day,
+                 priced={s for s, px in managed_px.items() if px is not None})
 
     # Trade-event digest through the shared alert dispatcher. OFF by default:
     # the scan workflow exports SMTP creds and alert_dispatch fires every
