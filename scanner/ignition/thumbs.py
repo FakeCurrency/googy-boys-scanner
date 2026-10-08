@@ -16,7 +16,7 @@ never re-derives engine geometry.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -95,16 +95,26 @@ def series(done: pd.DataFrame, forming: Optional[pd.DataFrame], row: dict) -> di
 
 
 def build(results: List[dict], frames: Dict[str, pd.DataFrame],
-          forming: Dict[str, pd.DataFrame]) -> Tuple[Dict[str, dict], List[str]]:
+          forming: Dict[str, pd.DataFrame], *,
+          on_error: Optional[Callable[[str, BaseException], None]] = None
+          ) -> Tuple[Dict[str, dict], List[str]]:
     """({yf: series}, sorted yf list of the rows no chart could be built for).
-    One bad frame costs its own chart and nothing else."""
+    One bad frame costs its own chart and nothing else.
+
+    `on_error(yf, exc)` hears WHY each one failed. A chart failure is still
+    swallowed (it never costs the screen), but not into silence: run.py hands
+    in a scanerrors.ErrorLog, so a break that hits every row prints its
+    exception kinds rather than a bare list of tickers. Nothing is printed
+    here -- the module stays engine-gated."""
     rows: Dict[str, dict] = {}
     missing: List[str] = []
     for r in results:
         yf = r.get("yf")
         try:
             rows[yf] = series(frames[yf], forming.get(yf), r)
-        except Exception:                                 # noqa: BLE001 -- a chart never costs the screen
+        except Exception as exc:                          # noqa: BLE001 -- a chart never costs the screen
+            if on_error is not None:
+                on_error(str(yf), exc)
             missing.append(str(yf))
     return rows, sorted(missing)
 

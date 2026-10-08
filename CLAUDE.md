@@ -134,7 +134,7 @@ scripts/               CI-side one-offs and helpers, NOT imported by the engine
 | alert_returns.yml | daily 22:20 UTC + 23:50 backstop | the EDGE PIPELINE (grown from one script to four, batch-100 2026-08-20), in order: `alert_returns.py` (ingests alignments + stamps 1/5/10/20-SESSION forward returns into `data/alert_forward_returns.json`, enriches blank-only context fields frozen at first write) → `edge_rosters.py` (daily plain-A+ roster baseline, `data/edge_rosters.json`, same imported machinery/plumbing) → `book_stress.py` (uniform-shock tide table vs real stops, `public/data/book_stress.json` — the journal's tide line reads it) → `alert_edge_report.py` printed into the STEP SUMMARY daily (read-only, pinned) → `edge_summary.py` (dedup aligned-vs-baseline headline as `public/data/edge_summary.json`, math IMPORTED from the report, never re-typed) (the Sunday-only Discord digest leg was removed 2026-08-27 with the whole channel — the daily STEP SUMMARY is the delivery). A SIDE LEDGER on purpose, twice over: alert_history.json is a rolling 800-cap window already evicting at ~14 days (a 20-session return can never mature in it) AND is written inside the scan mutex (a second writer would race it) — so the scripts READ the history, never write it (test-pinned). Idempotent; returns FROZEN at first measurement — so `stamp()` reads COMPLETED BARS ONLY (2026-10-05): a bar dated on/after the market-local today is ignored until `config.ALERT_RETURNS_BAR_FINAL` (ASX 16:45 Sydney, NASDAQ 16:30 NY — close + delayed feed; crypto never reads today's UTC bar), because the run lands 10:18–13:52 Sydney and had frozen ~1,900 of 4,900 ASX alert stamps (7,700 of 14,755 roster stamps) on the still-forming intraday bar, sign flipped on dozens. FORWARD-ONLY FIX — the contaminated rows are still live and feed edge_summary; clearing/re-stamping them is an OWNER decision, not done; the 23:50 cron is a SCHEDULER-DROP BACKSTOP (2026-08-27) that skips when a ledger's `updated_at` on main is at/after the most recent 22:00Z slot (2026-10-05 — was "any scheduled success since 00:00 UTC" via the Actions API, which counted yesterday's late runs and its own skip-runs; `actions: read` dropped), fail-open; each staged one-pathspec-at-a-time with `\|\| true` paired to the ANY-OF assert_staged; WATCHDOG_RUNS 26h. Pins: `tests/test_alert_returns.py`, `test_edge_rosters.py`, `test_book_stress.py`, `test_alert_edge_report.py`, `test_edge_summary.py` |
 | ignition.yml | `14 0` UTC (the new completed crypto bar) + `14 1,2` backstops (skip once today's file is on the branch) + `44 5,11,17,21` intraday; push to `.github/ignition-kick`; manual (`backtest`, `dry_run`) | IGNITION lens (REPORT-ONLY, crypto): screens the coil → ignition shape into `public/data/ignition/crypto.json` + its mini-chart sidecar `crypto_charts.json`; a kick or `backtest: true` also replays full history into `crypto_backtest.json`, committed back to the PUSHED branch (never hard-coded main). Own concurrency group per branch, not in the scan mutex; assert_staged per reported path; no WATCHDOG entry by decision. Pins: `tests/test_ignition_workflow.py` |
 | ignition_asx.yml | `24 6` UTC Mon–Fri (after the ASX close in both DST regimes) + `24 7,9` backstops (skip once a file generated after today's close is on the branch — `scripts/ignition_due.py asx`, stdlib only, runs before pip; the close is `config.IGNITION_BAR_FINAL["asx"]`) + `54 0,2,4` intraday; push to `.github/ignition-asx-kick`; manual (`backtest`, `dry_run`) | IGNITION on the ASX (REPORT-ONLY): the STRUCTURAL TWIN of ignition.yml — same steps, same run blocks with `crypto`→`asx` (test-pinned byte-equal, so the crypto suite's executed shell covers it), own gate, own group `ignition-asx-<ref>`, own cache namespace, 300-min timeout for the ~2,000-name replay. Publishes `public/data/ignition/asx.json` + `asx_charts.json` (+ `asx_backtest.json`). Pins: `tests/test_ignition_asx.py` |
-| ignition_nasdaq.yml | `34 21` UTC Mon–Fri (past the 16:30 New York bar-final in both DST regimes) + `34 22,23` backstops (still the close's UTC weekday; skip once a file generated after the latest 16:30 New York is on the branch — `scripts/ignition_due.py nasdaq`) + `54 14,16,18` intraday (in session, an hour clear of the close, both regimes); push to `.github/ignition-nasdaq-kick`; manual (`backtest`, `dry_run`) | IGNITION on NASDAQ (REPORT-ONLY, 2026-10-08): the third STRUCTURAL TWIN of ignition.yml — same steps, run blocks byte-equal with `crypto`→`nasdaq` (the TWINS pins in `tests/test_ignition_asx.py`), own gate, own group `ignition-nasdaq-<ref>`, own cache namespace `ignition-nasdaq-frames-`, 300-min timeout for the ~1,430-name replay, no WATCHDOG entry. Publishes `public/data/ignition/nasdaq.json` + `nasdaq_charts.json` (+ `nasdaq_backtest.json`). Pins: `tests/test_ignition_nasdaq.py` |
+| ignition_nasdaq.yml | `34 21` UTC Mon–Fri (past the 16:30 New York bar-final in both DST regimes) + `34 22,23` backstops (still the close's UTC weekday; skip once a file generated after the latest 16:30 New York is on the branch — `scripts/ignition_due.py nasdaq`) + `54 14,16,18` intraday (in session, an hour clear of the close, both regimes, WHEN ON TIME — the gate skips one GitHub delays to at/after 15:30 New York, pinned by executing the gate in `tests/test_ignition_nasdaq.py`); push to `.github/ignition-nasdaq-kick`; manual (`backtest`, `dry_run`) | IGNITION on NASDAQ (REPORT-ONLY, 2026-10-08): the third STRUCTURAL TWIN of ignition.yml — same steps, run blocks byte-equal with `crypto`→`nasdaq` (the TWINS pins in `tests/test_ignition_asx.py`), own gate, own group `ignition-nasdaq-<ref>`, own cache namespace `ignition-nasdaq-frames-`, 300-min timeout for the ~1,430-name replay, no WATCHDOG entry. Publishes `public/data/ignition/nasdaq.json` + `nasdaq_charts.json` (+ `nasdaq_backtest.json`). Pins: `tests/test_ignition_nasdaq.py` |
 | crypto_source_check.yml | manual; push to `.github/crypto-source-kick` | READ-ONLY verification of the crypto data-source switch (see CRYPTO DATA SOURCE): venue reachability from a runner, freshness, close gap to Yahoo (ticker collisions), liquidity-floor effect, and a DRY VIVEK crypto scan on exchange klines diffed against the published one — writes nothing, no bot, no mutex, no assert_staged/WATCHDOG (evidence_brief pattern) |
 | momentum.yml | `30 6`, `30 21` Mon–Fri + `30 0` daily + a `41 */3` backstop, and after every completed morning_plays.yml run | MOMENTUM lens (REPORT-ONLY): screens ONE market per run — the newest one due per `scripts/momentum_due.py`, read against main — after that market's close, into `public/data/momentum/<market>.json`; nothing else. Own concurrency group (`momentum`), not in the scan mutex; assert_staged on the one path |
 | data_depth.yml | manual only | READ-ONLY probe of how much free daily history each source serves (`scripts/data_depth.py`, stdlib only); the printed table is the deliverable. No git, no assert_staged, no WATCHDOG entry |
@@ -2234,11 +2234,23 @@ explicit list is where a new odd-named peg has to be added. Pins:
   `<market>_backtest.json`, `engine.py`, `backtest.py` and
   `IGNITION_RULESET_VERSION` did not move. **THE JOIN:** the sidecar's
   `generated_at` is the screen's exact stamp, and the page draws only when
-  the two match (dashed placeholders + a 30 s re-read otherwise). Contract,
+  the two match. Otherwise dashed placeholders, and `ignition.js` `chase()`
+  re-reads whichever file is BEHIND without waiting for the deck: a sidecar
+  OLDER than the screen is re-read past `CHART_RETRY_MS` (30 s); one NEWER
+  than it re-reads the SCREEN at once (30 s floor) through the deck's own
+  re-render callback, so the pill and the panel heading move together; ONE
+  timer (`CHART_RETRY_MS` + 1 s) re-runs sync() while they still disagree
+  and the panel stays open on that market (2026-10-08 review: both
+  directions used to wait up to the deck's 5-minute live TTL). Contract,
   top level in order: `schema_version` 1, `lens`, `market`, `generated_at`,
   `bars` (= `IGNITION_CHART_BARS`), `smas` (= `IGNITION_CHART_SMAS`), `rows`
   keyed by the screen row's `yf`, `missing` (sorted `yf`s whose chart could
-  not be built — never costs the screen). A row: `end` (== the row's
+  not be built — never costs the screen), then `chart_errors` /
+  `chart_error_sample` (run.py's `scanerrors.ErrorLog("ignition charts
+  [<market>]")`, fed by `thumbs.build(..., on_error=)`: the WHY behind
+  `missing`, also printed as its own summary line with the `!!` loud marker;
+  no `::warning::` — scanerrors is not an alert channel; never in the
+  screen payload). A row: `end` (== the row's
   `last_bar`), `f` (1 = the arrays end with the forming bar), `o h l c`
   (5 significant figures, null only if non-finite), `v` (int 0..100 of the
   window's loudest bar), `ma` (one array per `smas` entry: the SMA on the
@@ -2254,7 +2266,10 @@ explicit list is where a new odd-named peg has to be added. Pins:
   Four display constants, no ruleset bump: `IGNITION_CHART_BARS` 120 (bars
   on every market, never `engine.bars()` — ~6 months ASX, ~4 crypto),
   `IGNITION_CHART_SMAS` (= `IGNITION_RIBBON_SMAS`, one line to change),
-  `IGNITION_CHART_SIG_FIGS` 5, `IGNITION_CHART_VOL_SCALE` 100. Every Ignition
+  `IGNITION_CHART_SIG_FIGS` 5, `IGNITION_CHART_VOL_SCALE` 100. Drawn sizes
+  (ignition.css): 160px tall on a card; a COILED row 240x72 on desktop,
+  380x104 from 1400px (the Name column's spare width; below 1400 a wider
+  chart ellipsizes names), full width x 96 in the phone fold. Every Ignition
   workflow (crypto, ASX, NASDAQ) adds the sidecar to `PATHS` beside the screen file (`SCAN_PUBLISHED`), so it
   gets its own `git add`, presence check and `assert_staged` (the fresh stamp
   is why a real publish always stages it). **A failed sidecar write fails the
@@ -2287,7 +2302,11 @@ explicit list is where a new odd-named peg has to be added. Pins:
   IS NASDAQ GLOBAL SELECT (~1,430 names, `universe._fetch_nasdaq_listed`,
   the VIVEK scan's list); the Global Market / Capital Market tiers, where
   most small-cap bases live, are left out — widening is the owner's call**
-  (a lens-only tiers pass-through in `run._download`, ~2× the runtime).
+  (a lens-only tiers pass-through in `run._download`, ~2× the runtime). The
+  replay's SURVIVORSHIP caveat says so (`backtest.UNIVERSE_WHY`: "today's
+  NASDAQ Global Select (in good standing) listings", missing names that were
+  "moved down a tier or put on a deficiency notice" too); the ASX caveat is
+  byte-identical (pinned).
   **COMPLETENESS IS GATED:** a market missing from any per-market dict
   silently ran on crypto's value (QNT as a design case, 0.30 cost, a 3-day
   age, a $1M trigger, a BTC regime in the replay) with nothing erroring, so
@@ -2303,11 +2322,21 @@ explicit list is where a new odd-named peg has to be added. Pins:
   low (only VIVEK A+/A names are cached) and fills on the second run. The
   deck pill shows on the NASDAQ deck (session-market staleness, weekday
   hours); the STALE badge names each market's own workflow ("Ignition scan
-  (NASDAQ)"). Open, not done: `bar_is_forming` calls a stock bar complete at
-  the 16:00 session close while volume is final only at the bar-final time
-  (the NASDAQ crons never land in that gap; the ASX's `54 4` intraday cron is
-  15:54 Sydney under AEDT, so a slow download could cross 16:00) — a
-  separate change, since it moves pinned ASX tests. Pins:
+  (NASDAQ)"). **THE 16:00–16:30 GAP (2026-10-08 review):** on time the NASDAQ
+  crons never land between the bell and the bar-final, but GitHub runs crons
+  hours late, and a dispatch or a kick can land anywhere. So (1)
+  `run.bar_is_forming` calls a NASDAQ bar FORMING until its
+  `IGNITION_BAR_FINAL` (16:30 New York), not the 16:00 bell — scoped by
+  `config.IGNITION_FORMING_UNTIL_BAR_FINAL = ("nasdaq",)`; a run in the gap
+  publishes today's break as provisional, never confirmed; (2)
+  ignition_nasdaq.yml's gate skips an INTRADAY cron that lands at/after 15:30
+  New York (read before the download, run.py's clock after it; it also stops
+  a run that straddles 16:30 from stamping past it and making
+  `ignition_due.py` skip both backstops). Still open on the ASX:
+  `bar_is_forming` completes its bar at the 16:00 session close, not its
+  16:40 bar-final (the `54 4` intraday cron is 15:54 Sydney under AEDT, so a
+  slow download could cross 16:00) — a separate change, since it moves
+  pinned ASX tests and the AEST 06:24 UTC primary. Pins:
   `tests/test_ignition_nasdaq.py`, the TWINS pins in
   `tests/test_ignition_asx.py`, `test/ignition.test.js`.
 - **What the replay says (exchange data + peg rule, run of 2026-09-28

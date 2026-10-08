@@ -396,6 +396,23 @@ def test_one_broken_frame_lands_in_missing_and_the_others_still_build():
     assert missing == ["B", "GONE"]
 
 
+def test_on_error_hears_each_failed_row_and_WHY_and_the_result_does_not_move():
+    """A chart failure is swallowed (it never costs the screen) but not into
+    silence: the reason reaches the caller's hook. Same rows, same missing
+    list with or without the hook."""
+    good = walk(200)
+    broken = good.drop(columns=["Close"])
+    results = [{"yf": "GONE", "state": "COILED"}, {"yf": "B", "state": "COILED"},
+               {"yf": "A", "state": "COILED"}]
+    frames = {"A": good, "B": broken}
+    heard = []
+    rows, missing = thumbs.build(results, frames, {},
+                                 on_error=lambda yf, exc: heard.append((yf, type(exc))))
+    assert heard == [("GONE", KeyError), ("B", ValueError)], "every failure, in results order"
+    bare_rows, bare_missing = thumbs.build(results, frames, {})
+    assert (list(rows), missing) == (list(bare_rows), bare_missing) == (["A"], ["B", "GONE"])
+
+
 # ---------------------------------------------------------------------------
 # 9. the sidecar body
 # ---------------------------------------------------------------------------
@@ -511,6 +528,41 @@ def test_a_row_whose_chart_fails_is_missing_and_the_run_still_publishes(cli, mon
     (_, screen, _), (_, charts, _) = cli["published"]
     assert charts["missing"] == ["RUN-USD"] and "RUN-USD" not in charts["rows"]
     assert "RUN-USD" in {r["yf"] for r in screen["results"]}
+    assert charts["chart_errors"] == 1
+    assert charts["chart_error_sample"] == [{"symbol": "RUN-USD", "error": "ValueError: synthetic"}]
+
+
+def test_a_chart_break_on_every_row_prints_its_REASON_and_the_sidecar_keeps_it(cli, monkeypatch,
+                                                                              capsys):
+    """The scenario the bare ticker list hid: something systematic makes
+    series() raise on every row. The run still publishes (a chart never costs
+    the screen) but the log names the exception kind, loud past
+    SCAN_ERROR_LOUD_PCT, and the committed sidecar carries the count and a
+    sample. No ::warning:: -- scanerrors is not an alert channel."""
+    def series(done, forming, row):
+        raise KeyError("Volume")
+
+    monkeypatch.setattr(RUN.thumbs, "series", series)
+    assert RUN.main(["--market", "crypto"]) == 0
+    out = capsys.readouterr().out
+    (_, screen, _), (_, charts, _) = cli["published"]
+    n = len(screen["results"])
+    assert n >= 2 and charts["rows"] == {} and len(charts["missing"]) == n
+    assert f"!! ignition charts [crypto]: {n} failed of {n} (100.0%) - KeyError x{n}" in out
+    assert "::warning::" not in out
+    assert charts["chart_errors"] == n
+    assert charts["chart_error_sample"][0]["error"] == "KeyError: 'Volume'"
+    assert not any(k.startswith("chart_") for k in screen), "the screen payload never carries them"
+
+
+def test_a_clean_chart_build_still_prints_its_line_and_publishes_a_zero(cli, capsys):
+    assert RUN.main(["--market", "crypto"]) == 0
+    out = capsys.readouterr().out
+    (_, screen, _), (_, charts, _) = cli["published"]
+    n = len(screen["results"])
+    assert f"  ignition charts [crypto]: 0 failed of {n}\n" in out
+    assert list(charts)[-3:] == ["missing", "chart_errors", "chart_error_sample"]
+    assert (charts["chart_errors"], charts["chart_error_sample"]) == (0, [])
 
 
 def test_a_dry_run_and_a_backtest_never_publish_a_sidecar(cli):

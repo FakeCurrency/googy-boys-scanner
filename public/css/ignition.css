@@ -262,6 +262,14 @@ a.ig-chart:hover { box-shadow: inset 0 0 0 1px var(--ig-line); }
 .ig-tbl td.c-chart { width: 240px; padding: 6px 4px 6px 8px; }
 .ig-tbl .ig-chart { width: 240px; height: 72px; }
 .ig-tbl tr.is-dim .ig-chart { opacity: 0.6; }
+/* 1400px+: the Name column runs ~300px wider than the names need, so the
+   row chart takes it (240x72 is a ~2px-a-bar tangle; 380x104 gives the
+   price pane ~3px a bar and a readable volume strip). Below 1400 a wider
+   chart starts ellipsizing names, so the 240x72 above stands. */
+@media (min-width: 1400px) {
+  .ig-tbl.has-chart td.c-chart { width: 380px; }
+  .ig-tbl.has-chart .ig-chart { width: 380px; height: 104px; }
+}
 /* 1001-1199px: the two quiet columns go to the row tooltip (it says both). */
 @media (min-width: 1001px) and (max-width: 1199px) {
   .ig-tbl.has-chart .c-dd, .ig-tbl.has-chart .c-q { display: none; }

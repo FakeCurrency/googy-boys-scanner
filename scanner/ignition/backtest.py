@@ -699,6 +699,20 @@ COST_WHY = {
               "$2-10 price",
 }
 
+# What the replayed universe REALLY is, where the market's label alone would
+# overstate it (the SURVIVORSHIP caveat): (universe, how a name leaves it).
+# NASDAQ replays Global Select names in good standing only
+# (universe._fetch_nasdaq_listed(tiers="Q") drops the Global Market and Capital
+# Market tiers and every non-N/blank Financial Status), and both filters select
+# on OUTCOME: a coil that ran tends to be in Global Select today, one that
+# failed is often a tier down or deficient. Display text only; a market not
+# named here reads its label (the ASX caveat is byte-identical).
+UNIVERSE_WHY = {
+    "nasdaq": ("NASDAQ Global Select (in good standing)",
+               "delisted, suspended, taken over, moved down a tier or put on a deficiency "
+               "notice"),
+}
+
 
 def _caveats(market: str, data_note: Optional[str], design: dict) -> List[str]:
     """The published honesty block. Crypto's wording is unchanged."""
@@ -725,11 +739,11 @@ def _caveats(market: str, data_note: Optional[str], design: dict) -> List[str]:
     else:
         rule += ("No design case: no %s chart informed the port, so every trigger is "
                  "scored." % label)
+    universe, gone = UNIVERSE_WHY.get(market, (label, "delisted, suspended or taken over"))
     return [
         "SURVIVORSHIP: today's %s listings only. A company that broke out and was later "
-        "delisted, suspended or taken over is missing, along with every failed breakout it "
-        "had. Long-breakout results are biased UP -- judge against random_timing, not "
-        "zero." % label,
+        "%s is missing, along with every failed breakout it had. Long-breakout results are "
+        "biased UP -- judge against random_timing, not zero." % (universe, gone),
         "Realised trades only: open and pending trades are shown as marks beside the "
         "numbers, never inside them.",
         rule,

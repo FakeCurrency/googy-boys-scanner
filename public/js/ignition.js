@@ -110,7 +110,7 @@
   const CHART_COL = ["c-chart", "Chart", "Recent daily bars: candles and volume, the SMA lines, the base " +
     "(shaded), the breakout level (dashed teal); on a trigger, the trigger bar (yellow column), the stop " +
     "(dashed red) and the exit (grey column). Tap a chart to open the full chart."];
-  const CHART_RETRY_MS = 30 * 1000;   // re-read a sidecar that describes another run, this soon
+  const CHART_RETRY_MS = 30 * 1000;   // screen and sidecar from different runs: re-read the one behind, this soon
 
   // ── pure helpers (sliced and executed by test/ignition.test.js) ──────────
 
@@ -1034,6 +1034,8 @@
   let openFor = null;       // the market whose panel is open, or null
   let current = null;       // the market the deck is showing (last sync)
   let painted = "";         // what the panel currently shows, to skip repaints
+  let deckReady = null;     // the deck's latest re-render callback (pill's onReady)
+  let retrying = false;     // one re-read is queued while screen and sidecar disagree
 
   // A renderer fault must reach window.onerror, not vanish into a catch.
   const report = (err) => { setTimeout(() => { throw err; }, 0); };
@@ -1078,6 +1080,7 @@
   // (the deck's re-render) once it settles.
   function pill(market, onReady) {
     if (!isMarket(market)) return null;
+    if (typeof onReady === "function") deckReady = onReady;
     const e = load(live, market, liveUrl(market), LIVE_TTL_MS, onReady);
     if (entryStatus(e) === "loading") return loadingInfo();
     return pillInfo(e.data, openFor === market, staleOf(e.data, market, Date.now()));
@@ -1102,6 +1105,36 @@
     });
   }
 
+  // The screen and its sidecar landed from DIFFERENT runs (a deploy between
+  // the two fetches), so the charts wait. Nothing else re-reads either file
+  // soon -- the live file only through pill(), on the deck's 5-minute TTL --
+  // so chase the one that is behind. A sidecar NEWER than the screen means
+  // the screen is out of date: re-read it (stamps are same-format ISO
+  // strings, so they order as text) and hand the result to the deck, so the
+  // pill and the panel heading move together. Either way, ONE timer re-runs
+  // sync() just past CHART_RETRY_MS while the panel stays open on this
+  // market; the next disagreeing sync queues the next one, so it stops by
+  // itself once they agree or the panel closes.
+  function chase(market, e, c) {
+    const cg = obj(c.data).generated_at, eg = obj(e.data).generated_at;
+    if (!c.data || typeof cg !== "string" || typeof eg !== "string" || cg === eg) return;
+    if (cg > eg) {
+      load(live, market, liveUrl(market), CHART_RETRY_MS,
+        () => { painted = ""; if (deckReady) deckReady(market); else sync(current); });
+    }
+    // A sidecar fetch in flight re-runs sync() when it lands (and re-queues
+    // from there if they still disagree), so no timer is needed behind it.
+    if (!retrying && !c.inflight) {
+      retrying = true;
+      setTimeout(() => {
+        retrying = false;
+        // No forced repaint: sync() re-reads what is due and redraws only if
+        // something landed (a closed panel or a market switch: nothing).
+        if (openFor === market && current === market) sync(market);
+      }, CHART_RETRY_MS + 1000);
+    }
+  }
+
   // Show / hide / repaint #ignition-panel for the market the deck is on.
   function sync(market) {
     // A market switch CLOSES the panel: coming back must not re-open it
@@ -1121,6 +1154,7 @@
     const repaint = () => { painted = ""; sync(current); };
     const b = load(bts, market, btUrl(market), null, repaint);
     const c = load(chs, market, chartsUrl(market), chartsTtl(chs[market], e.data), repaint);
+    chase(market, e, c);
     const status = entryStatus(b);
     let html, key;
     // Everything that reads the payload sits inside the try: a value that
