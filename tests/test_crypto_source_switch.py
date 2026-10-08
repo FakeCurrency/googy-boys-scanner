@@ -31,7 +31,10 @@ def _klines(n=3, px=100.0):
 
 
 def _yahoo_frame(px=7.0):
-    idx = pd.date_range(end="2024-01-03", periods=3, freq="D")
+    # Ends TODAY (audit 2026-10-08 #4): the Yahoo leg now has the exchange
+    # legs' bar-age gate, so a frame ending in 2024 is a frozen series.
+    idx = pd.date_range(end=pd.Timestamp.now(tz="UTC").normalize().tz_localize(None),
+                        periods=3, freq="D")
     return pd.DataFrame({"Open": px, "High": px, "Low": px, "Close": px, "Volume": 1.0}, index=idx)
 
 

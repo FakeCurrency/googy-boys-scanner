@@ -271,6 +271,53 @@ def bar_age_days(df: Optional[pd.DataFrame], now: Optional[dt.datetime] = None) 
         return None
 
 
+def _completed(df: pd.DataFrame, now: dt.datetime) -> pd.DataFrame:
+    """The frame without its trailing FORMING daily bar(s) (the current UTC
+    date or later: config.daily_bar_forming) -- the bars VIVEK grades once
+    scan.py drops the forming one."""
+    k = len(df)
+    while k > 0 and config.daily_bar_forming("crypto", pd.Timestamp(df.index[k - 1]), now):
+        k -= 1
+    return df.iloc[:k]
+
+
+def completed_bar_age_days(df: Optional[pd.DataFrame],
+                           now: Optional[dt.datetime] = None) -> Optional[int]:
+    """Whole UTC days between the frame's newest COMPLETED daily bar and `now`
+    (bar_age_days reads the newest bar, which on a Yahoo frame is yfinance's
+    live row). None when no bar is completed yet or the index is unreadable."""
+    if df is None or not len(df):
+        return None
+    now = now or dt.datetime.now(dt.timezone.utc)
+    try:
+        return bar_age_days(_completed(df, now), now)
+    except Exception:  # noqa: BLE001 - unreadable = unknown
+        return None
+
+
+def quantized(df: Optional[pd.DataFrame], now: Optional[dt.datetime] = None,
+              bars: Optional[int] = None, min_distinct: Optional[int] = None) -> bool:
+    """True when the last `bars` COMPLETED daily closes take fewer than
+    `min_distinct` distinct values (config CRYPTO_YAHOO_QUANT_*): history
+    rounded to a price grid coarser than the coin (Yahoo's 6 decimals on a
+    sub-1e-5 coin) or frozen flat. False when fewer than `bars` completed
+    bars exist -- too short to judge."""
+    if df is None or not len(df):
+        return False
+    now = now or dt.datetime.now(dt.timezone.utc)
+    bars = int(config.CRYPTO_YAHOO_QUANT_BARS if bars is None else bars)
+    need = int(config.CRYPTO_YAHOO_QUANT_MIN_DISTINCT if min_distinct is None else min_distinct)
+    if bars <= 0 or need <= 0:
+        return False
+    try:
+        closes = pd.to_numeric(_completed(df, now)["Close"], errors="coerce").dropna()
+    except Exception:  # noqa: BLE001 - unreadable = cannot judge
+        return False
+    if len(closes) < bars:
+        return False
+    return int(closes.iloc[-bars:].nunique()) < need
+
+
 def anchor_ok(df: Optional[pd.DataFrame], anchor, tol: Optional[float] = None) -> bool:
     """Does this frame reproduce a price already RECORDED for the coin?
     `anchor` = (YYYY-MM-DD, price): the frame's close on that date must sit

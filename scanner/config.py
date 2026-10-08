@@ -179,6 +179,28 @@ CRYPTO_ANCHOR_TOL = 0.15
 # venue and froze a held coin's mark (fourth pre-merge review). A thin coin with
 # no trade today or yesterday falls through to the next venue / Yahoo.
 EXCHANGE_MAX_BAR_AGE_DAYS = 1
+# THE YAHOO FALLBACK LEG gets the same gate, and two more (audit 2026-10-08
+# #4/#16/#17): data.fetch's Yahoo leg had none, so a coin no exchange lists
+# (BDX, WBT, OKB were held) or whose pair is stale-rejected (BTT, LIT...) was
+# priced off any Yahoo frame whose LAST ROW passed identity. A Yahoo crypto
+# frame is the daily HISTORY plus yfinance's separate LIVE row dated today,
+# so the last row says nothing about the bars VIVEK grades. (1) Newest bar
+# older than EXCHANGE_MAX_BAR_AGE_DAYS = the quote itself froze: stale. (2)
+# Newest COMPLETED bar (the forming row dropped) older than this = the live
+# row is glued onto history Yahoo stopped printing (BTT: bars ending
+# 2025-10-27, published as data_age_days 0): stale. 2, not 1: Yahoo prints
+# D-1 late, and at 05:52Z on 2026-10-07 31 healthy Yahoo frames ended D-2.
+CRYPTO_YAHOO_MAX_COMPLETED_AGE_DAYS = 2
+# (3) Yahoo rounds daily crypto history to 6 decimals, so a sub-1e-5 coin's
+# completed closes are a constant 1e-06 / 2e-06 while the live row carries the
+# real price (HTX: every close 2e-06 for a 1.71e-06 coin; published B+ with
+# risk 0 and stop == entry). Fewer than MIN_DISTINCT distinct values among the
+# last QUANT_BARS completed closes = not a price series: refused under
+# identity_rejected. Every real coin measured has 17-20 of 20 (Binance SHIB at
+# 5.4e-06: 17); the two quantized ones have 1. Judged only with QUANT_BARS
+# completed bars in hand (the kill switch's 5d fetch is not judged).
+CRYPTO_YAHOO_QUANT_BARS = 20
+CRYPTO_YAHOO_QUANT_MIN_DISTINCT = 5
 EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit

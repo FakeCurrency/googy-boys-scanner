@@ -388,7 +388,9 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
     volume), Yahoo only for the coins no exchange lists (and only when
     CRYPTO_YAHOO_FALLBACK). Every other market, or "yahoo": `download()`
     exactly as before. Tickers keep their Yahoo spelling ("QNT-USD") either
-    way, so every caller's keys are unchanged.
+    way, so every caller's keys are unchanged. The Yahoo leg gets the
+    exchange legs' age gate plus two history checks (`_yahoo_fault`): its
+    last row is yfinance's live quote, not the bars VIVEK grades.
 
     `interval` "1d" (the scan, the bot, the lens) or "4h" (the display-only
     4H plans). Yahoo has no 4h, so a Yahoo leg asks for 1h and vivek's
@@ -418,7 +420,8 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
 
     The report: `source_of` {ticker: venue}, `by_source` counts, `dead`
     venues (refused the runner), `yahoo_fallback` count, `identity_rejected`,
-    `stale_rejected` (a venue whose newest bar is too old: a delisted pair),
+    `stale_rejected` (a venue whose newest bar is too old: a delisted pair;
+    for "yahoo" also a frozen history behind a live row),
     `refused`, and `unchecked` (tickers priced with no reference at all).
     """
     tickers = list(tickers)
@@ -478,8 +481,15 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
             fb = {t: f for t, f in download(to_yahoo, period=period, **ykw).items()
                   if t in asked}
             for t, f in list(fb.items()):
-                how = exchange_data.identity_of(f, (ref_prices or {}).get(t), (anchors or {}).get(t),
-                                                ref_tol, require_identity)
+                fault = _yahoo_fault(f, yahoo_iv)
+                if fault == "stale":
+                    # Yahoo is a venue like any other: a frozen series is not
+                    # a price (audit 2026-10-08 #4/#17).
+                    stale.setdefault(base[t], []).append("yahoo")
+                    del fb[t]
+                    continue
+                how = None if fault else exchange_data.identity_of(
+                    f, (ref_prices or {}).get(t), (anchors or {}).get(t), ref_tol, require_identity)
                 if how is None:
                     rejected.setdefault(base[t], []).append("yahoo")
                     del fb[t]
@@ -524,6 +534,43 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
                         "price (no CoinGecko price in the universe)", market_key,
                         report["unchecked"])
     return frames, report
+
+
+def _yahoo_fault(df, interval: str = "1d", now: dt.datetime | None = None) -> str | None:
+    """Why a crypto frame from fetch()'s Yahoo leg cannot be used, or None.
+
+    The exchange legs refuse a frozen pair inside download_klines; this leg
+    had no gate at all (audit 2026-10-08 #4). And a Yahoo crypto frame is two
+    things glued together -- the daily HISTORY and yfinance's separate LIVE
+    row dated today -- so every check that read the last row read the live
+    quote: history Yahoo stopped printing a year ago passed as 0 days old
+    (#17, BTT) and history rounded to 6 decimals passed identity on the live
+    row's full precision (#16, HTX). VIVEK grades the history, so the
+    history is what is checked here (config CRYPTO_YAHOO_* for the numbers).
+
+      "stale"     newest bar older than EXCHANGE_MAX_BAR_AGE_DAYS (the quote
+                  froze), or -- daily -- newest COMPLETED bar older than
+                  CRYPTO_YAHOO_MAX_COMPLETED_AGE_DAYS (the history froze).
+      "quantized" daily: the recent completed closes are not a price series
+                  (exchange_data.quantized) -- refused as unproven identity.
+    """
+    from . import exchange_data
+    now = now or dt.datetime.now(dt.timezone.utc)
+    max_age = int(getattr(config, "EXCHANGE_MAX_BAR_AGE_DAYS", 0) or 0)
+    if max_age:
+        age = exchange_data.bar_age_days(df, now)
+        if age is None or age > max_age:
+            return "stale"
+    if interval != "1d":
+        return None          # intraday (the display-only 4H plans): full precision
+    max_done = int(getattr(config, "CRYPTO_YAHOO_MAX_COMPLETED_AGE_DAYS", 0) or 0)
+    if max_done:
+        done = exchange_data.completed_bar_age_days(df, now)
+        if done is not None and done > max_done:
+            return "stale"
+    if exchange_data.quantized(df, now):
+        return "quantized"
+    return None
 
 
 def identity_kwargs(market_key: str, items: list, cache_key: str | None = None) -> dict:

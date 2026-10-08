@@ -152,7 +152,10 @@ def test_live_marks_suffix_mapping_and_batching(monkeypatch):
     import scanner.data as sdata
 
     def _frame(px):
-        idx = pd.date_range(end="2024-01-02", periods=3, freq="D")
+        # Ends TODAY (audit 2026-10-08 #4): the crypto leg reaches Yahoo through
+        # data.fetch, which now refuses a frozen (2024-dated) series as stale.
+        idx = pd.date_range(end=pd.Timestamp.now(tz="UTC").normalize().tz_localize(None),
+                            periods=3, freq="D")
         return pd.DataFrame({"Close": [px] * 3}, index=idx)
 
     asked = []
