@@ -1,0 +1,773 @@
+{
+  "schema_version": 1,
+  "lens": "ignition",
+  "market": "nasdaq",
+  "generated_at": "2026-10-08T05:05:29+00:00",
+  "ruleset_version": "1.0.0",
+  "timeframe": "1d",
+  "last_closed_bar": "2026-10-07",
+  "report_only": true,
+  "regime": {
+    "index": "^IXIC",
+    "label": "NASDAQ Composite",
+    "close": 27538.69,
+    "sma200": 24798.61,
+    "above_200": true,
+    "vs_200_pct": 11.0,
+    "as_of": "2026-10-07"
+  },
+  "params": {
+    "ribbon_max": 0.12,
+    "atr_pctl_max": 0.25,
+    "vol_pctl_max": 0.35,
+    "min_drawdown": 0.5,
+    "coil_lookback": 10,
+    "breakout_tol": 0.0,
+    "rvol_min": 3.0,
+    "max_ext": 0.6,
+    "min_base_turnover": 1000000.0,
+    "min_trigger_turnover": 3000000.0,
+    "rearm_bars": 20,
+    "stop_atr_mult": 1.0,
+    "require_coil": true,
+    "require_rvol": true
+  },
+  "rules": {
+    "fresh_bars": 2,
+    "keep_bars": 20,
+    "base_bars": 60,
+    "trail_sma": 9,
+    "wide_stop_pct": 35.0,
+    "bars_per_year": 252,
+    "calendar_windows": {
+      "IGNITION_RANK_WINDOW": 504,
+      "IGNITION_RANK_MIN_PERIODS": 252,
+      "IGNITION_DD_LOOKBACK": 756,
+      "IGNITION_DD_MIN_PERIODS": 252,
+      "IGNITION_MIN_BARS": 276,
+      "IGNITION_BT_MAX_HOLD": 124,
+      "IGNITION_BT_RANDOM_WINDOW": 126
+    }
+  },
+  "summary": {
+    "universe": 1429,
+    "downloaded": 1429,
+    "screened": 1324,
+    "skipped": {
+      "short history": 105
+    },
+    "counts": {
+      "IGNITING": 0,
+      "RUNNING": 1,
+      "CLOSED": 1,
+      "COILED": 20,
+      "provisional": 0,
+      "igniting_confirmed": 0
+    },
+    "bars": {
+      "completed_last": "2026-10-07",
+      "raw_last": "2026-10-07",
+      "expected_completed": null,
+      "lagging": 0,
+      "completed_dist": {
+        "2026-10-07": 1428,
+        "2026-10-06": 1
+      },
+      "raw_dist": {
+        "2026-10-07": 1428,
+        "2026-10-06": 1
+      }
+    },
+    "sources": {
+      "mode": "yahoo",
+      "by_source": {
+        "yahoo": 1429
+      },
+      "dead": {},
+      "errors": {},
+      "no_exchange": [],
+      "yahoo_fallback": 0,
+      "identity_rejected": {},
+      "stale_rejected": {},
+      "refused": [],
+      "pinned_missing": [],
+      "unchecked": 0
+    },
+    "errors": 0,
+    "cache": {
+      "fresh": 1429,
+      "reused": 0,
+      "merged": 1429,
+      "universe": 1429,
+      "stale_dropped": 0,
+      "refused": 0
+    },
+    "mcap": {
+      "rows": 22,
+      "have": 17
+    },
+    "elapsed_s": 237.1
+  },
+  "results": [
+    {
+      "symbol": "PCVX",
+      "name": "Vaxcyte, Inc. - Common Stock",
+      "yf": "PCVX",
+      "source": "yahoo",
+      "trigger_date": "2026-10-05",
+      "trigger_close": 73.81999969,
+      "entry": 73.34999847,
+      "entry_basis": "next_open",
+      "entry_date": "2026-10-06",
+      "bars_since": 2,
+      "rvol": 9.98,
+      "ext_pct": 25.9,
+      "turnover_trigger": 1101689675.0,
+      "turnover_base": 87099738.0,
+      "base": {
+        "high": 63.97999954,
+        "low": 52.47000122,
+        "bars": 60,
+        "range_pct": 21.9
+      },
+      "stop": 61.82639371,
+      "risk_pct": 15.7,
+      "wide_stop": false,
+      "mm_target": 75.48999786,
+      "mm_passed": false,
+      "mm_r": 0.19,
+      "coil": {
+        "ribbon_pct": 7.37,
+        "atr_pctl": 8.7,
+        "vol_pctl": 57.5,
+        "drawdown_pct": 53.3,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.0,
+      "state": "RUNNING",
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 66.95999908,
+      "change_pct": -8.7,
+      "r_now": -0.55,
+      "trail": 60.89777713,
+      "mcap": 8435770880.0,
+      "mcap_asof": "2026-09-30",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "CTKB",
+      "name": "Cytek Biosciences, Inc. - Common Stock",
+      "yf": "CTKB",
+      "source": "yahoo",
+      "trigger_date": "2026-09-22",
+      "trigger_close": 5.71000004,
+      "entry": 5.73000002,
+      "entry_basis": "next_open",
+      "entry_date": "2026-09-23",
+      "bars_since": 11,
+      "rvol": 3.64,
+      "ext_pct": 13.5,
+      "turnover_trigger": 21576948.0,
+      "turnover_base": 5018354.0,
+      "base": {
+        "high": 5.32000017,
+        "low": 4.04500008,
+        "bars": 60,
+        "range_pct": 31.5
+      },
+      "stop": 5.09730824,
+      "risk_pct": 11.0,
+      "wide_stop": false,
+      "mm_target": 6.59500027,
+      "mm_passed": false,
+      "mm_r": 1.37,
+      "coil": {
+        "ribbon_pct": 7.58,
+        "atr_pctl": 1.4,
+        "vol_pctl": 72.8,
+        "drawdown_pct": 46.5,
+        "coiled": false,
+        "coiled_bars": 0
+      },
+      "mfe_r": 0.76,
+      "exit_reason": "trail",
+      "exit_date": "2026-10-07",
+      "exit_price": 5.21000004,
+      "exit_r": -0.82,
+      "exit_pending": false,
+      "state": "CLOSED",
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 5.34000015,
+      "change_pct": -6.8,
+      "r_now": -0.62,
+      "trail": 5.73333338,
+      "mcap": 763001728.0,
+      "mcap_asof": "2026-10-04",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "INMD",
+      "name": "InMode Ltd.  - Ordinary Shares",
+      "yf": "INMD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 4.16,
+        "atr_pctl": 0.4,
+        "vol_pctl": 5.0,
+        "drawdown_pct": 53.3,
+        "coiled": true,
+        "coiled_bars": 84,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 15.67000008,
+        "low": 13.94999981,
+        "bars": 60
+      },
+      "breakout_level": 15.67000008,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 14.01000023,
+      "mcap": 813099136.0,
+      "mcap_asof": "2026-10-05",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "PTON",
+      "name": "Peloton Interactive, Inc. - Common Stock",
+      "yf": "PTON",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 7.9,
+        "atr_pctl": 2.8,
+        "vol_pctl": 11.9,
+        "drawdown_pct": 55.5,
+        "coiled": true,
+        "coiled_bars": 11,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 6.73000002,
+        "low": 4.69000006,
+        "bars": 60
+      },
+      "breakout_level": 6.73000002,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 4.8499999,
+      "mcap": 2369907712.0,
+      "mcap_asof": "2026-09-04",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "HCAT",
+      "name": "Health Catalyst, Inc - Common stock",
+      "yf": "HCAT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 3.17,
+        "atr_pctl": 3.0,
+        "vol_pctl": 1.6,
+        "drawdown_pct": 84.6,
+        "coiled": true,
+        "coiled_bars": 10,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 2.4000001,
+        "low": 1.52999997,
+        "bars": 60
+      },
+      "breakout_level": 2.4000001,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 1.75999999,
+      "mcap": 163305776.0,
+      "mcap_asof": "2026-08-04",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "XBIT",
+      "name": "XBiotech Inc. - Common Stock",
+      "yf": "XBIT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.39,
+        "atr_pctl": 0.6,
+        "vol_pctl": 16.1,
+        "drawdown_pct": 78.0,
+        "coiled": true,
+        "coiled_bars": 6,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 2.47000003,
+        "low": 2.13000011,
+        "bars": 60
+      },
+      "breakout_level": 2.47000003,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 2.19000006,
+      "mcap": null,
+      "mcap_asof": null,
+      "mcap_src": null
+    },
+    {
+      "symbol": "ASPS",
+      "name": "Altisource Portfolio Solutions S.A. - Common Stock",
+      "yf": "ASPS",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.05,
+        "atr_pctl": 15.1,
+        "vol_pctl": 10.1,
+        "drawdown_pct": 84.2,
+        "coiled": true,
+        "coiled_bars": 6,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 7.26000023,
+        "low": 5.0,
+        "bars": 60
+      },
+      "breakout_level": 7.03000021,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 5.94999981,
+      "mcap": null,
+      "mcap_asof": null,
+      "mcap_src": null
+    },
+    {
+      "symbol": "CRNT",
+      "name": "Ceragon Networks Ltd. - Ordinary Shares",
+      "yf": "CRNT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.77,
+        "atr_pctl": 2.2,
+        "vol_pctl": 6.2,
+        "drawdown_pct": 62.8,
+        "coiled": true,
+        "coiled_bars": 4,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 2.4000001,
+        "low": 1.99000001,
+        "bars": 60
+      },
+      "breakout_level": 2.4000001,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 2.13000011,
+      "mcap": 207237632.0,
+      "mcap_asof": "2026-07-21",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "GPRE",
+      "name": "Green Plains, Inc. - Common Stock",
+      "yf": "GPRE",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 1.77,
+        "atr_pctl": 0.2,
+        "vol_pctl": 29.6,
+        "drawdown_pct": 51.9,
+        "coiled": true,
+        "coiled_bars": 3,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 19.64999962,
+        "low": 13.43000031,
+        "bars": 60
+      },
+      "breakout_level": 19.64999962,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 15.34000015,
+      "mcap": 1061944192.0,
+      "mcap_asof": "2026-10-05",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 7.62,
+        "atr_pctl": 4.2,
+        "vol_pctl": 41.5,
+        "drawdown_pct": 76.1,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-24"
+      },
+      "base": {
+        "high": 4.5999999,
+        "low": 3.54999995,
+        "bars": 60
+      },
+      "breakout_level": 4.5999999,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 3.75,
+      "mcap": 656002624.0,
+      "mcap_asof": "2026-09-30",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "MOLN",
+      "name": "Molecular Partners AG - American Depositary Shares",
+      "yf": "MOLN",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 7.66,
+        "atr_pctl": 25.6,
+        "vol_pctl": 12.3,
+        "drawdown_pct": 70.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-05"
+      },
+      "base": {
+        "high": 4.71999979,
+        "low": 3.72000003,
+        "bars": 60
+      },
+      "breakout_level": 4.71999979,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 3.80999994,
+      "mcap": null,
+      "mcap_asof": null,
+      "mcap_src": null
+    },
+    {
+      "symbol": "GLXY",
+      "name": "Galaxy Digital Inc. - Class A common stock",
+      "yf": "GLXY",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.85,
+        "atr_pctl": 29.4,
+        "vol_pctl": 4.8,
+        "drawdown_pct": 53.4,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-06"
+      },
+      "base": {
+        "high": 27.6760006,
+        "low": 18.21999931,
+        "bars": 60
+      },
+      "breakout_level": 27.6760006,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 21.39999962,
+      "mcap": 14284567552.0,
+      "mcap_asof": "2026-09-26",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "FOXF",
+      "name": "Fox Factory Holding Corp. - Common Stock",
+      "yf": "FOXF",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.62,
+        "atr_pctl": 45.2,
+        "vol_pctl": 45.8,
+        "drawdown_pct": 80.9,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-25"
+      },
+      "base": {
+        "high": 22.09000015,
+        "low": 17.0,
+        "bars": 60
+      },
+      "breakout_level": 22.09000015,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 18.62000084,
+      "mcap": 782617280.0,
+      "mcap_asof": "2026-10-07",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "LINE",
+      "name": "Lineage, Inc. - Common Stock",
+      "yf": "LINE",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.82,
+        "atr_pctl": 20.8,
+        "vol_pctl": 56.7,
+        "drawdown_pct": 57.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-02"
+      },
+      "base": {
+        "high": 44.42441102,
+        "low": 33.5,
+        "bars": 60
+      },
+      "breakout_level": 44.42441102,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 34.20999908,
+      "mcap": 9332710400.0,
+      "mcap_asof": "2026-09-21",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "KRNT",
+      "name": "Kornit Digital Ltd. - Ordinary Shares",
+      "yf": "KRNT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.86,
+        "atr_pctl": 9.3,
+        "vol_pctl": 61.3,
+        "drawdown_pct": 47.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-24"
+      },
+      "base": {
+        "high": 19.35000038,
+        "low": 14.35999966,
+        "bars": 60
+      },
+      "breakout_level": 19.35000038,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 17.93000031,
+      "mcap": 724845504.0,
+      "mcap_asof": "2026-10-02",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "PRTA",
+      "name": "Prothena Corporation plc - Ordinary Shares",
+      "yf": "PRTA",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.39,
+        "atr_pctl": 30.8,
+        "vol_pctl": 40.9,
+        "drawdown_pct": 84.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-05"
+      },
+      "base": {
+        "high": 9.86999989,
+        "low": 7.80000019,
+        "bars": 60
+      },
+      "breakout_level": 9.86999989,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 8.47999954,
+      "mcap": 489754752.0,
+      "mcap_asof": "2026-09-08",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "ICFI",
+      "name": "ICF International, Inc. - Common Stock",
+      "yf": "ICFI",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.94,
+        "atr_pctl": 14.1,
+        "vol_pctl": 38.5,
+        "drawdown_pct": 53.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-24"
+      },
+      "base": {
+        "high": 95.53116113,
+        "low": 74.71360074,
+        "bars": 60
+      },
+      "breakout_level": 95.53116113,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 82.84999847,
+      "mcap": 1485822208.0,
+      "mcap_asof": "2026-10-08",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "KLTR",
+      "name": "Kaltura, Inc. - Common Stock",
+      "yf": "KLTR",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 13.33,
+        "atr_pctl": 5.4,
+        "vol_pctl": 7.3,
+        "drawdown_pct": 52.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-28"
+      },
+      "base": {
+        "high": 2.04999995,
+        "low": 1.25199997,
+        "bars": 60
+      },
+      "breakout_level": 2.04999995,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 1.33000004,
+      "mcap": 248658480.0,
+      "mcap_asof": "2026-08-24",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "PLRX",
+      "name": "Pliant Therapeutics, Inc. - Common Stock",
+      "yf": "PLRX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 13.44,
+        "atr_pctl": 13.5,
+        "vol_pctl": 1.0,
+        "drawdown_pct": 95.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-06"
+      },
+      "base": {
+        "high": 1.23000002,
+        "low": 1.00999999,
+        "bars": 60
+      },
+      "breakout_level": 1.23000002,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 0.99000001,
+      "mcap": null,
+      "mcap_asof": null,
+      "mcap_src": null
+    },
+    {
+      "symbol": "SPWH",
+      "name": "Sportsman's Warehouse Holdings, Inc. - Common Stock",
+      "yf": "SPWH",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 14.03,
+        "atr_pctl": 3.8,
+        "vol_pctl": 5.0,
+        "drawdown_pct": 79.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-02"
+      },
+      "base": {
+        "high": 1.36000001,
+        "low": 1.10000002,
+        "bars": 60
+      },
+      "breakout_level": 1.36000001,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 1.12,
+      "mcap": null,
+      "mcap_asof": null,
+      "mcap_src": null
+    },
+    {
+      "symbol": "BOOM",
+      "name": "DMC Global Inc. - Common Stock",
+      "yf": "BOOM",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 15.19,
+        "atr_pctl": 11.1,
+        "vol_pctl": 5.2,
+        "drawdown_pct": 75.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-25"
+      },
+      "base": {
+        "high": 7.8499999,
+        "low": 5.28000021,
+        "bars": 60
+      },
+      "breakout_level": 7.8499999,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 5.80000019,
+      "mcap": 136186480.0,
+      "mcap_asof": "2026-08-27",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "CRTO",
+      "name": "Criteo S.A. - Ordinary Shares",
+      "yf": "CRTO",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 21.97,
+        "atr_pctl": 23.6,
+        "vol_pctl": 8.5,
+        "drawdown_pct": 70.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-25"
+      },
+      "base": {
+        "high": 23.14999962,
+        "low": 14.27999973,
+        "bars": 60
+      },
+      "breakout_level": 23.14999962,
+      "provisional": false,
+      "last_bar": "2026-10-07",
+      "price": 14.89999962,
+      "mcap": 954646016.0,
+      "mcap_asof": "2026-08-14",
+      "mcap_src": "cache"
+    }
+  ],
+  "errors": []
+}
