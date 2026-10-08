@@ -13,7 +13,10 @@ DESIGN DECISIONS (each deliberate):
   and every CI clone pays for it. HISTORY_ARCHIVE_MAX_FILES caps the union.
 - COMPLETED BARS ONLY: the frame's forming bar (today, market-local) is dropped,
   so each file gains at most one FINAL bar per session and quiet days produce
-  byte-identical files (no commit churn from intraday marks).
+  byte-identical files (no commit churn from intraday marks). A frame the
+  frame cache back-filled is yesterday's RAW download, so its bars are judged
+  final at the instant it was FETCHED (audit 2026-10-08 #59), and a same-day
+  rewrite is skipped only when the last bar's values match too.
 - ADJUSTED BASIS, SPLICE-EXTENDED: yfinance auto_adjust re-bases the WHOLE
   series on every dividend/split, so yesterday's stored bars and today's frame
   can sit on different bases. On every write the file is REBUILT from today's
@@ -44,6 +47,7 @@ import pathlib
 from zoneinfo import ZoneInfo
 
 from . import config
+from .data import CACHE_REUSED, FETCHED_AT
 from .journal_common import atomic_write
 
 ROOT = pathlib.Path("data/history")
@@ -55,13 +59,37 @@ def _today(market: str) -> _dt.date:
     return _dt.datetime.now(ZoneInfo(_MARKET_TZ.get(market, "UTC"))).date()
 
 
-def _frame_bars(df, today: _dt.date) -> list[list]:
-    """Frame → [[date, o, h, l, c, v], ...], completed bars only, no invention."""
+def _fetch_instant(df):
+    """For a frame the frame cache BACK-FILLED (data.CACHE_REUSED), the UTC
+    instant it was downloaded; None for a fresh frame. A reused frame is the
+    RAW frame as fetched, forming bar and all, so a bar dated before today
+    may still be that day's mid-session snapshot (audit 2026-10-08 #59).
+    Returns False when the fetch time is unknown: finality cannot be proved."""
+    attrs = getattr(df, "attrs", None) or {}
+    if not attrs.get(CACHE_REUSED):
+        return None
+    try:
+        t = _dt.datetime.fromisoformat(str(attrs.get(FETCHED_AT)))
+    except (TypeError, ValueError):
+        return False
+    return t if t.tzinfo else t.replace(tzinfo=_dt.timezone.utc)
+
+
+def _frame_bars(df, today: _dt.date, market: str = "asx") -> list[list]:
+    """Frame → [[date, o, h, l, c, v], ...], completed bars only, no invention.
+    A cache-reused frame also drops every bar that was still FORMING when it
+    was fetched (config.daily_bar_forming at the fetch instant) -- its last
+    bar if that instant is unknown."""
+    fetched = _fetch_instant(df)
     out = []
-    for ts, row in df.iterrows():
+    for i, (ts, row) in enumerate(df.iterrows()):
         d = ts.date() if hasattr(ts, "date") else ts
         if d >= today:            # forming bar — final close not printed yet
             continue
+        if fetched is False and i == len(df) - 1:
+            continue              # reused, fetch time unknown: not provably final
+        if fetched and config.daily_bar_forming(market, d, fetched):
+            continue              # reused: forming when the cache took it
         try:
             o, h, l, c = float(row["Open"]), float(row["High"]), float(row["Low"]), float(row["Close"])
         except (KeyError, TypeError, ValueError):
@@ -121,7 +149,7 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
             continue
         if sym not in existing and len(existing) + (written and 0) >= max_files and len(existing) >= max_files:
             continue                       # cap new names; existing files still refresh
-        bars = _frame_bars(df, today)
+        bars = _frame_bars(df, today, market)
         if not bars:
             continue
         path = base / f"{sym}.json"
@@ -132,7 +160,9 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
             except (OSError, ValueError):
                 old = None
         if old and old.get("bars"):
-            if old.get("updated") == today.isoformat() and old["bars"] and old["bars"][-1][0] == bars[-1][0]:
+            # Same session AND the same last bar, values included (audit #59:
+            # a bar a later scan corrects must not wait a day to be stored).
+            if old.get("updated") == today.isoformat() and old["bars"] and old["bars"][-1] == bars[-1]:
                 continue                   # same session already archived — no-op
             merged, suspect = _splice(old["bars"], bars, drift)
         else:
