@@ -55,35 +55,37 @@ def backtest_path(market: str) -> pathlib.Path:
 def bar_is_forming(market: str, last_idx, now: dt.datetime) -> bool:
     """Is the trailing daily bar the current, still-forming session?
 
-    Mirrors scan._bar_is_forming (crypto forms until UTC midnight; a stock bar
-    forms until its session close) WITHOUT importing the VIVEK scan module --
-    the lens keeps no edge into the files that decide trades.
+    The repo's ONE answer, config.daily_bar_forming: crypto forms until UTC
+    midnight; a stock bar forms until the instant the feed shows the session's
+    FINAL print (config.DAILY_BAR_FINAL -- the ASX at 16:40 Sydney, the
+    2026-10-06 close ruling). It used VIVEK_JOURNAL_SESSION's 16:00 close
+    until audit #22 (2026-10-08), so a run whose clock landed at 16:00-16:40
+    Sydney screened a pre-auction bar as COMPLETED, published a breakout on it
+    as a confirmed IGNITING row and saved it to the frame cache as final. A
+    bar dated AFTER the clock (the day rolled over while the download ran) is
+    forming by definition. Read through config rather than scan.py's copy: the
+    lens keeps no edge into the files that decide trades.
     """
-    mkt = config.MARKETS.get(market)
-    tz = ZoneInfo(getattr(mkt, "timezone", "UTC") or "UTC")
-    local = now.astimezone(tz)
     try:
-        last = pd.Timestamp(last_idx).date()
+        last = pd.Timestamp(last_idx)
     except Exception:
         return False
-    if last < local.date():
-        return False
-    if last > local.date():
-        # A bar dated AFTER the clock: the day rolled over while the download
-        # ran (a run that starts at 23:5x UTC and finishes past midnight gets
-        # the new day's minutes-old bar). It is forming by definition -- the
-        # old `!=` test called it completed and screened a partial bar.
-        return True
-    sess = config.VIVEK_JOURNAL_SESSION.get(market)
-    if not sess:
-        return True
-    return (local.hour * 60 + local.minute) < (sess[2] * 60 + sess[3])
+    return config.daily_bar_forming(market, last, now)
 
 
-def split_forming(frame: pd.DataFrame, market: str, now: dt.datetime):
-    """(completed bars, forming bar or None)."""
+def split_forming(frame: pd.DataFrame, market: str, now: dt.datetime,
+                  since: Optional[dt.datetime] = None):
+    """(completed bars, forming bar or None).
+
+    `since` is the clock read BEFORE the download. A bar counts as completed
+    only when it was already final at BOTH clocks (audit #22): a download
+    that starts at 16:36 Sydney and ends at 16:42 fetched its first names
+    before the ASX close is final on the feed, so the after-download clock
+    alone would bank a pre-auction print. With `since` None (injected frames)
+    only `now` is asked."""
     df = E.clean(frame)
-    if len(df) and bar_is_forming(market, df.index[-1], now):
+    if len(df) and (bar_is_forming(market, df.index[-1], now)
+                    or (since is not None and bar_is_forming(market, df.index[-1], since))):
         return df.iloc[:-1], df.iloc[-1:]
     return df, None
 
@@ -146,15 +148,17 @@ def _download(market: str, period: str, limit: int):
     return rows, frames, report
 
 
-def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime):
+def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime,
+               since: Optional[dt.datetime] = None):
     """({yf: completed bars}, {yf: forming bar}) -- the forming bar is kept
     OUT of anything that persists, so the frame cache only ever holds
     completed bars (a cached mid-day snapshot, re-used the next day when
-    Yahoo drops the ticker, would otherwise be screened as a finished bar)."""
+    Yahoo drops the ticker, would otherwise be screened as a finished bar).
+    `since`: see split_forming."""
     done: Dict[str, pd.DataFrame] = {}
     forming: Dict[str, pd.DataFrame] = {}
     for yf, f in frames.items():
-        d, fm = split_forming(f, market, now)
+        d, fm = split_forming(f, market, now, since)
         if len(d):
             done[yf] = d
         if fm is not None and len(fm):
@@ -257,15 +261,19 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
     cache_stats: dict = {}
     src_report: dict = {}
     caps: dict = {}
+    since: Optional[dt.datetime] = None
     if frames is None:
+        # The clock BEFORE the download as well as after it (audit #22): a
+        # bar is completed only when it was final when the fetch STARTED.
+        since = now or dt.datetime.now(dt.timezone.utc)
         # before the download: Yahoo throttles its quote endpoint after it
-        caps = mcap.known(market, out_path(market), now or dt.datetime.now(dt.timezone.utc))
+        caps = mcap.known(market, out_path(market), since)
         rows, fresh, src_report = _download(market, config.IGNITION_DATA_PERIOD, limit)
         regime = regime_frame(market, config.IGNITION_DATA_PERIOD)
-        # The clock is read AFTER the download, so "forming" is judged at the
-        # moment the bars are actually in hand (the download takes minutes).
+        # ... and AFTER it, so a day that rolled over while the bars were
+        # coming in is judged at the moment they are actually in hand.
         now = now or dt.datetime.now(dt.timezone.utc)
-        done, forming = _split_all(fresh, market, now)
+        done, forming = _split_all(fresh, market, now, since)
         frames, cache_stats = sdata.merge_with_cache(
             f"ignition-{market}", done, [r["yf"] for r in rows],
             refused=src_report.get("refused") or (),
@@ -337,7 +345,7 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "last_closed_bar": max((r["last_bar"] for r in results), default=None),
         "report_only": True,
         "regime": (btc_regime(frames) if market == "crypto"
-                   else index_regime(split_forming(regime, market, now)[0]
+                   else index_regime(split_forming(regime, market, now, since)[0]
                                      if regime is not None else None, market)),
         "params": p.as_dict(),
         "rules": {
@@ -375,7 +383,9 @@ def backtest_market(market: str, *, limit: int = 0,
                     now: Optional[dt.datetime] = None) -> Optional[dict]:
     src_report: dict = {}
     regime = None
+    since: Optional[dt.datetime] = None
     if frames is None:
+        since = now or dt.datetime.now(dt.timezone.utc)   # before the download
         rows, frames, src_report = _download(market, config.IGNITION_BT_PERIOD, limit)
         regime = regime_frame(market, config.IGNITION_BT_PERIOD)
     now = now or dt.datetime.now(dt.timezone.utc)   # after the download
@@ -384,14 +394,14 @@ def backtest_market(market: str, *, limit: int = 0,
         print(f"ignition: backtest has no data for {market} - nothing written", flush=True)
         return None
     # Completed bars only: the forming bar of the run day is not history yet.
-    done, _ = _split_all(frames, market, now)
+    done, _ = _split_all(frames, market, now, since)
     symbols = {r["yf"]: r["symbol"] for r in rows}
     sources = sdata.source_summary(src_report)
     started = time.time()
     payload = bt.backtest(done, market, symbols=symbols,
                           universe_size=len(rows) or len(frames), now=now,
                           data_note=data_note(sources, market),
-                          regime=(split_forming(regime, market, now)[0]
+                          regime=(split_forming(regime, market, now, since)[0]
                                   if regime is not None else None))
     payload["elapsed_s"] = round(time.time() - started, 1)
     payload["sources"] = sources

@@ -1414,10 +1414,13 @@ def test_split_forming_for_crypto_is_the_UTC_date():
 
 
 def test_bar_is_forming_for_a_stock_session_ends_at_its_close():
+    # audit #22: "its close" is the instant the feed shows the FINAL print
+    # (config.DAILY_BAR_FINAL, ASX 16:40 Sydney), not the 16:00 bell
     syd = ZoneInfo("Australia/Sydney")
     d = pd.Timestamp("2026-09-28")
     assert RUN.bar_is_forming("asx", d, dt.datetime(2026, 9, 28, 15, 59, tzinfo=syd)) is True
-    assert RUN.bar_is_forming("asx", d, dt.datetime(2026, 9, 28, 16, 0, tzinfo=syd)) is False
+    assert RUN.bar_is_forming("asx", d, dt.datetime(2026, 9, 28, 16, 39, tzinfo=syd)) is True
+    assert RUN.bar_is_forming("asx", d, dt.datetime(2026, 9, 28, 16, 40, tzinfo=syd)) is False
     assert RUN.bar_is_forming("asx", d, dt.datetime(2026, 9, 29, 11, 0, tzinfo=syd)) is False
 
 

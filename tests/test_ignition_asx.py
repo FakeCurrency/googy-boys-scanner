@@ -219,10 +219,13 @@ def test_an_asx_frame_up_to_five_days_old_is_screened_and_six_is_not():
 
 
 def test_the_asx_forming_bar_is_the_session_before_the_close():
+    # audit #22: the close is config.DAILY_BAR_FINAL's 16:40 Sydney (Yahoo shows
+    # the auction ~20 min late), so 16:30 is still forming; it was the 16:00 bell
     syd = dt.timezone(dt.timedelta(hours=10))
     day = pd.Timestamp("2026-09-29")
     assert RUN.bar_is_forming("asx", day, dt.datetime(2026, 9, 29, 14, 0, tzinfo=syd))
-    assert not RUN.bar_is_forming("asx", day, dt.datetime(2026, 9, 29, 16, 30, tzinfo=syd))
+    assert RUN.bar_is_forming("asx", day, dt.datetime(2026, 9, 29, 16, 30, tzinfo=syd))
+    assert not RUN.bar_is_forming("asx", day, dt.datetime(2026, 9, 29, 16, 40, tzinfo=syd))
 
 
 # ---------------------------------------------------------------------------
