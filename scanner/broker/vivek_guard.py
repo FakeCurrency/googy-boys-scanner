@@ -62,6 +62,11 @@ import datetime as _dt
 
 from .. import config
 
+#: The weekly guard's window, in calendar days (`week_pnl`). Also how stale a
+#: position's newest day mark may be before `ref_price` stops trusting its
+#: `last_mark` as the window's reference (audit #57).
+_WEEK_DAYS = 7
+
 
 def _unreal_r(pos: dict, price: float) -> float:
     """WHOLE-LIFE unrealised R of an open position at `price` (0 on bad risk).
@@ -107,13 +112,25 @@ def ref_price(pos: dict, since: str) -> float:
       1. opened inside the window -> its own entry (the whole life IS the window)
       2. `day_marks[<first stored day >= since>]` -> the mark it carried into
          the window, stamped by the runner from the previous run's last_mark
-      3. the OLDEST stored mark, when every stored mark predates the window
-         (a position nothing has been able to mark for over a week); charges
-         MORE of its life to the window, never less
+      3. every stored mark predates the window, i.e. no run has touched the
+         position since the window opened (every run stamps every open
+         position of its market, priced or not, BEFORE it marks it):
+           a. the newest mark is within `_WEEK_DAYS` of the window -> its
+              `last_mark` (the newest mark if it has none). That IS what it
+              carried into the window — exactly what `_stamp_day_ref` will
+              stamp on the next run. The common case: a manual close
+              (`_restamp`) or the kill switch before the day's first scan.
+           b. older than that (a position nothing has been able to mark for
+              over a week) -> the OLDEST stored mark; charges MORE of its
+              life to the window, never less
       4. `last_mark`, then `entry` — legacy rows and hand-built tickets that
          have never been through a stamping run. This is the pre-2026-07-28
          behaviour, kept as the floor so an un-stamped book degrades to the old
          numbers rather than to zero.
+
+    Step 3a is audit #57 (2026-10-08). Step 3 used to take the OLDEST of up to
+    nine marks whenever today's had not been stamped yet, so a close before
+    the first scan rewrote the saved guard with ~8 days of drift as "today".
     """
     entry = _num(pos.get("entry"))
     entry_date = str(pos.get("entry_date") or "")
@@ -126,10 +143,29 @@ def ref_price(pos: dict, since: str) -> float:
         clean = {k: v for k, v in clean.items() if v > 0}
         if clean:
             eligible = sorted(k for k in clean if not since or k >= since)
-            return clean[eligible[0]] if eligible else clean[sorted(clean)[0]]
+            if eligible:
+                return clean[eligible[0]]
+            newest = max(clean)
+            if _within_week(newest, since):
+                last = _num(pos.get("last_mark"))
+                return last if last > 0 else clean[newest]
+            return clean[min(clean)]
 
     last = _num(pos.get("last_mark"))
     return last if last > 0 else entry
+
+
+def _within_week(mark_day: str, since: str) -> bool:
+    """Is `mark_day` no more than `_WEEK_DAYS` calendar days before `since`?
+
+    False on an unparseable date: the caller then keeps the conservative
+    oldest-mark reference rather than guessing the position is fresh.
+    """
+    try:
+        gap = _dt.date.fromisoformat(since) - _dt.date.fromisoformat(mark_day)
+    except (ValueError, TypeError):
+        return False
+    return gap.days <= _WEEK_DAYS
 
 
 def _r_from(pos: dict, price: float, ref: float, risk: float) -> float:
@@ -354,7 +390,7 @@ def week_pnl(book: dict, market: str, day: str, price_of) -> dict:
     as a zero one.
     """
     try:
-        cutoff = (_dt.date.fromisoformat(day) - _dt.timedelta(days=7)).isoformat()
+        cutoff = (_dt.date.fromisoformat(day) - _dt.timedelta(days=_WEEK_DAYS)).isoformat()
     except (ValueError, TypeError):
         return {}
     return _window_pnl(book, market, cutoff, day, price_of)
