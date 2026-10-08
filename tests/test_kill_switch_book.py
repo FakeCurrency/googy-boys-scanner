@@ -24,7 +24,10 @@ def _book(open_=None, closed=None):
 
 def test_adapter_selects_market_day_and_stamps_session_key():
     book = _book(
-        open_=[{"market": "asx", "unreal_usd": -50.0, "realized_r": 0.5, "risk_usd": 40.0},
+        open_=[{"market": "asx", "symbol": "A", "direction": "long", "status": "open",
+                "entry": 100.0, "risk": 5.0, "risk_usd": 40.0, "entry_date": "2023-12-01",
+                "day_marks": {"2024-01-02": 100.0}, "last_mark": 97.5,
+                "unreal_usd": -50.0, "realized_r": 0.5, "booked_pct": 0.5},
                {"market": "nasdaq", "unreal_usd": -999.0}],          # other market: excluded
         closed=[{"market": "asx", "exit_date": "2024-01-02", "realized_r": -2.0, "risk_usd": 100.0},
                 {"market": "asx", "exit_date": "2024-01-01", "realized_r": -5.0, "risk_usd": 100.0}],  # other day
@@ -32,9 +35,14 @@ def test_adapter_selects_market_day_and_stamps_session_key():
     j = ks._book_market_journal(book, "asx", "2024-01-02")
     assert len(j["closed"]) == 1 and j["closed"][0]["pnl"] == pytest.approx(-200.0)
     assert j["closed"][0]["session_day"] == _session_day()   # comparable key for check_and_kill
-    # open leg: stamped unreal on remaining size + banked partial-exit R
-    assert len(j["open"]) == 1
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0 + 0.5 * 40.0)
+    # open leg (audit #3): TODAY's window from vivek_guard, not the whole-life
+    # stamp (-50) plus every partial ever banked (+0.5R x $40). Priced at its
+    # last mark 97.5 against the 100 it carried into the day, on the half
+    # still open: 0.5 x -0.5R x $40 = -$10. The undated +0.5R bank keeps its
+    # conservative count (vivek_guard's no-ledger rule): +$20.
+    assert len(j["open"]) == 1 and j["open_n"] == 1
+    assert j["open"][0]["unreal_pnl"] == pytest.approx(-10.0 + 20.0)
+    assert j["session"]["session_usd"] == pytest.approx(-200.0 - 10.0 + 20.0)
 
 
 def test_check_and_kill_honours_custom_limit(stub_alerts):
@@ -97,19 +105,23 @@ def test_adapter_live_quote_repriceses_with_runner_maths():
     assert j["live_marks"] == 1
 
 
-def test_adapter_no_quote_falls_back_to_stamped_mark():
-    j = ks._book_market_journal(_book(open_=[_pos()]), "asx", "2024-01-02",
-                                quotes={})
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0)
+def test_adapter_no_quote_falls_back_to_the_last_scan_mark():
+    # audit #3: the fallback is the position's last_mark priced through the
+    # window maths, no longer the whole-life `unreal_usd` stamp (-50 here).
+    p = _pos(day_marks={"2024-01-02": 100.0}, last_mark=97.5, entry_date="2023-12-01")
+    j = ks._book_market_journal(_book(open_=[p]), "asx", "2024-01-02", quotes={})
+    assert j["open"][0]["unreal_pnl"] == pytest.approx(-0.5 * 100.0)   # 97.5 vs 100
     assert j["live_marks"] == 0
 
 
-def test_adapter_malformed_row_keeps_stamp_not_crash():
+def test_adapter_malformed_row_does_not_crash_the_safety_net():
     bad = _pos()
-    del bad["entry"]                      # _unreal_r would KeyError
+    del bad["entry"]                      # _unreal_r used to KeyError on this
     j = ks._book_market_journal(_book(open_=[bad]), "asx", "2024-01-02",
                                 quotes={("BHP", "asx"): 90.0})
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0)
+    # audit #3: a row the window maths cannot measure adds nothing measured;
+    # the old whole-life stamp (-50) is not a day's P&L and is not used.
+    assert j["open"][0]["unreal_pnl"] == pytest.approx(0.0)
 
 
 def test_run_standalone_fires_on_live_move_stale_mark_says_fine(
@@ -360,9 +372,20 @@ def test_the_alert_does_not_promise_a_flatten_that_will_not_happen(
 
 # ── run_standalone routing: the map, the de-dupe, the unmapped fallback ────────
 
+def _market_today(m):
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    return dt.datetime.now(ZoneInfo(config.MARKETS[m].timezone)).strftime("%Y-%m-%d")
+
+
 def _breached_book(markets):
-    """One open position per named market, each far past any sane limit."""
-    return _book(open_=[_pos(f"SYM{i}", m, risk_usd=100_000.0, unreal_usd=-99_000.0)
+    """One open position per named market, each far past any sane limit.
+
+    Opened TODAY (market-local) and marked 19.8R down at the last scan: since
+    audit #3 the switch measures today's window, so the loss has to be today's.
+    """
+    return _book(open_=[_pos(f"SYM{i}", m, risk_usd=100_000.0, unreal_usd=-99_000.0,
+                             entry_date=_market_today(m), last_mark=1.0)
                         for i, m in enumerate(markets)])
 
 

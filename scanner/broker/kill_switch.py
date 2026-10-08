@@ -1,8 +1,11 @@
 """Daily-loss kill-switch.
 
-Checks the session P&L (realised + unrealised) against SCALP_MAX_DAILY_LOSS.
-If the limit is breached, flattens all broker positions and cancels all orders,
-then fires an alert via alert_dispatch.
+Checks the session P&L (realised + unrealised) against a loss limit — for the
+BOT BOOK (run_standalone) that is TODAY's window per market from
+`vivek_guard.session_pnl` (audit #3, 2026-10-08; it used to be whole-life)
+against the runner guard's daily limit; the legacy scalp-journal callers keep
+SCALP_MAX_DAILY_LOSS. If the limit is breached, flattens the routed broker
+positions and cancels their orders, then fires an alert via alert_dispatch.
 
 Runs as the half-hourly kill_switch.yml workflow (python -m
 scanner.broker.kill_switch). (The bybit_run / paper_run pre-trade callers were
@@ -67,7 +70,10 @@ def trade_pnl(t: dict) -> float:
     NaN-safe on purpose: a NaN inside a sum makes every downstream comparison
     False, i.e. it DISARMS the guard rather than tripping it.
     (Moved here from risk_manager.py on 2026-09-17 when that module went with
-    the AI BOT page; identical arithmetic.)
+    the AI BOT page; identical arithmetic.) Since audit #3 (2026-10-08) the
+    bot-book check no longer calls it — a close is charged its in-window R by
+    `vivek_guard.session_pnl`, not this whole-life figure — so it is kept only
+    as the documented whole-life conversion of a closed row.
     """
     import math
     raw = t.get("pnl")
@@ -274,41 +280,55 @@ def _book_market_journal(book: dict, market: str, market_day: str,
                          quotes: dict | None = None) -> dict:
     """Adapt ONE market's slice of the BOT BOOK to check_and_kill's journal shape.
 
-    Selection is by the market-local day (exit_date), but rows are stamped with
-    the AEST _session_day() key because that is what check_and_kill compares
-    against. Open positions are re-priced LIVE when `quotes` has a price for
-    them (same _unreal_r maths the runner itself stamps with, so the two can
-    never disagree on semantics); any position without a live quote falls back
-    to the unreal_usd mark from the last scan. Banked partial-exit R
-    (realized_r) is added either way.
+    THE NUMBER IS TODAY'S WINDOW, from `vivek_guard.session_pnl` (audit #3,
+    2026-10-08). This used to hand-roll each open position's WHOLE-LIFE
+    unrealised P&L (`_unreal_r`, measured from entry) plus every partial it had
+    ever banked, plus each close at its whole-life R, and compare that with
+    the DAILY limit — the exact defect TOP100 #13 removed from the runner's own
+    guard. A market holding old losers that were flat today fired every half
+    hour (and reached for its broker), and one holding old winners could lose
+    more than the limit today in silence. The runner's guard and this switch
+    now read one set of window maths, so they can only disagree on the prices.
 
-    The closed-row conversion is trade_pnl (below), the same
-    `realized_r x risk_usd` this line has always hand-rolled. It lived in
-    risk_manager.py until the scalp-era risk stack was removed with the AI BOT
-    page (2026-09-17); this is now its only consumer, so it lives here.
+    Prices: a live quote from `quotes` when it passed `_live_marks`'s sanity
+    filter (and is a finite positive number — a NaN session would compare
+    False against the limit and FIRE), else the position's `last_mark` (the
+    same fallback `_restamp` uses between scans). With neither it is unpriced
+    and adds nothing measured: vivek_guard's fail-closed worst case is the
+    runner's halt rule, not a reason to flatten a broker account.
+
+    Rows are stamped with the AEST `_session_day()` key because that is what
+    check_and_kill compares against; the market-local `market_day` is the
+    window. `session` carries the full vivek_guard figure for the log line.
     """
+    import math
+
     from scanner.scalp_journal import _session_day
 
     from . import vivek_guard
-    key = _session_day()
-    closed = [{"session_day": key, "pnl": trade_pnl(t)}
-              for t in book.get("closed", [])
-              if t.get("market") == market and t.get("exit_date") == market_day]
-    open_, live_n = [], 0
+    quotes = quotes or {}
+    prices, live_n = {}, 0
     for p in book.get("open", []):
         if p.get("market") != market:
             continue
-        unreal = p.get("unreal_usd") or 0.0          # last-scan stamp (fallback)
-        q = (quotes or {}).get((p.get("symbol"), market))
-        if q is not None:
-            try:
-                unreal = vivek_guard._unreal_r(p, q) * (p.get("risk_usd") or 0.0)
-                live_n += 1
-            except Exception:                        # malformed row: keep stamp
-                unreal = p.get("unreal_usd") or 0.0
-        open_.append({"unreal_pnl": unreal
-                      + (p.get("realized_r") or 0.0) * (p.get("risk_usd") or 0.0)})
-    return {"open": open_, "closed": closed, "live_marks": live_n}
+        sym = p.get("symbol")
+        q = quotes.get((sym, market))
+        try:
+            q = float(q) if q is not None else None
+        except (TypeError, ValueError):
+            q = None
+        if q is not None and math.isfinite(q) and q > 0:
+            prices[sym] = q
+            live_n += 1
+            continue
+        last = vivek_guard._num(p.get("last_mark"))
+        if last > 0:
+            prices[sym] = last
+    pnl = vivek_guard.session_pnl(book, market, market_day, prices.get)
+    key = _session_day()
+    return {"open": [{"unreal_pnl": pnl["open_realised_usd"] + pnl["unrealised_usd"]}],
+            "closed": [{"session_day": key, "pnl": pnl["realised_usd"]}],
+            "live_marks": live_n, "open_n": pnl["open"], "session": pnl}
 
 
 def run_standalone(dry_run: bool = False) -> dict:
@@ -398,9 +418,10 @@ def run_standalone(dry_run: bool = False) -> dict:
         else:
             pnl = (sum(c["pnl"] for c in j["closed"])
                    + sum(p["unreal_pnl"] for p in j["open"]))
-            log.info("kill-switch OK [%s] - book P&L $%.2f / limit -$%.2f "
+            log.info("kill-switch OK [%s] - today's book P&L $%.2f / limit -$%.2f "
                      "(%d open, %d live-priced)",
-                     market, pnl, limit, len(j["open"]), j.get("live_marks", 0))
+                     market, pnl, limit, j.get("open_n", len(j["open"])),
+                     j.get("live_marks", 0))
     return out
 
 

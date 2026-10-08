@@ -69,11 +69,16 @@ _WEEK_DAYS = 7
 
 
 def _unreal_r(pos: dict, price: float) -> float:
-    """WHOLE-LIFE unrealised R of an open position at `price` (0 on bad risk).
+    """WHOLE-LIFE unrealised R of an open position at `price` (0 on bad risk
+    or a missing entry).
 
     This is the number stamped on the book for display (`unreal_r`/`unreal_usd`)
-    and read by the kill switch — "how is this position doing", measured from
-    entry. The loss guard does NOT use it any more; see `_window_r`.
+    and `session_pnl`'s `open_total_usd` — "how is this position doing",
+    measured from entry. Neither loss check uses it any more: the guard reads
+    `_window_r`, and since audit #3 (2026-10-08) so does the kill switch, via
+    `session_pnl`. A row with no usable entry reads 0 rather than raising,
+    because the kill switch now reaches this through `session_pnl` and a
+    safety net must not die on one malformed row.
 
     Scaled by the REMAINING open fraction (2026-07-20, review C6): once a
     position has booked partial profits (`booked_pct` > 0) only the un-booked
@@ -87,7 +92,9 @@ def _unreal_r(pos: dict, price: float) -> float:
     remaining = _remaining(pos)
     if remaining <= 0.0:
         return 0.0
-    entry = pos["entry"]
+    entry = _num(pos.get("entry"))
+    if entry <= 0:
+        return 0.0
     per_unit = (price - entry) / risk if pos.get("direction") == "long" else (entry - price) / risk
     return per_unit * remaining
 
