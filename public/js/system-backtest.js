@@ -67,9 +67,19 @@
       `This is a SLICE of each market, not the whole of it — the percentages above are the coverage.</p>`;
   }
 
-  function block(d, title, lead) {
+  /* Which cohort keys a block reads (audit #53, 2026-10-08). The both-
+   * directions report ALSO carries every `_long` key, and this used to prefer
+   * them for BOTH reports — so the block captioned "longs and shorts together"
+   * printed long-only High conviction / timeframe / entry-trigger tables beside
+   * both-direction By grade and Overall ones (the cohort rows summed to the 668
+   * longs while Overall said 1191 trades, and high conviction read +0.242R
+   * where both directions measured +0.056R). The long-only report reads `_long`
+   * (identical to its plain keys); the both report reads the plain keys and
+   * never falls back to a long-only figure, so a missing cohort shows missing. */
+  function block(d, title, lead, longOnly) {
     const res = d.results || {};
-    const conv = (res.by_conviction_long || res.by_conviction || {});
+    const pick = (k) => (longOnly ? res[k + "_long"] || res[k] : res[k]) || {};
+    const conv = pick("by_conviction");
     const gen = d.generated_at ? String(d.generated_at).slice(0, 10) : "—";
 
     let html = `<h3 class="bt-h">${esc(title)} <span class="bt-when">run ${esc(gen)}</span></h3>`;
@@ -90,20 +100,22 @@
       html += `<p class="bt-none">This report predates the high-conviction cohort. ` +
         `The next backtest run fills it in.</p>`;
     }
-    // The four cells the widened rule is built from, one at a time (long only).
+    // The four cells the widened rule is built from, one at a time. The report
+    // only measures them on LONGS, so a both-directions block says so in the
+    // table's own heading rather than passing them off as both directions.
     const cells = res.by_conviction_cell_long;
     if (cells && Object.keys(cells).length) {
-      html += table("By conviction cell",
+      html += table(longOnly ? "By conviction cell" : "By conviction cell (longs only)",
         Object.keys(cells).map((k) => row(k, cells[k])).join(""));
     }
 
-    const byTf = res.by_timeframe_long || res.by_timeframe || {};
+    const byTf = pick("by_timeframe");
     html += table("By timeframe", ["1W", "3D", "1D"].map((k) => row(k, byTf[k])).join(""));
 
     const byGrade = res.by_grade || {};
     html += table("By grade", ["A+", "A"].map((k) => row(k, byGrade[k])).join(""));
 
-    const byEt = res.by_entry_type_long || res.by_entry_type || {};
+    const byEt = pick("by_entry_type");
     html += table("By entry trigger",
       ["reclaim", "retest", "break"].map((k) => row(k, byEt[k])).join(""));
 
@@ -126,12 +138,12 @@
     if (lo) {
       html += block(lo, "Long-only replay",
         "The one that matches how these plays are actually traded: longs only, " +
-        "no shorts. Read this first.");
+        "no shorts. Read this first.", true);
     }
     if (both) {
       html += block(both, "Both directions",
         "The canonical record, longs and shorts together. Kept because it is the " +
-        "full picture, not because it is the one being traded.");
+        "full picture, not because it is the one being traded.", false);
     }
     host.innerHTML = html;
   }).catch(() => {

@@ -110,6 +110,77 @@ test("the run date is shown, so a stale report is visible as stale", async () =>
   assert.ok(/run 2026-09-20/.test(h));
 });
 
+suite("each block reads its OWN direction (audit #53, 2026-10-08)");
+
+/* The canonical both-directions report carries every `_long` key too. The
+ * block used to prefer `_long` for BOTH reports, so "longs and shorts
+ * together" printed long-only cohorts (high conviction +0.242R) beside
+ * both-direction By grade / Overall tables (high conviction both ways:
+ * +0.056R). The numbers below are the 2026-10-04 report's, distinct per key. */
+const BOTH = () => REPORT({
+  results: {
+    overall: M({ n: 1191, avg_r: -0.087 }),
+    by_direction: { long: M({ n: 668 }), short: M({ n: 523 }) },
+    by_conviction: { high: M({ n: 244, avg_r: 0.056 }), rest: M({ n: 947, avg_r: -0.124 }) },
+    by_conviction_long: { high: M({ n: 151, avg_r: 0.242 }), rest: M({ n: 517, avg_r: -0.042 }) },
+    by_conviction_cell_long: { "1W reclaim": M({ n: 36 }), "3D reclaim": M({ n: 71 }) },
+    by_timeframe: { "1W": M({ n: 191 }), "3D": M({ n: 385 }), "1D": M({ n: 615, avg_r: -0.126 }) },
+    by_timeframe_long: { "1W": M({ n: 111 }), "3D": M({ n: 218 }), "1D": M({ n: 339, avg_r: -0.055 }) },
+    by_grade: { "A+": M({ n: 529 }), A: M({ n: 662 }) },
+    by_entry_type: { reclaim: M({ n: 446, avg_r: -0.161 }), retest: M({ n: 626 }), break: M({ n: 119 }) },
+    by_entry_type_long: { reclaim: M({ n: 251, avg_r: 0.069 }), retest: M({ n: 341 }), break: M({ n: 76 }) },
+  },
+});
+const bothBlock = (h) => h.slice(h.indexOf("Both directions"));
+const cell = (n) => new RegExp(`<td>${n}</td>`);
+
+test("the Both-directions block shows both-direction cohorts, never the long-only ones", async () => {
+  const b = bothBlock(await render(null, BOTH()));
+  assert.ok(cell(244).test(b) && /\+0\.056/.test(b), "high conviction both ways: n=244, +0.056R");
+  assert.ok(!cell(151).test(b) && !/\+0\.242/.test(b), "the long-only +0.242R must not appear as 'longs and shorts together'");
+  assert.ok(cell(947).test(b) && !cell(517).test(b), "the 'everything else' row is both directions too");
+  assert.ok(cell(615).test(b) && !cell(339).test(b), "By timeframe reads by_timeframe");
+  assert.ok(cell(446).test(b) && !cell(251).test(b), "By entry trigger reads by_entry_type");
+  assert.ok(cell(1191).test(b), "and agrees with its own Overall row");
+});
+
+test("the long-only block still reads the _long cohorts", async () => {
+  const r = BOTH();
+  const h = await render(r, null);
+  assert.ok(cell(151).test(h) && cell(339).test(h) && cell(251).test(h));
+  assert.ok(!cell(244).test(h) && !cell(615).test(h) && !cell(446).test(h));
+});
+
+test("the per-cell table is labelled longs-only inside the Both block, and only there", async () => {
+  const both = bothBlock(await render(null, BOTH()));
+  assert.ok(/By conviction cell \(longs only\)/.test(both), "a long-only table in the Both block must say so");
+  const lo = await render(BOTH(), null);
+  assert.ok(/By conviction cell</.test(lo) && !/\(longs only\)/.test(lo), "the long-only block needs no caveat");
+});
+
+test("a both report missing a plain cohort shows it missing, not the long-only figure", async () => {
+  const r = BOTH();
+  delete r.results.by_conviction;
+  delete r.results.by_timeframe;
+  const b = bothBlock(await render(null, r));
+  assert.ok(/predates the high-conviction cohort/.test(b));
+  assert.ok(!cell(151).test(b) && !cell(339).test(b), "no silent fallback to a long-only cohort");
+});
+
+test("against the REAL both report, the Both block's cohorts are its both-direction ones", async () => {
+  const both = readJSON("public/data/vivek_backtest.json");
+  const res = both && both.results;
+  if (!res || !res.by_conviction || !res.by_conviction.high) return;
+  const b = bothBlock(await render(null, both));
+  assert.ok(cell(Math.round(res.by_conviction.high.n)).test(b),
+    `high conviction should read n=${res.by_conviction.high.n} (both directions)`);
+  const lng = res.by_conviction_long && res.by_conviction_long.high;
+  if (lng && lng.n !== res.by_conviction.high.n && lng.n !== res.by_conviction.rest.n) {
+    assert.ok(!cell(Math.round(lng.n)).test(b.slice(0, b.indexOf("By conviction cell"))),
+      "the long-only high-conviction count must not lead the Both block");
+  }
+});
+
 suite("honesty under missing data");
 
 test("a missing cohort reads as missing, never as zero", async () => {
