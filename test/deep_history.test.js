@@ -198,7 +198,7 @@ function dailyResult(p1, p2) {                  // one bar per day inside [p1, p
   for (let t = Math.ceil(p1 / 86400) * 86400; t < p2; t += 86400) { ts.push(t); c.push(t / 86400); }
   return { timestamp: ts, indicators: { quote: [{ open: c, high: c, low: c, close: c, volume: c.map(() => 1) }] } };
 }
-function windowedYahoo({ failK = [], single = null, price = 42 } = {}) {
+function windowedYahoo({ failK = [], emptyK = [], single = null, price = 42 } = {}) {
   const calls = [];
   const impl = (url) => {
     calls.push(url);
@@ -210,6 +210,7 @@ function windowedYahoo({ failK = [], single = null, price = 42 } = {}) {
     const p1 = +q.get("period1"), p2 = +q.get("period2");
     const k = Math.round((NOW_S + 86400 - p2) / YEAR_S / 5);
     if (failK.includes(k)) return Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({}) });
+    if (emptyK.includes(k)) return okRes({ meta: {}, indicators: { quote: [{}] } });   // 200, no bars
     return okRes(dailyResult(p1, p2));
   };
   return { impl, calls };
@@ -252,6 +253,19 @@ test("a failed MIDDLE window never joins across the hole", async () => {
   assert.equal(out.chunks, 2, "only windows 0 and 1 are contiguous with today");
   assert.ok(out.candles[0].time >= NOW_S - 10 * YEAR_S - 2 * 86400, "nothing older than the hole survives");
   assert.ok(NOW_S - out.candles[out.candles.length - 1].time < 2 * 86400);
+});
+
+test("a window that ANSWERS with no bars is a hole too: never stitched across", async () => {
+  // A 200 carrying no timestamps leaves exactly the gap a 429 does. In the
+  // newest slot it would serve the chart that ends five years ago.
+  const newest = await load({ fetchImpl: windowedYahoo({ emptyK: [0] }).impl })
+    .fetchYahooDeep("ON", { years: 25, chunkYears: 5 });
+  assert.equal(newest.candles.length, 0, "an empty newest window must not let the older four through");
+  assert.equal(newest.chunks, 0);
+  const middle = await load({ fetchImpl: windowedYahoo({ emptyK: [1] }).impl })
+    .fetchYahooDeep("ON", { years: 25, chunkYears: 5 });
+  assert.equal(middle.chunks, 1);
+  assert.equal(maxGapDays(middle.candles), 1, "joined across an empty middle window");
 });
 
 // The endpoint has to SAY a series is short, or the chart cannot. The real

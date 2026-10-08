@@ -136,6 +136,18 @@ test("a cold offline launch at start_url ./index.html renders the app shell", as
   assert.ok(html.includes("<title>Vivek 5.0</title>"));
 });
 
+test("the install STORES offline.html and index.html un-redirected", async () => {
+  // Every reader re-wraps too, but the stored copy is what any future reader
+  // gets; a redirected entry in the precache is the bug, not a detail.
+  const w = await installedOffline();
+  for (const k of ["offline.html", "index.html"]) {
+    const hit = await w.caches.match(k);
+    assert.ok(hit, k + " was not precached");
+    assert.equal(hit.redirected, false, k + " was stored redirected");
+    assert.ok((await hit.text()).length > 0, k + " was stored empty");
+  }
+});
+
 test("the install still precaches the shell's versioned assets", async () => {
   const w = await installedOffline();
   assert.ok(await w.caches.match("css/styles.css?v=7"), "styles.css was not precached");
@@ -171,6 +183,13 @@ test("a redirected entry already in the cache is re-wrapped before it answers", 
   await c.put(ORIGIN + "/sectors", redirected("<title>News</title>", "/sectors"));
   const html = await servable(await w.navigate("/sectors"));
   assert.ok(html.includes("<title>News</title>"));
+  // ...and on the other two cache paths: found under the page's other
+  // spelling, and the offline.html fallback itself.
+  assert.ok((await servable(await w.navigate("/sectors.html"))).includes("<title>News</title>"),
+    "the alias hit must be re-wrapped too");
+  await c.put("offline.html", redirected(OFFLINE, "/offline"));
+  assert.ok((await servable(await w.navigate("/never-seen.html"))).includes("branded offline page"),
+    "the offline.html fallback must be re-wrapped too");
 });
 
 test("online navigations are untouched: the network's own response is returned", async () => {

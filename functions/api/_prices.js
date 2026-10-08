@@ -254,8 +254,9 @@ export async function fetchYahooWindow(sym, { p1, p2, interval = "1d", timeout =
  * reads only the last 20 gaps. Now the stitch stops at the first failed window
  * (everything older is discarded, never joined across the gap), and a failed
  * newest window returns no candles so history() falls through to its
- * single-range path. `chunks` / `chunks_wanted` travel to the response so the
- * chart can tell a short series from a whole one. */
+ * single-range path. A window that answers with NO bars counts as failed: it
+ * leaves the same hole. `chunks` / `chunks_wanted` travel to the response so
+ * the chart can tell a short series from a whole one. */
 export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
                                             chunkYears = DEEP_CHUNK_YEARS } = {}) {
   const now = Math.floor(Date.now() / 1000);
@@ -269,14 +270,18 @@ export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
     jobs.push(fetchYahooWindow(sym, { p1, p2, interval }));
   }
   const settled = await Promise.all(jobs);      // index = window k, 0 = NEWEST
+  // A window that ANSWERED with no bars is a hole too: joining across it is
+  // the same 5-year gap, and an empty NEWEST window would serve the same chart
+  // ending five years ago. So the run counts windows that yielded candles.
+  const bars = settled.map((r) => (r ? yahooCandles(r) : []));
   let run = 0;
-  while (run < settled.length && settled[run]) run++;
+  while (run < bars.length && bars[run].length) run++;
   const results = settled.slice(0, run);
   if (!results.length) return { candles: [], result: null, chunks: 0, chunks_wanted: jobs.length };
 
   const byTime = new Map();
-  for (const r of results) {
-    for (const c of yahooCandles(r)) {
+  for (const list of bars.slice(0, run)) {
+    for (const c of list) {
       if (!byTime.has(c.time)) byTime.set(c.time, c);
     }
   }
