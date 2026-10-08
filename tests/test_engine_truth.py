@@ -642,7 +642,7 @@ def test_the_recurrence_was_kept_and_only_the_pandas_lookups_were_dropped():
     value itself, and the direction latch reads both finished bands — so bar i
     genuinely needs bar i-1. A future "proper vectorisation" that changes the
     output is a trading change, not a refactor; this test makes the reasoning
-    findable from the code rather than only from TOP100.md.
+    findable from the code rather than only from the (deleted) TOP100 audit.
     """
     src = (REPO / "scanner" / "indicators.py").read_text(encoding="utf-8")
     body = src.split("def supertrend(")[1].split("\ndef ")[0]

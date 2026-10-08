@@ -1,4 +1,4 @@
-"""The alert blackout — Tier 0 of TOP100.md (2026-07-28).
+"""The alert blackout — Tier 0 of the TOP100 audit (2026-07-28; doc deleted, in git history).
 
 Every test in here pins a case where the system HAD the information and failed
 to tell anybody. That is a distinct class of bug from a wrong number, and it
