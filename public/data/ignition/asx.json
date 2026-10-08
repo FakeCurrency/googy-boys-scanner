@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-08T06:37:37+00:00",
+  "generated_at": "2026-10-08T06:54:46+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-08",
@@ -71,14 +71,14 @@
       "expected_completed": null,
       "lagging": 0,
       "completed_dist": {
-        "2026-10-08": 1108,
-        "2026-10-07": 616,
+        "2026-10-08": 1165,
+        "2026-10-07": 559,
         "2026-10-06": 1,
         "2026-10-01": 1
       },
       "raw_dist": {
-        "2026-10-08": 1108,
-        "2026-10-07": 616,
+        "2026-10-08": 1165,
+        "2026-10-07": 559,
         "2026-10-06": 1,
         "2026-10-01": 1
       }
@@ -86,7 +86,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1363
+        "yahoo": 1329
       },
       "dead": {},
       "errors": {},
@@ -100,8 +100,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1363,
-      "reused": 363,
+      "fresh": 1329,
+      "reused": 397,
       "merged": 1726,
       "universe": 1923,
       "stale_dropped": 0,
@@ -109,16 +109,16 @@
     },
     "mcap": {
       "rows": 89,
-      "have": 88
+      "have": 89
     },
-    "elapsed_s": 285.9
+    "elapsed_s": 316.2
   },
   "results": [
     {
       "symbol": "WNR",
       "name": "Wingara Ag Ltd",
       "yf": "WNR.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 0.0,
@@ -230,7 +230,7 @@
       "symbol": "TFL",
       "name": "Tasfoods Limited",
       "yf": "TFL.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 2.6,
@@ -314,7 +314,7 @@
       "symbol": "VIG",
       "name": "Victor Group Holdings Limited",
       "yf": "VIG.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 0.0,
@@ -510,7 +510,7 @@
       "symbol": "ZLD",
       "name": "Zelira Therapeutics Limited",
       "yf": "ZLD.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 2.19,
@@ -1154,7 +1154,7 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.74,
@@ -1203,34 +1203,6 @@
       "last_bar": "2026-10-07",
       "price": 0.007,
       "mcap": 3785123.0,
-      "mcap_asof": "2026-10-07",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "WNX",
-      "name": "Wellnex Life Limited",
-      "yf": "WNX.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 7.26,
-        "atr_pctl": 5.0,
-        "vol_pctl": 15.1,
-        "drawdown_pct": 96.3,
-        "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-07"
-      },
-      "base": {
-        "high": 0.15000001,
-        "low": 0.05,
-        "bars": 60
-      },
-      "breakout_level": 0.15000001,
-      "provisional": false,
-      "last_bar": "2026-10-07",
-      "price": 0.075,
-      "mcap": 5477011.0,
       "mcap_asof": "2026-10-07",
       "mcap_src": "previous"
     },
@@ -1624,7 +1596,7 @@
       "price": 0.003,
       "mcap": 3914945.0,
       "mcap_asof": "2026-10-08",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "DMP",
@@ -1635,7 +1607,7 @@
       "coil": {
         "ribbon_pct": 9.73,
         "atr_pctl": 22.6,
-        "vol_pctl": 17.9,
+        "vol_pctl": 18.1,
         "drawdown_pct": 59.4,
         "coiled": true,
         "coiled_bars": 1,
@@ -1650,9 +1622,9 @@
       "provisional": false,
       "last_bar": "2026-10-08",
       "price": 22.0,
-      "mcap": 1872198016.0,
-      "mcap_asof": "2026-10-03",
-      "mcap_src": "cache"
+      "mcap": 2084430976.0,
+      "mcap_asof": "2026-10-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CAT",
@@ -1706,9 +1678,9 @@
       "provisional": false,
       "last_bar": "2026-10-08",
       "price": 0.04,
-      "mcap": null,
-      "mcap_asof": null,
-      "mcap_src": null
+      "mcap": 65708160.0,
+      "mcap_asof": "2026-10-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "ESR",
@@ -1734,9 +1706,9 @@
       "provisional": false,
       "last_bar": "2026-10-08",
       "price": 0.027,
-      "mcap": 80371328.0,
-      "mcap_asof": "2026-08-25",
-      "mcap_src": "cache"
+      "mcap": 60792748.0,
+      "mcap_asof": "2026-10-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "NGS",
@@ -1770,7 +1742,7 @@
       "symbol": "WOT",
       "name": "Wotso",
       "yf": "WOT.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 3.9,
@@ -1882,7 +1854,7 @@
       "symbol": "TER",
       "name": "Terracom Limited",
       "yf": "TER.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 6.02,
@@ -1960,6 +1932,34 @@
       "price": 0.001,
       "mcap": 3306250.0,
       "mcap_asof": "2026-10-05",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "WNX",
+      "name": "Wellnex Life Limited",
+      "yf": "WNX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.08,
+        "atr_pctl": 3.4,
+        "vol_pctl": 88.7,
+        "drawdown_pct": 96.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 0.15000001,
+        "low": 0.05,
+        "bars": 60
+      },
+      "breakout_level": 0.15000001,
+      "provisional": false,
+      "last_bar": "2026-10-08",
+      "price": 0.075,
+      "mcap": 5477011.0,
+      "mcap_asof": "2026-10-07",
       "mcap_src": "previous"
     },
     {
@@ -2554,12 +2554,12 @@
       "symbol": "SVY",
       "name": "Stavely Minerals Limited",
       "yf": "SVY.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 18.06,
-        "atr_pctl": 27.6,
-        "vol_pctl": 4.6,
+        "ribbon_pct": 20.35,
+        "atr_pctl": 17.3,
+        "vol_pctl": 0.4,
         "drawdown_pct": 84.0,
         "coiled": false,
         "coiled_bars": 0,
@@ -2567,12 +2567,12 @@
       },
       "base": {
         "high": 0.019,
-        "low": 0.013,
+        "low": 0.012,
         "bars": 60
       },
       "breakout_level": 0.019,
       "provisional": false,
-      "last_bar": "2026-10-07",
+      "last_bar": "2026-10-08",
       "price": 0.012,
       "mcap": 13423963.0,
       "mcap_asof": "2026-10-05",
