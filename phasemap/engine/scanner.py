@@ -9,6 +9,7 @@ import pandas as pd
 from phasemap.config import CONFIG
 from phasemap.engine.indicators import compute_indicators
 from phasemap.engine.setup_engine import SetupEngine
+from phasemap.engine.zones import price_round
 
 TIER_ORDER = {"A+": 0, "A": 1, "Watch": 2, None: 3}
 STATE_ORDER = {"RUNNING": 0, "DISPLACED": 1, "SWEPT": 2, "TRAP_SET": 3,
@@ -105,7 +106,7 @@ def _metrics(eng: SetupEngine, ind, i: int) -> dict:
         "retrace_pct": None,
         "dist_to_yearly_open_pct": None if math.isnan(yo) else round((c - yo) / yo, nd),
         "avg_turnover_20d": None if math.isnan(ind.turnover20[i]) else int(round(ind.turnover20[i])),
-        "close": round(c, nd),
+        "close": price_round(c),
     }
     r = eng.retrace_pct(i)
     if not math.isnan(r):
@@ -121,12 +122,12 @@ def _metrics(eng: SetupEngine, ind, i: int) -> dict:
         m["displacement_date"] = ind.dates[eng.displacement_index].isoformat()
     if eng.state == "TRAP_SET":
         m["bars_in_box"] = eng.bars_in_box
-        m["box_low"] = round(eng.box_low, nd)
-        m["box_high"] = round(eng.box_high, nd)
+        m["box_low"] = price_round(eng.box_low)
+        m["box_high"] = price_round(eng.box_high)
         m["box_height_pct"] = round((eng.box_high - eng.box_low) / eng.box_low, nd)
         if eng.trap_cluster:
-            m["cluster_low"] = round(eng.trap_cluster[0], nd)
-            m["cluster_high"] = round(eng.trap_cluster[1], nd)
+            m["cluster_low"] = price_round(eng.trap_cluster[0])
+            m["cluster_high"] = price_round(eng.trap_cluster[1])
     return m
 
 

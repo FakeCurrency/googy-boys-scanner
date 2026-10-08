@@ -5,6 +5,8 @@ backtest harness; until it supplies real numbers the {stats} slot renders
 empty (guardrail: no performance claims before M4).
 """
 
+import math
+
 from phasemap.config import CONFIG
 from phasemap.narrate.templates import (DISCLAIMER, NEXT_EVIDENCE,
                                         SOURCE_NAMES, TEMPLATES)
@@ -13,6 +15,10 @@ from phasemap.narrate.templates import (DISCLAIMER, NEXT_EVIDENCE,
 def fmt_price(x: float) -> str:
     if x is None:
         return "?"
+    if 0 < x < 0.01:
+        # sub-cent: 3 significant figures, never "0.0000" (audit #28 -- BONK
+        # ~2e-5 narrated "touched the 50% area at 0.0000-0.0000")
+        return f"{x:.{2 - math.floor(math.log10(x))}f}"
     if x < 0.10:
         return f"{x:.4f}"
     if x < 2.00:

@@ -10,9 +10,39 @@ CONSUMED/VIOLATED.
   "above" — price approaches from below (bull targets, bear supply/invalidations)
 """
 
+import math
 from dataclasses import dataclass, field
 
 from phasemap.config import CONFIG
+
+_MAX_PRICE_DECIMALS = 12   # the harness's precision; nothing finer is meaningful
+
+
+def _price_decimals(x: float) -> int:
+    """CONFIG.price_decimals, widened to CONFIG.price_sig_figs significant
+    figures for small prices (audit #28). Unchanged at/above $0.10."""
+    nd = CONFIG.price_decimals
+    if x and math.isfinite(x):
+        nd = max(nd, CONFIG.price_sig_figs - 1 - math.floor(math.log10(abs(x))))
+    return min(nd, _MAX_PRICE_DECIMALS)
+
+
+def price_round(x: float) -> float:
+    """Round one published price (zone edge, close, box/cluster level)."""
+    return round(x, _price_decimals(x))
+
+
+def band_round(low: float, high: float) -> tuple:
+    """Round a band's two edges for publishing. A band the engine built with
+    width is never published as one price: when rounding would collapse it,
+    both edges take more decimals until they differ (audit #26/#28)."""
+    lo, hi = price_round(low), price_round(high)
+    if low < high and lo >= hi:
+        nd = max(_price_decimals(low), _price_decimals(high))
+        while nd < _MAX_PRICE_DECIMALS and round(low, nd) >= round(high, nd):
+            nd += 1
+        lo, hi = round(low, nd), round(high, nd)
+    return lo, hi
 
 
 @dataclass
@@ -64,12 +94,12 @@ class Zone:
                 self.status = "RESPECTED"
 
     def to_dict(self) -> dict:
-        nd = CONFIG.price_decimals
+        low, high = band_round(self.low, self.high)
         d = {
             "id": self.id,
             "type": self.type,
-            "low": round(self.low, nd),
-            "high": round(self.high, nd),
+            "low": low,
+            "high": high,
             "status": self.status,
         }
         if self.confluence > 1 or self.sources:

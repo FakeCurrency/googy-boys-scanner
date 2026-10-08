@@ -69,6 +69,11 @@ class PhaseMapConfig:
     fib_ext_bands: tuple = ((1.0, 1.272), (1.618, 2.0))
     entry_retrace_band: tuple = (0.236, 0.382)   # shallow continuation band
     price_decimals: int = 4            # rounding for output determinism
+    # ...widened below $0.10 to keep this many significant figures (v1.3.2,
+    # audit #28): at a flat 4 dp every zone and close of a sub-cent coin (BONK
+    # ~2e-5) published as 0.0 and narrated "0.0000-0.0000". The chart writer
+    # (8 dp) and the harness (12 dp) were already widened for the same reason.
+    price_sig_figs: int = 4
 
     # ---- Buffer function (Section 3.1) --------------------------------------
     buffer_atr_mult: float = 0.5
