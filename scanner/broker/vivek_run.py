@@ -40,6 +40,7 @@ third is not implemented in this phase so a live order is impossible here:
 
 import datetime as dt
 import json
+import math
 import os
 import logging
 import pathlib
@@ -718,6 +719,38 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     snap["leverage_target"] = plan["leverage_target"]
     snap["risk_pct"] = plan["risk_pct"]
     snap["risk_usd"] = plan["risk_usd"]
+    # THE DOLLARS R IS DENOMINATED IN, MEASURED AT THE FILL (audit #12,
+    # 2026-10-08, owner: "Do it all"). decide() sized the ticket at the PLAN
+    # entry (the signal close, or a break's pivot), so the plan's risk_usd is
+    # units x |signal - stop|; but the row's `risk` -- the unit every R on it is
+    # measured in (realized_r, unreal_r, cost_r) -- is |fill - stop|
+    # (_snapshot). Every dollar reader (vivek_guard's day/week P&L, unreal_usd,
+    # kill_switch.trade_pnl, the journal, the review push) computes
+    # R x risk_usd, so the book's dollars were off the real units x price move
+    # by (signal - stop) / (fill - stop): a 10 -> 10.80 paid-up fill stopped at
+    # 8.95 booked -$257 of a real -$462.50, under-counting the loss guard. The
+    # SIZE is untouched -- units and notional stay what the sizer decided, so
+    # nothing is bought in a different quantity and the fixed-notional
+    # convention every other row (and the resize script) reads still holds;
+    # only the dollars attached to one R move, to units x risk, so that
+    # R x risk_usd is exactly the money. The plan's figure is kept beside it as
+    # `risk_usd_plan`, and risk_pct scales with it. Rows written before this
+    # carry no `risk_usd_plan` and keep the old convention (not restated).
+    restated = False
+    try:
+        fill_risk = float(snap.get("units") or 0) * float(snap.get("risk") or 0)
+        plan_risk = float(plan.get("risk_usd") or 0)
+    except (TypeError, ValueError):
+        fill_risk = plan_risk = 0.0
+    if fill_risk > 0 and plan_risk > 0 and math.isfinite(fill_risk):
+        snap["risk_usd_plan"] = plan["risk_usd"]
+        if abs(round(fill_risk, 2) - plan_risk) >= 0.005:
+            snap["risk_usd"] = round(fill_risk, 2)
+            try:
+                snap["risk_pct"] = round(float(plan["risk_pct"]) * fill_risk / plan_risk, 4)
+            except (TypeError, ValueError):
+                pass
+            restated = True
     # WHICH SIZER PRODUCED THIS ROW (2026-07-28). size_position returns it and
     # decide() splats it onto the ticket, but nothing was copying it down here,
     # so the book recorded the NUMBERS of a sizing decision without recording
@@ -752,7 +785,15 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # every reader. Report-only, exactly as on the ticket: nothing downstream
     # branches on it -- vivek_run does not size, skip or close differently for a
     # flagged row, and the daily/weekly guards never read it.
-    snap["review"] = list(plan.get("review") or [])
+    # When the fill moved the 1R (audit #12, above), the flag is re-derived by
+    # vivek_bot.review_flags from the money the row really carries -- the flag
+    # records what was known at ENTRY, and the fill is the entry; a flag sized
+    # off the signal under-flagged exactly the paid-up fills.
+    if restated:
+        snap["review"] = vivek_bot.review_flags(
+            {"risk_usd": snap["risk_usd"], "entry": fill, "stop": plan["stop"]})
+    else:
+        snap["review"] = list(plan.get("review") or [])
     snap["source"] = "vivek_bot"
     snap["lens"] = "vivek"     # lens attribution — journal lens tracker reads it
     # AUDIT-ONLY level_tf (n≥30 pack). Prefer the scan-row value the runner

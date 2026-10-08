@@ -752,8 +752,15 @@ def test_live_bot_rows_are_sized_at_their_signal_entry():
         # sub-cent coin. A fill-basis restatement misses by the slippage
         # (ASTS 6.6%, SMCI 5.1% on 2026-09-27), so the tolerance still bites.
         assert p["units"] * sig == pytest.approx(p["notional"], rel=1e-3), p["symbol"]
+        # Audit #12 (2026-10-08): a row opened since carries the signal-sized
+        # figure as `risk_usd_plan` and its risk_usd at the FILL (units x risk),
+        # so R x risk_usd is the real money. Older rows keep the plan figure.
+        planned = p.get("risk_usd_plan", p["risk_usd"])
         assert p["units"] * abs(sig - rz.basis_stop(p)) == pytest.approx(
-            p["risk_usd"], rel=1e-3, abs=0.05), p["symbol"]
+            planned, rel=1e-3, abs=0.05), p["symbol"]
+        if "risk_usd_plan" in p:
+            assert p["units"] * float(p["risk"]) == pytest.approx(
+                p["risk_usd"], rel=1e-3, abs=0.05), p["symbol"]
 
 
 def test_live_flags_restate_to_exactly_what_review_flags_would_write(monkeypatch):
