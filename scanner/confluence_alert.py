@@ -239,7 +239,13 @@ def main(argv=None) -> int:
         print(f"confluence: push-worthy (undelivered) {a['market']}:"
               f"{a['ticker']} {a['side'].upper()} {a['count']}-lens - "
               f"{' + '.join(a['labels'])}")
-    if args.dry_run and to_post:
+    # A dry run writes NOTHING (audit #62, 2026-10-08). The old guard returned
+    # only when something was push-worthy, so the common dry run (2-lens
+    # alignments under a triples-only threshold) fell through and saved the
+    # state with them marked seen: the next real run's diff_new then found
+    # nothing fresh and never logged them to alert_history.json or the edge
+    # ledger that ingests it.
+    if args.dry_run:
         return 0
     _save_state_if_changed(state, build_state(alignments, state, set()))
     return 0
