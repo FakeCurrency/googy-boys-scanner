@@ -134,8 +134,12 @@ def resim_trade(df: pd.DataFrame, trade: dict, fill_model: str) -> dict | None:
     h = df["High"].to_numpy(); l = df["Low"].to_numpy(); c = df["Close"].to_numpy()
     n = len(df)
     rules = vp.baseline_rules()
-    # manage from NEXT bar after entry (entry bar already filled)
-    for j in range(j0 + 1, n):
+    # Manage FROM the entry bar (audit #64). The parity replay fills at bar j's
+    # open and then marks bar j's low and high in the same step, so a trade
+    # stopped on its fill day is a baseline stop. Starting at j0 + 1 let every
+    # such trade survive in all three models, and the "pessimistic (live parity
+    # default)" column could not reproduce the baseline it is named after.
+    for j in range(j0, n):
         day = dates[j]
         manage_bar_fill(snap, float(h[j]), float(l[j]), float(c[j]), day, costs,
                         is_last=(j == n - 1), fill_model=fill_model, rules=rules)
@@ -180,10 +184,14 @@ def pm_classify_at(df: pd.DataFrame, market: str, entry_date: str,
     if hasattr(d.columns, "nlevels") and d.columns.nlevels > 1:
         d.columns = [c[0] if isinstance(c, tuple) else c for c in d.columns]
     d = drop_forming_bar(d, market)
-    # slice to entry_date inclusive (no look-ahead)
+    # Slice to the bars BEFORE entry_date (audit #64). entry_date is the FILL
+    # bar -- the parity replay opens at the open of the bar after the signal --
+    # so `<=` handed PhaseMap that bar's high, low and close, none of which was
+    # known at the open fill: a one-bar look-ahead in the ALIGNED/OPPOSED gates.
+    # The last bar kept is the signal bar, the last close the trade could see.
     try:
         target = pd.Timestamp(entry_date)
-        mask = pd.to_datetime(d["Date"]) <= target
+        mask = pd.to_datetime(d["Date"]) < target
         d = d.loc[mask].reset_index(drop=True)
     except Exception:
         return {"confluence": "NONE", "pm_state": None, "pm_dir": None, "reason": "bad_date"}
