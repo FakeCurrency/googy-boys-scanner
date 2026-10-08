@@ -53,8 +53,9 @@ ledgers priced crypto on Yahoo's `download` regardless, and the 2026-09-29 JUP
 row froze another coin's returns (base 0.000327 against the scanned $0.37).
 Crypto now goes through scanner.data.fetch -- the one entry point -- with the
 identity check armed: a row's own pinned base (base_bar, base_close) is its
-history anchor, else the committed scan's price for the coin is the
-reference, and a coin nothing vouches for is left unstamped (named, retried),
+history anchor when an identity-CHECKED frame set it (`base_identity` ref /
+anchor -- an unchecked base never vouches), else the committed scan's price
+for the coin is the reference, and a coin nothing vouches for is left unstamped (named, retried),
 never priced as a stranger. A crypto row whose STORED base is not the
 instrument now priced (the pre-fix JUP row) is never extended either: its
 frozen values stay exactly as they are, an owner decision.
@@ -326,11 +327,16 @@ def _base_index(e: dict, days: list, done: int, base_day: dt.date) -> tuple:
 
 def _same_instrument(df, day: dt.date, stored) -> bool:
     """Does this frame reproduce the base close the row already stored, on
-    its base day? exchange_data.anchor_ok -- the same history-anchor test the
-    book and the kill switch use (CRYPTO_ANCHOR_TOL)."""
+    its base day? exchange_data.anchor_ok -- the history-anchor test the book
+    and the kill switch use -- but at the IDENTITY band (CRYPTO_IDENTITY_TOL),
+    not the tighter anchor band: a row stamped before 2026-10-05 may hold a
+    still-FORMING bar's price as its base (an intraday print, not the close),
+    and a coin that moved past 15% after that print is still the coin. The
+    strangers this exists to catch are orders of magnitude off (JUP: x1,100)."""
     from scanner import exchange_data
     try:
-        return exchange_data.anchor_ok(df, (day.isoformat(), float(stored)))
+        return exchange_data.anchor_ok(df, (day.isoformat(), float(stored)),
+                                       tol=float(config.CRYPTO_IDENTITY_TOL))
     except (TypeError, ValueError):
         return False
 
@@ -374,6 +380,16 @@ def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None
             if e.get("base_close") is None:
                 e["base_close"] = round(base_close, 8)
                 e["base_bar"] = days[bi].isoformat()
+                if e.get("market") == "crypto":
+                    # How the frame that set the base proved it is the coin
+                    # (data.fetch's attrs["identity"]: ref / anchor / none).
+                    # Only a CHECKED base may later vouch for the coin as a
+                    # history anchor (crypto_identity_kwargs) -- the rule
+                    # data.anchor_of keeps: an unchecked frame (a Yahoo-mode
+                    # run, CRYPTO_DATA_SOURCE="yahoo") must never become the
+                    # evidence the next check trusts.
+                    e["base_identity"] = str((getattr(df, "attrs", None) or {}).get("identity")
+                                             or "none")
                 stamped += 1        # recording the baseline is itself a change
             elif e.get("market") == "crypto" and not _same_instrument(df, days[bi], e["base_close"]):
                 # Crypto bars are never split-adjusted, so a stored base this
@@ -431,19 +447,24 @@ def crypto_identity_kwargs(want: dict) -> dict:
     """data.fetch() kwargs that make every crypto frame prove it is the coin
     the ledger row is about (audit #30).
 
-    ANCHOR first: a row stamped since base_bar existed holds a real completed
-    close of an identity-checked frame -- (base_bar, base_close) -- and a
-    venue's frame must reproduce it (exchange_data.anchor_ok); a real move
-    since cannot fail it. Else the REFERENCE: the committed crypto scan's
-    price for the coin (the instrument the VIVEK leg scanned), against the
-    frame's latest close at CRYPTO_IDENTITY_TOL. `require_identity`: a coin
-    with neither is refused -- left unstamped, never priced unchecked."""
+    ANCHOR first: a row whose base was set by an IDENTITY-CHECKED frame
+    (`base_identity` "ref"/"anchor") holds a real completed close of the coin
+    -- (base_bar, base_close) -- and a venue's frame must reproduce it
+    (exchange_data.anchor_ok); a real move since cannot fail it. A base set
+    by an unchecked frame (`base_identity` "none", or a row stamped before
+    the field existed) is never an anchor: it may be a same-ticker stranger,
+    and anchoring on it would let the stranger vouch for itself. Else the
+    REFERENCE: the committed crypto scan's price for the coin (the instrument
+    the VIVEK leg scanned), against the frame's latest close at
+    CRYPTO_IDENTITY_TOL. `require_identity`: a coin with neither is refused
+    -- left unstamped, never priced unchecked."""
     suffix = config.MARKETS["crypto"].suffix
     prices = _scan_prices()
     refs, anchors = {}, {}
     for key, entries in want.items():
         pinned = sorted((str(e["base_bar"])[:10], float(e["base_close"])) for e in entries
-                        if e.get("base_bar") and isinstance(e.get("base_close"), (int, float))
+                        if e.get("base_bar") and e.get("base_identity") in ("ref", "anchor")
+                        and isinstance(e.get("base_close"), (int, float))
                         and e["base_close"] > 0)
         if pinned:
             anchors[key] = pinned[-1]

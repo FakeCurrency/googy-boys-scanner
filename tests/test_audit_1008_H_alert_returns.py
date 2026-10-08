@@ -81,6 +81,22 @@ def test_a_halt_from_the_alert_session_is_a_gap_not_a_base():
     assert led["entries"][0]["base_close"] is None
 
 
+def test_a_frame_that_starts_after_base_day_never_finds_a_base_in_it(capsys):
+    """A legacy row (stored base, no base_bar) whose download no longer
+    reaches its base_day: the first bar in the frame is three days LATER --
+    inside the holiday allowance, so only the coverage check stands between
+    it and a base that is not the alert session's close."""
+    led = ar._fresh()
+    frozen = {"1": 0.01, "5": None, "10": None, "20": None}
+    led["entries"].append(_row("asx", "SLD", "2026-06-15", base_close=2.5, fwd=dict(frozen)))
+    idx = pd.bdate_range("2026-06-18", periods=30)
+    frames = _bars("SLD.AX", idx, [1.0 + 0.05 * i for i in range(30)])
+    now = dt.datetime(2026, 8, 20, tzinfo=UTC)
+    assert ar.stamp(led, frames, ar.wanting_prices(led, now.date()), now) == 0
+    assert led["entries"][0]["fwd"] == frozen, "never measured off a bar after the alert session"
+    assert "the frame starts after base_day" in capsys.readouterr().out
+
+
 def test_a_weekend_or_holiday_base_still_finds_the_next_session():
     # Good Friday 2027-03-26 alert -> the Tuesday (Easter Monday shut): +4 days.
     led = ar._fresh()
@@ -214,6 +230,7 @@ def test_the_audits_JUP_alignment_is_stamped_off_the_real_coin(venues, tmp_path,
     e = json.loads((tmp_path / "ledger.json").read_text())["entries"][0]
     assert e["base_close"] == 0.37, "the base is the real JUP, not Yahoo's stranger"
     assert e["base_bar"] == when.strftime("%Y-%m-%d") and e["fwd"]["1"] == 0.0
+    assert e["base_identity"] == "ref", "checked against the scan's price, and it says so"
     assert ["JUP-USD"] not in asked, "Yahoo's JUP was never even the candidate"
 
 
@@ -234,7 +251,7 @@ def test_a_pinned_base_is_the_rows_own_history_anchor(venues):
     venue's frame must reproduce (base_bar, base_close) -- so a coin that has
     left the scan still matures, and a stranger still cannot."""
     day = (_today_utc() - pd.Timedelta(days=3)).strftime("%Y-%m-%d")
-    row = _row("crypto", "OLD", day, base_close=1.0, base_bar=day)
+    row = _row("crypto", "OLD", day, base_close=1.0, base_bar=day, base_identity="ref")
     venues(binance={"OLD": 1.0}, yahoo={}, scan_prices={})
     assert "OLD-USD" in ar.fetch_frames({"OLD-USD": [row]}, _today_utc().date())
     venues(binance={"OLD": 50.0}, yahoo={"OLD-USD": 50.0}, scan_prices={})
@@ -246,12 +263,48 @@ def test_crypto_identity_kwargs_prefers_the_rows_anchor_and_requires_identity(tm
     prices.write_text(json.dumps({"prices": {"JUP": 0.3667, "BTC": 82000.0}}), encoding="utf-8")
     monkeypatch.setattr(ar, "SCAN_PRICES", str(prices))
     want = {"JUP-USD": [_row("crypto", "JUP", "2026-10-01")],
-            "BTC-USD": [_row("crypto", "BTC", "2026-09-20", base_close=80000.0, base_bar="2026-09-20"),
-                        _row("crypto", "BTC", "2026-09-25", base_close=81000.0, base_bar="2026-09-25")]}
+            "BTC-USD": [_row("crypto", "BTC", "2026-09-20", base_close=80000.0, base_bar="2026-09-20",
+                             base_identity="anchor"),
+                        _row("crypto", "BTC", "2026-09-25", base_close=81000.0, base_bar="2026-09-25",
+                             base_identity="ref")]}
     kw = ar.crypto_identity_kwargs(want)
     assert kw["require_identity"] is True
     assert kw["ref_prices"] == {"JUP-USD": 0.3667, "BTC-USD": 82000.0}
     assert kw["anchors"] == {"BTC-USD": ("2026-09-25", 81000.0)}, "the newest pinned base"
+
+
+def test_a_base_an_unchecked_frame_set_never_vouches_for_the_coin(tmp_path, monkeypatch):
+    """A Yahoo-mode run (CRYPTO_DATA_SOURCE="yahoo") prices crypto with no
+    identity check, so the base it pins may be a same-ticker stranger's close.
+    Anchoring on it would let the stranger vouch for itself -- and for every
+    later row on the coin -- once exchange mode is back (data.anchor_of's rule:
+    an unchecked frame is never the evidence the next check trusts)."""
+    prices = tmp_path / "p.json"
+    prices.write_text(json.dumps({"prices": {"JUP": 0.3667}}), encoding="utf-8")
+    monkeypatch.setattr(ar, "SCAN_PRICES", str(prices))
+    want = {"JUP-USD": [_row("crypto", "JUP", "2026-10-01", base_close=0.000327,
+                             base_bar="2026-10-01", base_identity="none"),
+                        _row("crypto", "JUP", "2026-10-02", base_close=0.00033,
+                             base_bar="2026-10-02"),            # stamped before the field
+                        _row("crypto", "JUP", "2026-10-05")]}
+    kw = ar.crypto_identity_kwargs(want)
+    assert kw["anchors"] == {}, "an unchecked base is never an anchor"
+    assert kw["ref_prices"] == {"JUP-USD": 0.3667}, "the scan's price is the check instead"
+
+
+def test_the_first_crypto_stamp_records_how_its_frame_was_checked():
+    led = ar._fresh()
+    led["entries"] += [_row("crypto", "AAA", "2026-10-01"), _row("crypto", "BBB", "2026-10-01"),
+                       _row("asx", "CCC", "2026-10-01")]
+    idx = pd.date_range("2026-09-28", periods=6, freq="D")
+    frames = {**_bars("AAA-USD", idx, [1.0] * 6), **_bars("BBB-USD", idx, [2.0] * 6),
+              **_bars("CCC.AX", idx, [3.0] * 6)}
+    frames["AAA-USD"].attrs["identity"] = "anchor"           # BBB-USD: no stamp at all
+    now = dt.datetime(2026, 10, 4, 1, 0, tzinfo=UTC)
+    ar.stamp(led, frames, ar.wanting_prices(led, now.date()), now)
+    a, b, c = led["entries"]
+    assert a["base_identity"] == "anchor" and b["base_identity"] == "none"
+    assert "base_identity" not in c, "stocks have no identity check to record"
 
 
 def test_a_row_frozen_on_another_instrument_is_never_extended(capsys):
@@ -282,6 +335,21 @@ def test_a_legacy_crypto_row_on_the_same_coin_keeps_maturing():
     ar.stamp(led, frames, ar.wanting_prices(led, now.date()), now)
     e = led["entries"][0]
     assert e["fwd"]["1"] == 0.01 and e["fwd"]["10"] is not None and e["fwd"]["20"] is not None
+
+
+def test_a_legacy_base_from_a_forming_bar_is_still_the_same_coin():
+    """Before 2026-10-05 a crypto base could be a still-forming bar's intraday
+    print. The final close 25% away from it is a big day for the SAME coin,
+    not another instrument: the row keeps maturing (the anchor band, 15%,
+    would have frozen it for good and dropped exactly the big-move days)."""
+    led = ar._fresh()
+    led["entries"].append(_row("crypto", "PMP", "2026-09-29", base_close=1.0,
+                               fwd={"1": 0.01, "5": None, "10": None, "20": None}))
+    idx = pd.date_range("2026-09-20", periods=40, freq="D")
+    closes = [1.0] * 9 + [1.25] * 31                         # 09-29 closed at 1.25
+    now = dt.datetime(2026, 10, 29, 1, 0, tzinfo=UTC)
+    ar.stamp(led, _bars("PMP-USD", idx, closes), ar.wanting_prices(led, now.date()), now)
+    assert led["entries"][0]["fwd"]["5"] == 0.0
 
 
 def test_the_roster_ledger_prices_crypto_through_data_fetch_too(tmp_path, monkeypatch):
