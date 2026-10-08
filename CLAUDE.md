@@ -365,7 +365,9 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   GATE above (the 16:35 / 06:35 single-shot design lasted one morning).** Owner setup: set the
   secret in Cloudflare Pages env vars, then two cron-job.org jobs with the job
   timezone set to UTC, Mon–Fri, every 30 min — ASX 06:15..10:45Z, US
-  20:15..23:45Z — hitting the URL with `&key=`. Until the pinger is live,
+  20:15..23:45Z — hitting the URL with `&key=` (LIVE: cron-job.org job
+  8424425 `slot=asx (post-close ladder, UTC)` and 8424432 `slot=us`, read back
+  with ops `cronjob-list` 2026-10-08). Until the pinger is live,
   GitHub's own cron still delivers — hours late, via the delay-proof gate. A
   Claude Routine was tried as an interim and REJECTED the same hour: Routine-
   fired sessions carry NO MCP connectors (the create_trigger result says so)
@@ -2528,6 +2530,33 @@ machinery changed. **Do not re-add it.** If the owner ever wants a breakout
 system again it starts from `git log -- scanner/turtle.py` at the removal
 commit, not from memory — the engine's three audit-found bugs, the ½N stop
 5%-risk arithmetic and the System-1 filter are all recorded there.
+
+## CHECK-IN SKILL — "how's the scanner?" (2026-10-08, owner: "I'm very happy")
+
+`.claude/skills/vivek5-checkin/` answers the owner's status questions ("how's
+the scanner going", "did the close/digest go", "why the Run failed emails") in
+plain English, Melbourne time, verdict first. It was tested against a plain
+session on three real questions: 28/28 checks vs 24/28, about half the time,
+and only it caught the missed 02:10 NASDAQ scan of 8 Oct (cron-job.org fired;
+the heartbeat got a 503 because GitHub refused that one dispatch; 03:10 was 200).
+
+- **`scripts/scanner_status.py` is READ-ONLY and stdlib-only**: it runs
+  `git fetch` and `git show/log/ls-tree/rev-parse` against origin/main and
+  prints scans per session, the after-close lenses, the paper book (diffed
+  through its own git history) and a LOOKS WRONG / NOT DUE YET verdict. It
+  COPIES the scan windows, close gates and Momentum due times out of config
+  rather than importing them, so `tests/test_vivek5_checkin.py` pins each copy
+  to config, pins the read-only shape by AST (no open(), git reads + one fetch
+  only), and runs the script on a fixture repo. **Move a window or gate in
+  config and that test tells you to move the skill's copy.**
+- **SKILL.md's never-list is a safety rail, test-pinned**: a check-in never
+  calls `/api/heartbeat`, `/api/scan`, `/api/close` or `/api/morning_plays`,
+  never re-sends the digest, never dispatches PhaseMap by hand, never runs a
+  mutating ops action without asking, never cancels a run it did not start.
+- `references/schedule.md` is the normal day and the "looks broken but is
+  normal" list; `references/runs.md` reads run logs, the digest, the gate and
+  cron-job.org history. Update them when a schedule or cron-job.org job
+  changes, the same way this file is updated.
 
 ## Batch-100 (2026-08-20) — the edge-measurement layer, and where its fences are
 

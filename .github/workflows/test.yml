@@ -89,6 +89,10 @@ on:
       # and a push touching it is exactly the push that restates the open book
       # (resize_book.yml) - the one edit that must never ship unchecked.
       - ".github/resize-kick"
+      # .claude/skills/** (2026-10-08), same rule: tests/test_vivek5_checkin.py
+      # runs the check-in skill's status script and reads its SKILL.md and
+      # references, so an edit to the skill alone must still run the gate.
+      - ".claude/skills/**"
   pull_request:
   workflow_dispatch:
 
