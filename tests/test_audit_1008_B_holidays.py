@@ -140,6 +140,33 @@ def test_an_aware_index_is_read_in_the_markets_own_calendar():
     assert vj.no_session_today("asx", {"X.AX": df}, now) is False
 
 
+def test_a_held_refetch_with_todays_bar_is_evidence_the_session_is_live(env, monkeypatch):
+    # The scan download came back as nothing but the previous session's bars
+    # (throttled, back-filled from last night's cache), but the direct refetch
+    # of a held name -- run_market's own fallback for exactly this -- returned
+    # today's bar. The exchange traded: the stop it can now see must be tested,
+    # so the proxy reads the frames AFTER that refetch, not before it.
+    monkeypatch.setattr(config, "VIVEK_JOURNAL_SPECIAL_DAYS", {})
+    _book(env, [_held()])
+    now = dt.datetime(2026, 12, 29, 12, 0, tzinfo=SYD)
+    frames = {"HOL.AX": _frame(10.0, "2026-12-24")}            # OLD missing: refetched
+    monkeypatch.setattr(data, "fetch",
+                        lambda *a, **k: ({"OLD.AX": _frame(9.0, "2026-12-29")}, {}))
+    assert vj.no_session_today("asx", frames, now) is True     # the download alone
+    bk = vr.run_market("asx", [], frames, UNI, now=now)
+    assert [p["symbol"] for p in bk["closed"]] == ["OLD"]      # 9.0 under the 9.6 stop
+
+
+def test_with_session_gating_switched_off_the_proxy_never_fires(monkeypatch):
+    # VIVEK_JOURNAL_MARKET_HOURS = False means "no session gating at all":
+    # market_open is always True, so the proxy must not invent a closed session
+    # out of old bars (it would otherwise read every weekend as a holiday).
+    monkeypatch.setattr(config, "VIVEK_JOURNAL_MARKET_HOURS", False)
+    sat = dt.datetime(2026, 12, 26, 12, 0, tzinfo=SYD)
+    assert vj.market_open("asx", sat) is True
+    assert vj.no_session_today("asx", {"X.AX": _frame(1.0, "2026-12-24")}, sat) is False
+
+
 def test_outside_the_session_the_proxy_defers_to_the_clock():
     sat = dt.datetime(2026, 12, 26, 12, 0, tzinfo=SYD)
     assert vj.no_session_today("asx", {"X.AX": _frame(1.0, "2026-12-24")}, sat) is False

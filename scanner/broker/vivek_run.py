@@ -1283,18 +1283,6 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         now = dt.datetime.now(ZoneInfo(mkt.timezone))
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
-    # An exchange HOLIDAY is a closed session (audit #15, 2026-10-08): the clock
-    # says open, but not one frame carries a bar dated today, so every price in
-    # hand is the previous session's close. Filling at it, or testing a stop on
-    # it, books a price nobody traded at, dated a day nobody traded. Closed
-    # means closed here exactly as at 18:00: no fills, no management, and the
-    # mark-sanity budget is not spent (session_open=False).
-    if is_open and no_session_today(market, frames, now):
-        log.warning("vivek_run [%s]: the clock says the session is open but no "
-                    "frame carries a bar dated %s - treating it as an exchange "
-                    "HOLIDAY (closed session): no fills, no stop tests",
-                    market, day)
-        is_open = False
     yf_map = {u["symbol"]: u["yf"] for u in universe}
     from ..data import anchor_of, mark_age_h, venue_of  # deferred, like fetch below
     costs = costs_for(market)                         # fees + slippage R-drag (None = off)
@@ -1379,6 +1367,25 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         except Exception as e:
             log.warning("vivek_run [%s]: could not fetch book symbols %s: %s",
                         market, ", ".join(missing + refetch), e)
+
+    # An exchange HOLIDAY is a closed session (audit #15, 2026-10-08): the clock
+    # says open, but not one frame carries a bar dated today, so every price in
+    # hand is the previous session's close. Filling at it, or testing a stop on
+    # it, books a price nobody traded at, dated a day nobody traded. Closed
+    # means closed here exactly as at 18:00: no fills, no management, and the
+    # mark-sanity budget is not spent (session_open=False). Read AFTER the
+    # held-position refetch above, so a fresh frame that came back for a held
+    # name counts as evidence the exchange traded: a run whose scan download
+    # was all cache from the previous session must still test the stops it can
+    # now see. A feed serving only an earlier session (or a run in the first
+    # minutes of the session, before the delayed feed prints today's bar) reads
+    # the same way -- fail safe: no fill off a price nobody traded today.
+    if is_open and no_session_today(market, frames, now):
+        log.warning("vivek_run [%s]: the clock says the session is open but no "
+                    "frame carries a bar dated %s - treating it as a CLOSED "
+                    "session (an exchange holiday, or a feed serving only an "
+                    "earlier session): no fills, no stop tests", market, day)
+        is_open = False
 
     # 1) manage open positions for THIS market — mark to the observed price.
     closed_now = 0

@@ -236,8 +236,12 @@ def no_session_today(market_key: str, frames: dict, now: dt.datetime) -> bool:
     when `market_open` says the session is live, and only when at least one
     frame carries a readable date and the newest of them all is before
     today. No dated frame at all is no evidence (nothing can be priced off it
-    anyway), so the clock's verdict stands. `now` is aware, any zone.
+    anyway), so the clock's verdict stands; with
+    config.VIVEK_JOURNAL_MARKET_HOURS off (no session gating at all) it never
+    fires either. `now` is aware, any zone.
     """
+    if not config.VIVEK_JOURNAL_MARKET_HOURS:
+        return False                                 # session gating switched off
     sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
     if sess is None:
         return False                                 # 24/7 (crypto)
