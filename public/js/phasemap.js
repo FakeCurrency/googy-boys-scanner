@@ -96,13 +96,14 @@
   // "Since you last checked" — a per-market snapshot of what the last visit
   // saw ("TICKER|direction" → state). Purely presentational: it only powers
   // the NEW / state-change badges and the catch-up banner.
-  function seenKey() { return `pm-seen:${state.market}`; }
-  function loadSeen() {
-    try { return JSON.parse(localStorage.getItem(seenKey()) || "null"); }
+  // Keyed by the market the scan was LOADED for, passed in by load() (#51).
+  function seenKey(market) { return `pm-seen:${market}`; }
+  function loadSeen(market) {
+    try { return JSON.parse(localStorage.getItem(seenKey(market)) || "null"); }
     catch (_) { return null; }
   }
-  function diffSinceLastVisit() {
-    const prev = loadSeen();
+  function diffSinceLastVisit(market) {
+    const prev = loadSeen(market);
     const cur = { run_date: state.data.run_date, states: {} };
     state.data.results.forEach((r) => { cur.states[`${r.ticker}|${r.direction}`] = r.state; });
     // same scan as last visit → nothing is "since you last checked"
@@ -116,7 +117,7 @@
         else if (prev.states[k] !== st) { state.changedFrom[k] = prev.states[k]; state.sinceInfo.changed++; }
       }
     }
-    lsSet(seenKey(), JSON.stringify(cur));
+    lsSet(seenKey(market), JSON.stringify(cur));
   }
 
   function cardHTML(rec, idx) {
@@ -506,65 +507,91 @@
     });
   }
 
+  // Every load is numbered and only the NEWEST may touch the page (audit #51,
+  // 2026-10-08). A market switch starts a new load while the previous market's
+  // ~1 MB scan (or its confluence) is still in flight, and whichever answer
+  // landed LAST used to be drawn under the market selected NOW: ASX cards
+  // under the CRYPTO tab, chart links of m=crypto&s=<ASX ticker>, and
+  // pm-seen:crypto overwritten with ASX keys. A sequence rather than a market
+  // check, because ASX -> crypto -> ASX would let the FIRST ASX answer re-run
+  // the since-you-last-checked diff against the snapshot the third load just
+  // stored (same run_date) and wipe every NEW badge. app.js's poll carries the
+  // same rule (TOP100 #79).
+  let loadSeq = 0;
+
   async function load() {
+    const seq = ++loadSeq;
+    const market = state.market;
+    const stale = () => seq !== loadSeq;
+    // The skeleton below says "nothing loaded yet", so the state says so too:
+    // a filter click while this loads must not redraw the previous market's
+    // cards, banner and catch-up line under this market's tab.
+    state.data = null;
+    state.confl = null;
+    state.sinceInfo = null;
     $("#pm-sub").textContent = "Loading latest scan…";
     $("#pm-list").innerHTML = SKELETON.repeat(4);   // shimmer, not a blank page
     try {
       // narrations ship in a sidecar file (latest.json is ~25% lighter);
       // fetched in parallel and merged back. Old full payloads still work.
       const [res, narrRes] = await Promise.all([
-        PM.fetchTimeout(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" }),
-        PM.fetchTimeout(`data/phasemap/${state.market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
+        PM.fetchTimeout(`data/phasemap/${market}/latest.json`, { cache: "no-cache" }),
+        PM.fetchTimeout(`data/phasemap/${market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
       ]);
       if (!res.ok) throw new Error("HTTP " + res.status);
-      state.data = await res.json();
+      const data = await res.json();
+      if (stale()) return;
       try {
         let nj = narrRes && narrRes.ok ? await narrRes.json() : null;
         // The pair ships together but is fetched in parallel — a deploy landing
         // between the two requests can leave the sidecar on the PREVIOUS scan
         // (review H5). run_date-match the pair and refetch the sidecar once,
         // cache-busted by the wanted run_date (shared, CDN-friendly buster).
-        if (nj && nj.run_date && state.data.run_date && nj.run_date !== state.data.run_date) {
+        if (nj && nj.run_date && data.run_date && nj.run_date !== data.run_date) {
           try {
             const r2 = await PM.fetchTimeout(
-              `data/phasemap/${state.market}/narrations.json?rd=${encodeURIComponent(state.data.run_date)}`,
+              `data/phasemap/${market}/narrations.json?rd=${encodeURIComponent(data.run_date)}`,
               { cache: "reload" });
             if (r2.ok) nj = await r2.json();
           } catch (_) { /* keep the mismatched sidecar — better than nothing */ }
         }
         const nm = (nj && nj.narrations) || {};
-        state.data.results.forEach((r) => {
+        data.results.forEach((r) => {
           if (r.narration == null) r.narration = nm[`${r.ticker}|${r.direction}`] || "";
         });
       } catch (_) {
-        state.data.results.forEach((r) => { if (r.narration == null) r.narration = ""; });
+        data.results.forEach((r) => { if (r.narration == null) r.narration = ""; });
       }
+      if (stale()) return;
+      state.data = data;
       $("#pm-sub").innerHTML = PM.esc(
-        `${state.market.toUpperCase()} · scan ${state.data.run_date} · ruleset v${state.data.ruleset_version} · ` +
-        `${state.data.universe_size} tickers scanned · ${state.data.results.length} results`)
-        + PM.staleBadgeHTML(state.data.run_date);
+        `${market.toUpperCase()} · scan ${data.run_date} · ruleset v${data.ruleset_version} · ` +
+        `${data.universe_size} tickers scanned · ${data.results.length} results`)
+        + PM.staleBadgeHTML(data.run_date);
       state.sinceDismissed = false;
-      diffSinceLastVisit();
+      diffSinceLastVisit(market);
       // multi-lens confluence badges + banner (async — re-render when known)
       state.confl = null;
       renderConfBanner();
-      PM.loadConfluence(state.market).then((c) => {
+      PM.loadConfluence(market).then((c) => {
+        if (stale()) return;
         state.confl = c;
         render();
         renderConfBanner();
       });
     } catch (err) {
+      if (stale()) return;   // a newer load owns the page; its answer stands
       state.data = null;
       // 404 = the artefact is genuinely missing; anything else is a
       // connection/CDN failure where the scan EXISTS and deserves a retry
       // button, not a "run the scanner" shrug (2026-07-29).
       if (PM.loadFailKind(err) === "missing") {
         $("#pm-sub").textContent =
-          `No ${state.market.toUpperCase()} PhaseMap scan yet (${err.message})`;
-        $("#pm-list").innerHTML = `<div class="pm-empty">Run: python -m phasemap.run --market ${PM.esc(state.market)}</div>`;
+          `No ${market.toUpperCase()} PhaseMap scan yet (${err.message})`;
+        $("#pm-list").innerHTML = `<div class="pm-empty">Run: python -m phasemap.run --market ${PM.esc(market)}</div>`;
       } else {
         $("#pm-sub").textContent =
-          `Couldn't load the ${state.market.toUpperCase()} PhaseMap scan — connection problem.`;
+          `Couldn't load the ${market.toUpperCase()} PhaseMap scan — connection problem.`;
         $("#pm-list").innerHTML =
           `<div class="pm-empty">The scan is there; this device couldn't fetch it. ${PM.retryHTML("pm-retry-load")}</div>`;
         const b = document.getElementById("pm-retry-load");

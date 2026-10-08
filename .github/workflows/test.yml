@@ -166,6 +166,8 @@ jobs:
         run: node test/escaping.test.js
       - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip + funnel-trend + v5-split rules (TOP100 #78/#79)
         run: node test/staleview.test.js
+      - name: Lens-page load races + PhaseMap FLASHED reference (#51/#52/#83/#84)
+        run: node test/lens_pages.test.js
       - name: Leak + backoff rules (TOP100 #80/#81/#82)
         run: node test/leaks.test.js
       - name: Deferred layout read in the deck render path (TOP100 #86)
