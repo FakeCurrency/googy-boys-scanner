@@ -31,7 +31,9 @@ Noise rules (the whole point — high signal, low volume):
     then ONE recovery notice when it clears. Never a message per check.
   * If a workflow's latest concluded run FAILED, the watchdog stays silent
     about that workflow — GitHub already emailed the failure; this tool only
-    speaks for problems that are otherwise invisible.
+    speaks for problems that are otherwise invisible. Silent means silent in
+    both directions: a workflow it could not measure (that, or the API fetch
+    failed) keeps its alert state as it was and is never "recovered".
   * Thresholds live in scanner/config.py (config-first) and are all set at
     2x or more of the worst cron drift ever observed in this repo (48 min),
     so scheduler jitter cannot page anyone.
@@ -352,19 +354,35 @@ def session_hours_between(start: dt.datetime, end: dt.datetime) -> float:
 
 
 def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
-               notes: list | None = None) -> list[dict]:
+               notes: list | None = None,
+               unmeasured: set | None = None) -> list[dict]:
     """GitHub Actions run history per critical workflow — the heartbeat.
 
     For each workflow: find the newest CONCLUDED run and the newest SUCCESS
     in the last page. If the newest concluded run failed -> stay silent
     (GitHub emailed already; note it in the summary instead). Otherwise, if
     the newest success is older than the threshold -> finding. Zero recorded
-    runs -> note only (a brand-new workflow is not a breach)."""
+    runs -> note only (a brand-new workflow is not a breach).
+
+    Every workflow this run could NOT evaluate (fetch failed, latest run
+    failed, no concluded run on the page, no repo to ask) has its finding key
+    added to ``unmeasured`` when a set is passed: silence about a workflow is
+    not evidence it recovered, and reconcile() keeps such a key's alert state
+    as it was instead of announcing a recovery (audit #61, 2026-10-08)."""
     repo = repo or os.environ.get("GITHUB_REPOSITORY", "")
     out: list[dict] = []
+
+    def _skip(wf: str, note: str) -> None:
+        if notes is not None:
+            notes.append(note)
+        if unmeasured is not None:
+            unmeasured.add(f"run_{wf}")
+
     if not repo:
         if notes is not None:
             notes.append("run-history probes skipped (no GITHUB_REPOSITORY)")
+        if unmeasured is not None:
+            unmeasured.update(f"run_{wf}" for wf in config.WATCHDOG_RUNS)
         return out
     for wf, spec in config.WATCHDOG_RUNS.items():
         url = (f"https://api.github.com/repos/{repo}/actions/workflows/"
@@ -372,18 +390,15 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
         try:
             runs = fetch(url).get("workflow_runs", [])
         except Exception as e:
-            if notes is not None:
-                notes.append(f"{wf}: run-history fetch failed ({e})")
+            _skip(wf, f"{wf}: run-history fetch failed ({e})")
             continue
         concluded = [r for r in runs if r.get("conclusion")]
         if not concluded:
-            if notes is not None:
-                notes.append(f"{wf}: no recorded runs yet")
+            _skip(wf, f"{wf}: no recorded runs yet")
             continue
         if concluded[0].get("conclusion") in _NOISY_CONCLUSIONS:
-            if notes is not None:
-                notes.append(f"{wf}: latest run FAILED - GitHub emailed; "
-                             f"watchdog staying quiet")
+            _skip(wf, f"{wf}: latest run FAILED - GitHub emailed; "
+                      f"watchdog staying quiet")
             continue
         succ = next((r for r in concluded
                      if r.get("conclusion") == "success"), None)
@@ -409,10 +424,20 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
 
 
 def reconcile(state: dict, findings: list[dict], now: dt.datetime,
-              renotify_h: float | None = None) -> tuple[dict, list[dict], list[str]]:
+              renotify_h: float | None = None,
+              unmeasured=None) -> tuple[dict, list[dict], list[str]]:
     """(old state, current findings) -> (new state, findings to ALERT now,
-    recovered keys). State: {key: {"first": iso, "last_alert": iso}}."""
+    recovered keys). State: {key: {"first": iso, "last_alert": iso}}.
+
+    ``unmeasured``: keys a probe could not evaluate this run. A key in the old
+    state that is absent from the findings only because it went unmeasured is
+    NOT recovered: its state is carried forward untouched (same ``first``,
+    same ``last_alert``), so the next measurable run either reminds on the 6h
+    clock or reports a real recovery. Counting it recovered sent a false
+    'recovered' notice and then re-alerted it as a first detection, bypassing
+    the renotify rule (audit #61, 2026-10-08)."""
     renotify_h = config.WATCHDOG_RENOTIFY_HOURS if renotify_h is None else renotify_h
+    unmeasured = set(unmeasured or ())
     new_state: dict = {}
     to_alert: list[dict] = []
     current = {f["key"]: f for f in findings}
@@ -430,7 +455,11 @@ def reconcile(state: dict, findings: list[dict], now: dt.datetime,
                                   "last_alert": now.isoformat(timespec="seconds")}
             else:
                 new_state[key] = prev
-    recovered = sorted(k for k in state if k not in current)
+    for key in state:
+        if key not in current and key in unmeasured:
+            new_state[key] = state[key]
+    recovered = sorted(k for k in state
+                       if k not in current and k not in unmeasured)
     return new_state, to_alert, recovered
 
 
@@ -469,8 +498,9 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
     now = now or _utcnow()
     host = os.environ.get("WATCHDOG_HOST", "unknown")
     notes: list[str] = []
+    unmeasured: set[str] = set()
     findings = probe_content(ROOT, now)
-    findings += probe_runs(_default_fetch, now, notes=notes)
+    findings += probe_runs(_default_fetch, now, notes=notes, unmeasured=unmeasured)
 
     state_path = pathlib.Path(os.environ.get("WATCHDOG_STATE", str(STATE_FILE)))
     try:
@@ -480,7 +510,13 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
     except Exception:
         state = {}
 
-    new_state, to_alert, recovered = reconcile(state, findings, now)
+    new_state, to_alert, recovered = reconcile(state, findings, now,
+                                               unmeasured=unmeasured)
+    current_keys = {f["key"] for f in findings}
+    held = sorted(k for k in unmeasured if k in state and k not in current_keys)
+    if held:
+        notes.append("not measured this run, kept open (NOT a recovery): "
+                     + ", ".join(held))
 
     crit = [f for f in to_alert if f["severity"] == "CRITICAL"]
     warn = [f for f in to_alert if f["severity"] != "CRITICAL"]
