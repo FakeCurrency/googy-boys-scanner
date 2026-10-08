@@ -37,6 +37,16 @@ which telescopes exactly: summing every day's window over a position's life
 returns its total P&L, no more and no less. A position opened inside the window
 uses its own entry as the reference, so its first day counts in full.
 
+A CLOSED row is measured the same way (audit #1, 2026-10-08): the exits it took
+inside the window are valued from the mark it carried into the window, so the
+day a position closes is charged only what it moved that day. Until then the
+closed leg charged `realized_r` (the whole life, from entry) to the exit day,
+so the windows stopped telescoping at every close: a trailed runner giving a
+big move back to its stop read as roughly flat on a crash day, and an old loser
+stopping out re-charged its whole loss to a quiet one. Rows that cannot be
+measured that way (no complete dated exit ledger, no reference) keep the old
+whole-life charge, which errs toward halting.
+
 DIRECTION OF THE CHANGE, STATED PLAINLY: for a book full of older positions this
 makes the daily guard LOOSER (it no longer arrives pre-breached) and the weekly
 guard TIGHTER on names that have been bleeding for a fortnight (their older
@@ -205,6 +215,38 @@ def _window_r(pos: dict, since: str, day: str, price: float | None) -> dict:
     return out
 
 
+def _windowable_close(t: dict, since: str, day: str) -> bool:
+    """Can a CLOSED row be measured from its window reference (audit #1)?
+
+    Needs (a) a measurable trade (risk and entry > 0), (b) an exit ledger that
+    accounts for the WHOLE position — every exit dated, so each leg can land in
+    its own window — and (c) evidence of what it carried into the window: it
+    opened inside it (the reference is its entry) or it carries `day_marks`.
+    Without (c) `ref_price` would fall to `last_mark`, which on a row closed by
+    a scan is its own exit print, and the close would read as a zero move.
+    """
+    if _num(t.get("risk")) <= 0 or _num(t.get("entry")) <= 0:
+        return False
+    exits = t.get("exits") or []
+    if not exits:
+        return False
+    booked = 0.0
+    for e in exits:
+        pct = _num((e or {}).get("pct"))
+        if pct <= 0 or _num((e or {}).get("price")) <= 0:
+            continue
+        if not str((e or {}).get("date") or ""):
+            return False
+        booked += pct
+    if booked < 1.0 - 1e-6:
+        return False
+    entry_date = str(t.get("entry_date") or "")
+    if entry_date and since <= entry_date <= day:
+        return True
+    marks = t.get("day_marks")
+    return isinstance(marks, dict) and any(_num(v) > 0 for v in marks.values())
+
+
 def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict:
     """Aggregate `_window_r` across a market's open + closed positions.
 
@@ -235,6 +277,22 @@ def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict
         if not (since <= exit_date <= day):
             continue
         risk_usd = _num(t.get("risk_usd"))
+        if _windowable_close(t, since, day):
+            # Measured exactly like an open row (audit #1, 2026-10-08): every
+            # in-window exit is valued from the mark the trade CARRIED INTO the
+            # window, not from entry. Charging `realized_r` here booked the
+            # whole life to the exit day, so the moves earlier days had already
+            # charged through `day_marks` were counted twice: a trailed runner
+            # giving back a big move to its stop read ~0 on a crash day, and an
+            # old loser stopping out re-charged its whole loss to a quiet one.
+            # A closed status leaves nothing remaining, so `unrealised` is 0.
+            w = _window_r(t, since, day, None)
+            realised += (w["banked"] - w["cost"]) * risk_usd
+            continue
+        # No complete exit ledger (legacy / hand-built rows) or no evidence of
+        # what the trade carried into the window: the pre-2026-10-08 path. It
+        # charges the undated part whole-life to the exit day, which errs
+        # toward halting.
         total = _num(t.get("realized_r")) * risk_usd
         if t.get("exits"):
             # Subtract the R this trade banked BEFORE the window opened — those
