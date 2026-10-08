@@ -515,13 +515,16 @@ def _gate_block() -> str:
     """
     lines = _scan_commit_body().splitlines()
     start = next(i for i, l in enumerate(lines) if l.strip() == 'SKIPPED=""')
-    manual = next(i for i, l in enumerate(lines) if "scan output (manual)" in l)
+    # audit #5: the manual branch asserts each market's canonical book now,
+    # labelled "bot book [$m] (manual)" (it was one "scan output (manual)").
+    manual = next(i for i, l in enumerate(lines) if "(manual)" in l and "assert_staged" in l)
     end = next(i for i in range(manual, len(lines)) if lines[i].strip() == "fi")
     return "\n".join(lines[start:end + 1])
 
 
 def _run_gate(tmp_path, *, skipped=(), staged_ok=False,
-              market="asx nasdaq crypto", mk="asx nasdaq crypto", event="schedule"):
+              market="asx nasdaq crypto", mk="asx nasdaq crypto", event="schedule",
+              reason=""):
     """Run the real gate shell with a stubbed assert_staged. Returns (rc, out).
 
     `staged_ok` is what the stub reports for EVERY path, which is the only two
@@ -541,7 +544,8 @@ def _run_gate(tmp_path, *, skipped=(), staged_ok=False,
             "".join(f"{m}\n" for m in skipped), encoding="ascii")
     script = tmp_path / "gate.sh"
     script.write_text(
-        f'GITHUB_EVENT_NAME="{event}"\nM="{market}"\nMK="{mk}"\n' + _gate_block(),
+        f'GITHUB_EVENT_NAME="{event}"\nREASON="{reason}"\nM="{market}"\nMK="{mk}"\n'
+        + _gate_block(),
         encoding="utf-8",
     )
     # `bash -e` is what GitHub Actions runs `run:` blocks under (default shell
@@ -622,6 +626,68 @@ def test_a_normal_run_is_untouched_by_any_of_this(tmp_path):
     for label in ("scan output [asx]", "bot book [nasdaq]",
                   "combined book (journal)", "combined book (public twin)"):
         assert f"ASSERT-CALLED: {label}" in out
+
+
+# audit #5 (2026-10-08) - a heartbeat heal is a real scan and is gated like one.
+# The healer dispatches scan.yml as workflow_dispatch with reason=heartbeat, and
+# since cron-job.org became the real clock (2026-10-06) that is ~95% of stock
+# scans. Keyed on the event name alone, every heal took the advisory branch.
+
+
+@pytest.mark.parametrize("market", ["asx crypto", "asx", "nasdaq crypto", "crypto"])
+def test_a_heartbeat_heal_that_staged_nothing_fails_like_a_cron(tmp_path, market):
+    rc, out = _run_gate(tmp_path, staged_ok=False, market=market, mk=market,
+                        event="workflow_dispatch", reason="heartbeat")
+    assert rc != 0, out
+    first = market.split()[0]
+    assert f"ASSERT-CALLED: scan output [{first}]" in out, out
+
+
+def test_a_heartbeat_heal_where_only_asx_froze_is_red_even_though_crypto_moved(tmp_path):
+    """The sharp case: the usual heal is 'asx crypto'. ASX's bot layer throws
+    (swallowed in run.py), crypto saves, so the COMBINED book still moves -
+    the old advisory branch then passed with no warning at all."""
+    stub = tmp_path / "scripts" / "assert_staged.sh"
+    stub.parent.mkdir(parents=True)
+    stub.write_text('#!/usr/bin/env bash\necho "ASSERT-CALLED: $1"\n'
+                    'case "$1" in "bot book [asx]") exit 1 ;; esac\nexit 0\n', encoding="utf-8")
+    script = tmp_path / "gate.sh"
+    script.write_text('GITHUB_EVENT_NAME="workflow_dispatch"\nREASON="heartbeat"\n'
+                      'M="asx crypto"\nMK="asx crypto"\n' + _gate_block(), encoding="utf-8")
+    p = subprocess.run(["bash", "-e", str(script)], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0, p.stdout + p.stderr
+    assert "ASSERT-CALLED: bot book [asx]" in p.stdout
+
+
+def test_a_heartbeat_heal_still_honours_the_skip_marker(tmp_path):
+    rc, out = _run_gate(tmp_path, skipped=("asx", "crypto"), staged_ok=False,
+                        market="asx crypto", mk="asx crypto",
+                        event="workflow_dispatch", reason="heartbeat")
+    assert rc == 0, out
+    assert "UNCHANGED from the previous run" in out
+
+
+@pytest.mark.parametrize("reason", ["", "manual"])
+def test_a_human_dispatch_still_only_warns_and_names_each_canonical_book(tmp_path, reason):
+    """The documented exemption (a --dry-run/--limit test stages nothing) is
+    kept for people. Its warning now names each market's CANONICAL book."""
+    rc, out = _run_gate(tmp_path, staged_ok=False, market="asx nasdaq", mk="asx nasdaq",
+                        event="workflow_dispatch", reason=reason)
+    assert rc == 0, out
+    assert "ASSERT-CALLED: bot book [asx] (manual)" in out
+    assert "ASSERT-CALLED: bot book [nasdaq] (manual)" in out
+    assert "::warning::asx book not staged" in out
+
+
+def test_the_commit_step_actually_receives_the_dispatch_reason():
+    """The shell tests above set REASON by hand; this is the half that proves
+    the real step gets it - through env, never ${{ }} inside run:."""
+    step = _step(_load("scan.yml"), "scan", "Commit & push fresh data")
+    assert step.get("env", {}).get("REASON") == "${{ github.event.inputs.reason }}"
+    assert "${{" not in str(step["run"])
+    hb = (ROOT / "functions" / "api" / "heartbeat.js").read_text(encoding="utf-8")
+    assert 'reason: "heartbeat"' in hb, "the healer no longer names itself heartbeat"
 
 
 def test_the_workflow_reads_the_exact_path_the_scanner_writes():

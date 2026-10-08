@@ -402,6 +402,10 @@ jobs:
       #     run: python -m scanner.journal
 
       - name: Commit & push fresh data (triggers Cloudflare deploy)
+        env:
+          # Free-text input via env, never ${{ }} in run: (2026-07-20 security
+          # pass). Read by the must-change gate below (audit #5, 2026-10-08).
+          REASON: ${{ github.event.inputs.reason }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -457,8 +461,8 @@ jobs:
           # *_vivek.json files (wall-clock generated_at) and every non-dry bot
           # run re-stamps the book's updated_at — a scheduled run staging
           # NOTHING is always a bug (the Phase 3 staging bug ran green 5x
-          # exactly this way). Manual dispatches (--dry-run/--limit tests)
-          # only warn.
+          # exactly this way). Heartbeat heals are gated the same way (audit
+          # #5); manual dispatches (--dry-run/--limit tests) only warn.
           #
           # TOP100 #49 - ONE path was being asserted, and it was the DERIVED one.
           # `journal/vivek_bot_book.json` is `_write_combined()` output; the
@@ -517,7 +521,18 @@ jobs:
             echo "::warning::source fully blocked for: ${SKIPPED}- previous JSON kept, must-change gate advisory for those markets only"
           fi
           skipped() { case " $SKIPPED " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
-          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+          # A HEARTBEAT HEAL IS GATED LIKE A CRON (audit #5, 2026-10-08). The
+          # healer (functions/api/heartbeat.js, pinged by cron-job.org - THE
+          # REAL CLOCK since 2026-10-06) dispatches this workflow as
+          # workflow_dispatch with reason=heartbeat and no args: a full, real
+          # scan, ~95% of stock scans since 2026-10-01. Keyed on the event name
+          # alone it took the advisory branch below, written for human
+          # --dry-run/--limit tests, so a market whose bot layer threw (run.py
+          # swallows it as "bot book: skipped" and exits 0) froze its book with
+          # every heal green - and nothing else catches that: <m>_prices.json
+          # is written BEFORE the bot layer, so the heartbeat and /api/health
+          # read the market fresh. REASON is the input, passed through env.
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${REASON:-}" = "heartbeat" ]; then
             for m in $MK; do
               if skipped "$m"; then
                 echo "::warning::${m}: no data downloaded and no cache to fall back on - scan deliberately published nothing, so ${m} data is UNCHANGED from the previous run. Not a staging failure."
@@ -547,8 +562,15 @@ jobs:
               bash scripts/assert_staged.sh "combined book (public twin)" public/data/vivek_bot_book.json
             fi
           else
-            bash scripts/assert_staged.sh "scan output (manual)" journal/vivek_bot_book.json \
-              || echo "::warning::book not staged (manual run - dry-run or test args?)"
+            # A human dispatch (the SCAN button, a --dry-run/--limit test) only
+            # warns, and since audit #5 it warns about each market's CANONICAL
+            # book (TOP100 #49) rather than the derived combined view, which a
+            # sibling market's save moves on its own.
+            for m in $MK; do
+              skipped "$m" || bash scripts/assert_staged.sh "bot book [$m] (manual)" \
+                "journal/vivek_bot_book.${m}.json" \
+                || echo "::warning::${m} book not staged (manual run - dry-run or test args?)"
+            done
           fi
           if git diff --cached --quiet; then
             echo "No data changes to commit."
