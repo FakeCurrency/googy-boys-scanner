@@ -120,10 +120,13 @@ jobs:
       - name: Screen ASX
         id: scan
         if: steps.due.outputs.run == 'true'
+        env:
+          # audit #13: inputs reach the shell via env, never ${{ }} in run:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -u
           ARGS="--market asx"
-          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${DRY_RUN:-}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           # THREE OUTCOMES, AND THE EXIT CODE IS WHAT TELLS THEM APART.
           #   0  screened and published
           #   3  deliberately published nothing (download blocked/empty); the
@@ -148,11 +151,14 @@ jobs:
       - name: Backtest ASX
         id: bt
         if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true)
+        env:
+          # audit #13: inputs reach the shell via env, never ${{ }} in run:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -u
           set -o pipefail
           ARGS="--market asx --backtest"
-          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${DRY_RUN:-}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           RC=0
           python -m scanner.ignition.run $ARGS | tee -a "$GITHUB_STEP_SUMMARY" || RC=$?
           case "$RC" in

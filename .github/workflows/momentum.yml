@@ -95,14 +95,28 @@ jobs:
       # the previous one was created at an older SHA, and that older copy
       # would call a market due that was published minutes ago. Stdlib only
       # on the runner's own python3, so a no-op wake-up never installs pandas.
+      #
+      # EVERY INPUT REACHES THE SHELL THROUGH env:, NEVER AS ${{ }} INSIDE run:
+      # (audit #13, 2026-10-08 - the 2026-07-20 security pass's rule, which this
+      # file broke). Actions substitutes ${{ }} as TEXT before bash parses the
+      # script, so a free-text `window` holding a double quote ran arbitrary
+      # shell beside a contents:write token - turning a dispatch-only
+      # credential (GH_DISPATCH_TOKEN is Actions-only) into a push to main.
+      # Each value is then checked against what it may legally be.
       - name: Which market is due
         id: due
+        env:
+          DISPATCH_MARKET: ${{ inputs.market }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            MARKET="${{ inputs.market }}"
-            echo "market=${MARKET:-asx}" >> "$GITHUB_OUTPUT"
-            echo "manual dispatch: ${MARKET:-asx} (no due check)"
+            MARKET="${DISPATCH_MARKET:-asx}"
+            case "$MARKET" in
+              asx|nasdaq|crypto) ;;
+              *) echo "::error::market input is not one of asx, nasdaq, crypto"; exit 2 ;;
+            esac
+            echo "market=$MARKET" >> "$GITHUB_OUTPUT"
+            echo "manual dispatch: $MARKET (no due check)"
             exit 0
           fi
           git fetch --quiet --depth=1 origin main
@@ -140,19 +154,40 @@ jobs:
       - name: Screen the market
         id: scan
         if: steps.due.outputs.market != ''
+        env:
+          MARKET: ${{ steps.due.outputs.market }}
+          MODE: ${{ inputs.mode }}
+          WINDOW: ${{ inputs.window }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          BACKTEST: ${{ inputs.backtest }}
         run: |
           set -u
-          MARKET="${{ steps.due.outputs.market }}"
+          case "${MARKET:-}" in
+            asx|nasdaq|crypto) ;;
+            *) echo "::error::market is not one of asx, nasdaq, crypto"; exit 2 ;;
+          esac
           echo "market=$MARKET" >> "$GITHUB_OUTPUT"
 
           ARGS="--market $MARKET"
-          if [ -n "${{ inputs.mode }}" ]; then ARGS="$ARGS --mode ${{ inputs.mode }}"; fi
-          if [ -n "${{ inputs.window }}" ]; then ARGS="$ARGS --window ${{ inputs.window }}"; fi
-          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ -n "${MODE:-}" ]; then
+            case "$MODE" in
+              A|B|C) ;;
+              *) echo "::error::mode input must be A, B or C"; exit 2 ;;
+            esac
+            ARGS="$ARGS --mode $MODE"
+          fi
+          # `window` is the one FREE-TEXT input: a whole number of bars or blank.
+          if [ -n "${WINDOW:-}" ]; then
+            case "$WINDOW" in
+              *[!0-9]*) echo "::error::window input must be a whole number of bars"; exit 2 ;;
+            esac
+            ARGS="$ARGS --window $WINDOW"
+          fi
+          if [ "${DRY_RUN:-}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           # A manual BACKTEST publishes the lens's second file, same directory,
           # same gate and commit path; an automatic wake-up never sets this.
           FILE="$MARKET.json"
-          if [ "${{ inputs.backtest }}" = "true" ]; then
+          if [ "${BACKTEST:-}" = "true" ]; then
             ARGS="$ARGS --backtest"
             FILE="${MARKET}_backtest.json"
           fi
@@ -187,10 +222,11 @@ jobs:
 
       - name: Commit and push
         if: steps.scan.outputs.published == 'true' && inputs.dry_run != true
+        env:
+          MARKET: ${{ steps.scan.outputs.market }}
+          FILE: ${{ steps.scan.outputs.file }}
         run: |
           set -u
-          MARKET="${{ steps.scan.outputs.market }}"
-          FILE="${{ steps.scan.outputs.file }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 

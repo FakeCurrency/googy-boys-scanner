@@ -631,7 +631,21 @@ def test_every_trigger_but_the_backstop_is_due_without_touching_git(sh, event, s
 # ---------------------------------------------------------------------------
 
 def _render(body: str, *, dry_run: bool) -> str:
-    return body.replace("${{ inputs.dry_run }}", "true" if dry_run else "")
+    # audit #13: the dry_run input arrives through the step's env (DRY_RUN),
+    # never as ${{ }} text inside run:, so there is nothing left to render here;
+    # the value travels in _dry_env() and the env mapping is pinned below.
+    assert "${{" not in body, "an expression crept back into a run: block"
+    return body
+
+
+def _dry_env(dry_run: bool) -> dict:
+    return {"DRY_RUN": "true" if dry_run else ""}
+
+
+def test_the_dry_run_input_reaches_both_runner_steps_through_env():
+    for step in (SCAN, BT):
+        assert step.get("env", {}).get("DRY_RUN") == "${{ inputs.dry_run }}", step.get("id")
+        assert '"${DRY_RUN:-}" = "true"' in step["run"], step.get("id")
 
 
 def _stub_python(sh) -> pathlib.Path:
@@ -662,7 +676,7 @@ def test_the_exit_code_decides_the_outcome(sh, step, rc, published, step_rc):
     """
     _stub_python(sh)
     body = _render(step["run"], dry_run=False)
-    code, out, log = _run_block(sh, body, sh["tmp"], {"STUB_RC": str(rc)})
+    code, out, log = _run_block(sh, body, sh["tmp"], {"STUB_RC": str(rc), **_dry_env(False)})
     assert code == step_rc, log
     assert out.get("published") == published, (out, log)
     if rc == 3:
@@ -676,7 +690,8 @@ def test_the_exit_code_decides_the_outcome(sh, step, rc, published, step_rc):
 def test_the_screen_and_backtest_run_the_cli_they_claim_to(sh, dry_run):
     args_log = _stub_python(sh)
     for step in (SCAN, BT):
-        rc, _, log = _run_block(sh, _render(step["run"], dry_run=dry_run), sh["tmp"], {})
+        rc, _, log = _run_block(sh, _render(step["run"], dry_run=dry_run), sh["tmp"],
+                                _dry_env(dry_run))
         assert rc == 0, log
     screen, replay = args_log.read_text(encoding="utf-8").splitlines()
     assert screen.split()[:4] == ["-m", "scanner.ignition.run", "--market", "crypto"]

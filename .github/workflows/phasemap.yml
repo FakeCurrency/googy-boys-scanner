@@ -63,10 +63,16 @@ jobs:
           # (2026-07-20 security pass) — the runner does not shell-interpolate
           # env values, so a crafted input can't inject commands.
           ARGS: ${{ github.event.inputs.args }}
+          # The market too (audit #13, 2026-10-08): a choice input, but no
+          # ${{ }} expression belongs inside run: at all - tests pin it repo-wide.
+          MARKET: ${{ github.event.inputs.market }}
         run: |
           set +e
-          MARKET="${{ github.event.inputs.market }}"
           MARKET="${MARKET:-all}"
+          case "$MARKET" in
+            all|asx|nasdaq|crypto) ;;
+            *) echo "::error::market input is not one of all, asx, nasdaq, crypto"; exit 2 ;;
+          esac
 
           if [ "$MARKET" != "all" ]; then
             echo "Single-market PhaseMap scan: $MARKET"

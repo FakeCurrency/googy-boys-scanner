@@ -65,7 +65,8 @@ def test_no_scheduled_run_picks_its_market_off_the_cron_string():
     cron would again silently skip that market for the day."""
     assert "github.event.schedule" not in SRC
     scan = _step(id="scan")
-    assert 'MARKET="${{ steps.due.outputs.market }}"' in scan["run"]
+    # audit #13: the market reaches the shell through env, never ${{ }} in run:
+    assert scan["env"]["MARKET"] == "${{ steps.due.outputs.market }}"
 
 
 def test_every_step_after_the_gate_is_skipped_when_nothing_is_due():
@@ -232,7 +233,8 @@ def test_the_must_change_gate_names_the_canonical_path():
     body = commit["run"]
     assert "scripts/assert_staged.sh" in body
     assert 'bash scripts/assert_staged.sh "momentum $MARKET" "public/data/momentum/$FILE"' in body
-    assert 'FILE="${{ steps.scan.outputs.file }}"' in body
+    # audit #13: through env, never ${{ }} inside run:
+    assert commit["env"]["FILE"] == "${{ steps.scan.outputs.file }}"
     assert "git add -- " in body, "one pathspec at a time"
 
 
@@ -242,7 +244,10 @@ def test_the_file_is_the_screen_unless_a_human_asked_for_the_backtest():
     workflow_run wake-up can publish a backtest (or skip a screen for one)."""
     body = next(s for s in JOB["steps"] if s.get("id") == "scan")["run"]
     assert 'FILE="$MARKET.json"' in body
-    assert 'if [ "${{ inputs.backtest }}" = "true" ]; then' in body
+    # audit #13: the input arrives as $BACKTEST via env, never ${{ }} in run:
+    assert 'if [ "${BACKTEST:-}" = "true" ]; then' in body
+    assert next(s for s in JOB["steps"] if s.get("id") == "scan")["env"]["BACKTEST"] == (
+        "${{ inputs.backtest }}")
     assert 'FILE="${MARKET}_backtest.json"' in body
     assert 'ARGS="$ARGS --backtest"' in body
     files = set(re.findall(r'FILE="([^"$]*\$\{?MARKET\}?[^"]*)"', body))
