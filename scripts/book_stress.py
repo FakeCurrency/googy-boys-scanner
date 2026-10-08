@@ -11,7 +11,13 @@ Method, deliberately simple and stated on the payload: apply a uniform
 percentage drawdown d to every LONG position's last_mark; a position stops
 out when mark*(1-d) <= stop (its R lands at the stop's R), otherwise it
 re-marks at the shocked price. Shorts (none held today; allow_shorts is off)
-are left untouched and counted out loud. No betas, no correlations - a
+are left untouched and counted out loud. A RUNNER (a position that has banked a
+partial, `booked_pct` > 0) is shocked on its un-booked REMAINDER only - the same
+basis as the engine's published `unreal_r` (vivek_guard._unreal_r), so the
+base and every shocked figure measure the same exposure and a 0% shock gives
+back exactly nothing (audit #31, 2026-10-08: the shocked side used to value the
+full original size, so a runner read as GAINING under a drawdown). Banked R is
+out of both sides, as it always was. No betas, no correlations - a
 uniform beta-1 shock is the honest floor of sophistication, and what it
 loses in nuance it keeps in explainability.
 
@@ -48,14 +54,22 @@ def stress(open_rows: list[dict], shocks=SHOCKS) -> dict:
         mark, stop, entry, risk = (t.get("last_mark"), t.get("stop"),
                                    t.get("entry"), t.get("risk"))
         ur = t.get("unreal_r")
+        booked = t.get("booked_pct")
+        booked = 0.0 if booked is None else booked
         if str(t.get("direction", "long")).lower() != "long":
             shorts += 1
             continue
-        if not all(_finite(x) for x in (mark, stop, entry, risk)) or risk <= 0 or not _finite(ur):
+        if (not all(_finite(x) for x in (mark, stop, entry, risk, booked)) or risk <= 0
+                or not _finite(ur)):
             skipped += 1
             continue
-        rows.append({"mark": float(mark), "stop": float(stop),
-                     "entry": float(entry), "risk": float(risk), "ur": float(ur)})
+        # The un-booked remainder, clamped exactly as vivek_guard._remaining
+        # does - the basis the published `unreal_r` (the base below) is on.
+        rem = min(1.0, max(0.0, 1.0 - float(booked)))
+        if rem <= 0.0:
+            continue        # fully booked: nothing left exposed to a shock
+        rows.append({"mark": float(mark), "stop": float(stop), "entry": float(entry),
+                     "risk": float(risk), "ur": float(ur), "rem": rem})
     base_ur = round(sum(r["ur"] for r in rows), 3)
     table = []
     for d in shocks:
@@ -65,14 +79,15 @@ def stress(open_rows: list[dict], shocks=SHOCKS) -> dict:
             shocked = r["mark"] * (1 - d)
             if shocked <= r["stop"]:
                 stopped += 1
-                new_total += (r["stop"] - r["entry"]) / r["risk"]
+                new_total += r["rem"] * (r["stop"] - r["entry"]) / r["risk"]
             else:
-                new_total += (shocked - r["entry"]) / r["risk"]
+                new_total += r["rem"] * (shocked - r["entry"]) / r["risk"]
         table.append({
             "shock_pct": round(d * 100, 1),
             "stopped": stopped,
-            "unreal_r": round(new_total, 2),
-            "given_back_r": round(base_ur - new_total, 2),
+            # `+ 0.0` turns a rounded -0.0 into 0.0 (a 0% shock is exact now).
+            "unreal_r": round(new_total, 2) + 0.0,
+            "given_back_r": round(base_ur - new_total, 2) + 0.0,
         })
     return {
         "n_long": len(rows),
@@ -81,7 +96,8 @@ def stress(open_rows: list[dict], shocks=SHOCKS) -> dict:
         "base_unreal_r": round(base_ur, 2),
         "shocks": table,
         "method": ("uniform beta-1 shock on every long's last_mark vs its real "
-                   "stop; a stopped position realises its stop's R; no "
+                   "stop; a stopped position realises its stop's R; a runner is "
+                   "valued on its un-booked remainder, like unreal_r; no "
                    "correlations, no betas - the honest floor of sophistication"),
     }
 
