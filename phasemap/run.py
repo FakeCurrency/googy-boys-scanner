@@ -131,7 +131,43 @@ def write_chart_json(out_dir: str, ticker: str, df) -> None:
     os.replace(tmp, path)
 
 
-def run_market(market: str, args, run_date: str, data_root: str) -> dict:
+def _previous_result_count(out_dir: str):
+    """Results in the market's current latest.json, or None when unreadable."""
+    try:
+        with open(os.path.join(out_dir, "latest.json"), encoding="utf-8") as f:
+            res = json.load(f).get("results")
+        return len(res) if isinstance(res, list) else None
+    except Exception:
+        return None
+
+
+def publish_refusal(fetched: int, universe: int, n_results: int,
+                    prev_results, full_universe: bool):
+    """Why this run must NOT replace the published snapshot, or None.
+
+    Audit #9 / REFINEMENTS #24 (2026-10-08): a Yahoo throttle/outage night
+    (yfinance swallows the errors into empty frames) used to publish
+    results=[] over yesterday's latest.json and prune every chart file, with
+    a green exit -- the schema gate accepts an empty list and run_date alone
+    satisfied the must-change gate. A refusal writes and prunes NOTHING, so
+    yesterday's files stay up and, on a scheduled run, phasemap.yml's
+    must-change gate turns the run red while the night's healthy markets still
+    commit (a non-zero exit here would skip the commit step for all of them).
+    """
+    if fetched == 0:
+        return (f"the provider returned no usable bars for any of the "
+                f"{universe} tickers (Yahoo outage or throttle)")
+    if (full_universe and prev_results is not None
+            and prev_results >= CONFIG.publish_collapse_min_prev
+            and n_results < CONFIG.publish_collapse_ratio * prev_results):
+        return (f"results collapsed to {n_results} from {prev_results} in the "
+                f"previous latest.json (bars for {fetched} of {universe} tickers)")
+    return None
+
+
+def run_market(market: str, args, run_date: str, data_root: str):
+    """Scan one market and publish its snapshot. Returns the by-state counts,
+    or None when publish_refusal() kept the previous snapshot instead."""
     symbols = load_symbols(market)
     if args.tickers:
         wanted = [t.strip().upper() for t in args.tickers.split(",")]
@@ -152,6 +188,7 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
 
     results = []
     charted = set()
+    pending_charts = []   # written only once the publish guard passes (audit #9)
     now = datetime.datetime.now(datetime.timezone.utc)   # one instant per market run
     for t in provider.universe():
         df = provider.get_daily_bars(t)
@@ -176,12 +213,24 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
             rec["next"] = render_next(rec)
             results.append(rec)
         if recs and t not in charted:
-            write_chart_json(chart_dir, t, df)
+            pending_charts.append((t, df))
             charted.add(t)
 
+    out_dir = os.path.join(data_root, market)
+    refusal = publish_refusal(provider.fetched_count(), len(symbols), len(results),
+                              _previous_result_count(out_dir),
+                              full_universe=not (args.tickers or args.limit))
+    if refusal:
+        # ASCII only; ::error:: renders as an annotation on the run page
+        print(f"::error::PhaseMap {market}: REFUSED to publish - {refusal}. "
+              f"The previous latest.json and chart files are kept; nothing "
+              f"was written or pruned.")
+        return None
+
+    for t, df in pending_charts:
+        write_chart_json(chart_dir, t, df)
     snap = build_snapshot(run_date, universe_size=len(symbols),
                           results=sort_records(results))
-    out_dir = os.path.join(data_root, market)
     write_snapshot(snap, out_dir)
     pruned = prune_stale_files(chart_dir, charted) + prune_dated_snapshots(out_dir)
     if pruned:

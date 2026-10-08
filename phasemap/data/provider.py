@@ -32,11 +32,18 @@ class YFinanceProvider:
         self._symbols = dict(symbols)
         self._period = period
         self._cache = {}
+        self._fetched = False   # fetch_all runs at most once per run (audit #9)
 
     def universe(self):
         return sorted(self._symbols)
 
     def fetch_all(self, chunk_size: int = 75):
+        # Marked BEFORE the download (audit #9, 2026-10-08): get_daily_bars
+        # used to re-run fetch_all whenever the cache was EMPTY, so a Yahoo
+        # outage night (every chunk empty) re-downloaded the whole universe
+        # once per ticker -- ~50,000 yf.download calls on the ASX, past the
+        # nightly's 120-min timeout, discarding every market's snapshot.
+        self._fetched = True
         import yfinance as yf
         by_yf = {yf_sym: t for t, yf_sym in self._symbols.items()}
         yf_syms = sorted(by_yf)
@@ -71,7 +78,11 @@ class YFinanceProvider:
                                         "Close", "Volume"]]
                 self._cache[by_yf[sym]] = out
 
+    def fetched_count(self) -> int:
+        """How many universe tickers came back with usable bars."""
+        return len(self._cache)
+
     def get_daily_bars(self, ticker: str):
-        if not self._cache:
+        if not self._fetched:
             self.fetch_all()
         return self._cache.get(ticker)

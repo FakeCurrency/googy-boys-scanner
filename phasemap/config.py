@@ -86,6 +86,14 @@ class PhaseMapConfig:
     # ---- Output ---------------------------------------------------------------
     output_dir: str = "public/data/phasemap"   # frontend reads latest.json here
     timezone: str = "Australia/Melbourne"
+    # Publish guard (v1.3.2, audit #9 / REFINEMENTS #24): a Yahoo outage night
+    # used to overwrite latest.json with zero results and prune every chart
+    # file, green. A full-universe run refuses to write or prune when the
+    # provider returned nothing, or when results fall below this share of the
+    # previous latest.json (judged only when that file had at least
+    # publish_collapse_min_prev results -- a tiny market is too noisy).
+    publish_collapse_ratio: float = 0.5
+    publish_collapse_min_prev: int = 20
 
     # ---- Data hygiene (v1.3.0; equities v1.3.2) --------------------------------
     # 24/7 markets have no session close: yfinance's newest daily row is the
