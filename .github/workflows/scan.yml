@@ -157,6 +157,12 @@ jobs:
             # FAIL OPEN: an extra scan costs one run; a session with no scan
             # costs the day. A schedule still never scans crypto.
             M="${MARKET:-all}"
+            # Checked before it reaches $GITHUB_OUTPUT: a newline in it would
+            # forge another output line (audit #13 hardening, 2026-10-08).
+            case "$M" in
+              all|asx|nasdaq|crypto) ;;
+              *) echo "::error::market input is not one of all, asx, nasdaq, crypto"; exit 2 ;;
+            esac
             [ "$M" = "all" ] && M="asx nasdaq crypto"
             [ "$EVENT" = "schedule" ] && M="asx nasdaq"
             echo "::warning::scan gate crashed - scanning $M (fail open)"

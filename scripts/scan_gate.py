@@ -27,7 +27,9 @@ Who started the run decides which rule applies:
              2026-10-05 a heal rescanned all three markets round the clock:
              65 of the 83 heal-started ASX scans from 28 Sep to 5 Oct ran
              with the ASX shut.)
-  otherwise  a person or the SCAN button: exactly what was asked.
+  otherwise  a person or the SCAN button: exactly what was asked, if it is
+             a market at all (anything else scans nothing and is never
+             echoed into the outputs).
 
 The gate runs outside the `scan` mutex and reads the stamps on the branch
 when it starts, so a second trigger that arrives while a catch-up scan is
@@ -90,6 +92,13 @@ def decide(event: str, schedule: str, reason: str, market: str, now: dt.datetime
     asked = list(ALL) if market in ("", "all") else [market]
     if event == "schedule":
         asked = list(STOCK)
+    elif market not in ("", "all") + ALL:
+        # Never echo an unknown market back (audit #13 hardening, 2026-10-08):
+        # main() prints `markets=` into $GITHUB_OUTPUT and the scan job copies
+        # it into $GITHUB_ENV, so a newline in a dispatched value could forge
+        # an output or an environment line for every later step. The choice
+        # list should stop such a value; this does not rely on it.
+        return [], f"{event}: market {market!a} is not one of all, {', '.join(ALL)} -> skip"
     elif reason != "heartbeat":
         return asked, f"{event}: running what was asked"
     closing = event == "schedule" and schedule in CLOSING_CRONS

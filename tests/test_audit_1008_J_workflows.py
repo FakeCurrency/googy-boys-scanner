@@ -219,3 +219,67 @@ def test_the_arriving_file_is_what_the_scan_writes():
     src = (ROOT / "scanner" / "scan.py").read_text(encoding="utf-8")
     assert 'f"{market_key}_arriving.json"' in src, (
         "scan.py renamed the arriving file; both staging lists must follow")
+
+
+# ---------------------------------------------------------------------------
+# #13 hardening (review) - scan.yml's market input never reaches
+# $GITHUB_OUTPUT / $GITHUB_ENV unchecked
+# ---------------------------------------------------------------------------
+# The same threat as #13 by a different door: scan_gate.py echoed a manual
+# dispatch's market straight into `markets=` ($GITHUB_OUTPUT), the scan job
+# copies that into $GITHUB_ENV, and the gate's fail-open branch did the same
+# in shell. A newline in the value would forge an output or an env line (e.g.
+# BASH_ENV) for every later step. GitHub's choice list should refuse such a
+# value; these pins make the workflow not depend on it.
+
+import importlib.util  # noqa: E402
+
+_gspec = importlib.util.spec_from_file_location("scan_gate_j", ROOT / "scripts" / "scan_gate.py")
+SCAN_GATE = importlib.util.module_from_spec(_gspec)
+_gspec.loader.exec_module(SCAN_GATE)
+
+FORGE = "asx\nmarkets<<E\nasx\nBASH_ENV=/tmp/pwn\nE"
+
+
+@pytest.mark.parametrize("market", [FORGE, "turtle", "asx nasdaq", "ASX"])
+@pytest.mark.parametrize("reason", ["manual", "heartbeat", ""])
+def test_the_scan_gate_never_echoes_an_unknown_market(market, reason, capsys):
+    import datetime as dt
+    now = dt.datetime(2026, 10, 7, 2, 0, tzinfo=dt.timezone.utc)   # ASX live
+    markets, why = SCAN_GATE.decide("workflow_dispatch", "", reason, market, now, {})
+    assert markets == [], why
+    assert "\n" not in why
+    SCAN_GATE.main(["--event", "workflow_dispatch", "--reason", reason, "--market", market,
+                    "--now", now.isoformat(), "--data", str(ROOT / "public" / "data")])
+    assert capsys.readouterr().out == "run=false\nmarkets=\n"
+
+
+@pytest.mark.parametrize("market", ["", "all", "asx", "nasdaq", "crypto"])
+def test_every_legal_market_is_still_scanned_as_asked(market):
+    import datetime as dt
+    now = dt.datetime(2026, 10, 10, 1, 0, tzinfo=dt.timezone.utc)  # Saturday
+    want = list(SCAN_GATE.ALL) if market in ("", "all") else [market]
+    assert SCAN_GATE.decide("workflow_dispatch", "", "manual", market, now, {})[0] == want
+
+
+def _gate_check_step():
+    return next(s for s in _load("scan.yml")["jobs"]["gate"]["steps"] if s.get("id") == "check")
+
+
+@needs_bash
+@pytest.mark.parametrize("market,rc_want,out_want", [
+    (FORGE, 2, ""), ("turtle", 2, ""),
+    ("asx", 0, "run=true\nmarkets=asx\n"), ("", 0, "run=true\nmarkets=asx nasdaq crypto\n"),
+])
+def test_a_gate_crash_never_writes_an_unchecked_market_to_the_outputs(
+        tmp_path, market, rc_want, out_want):
+    """No scripts/scan_gate.py in the cwd = the crash branch (a failed sparse
+    checkout), which builds `markets=` itself from the raw input."""
+    out = tmp_path / "out"
+    out.write_text("", encoding="utf-8")
+    env = {"PATH": "/usr/bin:/bin", "GITHUB_OUTPUT": str(out), "EVENT": "workflow_dispatch",
+           "SCHED": "", "REASON": "", "MARKET": market}
+    p = subprocess.run([BASH, "-e", "-c", _gate_check_step()["run"]], cwd=tmp_path, env=env,
+                       capture_output=True, text=True, timeout=60)
+    assert p.returncode == rc_want, p.stdout + p.stderr
+    assert out.read_text(encoding="utf-8") == out_want
