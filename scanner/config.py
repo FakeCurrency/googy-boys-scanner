@@ -1571,6 +1571,18 @@ MORNING_PLAYS_SLOT_GATE = {
     "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 40},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
+
+# WHEN IS TODAY'S DAILY BAR FINAL? (2026-10-08 audit, owner: "Do it all".)
+# The 2026-10-06 ASX-close ruling made the gate above the one source of truth
+# for "the session's bar is final on the feed", but only the scan gate, the
+# digest and ignition_asx_due read it; the VIVEK scan's forming-bar drop, ASX
+# Ignition, momentum_due and PhaseMap each kept their own (earlier) idea of the
+# close, so triggers armed on a pre-auction / mid-session bar. Every reader now
+# asks daily_bar_forming(). {market: (tz, hour, minute)} in the market's own
+# calendar; a market absent here (crypto) has no close and its bar for the
+# current UTC date is forming until UTC midnight.
+DAILY_BAR_FINAL = {g["market"]: (g["tz"], g["hour"], g["minute"])
+                   for g in MORNING_PLAYS_SLOT_GATE.values()}
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.
 MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}
@@ -1604,3 +1616,43 @@ MORNING_PLAYS_STALE_H = 20.0
 # digest. Empty = omit the link (a dead link is worse than none). The owner
 # can set their Cloudflare Pages URL here.
 MORNING_PLAYS_APP_URL = ""
+
+
+def daily_bar_forming(market: str, bar_date, now=None) -> bool:
+    """Is the daily bar dated `bar_date` still FORMING at `now`?
+
+    `bar_date` is the bar's date in the market's own calendar (a date, a
+    datetime/Timestamp, or an ISO string). `now` is an aware datetime (naive is
+    read as UTC; None = the current instant). Stocks: True only when the bar is
+    the market-local TODAY and the clock has not reached DAILY_BAR_FINAL (or
+    the bar is dated in the future). Crypto (no entry): True when the bar is the
+    current UTC date or later. Never raises on an unreadable date: an
+    unreadable bar is reported as NOT forming, so callers keep today's
+    behaviour rather than dropping a bar they cannot date.
+    """
+    import datetime as _dt
+    from zoneinfo import ZoneInfo as _Z
+
+    if now is None:
+        now = _dt.datetime.now(_dt.timezone.utc)
+    elif now.tzinfo is None:
+        now = now.replace(tzinfo=_dt.timezone.utc)
+    try:
+        if isinstance(bar_date, str):
+            d = _dt.date.fromisoformat(bar_date[:10])
+        elif isinstance(bar_date, _dt.datetime):
+            d = bar_date.date()
+        elif isinstance(bar_date, _dt.date):
+            d = bar_date
+        else:                                   # pandas Timestamp et al.
+            d = bar_date.date()
+    except Exception:
+        return False
+    final = DAILY_BAR_FINAL.get(market)
+    if not final:
+        return d >= now.astimezone(_dt.timezone.utc).date()
+    tz, hh, mm = final
+    local = now.astimezone(_Z(tz))
+    if d != local.date():
+        return d > local.date()
+    return (local.hour * 60 + local.minute) < (hh * 60 + mm)
