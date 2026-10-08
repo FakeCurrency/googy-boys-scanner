@@ -21,6 +21,9 @@ ACTIONS
                       "timezone":"Australia/Melbourne","enabled":true,
                       "saveResponses":true}
     cronjob-update   {"id": N, ...any of the create fields}
+                      a schedule field is MERGED into the job's current
+                      schedule (read first), so retiming "minutes" never
+                      widens a Mon-Fri job to every day
     cronjob-delete   {"id": N}
     cf-list-vars                       production env var NAMES + types only
     cf-set-var       {"name","value","type":"secret_text"|"plain_text"}
@@ -138,19 +141,23 @@ _JOB_FIELDS = ("title", "url", "enabled", "saveResponses", "requestMethod")
 _SCHED_FIELDS = ("timezone", "minutes", "hours", "mdays", "months", "wdays", "expiresAt")
 
 
-def cronjob_body(args):
+def cronjob_body(args, fill_defaults=False):
     """Translate the flat args dict into cron-job.org's {"job": {...}} shape.
-    Only fields present in args are sent, so an update touches nothing else."""
+    Only fields present in args are sent, so an update touches nothing else.
+
+    `fill_defaults` (cronjob-create ONLY): a create needs every axis stated,
+    so an unstated mdays/months/wdays is sent as [-1] ("every"). An update
+    must never do that -- [-1] is an explicit value, so a minutes-only retime
+    of a Mon-Fri job used to PATCH wdays:[-1] and widen it to seven days
+    (audit #55, 2026-10-08). do_cronjob merges an update's schedule fields
+    into the job's current schedule instead."""
     job = {k: args[k] for k in _JOB_FIELDS if k in args}
     sched = {k: args[k] for k in _SCHED_FIELDS if k in args}
     if sched:
-        # -1 means "every" on cron-job.org; a create needs every axis stated.
-        if "mdays" not in sched:
-            sched["mdays"] = [-1]
-        if "months" not in sched:
-            sched["months"] = [-1]
-        if "wdays" not in sched:
-            sched["wdays"] = [-1]
+        if fill_defaults:
+            # -1 means "every" on cron-job.org; a create needs every axis stated.
+            for axis in ("mdays", "months", "wdays"):
+                sched.setdefault(axis, [-1])
         job["schedule"] = sched
     return {"job": job}
 
@@ -179,14 +186,33 @@ def do_cronjob(action, args, env):
     if action == "cronjob-create":
         if not args.get("url"):
             raise OpsError('cronjob-create needs a "url"')
-        body = cronjob_body(args)
+        body = cronjob_body(args, fill_defaults=True)
         body["job"].setdefault("enabled", True)
         body["job"].setdefault("saveResponses", True)
         body["job"].setdefault("requestMethod", 0)
         return call("PUT", f"{CRONJOB_API}/jobs", h, body)
     if action == "cronjob-update":
         jid = _need_id(args)
-        return call("PATCH", f"{CRONJOB_API}/jobs/{jid}", h, cronjob_body(args))
+        body = cronjob_body(args)
+        if "schedule" in body["job"]:
+            # Whether cron-job.org merges a partial schedule on PATCH or
+            # replaces it wholesale is not something to bet a job's weekdays
+            # on: read the CURRENT schedule and send it whole, with only the
+            # caller's fields changed. If it cannot be read, change nothing.
+            status, current = call("GET", f"{CRONJOB_API}/jobs/{jid}", h)
+            sched = (((current or {}).get("jobDetails") or {}).get("schedule")
+                     if isinstance(current, dict) else None)
+            if not (200 <= int(status) < 300):
+                return status, {"error": f"could not read job {jid}'s current schedule "
+                                         "to merge into - nothing was changed",
+                                "get": current}
+            if not isinstance(sched, dict):
+                raise OpsError(f"job {jid}'s GET reply carries no jobDetails.schedule "
+                               "to merge into - nothing was changed")
+            merged = {k: sched[k] for k in _SCHED_FIELDS if k in sched}
+            merged.update(body["job"]["schedule"])
+            body["job"]["schedule"] = merged
+        return call("PATCH", f"{CRONJOB_API}/jobs/{jid}", h, body)
     if action == "cronjob-delete":
         return call("DELETE", f"{CRONJOB_API}/jobs/{_need_id(args)}", h)
     raise OpsError(f"unknown cronjob action {action}")
