@@ -10,6 +10,7 @@ chart file, and main() exited 0.
 """
 
 import argparse
+import datetime
 import json
 import os
 import sys
@@ -111,6 +112,9 @@ def test_a_collapse_against_the_previous_snapshot_is_refused(monkeypatch, tmp_pa
     assert pm_run.run_market("asx", _args(), "2026-10-08", root) is None
     with open(os.path.join(root, "asx", "latest.json"), "rb") as f:
         assert f.read() == before
+    # the night's 30 chart files are held back with the snapshot, not
+    # written ahead of a publish that is then refused
+    assert os.listdir(os.path.join(root, "charts", "asx")) == ["OLD0.json"]
 
 
 def test_a_healthy_night_publishes_and_prunes(monkeypatch, tmp_path):
@@ -146,3 +150,39 @@ def test_publish_refusal_rules():
     small = CONFIG.publish_collapse_min_prev - 1
     assert r(5, 30, 0, small, True) is None              # too small to judge
     assert r(5, 30, 0, None, True) is None               # no previous file
+
+
+# ------------------------------------------------------------ audit #8 wiring
+def test_a_bar_fetched_before_the_close_stays_forming_after_a_slow_download(
+        monkeypatch, tmp_path):
+    """run_market drops the forming bar, judged at the instant the download
+    STARTED: bars fetched at 15:59 New York are pre-close even if the
+    download finishes at 16:10 (audit #8 review, 2026-10-08)."""
+    root = str(tmp_path)
+    t0 = datetime.datetime(2026, 10, 7, 19, 59, tzinfo=datetime.timezone.utc)
+    t1 = datetime.datetime(2026, 10, 7, 20, 10, tzinfo=datetime.timezone.utc)
+    clock = {"t": t0}
+
+    class _Clock(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return clock["t"]
+
+    monkeypatch.setattr(pm_run, "datetime",
+                        types.SimpleNamespace(datetime=_Clock,
+                                              timezone=datetime.timezone))
+
+    def session_frame(chunk):
+        clock["t"] = t1                       # the download takes 11 minutes
+        bars = synth.fixture1()
+        bars["Date"] = pd.bdate_range(end="2026-10-07", periods=len(bars))
+        bars = bars.set_index("Date")
+        return pd.concat({sym: bars for sym in chunk}, axis=1)
+
+    monkeypatch.setattr(pm_run, "load_symbols", lambda m: _universe(3))
+    _stub_yfinance(monkeypatch, session_frame)
+    out = pm_run.run_market("nasdaq", _args(), "2026-10-08", root)
+    assert out                                 # still scanned and published
+    with open(os.path.join(root, "charts", "nasdaq", "T000.json"), encoding="utf-8") as f:
+        candles = json.load(f)["candles"]
+    assert candles[-1]["t"] == "2026-10-06"    # the 10-07 partial bar is gone

@@ -180,6 +180,12 @@ def run_market(market: str, args, run_date: str, data_root: str):
 
     provider = YFinanceProvider({t: info["yf"] for t, info in symbols.items()},
                                 period=args.period)
+    # One instant per market run, taken BEFORE the download: the bars' vintage
+    # is when they were fetched, so a download that straddles the close (an
+    # ASX run starting 16:35 Sydney finishes after 16:40) still treats the
+    # newest bar as forming. Taken after, it would be "final" by the clock
+    # while holding pre-close prices (audit #8 review).
+    now = datetime.datetime.now(datetime.timezone.utc)
     provider.fetch_all()
     stats = load_stats(market)
 
@@ -189,7 +195,6 @@ def run_market(market: str, args, run_date: str, data_root: str):
     results = []
     charted = set()
     pending_charts = []   # written only once the publish guard passes (audit #9)
-    now = datetime.datetime.now(datetime.timezone.utc)   # one instant per market run
     for t in provider.universe():
         df = provider.get_daily_bars(t)
         if df is None:
