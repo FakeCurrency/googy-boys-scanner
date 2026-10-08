@@ -246,10 +246,24 @@ def enrich(m, frames, universe, min_dollar_vol, market_key=None):
 # values forward instead of publishing the market without them.
 ENRICHED_KEYS = ("top_movers", "rotation_detail", "enriched_at")
 
+# The market READ fetch() builds from its own sector/index downloads, moved as
+# ONE unit (summary/rotation are computed from the two lists, and read_at says
+# when they were fetched). See carry_forward for why it can need carrying.
+READ_KEYS = ("indices", "sectors", "summary", "rotation", "read_at")
+
+
+def _read_rank(m: dict) -> tuple:
+    """How complete a market's read is: the sector board first (it is what the
+    NEWS page draws and what the summary needs), then the index list (which
+    only feeds the summary's headline)."""
+    return (bool(m.get("sectors")), bool(m.get("indices")))
+
 
 def carry_forward(sec: dict, prev: dict) -> int:
     """Copy ENRICHED_KEYS from the previously published sectors.json into any
-    market of ``sec`` that this run did not enrich. Returns how many were moved.
+    market of ``sec`` that this run did not enrich, and carry the previous
+    READ (READ_KEYS) over a fresh one that came back emptier. Returns how many
+    fields were moved.
 
     fetch() rebuilds the whole dict from scratch every run, so a crypto-only run
     (crypto_bot.yml, hourly 24/7) used to publish ASX and US with these keys
@@ -258,14 +272,32 @@ def carry_forward(sec: dict, prev: dict) -> int:
     Carrying the last values forward is not a fudge: outside market hours the
     previous session's movers ARE the current answer, and enriched_at rides
     along so the age is always auditable.
+
+    The read (audit #54, 2026-10-08): _fetch returns [] when Yahoo raises or
+    throttles a batch to an empty frame, so one throttled run published the
+    sector board, index list and summary BLANK under a fresh generated_at.
+    A fresh read that is missing its sectors or indices is now replaced by the
+    previous file's read when that one is more complete (``_read_rank``; a tie
+    keeps the fresh one), whole, so the summary always matches the lists shown.
+    ``read_at`` rides along (falling back to the previous file's generated_at
+    for a file published before the stamp existed), so a carried read is
+    never presented as fresh.
     """
     moved = 0
+    prev_at = prev.get("generated_at")
     for key, m in (sec.get("markets") or {}).items():
         old = ((prev.get("markets") or {}).get(key) or {})
         for k in ENRICHED_KEYS:
             if k not in m and k in old:
                 m[k] = old[k]
                 moved += 1
+        if _read_rank(old) > _read_rank(m):
+            for k in READ_KEYS:
+                if k in old:
+                    m[k] = old[k]
+                    moved += 1
+            if not old.get("read_at"):
+                m["read_at"] = prev_at   # None = age unknown, never "now"
     return moved
 
 
@@ -398,6 +430,10 @@ def fetch() -> dict:
         summary, rotation = _read(label, sectors, indices)
         markets[key] = {"label": label, "indices": indices, "sectors": sectors,
                         "summary": summary, "rotation": rotation,
+                        # when THIS read was fetched; carry_forward keeps the
+                        # previous read's stamp if it replaces an empty one
+                        "read_at": dt.datetime.now(dt.timezone.utc).isoformat(
+                            timespec="seconds"),
                         "upcoming": cal["upcoming"].get(key, []),
                         "latest_event": cal["latest"].get(key)}
 
