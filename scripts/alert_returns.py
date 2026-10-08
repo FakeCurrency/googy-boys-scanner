@@ -46,6 +46,19 @@ download used to slide past an old base_day (a suspension, a long-unmatured
 row) and silently re-anchor the base on a bar weeks later. Each ticker is now
 downloaded over a period that reaches its oldest wanted base_day.
 
+CRYPTO IS PRICED AS ITS OWN COIN (2026-10-08, audit #30). Since 2026-09-28 the
+crypto VIVEK leg is scanned on exchange klines with an identity check, because
+Yahoo serves a DIFFERENT token under several tickers (JUP, AERO, ARB...). These
+ledgers priced crypto on Yahoo's `download` regardless, and the 2026-09-29 JUP
+row froze another coin's returns (base 0.000327 against the scanned $0.37).
+Crypto now goes through scanner.data.fetch -- the one entry point -- with the
+identity check armed: a row's own pinned base (base_bar, base_close) is its
+history anchor, else the committed scan's price for the coin is the
+reference, and a coin nothing vouches for is left unstamped (named, retried),
+never priced as a stranger. A crypto row whose STORED base is not the
+instrument now priced (the pre-fix JUP row) is never extended either: its
+frozen values stay exactly as they are, an owner decision.
+
 Prints ALERT_RETURNS_UNCHANGED when the run changed nothing, so the workflow
 skips its commit - the reco_note pattern; a quiet day is a legitimate no-op,
 which is exactly where a must-change gate would be the wrong tool.
@@ -73,6 +86,10 @@ from scanner import config, output                                  # noqa: E402
 
 HISTORY = os.path.join(ROOT, "public", "data", "phasemap", "alert_history.json")
 LEDGER = os.path.join(ROOT, "data", "alert_forward_returns.json")
+# The committed crypto scan's slim prices ({"prices": {SYM: price}}): the
+# identity-checked price of each coin as the scan itself priced it -- the
+# reference a crypto frame must match (audit #30).
+SCAN_PRICES = os.path.join(ROOT, "public", "data", "crypto_prices.json")
 
 HORIZONS = tuple(getattr(config, "ALERT_RETURNS_HORIZONS", (1, 5, 10, 20)))
 CAP = int(getattr(config, "ALERT_RETURNS_CAP", 20000))
@@ -274,6 +291,8 @@ _UNSTAMPED_WHY = {
     "uncovered": "the frame starts after base_day, so the base bar is not in it",
     "gap": "no bar within ALERT_RETURNS_BASE_MAX_GAP_DAYS of base_day (a suspension)",
     "base_bar_missing": "the recorded base_bar is not in the frame",
+    "other_instrument": ("crypto: the frame's base close is not the stored base_close "
+                         "- the row was priced on another instrument, never extended"),
 }
 
 
@@ -303,6 +322,17 @@ def _base_index(e: dict, days: list, done: int, base_day: dt.date) -> tuple:
     if (days[bi] - base_day).days > gap:
         return None, "gap"
     return bi, None
+
+
+def _same_instrument(df, day: dt.date, stored) -> bool:
+    """Does this frame reproduce the base close the row already stored, on
+    its base day? exchange_data.anchor_ok -- the same history-anchor test the
+    book and the kill switch use (CRYPTO_ANCHOR_TOL)."""
+    from scanner import exchange_data
+    try:
+        return exchange_data.anchor_ok(df, (day.isoformat(), float(stored)))
+    except (TypeError, ValueError):
+        return False
 
 
 def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None) -> int:
@@ -345,6 +375,12 @@ def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None
                 e["base_close"] = round(base_close, 8)
                 e["base_bar"] = days[bi].isoformat()
                 stamped += 1        # recording the baseline is itself a change
+            elif e.get("market") == "crypto" and not _same_instrument(df, days[bi], e["base_close"]):
+                # Crypto bars are never split-adjusted, so a stored base this
+                # far off is another coin's close (Yahoo's JUP): its frozen
+                # horizons stay as they are and nothing is added to them.
+                unstamped.setdefault("other_instrument", []).append(str(e.get("key") or sym))
+                continue
             for h in HORIZONS:
                 key = str(h)
                 if e["fwd"].get(key) is not None:
@@ -379,18 +415,78 @@ def period_for(entries: list, today: dt.date) -> str:
     return next((name for cap, name in _PERIODS if need <= cap), "max")
 
 
+def _scan_prices(path: str | None = None) -> dict:
+    """{SYMBOL: price} from the committed crypto scan's prices file; {} when it
+    is unreadable (then only a row's own pinned base can vouch for a coin)."""
+    try:
+        with open(path or SCAN_PRICES, encoding="utf-8") as fh:
+            prices = json.load(fh).get("prices")
+    except (OSError, ValueError, AttributeError):
+        return {}
+    return {str(k).upper(): float(v) for k, v in (prices or {}).items()
+            if isinstance(v, (int, float)) and v > 0} if isinstance(prices, dict) else {}
+
+
+def crypto_identity_kwargs(want: dict) -> dict:
+    """data.fetch() kwargs that make every crypto frame prove it is the coin
+    the ledger row is about (audit #30).
+
+    ANCHOR first: a row stamped since base_bar existed holds a real completed
+    close of an identity-checked frame -- (base_bar, base_close) -- and a
+    venue's frame must reproduce it (exchange_data.anchor_ok); a real move
+    since cannot fail it. Else the REFERENCE: the committed crypto scan's
+    price for the coin (the instrument the VIVEK leg scanned), against the
+    frame's latest close at CRYPTO_IDENTITY_TOL. `require_identity`: a coin
+    with neither is refused -- left unstamped, never priced unchecked."""
+    suffix = config.MARKETS["crypto"].suffix
+    prices = _scan_prices()
+    refs, anchors = {}, {}
+    for key, entries in want.items():
+        pinned = sorted((str(e["base_bar"])[:10], float(e["base_close"])) for e in entries
+                        if e.get("base_bar") and isinstance(e.get("base_close"), (int, float))
+                        and e["base_close"] > 0)
+        if pinned:
+            anchors[key] = pinned[-1]
+        sym = key[:-len(suffix)] if suffix and key.endswith(suffix) else key
+        if prices.get(sym.upper()):
+            refs[key] = prices[sym.upper()]
+    return {"ref_prices": refs, "ref_tol": float(config.CRYPTO_IDENTITY_TOL),
+            "anchors": anchors, "require_identity": True}
+
+
 def fetch_frames(want: dict, today: dt.date) -> dict:
     """{want key: daily frame} for every ticker `want` asks about, each
     downloaded over a period that reaches its oldest wanted base_day (audit
-    #69: a fixed '3mo' slid past it). One call per period. Shared by the
+    #69: a fixed '3mo' slid past it). Stocks: Yahoo `download`, the plumbing
+    their scans use. Crypto: scanner.data.fetch -- the one entry point for
+    crypto bars -- with the identity check armed (crypto_identity_kwargs,
+    audit #30); a refused coin gets no frame and so no stamp. Shared by the
     roster ledger (edge_rosters.py), so both ledgers price the same way."""
     from scanner import data
-    by_period: dict[str, list] = {}
+    groups: dict[tuple, list] = {}
     for key in sorted(want):
-        by_period.setdefault(period_for(want[key], today), []).append(key)
+        is_crypto = any(e.get("market") == "crypto" for e in want[key])
+        groups.setdefault((is_crypto, period_for(want[key], today)), []).append(key)
     frames: dict = {}
-    for period, keys in sorted(by_period.items()):
-        frames.update(data.download(keys, period=period))
+    for (is_crypto, period), keys in sorted(groups.items()):
+        if not is_crypto:
+            frames.update(data.download(keys, period=period))
+            continue
+        kw = crypto_identity_kwargs({k: want[k] for k in keys})
+        got, report = data.fetch("crypto", keys, period=period, **kw)
+        got = {k: f for k, f in got.items() if k in want}
+        frames.update(got)
+        refused = set(report.get("refused") or ())
+        print(f"crypto ({period}): {len(got)}/{len(keys)} priced via data.fetch "
+              f"{report.get('by_source') or {}}, identity armed "
+              f"({len(kw['anchors'])} anchored, {len(kw['ref_prices'])} referenced)")
+        for label, miss in (("no source proved it is the coin the row is about",
+                             sorted(k for k in keys if k not in got and k in refused)),
+                            ("no source returned bars",
+                             sorted(k for k in keys if k not in got and k not in refused))):
+            if miss:
+                print(f"WARNING crypto: {len(miss)} coin(s) left unpriced - {label}: "
+                      f"{', '.join(miss[:12])}{' ...' if len(miss) > 12 else ''}")
     return frames
 
 

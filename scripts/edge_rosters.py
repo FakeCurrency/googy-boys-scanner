@@ -3,7 +3,9 @@
 
 The confluence ledger answers "how do ALIGNED alerts do"; this file answers
 the half every comparison needs: how do plain grade_raw A+ setups do, on the
-SAME Yahoo-close plumbing and the same 1/5/10/20-session horizons. The
+SAME price plumbing (alert_returns.fetch_frames: Yahoo closes for stocks,
+identity-checked data.fetch bars for crypto since audit #30) and the same
+1/5/10/20-session horizons. The
 2026-08-20 edge batch had to reconstruct this baseline from git history of
 scan snapshots; from today it simply accrues.
 

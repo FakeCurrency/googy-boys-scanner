@@ -139,3 +139,165 @@ def test_main_downloads_each_ticker_over_the_period_its_oldest_row_needs(tmp_pat
                         lambda syms, period=None, **k: asked.append((sorted(syms), period)) or {})
     assert ar.main(["--dry-run"]) == 0
     assert sorted(asked) == [(["NEW.AX"], "3mo"), (["OLD.AX"], "6mo")]
+
+
+# ── #30: crypto is priced as its own coin ────────────────────────────────────
+
+DAY_MS = 86_400_000
+
+
+def _today_utc():
+    return pd.Timestamp.now(tz="UTC").normalize()
+
+
+def _klines(px, n=10):
+    """Binance-shaped daily klines ending TODAY (the venue age gate refuses old ones)."""
+    t0 = int((_today_utc() - pd.Timedelta(days=n - 1)).timestamp() * 1000)
+    return [[t0 + i * DAY_MS, str(px), str(px), str(px), str(px), "1", t0 + i * DAY_MS + 1, "9e6"]
+            for i in range(n)]
+
+
+def _yahoo_frame(px, n=10):
+    idx = pd.date_range(end=_today_utc().tz_localize(None), periods=n, freq="D")
+    return pd.DataFrame({"Open": px, "High": px, "Low": px, "Close": px, "Volume": 1e6}, index=idx)
+
+
+@pytest.fixture
+def venues(monkeypatch, tmp_path):
+    """Binance's mirror lists the REAL coins; Yahoo's `download` serves the
+    audit's same-ticker stranger for JUP (0.000327 against a ~$0.37 coin).
+    The committed scan prices are a temp file the test writes."""
+    from scanner import config, data, exchange_data as X
+    monkeypatch.setattr(config, "CRYPTO_DATA_SOURCE", "exchange")
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance_vision", "coinbase"))
+    monkeypatch.setattr(X.time, "sleep", lambda s: None)
+    import urllib.error
+
+    def install(binance, yahoo, scan_prices):
+        def router(url, timeout):
+            if "binance.vision" in url:
+                for pair, px in binance.items():
+                    if f"symbol={pair}USDT" in url:
+                        return _klines(px)
+                raise urllib.error.HTTPError("u", 400, "x", None, None)
+            raise urllib.error.HTTPError("u", 404, "x", None, None)
+
+        monkeypatch.setattr(X, "_get_json", router)
+        asked = []
+        monkeypatch.setattr(data, "download", lambda t, period=None, **k: (
+            asked.append(sorted(t)) or {x: _yahoo_frame(yahoo[x]) for x in t if x in yahoo}))
+        prices = tmp_path / "crypto_prices.json"
+        prices.write_text(json.dumps({"prices": scan_prices}), encoding="utf-8")
+        monkeypatch.setattr(ar, "SCAN_PRICES", str(prices))
+        return asked
+    return install
+
+
+def _history(tmp_path, monkeypatch, entries):
+    hist = tmp_path / "history.json"
+    hist.write_text(json.dumps({"entries": entries}), encoding="utf-8")
+    monkeypatch.setattr(ar, "HISTORY", str(hist))
+    monkeypatch.setattr(ar, "LEDGER", str(tmp_path / "ledger.json"))
+
+
+def test_the_audits_JUP_alignment_is_stamped_off_the_real_coin(venues, tmp_path, monkeypatch):
+    """The 2026-09-29 JUP short: Yahoo's JUP-USD is another token (0.000327);
+    the VIVEK leg scanned the real one (~$0.37). The ledger must measure the
+    coin the alert was about."""
+    asked = venues(binance={"JUP": 0.37}, yahoo={"JUP-USD": 0.000327},
+                   scan_prices={"JUP": 0.3667})
+    when = (_today_utc() - pd.Timedelta(days=3)).replace(hour=1, minute=43)
+    _history(tmp_path, monkeypatch, [{"date": when.isoformat(), "market": "crypto",
+                                      "ticker": "JUP", "side": "short", "count": 2,
+                                      "lenses": ["PHASEMAP", "VIVEK"]}])
+    assert ar.main([]) == 0
+    e = json.loads((tmp_path / "ledger.json").read_text())["entries"][0]
+    assert e["base_close"] == 0.37, "the base is the real JUP, not Yahoo's stranger"
+    assert e["base_bar"] == when.strftime("%Y-%m-%d") and e["fwd"]["1"] == 0.0
+    assert ["JUP-USD"] not in asked, "Yahoo's JUP was never even the candidate"
+
+
+def test_a_coin_nothing_vouches_for_is_left_unstamped_never_priced_unchecked(venues, capsys):
+    """Binance lists XYZ, but the scan has no price for it and the row has no
+    pinned base: the identity check has nothing to check against, so it is
+    refused -- the row waits, named, instead of freezing an unchecked series."""
+    venues(binance={"XYZ": 2.0}, yahoo={"XYZ-USD": 2.0}, scan_prices={"BTC": 82000.0})
+    day = (_today_utc() - pd.Timedelta(days=3)).strftime("%Y-%m-%d")
+    want = {"XYZ-USD": [_row("crypto", "XYZ", day)]}
+    frames = ar.fetch_frames(want, _today_utc().date())
+    assert "XYZ-USD" not in frames
+    assert "left unpriced - no source proved it is the coin" in capsys.readouterr().out
+
+
+def test_a_pinned_base_is_the_rows_own_history_anchor(venues):
+    """A row stamped since base_bar existed vouches for its coin itself: the
+    venue's frame must reproduce (base_bar, base_close) -- so a coin that has
+    left the scan still matures, and a stranger still cannot."""
+    day = (_today_utc() - pd.Timedelta(days=3)).strftime("%Y-%m-%d")
+    row = _row("crypto", "OLD", day, base_close=1.0, base_bar=day)
+    venues(binance={"OLD": 1.0}, yahoo={}, scan_prices={})
+    assert "OLD-USD" in ar.fetch_frames({"OLD-USD": [row]}, _today_utc().date())
+    venues(binance={"OLD": 50.0}, yahoo={"OLD-USD": 50.0}, scan_prices={})
+    assert "OLD-USD" not in ar.fetch_frames({"OLD-USD": [row]}, _today_utc().date())
+
+
+def test_crypto_identity_kwargs_prefers_the_rows_anchor_and_requires_identity(tmp_path, monkeypatch):
+    prices = tmp_path / "p.json"
+    prices.write_text(json.dumps({"prices": {"JUP": 0.3667, "BTC": 82000.0}}), encoding="utf-8")
+    monkeypatch.setattr(ar, "SCAN_PRICES", str(prices))
+    want = {"JUP-USD": [_row("crypto", "JUP", "2026-10-01")],
+            "BTC-USD": [_row("crypto", "BTC", "2026-09-20", base_close=80000.0, base_bar="2026-09-20"),
+                        _row("crypto", "BTC", "2026-09-25", base_close=81000.0, base_bar="2026-09-25")]}
+    kw = ar.crypto_identity_kwargs(want)
+    assert kw["require_identity"] is True
+    assert kw["ref_prices"] == {"JUP-USD": 0.3667, "BTC-USD": 82000.0}
+    assert kw["anchors"] == {"BTC-USD": ("2026-09-25", 81000.0)}, "the newest pinned base"
+
+
+def test_a_row_frozen_on_another_instrument_is_never_extended(capsys):
+    """The committed JUP row: base 0.000327 and 1s/5s from Yahoo's token. Now
+    priced on the real coin, its 10s/20s must NOT be measured against the
+    stranger's base, and its frozen values stay exactly as they are."""
+    led = ar._fresh()
+    frozen = {"1": -0.003058, "5": -0.009174, "10": None, "20": None}
+    led["entries"].append(_row("crypto", "JUP", "2026-09-29", base_close=0.000327, fwd=dict(frozen)))
+    idx = pd.date_range("2026-09-20", periods=40, freq="D")
+    frames = _bars("JUP-USD", idx, [0.37] * 40)
+    now = dt.datetime(2026, 10, 29, 1, 0, tzinfo=UTC)
+    assert ar.stamp(led, frames, ar.wanting_prices(led, now.date()), now) == 0
+    e = led["entries"][0]
+    assert e["fwd"] == frozen and e["base_close"] == 0.000327 and "base_bar" not in e
+    assert "another instrument" in capsys.readouterr().out
+
+
+def test_a_legacy_crypto_row_on_the_same_coin_keeps_maturing():
+    # Yahoo and the exchange agree on a non-colliding coin to ~0.1%.
+    led = ar._fresh()
+    led["entries"].append(_row("crypto", "BTC", "2026-09-29", base_close=80000.0,
+                               fwd={"1": 0.01, "5": 0.02, "10": None, "20": None}))
+    idx = pd.date_range("2026-09-20", periods=40, freq="D")
+    closes = [80080.0] * 9 + [80080.0 * (1 + 0.001 * i) for i in range(31)]
+    frames = _bars("BTC-USD", idx, closes)
+    now = dt.datetime(2026, 10, 29, 1, 0, tzinfo=UTC)
+    ar.stamp(led, frames, ar.wanting_prices(led, now.date()), now)
+    e = led["entries"][0]
+    assert e["fwd"]["1"] == 0.01 and e["fwd"]["10"] is not None and e["fwd"]["20"] is not None
+
+
+def test_the_roster_ledger_prices_crypto_through_data_fetch_too(tmp_path, monkeypatch):
+    import scanner.data
+    day = (dt.datetime.now(UTC).date() - dt.timedelta(days=3)).isoformat()
+    (tmp_path / "rosters.json").write_text(json.dumps({"schema_version": 1, "updated_at": "",
+        "entries": [_row("crypto", "APT", day), _row("asx", "BHP", day)]}), encoding="utf-8")
+    monkeypatch.setattr(er, "LEDGER", str(tmp_path / "rosters.json"))
+    monkeypatch.setattr(er, "ROOT", str(tmp_path))          # no scans: nothing ingested
+    calls = []
+    monkeypatch.setattr(scanner.data, "download",
+                        lambda t, period=None, **k: calls.append(("download", sorted(t))) or {})
+    monkeypatch.setattr(scanner.data, "fetch", lambda m, t, period=None, **k: (
+        calls.append(("fetch", m, sorted(t), k.get("require_identity"))) or ({}, {})))
+    assert er.main(["--dry-run"]) == 0
+    assert ("fetch", "crypto", ["APT-USD"], True) in calls
+    assert ("download", ["BHP.AX"]) in calls
+    assert not any(c[0] == "download" and any(s.endswith("-USD") for s in c[1]) for c in calls), \
+        "no crypto ticker may reach Yahoo's unchecked download"
