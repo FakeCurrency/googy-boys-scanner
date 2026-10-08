@@ -31,7 +31,6 @@ stream's trade is still open is not a new trade.
 from __future__ import annotations
 
 import math
-import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -82,13 +81,6 @@ def signal_masks(ev: pd.DataFrame, cfg: MomentumConfig) -> Dict[Tuple[str, str],
     }
 
 
-def _reason_key(reason: str) -> str:
-    """'price 0.0070 below the asx floor' -> 'price'; the words before the
-    first number or bracket, so counts group by gate rather than by value."""
-    m = re.match(r"[a-z][a-z\- ]*[a-z]", reason)
-    return m.group(0) if m else reason
-
-
 def _costs(market: str) -> Tuple[float, float]:
     slip = config.BT_SLIPPAGE_BPS.get(market, config.BT_SLIPPAGE_BPS.get("default", 0.0))
     comm = config.BT_COMMISSION_BPS.get(market, config.BT_COMMISSION_BPS.get("default", 0.0))
@@ -124,7 +116,7 @@ def replay_symbol(frame: pd.DataFrame, market: str, *, symbol: str = "", name: A
                                                 name=name, sector=sector)
             reason = gate_memo[j]
             if reason is not None:
-                gated[_reason_key(reason)] = gated.get(_reason_key(reason), 0) + 1
+                gated[gates.reason_key(reason)] = gated.get(gates.reason_key(reason), 0) + 1
                 continue
             plan = box(ev, j, direction)
             if plan is None:

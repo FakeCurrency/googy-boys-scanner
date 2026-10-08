@@ -37,8 +37,8 @@ import pandas as pd
 from . import config
 
 __all__ = [
-    "dollar_adv", "is_product", "gate_frame", "rank_rows", "directions_agree",
-    "select",
+    "dollar_adv", "is_product", "gate_frame", "reason_key", "rank_rows",
+    "directions_agree", "select",
 ]
 
 # Compiled once. Word boundaries on the keywords, the measured patterns as
@@ -163,6 +163,19 @@ def gate_frame(frame: pd.DataFrame, market: str, *, cfg=None,
         if adv < adv_floor:
             return "turnover %.0f below the %s floor %.0f" % (adv, market, adv_floor)
     return None
+
+
+def reason_key(reason: str) -> str:
+    """gate_frame's reason -> the GATE it names, for a count.
+
+    'price 0.0070 below the asx floor 0.0200' -> 'price'; the words before the
+    first number or bracket, so counts group by gate rather than by value. The
+    screen's skipped_by_reason and the backtest's signals_gated share it: the
+    screen used to key on the text before ' (', and the price and turnover
+    reasons carry no bracket, so every distinct value became its own bucket
+    (798 keys in one ASX file -- audit #67)."""
+    m = re.match(r"[a-z][a-z\- ]*[a-z]", reason)
+    return m.group(0) if m else reason
 
 
 def directions_agree(row: Dict[str, Any]) -> bool:

@@ -138,7 +138,8 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
                     reason = f"stale frame ({age} sessions old)"
                     stale += 1
             if reason is not None:
-                skipped[reason.split(" (")[0]] = skipped.get(reason.split(" (")[0], 0) + 1
+                key = gates.reason_key(reason)          # by gate, not by value (#67)
+                skipped[key] = skipped.get(key, 0) + 1
                 continue
 
             row = screen_symbol(frame, cfg, symbol=symbol, market=market)
