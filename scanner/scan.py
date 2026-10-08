@@ -79,6 +79,10 @@ def _fund_tag(info: dict) -> bool:
 # loudly — not silently per-row inside the scan loop.
 _PRODUCT_RES = tuple(re.compile(p)
                      for p in getattr(config, "PRODUCT_NAME_PATTERNS", ()) or ())
+# Audit #56: the name forms an operating GICS sector can contradict (the LIC
+# "Investments Limited" / "Investment Company" forms). Matched by pattern TEXT,
+# so a gated pattern must also be in PRODUCT_NAME_PATTERNS to act at all.
+_PRODUCT_SECTOR_GATED = frozenset(getattr(config, "PRODUCT_SECTOR_GATED_PATTERNS", ()) or ())
 
 
 def _product_kw_re():
@@ -126,14 +130,15 @@ def _product_tag(info: dict) -> bool:
             _KW_RE_CACHE = _product_kw_re()
         if _KW_RE_CACHE.search(name):
             return True
-        # Audit #56: the name PATTERNS describe financial listing classes; a
-        # row carrying an operating GICS sector (PMV retail, NZK food) is an
-        # operating company whatever its name says. The keyword list above is
-        # deliberately not gated (it mirrors the bot's own exclusion).
+        # Audit #56: a LIC-shaped NAME ("... Investments Limited") on a row
+        # carrying an operating GICS sector (PMV retail, NZK food) is an
+        # operating company, so the sector-gated forms skip such a row. The
+        # security-class patterns (preferred/notes/warrants/...) and the
+        # keyword list above are deliberately NOT gated.
         hints = getattr(config, "PRODUCT_PATTERN_SECTOR_HINTS", ()) or ()
-        if sector and not any(h in sector for h in hints):
-            return False
-        return any(rx.search(name) for rx in _PRODUCT_RES)
+        operating = bool(sector) and not any(h in sector for h in hints)
+        return any(rx.search(name) for rx in _PRODUCT_RES
+                   if not (operating and rx.pattern in _PRODUCT_SECTOR_GATED))
     except Exception:                                  # noqa: BLE001
         return False
 

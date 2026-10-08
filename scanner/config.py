@@ -610,17 +610,24 @@ PRODUCT_NAME_PATTERNS = (
     r"\bWARRANTS?\b",
     r"\bRIGHTS? \(",       # listing-class "Rights (…)" lines, not names containing Rights
 )
-# Audit #56 (2026-10-08): the patterns above describe FINANCIAL listing classes
-# (LICs, preferreds, notes, warrants), so they apply only to a row whose sector
-# is blank or contains one of these lower-case hints (financial, unclassified or
-# non-operating). A row whose GICS sector names an operating industry is an
-# operating company whatever its name says: Premier Investments Limited (PMV,
-# Consumer Discretionary Distribution & Retail) and New Zealand King Salmon
-# Investments Limited (NZK, Food, Beverage & Tobacco) were being dimmed as LICs,
-# while the real LICs keep dimming (BTI / NGI "Financial Services", IIC "Class
-# Pend", the rest "Not Applic"; NASDAQ rows carry no sector). The fund KEYWORD
-# list (TRUST/FUND/ETF ...) is NOT gated by this -- it mirrors the bot's own
+# Audit #56 (2026-10-08): the LIC name forms describe a BUSINESS (an
+# investment company), and an operating GICS sector contradicts that: Premier
+# Investments Limited (PMV, Consumer Discretionary Distribution & Retail) and
+# New Zealand King Salmon Investments Limited (NZK, Food, Beverage & Tobacco)
+# were being dimmed as LICs. So the patterns in PRODUCT_SECTOR_GATED_PATTERNS
+# (each one a member of PRODUCT_NAME_PATTERNS, test-pinned) apply only to a
+# row whose sector is blank or contains one of the lower-case hints below
+# (financial, unclassified or non-operating); the real LICs keep dimming (BTI /
+# NGI "Financial Services", IIC "Class Pend", the rest "Not Applic"; NASDAQ
+# rows carry no sector). The OTHER patterns (preferred / notes / debentures /
+# warrants / rights) describe the SECURITY CLASS, which no issuer sector turns
+# into an operating stock, so they stay ungated. The fund KEYWORD list
+# (TRUST/FUND/ETF ...) is NOT gated either -- it mirrors the bot's own
 # exclusion, which skips the TRUST-named banks too.
+PRODUCT_SECTOR_GATED_PATTERNS = (
+    r"\bINVESTMENTS (LIMITED|LTD)\b",
+    r"\bINVESTMENT (COMPANY|CO)\b",
+)
 PRODUCT_PATTERN_SECTOR_HINTS = ("financ", "bank", "insur", "class pend",
                                 "not applic", "n/a")
 # ENTRY CELLS (owner ruling 2026-09-21): the bot trades a plan ONLY when its
