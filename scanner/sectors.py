@@ -280,8 +280,8 @@ def carry_forward(sec: dict, prev: dict) -> int:
     previous file's read when that one is more complete (``_read_rank``; a tie
     keeps the fresh one), whole, so the summary always matches the lists shown.
     ``read_at`` rides along (falling back to the previous file's generated_at
-    for a file published before the stamp existed), so a carried read is
-    never presented as fresh.
+    only for a file published before the stamp existed; a carried null stays
+    null), so a carried read is never presented as fresher than it is.
     """
     moved = 0
     prev_at = prev.get("generated_at")
@@ -296,7 +296,10 @@ def carry_forward(sec: dict, prev: dict) -> int:
                 if k in old:
                     m[k] = old[k]
                     moved += 1
-            if not old.get("read_at"):
+            if "read_at" not in old:
+                # A file from before the stamp fetched its read with the file.
+                # An explicit null (age unknown) stays null on every later
+                # carry: a later file's generated_at would date it falsely.
                 m["read_at"] = prev_at   # None = age unknown, never "now"
     return moved
 

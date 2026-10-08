@@ -93,6 +93,18 @@ def test_unknown_age_is_null_never_now(monkeypatch):
     assert sec["markets"]["asx"]["read_at"] is None
 
 
+def test_an_unknown_age_stays_unknown_on_the_next_carry(monkeypatch):
+    # Review of #54: a read already carried with read_at null (age unknown)
+    # must not pick up the NEXT file's generated_at on a second carry - that
+    # file was written later than the read was fetched, so its stamp would
+    # date the read falsely fresh.
+    sec = _throttled_fetch(monkeypatch)
+    prev = _prev_file(read_at=None)
+    sectors.carry_forward(sec, prev)
+    assert sec["markets"]["asx"]["read_at"] is None
+    assert len(sec["markets"]["asx"]["sectors"]) == 2
+
+
 def test_a_complete_fresh_read_is_never_replaced():
     fresh = {"markets": {"asx": _good_read("fresh")}}
     fresh["markets"]["asx"]["read_at"] = "2026-10-08T05:10:00+00:00"
