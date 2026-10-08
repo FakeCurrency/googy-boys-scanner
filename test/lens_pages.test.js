@@ -12,6 +12,9 @@
  *        nightly job ran. The job lands after Melbourne midnight, so no event
  *        date ever equalled it and the cue never rendered.
  *   #83  specs.js: the same missing guard on the spec file and its confluence.
+ *   #84  momentum.js guarded only its success path: a late FAILURE of the
+ *        previous market wiped the market now shown, and the previous market's
+ *        "scanned ..." stamp survived on a loading or no-data page.
  *
  * Everything here EXECUTES the shipped page scripts (and the real
  * phasemap-shared.js under them) against a fake DOM and a fake network whose
@@ -421,6 +424,81 @@ test("ASX -> NASDAQ -> ASX: the first ASX request failing last does not wipe the
   await flush();
   assert.equal(p.title(), "SPECS · ASX · 1 setups");
   assert.ok(/CXZ/.test(p.list()) && !/connection problem/.test(p.sub()));
+});
+
+/* ── Momentum fixtures ───────────────────────────────────────────────────── */
+const moRow = (symbol) => ({ symbol, name: symbol + " Inc", rule_b: true, rule_b_direction: "bull",
+  rule_b_score: 2, rule_b_bars_ago: 0, direction: "bull", close: 1, rsi: 50, dollar_adv_20: 1 });
+const moScan = (rows, gen) => ({ generated_at: gen || "2026-10-07T06:18:00Z", mode: "A",
+  last_closed_bar: "2026-10-07", summary: { scanned: rows.length, skipped_gates: 0 }, results: rows });
+const moBoot = (m) => {
+  const p = boot("momentum.js", {
+    groups: { "#mo-market .market-btn": [["market", "asx"], ["market", "nasdaq"], ["market", "crypto"]] },
+    location: { search: `?m=${m || "asx"}`, href: `https://x.test/momentum.html?m=${m || "asx"}` },
+  });
+  p.click = (mk) => {
+    const b = p.dom.group["#mo-market .market-btn"].find((x) => x.dataset.market === mk);
+    p.el("#mo-market").fire("click", { target: { closest: (s) => (s === ".market-btn" ? b : null) } });
+  };
+  p.title = () => p.el("#mo-title").textContent;
+  p.stamp = () => p.el("#mo-stamp").textContent;
+  p.list = () => p.el("#mo-list").innerHTML;
+  return p;
+};
+
+suite("#84 Momentum: a late failure, and the stamp a market leaves behind");
+
+test("a late ASX failure does not wipe NASDAQ's loaded page", async () => {
+  const p = moBoot("asx");
+  p.click("nasdaq");
+  p.net.ok("data/momentum/nasdaq.json", moScan([moRow("NQ1")]));
+  await flush();
+  assert.equal(p.title(), "MOMENTUM · 1 name");
+  p.net.status("data/momentum/asx.json", 503);   // e.g. the 20 s fetchTimeout abort
+  await flush();
+  assert.equal(p.title(), "MOMENTUM · 1 name", "NASDAQ's page must survive ASX's late failure");
+  assert.ok(/NQ1/.test(p.list()) && !/connection problem/.test(p.list()));
+});
+
+test("a late ASX SUCCESS does not replace NASDAQ's page either (the guard that was already there)", async () => {
+  const p = moBoot("asx");
+  p.click("nasdaq");
+  p.net.ok("data/momentum/nasdaq.json", moScan([moRow("NQ1")]));
+  await flush();
+  p.net.ok("data/momentum/asx.json", moScan([moRow("AX1"), moRow("AX2")]));
+  await flush();
+  assert.equal(p.title(), "MOMENTUM · 1 name");
+  assert.ok(/NQ1/.test(p.list()) && !/AX1/.test(p.list()));
+});
+
+test("ASX -> NASDAQ -> ASX: the first ASX request failing last does not wipe the second's data", async () => {
+  const p = moBoot("asx");
+  p.click("nasdaq");
+  p.click("asx");
+  p.net.ok("data/momentum/asx.json", moScan([moRow("AX1")]), true);   // the newest ASX load
+  await flush();
+  assert.ok(/AX1/.test(p.list()));
+  p.net.status("data/momentum/asx.json", 503);   // the first ASX load, abandoned
+  await flush();
+  assert.ok(/AX1/.test(p.list()), "same market, older request: still not allowed to touch the page");
+  assert.equal(p.title(), "MOMENTUM · 1 name");
+});
+
+test("switching market clears the previous market's stamp and rows while loading, and on no-data", async () => {
+  const p = moBoot("asx");
+  p.net.ok("data/momentum/asx.json", moScan([moRow("AX1")]));
+  await flush();
+  assert.ok(/^scanned /.test(p.stamp()), "ASX shows its scan time");
+  p.click("crypto");
+  assert.equal(p.title(), "MOMENTUM · loading…");
+  assert.equal(p.stamp(), "", "the loading page must not carry ASX's 'scanned ...' time");
+  assert.ok(!/AX1/.test(p.list()),
+    "nor ASX's rows — under the CRYPTO tab their chart links read m=crypto&s=AX1");
+  p.net.status("data/momentum/crypto.json", 404);
+  await flush();
+  assert.equal(p.title(), "MOMENTUM · no data");
+  assert.equal(p.stamp(), "", "a no-data page has no scan time to show");
+  assert.equal(p.el("#mo-stamp").title, "");
 });
 
 (async () => {

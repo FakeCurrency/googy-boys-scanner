@@ -51,9 +51,25 @@
     return MARKETS.includes(m) ? m : "asx";
   }
 
+  // Every load is numbered; only the newest may touch the page (audit #84).
+  let loadSeq = 0;
+
   async function load(market) {
+    const seq = ++loadSeq;
+    // A market switch can land while an older fetch is still in flight. Apply
+    // nothing if the answer changed underneath us, or ASX rows appear under
+    // the NASDAQ heading — a page that is not merely stale but wrong about
+    // which market it is showing, with nothing on screen saying so. That holds
+    // for a FAILURE too (audit #84, 2026-10-08): the old market's 20 s timeout
+    // used to land after the new market had rendered and wipe it to "no data".
+    // A sequence, not just a market check, because ASX -> NASDAQ -> ASX leaves
+    // two ASX requests in flight and only the newer one speaks for the page.
+    const stale = () => seq !== loadSeq || market !== state.market;
     state.loading = true;
     state.err = null;
+    // The page says "loading" from here, so it must not keep drawing the
+    // previous market's rows (their chart links would carry the new market).
+    state.data = null;
     render();
     let payload = null;
     try {
@@ -63,17 +79,14 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       payload = await res.json();
     } catch (err) {
+      if (stale()) return;
       state.err = err;
       state.data = null;
       state.loading = false;
       render();
       return;
     }
-    // A market switch can land while an older fetch is still in flight. Apply
-    // nothing if the answer changed underneath us, or ASX rows appear under
-    // the NASDAQ heading — a page that is not merely stale but wrong about
-    // which market it is showing, with nothing on screen saying so.
-    if (market !== state.market) return;
+    if (stale()) return;
     state.data = payload;
     state.loading = false;
     render();
@@ -158,16 +171,27 @@
     const sub = $("mo-sub");
     const dot = $("mo-dot");
     const cover = $("mo-cover");
+    const stamp = $("mo-stamp");
+    // A loading or no-data page has no scan of its own, so nothing in the
+    // header may describe the previous market's (audit #84): its "scanned
+    // ..." time used to sit beside "MOMENTUM · no data", and its coverage
+    // line beside "loading…".
+    const noScan = () => {
+      sub.textContent = "RSI divergence and scored 20/50 crosses · report only";
+      if (cover) { cover.textContent = ""; cover.hidden = true; }
+      stamp.textContent = "";
+      stamp.title = "";
+    };
     if (state.loading) {
       title.textContent = "MOMENTUM · loading…";
       dot.className = "deck-dot";
+      noScan();
       return;
     }
     if (!state.data) {
       title.textContent = "MOMENTUM · no data";
       dot.className = "deck-dot is-stale warn";
-      sub.textContent = "RSI divergence and scored 20/50 crosses · report only";
-      if (cover) { cover.textContent = ""; cover.hidden = true; }
+      noScan();
       return;
     }
     const n = ((state.data.results) || []).length;
@@ -189,7 +213,6 @@
     // it is the date every number on this page was measured on.
     if (state.data.last_closed_bar) bits.push(`last bar ${state.data.last_closed_bar}`);
     sub.textContent = bits.join(" · ");
-    const stamp = $("mo-stamp");
     stamp.textContent = state.data.generated_at
       ? `scanned ${fmtMelb(state.data.generated_at)}` : "";
     stamp.title = state.data.last_closed_bar
