@@ -104,8 +104,12 @@ def test_no_sender_in_alert_dispatch_reads_a_credential_raw():
     # are exactly the channel credentials.
     src = _src("scanner/broker/alert_dispatch.py")
     body = src.split('def _cred', 1)[1]          # everything after the helper
+    # GBS_SMTP_PORT / GBS_ALERT_FROM joined 2026-10-08 (audit #63): read raw
+    # with an os.environ default, an UNSET secret ("" under GitHub) crashed
+    # the email leg on int("") and sent with an empty From.
     for name in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "DISCORD_WEBHOOK_URL",
-                 "GBS_SMTP_HOST", "GBS_SMTP_USER", "GBS_SMTP_PASS", "GBS_ALERT_TO"):
+                 "GBS_SMTP_HOST", "GBS_SMTP_USER", "GBS_SMTP_PASS", "GBS_ALERT_TO",
+                 "GBS_SMTP_PORT", "GBS_ALERT_FROM"):
         raw = re.search(r"os\.environ\.get\(\"%s\"" % name, body)
         assert raw is None, f"{name} is read raw, bypassing _cred"
 

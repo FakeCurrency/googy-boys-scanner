@@ -91,13 +91,25 @@ def _email(subject: str, body: str) -> bool:
     to   = _cred("GBS_ALERT_TO")
     if not (host and user and pwd and to):
         return False
-    port = int(os.environ.get("GBS_SMTP_PORT", "587"))
-    msg  = MIMEText(body, "plain")
-    msg["Subject"] = subject
-    msg["From"]    = os.environ.get("GBS_ALERT_FROM", user)
-    msg["To"]      = to
     try:
-        with smtplib.SMTP(host, port) as s:
+        from scanner import config as _cfg
+        default_port = getattr(_cfg, "ALERT_SMTP_PORT", 587)
+        timeout = getattr(_cfg, "ALERT_SMTP_TIMEOUT_S", 15)
+    except Exception:                                     # noqa: BLE001
+        default_port, timeout = 587, 15
+    # Audit #63 (2026-10-08): the workflows export GBS_SMTP_PORT and
+    # GBS_ALERT_FROM from secrets, and an UNSET secret arrives as "", not
+    # absent -- so `or` the defaults, never os.environ.get(name, default).
+    # Everything from here is inside the try: a sender that raises crashes
+    # its caller (the watchdog step died before saving state), and a bad
+    # port must fail THIS send with a warning, like any other SMTP fault.
+    try:
+        port = int(_cred("GBS_SMTP_PORT") or default_port)
+        msg  = MIMEText(body, "plain")
+        msg["Subject"] = subject
+        msg["From"]    = _cred("GBS_ALERT_FROM") or user
+        msg["To"]      = to
+        with smtplib.SMTP(host, port, timeout=timeout) as s:
             s.starttls()
             s.login(user, pwd)
             s.sendmail(msg["From"], [to], msg.as_string())

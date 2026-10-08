@@ -1086,6 +1086,16 @@ ALERT_SEVERITY = {
 # Flip back to True when the bot is ready to go live again.
 TELEGRAM_ENABLED = False
 
+# The email leg's SMTP defaults (alert_dispatch._email; audit #63, 2026-10-08).
+# Every workflow exports GBS_SMTP_PORT from a secret and GitHub renders an UNSET
+# secret as "", so an os.environ default never applied and int("") raised out
+# of the watchdog the day the other four SMTP secrets were set. An empty port
+# now means ALERT_SMTP_PORT. The timeout bounds a server that accepts the
+# connection and then stalls: inside the scan job that wait sits under the
+# `scan` mutex, and without one it never ends.
+ALERT_SMTP_PORT = 587
+ALERT_SMTP_TIMEOUT_S = 15
+
 # Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
 # by owner ruling — "get rid of the discord aspect, I will work on
 # implementing something new in the future". The router, tiers and rate
