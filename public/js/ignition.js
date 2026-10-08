@@ -2,9 +2,11 @@
 
    A name goes quiet for months (SMAs stacked tight, volatility and volume at
    multi-year lows, far under its old highs), then CLOSES out of that base on
-   a multiple of its normal volume. scanner/ignition/ publishes
-   data/ignition/<market>.json and a pre-registered replay,
-   data/ignition/<market>_backtest.json. This file only RENDERS them: it
+   a multiple of its normal volume. Crypto, the ASX and NASDAQ each get their
+   own files and their own workflow (IGNITION_MARKETS). scanner/ignition/ publishes
+   data/ignition/<market>.json, a pre-registered replay,
+   data/ignition/<market>_backtest.json, and each row's recent bars for its
+   mini chart, data/ignition/<market>_charts.json. This file only RENDERS them: it
    writes, posts and stores nothing, and the bot does not trade this lens, so
    every surface says so in words. app.js only places the pill.
 
@@ -16,7 +18,8 @@
      2. CLOSED rows stay on purpose: a list of survivors is the bias this lens
         exists to catch.
      3. Absent data hides silently. The live file loads lazily (a placeholder
-        pill holds the slot), the backtest only when the panel opens, and the
+        pill holds the slot), the backtest and the charts only when the panel
+        opens (charts are drawn only off the SAME run as the screen), and the
         .catch() covers only the fetch and parse: a render fault is re-raised
         to window.onerror, never mistaken for a missing file (TOP100 #88).
      4. A stale screen says "as of <date>" on the pill and the panel head.
@@ -30,7 +33,7 @@
 
   // Mirrors scanner/config.py IGNITION_MARKETS (pinned by
   // tests/test_ignition_frontend.py), so a pill never fetches a 404.
-  const IGNITION_MARKETS = ["crypto", "asx"];
+  const IGNITION_MARKETS = ["crypto", "asx", "nasdaq"];
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -55,6 +58,9 @@
   // A session market's run-age limit in WEEKDAY hours: a Friday screen read
   // Monday is ~18h old, a Monday holiday ~43h; two dead trading days flag.
   const STALE_SESSION_H = 50;
+  // The GitHub workflow that refreshes each market's file, as its runs page
+  // names it: a STALE badge says which one to check.
+  const WF_NAME = { crypto: "Ignition scan", asx: "Ignition scan (ASX)", nasdaq: "Ignition scan (NASDAQ)" };
   // Page order, mirroring scanner/ignition/engine.py state_rank.
   const STATE_ORDER = { IGNITING: 0, RUNNING: 1, CLOSED: 2, COILED: 3 };
   const STATE_LABEL = { IGNITING: "Igniting", RUNNING: "Running", CLOSED: "Closed" };
@@ -69,7 +75,7 @@
     binance: "Daily klines from Binance",
     bybit: "Daily klines from Bybit",
     coinbase: "Daily candles from Coinbase",
-    yahoo: "Yahoo's daily series (every ASX name; for crypto, the fallback for coins no exchange source served)",
+    yahoo: "Yahoo's daily series (every ASX and NASDAQ name; for crypto, the fallback for coins no exchange source served)",
     cache: "Bars from the last good download: this run's fetch did not return this symbol",
   };
   const CAVEAT_FALLBACK = "Replayed over today's coin list: coins that pumped " +
@@ -79,7 +85,7 @@
   // Market cap: the engine row's `mcap`, in the market's OWN currency (the
   // paper book's face-value convention), with `mcap_asof` / `mcap_src`.
   // Context only — nothing is filtered on it.
-  const CAP_CCY = { asx: "A$", crypto: "US$" };
+  const CAP_CCY = { asx: "A$", nasdaq: "US$", crypto: "US$" };
   const CAP_SRC = { coingecko: "CoinGecko", yahoo: "Yahoo", cache: "the shared cap cache", previous: "the previous run" };
   const CAP_UNITS = [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"], [1, ""]];
   // A coiled row whose price text is longer than this (sub-$0.001 coins)
@@ -90,7 +96,7 @@
   // The COILED table's columns: [cell class, head, head tooltip].
   const COIL_COLS = [
     ["c-sym", "Name", "Symbol and company. Hover a row for its quiet readings in words."],
-    ["c-cap", "Mkt cap", "Market cap, in the market's own currency (A$ on the ASX, US$ on crypto). Context, not a filter."],
+    ["c-cap", "Mkt cap", "Market cap, in the market's own currency (A$ on the ASX, US$ on NASDAQ and crypto). Context, not a filter."],
     ["c-px", "Price", "The latest price the screen read"],
     ["c-brk", "Breakout", "The top of the base: a daily close above it, on enough volume, would be a trigger"],
     ["c-gap", "To breakout", "How far the price sits under the breakout level"],
@@ -98,12 +104,20 @@
     ["c-dd", "Under high", "How far under its 3-year high"],
     ["c-q", "ATR pctl", "How quiet: ATR as a % of price, as a percentile of its own 2-year history (low = quiet)"],
   ];
+  // Mini-chart geometry in viewBox units: x = bar index, y 0..H, price pane on top,
+  // volume strip at the foot. Colours live in ignition.css (tokens only).
+  const CH = { H: 100, PRICE: 78, VOL: 20, PAD: 0.06, BODY: 0.62, MIN_BODY: 1.2, LOG_RATIO: 3 };
+  const CHART_COL = ["c-chart", "Chart", "Recent daily bars: candles and volume, the SMA lines, the base " +
+    "(shaded), the breakout level (dashed teal); on a trigger, the trigger bar (yellow column), the stop " +
+    "(dashed red) and the exit (grey column). Tap a chart to open the full chart."];
+  const CHART_RETRY_MS = 30 * 1000;   // re-read a sidecar that describes another run, this soon
 
   // ── pure helpers (sliced and executed by test/ignition.test.js) ──────────
 
   function isMarket(m) { return IGNITION_MARKETS.indexOf(String(m == null ? "" : m).toLowerCase()) >= 0; }
   function liveUrl(market) { return `data/ignition/${market}.json`; }
   function btUrl(market) { return `data/ignition/${market}_backtest.json`; }
+  function chartsUrl(market) { return `data/ignition/${market}_charts.json`; }
 
   // A number the payload carries, or null: NaN/Infinity/strings are missing,
   // never coerced, so a missing field renders a dash, not a 0.
@@ -340,7 +354,7 @@
       `${esc(lookup(SOURCE_LABEL, src, src))}</span>`;
   }
 
-  // The source most rows share (Yahoo for every ASX name), or null. A coiled
+  // The source most rows share (Yahoo for every stock), or null. A coiled
   // row names its source only when it differs from this: the same word on
   // 77 rows buries the one "Cached" worth seeing.
   function mainSource(rows) {
@@ -408,6 +422,126 @@
     const has = (r) => capOf(r.mcap) != null;
     return rows.filter(has).sort((a, b) => capOf(b.mcap) - capOf(a.mcap))
       .concat(rows.filter((r) => !has(r)));
+  }
+
+  // ── mini charts: data/ignition/<market>_charts.json ─────────────────────
+  // The sidecar carries each row's last ~120 daily bars, its SMAs and the
+  // base / trigger / exit bar indices, all computed by the screen run
+  // (scanner/ignition/thumbs.py). The levels come off the screen row. This
+  // code only draws: no maths on the bars, no geometry derived here.
+
+  // "absent" -> no chart markup at all; "wait" -> same-size placeholders (loading, or bars
+  // from another run); "ok" -> draw.
+  function chartsState(status, charts, payload) {
+    if (status === "loading") return "wait";
+    if (status !== "ok") return "absent";            // also undefined: old 6-arg panelHTML calls
+    const g = obj(charts).generated_at;
+    return typeof g === "string" && g === obj(payload).generated_at ? "ok" : "wait";
+  }
+
+  // A sidecar that describes another run is re-read soon; a matching one keeps the live TTL.
+  function chartsTtl(entry, payload) {
+    const d = entry && entry.data;
+    return d && obj(d).generated_at !== obj(payload).generated_at ? CHART_RETRY_MS : LIVE_TTL_MS;
+  }
+
+  // The row's bars, or null: an own key only ("__proto__" reads missing), and
+  // only when they end on the bar the row was screened on.
+  function seriesFor(charts, r) {
+    const s = lookup(obj(obj(charts).rows), r && r.yf, null);
+    return s && typeof s === "object" && Array.isArray(s.c) && s.c.length >= 2 &&
+      isDay(s.end) && s.end === r.last_bar ? s : null;
+  }
+
+  // One row's chart as an inline SVG string, or "" when the bars are unusable.
+  // Back to front: base box, trigger / exit columns, volume, wicks, bodies,
+  // the forming bar (faded), the SMA lines (clipped to the price pane), the
+  // level line, the stop line. One path per colour, so the element count does
+  // not grow with the bars. The y-range comes from the candles and the levels,
+  // never the SMAs; log scale once the range spans CH.LOG_RATIO.
+  function chartSVG(s, r) {
+    const row = obj(r), b = obj(row.base);
+    const pos = (v) => (num(v) != null && v > 0 ? v : null);
+    const arrOf = (a) => (Array.isArray(a) ? a.map(pos) : []);
+    const [o, h, l, c] = ["o", "h", "l", "c"].map((k) => arrOf(obj(s)[k]));
+    const n = c.length;
+    if (n < 2 || o.length !== n || h.length !== n || l.length !== n) return "";
+    const v = Array.isArray(s.v) && s.v.length === n ? s.v.map(num) : [];
+    const idx = (q) => { const i = num(q); return i != null && i === Math.floor(i) && i >= 0 && i < n ? i : null; };
+    const span = Array.isArray(s.b) ? s.b.map(idx) : [];
+    const b0 = span[0], b1 = span[1], hasBase = b0 != null && b1 != null && b1 >= b0;
+    const t = idx(s.t), x = idx(s.x);
+    const coiled = row.state === "COILED";
+    const bh = pos(b.high), bl = pos(b.low);
+    const lvl = coiled ? pos(row.breakout_level) : bh;
+    const stop = coiled ? null : pos(row.stop);
+    const ext = h.concat(l, [bh, bl, lvl, stop]).filter((y) => y != null);   // NOT the SMAs
+    if (!ext.length) return "";
+    const hi = Math.max(...ext), lo = Math.min(...ext);
+    const F = hi / lo >= CH.LOG_RATIO ? Math.log : (y) => y;
+    let top = F(hi), bot = F(lo);
+    const pad = top > bot ? (top - bot) * CH.PAD : (Math.abs(top) || 1) * CH.PAD;   // flat base stays drawable
+    top += pad; bot -= pad;
+    const r1 = (y) => Math.round(y * 10) / 10;
+    const Y = (p) => r1((top - F(p)) / (top - bot) * CH.PRICE);
+    const HAIR = ' vector-effect="non-scaling-stroke"', W = ` stroke-width="${CH.BODY}"`;
+    const path = (cls, d, extra) => (d ? `<path class="${cls}" d="${d}"${extra || ""}/>` : "");
+    const rect = (cls, x0, y0, w, hh) => `<rect class="${cls}" x="${x0}" y="${y0}" width="${w}" height="${hh}"/>`;
+    const vmax = Math.max(0, ...v.filter((q) => q != null));
+    const form = s.f === 1 ? n - 1 : -1;
+    const d = { wu: "", wd: "", bu: "", bd: "", vu: "", vd: "" };
+    let fg = "";
+    for (let i = 0; i < n; i++) {
+      if (o[i] == null || h[i] == null || l[i] == null || c[i] == null) continue;
+      const up = c[i] >= o[i];
+      let y1 = Y(Math.max(o[i], c[i])), y2 = Y(Math.min(o[i], c[i]));
+      if (y2 - y1 < CH.MIN_BODY) { const m = (y1 + y2) / 2; y1 = r1(m - CH.MIN_BODY / 2); y2 = r1(m + CH.MIN_BODY / 2); }
+      const wick = `M${i} ${Y(h[i])}V${Y(l[i])}`, body = `M${i} ${y1}V${y2}`;
+      const vol = vmax > 0 && v[i] != null && v[i] > 0 ? `M${i} ${CH.H}V${r1(CH.H - Math.min(v[i], vmax) / vmax * CH.VOL)}` : "";
+      if (i === form) {
+        fg = `<g class="ch-form">${path(up ? "ch-vu" : "ch-vd", vol, W)}${path(up ? "ch-wu" : "ch-wd", wick, HAIR)}` +
+             `${path(up ? "ch-bu" : "ch-bd", body, W)}</g>`;
+      } else {
+        d[up ? "wu" : "wd"] += wick; d[up ? "bu" : "bd"] += body; d[up ? "vu" : "vd"] += vol;
+      }
+    }
+    const ma = (Array.isArray(s.ma) ? s.ma : []).map((a, j) => {
+      const vals = arrOf(a);
+      if (vals.length !== n) return "";
+      let p = "", pen = "M";
+      vals.forEach((y, i) => { if (y == null) { pen = "M"; return; } p += `${pen}${i} ${Y(y)}`; pen = "L"; });
+      return path(`ch-s${j}`, p, HAIR);
+    }).join("");
+    const base = hasBase && bh != null && bl != null
+      ? rect("ch-base", b0 - 0.5, Y(bh), b1 - b0 + 1, r1(Math.max(Y(bl) - Y(bh), CH.MIN_BODY))) : "";
+    const trig = t != null ? rect("ch-trig", t - 0.5, 0, 1, CH.PRICE) : "";
+    const exit = x != null ? rect("ch-exit", x - 0.5, 0, 1, CH.PRICE) : "";
+    const from = hasBase ? b0 - 0.5 : -0.5;
+    const level = lvl != null && (coiled || t != null)
+      ? path("ch-lvl", `M${from} ${Y(lvl)}H${coiled ? n - 0.5 : t + 0.5}`, HAIR) : "";
+    const stopLine = stop != null && t != null
+      ? path("ch-stop", `M${t - 0.5} ${Y(stop)}H${(x != null ? x : n - 1) + 0.5}`, HAIR) : "";
+    return `<svg class="ig-ch" viewBox="-0.5 0 ${n} ${CH.H}" preserveAspectRatio="none" focusable="false">` +
+      base + trig + exit +
+      path("ch-vu", d.vu, W) + path("ch-vd", d.vd, W) +
+      path("ch-wu", d.wu, HAIR) + path("ch-wd", d.wd, HAIR) +
+      path("ch-bu", d.bu, W) + path("ch-bd", d.bd, W) + fg +
+      (ma ? `<svg x="-0.5" y="0" width="${n}" height="${CH.PRICE}" viewBox="-0.5 0 ${n} ${CH.PRICE}" ` +
+            `preserveAspectRatio="none">${ma}</svg>` : "") +
+      level + stopLine + `</svg>`;
+  }
+
+  // The chart slot for one row: the drawn chart linked to the full chart, or a
+  // same-size dashed box (waiting, or no bars for this row). The symbol link
+  // stays the one tab stop and the accessible name, and no title here keeps
+  // the COILED row's tooltip showing over its chart.
+  function chartHTML(market, r, s, state) {
+    if (state === "wait") return `<span class="ig-chart is-wait" aria-hidden="true"></span>`;
+    const svg = s ? chartSVG(s, r) : "";
+    return svg
+      ? `<a class="ig-chart" href="${esc(chartHref(market, r.symbol == null ? "" : r.symbol))}" tabindex="-1" ` +
+        `aria-hidden="true">${svg}</a>`
+      : `<span class="ig-chart is-none" aria-hidden="true"></span>`;
   }
 
   // ── trigger cards: IGNITING / RUNNING / CLOSED ───────────────────────────
@@ -552,8 +686,9 @@
   // (symbol, state, name, the one outcome number), a meta line (cap first,
   // then the tags), two or three plain sentences, the levels, and where the
   // numbers came from. The cap leads the meta line so it sits in one place at
-  // every width, never wrapping between a ticker and its name.
-  function triggerCardHTML(r, market, rules) {
+  // every width, never wrapping between a ticker and its name. `cx` (optional)
+  // draws the row's mini chart between the meta line and the sentences.
+  function triggerCardHTML(r, market, rules, cx) {
     const st = String(r.state == null ? "" : r.state);
     const out = outcomeOf(r);
     return `<article class="ig-card ig-${esc(st.toLowerCase())}${r.provisional ? " is-prov" : ""}">` +
@@ -563,7 +698,7 @@
       `<div class="ig-out${out.tone ? " " + out.tone : ""}" title="${esc(out.tip)}">` +
       `<b>${esc(out.text)}</b><span>${esc(out.cap)}</span></div></div>` +
       `<div class="ig-card-meta">${capHTML(r, market)}${tagsHTML(r, rules)}</div>` +
-      storyHTML(r) + levelsHTML(r) + footHTML(r) + `</article>`;
+      (cx ? cx(r) : "") + storyHTML(r) + levelsHTML(r) + footHTML(r) + `</article>`;
   }
 
   // ── COILED: one table, largest market cap first ─────────────────────────
@@ -611,7 +746,7 @@
     ].filter(Boolean).join("\n");
   }
 
-  function coiledRowHTML(r, market, srcMain) {
+  function coiledRowHTML(r, market, srcMain, cx) {
     const c = obj(r.coil);
     const gap = coilGap(r);
     const at = gap != null && Math.abs(gap) < AT_LEVEL_PCT;
@@ -625,6 +760,7 @@
     const cls = ["ig-tr", c.coiled ? "" : "is-ended", flat && at ? "is-dim" : "",
       Math.max(px.length, brk.length) > LONG_PX_CHARS ? "is-longpx" : ""].filter(Boolean).join(" ");
     return `<tr class="${cls}" title="${esc(coilTip(r))}">` +
+      (cx ? `<td class="c-chart">${cx(r)}</td>` : "") +
       `<td class="c-sym"><div class="ig-symcell">${symLink(market, r.symbol)}` +
       (r.name ? `<span class="ig-name">${esc(r.name)}</span>` : "") + flag +
       (r.source !== srcMain ? sourceHTML(r.source) : "") + `</div></td>` +
@@ -637,10 +773,12 @@
       `<td class="c-q">${esc(atr == null ? DASH : (atr < 1 ? "<1" : String(Math.round(atr))))}</td></tr>`;
   }
 
-  function coiledTableHTML(rows, market, srcMain) {
-    return `<table class="ig-tbl"><thead><tr>` +
-      COIL_COLS.map(([cls, label, tip]) => `<th scope="col" class="${cls}" title="${esc(tip)}">${esc(label)}</th>`).join("") +
-      `</tr></thead><tbody>${sortByCap(rows).map((r) => coiledRowHTML(r, market, srcMain)).join("")}</tbody></table>`;
+  // `cx` (optional) adds the chart column, first, and marks the table has-chart.
+  function coiledTableHTML(rows, market, srcMain, cx) {
+    const cols = cx ? [CHART_COL].concat(COIL_COLS) : COIL_COLS;
+    return `<table class="ig-tbl${cx ? " has-chart" : ""}"><thead><tr>` +
+      cols.map(([cls, label, tip]) => `<th scope="col" class="${cls}" title="${esc(tip)}">${esc(label)}</th>`).join("") +
+      `</tr></thead><tbody>${sortByCap(rows).map((r) => coiledRowHTML(r, market, srcMain, cx)).join("")}</tbody></table>`;
   }
 
   // One line under the COILED heading saying what a trigger IS, read off the
@@ -804,11 +942,13 @@
       (p.last_closed_bar ? " · last completed daily bar " + p.last_closed_bar : "") +
       (p.ruleset_version ? " · ruleset " + p.ruleset_version : "") +
       sourcesText(obj(s.sources));
+    const mk = p.market == null ? "crypto" : p.market;
     const badge = stale
       ? ` <span class="ig-stale" title="${esc("This screen is behind: " + stale.reasons.join("; ") +
-          (p.market === "crypto" || p.market == null
-            ? ". It normally refreshes just after 00:00 UTC and several times a day; check the Ignition workflow runs."
-            : ". It normally refreshes just after the close and a few times in session on weekdays; check the Ignition (ASX) workflow runs."))}">` +
+          (BAR_24_7.indexOf(mk) >= 0
+            ? ". It normally refreshes just after 00:00 UTC and several times a day"
+            : ". It normally refreshes just after the close and a few times in session on weekdays") +
+          "; check the " + lookup(WF_NAME, mk, "Ignition scan") + " workflow runs.")}">` +
         `${esc("⚠ STALE · as of " + (stale.asOf || DASH))}</span>`
       : "";
     const meta = [regimeHTML(p.regime), lagHTML(obj(s.bars))].filter(Boolean);
@@ -860,12 +1000,16 @@
 
   // The whole panel, as one string. `coiledOpen` carries the COILED
   // disclosure's state across a repaint (the backtest landing, a refresh).
-  function panelHTML(payload, btStatus, bt, market, coiledOpen, stale) {
+  // `chStatus` / `charts` are the chart sidecar's load state and data: absent
+  // draws no chart markup at all (the panel as it was before the charts).
+  function panelHTML(payload, btStatus, bt, market, coiledOpen, stale, chStatus, charts) {
     const p = obj(payload);
     const g = groupRows(p.results);
     const k = countsOf(payload);
     const rules = p.rules || {};
-    const trig = (r) => triggerCardHTML(r, market, rules);
+    const cs = chartsState(chStatus, charts, p);
+    const cx = cs === "absent" ? null : (r) => chartHTML(market, r, cs === "ok" ? seriesFor(charts, r) : null, cs);
+    const trig = (r) => triggerCardHTML(r, market, rules, cx);
     let h = headHTML(payload, stale) + evidenceHTML(btStatus, bt, payload);
     h += ignitingHTML(g, k, trig);
     if (g.RUNNING.length) h += sectionHTML("ig-sec-running", "Running", "", g.RUNNING, trig);
@@ -877,7 +1021,7 @@
         `<summary class="ig-h">${esc("Coiled")} <b>${esc(g.COILED.length)}</b> ` +
         `<span class="ig-note">${esc("quiet bases one close from a trigger")}</span></summary>` +
         `<p class="ig-explain">${esc(coilNote(p.params))}</p>` +
-        coiledTableHTML(g.COILED, market, mainSource(p.results)) + `</details>`;
+        coiledTableHTML(g.COILED, market, mainSource(p.results), cx) + `</details>`;
     }
     return h;
   }
@@ -886,6 +1030,7 @@
 
   const live = {};          // market -> { data, at, inflight, onReady }
   const bts = {};           // market -> same, for the backtest
+  const chs = {};           // market -> same, for the chart sidecar
   let openFor = null;       // the market whose panel is open, or null
   let current = null;       // the market the deck is showing (last sync)
   let painted = "";         // what the panel currently shows, to skip repaints
@@ -972,8 +1117,10 @@
       painted = "";
       return;
     }
-    // Only now — the panel is open — is the backtest worth its bytes.
-    const b = load(bts, market, btUrl(market), null, () => { painted = ""; sync(current); });
+    // Only now — the panel is open — are the backtest and the charts worth their bytes.
+    const repaint = () => { painted = ""; sync(current); };
+    const b = load(bts, market, btUrl(market), null, repaint);
+    const c = load(chs, market, chartsUrl(market), chartsTtl(chs[market], e.data), repaint);
     const status = entryStatus(b);
     let html, key;
     // Everything that reads the payload sits inside the try: a value that
@@ -982,10 +1129,11 @@
     // pill reset, error reported — not leave the old panel up with no pill.
     try {
       const stale = staleOf(e.data, market, Date.now());
-      key = market + "|" + e.at + "|" + status + "|" + b.at + "|" + (stale ? stale.asOf + stale.reasons.length : "");
+      key = market + "|" + e.at + "|" + status + "|" + b.at + "|" + c.at + "|" +
+        (stale ? stale.asOf + stale.reasons.length : "");
       if (key === painted && !host.hidden) return;
       const det = host.querySelector ? host.querySelector("details.ig-coiled") : null;
-      html = panelHTML(e.data, status, b.data, market, !!(det && det.open), stale);
+      html = panelHTML(e.data, status, b.data, market, !!(det && det.open), stale, entryStatus(c), c.data);
     } catch (err) {
       host.hidden = true;
       host.innerHTML = "";

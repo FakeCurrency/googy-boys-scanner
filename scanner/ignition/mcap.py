@@ -2,7 +2,7 @@
 a MARKET cap on each box"). Stamped after the screen sorts, so a cap can never
 move a row, a state or a count; nothing in the engine or the replay reads it.
 
-Row keys: mcap (the market's own currency: A$ asx, US$ crypto), mcap_asof
+Row keys: mcap (the market's own currency: A$ asx, US$ nasdaq and crypto), mcap_asof
 ("YYYY-MM-DD") and mcap_src ("coingecko" | "yahoo" | "cache" | "previous"), each
 None when unknown. The shared cap cache is READ only: scan.yml's marketcaps step
 is its one writer.
@@ -48,7 +48,7 @@ def _previous_rows(path):
 
 
 def known(market, prev_path, now):
-    """{symbol: entry} for the ASX (crypto: {}): the newest of the shared cache
+    """{symbol: entry} for a stock market (crypto: {}): the newest of the shared cache
     and the previous file. Yahoo is asked once, for previous-file names with no
     recent cap -- today's rows are nearly all there, as a trigger needs a recent
     coil. Call it BEFORE the frame download: Yahoo throttles after it."""
@@ -77,7 +77,7 @@ def known(market, prev_path, now):
 def stamp(market, results, rows, caps, today):
     """Write the three keys on every result row, in place; return the summary
     block. Crypto reads the universe rows' cg_mcap (undated when the universe is
-    an outage-day snapshot, cg_stale); the ASX reads `caps` from known()."""
+    an outage-day snapshot, cg_stale); a stock market reads `caps` from known()."""
     if market == "crypto":
         caps = {r.get("symbol"): {"mcap": r.get("cg_mcap"), "src": "coingecko",
                                   "asof": None if r.get("cg_stale") else today} for r in rows}

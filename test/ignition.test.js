@@ -27,6 +27,11 @@
  *      swallowed by the fetch's catch (TOP100 #88) — in ignition.js AND in
  *      app.js, where a lens fault may not abort the deck.
  *   6. Stale data says so, on the pill and in the panel header.
+ *   7. Mini charts (data/ignition/<market>_charts.json) are drawn only off the
+ *      SAME run as the screen (generated_at join), fetched only once the panel
+ *      opens; an absent sidecar leaves the panel byte-identical to the
+ *      chartless one. The SVG is a fixed handful of elements whatever the bar
+ *      count, every coordinate a clean in-range number, nothing to read as text.
  *
  * Sandboxes use `new Function(body)()`, NOT vm.runInContext: a vm context is a
  * separate realm and cross-realm deepStrictEqual fails on Array.prototype.
@@ -49,6 +54,7 @@ const readReal = (name) => {
 const REAL_LIVE = readReal("crypto.json");
 const REAL_BT = readReal("crypto_backtest.json");
 const REAL_ASX = readReal("asx.json");
+const REAL_NASDAQ = readReal("nasdaq.json");
 
 let passed = 0, failed = 0;
 const pending = [];
@@ -93,12 +99,14 @@ function fnSrc(name, src) {
 }
 
 const CONSTS = ["IGNITION_MARKETS", "esc", "own", "lookup", "DASH", "LIVE_TTL_MS", "STALE_GEN_H", "STALE_BAR_GRACE_H",
-  "BAR_24_7", "STALE_SESSION_H", "STATE_ORDER", "STATE_LABEL", "SMA9", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK",
-  "MONTHS", "CAP_CCY", "CAP_SRC", "CAP_UNITS", "LONG_PX_CHARS", "AT_LEVEL_PCT", "COIL_COLS"];
-const FNS = ["isMarket", "liveUrl", "btUrl", "num", "obj", "fmtPx", "fmtPxPair", "signed", "fmtPct", "fmtR", "fmtX",
+  "BAR_24_7", "STALE_SESSION_H", "WF_NAME", "STATE_ORDER", "STATE_LABEL", "SMA9", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK",
+  "MONTHS", "CAP_CCY", "CAP_SRC", "CAP_UNITS", "LONG_PX_CHARS", "AT_LEVEL_PCT", "COIL_COLS",
+  "CH", "CHART_COL", "CHART_RETRY_MS"];
+const FNS = ["isMarket", "liveUrl", "btUrl", "chartsUrl", "num", "obj", "fmtPx", "fmtPxPair", "signed", "fmtPct", "fmtR", "fmtX",
   "fmtN", "toneOf", "isDay", "utcDay", "shortDay", "weekdayHours", "staleOf", "rowRank", "groupRows", "countsOf",
   "provNote", "pillInfo", "loadingInfo", "melb", "utcText", "chartHref", "symLink", "tag", "sourceHTML", "mainSource",
   "capOf", "ccy", "fmtCap", "capProv", "capTip", "capHTML", "sortByCap",
+  "chartsState", "chartsTtl", "seriesFor", "chartSVG", "chartHTML",
   "entryTip", "outcomeOf", "fig", "breakoutLine", "sinceLine", "exitLine", "heldLine", "storyHTML",
   "level", "levelsHTML", "footHTML", "tagsHTML", "triggerCardHTML",
   "coilGap", "isFlatBase", "flatTag", "coilTip", "coiledRowHTML", "coiledTableHTML", "coilNote",
@@ -209,12 +217,14 @@ const noJunkValues = (html, what) => {
 // ════════════════════════════════════════════════════════════════════════════
 suite("markets — mirrored from config.IGNITION_MARKETS");
 
-test("the shipped constant is crypto + the ASX, and isMarket reads it", () => {
-  assert.deepEqual(I.IGNITION_MARKETS, ["crypto", "asx"]);
+test("the shipped constant is crypto + the ASX + NASDAQ, and isMarket reads it", () => {
+  assert.deepEqual(I.IGNITION_MARKETS, ["crypto", "asx", "nasdaq"]);
   assert.equal(I.isMarket("crypto"), true);
   assert.equal(I.isMarket("CRYPTO"), true);
   assert.equal(I.isMarket("asx"), true);
-  assert.equal(I.isMarket("nasdaq"), false);
+  assert.equal(I.isMarket("nasdaq"), true);
+  assert.equal(I.isMarket("NASDAQ"), true);
+  assert.equal(I.isMarket("nyse"), false);
   assert.equal(I.isMarket(null), false);
 });
 
@@ -223,6 +233,9 @@ test("the two URLs are exactly the files scanner/ignition/run.py writes", () => 
   assert.equal(I.btUrl("crypto"), "data/ignition/crypto_backtest.json");
   assert.equal(I.liveUrl("asx"), "data/ignition/asx.json");
   assert.equal(I.btUrl("asx"), "data/ignition/asx_backtest.json");
+  assert.equal(I.liveUrl("nasdaq"), "data/ignition/nasdaq.json");
+  assert.equal(I.btUrl("nasdaq"), "data/ignition/nasdaq_backtest.json");
+  assert.equal(I.chartsUrl("nasdaq"), "data/ignition/nasdaq_charts.json");
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -508,6 +521,53 @@ test("a stale panel header shows the badge; a fresh one does not", () => {
   assert.ok(!/ig-stale/.test(I.headHTML(staleP(), null)));
 });
 
+test("NASDAQ is a session market too: weekday hours, never the 24/7 bar rule", () => {
+  // Fri 9 Oct 21:34 UTC post-close run, read Mon 12 Oct 15:00 UTC:
+  // 2.4h Fri + 15h Mon = 17.4 weekday hours (65.4h of wall clock).
+  const fri = staleP({ market: "nasdaq", generated_at: "2026-10-09T21:34:00Z", last_closed_bar: "2026-10-09" });
+  assert.equal(I.staleOf(fri, "nasdaq", Date.parse("2026-10-12T15:00:00Z")), null);
+  // A Monday holiday on top still clears it: read Tue 15:00 UTC = 41.4h.
+  assert.equal(I.staleOf(fri, "nasdaq", Date.parse("2026-10-13T15:00:00Z")), null);
+  // Dead until Wednesday afternoon: 2.4 + 24 + 24 + 15 = 65.4h, stale.
+  const s = I.staleOf(fri, "nasdaq", Date.parse("2026-10-14T15:00:00Z"));
+  assert.ok(s, "two dead trading days must be stale");
+  assert.match(s.reasons.join(" "), /over 50 weekday hours ago/);
+  assert.ok(I.BAR_24_7.indexOf("nasdaq") < 0, "a stock market's weekend is not the bar rule's business");
+});
+
+test("the STALE badge names the workflow that refreshes THIS market's file", () => {
+  const badge = (market, now) => {
+    const p = staleP({ market, generated_at: "2026-09-20T06:00:00Z", last_closed_bar: "2026-09-19" });
+    return /class="ig-stale" title="([^"]*)"/.exec(I.headHTML(p, I.staleOf(p, market, now)))[1];
+  };
+  const crypto = badge("crypto", NOW);
+  assert.match(crypto, /just after 00:00 UTC and several times a day; check the Ignition scan workflow runs\.$/);
+  const asx = badge("asx", NOW);
+  assert.match(asx, /just after the close and a few times in session on weekdays; check the Ignition scan \(ASX\) workflow runs\.$/);
+  const nq = badge("nasdaq", NOW);
+  assert.match(nq, /just after the close and a few times in session on weekdays; check the Ignition scan \(NASDAQ\) workflow runs\.$/);
+  assert.ok(!/ASX/.test(nq), "a NASDAQ badge never sends the reader to the ASX workflow");
+  assert.deepEqual(Object.keys(I.WF_NAME).sort(), I.IGNITION_MARKETS.slice().sort(), "one workflow name per market");
+  // a payload with no market is crypto's (the lens's first market)
+  const bare = staleP({ last_closed_bar: "2026-09-26" });
+  delete bare.market;
+  assert.match(I.headHTML(bare, I.staleOf(bare, "crypto", NOW)),
+    /just after 00:00 UTC and several times a day; check the Ignition scan workflow runs\./);
+});
+
+test("a NASDAQ header shows the NASDAQ Composite regime from the generic keys", () => {
+  const h = I.headHTML(payload([trig()], undefined, { market: "nasdaq", regime: {
+    index: "^IXIC", label: "NASDAQ Composite", close: 18234.5, sma200: 17110.25, above_200: true,
+    vs_200_pct: 6.6, as_of: "2026-10-07" } }), null);
+  assert.match(h, /class="ig-regime is-up" title="Context, not a filter: the market&#39;s own trend[^"]*NASDAQ Composite 18,234\.50 vs 200-SMA 17,110\.25, as of 2026-10-07\.">NASDAQ Composite above its 200-SMA \(\+6\.6%\)</);
+});
+
+test("NASDAQ tooltips say US$ and Yahoo, not just the ASX's words", () => {
+  assert.match(I.COIL_COLS.find((c) => c[0] === "c-cap")[2], /US\$ on NASDAQ and crypto/);
+  assert.match(I.SOURCE_TIP.yahoo, /every ASX and NASDAQ name/);
+  assert.equal(I.ccy("nasdaq"), "US$");
+});
+
 test("lagging > 0 says 'N coins behind yesterday's close', with the detail in the tooltip", () => {
   const p = staleP();
   p.summary.bars = { completed_last: "2026-09-27", expected_completed: "2026-09-27", lagging: 39,
@@ -702,7 +762,8 @@ test("fmtCap: 2-3 significant figures, T/B/M/K, currency by market", () => {
   assert.equal(I.fmtCap(3.1e12, "crypto"), "US$3.1T");
   assert.equal(I.fmtCap(158e3, "asx"), "A$158K");
   assert.equal(I.fmtCap(512, "asx"), "A$512");
-  assert.equal(I.fmtCap(5e6, "nasdaq"), "$5.0M", "an unknown market gets a bare $");
+  assert.equal(I.fmtCap(5e6, "nasdaq"), "US$5.0M");
+  assert.equal(I.fmtCap(5e6, "nyse"), "$5.0M", "an unknown market gets a bare $");
 });
 
 test("fmtCap: a value that rounds across a unit prints in the unit it lands in", () => {
@@ -754,8 +815,8 @@ test("COILED orders by market cap, largest first; rows without one follow in eng
   assert.ok(h.indexOf(">BIG</a>") < h.indexOf(">SMALL</a>"), "the table is drawn in cap order");
 });
 
-test("every row of both LIVE payloads draws exactly one cap, with or without caps on file", () => {
-  for (const [market, live] of [["crypto", REAL_LIVE], ["asx", REAL_ASX]]) {
+test("every row of every LIVE payload draws exactly one cap, with or without caps on file", () => {
+  for (const [market, live] of [["crypto", REAL_LIVE], ["asx", REAL_ASX], ["nasdaq", REAL_NASDAQ]]) {
     if (!live) { console.log(`     (no public/data/ignition/${market}.json — skipped)`); continue; }
     const drawn = live.results.filter((r) => I.rowRank(r)).length;
     const withCaps = Object.assign({}, live, { results: live.results.map((r, i) =>
@@ -827,6 +888,7 @@ test("INERT: the rendered panel never reads like an instruction", () => {
       undefined, { params: { rvol_min: 3, max_ext: 0.6, coil_lookback: 10 } }), "ok", BT, "crypto", true, null)];
   if (REAL_LIVE) panels.push(I.panelHTML(REAL_LIVE, "ok", REAL_BT, "crypto", true, null));
   if (REAL_ASX) panels.push(I.panelHTML(REAL_ASX, "absent", null, "asx", true, null));
+  if (REAL_NASDAQ) panels.push(I.panelHTML(REAL_NASDAQ, "absent", null, "nasdaq", true, null));
   for (const h of panels) {
     const m = banned.exec(h);
     assert.ok(!m, `the panel says "${m && m[0]}": ${m && h.slice(Math.max(0, m.index - 80), m.index + 40)}`);
@@ -941,7 +1003,8 @@ test("no IGNITING rows says so in words rather than dropping the section", () =>
 });
 
 test("the REAL committed screens render without a junk value, every row drawn", () => {
-  for (const [market, live, bt] of [["crypto", REAL_LIVE, REAL_BT], ["asx", REAL_ASX, null]]) {
+  for (const [market, live, bt] of [["crypto", REAL_LIVE, REAL_BT], ["asx", REAL_ASX, null],
+                                    ["nasdaq", REAL_NASDAQ, null]]) {
     if (!live) { console.log(`     (no public/data/ignition/${market}.json — skipped)`); continue; }
     const h = I.panelHTML(live, bt ? "ok" : "absent", bt, market, true, I.staleOf(live, market, NOW));
     noJunkValues(h, "real " + market + " panel");
@@ -1148,18 +1211,21 @@ const ok200 = (body) => Promise.resolve({ ok: true, status: 200, json: () => Pro
 const r404 = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.reject(new Error("no")) });
 const flush = () => new Promise((r) => setImmediate(r));
 const settle = async () => { await flush(); await flush(); };
-const both = (live, bt) => (url) => ok200(url.endsWith("_backtest.json") ? bt : live);
+// The live file, the backtest and the chart sidecar; no sidecar given = a 404,
+// so a test that predates the charts settles on the chartless panel.
+const both = (live, bt, ch) => (url) => (url.endsWith("_charts.json") ? (ch ? ok200(ch) : r404())
+  : ok200(url.endsWith("_backtest.json") ? bt : live));
 
 test("the module exports window.Ignition and binds one delegated click listener", () => {
   const m = runModule(() => r404());
   assert.deepEqual(Object.keys(m.Ig).sort(), ["MARKETS", "isMarket", "pill", "sync", "toggle"]);
-  assert.deepEqual(m.Ig.MARKETS, ["crypto", "asx"]);
+  assert.deepEqual(m.Ig.MARKETS, ["crypto", "asx", "nasdaq"]);
   assert.deepEqual(m.listeners.map((l) => l[0]), ["click"]);
 });
 
 test("a non-Ignition market fetches nothing and gets no pill (not even a placeholder)", async () => {
   const m = runModule(() => ok200(SAMPLE));
-  assert.equal(m.Ig.pill("nasdaq", () => {}), null);
+  assert.equal(m.Ig.pill("nyse", () => {}), null);
   assert.equal(m.Ig.pill("NYSE", () => {}), null);
   await flush();
   assert.equal(m.calls.length, 0);
@@ -1258,7 +1324,8 @@ test("the backtest is fetched ONLY when the panel opens, and the panel then rend
   m.Ig.sync("crypto");
   assert.equal(m.host.hidden, false);
   assert.match(m.host.innerHTML, /Backtest loading/);
-  assert.deepEqual(m.calls.map((c) => c.url), ["data/ignition/crypto.json", "data/ignition/crypto_backtest.json"]);
+  assert.deepEqual(m.calls.map((c) => c.url), ["data/ignition/crypto.json", "data/ignition/crypto_backtest.json",
+    "data/ignition/crypto_charts.json"]);
   await settle();
   assert.match(m.host.innerHTML, /expectancy <b>\+9\.96R<\/b>/, "the evidence line repaints when the file lands");
   assert.equal(m.Ig.pill("crypto").open, true, "the pill reports the panel as open");
@@ -1276,12 +1343,12 @@ test("a market switch CLOSES the panel: coming back does not re-open it unasked"
   m.Ig.sync("crypto");
   await settle();
   assert.equal(m.host.hidden, false);
-  m.Ig.sync("nasdaq");
+  m.Ig.sync("nyse");
   assert.equal(m.host.hidden, true, "switching market hides it");
   m.Ig.sync("crypto");
   assert.equal(m.host.hidden, true, "returning to crypto must not re-open the panel");
   assert.equal(m.Ig.pill("crypto").open, false, "and the pill is not drawn pressed");
-  assert.equal(m.calls.length, 2, "no refetch");
+  assert.equal(m.calls.length, 3, "no refetch (live, backtest, charts: once each)");
 });
 
 test("the market-switch LISTENER hides an open panel at once", async () => {
@@ -1292,7 +1359,7 @@ test("the market-switch LISTENER hides an open panel at once", async () => {
   m.Ig.sync("crypto");
   assert.equal(m.host.hidden, false);
   const click = m.listeners.find((l) => l[0] === "click")[1];
-  const btn = { getAttribute: (k) => (k === "data-market" ? "nasdaq" : null) };
+  const btn = { getAttribute: (k) => (k === "data-market" ? "nyse" : null) };
   click({ target: { closest: (sel) => (sel === ".market-btn[data-market]" ? btn : null) } });
   assert.equal(m.host.hidden, true, "the delegated market-switch listener must hide the panel");
   assert.equal(m.host.innerHTML, "");
@@ -1396,6 +1463,510 @@ test("source order: the catch sits on the fetch+parse, the callback runs after i
   const cb = load.indexOf("cb(market)");
   assert.ok(c > 0 && cb > c, "the onReady callback must run AFTER the fetch's catch");
   assert.equal((load.match(/\.catch\(/g) || []).length, 1, "exactly one catch, on the fetch");
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+suite("mini charts — the sidecar contract, drawn");
+
+// One row of data/ignition/<market>_charts.json, shaped the way
+// scanner/ignition/thumbs.py writes it: a deterministic walk with a long
+// history behind the window (so every SMA is warm inside it, as on a real
+// frame), 5 significant figures, volume as 0..100 of the window's loudest bar.
+// b / t / x are placed by hand; the server owns that geometry.
+const SMAS = [9, 26, 43, 200];
+const sig5 = (x) => Number(x.toPrecision(5));
+function series(n, opts) {
+  const op = opts || {};
+  const total = n + 200;
+  let seed = op.seed || 11, px = op.start || 50;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const O = [], H = [], L = [], C = [], V = [];
+  for (let i = 0; i < total; i++) {
+    const cl = px * (1 + (rnd() - 0.5) * 0.08);
+    O.push(px); C.push(cl);
+    H.push(Math.max(px, cl) * (1 + rnd() * 0.03)); L.push(Math.min(px, cl) * (1 - rnd() * 0.03));
+    V.push(rnd() * 1e6); px = cl;
+  }
+  const w = (a) => a.slice(total - n);
+  const vmax = Math.max(...w(V));
+  const sma = (p) => C.map((_, i) => (i + 1 < p ? null : sig5(C.slice(i + 1 - p, i + 1).reduce((a, b) => a + b, 0) / p)));
+  return Object.assign({ end: "2026-09-27", f: op.f ? 1 : 0, o: w(O).map(sig5), h: w(H).map(sig5), l: w(L).map(sig5),
+    c: w(C).map(sig5), v: w(V).map((x) => Math.round(100 * x / vmax)), ma: SMAS.map((p) => w(sma(p))) }, op.extra || {});
+}
+// The screen row a series belongs to, its base read off the bars inside `b`.
+function rowFor(state, s, over) {
+  const [b0, b1] = s.b || [0, s.c.length - 1];
+  const base = { high: Math.max(...s.h.slice(b0, b1 + 1)), low: Math.min(...s.l.slice(b0, b1 + 1)), bars: b1 - b0 + 1 };
+  const r = { symbol: "CHT", yf: "CHT-USD", state, last_bar: s.end, base };
+  if (state === "COILED") r.breakout_level = base.high; else r.stop = sig5(base.low * 0.97);
+  return Object.assign(r, over || {});
+}
+const span60 = (i1) => [Math.max(0, i1 - 59), i1];
+// [series, row] for one shape at n bars. CLOSED_FORMING is the most marks a
+// chart can carry (trigger + exit + forming bar + base + 4 SMAs + 2 lines).
+const SHAPES = {
+  COILED: (n) => { const s = series(n); s.b = span60(n - 2); return [s, rowFor("COILED", s)]; },
+  RUNNING: (n) => { const s = series(n); s.t = n - 6; s.b = span60(s.t - 1); return [s, rowFor("RUNNING", s)]; },
+  CLOSED: (n) => { const s = series(n); s.t = n - 12; s.x = n - 3; s.b = span60(s.t - 1); return [s, rowFor("CLOSED", s)]; },
+  PROVISIONAL: (n) => {
+    const s = series(n, { f: 1 }); s.t = n - 1; s.b = span60(s.t - 1);
+    return [s, rowFor("IGNITING", s, { provisional: true })];
+  },
+  CLOSED_FORMING: (n) => {
+    const s = series(n, { f: 1 }); s.t = n - 12; s.x = n - 4; s.b = span60(s.t - 1);
+    return [s, rowFor("CLOSED", s)];
+  },
+};
+const marks = (svg) => (svg.match(/<(svg|path|rect|g)\b/g) || []).length;
+const dOf = (svg, cls) => [...svg.matchAll(new RegExp(`<path class="${cls}" d="([^"]*)"`, "g"))].map((m) => m[1]).join("");
+// The outer drawing and the nested SMA pane, apart: only the SMAs may leave
+// the price pane (the nested SVG clips them).
+const splitPane = (svg) => {
+  const m = /(<svg x="[^"]*"[^>]*>)([\s\S]*?)<\/svg>/.exec(svg);
+  return m ? { outer: svg.slice(0, m.index) + m[1] + svg.slice(m.index + m[0].length - 6), inner: m[2] } : { outer: svg, inner: "" };
+};
+// Every x and y the markup carries, as the strings it printed.
+function coords(part) {
+  const xs = [], ys = [];
+  for (const m of part.matchAll(/\sd="([^"]*)"/g)) {
+    for (const c of m[1].matchAll(/([MLVH])([^MLVH]*)/g)) {
+      const a = c[2].trim().split(/\s+/);
+      if (c[1] === "M" || c[1] === "L") { xs.push(a[0]); ys.push(a[1]); } else if (c[1] === "V") ys.push(a[0]); else xs.push(a[0]);
+    }
+  }
+  for (const m of part.matchAll(/\s(x|width)="([^"]*)"/g)) xs.push(m[2]);
+  for (const m of part.matchAll(/\s(y|height)="([^"]*)"/g)) ys.push(m[2]);
+  return { xs, ys };
+}
+// bar index -> the y its wick starts at (the high), off every wick path.
+const highs = (svg) => {
+  const out = {};
+  for (const m of svg.matchAll(/class="ch-w[ud]" d="([^"]*)"/g)) {
+    for (const seg of m[1].matchAll(/M(\d+) (-?[\d.]+)V/g)) out[seg[1]] = Number(seg[2]);
+  }
+  return out;
+};
+
+test("chartsUrl is the sidecar scanner/ignition/run.py writes beside the screen", () => {
+  assert.equal(I.chartsUrl("crypto"), "data/ignition/crypto_charts.json");
+  assert.equal(I.chartsUrl("asx"), "data/ignition/asx_charts.json");
+});
+
+test("chartsState: loading waits, absent hides, ok draws ONLY off the same run as the screen", () => {
+  const p = { generated_at: "2026-09-28T06:00:00+00:00" };
+  assert.equal(I.chartsState("loading", null, p), "wait");
+  assert.equal(I.chartsState("absent", null, p), "absent");
+  assert.equal(I.chartsState(undefined, undefined, p), "absent", "an old 6-argument panelHTML call draws no charts");
+  assert.equal(I.chartsState("ok", { generated_at: p.generated_at }, p), "ok");
+  assert.equal(I.chartsState("ok", { generated_at: "2026-09-27T06:00:00+00:00" }, p), "wait", "another run's bars");
+  assert.equal(I.chartsState("ok", {}, p), "wait", "a sidecar with no stamp is never matched");
+  assert.equal(I.chartsState("ok", { generated_at: undefined }, {}), "wait", "two missing stamps are not a match");
+  assert.equal(I.chartsState("ok", { generated_at: 5 }, { generated_at: 5 }), "wait", "the stamp is a string");
+});
+
+test("panelHTML with 6 arguments is byte-identical to an absent sidecar (and to the pre-chart panel)", () => {
+  for (const p of [SAMPLE, payload([PROV, CLOSED, coiled()])]) {
+    const six = I.panelHTML(p, "ok", BT, "crypto", true, null);
+    assert.equal(six, I.panelHTML(p, "ok", BT, "crypto", true, null, "absent", null));
+    assert.equal(six, I.panelHTML(p, "ok", BT, "crypto", true, null, "absent", { generated_at: p.generated_at }));
+    assert.ok(!/ig-chart|c-chart|has-chart|ig-ch/.test(six), "no chart markup without a sidecar");
+  }
+});
+
+test("chartsTtl: a matching sidecar keeps the live TTL; one from another run is re-read in 30s", () => {
+  const p = { generated_at: "2026-09-28T06:00:00+00:00" };
+  assert.equal(I.CHART_RETRY_MS, 30 * 1000);
+  assert.equal(I.chartsTtl(undefined, p), I.LIVE_TTL_MS, "never loaded");
+  assert.equal(I.chartsTtl({ data: null, at: 1 }, p), I.LIVE_TTL_MS, "absent: no hammering a 404");
+  assert.equal(I.chartsTtl({ data: { generated_at: p.generated_at } }, p), I.LIVE_TTL_MS);
+  assert.equal(I.chartsTtl({ data: { generated_at: "2026-09-27T06:00:00+00:00" } }, p), I.CHART_RETRY_MS);
+  assert.equal(I.chartsTtl({ data: {} }, p), I.CHART_RETRY_MS);
+});
+
+test("seriesFor: an own key only, ending on the row's last bar, with at least two bars", () => {
+  const s = series(30);
+  const charts = { rows: { "CHT-USD": s } };
+  const r = { yf: "CHT-USD", last_bar: "2026-09-27" };
+  assert.equal(I.seriesFor(charts, r), s, "the row's own series");
+  assert.equal(I.seriesFor(charts, { yf: "MISSING", last_bar: "2026-09-27" }), null, "a missing yf");
+  assert.equal(I.seriesFor({ rows: {} }, { yf: "__proto__", last_bar: "2026-09-27" }), null, "never Object.prototype");
+  assert.equal(I.seriesFor({ rows: {} }, { yf: "toString", last_bar: "2026-09-27" }), null, "never a prototype member");
+  assert.equal(I.seriesFor({ rows: Object.create({ "CHT-USD": s }) }, r), null, "an inherited key is not the row's own");
+  assert.equal(I.seriesFor(charts, { yf: "CHT-USD", last_bar: "2026-09-26" }), null, "bars that end on another day");
+  assert.equal(I.seriesFor({ rows: { X: Object.assign({}, s, { end: undefined }) } }, { yf: "X" }), null,
+    "a series and a row both missing their dates do not match");
+  assert.equal(I.seriesFor({ rows: { X: Object.assign({}, s, { c: [1] }) } }, { yf: "X", last_bar: s.end }), null, "one bar");
+  assert.equal(I.seriesFor({ rows: { X: Object.assign({}, s, { c: "1,2" }) } }, { yf: "X", last_bar: s.end }), null);
+  assert.equal(I.seriesFor(null, r), null);
+  assert.equal(I.seriesFor({ rows: [s] }, { yf: "0", last_bar: s.end }), null, "rows is an object, not a list");
+});
+
+test("chartSVG: one stretched SVG over [-0.5, n] x [0, 100], every mark where the row says", () => {
+  for (const n of [30, 120, 121]) {
+    for (const [name, make] of Object.entries(SHAPES)) {
+      const [s, r] = make(n);
+      const svg = I.chartSVG(s, r);
+      const what = `${name} n=${n}`;
+      assert.equal((svg.match(/<svg class="ig-ch"/g) || []).length, 1, what);
+      assert.ok(svg.startsWith(`<svg class="ig-ch" viewBox="-0.5 0 ${n} 100" preserveAspectRatio="none"`), what);
+      for (const cls of ["ch-wu", "ch-bu", "ch-wd", "ch-bd", "ch-base", "ch-lvl"]) {
+        assert.ok(svg.includes(`class="${cls}"`), `${what} lost ${cls}`);
+      }
+      const withData = s.ma.filter((a) => a.some((y) => y != null)).length;
+      assert.equal((svg.match(/class="ch-s\d"/g) || []).length, withData, `${what}: one line per SMA with data`);
+      const trigger = r.state !== "COILED";
+      for (const cls of ["ch-trig", "ch-stop"]) assert.equal(svg.includes(`class="${cls}"`), trigger, `${what} ${cls}`);
+      assert.equal(svg.includes('class="ch-exit"'), s.x != null, `${what} ch-exit`);
+      // The base box spans exactly b, inclusive.
+      const box = /<rect class="ch-base" x="([^"]+)" y="[^"]+" width="([^"]+)"/.exec(svg);
+      assert.deepEqual([Number(box[1]), Number(box[2])], [s.b[0] - 0.5, s.b[1] - s.b[0] + 1], `${what} base box`);
+      if (trigger) {
+        assert.match(svg, new RegExp(`<rect class="ch-trig" x="${s.t - 0.5}" y="0" width="1" height="78"/>`), what);
+        const stopEnd = (s.x != null ? s.x : n - 1) + 0.5;
+        assert.match(dOf(svg, "ch-stop"), new RegExp(`^M${s.t - 0.5} [\\d.]+H${stopEnd}$`), `${what}: the stop runs trigger -> exit/edge`);
+        assert.match(dOf(svg, "ch-lvl"), new RegExp(`^M${s.b[0] - 0.5} [\\d.]+H${s.t + 0.5}$`), `${what}: the level runs box -> trigger`);
+      } else {
+        assert.match(dOf(svg, "ch-lvl"), new RegExp(`^M${s.b[0] - 0.5} [\\d.]+H${n - 0.5}$`), `${what}: the level runs box -> edge`);
+      }
+      if (s.x != null) assert.match(svg, new RegExp(`<rect class="ch-exit" x="${s.x - 0.5}" y="0" width="1" height="78"/>`));
+    }
+  }
+});
+
+test("chartSVG: the forming bar is drawn once, faded, in its own group and never in the main paths", () => {
+  for (const make of [SHAPES.PROVISIONAL, SHAPES.CLOSED_FORMING]) {
+    const [s, r] = make(121);
+    const svg = I.chartSVG(s, r);
+    const g = (/<g class="ch-form">([\s\S]*?)<\/g>/.exec(svg) || [])[1] || "";
+    assert.equal((svg.match(/<g class="ch-form">/g) || []).length, 1);
+    assert.equal((g.match(/class="ch-w[ud]"/g) || []).length, 1, "one wick in the group");
+    assert.equal((g.match(/class="ch-b[ud]"/g) || []).length, 1, "one body in the group");
+    assert.ok(/^(<path[^>]*d="M120 [^"]*"[^>]*\/>)+$/.test(g), "the group holds bar 120 only: " + g);
+    const main = svg.replace(/<g class="ch-form">[\s\S]*?<\/g>/, "");
+    for (const cls of ["ch-wu", "ch-wd", "ch-bu", "ch-bd", "ch-vu", "ch-vd"]) {
+      assert.ok(!/(^|[VH\d])M120 /.test(dOf(main, cls)), `bar 120 leaked into ${cls}`);
+    }
+  }
+  const [s0, r0] = SHAPES.RUNNING(120);
+  assert.ok(!/ch-form/.test(I.chartSVG(s0, r0)), "f = 0: no forming group");
+});
+
+test("chartSVG: the element count does not grow with the bars (one path per colour), at most 21", () => {
+  for (const [name, make] of Object.entries(SHAPES)) {
+    const a = I.chartSVG(...make(30)), b = I.chartSVG(...make(120));
+    assert.equal(marks(a), marks(b), `${name}: ${marks(a)} elements at 30 bars, ${marks(b)} at 120`);
+    assert.ok(marks(b) <= 21, `${name}: ${marks(b)} elements`);
+  }
+  assert.equal(marks(I.chartSVG(...SHAPES.CLOSED_FORMING(120))), 21, "the fullest chart is the bound");
+});
+
+test("chartSVG: every outer coordinate is a clean in-range number; the SMAs need only be finite", () => {
+  const clean = /^-?\d+(\.\d)?$/;
+  for (const n of [30, 120]) {
+    for (const [name, make] of Object.entries(SHAPES)) {
+      const svg = I.chartSVG(...make(n));
+      const { outer, inner } = splitPane(svg);
+      assert.ok(inner.includes("ch-s0"), name + ": the SMA pane was found");
+      const { xs, ys } = coords(outer);
+      assert.ok(xs.length > n && ys.length > n, name);
+      for (const t of xs) assert.ok(clean.test(t) && Number(t) >= -0.5 && Number(t) <= n, `${name} n=${n}: x "${t}"`);
+      for (const t of ys) assert.ok(clean.test(t) && Number(t) >= 0 && Number(t) <= 100, `${name} n=${n}: y "${t}"`);
+      const pane = coords(inner);
+      for (const t of pane.xs.concat(pane.ys)) assert.ok(isFinite(Number(t)) && t !== "", `${name}: SMA coordinate "${t}"`);
+      assert.ok(!/NaN|Infinity|undefined|null/.test(svg), name);
+    }
+  }
+});
+
+test("chartSVG: the highest high is the top of the chart; log scale from a 3x range, linear under it", () => {
+  for (const make of [SHAPES.COILED, SHAPES.CLOSED_FORMING]) {
+    const [s, r] = make(120);
+    const ys = highs(I.chartSVG(s, r));
+    const top = s.h.indexOf(Math.max(...s.h));
+    assert.equal(Math.min(...Object.values(ys)), ys[top], "the highest high has the smallest y");
+  }
+  const flat = (px) => ({ end: "2026-09-27", f: 0, o: px, h: px, l: px, c: px, v: px.map(() => 0), ma: [] });
+  const gaps = (px) => {
+    const y = highs(I.chartSVG(flat(px), { state: "RUNNING" }));
+    return [y[0] - y[1], y[1] - y[2]];
+  };
+  const [g1, g2] = gaps([1, 2, 4]);                        // 4x: log, so equal ratios get equal gaps
+  assert.ok(g1 > 0 && Math.abs(g1 - g2) <= 0.11, `log: 1, 2, 4 should be evenly spaced, got gaps ${g1}, ${g2}`);
+  const [l1, l2] = gaps([10, 11, 12]);                     // 1.2x: linear
+  assert.ok(l1 > 0 && Math.abs(l1 - l2) <= 0.11, `linear: 10, 11, 12 should be evenly spaced, got ${l1}, ${l2}`);
+  assert.equal(I.CH.LOG_RATIO, 3);
+  const [k1, k2] = gaps([1, 1.45, 2.9]);                   // 2.9x: still linear
+  assert.ok(Math.abs(k1 - k2) > 3, `under 3x the scale is linear, got gaps ${k1}, ${k2}`);
+});
+
+test("chartSVG: the y-range is the candles and the levels, NEVER the SMAs (a far 200-SMA is clipped, not fitted)", () => {
+  const [s] = SHAPES.RUNNING(120);
+  const lows = (svg) => [...svg.matchAll(/class="ch-w[ud]" d="([^"]*)"/g)]
+    .flatMap((m) => [...m[1].matchAll(/V(-?[\d.]+)/g)].map((v) => Number(v[1])));
+  const edge = Math.round(I.CH.PRICE * I.CH.PAD / (1 + 2 * I.CH.PAD) * 10) / 10;
+  const far = Object.assign({}, s, { ma: s.ma.map((a, j) => (j === 3 ? a.map((y) => y * 10) : a)) });
+  for (const ser of [s, far]) {
+    const svg = I.chartSVG(ser, { state: "RUNNING" });     // no levels: the bars alone set the range
+    assert.equal(Math.min(...Object.values(highs(svg))), edge, "the highest high sits one pad under the top");
+    assert.equal(Math.max(...lows(svg)), Math.round((I.CH.PRICE - edge) * 10) / 10, "the lowest low one pad over the pane foot");
+  }
+  const withStop = I.chartSVG(s, { state: "RUNNING", stop: Math.min(...s.l) / 2 });
+  assert.ok(Math.max(...lows(withStop)) < I.CH.PRICE - edge - 5, "a level under the bars DOES widen the range");
+});
+
+test("chartSVG: unusable input returns \"\" and never throws", () => {
+  const s = series(30);
+  const bad = [null, undefined, {}, { c: [] }, "x", [1, 2],
+    Object.assign({}, s, { o: s.o.slice(1) }), Object.assign({}, s, { h: s.h.slice(1) }),
+    Object.assign({}, s, { l: null }), { o: [1], h: [1], l: [1], c: [1] },
+    Object.assign({}, s, { o: s.o.map(() => null), h: s.h.map(() => 0), l: s.l.map(() => -1), c: s.c.map(() => NaN) })];
+  for (const v of bad) {
+    let out;
+    assert.doesNotThrow(() => { out = I.chartSVG(v, { state: "COILED" }); }, JSON.stringify(v));
+    assert.equal(out, "", JSON.stringify(v && v.c));
+  }
+  assert.doesNotThrow(() => I.chartSVG(s, null));
+});
+
+test("chartSVG: sparse and odd bars still draw clean (no NaN / Infinity / null text)", () => {
+  const [s, r] = SHAPES.RUNNING(120);
+  const holes = JSON.parse(JSON.stringify(s));
+  holes.c[10] = null; holes.o[20] = 0; holes.h[30] = -1; holes.l[40] = "x";
+  const cases = {
+    "all-null SMAs": [Object.assign({}, s, { ma: s.ma.map((a) => a.map(() => null)) }), r],
+    "no SMAs at all": [Object.assign({}, s, { ma: undefined }), r],
+    "SMA of the wrong length": [Object.assign({}, s, { ma: [s.ma[0].slice(1)] }), r],
+    "flat o=h=l=c": [Object.assign({}, s, { o: s.c.map(() => 0.008), h: s.c.map(() => 0.008), l: s.c.map(() => 0.008),
+      c: s.c.map(() => 0.008), ma: [] }), { state: "COILED", base: { high: 0.008, low: 0.008 }, breakout_level: 0.008 }],
+    "zero volume": [Object.assign({}, s, { v: s.v.map(() => 0) }), r],
+    "no volume": [Object.assign({}, s, { v: null }), r],
+    "missing b / t / x": [Object.assign({}, s, { b: undefined, t: undefined, x: undefined }), r],
+    "junk b / t / x": [Object.assign({}, s, { b: [70, 10], t: 1.5, x: 999 }), r],
+    "sub-1e-6 prices": [JSON.parse(JSON.stringify(s)), r],
+    "null and zero prices inside the arrays": [holes, r],
+    "no levels on the row": [s, { state: "RUNNING" }],
+  };
+  const tiny = cases["sub-1e-6 prices"][0];
+  for (const k of ["o", "h", "l", "c"]) tiny[k] = tiny[k].map((y) => y * 1e-8);
+  tiny.ma = tiny.ma.map((a) => a.map((y) => (y == null ? y : y * 1e-8)));
+  cases["sub-1e-6 prices"][1] = rowFor("RUNNING", tiny);
+  for (const [what, [ser, row]] of Object.entries(cases)) {
+    const svg = I.chartSVG(ser, row);
+    assert.ok(svg.startsWith('<svg class="ig-ch"'), what + " drew nothing");
+    noJunk(svg, what);
+    assert.ok(!/Infinity/.test(svg), what + " leaked Infinity");
+  }
+  assert.ok(!/ch-v[ud]/.test(I.chartSVG(...cases["zero volume"])), "zero volume draws no volume strip");
+  assert.ok(!/ch-trig|ch-exit|ch-stop/.test(I.chartSVG(...cases["junk b / t / x"])), "junk indices draw no marks");
+});
+
+test("chartSVG: nothing in it reads as text (no text, title or desc)", () => {
+  for (const make of Object.values(SHAPES)) assert.ok(!/<text|<title|<desc/.test(I.chartSVG(...make(120))));
+});
+
+test("chartHTML: a dashed box while waiting or without bars; a drawn chart links to the full chart", () => {
+  const [s, r] = SHAPES.COILED(120);
+  const wait = I.chartHTML("crypto", r, s, "wait");
+  assert.equal(wait, '<span class="ig-chart is-wait" aria-hidden="true"></span>');
+  assert.equal(I.chartHTML("crypto", r, null, "ok"), '<span class="ig-chart is-none" aria-hidden="true"></span>');
+  assert.equal(I.chartHTML("crypto", r, { c: [] }, "ok"), '<span class="ig-chart is-none" aria-hidden="true"></span>',
+    "unusable bars are a box, not an empty link");
+  const h = I.chartHTML("asx", Object.assign({}, r, { symbol: "BUX" }), s, "ok");
+  assert.ok(h.startsWith(`<a class="ig-chart" href="${I.esc(I.chartHref("asx", "BUX"))}" tabindex="-1" aria-hidden="true">`));
+  assert.ok(h.includes("src=ignition"), "the chart opens the same lens-aware chart link as the symbol");
+  assert.ok(!/\stitle=/.test(h.slice(0, h.indexOf(">"))), "no title: the row's tooltip shows over the chart");
+  assert.ok(h.endsWith("</svg></a>"));
+  const evil = `<img src=x onerror=alert(1)>"'&`;
+  const e = I.chartHTML("crypto", Object.assign({}, r, { symbol: evil }), s, "ok");
+  const href = (/href="([^"]*)"/.exec(e) || [])[1];
+  assert.ok(href && !/[<>"']/.test(href), "unsafe href " + href);
+  assert.ok(!/<img/.test(e));
+  noJunk(I.chartHTML("crypto", Object.assign({}, r, { symbol: undefined }), s, "ok"), "a row with no symbol");
+});
+
+// A screen whose every row has its own yf, and the sidecar of the SAME run.
+const CHART_ROWS = [trig(), Object.assign({}, RUNNING, { yf: "AAA-USD" }),
+  Object.assign({}, CLOSED, { yf: "BBB-USD" }), coiled(), coiled({ symbol: "DDD", name: "DDD Coin", yf: "DDD-USD" }),
+  Object.assign({}, PROV, { yf: "PRV-USD" })];
+const CHART_SAMPLE = payload(CHART_ROWS);
+const chartsFor = (p, over) => {
+  const rows = {};
+  p.results.forEach((r, i) => {
+    const forming = !!r.provisional;
+    const s = series(forming ? 121 : 120, { f: forming, seed: i + 3 });
+    if (r.state === "COILED") s.b = span60(118);
+    else { s.t = forming ? 120 : 110; s.b = span60(s.t - 1); if (r.state === "CLOSED") s.x = 118; }
+    rows[r.yf] = s;
+  });
+  return Object.assign({ schema_version: 1, lens: "ignition", market: p.market, generated_at: p.generated_at,
+    bars: 120, smas: SMAS, rows, missing: [] }, over || {});
+};
+const CHARTS = chartsFor(CHART_SAMPLE);
+const articles = (h) => [...h.matchAll(/<article[\s\S]*?<\/article>/g)].map((m) => m[0]);
+const coilRows = (h) => [...h.matchAll(/<tr class="ig-tr[\s\S]*?<\/tr>/g)].map((m) => m[0]);
+
+test("with the sidecar: one chart per card and per COILED row, meta -> chart -> story, a first table column", () => {
+  const h = I.panelHTML(CHART_SAMPLE, "ok", BT2, "crypto", true, null, "ok", CHARTS);
+  const cards = articles(h);
+  assert.equal(cards.length, 4, "IGNITING, forming, RUNNING, CLOSED");
+  for (const c of cards) {
+    assert.equal((c.match(/class="ig-chart/g) || []).length, 1);
+    assert.match(c, /<a class="ig-chart"[^>]*><svg class="ig-ch"/, "every card's chart was drawn");
+    const meta = c.indexOf('class="ig-card-meta"'), ch = c.indexOf('class="ig-chart'), story = c.indexOf('class="ig-story"');
+    assert.ok(meta > 0 && ch > meta && story > ch, "the card reads meta -> chart -> story");
+  }
+  const rows = coilRows(h);
+  assert.equal(rows.length, 2);
+  for (const tr of rows) {
+    assert.equal((tr.match(/class="ig-chart/g) || []).length, 1);
+    const cells = [...tr.matchAll(/<td class="([\w-]+)/g)].map((m) => m[1]);
+    assert.deepEqual(cells, ["c-chart", "c-sym", "c-cap", "c-px", "c-brk", "c-gap", "c-bars", "c-dd", "c-q"]);
+  }
+  assert.match(h, /<table class="ig-tbl has-chart"><thead><tr><th scope="col" class="c-chart" title="[^"]+">Chart<\/th><th scope="col" class="c-sym"/);
+  noJunk(h, "panel with charts");
+  noJunk(I.CHART_COL[2], "chart column tooltip");
+  const banned = /\b(buy|sell|enter|go long|target price|trigger above)\b/i;
+  assert.ok(!banned.test(h) && !banned.test(I.CHART_COL[2]), "the charts never read like an instruction");
+  assert.ok(!/<button|aria-expanded/.test(h), "no controls arrive with the charts");
+});
+
+test("with the sidecar: a row it has no bars for (or another run's bars) keeps its slot as a dashed box", () => {
+  const partial = chartsFor(CHART_SAMPLE);
+  delete partial.rows["DDD-USD"];
+  partial.missing = ["DDD-USD"];
+  partial.rows["AAA-USD"].end = "2026-09-20";
+  const h = I.panelHTML(CHART_SAMPLE, "ok", BT2, "crypto", true, null, "ok", partial);
+  assert.equal((h.match(/class="ig-chart is-none"/g) || []).length, 2, "DDD (missing) and AAA (stale bars)");
+  assert.equal((h.match(/<a class="ig-chart"/g) || []).length, CHART_ROWS.length - 2);
+  const waiting = I.panelHTML(CHART_SAMPLE, "ok", BT2, "crypto", true, null, "ok",
+    Object.assign({}, CHARTS, { generated_at: "2026-09-27T06:00:00+00:00" }));
+  assert.equal((waiting.match(/class="ig-chart is-wait"/g) || []).length, CHART_ROWS.length, "another run: every slot waits");
+  assert.ok(!/<svg/.test(waiting), "another run's bars are never drawn under this run's levels");
+  const loading = I.panelHTML(CHART_SAMPLE, "ok", BT2, "crypto", true, null, "loading", null);
+  assert.equal((loading.match(/class="ig-chart is-wait"/g) || []).length, CHART_ROWS.length);
+  assert.match(loading, /class="ig-tbl has-chart"/, "the column is there while the bars load (no reflow when they land)");
+});
+
+test("the REAL sidecars, when committed: every row of the same run's screen gets its chart, nothing junk", () => {
+  for (const [market, live] of [["crypto", REAL_LIVE], ["asx", REAL_ASX], ["nasdaq", REAL_NASDAQ]]) {
+    const ch = readReal(market + "_charts.json");
+    if (!live || !ch) { console.log(`     (no public/data/ignition/${market}_charts.json — skipped)`); continue; }
+    if (ch.generated_at !== live.generated_at) {
+      console.log(`     (${market}_charts.json is from another run than ${market}.json — skipped)`);
+      continue;
+    }
+    const h = I.panelHTML(live, "absent", null, market, true, null, "ok", ch);
+    noJunkValues(h, "real " + market + " panel with charts");
+    const drawn = live.results.filter((r) => I.rowRank(r));
+    assert.equal((h.match(/class="ig-chart[ "]/g) || []).length, drawn.length, market + ": one chart slot per row");
+    const want = drawn.filter((r) => I.seriesFor(ch, r) && I.chartSVG(I.seriesFor(ch, r), r)).length;
+    assert.equal((h.match(/<a class="ig-chart"/g) || []).length, want, market + ": every row with bars is drawn");
+    assert.equal(want, drawn.filter((r) => (ch.missing || []).indexOf(r.yf) < 0).length,
+      market + ": every row not listed missing has bars ending on its last bar");
+    for (const r of drawn) {
+      const s = I.seriesFor(ch, r);
+      if (!s) continue;
+      const svg = I.chartSVG(s, r);
+      assert.ok(!/NaN|Infinity|undefined|null/.test(svg), market + " " + r.symbol);
+      assert.ok(marks(svg) <= 21, market + " " + r.symbol);
+    }
+  }
+});
+
+test("CSS: explicit chart heights (card, row, fold), the fold's order, tokens only", () => {
+  const rule = (sel) => {
+    const at = CSS.indexOf(sel + " {");
+    assert.ok(at >= 0, "no rule for " + sel);
+    return CSS.slice(at, CSS.indexOf("}", at));
+  };
+  assert.match(rule(".ig-chart"), /content-visibility:\s*auto/);
+  assert.match(rule(".ig-card .ig-chart"), /height:\s*160px/);
+  assert.match(rule(".ig-tbl .ig-chart"), /width:\s*240px;\s*height:\s*72px/);
+  const at = CSS.indexOf("@media (max-width: 1000px)");
+  let depth = 0, end = -1;
+  for (let i = CSS.indexOf("{", at); i < CSS.length; i++) {
+    if (CSS[i] === "{") depth++;
+    else if (CSS[i] === "}" && --depth === 0) { end = i; break; }
+  }
+  const fold = CSS.slice(at, end);
+  assert.match(fold, /\.ig-tbl \.ig-chart\s*\{[^}]*width:\s*100%;\s*height:\s*96px/, "the phone chart is full width x 96");
+  assert.match(fold, /\.ig-tbl td\.c-chart\s*\{[^}]*order:\s*3/, "the chart is line 2 of a folded row");
+  assert.match(fold, /\.ig-tbl td:not\(\.c-sym\):not\(\.c-cap\):not\(\.c-chart\)\s*\{\s*order:\s*4/,
+    "the line-3 selector must exclude the chart, or its (0,3,1) beats td.c-chart");
+  assert.match(fold, /\.ig-tbl\.has-chart tr::after\s*\{\s*content:\s*none/);
+  const chartRules = [...CSS.matchAll(/([^{}]*\.ig-ch[^{}]*)\{([^}]*)\}/g)];
+  assert.ok(chartRules.length >= 10);
+  for (const m of chartRules) assert.ok(!/#[0-9a-f]{3,8}\b/i.test(m[2]), "a hex colour in " + m[1].trim());
+  for (const tok of ["--green", "--red", "--text-2", "--ig", "--purple", "--orange", "--teal"]) {
+    assert.ok(chartRules.some((m) => m[2].includes(`var(${tok})`)), "the chart lost token " + tok);
+  }
+  assert.match(CSS, /@media \(min-width: 1001px\) and \(max-width: 1199px\)\s*\{\s*\.ig-tbl\.has-chart \.c-dd, \.ig-tbl\.has-chart \.c-q \{ display: none; \}/);
+});
+
+// ── the sidecar through the real module: lazy, joined, re-read ──────────────
+test("opening the panel fetches the sidecar once, third; the charts paint when it lands", async () => {
+  const m = runModule(both(CHART_SAMPLE, BT2, CHARTS));
+  m.Ig.pill("crypto", () => {});
+  await settle();
+  m.Ig.sync("crypto");
+  assert.equal(m.calls.length, 1, "a closed panel fetches no charts");
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  assert.deepEqual(m.calls.map((c) => c.url), ["data/ignition/crypto.json", "data/ignition/crypto_backtest.json",
+    "data/ignition/crypto_charts.json"]);
+  assert.equal(m.calls[2].opts.cache, "no-cache");
+  assert.match(m.host.innerHTML, /class="ig-chart is-wait"/, "dashed slots hold the space while the bars load");
+  assert.ok(!/class="ig-ch"/.test(m.host.innerHTML));
+  await settle();
+  assert.match(m.host.innerHTML, /<svg class="ig-ch"/, "the charts painted when the sidecar landed");
+  assert.equal((m.host.innerHTML.match(/<a class="ig-chart"/g) || []).length, CHART_ROWS.length);
+  m.Ig.sync("crypto");
+  assert.equal(m.calls.length, 3, "served from memory while fresh");
+  assert.deepEqual(m.errors, []);
+  assert.equal(m.timers.length, 0);
+});
+
+test("a 404 sidecar: the chartless panel exactly, silently", async () => {
+  const m = runModule(both(CHART_SAMPLE, BT2));
+  m.Ig.pill("crypto", () => {});
+  await settle();
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  assert.ok(!/ig-chart|c-chart|has-chart/.test(m.host.innerHTML), "no chart slots without the file");
+  assert.equal(m.host.innerHTML, I.panelHTML(CHART_SAMPLE, "ok", BT2, "crypto", false,
+    I.staleOf(CHART_SAMPLE, "crypto", NOW)), "byte-identical to the panel before charts");
+  assert.deepEqual(m.errors, []);
+  assert.deepEqual(m.timers, []);
+});
+
+test("another run's sidecar waits, and is re-read CHART_RETRY_MS later on the next sync; a matching one is not", async () => {
+  const other = chartsFor(CHART_SAMPLE, { generated_at: "2026-09-28T05:00:00+00:00" });
+  let n = 0;
+  const m = runModule((url) => (url.endsWith("_charts.json") ? ok200(++n === 1 ? other : CHARTS)
+    : ok200(url.endsWith("_backtest.json") ? BT2 : CHART_SAMPLE)));
+  m.Ig.pill("crypto", () => {});
+  await settle();
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  assert.match(m.host.innerHTML, /class="ig-chart is-wait"/, "bars from another run are not drawn");
+  assert.ok(!/<svg/.test(m.host.innerHTML));
+  m.clock.t += I.CHART_RETRY_MS - 1000;
+  m.Ig.sync("crypto");
+  assert.equal(n, 1, "not before CHART_RETRY_MS");
+  m.clock.t += 1001 + 1;
+  m.Ig.sync("crypto");
+  assert.equal(n, 2, "re-read once the retry time has passed");
+  await settle();
+  assert.match(m.host.innerHTML, /<svg class="ig-ch"/, "the matching sidecar is drawn");
+  m.clock.t += I.LIVE_TTL_MS - 1000;
+  m.Ig.sync("crypto");
+  assert.equal(n, 2, "a matching sidecar is not re-read inside the live TTL");
+  m.clock.t += 2000;
+  m.Ig.sync("crypto");
+  assert.equal(n, 3, "and is re-read past it");
+  assert.deepEqual(m.errors, []);
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1515,7 +2086,7 @@ test("an absent file: placeholder while loading, then NO pill", async () => {
 
 test("a non-Ignition market gets no placeholder and no pill", () => {
   const m = runModule(both(SAMPLE, BT));
-  const d = deckHarness(m.Ig, "nasdaq");
+  const d = deckHarness(m.Ig, "nyse");
   d.render();
   assert.ok(!/data-ignition/.test(d.box.html));
   assert.equal(m.calls.length, 0);
@@ -1586,10 +2157,10 @@ test("index.html loads ignition.css and ignition.js (before app.js) and hosts th
   assert.match(HTML, /<div class="ig-panel" id="ignition-panel" hidden/);
 });
 
-test("the asset versions moved with this change (?v= floor: ignition.js 5, ignition.css 3, app.js 139)", () => {
+test("the asset versions moved with this change (?v= floor: ignition.js 7, ignition.css 4, app.js 139)", () => {
   const v = (re) => Number((re.exec(HTML) || [])[1] || 0);
-  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 5, "ignition.js edited without a ?v= bump");
-  assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 3, "ignition.css edited without a ?v= bump");
+  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 7, "ignition.js edited without a ?v= bump");
+  assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 4, "ignition.css edited without a ?v= bump");
   assert.ok(v(/js\/app\.js\?v=(\d+)/) >= 139, "app.js edited without a ?v= bump");
 });
 
@@ -1612,7 +2183,8 @@ test("report-only by construction: no storage, no write, no second endpoint", ()
   assert.ok(!/\/api\//.test(CODE), "no API endpoint");
   assert.ok(!/beforeunload/.test(CODE));
   const urls = [...CODE.matchAll(/`(data\/[^`]+)`/g)].map((m) => m[1]).sort();
-  assert.deepEqual(urls, ["data/ignition/${market}.json", "data/ignition/${market}_backtest.json"]);
+  assert.deepEqual(urls, ["data/ignition/${market}.json", "data/ignition/${market}_backtest.json",
+    "data/ignition/${market}_charts.json"]);
   assert.ok(!/vivek_bot_book|bot_rules|conviction|confluence/.test(CODE),
     "the lens must not read the book, the rules or the confluence machinery");
 });

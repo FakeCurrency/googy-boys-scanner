@@ -1558,16 +1558,19 @@ def test_main_dry_run_screens_and_writes_nothing(sandbox, monkeypatch, capsys):
     assert _files(sandbox) == []
 
 
-def test_main_publishes_exactly_one_screen_file(sandbox, monkeypatch):
+def test_main_publishes_exactly_one_screen_file_and_its_chart_sidecar(sandbox, monkeypatch):
     frames, rows = _fresh_frames()
     monkeypatch.setattr(RUN, "_download", lambda *a, **k: (rows, frames, {}))
     monkeypatch.setattr(RUN.sdata, "merge_with_cache", lambda key, fr, t, refused=(), rejected_venues=None: (dict(fr), {}))
     assert RUN.main(["--market", MARKET]) == 0
-    assert _files(sandbox) == [f"{MARKET}.json"]
+    assert _files(sandbox) == [f"{MARKET}.json", f"{MARKET}_charts.json"]
     text = (sandbox / f"{MARKET}.json").read_text(encoding="utf-8")
     assert text.endswith("\n") and "NaN" not in text
     assert [r["state"] for r in json.loads(text)["results"]] == \
         ["IGNITING", "RUNNING", "CLOSED", "COILED"]
+    charts = (sandbox / f"{MARKET}_charts.json").read_text(encoding="utf-8")
+    assert charts.endswith("\n") and charts.count("\n") == 1 and "NaN" not in charts
+    assert json.loads(charts)["generated_at"] == json.loads(text)["generated_at"]
 
 
 def test_main_backtest_publishes_only_the_backtest_file(sandbox, monkeypatch, bt_payload, capsys):
@@ -1582,7 +1585,7 @@ def test_main_backtest_publishes_only_the_backtest_file(sandbox, monkeypatch, bt
 
 def test_main_refuses_a_market_the_lens_does_not_cover():
     with pytest.raises(SystemExit) as e:
-        RUN.main(["--market", "nasdaq"])
+        RUN.main(["--market", "nyse"])
     assert e.value.code == 2
 
 
@@ -1608,6 +1611,7 @@ def test_bar_freshness_says_when_the_data_is_a_day_behind():
     assert b["completed_dist"] == {"2026-09-27": 1, "2026-09-26": 2}
     # a stock market's calendar is not this function's business
     assert RUN.bar_freshness(frames, {}, "asx", now)["expected_completed"] is None
+    assert RUN.bar_freshness(frames, {}, "nasdaq", now)["expected_completed"] is None
     # A frame too old to be screened at all is the screen's "stale frame"
     # skip, not a coin "a day behind": it stays in the distribution only.
     frames["D-USD"] = f("2022-01-17")

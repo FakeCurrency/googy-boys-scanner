@@ -11,8 +11,9 @@ mirror of `config.IGNITION_MARKETS`, and a mirror nobody checks drifts
     a file that can never exist, on every visit to that market.
 
 So the literal is PARSED out of the shipped file here and compared to config.
-The same goes for the two data paths: the page must read exactly the files
-`scanner.ignition.run` writes, or the pill silently never appears.
+The same goes for the three data paths (screen, chart sidecar, replay): the
+page must read exactly the files `scanner.ignition.run` writes, or the pill or
+the mini charts silently never appear.
 
 It lives in `tests/` because it reads the shipped files as source and executes
 nothing; the behaviour is covered by test/ignition.test.js. New `tests/*.py`
@@ -57,7 +58,7 @@ def test_the_page_reads_exactly_the_files_the_runner_writes():
     from scanner.ignition import run
     src = JS.read_text(encoding="utf-8")
     for market in config.IGNITION_MARKETS:
-        for path in (run.out_path(market), run.backtest_path(market)):
+        for path in (run.out_path(market), run.backtest_path(market), run.charts_path(market)):
             rel = path.relative_to(PUB).as_posix()          # data/ignition/<m>.json
             folder, name = rel.rsplit("/", 1)
             template = folder + "/" + name.replace(market, "${market}", 1)

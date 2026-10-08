@@ -16,7 +16,10 @@ code, and what each test below holds:
     the forward date, the regime index (the ASX 200) and the design case (DTR)
     are per market.
   * The ASX screen is its own workflow, ignition_asx.yml, held to the crypto
-    workflow's exact shape so that suite's EXECUTED shell covers it too.
+    workflow's exact shape so that suite's EXECUTED shell covers it too. The
+    NASDAQ twin (ignition_nasdaq.yml, 2026-10-08) is held to the same shape by
+    the TWINS-parametrised tests below; its own values live in
+    tests/test_ignition_nasdaq.py.
 
 Network is never touched (tests/conftest.py refuses the venues; the frames
 here are synthetic).
@@ -75,7 +78,7 @@ def test_the_asx_windows_are_the_crypto_ones_in_trading_days():
     assert set(want) == set(E.CALENDAR_WINDOWS)
     for name, n in want.items():
         assert E.bars("asx", name) == n, name
-    assert config.IGNITION_BARS_PER_YEAR == {"crypto": 365, "asx": 252}
+    assert config.IGNITION_BARS_PER_YEAR == {"crypto": 365, "asx": 252, "nasdaq": 252}
 
 
 def test_the_minimum_history_still_covers_every_input_on_the_asx():
@@ -160,7 +163,7 @@ def test_mkt_reads_the_override_and_falls_through_for_crypto():
 
 
 def test_the_markets_list_and_the_regime_indices():
-    assert config.IGNITION_MARKETS == ("crypto", "asx")
+    assert config.IGNITION_MARKETS == ("crypto", "asx", "nasdaq")
     assert config.IGNITION_REGIME_INDEX["asx"] == ("^AXJO", "ASX 200")
     assert config.IGNITION_REGIME_INDEX["crypto"][0] == "BTC-USD"
 
@@ -314,32 +317,51 @@ ASX_SRC = (WFDIR / "ignition_asx.yml").read_text(encoding="utf-8")
 ASX = yaml.safe_load(ASX_SRC)
 _on = lambda d: d.get("on") or d[True]
 
-
-def _to_asx(text: str) -> str:
-    return (text.replace("--market crypto", "--market asx")
-                .replace("public/data/ignition/crypto", "public/data/ignition/asx")
-                .replace("ignition crypto", "ignition asx"))
+# Every stock-market twin of ignition.yml: {market: (workflow file, the name
+# its steps say)}. The structural pins below run over all of them.
+TWINS = {"asx": ("ignition_asx.yml", "ASX"), "nasdaq": ("ignition_nasdaq.yml", "NASDAQ")}
 
 
-def test_the_asx_workflow_has_the_same_steps_in_the_same_order():
-    cs, as_ = CRYPTO["jobs"]["ignition"]["steps"], ASX["jobs"]["ignition"]["steps"]
+def _twin(market: str) -> dict:
+    return yaml.safe_load((WFDIR / TWINS[market][0]).read_text(encoding="utf-8"))
+
+
+def _to_market(text: str, market: str) -> str:
+    return (text.replace("--market crypto", "--market " + market)
+                .replace("public/data/ignition/crypto", "public/data/ignition/" + market)
+                .replace("ignition crypto", "ignition " + market))
+
+
+def test_the_twins_are_every_stock_market_the_lens_screens():
+    assert set(TWINS) == set(config.IGNITION_MARKETS) - {"crypto"}
+
+
+@pytest.mark.parametrize("market", sorted(TWINS))
+def test_the_twin_workflow_has_the_same_steps_in_the_same_order(market):
+    label = TWINS[market][1]
+    cs, ts = CRYPTO["jobs"]["ignition"]["steps"], _twin(market)["jobs"]["ignition"]["steps"]
     shape = lambda st: [(s.get("id"), s.get("uses"), s.get("if")) for s in st]
-    assert shape(as_) == shape(cs)
-    names = [s.get("name") for s in as_]
-    assert names == [(_to_asx(n or "").replace("Screen crypto", "Screen ASX")
-                      .replace("Backtest crypto", "Backtest ASX") or None)
+    assert shape(ts) == shape(cs)
+    names = [s.get("name") for s in ts]
+    assert names == [(_to_market(n or "", market).replace("Screen crypto", "Screen " + label)
+                      .replace("Backtest crypto", "Backtest " + label) or None)
                      for n in (s.get("name") for s in cs)]
+    assert _twin(market)["name"] == "Ignition scan (%s)" % label
 
 
-def test_every_run_block_but_the_gate_is_the_crypto_block_for_the_asx():
+@pytest.mark.parametrize("market", sorted(TWINS))
+def test_every_run_block_but_the_gate_is_the_crypto_block_for_the_twin(market):
     """The crypto suite EXECUTES these blocks (exit-code arms, one-path
-    staging, per-path must-change gate, own-branch push); holding the ASX
+    staging, per-path must-change gate, own-branch push); holding each twin's
     copies byte-equal after the market substitution extends that proof."""
-    cs, as_ = CRYPTO["jobs"]["ignition"]["steps"], ASX["jobs"]["ignition"]["steps"]
-    for c, a in zip(cs, as_):
+    cs, ts = CRYPTO["jobs"]["ignition"]["steps"], _twin(market)["jobs"]["ignition"]["steps"]
+    checked = 0
+    for c, t in zip(cs, ts):
         if c.get("id") == "due" or "run" not in c:
             continue
-        assert a["run"] == _to_asx(c["run"]), c.get("name")
+        assert t["run"] == _to_market(c["run"], market), c.get("name")
+        checked += 1
+    assert checked >= 4, "the run blocks vanished - is the pin still aimed?"
 
 
 def test_the_asx_triggers_gate_group_cache_and_timeout():
@@ -357,7 +379,7 @@ def test_the_asx_triggers_gate_group_cache_and_timeout():
     assert cache["with"]["restore-keys"].strip() == "ignition-asx-frames-"
     gate = next(s for s in job["steps"] if s.get("id") == "due")["run"]
     assert '"24 7,9 * * 1-5"' in gate            # the backstop cron it recognises
-    assert "scripts/ignition_asx_due.py" in gate
+    assert "scripts/ignition_due.py asx" in gate
     assert ASX["permissions"] == {"contents": "write"}
 
 
@@ -375,25 +397,35 @@ def test_the_post_close_cron_is_after_the_close_in_both_dst_regimes():
         return (t.hour, t.minute)
     assert local("2026-12-15", "06:24") >= close                   # AEDT primary
     assert local("2026-07-15", "06:24") < close <= local("2026-07-15", "07:24")   # AEST
-    assert _due("2026-07-15T06:24:00+00:00", "2026-07-15T07:24:00+00:00") == "run=true"
+    assert _due("asx", "2026-07-15T06:24:00+00:00", "2026-07-15T07:24:00+00:00") == "run=true"
 
 
-def test_the_asx_kick_is_neither_the_scan_kick_nor_the_crypto_kick():
-    kick = ".github/ignition-asx-kick"
-    assert kick not in str(_on(CRYPTO)) and ".github/ignition-kick" not in str(_on(ASX))
+def test_the_kicks_are_pairwise_distinct_and_none_is_the_scan_kick():
+    kicks = {"crypto": _on(CRYPTO)["push"]["paths"]}
+    kicks.update({m: _on(_twin(m))["push"]["paths"] for m in TWINS})
+    flat = [k for paths in kicks.values() for k in paths]
+    assert len(flat) == len(set(flat)) == len(kicks), kicks
+    assert kicks["asx"] == [".github/ignition-asx-kick"]
     ds = yaml.safe_load((WFDIR / "dispatch_scan.yml").read_text(encoding="utf-8"))
-    assert kick not in str(_on(ds))
+    for k in flat:
+        assert k != ".github/scan-kick" and k not in str(_on(ds))
+    for m, paths in kicks.items():
+        others = [k for o, ps in kicks.items() if o != m for k in ps]
+        wf = CRYPTO if m == "crypto" else _twin(m)
+        assert not any(k in str(_on(wf)) for k in others), m
 
 
 # ---------------------------------------------------------------------------
-# the backstop gate script (stdlib only: it runs before pip install)
+# the backstop gate script (stdlib only: it runs before pip install). One
+# script for every stock market (scripts/ignition_due.py <market> ...); the
+# NASDAQ cases live in tests/test_ignition_nasdaq.py.
 # ---------------------------------------------------------------------------
 
-GATE = ROOT / "scripts" / "ignition_asx_due.py"
+GATE = ROOT / "scripts" / "ignition_due.py"
 
 
-def _due(stamp, now):
-    p = subprocess.run([sys.executable, str(GATE), stamp, "--now", now],
+def _due(market, stamp, now):
+    p = subprocess.run([sys.executable, str(GATE), market, stamp, "--now", now],
                        capture_output=True, text=True, check=True)
     return p.stdout.strip()
 
@@ -416,7 +448,15 @@ def _due(stamp, now):
     ("2026-07-15T06:30:00", "2026-07-15T07:24:00+00:00", "run=true"),
 ])
 def test_the_gate(stamp, now, want):
-    assert _due(stamp, now) == want
+    assert _due("asx", stamp, now) == want
+
+
+def test_the_asx_bar_final_is_the_digest_close_gate():
+    """One source of truth: the ASX gate's close IS MORNING_PLAYS_SLOT_GATE's
+    (moving the digest's close moves this gate with it)."""
+    g = config.MORNING_PLAYS_SLOT_GATE["asx"]
+    assert config.IGNITION_BAR_FINAL["asx"] == (g["tz"], g["hour"], g["minute"])
+    assert not (ROOT / "scripts" / "ignition_asx_due.py").exists(), "replaced by ignition_due.py"
 
 
 def test_the_gate_script_imports_only_the_standard_library_and_config():

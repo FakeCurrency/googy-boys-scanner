@@ -31,9 +31,10 @@ Also pinned here, because each is a way a report-only lens stops being one:
   * every threshold is a `config.IGNITION_*` constant, threaded through the
     frozen `Params` -- no bare numeric literal in the rule functions beyond
     0/1, no config value re-typed anywhere in the engine;
-  * the write set is EXACTLY `public/data/ignition/<market>.json` and
-    `<market>_backtest.json`, proven by reading the declarations AND by
-    running the real CLI with the writer stubbed;
+  * the write set is EXACTLY `public/data/ignition/<market>.json`, its chart
+    sidecar `<market>_charts.json` and `<market>_backtest.json`, proven by
+    reading the declarations AND by running the real CLI with the writer
+    stubbed;
   * the lens's frame cache has its own key, so it can never overwrite the
     VIVEK scan's last-good cache for the same market;
   * the bot_rules.json publisher (scanner/run.py) does not know the lens.
@@ -47,6 +48,7 @@ import ast
 import builtins
 import dataclasses
 import datetime as dt
+import json
 import os
 import pathlib
 import re
@@ -821,10 +823,43 @@ def test_the_ruleset_is_versioned():
 
     assert re.fullmatch(r"\d+\.\d+\.\d+", config.IGNITION_RULESET_VERSION)
     assert ignition.RULESET_VERSION == config.IGNITION_RULESET_VERSION
-    assert tuple(config.IGNITION_MARKETS) == ("crypto", "asx"), (
-        "crypto + the ASX (owner, 2026-09-29); widening the market set further is "
-        "an owner decision, and each market needs its own workflow "
-        "(ignition.yml, ignition_asx.yml) and page support")
+    assert tuple(config.IGNITION_MARKETS) == ("crypto", "asx", "nasdaq"), (
+        "crypto + the ASX (owner, 2026-09-29) + NASDAQ (owner, 2026-10-08); widening "
+        "the market set further is an owner decision, and each market needs its own "
+        "workflow (ignition.yml, ignition_asx.yml, ignition_nasdaq.yml) and page support")
+
+
+# Every per-market setting a session market reads through a `.get()` or
+# `engine.mkt()` fallback -- the dicts whose missing key silently becomes
+# CRYPTO's value (QNT as a design case, 0.30 cost, a 3-day age, a $1M trigger,
+# a BTC regime) instead of an error.
+PER_MARKET = ("IGNITION_BARS_PER_YEAR", "IGNITION_MIN_BASE_TURNOVER",
+              "IGNITION_MIN_TRIGGER_TURNOVER", "IGNITION_REGIME_INDEX",
+              "IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET", "IGNITION_BT_COST_PCT_BY_MARKET",
+              "IGNITION_BT_CASES_BY_MARKET", "IGNITION_BT_DESIGN_CASES_BY_MARKET",
+              "IGNITION_BT_REGISTERED_DATE_BY_MARKET")
+
+
+def test_every_market_has_an_explicit_entry_in_every_per_market_setting():
+    """A market added to IGNITION_MARKETS without its own key in one of these
+    would run end to end on crypto's value, with nothing erroring (shown in
+    scratch when NASDAQ was ported, 2026-10-08). So every non-crypto market
+    must name every setting, even where its value is empty (NASDAQ's design
+    cases) or happens to equal crypto's (NASDAQ's floors)."""
+    from scanner.ignition import engine as E
+
+    missing = [(name, m) for name in PER_MARKET for m in config.IGNITION_MARKETS
+               if m != "crypto" and m not in getattr(config, name)]
+    assert missing == [], missing
+    # Every setting the lens reads through mkt() has a *_BY_MARKET dict, and
+    # every such dict is in the list above, so a new one cannot dodge this test.
+    read = set(re.findall(r'mkt\([^,]+,\s*"(IGNITION_\w+)"\)',
+                          "".join(p.read_text(encoding="utf-8") for p in _py(LENS))))
+    assert len(read) >= 3, "the mkt() reads vanished - is the gate still aimed?"
+    by_market = {n for n in dir(config) if n.startswith("IGNITION_") and n.endswith("_BY_MARKET")}
+    assert {n + "_BY_MARKET" for n in read} <= by_market, read
+    assert by_market <= set(PER_MARKET), sorted(by_market - set(PER_MARKET))
+    assert E.mkt("nasdaq", "IGNITION_BT_DESIGN_CASES") == {}
 
 
 # ---------------------------------------------------------------------------
@@ -833,18 +868,21 @@ def test_the_ruleset_is_versioned():
 
 def test_the_lens_publishes_only_into_its_own_directory():
     """It owns `public/data/ignition/` and nothing else. Read off the module:
-    `out_path` / `backtest_path` are the single declaration of where output
-    goes, so this is the real write set and not a second opinion about it."""
+    `out_path` / `charts_path` / `backtest_path` are the single declaration of
+    where output goes, so this is the real write set and not a second opinion
+    about it."""
     from scanner.ignition import run
 
     assert run.OUT_DIR == ROOT / "public" / "data" / "ignition"
     for market in ("asx", "nasdaq", "crypto"):
         assert run.out_path(market).relative_to(ROOT).as_posix() \
             == f"public/data/ignition/{market}.json"
+        assert run.charts_path(market).relative_to(ROOT).as_posix() \
+            == f"public/data/ignition/{market}_charts.json"
         assert run.backtest_path(market).relative_to(ROOT).as_posix() \
             == f"public/data/ignition/{market}_backtest.json"
     writers = {n for n in dir(run) if n.endswith("_path") and callable(getattr(run, n))}
-    assert writers == {"out_path", "backtest_path"}, writers
+    assert writers == {"out_path", "backtest_path", "charts_path"}, writers
 
 
 def test_the_runner_names_no_other_published_artefact():
@@ -919,7 +957,7 @@ def cli(monkeypatch):
     # CCC's last bar is TODAY (UTC): the forming bar, which must be split off
     # before anything persists it.
     frames = {"AAA-USD": _frame(1), "BBB-USD": _frame(2), "CCC-USD": _frame(3, days_old=0)}
-    state = {"published": [], "load_calls": [], "load": None, "cache_calls": []}
+    state = {"published": [], "kw": [], "load_calls": [], "load": None, "cache_calls": []}
 
     def fake_download(market, period, limit):
         state["load_calls"].append((market, period, limit))
@@ -935,6 +973,7 @@ def cli(monkeypatch):
 
     def fake_write_json(path, payload, **kw):
         state["published"].append((pathlib.Path(path), payload))
+        state["kw"].append(kw)
         return pathlib.Path(path)
 
     monkeypatch.setattr(run, "_download", fake_download)
@@ -945,9 +984,10 @@ def cli(monkeypatch):
     return state
 
 
-def test_running_the_cli_writes_exactly_the_two_ignition_paths_and_nothing_else(cli):
+def test_running_the_cli_writes_exactly_the_ignition_paths_and_nothing_else(cli):
     """Screen, then backtest, through `main()` exactly as ignition.yml calls
-    it. Exactly one publish each, to the canonical path, through
+    it. The screen publishes its file and then its chart sidecar; the replay
+    publishes its one file. Each to the canonical path, through
     `output.write_json`; zero other writes of any kind. And the exit codes
     ignition.yml's case statement is built on: 0 published."""
     run = cli["run"]
@@ -955,11 +995,23 @@ def test_running_the_cli_writes_exactly_the_two_ignition_paths_and_nothing_else(
     assert run.main(["--market", "crypto", "--backtest"]) == 0
     got = [p.relative_to(ROOT).as_posix() for p, _ in cli["published"]]
     assert got == ["public/data/ignition/crypto.json",
+                   "public/data/ignition/crypto_charts.json",
                    "public/data/ignition/crypto_backtest.json"], got
     assert cli["raw_writes"] == [], cli["raw_writes"]
-    screen, replay = (payload for _, payload in cli["published"])
+    screen, charts, replay = (payload for _, payload in cli["published"])
     for payload in (screen, replay):
         assert payload["ruleset_version"] == config.IGNITION_RULESET_VERSION
+    # The sidecar: the SAME run's stamp (the page's join key), one entry per
+    # screened row (drawn or missing), compact, and nothing of it in the screen.
+    # (These random walks screen no row; tests/test_ignition_thumbs.py runs the
+    # same CLI over frames that screen four, so the row check is not vacuous.)
+    assert charts["generated_at"] == screen["generated_at"]
+    assert set(charts["rows"]) | set(charts["missing"]) == {r["yf"] for r in screen["results"]}
+    assert cli["kw"][1] == {"newline": True, "indent": None, "separators": (",", ":")}
+    assert cli["kw"][0] == {"newline": True} == cli["kw"][2]
+    text = json.dumps(screen)
+    assert not any(k in screen for k in ("rows", "missing", "smas", "charts")), sorted(screen)
+    assert '"ma"' not in text and '"o":' not in text
     assert screen["lens"] == "ignition" and screen["report_only"] is True
     assert screen["market"] == "crypto"
     assert not (ROOT / "public" / "data" / "ignition" / "_never").exists()
@@ -1043,4 +1095,5 @@ def test_the_engine_set_is_what_the_gates_above_actually_inspect():
     present = {p.name for p in _py(LENS)}
     covered = {p.name for p in _engine_modules()}
     assert "engine.py" in covered
+    assert "thumbs.py" in covered, "the mini-chart builder must stay engine-gated"
     assert covered == present - set(_NOT_ENGINE), sorted(covered)

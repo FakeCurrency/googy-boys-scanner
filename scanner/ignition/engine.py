@@ -24,7 +24,8 @@ The coil (all four on one bar):
     dry      20d avg volume, percentile over 2 years <= IGNITION_VOL_PCTL_MAX
     deep     1 - close / 3y max High                 >= IGNITION_MIN_DRAWDOWN
     ("2 years" / "3 years" are calendar time: `bars()` converts them to each
-    market's own bar count -- 730/1095 on 24/7 crypto, 504/756 on the ASX.)
+    market's own bar count -- 730/1095 on 24/7 crypto, 504/756 on the ASX
+    and NASDAQ.)
 
 The trigger (on a completed bar t):
     coiled on any of bars t-L .. t-1 (L = IGNITION_COIL_LOOKBACK)

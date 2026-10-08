@@ -20,6 +20,7 @@ property (HANDOFF_2026-09-22 Part 17.0).
     engine.py    pure feature/state maths, shared by the screen AND the replay
     run.py       CLI: screen a market, or replay it (--backtest)
     backtest.py  the walk-forward replay and its honesty blocks
+    thumbs.py    mini-chart arrays for the panel (display only)
 """
 
 __all__ = ["RULESET_VERSION"]
