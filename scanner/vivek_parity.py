@@ -2,13 +2,21 @@
 
 Replays the LIVE bot lifecycle over history — not the looser Insights walk-forward:
 
-  * A+ only (raw grade), long-only, funds excluded, retest skipped
-  * one plan per symbol via the bot's cell walk (1W > 3D > 1D, trigger must sit in the cell)
+  * A/A+ (raw grade), long-only, funds excluded, retest skipped
+  * the weekly/3d LEVEL gate (VIVEK_BOT_LEVEL_TF_ALLOW, fail-closed on a blank level)
+  * one plan per signal via the bot's cell walk (1W > 3D > 1D, trigger must sit in the cell)
   * live TP ladder + trail (same ``_mark`` / ``manage_position`` path)
   * pre-TP1 time-stop at ``VIVEK_BOT_MAX_HOLD_DAYS`` (default 28)
   * tradeability gates (min price, stop width) + ADV floor at entry
   * global slot cap + one-per-symbol + sector cap + stop-out cooldown
   * stamps ``level_tf``, ``entry_type``, ``hold_days``, ``mfe_r_at`` {5,10,14,21}
+
+Every takeable signal is replayed as its OWN trade, whether or not an earlier
+signal on the same symbol is still open (audit #37): the portfolio pass is what
+enforces one-per-symbol, so a signal the book skips (book_full, sector_cap,
+cooldown) leaves the symbol flat and the next armed signal is considered, as
+live. ``_symbol_chain`` recovers the one-at-a-time sequence with unlimited
+slots -- what ``all_signals`` and ``eligible`` report.
 
 Variants share the baseline ENTRY population and apply ONE delta each. A
 variant PASSES only if R/slot-month improves on ASX and NASDAQ and on both
@@ -40,6 +48,8 @@ from .vivek_backtest import (
     _sizing_basis,
     _turnover_series,
     fx_rates,
+    level_allowed,
+    level_tf_allow,
 )
 from .vivek_journal import _apply_costs, _mark, _r_of, _snapshot, costs_for
 
@@ -57,7 +67,10 @@ class ParityRules:
     max_hold_days: int | None = None          # None → read live config; 0 → off
     early_cut_day: int | None = None          # calendar days; None = off
     early_cut_mfe: float | None = None        # cut if peak mfe_r still below this
-    level_tfs: tuple[str, ...] | None = None  # None = all; e.g. ("weekly",)
+    # None = the LIVE level gate (VIVEK_BOT_LEVEL_TF_ALLOW; audit #34 -- it
+    # used to mean "all levels", so the "live" baseline admitted h4 rows the
+    # bot drops before decide()); () = gate off; e.g. ("weekly",) narrows.
+    level_tfs: tuple[str, ...] | None = None
     entry_types: tuple[str, ...] | None = None  # None = bot default (the cell table)
     grades: tuple[str, ...] | None = None       # None = config.VIVEK_BOT_GRADES
     long_only: bool = True
@@ -68,6 +81,12 @@ class ParityRules:
         if self.max_hold_days is None:
             return int(getattr(config, "VIVEK_BOT_MAX_HOLD_DAYS", 0) or 0)
         return int(self.max_hold_days or 0)
+
+    def resolved_level_tfs(self) -> tuple[str, ...]:
+        """The level allowlist this rule set enforces; empty = gate off."""
+        if self.level_tfs is None:
+            return level_tf_allow()
+        return tuple(str(a).strip().lower() for a in self.level_tfs)
 
     def allowed_entry_types(self) -> set[str] | None:
         """Triggers a variant may take (any timeframe). None = the live cell
@@ -267,7 +286,7 @@ def _manage_parity_bar(tr: dict, high: float, low: float, close: float, day: str
 
 
 def _entry_passes_rules(level_tf, entry_type, rules: ParityRules) -> bool:
-    if rules.level_tfs is not None and level_tf not in rules.level_tfs:
+    if not level_allowed(level_tf, rules.resolved_level_tfs()):
         return False
     allowed = rules.allowed_entry_types()
     if allowed is not None and entry_type not in allowed:
@@ -300,14 +319,22 @@ def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
     min_rr = float(getattr(config, "VIVEK_BOT_MIN_RR", 1.5) or 1.5)
 
     closed: list[dict] = []
-    open_tr: dict | None = None
+    # Audit #37: EVERY takeable signal becomes its own trade, so several can be
+    # open at once on one symbol. The old chain stopped looking while a trade
+    # was open, and the portfolio pass then skipped some of those trades
+    # (book_full, sector_cap, cooldown) -- a skipped trade kept "occupying" its
+    # symbol for its whole would-be life in the chain, and the next signal live
+    # would act on (a weekly reclaim stays armed all week) was never generated.
+    # One-per-symbol is the PORTFOLIO's rule (dup_symbol); `_symbol_chain`
+    # recovers the old one-at-a-time sequence exactly.
+    open_trs: list[dict] = []
     pending: tuple | None = None  # (tf, plan, row)
 
     for j in range(config.VIVEK_MIN_HISTORY, n):
         day = idx[j].date().isoformat()
 
-        # 1) open queued entry at this bar's open (one-per-symbol)
-        if pending is not None and open_tr is None and np.isfinite(o[j]):
+        # 1) open the queued entry at this bar's open
+        if pending is not None and np.isfinite(o[j]):
             tf, plan, row = pending
             tr = _snapshot(row, tf, plan, market, float(o[j]), day)
             if tr is not None:
@@ -327,37 +354,39 @@ def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
                     tr["mfe_r_at"] = {}
                     tr["close_r_at"] = {}
                     tr["path"] = []  # compact OHLC path for exit-variant re-sim
-                    open_tr = tr
-                else:
-                    tr = None  # gated
+                    open_trs.append(tr)
             pending = None
 
-        # 2) manage open
-        if open_tr is not None:
+        # 2) manage every open trade
+        still: list[dict] = []
+        for open_tr in open_trs:
             # record path bar for variant re-exits
             open_tr.setdefault("path", []).append({
                 "d": day, "h": float(h[j]), "l": float(l[j]), "c": float(c[j]),
             })
             _manage_parity_bar(open_tr, float(h[j]), float(l[j]), float(c[j]), day,
                                costs, is_last=(j == n - 1), rules=rules)
-            if open_tr["status"] == "closed":
-                # final mfe checkpoints up to hold
-                _stamp_mfe_checkpoints(open_tr, open_tr.get("hold_days") or 0, float(c[j]))
-                # V1 variants need price data AFTER a time-stop exit so a longer
-                # (or off) hold can be re-simulated. Append ~90 calendar bars of
-                # passive OHLC; re_exit replays management over the whole path
-                # under the variant rule and will stop earlier/later on its own.
-                if open_tr.get("exit_reason") == "time":
-                    for k in range(j + 1, min(n, j + 1 + 90)):
-                        open_tr["path"].append({
-                            "d": idx[k].date().isoformat(),
-                            "h": float(h[k]), "l": float(l[k]), "c": float(c[k]),
-                        })
-                closed.append(open_tr)
-                open_tr = None
+            if open_tr["status"] != "closed":
+                still.append(open_tr)
+                continue
+            # final mfe checkpoints up to hold
+            _stamp_mfe_checkpoints(open_tr, open_tr.get("hold_days") or 0, float(c[j]))
+            # V1 variants need price data AFTER a time-stop exit so a longer
+            # (or off) hold can be re-simulated. Append ~90 calendar bars of
+            # passive OHLC; re_exit replays management over the whole path
+            # under the variant rule and will stop earlier/later on its own.
+            if open_tr.get("exit_reason") == "time":
+                for k in range(j + 1, min(n, j + 1 + 90)):
+                    open_tr["path"].append({
+                        "d": idx[k].date().isoformat(),
+                        "h": float(h[k]), "l": float(l[k]), "c": float(c[k]),
+                    })
+            closed.append(open_tr)
+        open_trs = still
 
-        # 3) detect — only if flat (one-per-symbol) and liquid candidate bar
-        if open_tr is not None or pending is not None:
+        # 3) detect on a liquid candidate bar -- flat or not (see above). One
+        #    pending entry at a time: it fills at the next finite open.
+        if pending is not None:
             continue
         if not (cand[j] and not (turnover[j] < liq_min)):
             continue
@@ -406,6 +435,30 @@ def _slim_parity(tr: dict) -> dict:
             "hold_days", "mfe_r_at", "close_r_at", "sector", "tp1_hit", "tp2_hit",
             "tp3_hit", "adv_usd", "taken", "path")
     return {k: tr.get(k) for k in keys}
+
+
+def _symbol_chain(trades: list[dict]) -> list[dict]:
+    """Each symbol's trades one at a time, with unlimited slots (audit #37).
+
+    The replay emits every takeable signal, overlapping ones included; walking
+    them in entry order and keeping a trade only once the previous kept one has
+    EXITED (strictly before its entry, the same `exit_date < day` rule the
+    portfolio pass frees a slot on) reproduces the pre-#37 chain exactly --
+    that replay stopped detecting while a trade was open and resumed on its
+    exit bar, whose signal fills the bar after. This is "every signal the
+    symbol would have traded given a free slot", the population `all_signals`
+    and `eligible` have always reported. Input order is preserved."""
+    last_exit: dict = {}
+    keep: set = set()
+    for i in sorted(range(len(trades)), key=lambda i: str(trades[i].get("entry_date") or "")):
+        t = trades[i]
+        key = (t.get("market"), t.get("symbol"))
+        day = str(t.get("entry_date") or "")
+        if key in last_exit and not last_exit[key] < day:
+            continue
+        keep.add(i)
+        last_exit[key] = str(t.get("exit_date") or "")
+    return [t for i, t in enumerate(trades) if i in keep]
 
 
 # ── portfolio (global slots) + R/slot-month ───────────────────────────────────
@@ -491,13 +544,18 @@ def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> di
             "long_only": long_only,
             "grades": list(grades),
             "entry_cells": {tf: list(ets) for tf, ets in _bot_cells().items()},
+            "level_tfs": list(baseline_rules().resolved_level_tfs()),
             "simulated": ["time_stop", "tp_ladder_trail", "one_per_symbol",
                           "global_slot_cap", "sector_cap", "cooldown",
                           "min_price", "stop_width", "adv_gates",
                           "grade_gate", "long_only", "entry_cells",
-                          "cell_walk_one_plan"],
+                          "cell_walk_one_plan", "level_gate",
+                          "skipped_signal_leaves_symbol_flat"],
         },
-        "eligible": _metrics(elig),
+        # Unconstrained but one-at-a-time per symbol (#37): the replay now
+        # emits overlapping signals, and counting all of them here would
+        # describe signals no single-position symbol could ever hold.
+        "eligible": _metrics(_symbol_chain(elig)),
         "portfolio": _metrics(taken_all),
         "taken": len(taken_all),
         "skipped": dict(skips),
@@ -750,7 +808,8 @@ def run_market_parity(mk: str, limit: int | None, period: str,
         "universe_before_exclude": uni_before,
         "excluded": len(excl),
         "sampled_pct": round(100 * len(uni) / max(len(uni_all), 1), 1),
-        "trades": len(trades),
+        "trades": len(trades),                        # every takeable signal (#37)
+        "chain_trades": len(_symbol_chain(trades)),   # one at a time per symbol
         "sampled_symbols": [u.get("symbol") for u in uni],
     }
 
@@ -763,15 +822,24 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
     taken = _taken_list(baseline_trades)
     taken_ids = {(t.get("symbol"), t.get("market"), t.get("entry_date"), t.get("timeframe"))
                  for t in taken}
+    chain_ids = {id(t) for t in _symbol_chain(baseline_trades)}
     published = []
     for t in baseline_trades:
+        tid = (t.get("symbol"), t.get("market"), t.get("entry_date"), t.get("timeframe"))
+        in_chain, was_taken = id(t) in chain_ids, tid in taken_ids
+        if not (in_chain or was_taken):
+            # An overlapping signal the book neither took nor would have held
+            # with a free slot (#37): emitted only so a skip can be followed by
+            # the next signal. Counted in coverage, not published.
+            continue
         p = dict(t)
         p.pop("path", None)
-        tid = (t.get("symbol"), t.get("market"), t.get("entry_date"), t.get("timeframe"))
-        p["taken"] = tid in taken_ids
+        p["taken"] = was_taken
+        p["chain"] = in_chain
         p.setdefault("mfe_r_at", {})
         p.setdefault("close_r_at", {})
         published.append(p)
+    signals = [p for p in published if p["chain"]]
 
     report = {
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -787,10 +855,12 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
                 "grades": list(baseline_rules().allowed_grades()),
                 "long_only": True,
                 "entry_cells": {tf: list(ets) for tf, ets in _bot_cells().items()},
+                "level_tfs": list(baseline_rules().resolved_level_tfs()),
                 "max_open_total": int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0)
                                       or config.VIVEK_BOT_MAX_POSITIONS),
             },
-            "all_signals": report_by_slices(published),
+            "signals_emitted": len(baseline_trades),
+            "all_signals": report_by_slices(signals),
             "portfolio": port,
             "portfolio_slices": report_by_slices(taken),
         },
@@ -800,9 +870,17 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
             "Survivorship bias — today's universe excludes delisted names.",
             "yfinance daily data (dividend-adjusted); occasional gaps.",
             "Intrabar fills assume the stop fills before the target within a bar.",
-            "Parity mode mirrors live bot lifecycle (A+/long-only/skip-retest/"
-            "one-plan-per-symbol/28d pre-TP1 time-stop/ADV+tradeability gates/"
-            "global slot cap). Earnings buffer is NOT replayed (no historical calendar).",
+            "Parity mode mirrors live bot lifecycle (A/A+ raw grade/long-only/"
+            "weekly+3d level gate/cell walk, one plan per signal/28d pre-TP1 "
+            "time-stop/ADV+tradeability gates/global slot cap). Earnings buffer "
+            "is NOT replayed (no historical calendar).",
+            "Every takeable signal is replayed as its own trade; the portfolio "
+            "pass enforces one-per-symbol, so a signal the book skips leaves the "
+            "symbol flat and the next armed signal is considered, as live "
+            "(skipped.dup_symbol counts the signals seen while the symbol was "
+            "held). all_signals and eligible read the per-symbol one-at-a-time "
+            "chain (trades[].chain); published trades are that chain plus "
+            "whatever the book took.",
             "R units are primary. Dollar columns inherit the live sizing mode "
             f"({_sizing_basis().get('sizing_mode')}) and are secondary.",
             "Variant PASS requires R/slot-month improvement on ASX AND NASDAQ "
