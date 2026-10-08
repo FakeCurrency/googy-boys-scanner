@@ -67,7 +67,10 @@ def test_replay_symbol_smoke_does_not_crash():
     trades = bt.replay_symbol(df, "asx", "RND", "Random", "Materials")
     assert isinstance(trades, list)
     for t in trades:                                       # any trades must be well-formed
-        assert t["status"] == "closed" and t["timeframe"] in ("1D", "1W")
+        # Audit #10: every replayed timeframe, 3D included -- the weekly-proxy
+        # signals the old candidate mask hid now reach the engine, and on this
+        # frame one of them trades its 3D plan.
+        assert t["status"] == "closed" and t["timeframe"] in bt.TIMEFRAMES
         assert t.get("realized_r") is not None
 
 

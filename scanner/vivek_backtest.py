@@ -80,23 +80,79 @@ def _sizing_basis() -> dict:
 
 # ── per-symbol replay ─────────────────────────────────────────────────────────
 
+def _bucket_sma_asof(close: pd.Series, rule: str, min_buckets: int, proxy: bool,
+                     **resample_kw) -> np.ndarray:
+    """Per bar ``j``: the bucketed 200-SMA the ENGINE computes on ``close.iloc[:j+1]``.
+
+    Audit #10 (2026-10-08). The engine resamples the slice it is handed, so at
+    bar ``j`` its last bucket is the PARTIAL one holding ``j``, closing at
+    ``close[j]``, and empty buckets are dropped before the average is taken
+    (``.dropna()``). Resampling the whole frame once and forward-filling cannot
+    say that: it averages finished buckets only (one bucket stale for a weekly
+    level, or the bucket's FUTURE close for a 72h one), and without the dropna a
+    single empty bucket -- a one-week halt -- leaves a NaN in every window it
+    sits in for the next 200 buckets. That is what hid weekly-level setups.
+
+    So this rebuilds the engine's number bar by bar, in closed form: the finals
+    of the ``window - 1`` completed buckets before ``j``'s (prefix sums), plus
+    ``close[j]``, over ``window``. ``window = min(VIVEK_SMA, n)`` when ``proxy``
+    (``vivek._weekly_sma200``'s best-effort window once ``n >= min_buckets``),
+    else the full ``VIVEK_SMA`` and nothing until ``n`` reaches it (the 3-Day
+    level). ``n`` counts non-empty buckets up to and including ``j``'s. Bucket
+    membership comes from the SAME ``resample`` call the engine makes, so a bar
+    can never be binned differently here than there.
+    """
+    vals = close.to_numpy(dtype=float)
+    out = np.full(len(vals), np.nan)
+    ok = np.isfinite(vals)
+    if not ok.any():
+        return out
+    # A NaN close is skipped by the engine's `.last()`, and a bar whose OWN
+    # close is NaN never reaches a level test (`evaluate` refuses a non-finite
+    # price) -- so both sides read the finite closes only.
+    pos = pd.Series(np.arange(len(vals)), index=close.index)[ok]
+    starts = pos.resample(rule, **resample_kw).first().dropna().to_numpy(dtype=np.int64)
+    finals = close[ok].resample(rule, **resample_kw).last().dropna().to_numpy(dtype=float)
+    if len(starts) != len(finals):                     # cannot happen: same bars, same bins
+        return out
+    prefix = np.concatenate(([0.0], np.cumsum(finals)))
+    js = np.flatnonzero(ok)
+    k = np.searchsorted(starts, js, side="right") - 1  # bucket holding bar j
+    count = k + 1
+    sma_n = int(config.VIVEK_SMA)
+    window = np.minimum(sma_n, count) if proxy else np.full_like(count, sma_n)
+    live = count >= (min_buckets if proxy else sma_n)
+    js, k, window = js[live], k[live], window[live]
+    prev = prefix[k] - prefix[k - window + 1]          # finals[k-window+1 .. k-1]
+    out[js] = (prev + vals[js]) / window
+    return out
+
+
 def _candidate_mask(df: pd.DataFrame) -> np.ndarray:
-    """Bars where price is near a 200 SMA (daily or weekly) — the only place a
-    reaction can exist. A superset of the engine's in-play test (the engine
-    re-checks precisely), so it only saves work, never invents trades."""
+    """Bars where price is near a 200 SMA (daily, weekly or 3-day) — the only
+    place a reaction can exist. A superset of the engine's in-play test (the
+    engine re-checks precisely), so it only saves work, never invents trades.
+
+    Audit #10: the superset claim now holds by construction. Each level is the
+    number ``vivek.evaluate`` computes on the slice ending at the bar (see
+    ``_bucket_sma_asof``) -- including the weekly PROXY window the engine uses
+    from week 60 to week 200 and the empty buckets it drops -- so the 1.3x
+    widening below is float slack, not a guess at how far the two drift."""
     close = df["Close"]
     tol = config.VIVEK_NEAR_TOL * 1.3                      # widen so we never miss one
-    dsma = close.rolling(config.VIVEK_SMA).mean()
-    wk = close.resample("W-FRI").last()
-    wsma = wk.rolling(config.VIVEK_SMA).mean().reindex(df.index, method="ffill")
+    px = close.to_numpy(dtype=float)
+    dsma = close.rolling(config.VIVEK_SMA).mean().to_numpy(dtype=float)
+    wsma = _bucket_sma_asof(close, "W-FRI", int(config.VIVEK_MIN_WEEKLY_BARS), proxy=True)
     # 3-Day 200 SMA — epoch-anchored 72h buckets, identical to the engine's
     # _resample_3day_ohlc, so slice anchoring can't drift from this mask.
-    d3 = close.resample("72h", origin="epoch").last().dropna()
-    sma3 = d3.rolling(config.VIVEK_SMA).mean().reindex(df.index, method="ffill")
-    near_d = (close - dsma).abs() / close <= tol
-    near_w = (close - wsma).abs() / close <= tol
-    near_3 = (close - sma3).abs() / close <= tol
-    return (near_d.fillna(False) | near_w.fillna(False) | near_3.fillna(False)).to_numpy()
+    if getattr(config, "VIVEK_INCLUDE_3D_LEVEL", False):
+        sma3 = _bucket_sma_asof(close, "72h", int(config.VIVEK_SMA), proxy=False, origin="epoch")
+    else:
+        sma3 = np.full(len(px), np.nan)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        near = [np.abs(px - lvl) / px <= tol for lvl in (dsma, wsma, sma3)]
+    # A NaN level (or price) compares False: the same as the old `.fillna(False)`.
+    return near[0] | near[1] | near[2]
 
 
 def _turnover_series(df: pd.DataFrame, market: str) -> np.ndarray:
