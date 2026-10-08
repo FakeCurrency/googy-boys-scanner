@@ -86,18 +86,28 @@ CRYPTO_SKIP = {
     # identity check, not by any name rule: Figure's YLDS, Tether's USAT, the
     # yen stablecoin JPYC.
     "YLDS", "USAT", "JPYC",
+    # Audit 2026-10-08 #60: in the committed universe, requested from every
+    # venue each run, unscanned only because no venue serves them yet:
+    # SoFiUSD (SOFID, 0.999 -- "USD" glued to a word escapes the name rule),
+    # USX (0.999), SAFO (the Spiko overnight fund once listed as EURSAFO; its
+    # CoinGecko name lost the "(EUR)"), the Tradable SSTN notes PC0000031 /
+    # PC0000033 (1.000); and two the same sweep turned up beside them, CASH
+    # (0.999) and the yen coin JPYSC (0.0063 = 1/JPYUSD).
+    "SOFID", "USX", "SAFO", "PC0000031", "PC0000033", "CASH", "JPYSC",
 }
 
 # Name words that mark a peg or a tokenised cash/bond fund whatever its
 # ticker (CoinGecko's `name`, whole words, case-insensitive): "Resolv USR",
 # "Global Dollar", "United Stables" (U -- graded A on the first exchange-data
-# dry run), "Spiko Amundi Overnight Swap Fund (EUR)", "Circle USYC".
+# dry run), "Circle USYC", and (audit 2026-10-08 #60) "Spiko Amundi Overnight
+# Swap Fund" -- once "(EUR)", which the EUR word caught, now bare -- and the
+# "Tradable ... SSTN" par notes (PC0000031, PC0000033).
 # Deliberately narrow -- "Fund", "Gold" or a singular "Stable" (the STABLE
 # chain token, which floats) would catch coins that do trend -- so only
 # words that cannot describe a free-floating coin are here.
 _PEG_NAME = re.compile(
     r"\b(stablecoins?|stables|usd|dollar|eur|euro|treasury|treasuries|"
-    r"t-?bills?|money market|government (securities|bonds?)|CLO)\b",
+    r"t-?bills?|money market|government (securities|bonds?)|CLO|swap fund|SSTN)\b",
     re.IGNORECASE)
 
 
