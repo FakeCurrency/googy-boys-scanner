@@ -1,0 +1,49 @@
+{
+  "skill_name": "port-ignition",
+  "evals": [
+    {
+      "id": 0,
+      "name": "nasdaq-replay",
+      "prompt": "Why isn't their an IGNITION for nasdaq? build it, merge when green",
+      "expected_output": "A complete NASDAQ port on the pre-port commit 036ed6e2, matching or beating the real port (6898d686 + f1e3e04f) in completeness",
+      "files": [],
+      "base": "036ed6e2",
+      "assertions": [
+        "nasdaq is in config.IGNITION_MARKETS and every per-market IGNITION dict (BARS_PER_YEAR, MAX_DATA_AGE_DAYS_BY_MARKET, MIN_BASE_TURNOVER, MIN_TRIGGER_TURNOVER, BT_COST_PCT_BY_MARKET, BT_CASES_BY_MARKET, BT_DESIGN_CASES_BY_MARKET, BT_REGISTERED_DATE_BY_MARKET, REGIME_INDEX) has an explicit 'nasdaq' key",
+        "A test exists that fails when a non-crypto Ignition market lacks an explicit key in a per-market dict (the guard against silent fall-through to crypto's values)",
+        "The NASDAQ values are sensible and each has a written reason in a config comment: ~252 bars/year, data-age >= 4 days, base AND trigger floors both explicit with trigger > base, a round-trip cost justified for NASDAQ, a broad small-cap-inclusive regime index (not ^NDX), and no design case",
+        "A NASDAQ workflow twin exists whose run blocks (all but the gate) equal ignition.yml's after crypto->nasdaq substitution, and a test pins that equality",
+        "The NASDAQ crons fire after the NASDAQ daily bar is final (>= 16:30 New York) in BOTH EDT and EST, the intraday crons fall inside the session, and a test checks both DST regimes",
+        "A NASDAQ bar between the 16:00 bell and its bar-final time can never be published as a CONFIRMED trigger (forming until bar-final, or a gate that prevents such a run)",
+        "The NASDAQ backtest caveat text contains no ASX-, coin- or 'none prompted' wording, and a test asserts it",
+        "Existing crypto and ASX behaviour is unchanged: no IGNITION_RULESET_VERSION bump and the crypto/ASX caveat strings are byte-identical",
+        "Frontend: public/js/ignition.js lists nasdaq, NASDAQ caps show US$, the STALE badge names the NASDAQ workflow, ignition.js ?v= is bumped in index.html and public/version.json is restamped",
+        "A kick file for the first NASDAQ replay exists and the report explains that the replay runs on push",
+        "The full pytest suite and every test/*.test.js suite pass in the worktree (re-run by the grader, not taken from the executor's claim)",
+        "Nothing was pushed and no PR opened, and nothing under scanner/broker/ changed",
+        "The owner-facing summary is plain English and does not invent replay numbers"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "nyse-new-market",
+      "prompt": "can we get ignition running on the NYSE too? build it and merge when green",
+      "expected_output": "NYSE added as an Ignition-only market (stock list, registry, session, workflow twin, a page, chart links) without enrolling it in VIVEK or the bot",
+      "files": [],
+      "base": "efb9aa1b",
+      "assertions": [
+        "NYSE is NOT enrolled in the VIVEK scan or the paper bot: it is not added to config.MARKETS (or every MARKETS consumer excludes it and a test pins that)",
+        "The NYSE stock list comes from a free official source (nasdaqtrader otherlisted.txt filtered to NYSE exchange code N, optionally A), filters ETFs and test issues, maps class shares to Yahoo's dash form (BRK.B -> BRK-B), ships a bundled fallback CSV, and the parser is tested on canned input with no network",
+        "nyse is in IGNITION_MARKETS with explicit values in every per-market IGNITION dict, each with a written reason",
+        "The lens knows NYSE's timezone and session (America/New_York, 09:30-16:00) and treats the daily bar as forming until its bar-final time (~16:30 New York), not the bell",
+        "An ignition_nyse.yml workflow twin exists with run blocks pinned equal to ignition.yml's after substitution, crons on minutes no other Ignition twin uses, firing after bar-final in both DST regimes",
+        "NYSE Ignition results are reachable somewhere in the site's UI (a page or a panel), with a test covering it",
+        "A chart link for an NYSE symbol draws the NYSE instrument: chart.js no longer maps m=nyse to the ASX (.AX) market",
+        "Existing tests that used 'nyse' as the example of an uncovered market were re-pointed to an unused key",
+        "The full pytest suite and every test/*.test.js suite pass in the worktree (re-run by the grader, not taken from the executor's claim)",
+        "Existing crypto/ASX/NASDAQ behaviour is unchanged, nothing under scanner/broker/ changed, and nothing was pushed",
+        "The report is honest that the NYSE list and Yahoo data could not be verified from the container and that the first GitHub run proves them"
+      ]
+    }
+  ]
+}
