@@ -550,7 +550,14 @@ def _metrics(trades: list[dict]) -> dict:
     # problem or an exit problem" is answerable from the evidence file.
     # <= 0.01R: an excursion under a hundredth of a risk unit is noise, not
     # a favourable move.
-    mfe_zero = sum(1 for t in trades if (t.get("mfe_r") or 0.0) <= 0.01)
+    # Audit #33: measured over the trades that CARRY an MFE, and None when none
+    # do. `_SLIM_KEYS` used to drop `mfe_r`, so every published trade read
+    # `None or 0.0` and every bucket said 100% of trades -- +5R winners
+    # included -- never moved in their favour. A merged run still re-aggregates
+    # old slim records that have no MFE at all; reading their absence as 0.0
+    # would put the same 1.0 straight back, so they are left out of the rate.
+    mfes = [t.get("mfe_r") for t in trades if t.get("mfe_r") is not None]
+    mfe_zero = sum(1 for m in mfes if m <= 0.01)
     return {
         "n": n,
         "win_rate": round(100 * len(wins) / n, 1),
@@ -563,7 +570,7 @@ def _metrics(trades: list[dict]) -> dict:
         "total_usd": round(sum(ds), 2),
         "max_dd_usd": round(dd, 2),
         "max_dd_open_usd": round(dd_open, 2),
-        "mfe_zero_rate": round(mfe_zero / n, 3),
+        "mfe_zero_rate": round(mfe_zero / len(mfes), 3) if mfes else None,
     }
 
 
@@ -645,9 +652,11 @@ def aggregate(trades: list[dict]) -> dict:
 # `_risk_usd` had to size off the trailed stop and zeroed every breakeven-
 # trailed winner; `mae_r` is the only trace of what happened BETWEEN entry and
 # exit, without which a drawdown curve can only step at exits.
+# `mfe_r` added by audit #33: `_metrics` publishes `mfe_zero_rate` off it, and
+# with the key dropped here every bucket of every report read 1.0.
 _SLIM_KEYS = ("symbol", "market", "timeframe", "level_tf", "entry_type", "grade",
               "direction", "entry", "stop", "risk", "exit", "entry_date", "exit_date",
-              "exit_reason", "realized_r", "gross_r", "cost_r", "mae_r", "sector",
+              "exit_reason", "realized_r", "gross_r", "cost_r", "mae_r", "mfe_r", "sector",
               "structural_tps")
 
 

@@ -533,5 +533,9 @@ def test_mfe_zero_rate_counts_wrong_from_entry_trades():
     m = bt._metrics(trades)
     assert abs(m["mfe_zero_rate"] - 0.5) < 1e-9
     assert bt._metrics([])["mfe_zero_rate"] == 0.0
+    # Audit #33: an ABSENT MFE is skipped, not counted as 0.0 -- counting it
+    # was what published 1.0 in every bucket once _slim dropped the field.
     missing = bt._metrics([_trade(realized_r=1.0)])   # no mfe_r field at all
-    assert missing["mfe_zero_rate"] == 1.0, "an absent MFE reads 0.0 - counted, not skipped"
+    assert missing["mfe_zero_rate"] is None, "no trade carries an MFE: no rate, not 100%"
+    mixed = bt._metrics(trades + [_trade(realized_r=1.0)])
+    assert abs(mixed["mfe_zero_rate"] - 0.5) < 1e-9, "the rate is over trades that carry one"
