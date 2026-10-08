@@ -6,8 +6,6 @@ demand 0.048-0.048, narrated "ran the 0.0480-0.0480 lows"), and the schema
 gate only checked low <= high.
 """
 
-import random
-
 import pytest
 
 from phasemap.engine.scanner import scan_ticker
@@ -69,22 +67,6 @@ def test_the_schema_gate_rejects_a_single_price_zone():
         validate_snapshot(snap)
 
 
-def _walk(seed, n, price, market):
-    """Deterministic random walk with spikes, so sweeps/displacements print."""
-    rnd = random.Random(seed)
-    bars, c = [], price
-    for _ in range(n):
-        o = c
-        step = rnd.gauss(0, 0.02) * o
-        if rnd.random() < 0.04:
-            step *= 4                                  # displacement-sized bars
-        c = max(o + step, price * 0.05)
-        h = max(o, c) * (1 + abs(rnd.gauss(0, 0.008)))
-        lo = min(o, c) * (1 - abs(rnd.gauss(0, 0.008)))
-        bars.append((o, h, lo, c, 1e9))
-    return synth.bars_df(bars)
-
-
 @pytest.mark.parametrize("price,market", [(2e-5, "crypto"), (0.003, "crypto"),
                                           (0.004, "asx"), (0.05, "asx"),
                                           (0.6, "nasdaq"), (1.0, "asx"),
@@ -94,7 +76,7 @@ def test_every_published_zone_passes_the_strict_gate(price, market):
     # a hit would abort the whole market's publish
     results = []
     for seed in range(16):
-        df = _walk(seed, 520, price, market)
+        df = synth.seeded_walk(seed, 520, price)
         for rec, _eng in scan_ticker(f"S{seed}", df, market=market,
                                      volume_is_usd=(market == "crypto")):
             rec["narration"] = render(rec)

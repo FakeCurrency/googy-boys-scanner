@@ -6,6 +6,7 @@ Monday, so bar i falls on ISO weekday (i % 5) + 1.
 """
 
 import datetime
+import random
 
 import pandas as pd
 
@@ -197,3 +198,22 @@ def fixture_complete() -> pd.DataFrame:
 def fixture_trap_only() -> pd.DataFrame:
     """Fixture 1 truncated before the sweep -> TRAP_SET pre-alert."""
     return bars_df(base_to_box())
+
+
+def seeded_walk(seed: int, n: int, price: float) -> pd.DataFrame:
+    """A seeded random walk with occasional displacement-sized bars, so sweeps
+    and displacements print at any price scale. Deterministic for a given
+    seed (random.Random), for property-style sweeps over what the engine
+    builds (audit #26/#27, 2026-10-08)."""
+    rnd = random.Random(seed)
+    bars, c = [], price
+    for _ in range(n):
+        o = c
+        step = rnd.gauss(0, 0.02) * o
+        if rnd.random() < 0.04:
+            step *= 4
+        c = max(o + step, price * 0.05)
+        h = max(o, c) * (1 + abs(rnd.gauss(0, 0.008)))
+        lo = min(o, c) * (1 - abs(rnd.gauss(0, 0.008)))
+        bars.append((o, h, lo, c, 1e9))
+    return bars_df(bars)

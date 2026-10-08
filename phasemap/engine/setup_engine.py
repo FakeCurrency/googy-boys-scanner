@@ -17,7 +17,7 @@ import math
 from dataclasses import dataclass, field
 
 from phasemap.config import CONFIG
-from phasemap.engine.buffers import buffer
+from phasemap.engine.buffers import buffer, tick_size
 from phasemap.engine.indicators import IndicatorSet
 from phasemap.engine.zones import Zone, cluster_levels, merge_targets
 
@@ -88,6 +88,18 @@ class SetupEngine:
         a = self.ind.atr20[i]
         return buffer(float(self.ind.close[i]), 0.0 if math.isnan(a) else float(a),
                       self.market)
+
+    def _positive_low(self, low: float, high: float) -> float:
+        """No zone edge at or below zero (v1.3.2, audit #27). A bull floor of
+        extreme - buffer went negative on a 1-2 tick stock (ENV inv_hard
+        -0.0002..0.0018, narrated "intact above -0.0002") and padded bear
+        targets went below zero on microcaps. The low is clamped at one tick
+        -- the smallest price the instrument can print -- or at half the
+        band's top when that top is itself within a tick of zero, so the band
+        keeps its width. On a 1-2 tick name a close below the clamped floor
+        is impossible: the structural kill was unreachable there anyway."""
+        floor = min(tick_size(high, self.market), 0.5 * high)
+        return low if low >= floor else floor
 
     def _leg(self) -> float:
         return abs(self.leg_extreme - self.sweep_extreme)
@@ -286,7 +298,8 @@ class SetupEngine:
                                high=dem_high, side="below",
                                sources=["sweep_wick"], created_date=created)
             self.inv_hard = Zone(id="inv_hard", type="INVALIDATION_HARD",
-                                 low=extreme - buf, high=extreme, side="below",
+                                 low=self._positive_low(extreme - buf, extreme),
+                                 high=extreme, side="below",
                                  rule="close_below_low", created_date=created)
         else:
             sup_low = key_level if key_level < extreme else extreme - half
@@ -399,12 +412,14 @@ class SetupEngine:
                 else:
                     b_hi = self.sweep_extreme - lo_m * leg
                     b_lo = self.sweep_extreme - hi_m * leg
+                if b_lo <= 0:
+                    continue   # a projection to a non-positive price is not a price (audit #27)
                 edge = b_hi if self.bull else b_lo
                 if beyond(edge):
                     tag = f"fib_ext_{str(lo_m).replace('.', '')}"
                     cands.append((b_lo - half, b_hi + half, tag))
 
-        zones = [Zone(id="t", type="TARGET", low=lo, high=hi,
+        zones = [Zone(id="t", type="TARGET", low=self._positive_low(lo, hi), high=hi,
                       side="above" if self.bull else "below",
                       sources=[src], created_date=created)
                  for lo, hi, src in cands]
@@ -426,7 +441,8 @@ class SetupEngine:
         keep_status = (self.inv_soft.status, self.inv_soft._touched) if self.inv_soft else None
         if self.bull:
             self.inv_soft = Zone(id="inv_soft", type="INVALIDATION_MOMENTUM",
-                                 low=fifty - 0.5 * buf, high=fifty, side="below",
+                                 low=self._positive_low(fifty - 0.5 * buf, fifty),
+                                 high=fifty, side="below",
                                  rule="touch", created_date=created)
             self.entry = Zone(id="entry", type="ENTRY_CONTINUATION",
                               low=self.leg_extreme - hi_r * leg,
