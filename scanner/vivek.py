@@ -397,18 +397,30 @@ def _resample_4h_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
     way (public/js/chart.js bucketBars(intraday, 4*3600)), so the candles a
     reader sees and the plan they read are built from the same arithmetic.
 
-    Epoch-anchored buckets, NOT session-anchored: `resample("4h")` cuts on
+    Epoch-anchored buckets, NOT session-anchored: the bins cut on
     00:00/04:00/08:00/... UTC exactly as the chart's `t - t % (4*3600)` does.
     Anchoring to each market's open would produce prettier candles and would
     NOT match the chart, and two 4H series that disagree about where a bar
-    starts is the one outcome worth avoiding here."""
+    starts is the one outcome worth avoiding here.
+
+    Audit #19 (2026-10-08): that promise only held for a UTC index. Yahoo's
+    1h stock bars arrive tz-aware in the EXCHANGE zone (yfinance keeps the tz
+    for "h" intervals), and pandas anchors both its default origin and
+    origin="epoch" in the index's own zone -- so ASX bins cut at Sydney
+    midnight (13:00/14:00Z: 2 bars a day against the chart's 3) and NASDAQ
+    would have shifted an hour every EST winter. A tz-aware index is converted
+    to UTC first; a naive index is already UTC (exchange klines, tests). The
+    result keeps a UTC index, so a 4H plan's dates are UTC dates, like the
+    chart's buckets."""
     try:
+        if getattr(df.index, "tz", None) is not None:
+            df = df.tz_convert("UTC")
         h4 = pd.DataFrame({
-            "Open":   df["Open"].resample("4h").first(),
-            "High":   df["High"].resample("4h").max(),
-            "Low":    df["Low"].resample("4h").min(),
-            "Close":  df["Close"].resample("4h").last(),
-            "Volume": df["Volume"].resample("4h").sum(),
+            "Open":   df["Open"].resample("4h", origin="epoch").first(),
+            "High":   df["High"].resample("4h", origin="epoch").max(),
+            "Low":    df["Low"].resample("4h", origin="epoch").min(),
+            "Close":  df["Close"].resample("4h", origin="epoch").last(),
+            "Volume": df["Volume"].resample("4h", origin="epoch").sum(),
         }).dropna()
         return h4 if len(h4) else None
     except Exception:
@@ -430,7 +442,9 @@ def build_h4_plan(df_1h: pd.DataFrame, direction: str) -> dict | None:
     h4 = _resample_4h_ohlc(df_1h)
     if h4 is None or len(h4) < config.VIVEK_MIN_TF_BARS:
         return None
-    return build_tf_plan(h4, direction)
+    # Intraday: a date names up to six 4H bars, so the plan also carries the
+    # trigger/reaction bar's open instant (audit #20) for the chart to place on.
+    return build_tf_plan(h4, direction, stamp_ts=True)
 
 
 def _resample_3day_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
@@ -536,7 +550,8 @@ def _recent_reaction_bar(frame: pd.DataFrame, direction: str, level: float) -> i
     return None
 
 
-def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
+def build_tf_plan(frame: pd.DataFrame, direction: str,
+                  stamp_ts: bool = False) -> dict | None:
     """A full timeframe plan for `frame`: the 200 SMA level, structural SL/TPs,
     and the trigger state — all from ONE place (Python), so the row, chart and
     bot read identical numbers. Returns None when the frame is too short.
@@ -560,6 +575,13 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
     trades get taken, and the shorter average is often the honest best effort —
     a two-year-old listing has no 200-week history and never will until it ages.
     The defect was never the fallback; it was the fallback being silent.
+
+    ``stamp_ts`` (audit #20, 2026-10-08) is for INTRADAY frames (the 4H plan):
+    a date-only ``trigger_bar`` names up to six 4H bars and the chart drew the
+    trigger on the day's FIRST candle. With it the plan also carries
+    ``trigger_ts`` / ``reaction_ts`` = UTC epoch SECONDS of that bar's open
+    (None when there is no such bar), beside the unchanged date fields. Daily,
+    3-Day and Weekly plans never carry them.
     """
     n = len(frame)
     if n < config.VIVEK_MIN_TF_BARS:
@@ -587,7 +609,19 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
         except Exception:
             return None
 
+    def _ts(i):
+        # pandas reads a NAIVE Timestamp as UTC here (unlike datetime), which
+        # is what a naive index means in this engine (exchange klines).
+        try:
+            return int(pd.Timestamp(frame.index[i]).timestamp())
+        except Exception:
+            return None
+
     react_i = _recent_reaction_bar(frame, direction, level)
+    stamps = {}
+    if stamp_ts:
+        stamps = {"trigger_ts": _ts(trigger["bar"]) if trigger else None,
+                  "reaction_ts": _ts(react_i) if react_i is not None else None}
     return {
         **lv,
         "level": round(level, 8),
@@ -599,6 +633,7 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
         "entry_trigger": trigger["type"] if trigger else None,
         "trigger_bar": _date(trigger["bar"]) if trigger else None,
         "reaction_bar": _date(react_i) if react_i is not None else None,
+        **stamps,
         "bars": n,
     }
 
@@ -628,14 +663,26 @@ def build_plans(df: pd.DataFrame, sig: dict) -> dict:
 def build_markers(plans: dict) -> dict:
     """Chart markers per timeframe, derived from the plans so the chart no longer
     computes its own. At most two per TF (the reaction at the level + the trigger
-    bar) — deliberately minimal to keep the chart readable."""
+    bar) — deliberately minimal to keep the chart readable.
+
+    A marker from an intraday plan (the 4H plan carries ``reaction_ts`` /
+    ``trigger_ts``) also carries ``ts`` = UTC epoch seconds of its bar's open
+    (audit #20): the chart places it on the drawn candle whose bucket holds
+    that instant, and falls back to ``date`` when ``ts`` is absent. Daily /
+    3-Day / Weekly markers carry no ``ts``."""
     out: dict[str, list] = {}
     for tf, p in plans.items():
         ms = []
         if p.get("reaction_bar"):
-            ms.append({"date": p["reaction_bar"], "kind": "reaction"})
+            m = {"date": p["reaction_bar"], "kind": "reaction"}
+            if p.get("reaction_ts") is not None:
+                m["ts"] = int(p["reaction_ts"])
+            ms.append(m)
         if p.get("trigger_bar"):
-            ms.append({"date": p["trigger_bar"], "kind": "trigger", "label": p.get("entry_trigger")})
+            m = {"date": p["trigger_bar"], "kind": "trigger", "label": p.get("entry_trigger")}
+            if p.get("trigger_ts") is not None:
+                m["ts"] = int(p["trigger_ts"])
+            ms.append(m)
         out[tf] = ms
     return out
 
