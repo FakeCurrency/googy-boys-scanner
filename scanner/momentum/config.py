@@ -365,8 +365,9 @@ PRODUCT_KEYWORDS_BY_MARKET: Dict[str, Tuple[str, ...]] = {"crypto": ("FUND", "ET
 # RULESET_VERSION does not move for them (it traces a published file to the
 # RULES that made it, not to the clock that started the job).
 #
-# An equity market is due from (local close + PUBLISH_AFTER_CLOSE_MIN) on each
-# weekday until its NEXT session opens, and only if the committed file was
+# An equity market is due from (local close + PUBLISH_AFTER_CLOSE_MIN, or the
+# feed's final instant when later -- see below) on each weekday until its NEXT
+# session opens, and only if the committed file was
 # generated before that instant. The session hours are NOT restated here: the
 # gate reads scanner.config.VIVEK_JOURNAL_SESSION and each market's timezone,
 # so there is one table of sessions in the repo, not two.
