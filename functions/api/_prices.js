@@ -200,11 +200,24 @@ export async function fetchBinanceCandles(sym, { interval = "1d", limit = 260, t
  * joined with no rescaling. scripts/data_depth.py holds that test; re-run it
  * before trusting this if Yahoo ever changes.
  */
-const DEEP_YEARS = { "10y": 10, "15y": 15, "20y": 20, "25y": 25, "max": 25 };
+
+/** Years of history each multi-year range spans -- ONE table (audit #72,
+ *  2026-10-08). price.js's CHART_MAX_YEARS clamp, the stitcher's depth below
+ *  and the EODHD leg's `from` date all read it. fetchEodhdCandles used to keep
+ *  its own copy, written before the deep ranges existed (no 15y/20y/25y), so
+ *  the day an EODHD key is installed every 25y stock chart would have come
+ *  back as ONE year of bars -- the EODHD leg runs before the stitch and wins
+ *  whenever it returns anything. Sub-year ranges are absent on purpose:
+ *  nothing clamps or stitches them, and the EODHD leg fetches a year and
+ *  trims. test/deep_history.test.js pins every whitelisted range to it. */
+export const RANGE_YEARS = { "1y": 1, "2y": 2, "5y": 5, "10y": 10, "15y": 15, "20y": 20, "25y": 25, "max": 25 };
 const DEEP_CHUNK_YEARS = 5;          // the window size proven to stay at 1d
 
+/** A range deeper than one window is stitched (10y and up); 5y and shallower
+ *  take exactly the single-range path they always did. */
 export function deepYears(range) {
-  return DEEP_YEARS[range] || 0;
+  const y = RANGE_YEARS[range] || 0;
+  return y > DEEP_CHUNK_YEARS ? y : 0;
 }
 
 /** One Yahoo chart call for an explicit date window. null on failure. */
@@ -227,11 +240,22 @@ export async function fetchYahooWindow(sym, { p1, p2, interval = "1d", timeout =
  *
  * Windows are fetched IN PARALLEL (5 subrequests, well inside a Worker's
  * budget) because sequential chunks would add ~1.5s to every chart open.
- * A window that fails is SKIPPED, not fatal: a symbol younger than the span
- * legitimately 400s on the windows before it existed, and half a chart beats
- * none. Bars are deduped by timestamp (adjacent windows share their boundary
+ * Bars are deduped by timestamp (adjacent windows share their boundary
  * session) and sorted ascending, so a source that answers newest-first or
- * repeats a seam bar cannot double-count. */
+ * repeats a seam bar cannot double-count.
+ *
+ * ONLY A CONTIGUOUS RUN FROM THE NEWEST WINDOW IS STITCHED (audit #38,
+ * 2026-10-08). A failed window may only be dropped from the OLD end: a symbol
+ * younger than the span legitimately 400s on the windows before it existed,
+ * and half a chart beats none. The first cut dropped ANY failed window, so a
+ * 429 on the newest one served a chart ending five years ago beside a live
+ * header price, and one in the middle served a 1,825-day hole with the weekly
+ * 200-SMA drawn straight across it -- both as ok:true, since the degraded test
+ * reads only the last 20 gaps. Now the stitch stops at the first failed window
+ * (everything older is discarded, never joined across the gap), and a failed
+ * newest window returns no candles so history() falls through to its
+ * single-range path. `chunks` / `chunks_wanted` travel to the response so the
+ * chart can tell a short series from a whole one. */
 export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
                                             chunkYears = DEEP_CHUNK_YEARS } = {}) {
   const now = Math.floor(Date.now() / 1000);
@@ -244,8 +268,11 @@ export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
     const p1 = now - Math.min(k + chunkYears, years) * yearSec;
     jobs.push(fetchYahooWindow(sym, { p1, p2, interval }));
   }
-  const results = (await Promise.all(jobs)).filter(Boolean);
-  if (!results.length) return { candles: [], result: null };
+  const settled = await Promise.all(jobs);      // index = window k, 0 = NEWEST
+  let run = 0;
+  while (run < settled.length && settled[run]) run++;
+  const results = settled.slice(0, run);
+  if (!results.length) return { candles: [], result: null, chunks: 0, chunks_wanted: jobs.length };
 
   const byTime = new Map();
   for (const r of results) {
@@ -254,9 +281,9 @@ export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
     }
   }
   const candles = [...byTime.values()].sort((a, b) => a.time - b.time);
-  // results[0] is the NEWEST window — the one whose dividend events and adjusted
-  // flag describe the tape the chart is actually reading right now.
-  return { candles, result: results[0], chunks: results.length };
+  // results[0] is window k=0, the NEWEST -- guaranteed by the run above -- whose
+  // dividend events and adjusted flag describe the tape the chart is reading.
+  return { candles, result: results[0], chunks: run, chunks_wanted: jobs.length };
 }
 
 /** Yahoo chart result → clean candle objects (nulls dropped).
@@ -370,6 +397,8 @@ export function eodhdSymbol(sym) {
   return s + ".US";
 }
 
+const EODHD_MAX_YEARS = 30;          // the plan's documented depth, asked for by range=max
+
 /** EODHD EOD candles on the SCAN's adjusted basis (o/h/l/c scaled by
  *  adjusted_close/close, the same maths as the Yahoo adjclose path). EOD data
  *  only — intraday intervals are not on this plan and return []. Any failure
@@ -378,8 +407,8 @@ export async function fetchEodhdCandles(sym, { range = "1y", interval = "1d", ke
   if (!key || interval !== "1d") return [];
   const es = eodhdSymbol(sym);
   if (!es) return [];
-  const YEARS = { "1mo": 1, "3mo": 1, "6mo": 1, "1y": 1, "2y": 2, "5y": 5, "10y": 10, "max": 30 };
-  const yrs = YEARS[range] || 1;
+  // The shared table (audit #72); "max" asks this plan for its full 30 years.
+  const yrs = range === "max" ? EODHD_MAX_YEARS : (RANGE_YEARS[range] || 1);
   const from = new Date(Date.now() - yrs * 365.25 * 86400 * 1000).toISOString().slice(0, 10);
   try {
     const url = `https://eodhd.com/api/eod/${encodeURIComponent(es)}?api_token=${encodeURIComponent(key)}` +
@@ -444,7 +473,8 @@ export async function history(sym, assetType, { range = "1y", interval = "1d", p
       if (d.candles.length) {
         return { candles: trimCandles(d.candles, want), source: "yahoo-deep", delayed: !crypto,
                  basis: crypto ? "adj" : (isAdjusted(d.result) ? "adj" : "raw"),
-                 recent_div: recentDividend(d.result), chunks: d.chunks };
+                 recent_div: recentDividend(d.result),
+                 chunks: d.chunks, chunks_wanted: d.chunks_wanted };
       }
     } catch (_) { /* fall through to the ordinary single-range path */ }
   }

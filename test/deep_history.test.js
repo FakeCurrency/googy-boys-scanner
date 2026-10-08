@@ -50,7 +50,7 @@ function load({ fetchImpl, now = 1_780_000_000_000 } = {}) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(src + "\n;globalThis.__api = { deepYears, fetchYahooDeep, fetchYahooWindow, targetBars, trimCandles, yahooCandles, fetchBinanceCandles, fetchBinancePrice };", sandbox);
+  vm.runInContext(src + "\n;globalThis.__api = { deepYears, fetchYahooDeep, fetchYahooWindow, targetBars, trimCandles, yahooCandles, fetchBinanceCandles, fetchBinancePrice, history, fetchEodhdCandles, RANGE_YEARS };", sandbox);
   return sandbox.__api;
 }
 
@@ -181,6 +181,162 @@ test("the window request asks by DATE, not by range — that is the whole point"
   assert.match(url, /period2=2000/);
   assert.ok(!/[?&]range=/.test(url), "a range= param would re-introduce the coarsening");
   assert.match(url, /interval=1d/);
+});
+
+// ═══════════ a failed window may only be dropped from the OLD end ═════════════
+// Audit #38 (2026-10-08): the stitcher used to `.filter(Boolean)` over the five
+// window results, so a 429 on the NEWEST window served a chart ending five years
+// ago, and one in the middle served a 1,825-day hole with the weekly 200-SMA
+// drawn straight across it -- both as ok:true. The fake below answers each
+// window by its period2 (window k), and fails the chosen windows on BOTH hosts.
+suite("a failed window is dropped only from the OLD end (audit #38)");
+
+const NOW_S = 1_780_000_000;                    // load()'s default clock, in seconds
+const YEAR_S = 365 * 86400;
+function dailyResult(p1, p2) {                  // one bar per day inside [p1, p2)
+  const ts = [], c = [];
+  for (let t = Math.ceil(p1 / 86400) * 86400; t < p2; t += 86400) { ts.push(t); c.push(t / 86400); }
+  return { timestamp: ts, indicators: { quote: [{ open: c, high: c, low: c, close: c, volume: c.map(() => 1) }] } };
+}
+function windowedYahoo({ failK = [], single = null, price = 42 } = {}) {
+  const calls = [];
+  const impl = (url) => {
+    calls.push(url);
+    const q = new URL(url).searchParams;
+    if (q.get("period2") == null) {             // a range= call: the single-range path / live price
+      if (q.get("range") === "1d") return okRes({ meta: { regularMarketPrice: price }, timestamp: [], indicators: { quote: [{}] } });
+      return single ? okRes(single) : Promise.resolve({ ok: false, status: 422, json: () => Promise.resolve({}) });
+    }
+    const p1 = +q.get("period1"), p2 = +q.get("period2");
+    const k = Math.round((NOW_S + 86400 - p2) / YEAR_S / 5);
+    if (failK.includes(k)) return Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({}) });
+    return okRes(dailyResult(p1, p2));
+  };
+  return { impl, calls };
+}
+const maxGapDays = (c) => c.reduce((g, b, i) => (i ? Math.max(g, (b.time - c[i - 1].time) / 86400) : 0), 0);
+
+test("a young listing: the OLDEST windows failing still stitches the newest run", async () => {
+  const a = load({ fetchImpl: windowedYahoo({ failK: [3, 4] }).impl });
+  const out = await a.fetchYahooDeep("GLBE", { years: 25, chunkYears: 5 });
+  assert.equal(out.chunks, 3);
+  assert.equal(out.chunks_wanted, 5);
+  assert.ok(out.candles.length > 5000, "15 years of daily bars");
+  assert.ok(NOW_S - out.candles[out.candles.length - 1].time < 2 * 86400, "the series ends today");
+  assert.equal(maxGapDays(out.candles), 1);
+});
+
+test("a failed NEWEST window is not stitched: no chart that ends five years ago", async () => {
+  const a = load({ fetchImpl: windowedYahoo({ failK: [0] }).impl });
+  const out = await a.fetchYahooDeep("ON", { years: 25, chunkYears: 5 });
+  assert.equal(out.candles.length, 0,
+    "the four older windows must not be served as the chart -- they end five years before the header price");
+  assert.equal(out.chunks, 0);
+  assert.equal(out.chunks_wanted, 5);
+});
+
+test("...and history() then falls through to the single-range call", async () => {
+  const single = dailyResult(NOW_S - 5 * YEAR_S, NOW_S + 86400);
+  const y = windowedYahoo({ failK: [0], single });
+  const h = await load({ fetchImpl: y.impl }).history("ON", null, { range: "25y", interval: "1d" });
+  assert.equal(h.source, "yahoo", "the deep stitch must have been refused");
+  assert.ok(NOW_S - h.candles[h.candles.length - 1].time < 2 * 86400);
+  assert.ok(y.calls.some((u) => /[?&]range=25y/.test(u)), "the single-range path was not tried");
+  assert.equal(h.chunks, undefined, "the single-range path is not a stitch");
+});
+
+test("a failed MIDDLE window never joins across the hole", async () => {
+  const a = load({ fetchImpl: windowedYahoo({ failK: [2] }).impl });
+  const out = await a.fetchYahooDeep("ON", { years: 25, chunkYears: 5 });
+  assert.equal(maxGapDays(out.candles), 1, "a 1,825-day hole would put the weekly 200-SMA across nothing");
+  assert.equal(out.chunks, 2, "only windows 0 and 1 are contiguous with today");
+  assert.ok(out.candles[0].time >= NOW_S - 10 * YEAR_S - 2 * 86400, "nothing older than the hole survives");
+  assert.ok(NOW_S - out.candles[out.candles.length - 1].time < 2 * 86400);
+});
+
+// The endpoint has to SAY a series is short, or the chart cannot. The real
+// price.js runs here against the real helpers, its two imports stripped.
+const RELAY = API("_relay_guard.js");
+function loadPriceEndpoint(fetchImpl) {
+  const strip = (src) => src.replace(/export\s+async\s+function/g, "async function")
+    .replace(/export\s+function/g, "function").replace(/export\s+const/g, "const");
+  const body = strip(PRICES) + "\n" + strip(RELAY) + "\n" +
+    strip(PRICE.replace(/^import[^\n]*\n/gm, "")) + "\n;globalThis.__get = onRequestGet;";
+  const sandbox = {
+    JSON, Math, Number, String, Array, Object, Promise, Map, Set, isFinite, parseFloat, console, URL, Response,
+    AbortSignal: { timeout: () => null },
+    Date: class extends Date { static now() { return NOW_S * 1000; } },
+    encodeURIComponent, fetch: fetchImpl,
+    caches: { default: { match: async () => null, put: async () => {} } },
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(body, sandbox);
+  return (qs) => sandbox.__get({
+    request: new Request("https://x/api/price?" + qs), env: {}, waitUntil: () => {},
+  }).then((r) => r.json());
+}
+
+test("price.js passes chunks / chunks_wanted through on a deep range, and only there", async () => {
+  const get = loadPriceEndpoint(windowedYahoo({ failK: [3, 4], single: dailyResult(NOW_S - YEAR_S, NOW_S) }).impl);
+  const deep = await get("symbol=GLBE&range=25y&interval=1d");
+  assert.equal(deep.ok, true);
+  assert.equal(deep.chunks, 3);
+  assert.equal(deep.chunks_wanted, 5);
+  const shallow = await get("symbol=GLBE&range=1y&interval=1d");
+  assert.equal(shallow.ok, true);
+  assert.ok(!("chunks" in shallow) && !("chunks_wanted" in shallow), "a single-range answer has no windows");
+});
+
+// ═══════════ one range -> years table, EODHD leg included (audit #72) ═════════
+// fetchEodhdCandles kept a YEARS table that predated the deep ranges, so with an
+// EODHD key installed a 25y request fell to `|| 1` and returned ONE year, and
+// history() returned it before the Yahoo stitch was ever tried.
+suite("the EODHD leg honours the deep ranges (audit #72)");
+
+function eodhd() {
+  const calls = [];
+  const impl = (url) => {
+    calls.push(url);
+    const from = Date.parse(new URL(url).searchParams.get("from") + "T00:00:00Z") / 1000;
+    const rows = [];
+    for (let t = Math.ceil(from / 86400) * 86400; t <= NOW_S; t += 86400) {
+      const dow = new Date(t * 1000).getUTCDay();
+      if (dow === 0 || dow === 6) continue;
+      const d = new Date(t * 1000).toISOString().slice(0, 10);
+      rows.push({ date: d, open: 10, high: 11, low: 9, close: 10, adjusted_close: 10, volume: 5 });
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(rows) });
+  };
+  return { impl, calls };
+}
+const fromYears = (url) => (NOW_S - Date.parse(new URL(url).searchParams.get("from") + "T00:00:00Z") / 1000) / (365.25 * 86400);
+
+test("a 25y request with an EODHD key comes back 25 years deep, not one", async () => {
+  const e = eodhd();
+  const h = await load({ fetchImpl: e.impl }).history("AAPL", null, { range: "25y", interval: "1d", eodKey: "k" });
+  assert.equal(h.source, "eodhd");
+  assert.ok(h.candles.length > 6000, `25 years of sessions expected, got ${h.candles.length}`);
+  assert.ok(Math.abs(fromYears(e.calls[0]) - 25) < 0.01);
+});
+
+test("every range the endpoint whitelists asks EODHD for its own depth", async () => {
+  const RANGES = [...PRICE.match(/const RANGES = new Set\(\[([\s\S]*?)\]\)/)[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(RANGES.includes("25y") && RANGES.includes("max"), "could not read price.js's whitelist");
+  const a = load({ fetchImpl: () => Promise.reject(new Error("unused")) });
+  for (const r of RANGES) {
+    const e = eodhd();
+    await load({ fetchImpl: e.impl }).fetchEodhdCandles("AAPL", { range: r, key: "k" });
+    const want = r === "max" ? 30 : (a.RANGE_YEARS[r] || 1);
+    if (/y$|^max$/.test(r)) assert.ok(r in a.RANGE_YEARS, `${r} is whitelisted but has no depth in RANGE_YEARS`);
+    assert.ok(Math.abs(fromYears(e.calls[0]) - want) < 0.01, `${r}: EODHD asked for ${fromYears(e.calls[0]).toFixed(2)}y, want ${want}y`);
+  }
+});
+
+test("price.js reads the shared table rather than keeping its own copy", () => {
+  assert.match(PRICE, /import \{[^}]*\bRANGE_YEARS\b[^}]*\} from "\.\/_prices\.js"/);
+  assert.ok(!/const RANGE_YEARS\s*=/.test(PRICE), "a second RANGE_YEARS table is how the EODHD leg drifted");
+  assert.ok(!/const YEARS\s*=/.test(PRICES), "fetchEodhdCandles grew its own table back");
 });
 
 // ═══════════════════════════ the reverse switch ══════════════════════════════

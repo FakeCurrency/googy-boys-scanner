@@ -10,7 +10,7 @@
  *   GET /api/price?symbol=BTC-USD&range=1y&interval=1d&type=crypto
  *     → { ok, price, symbol, source, delayed, bars, candles:[{time,open,high,low,close,volume}] }
  */
-import { livePrice, history, intervalDegraded } from "./_prices.js";
+import { livePrice, history, intervalDegraded, RANGE_YEARS } from "./_prices.js";
 import { overPxLimit, cacheMatch, cachePut } from "./_relay_guard.js";
 
 // Successful responses edge-cache for ~20s via the Cache API (cachePut below —
@@ -58,7 +58,8 @@ export const onRequestGet = async (ctx) => {
    * It clamps rather than rejects, so an old cached page still asking for 25y
    * gets 5y of real bars instead of an error. */
   const capYears = Math.floor(Number((ctx.env && ctx.env.CHART_MAX_YEARS) || 0));
-  const RANGE_YEARS = { "1y": 1, "2y": 2, "5y": 5, "10y": 10, "15y": 15, "20y": 20, "25y": 25, "max": 25 };
+  // RANGE_YEARS is _prices.js's table, shared with the EODHD leg and the
+  // stitcher since audit #72 (2026-10-08), so the three cannot drift again.
   let effRange = range;
   if (capYears > 0 && range && RANGE_YEARS[range] > capYears) {
     // step down to the deepest whitelisted range still inside the cap
@@ -131,6 +132,13 @@ export const onRequestGet = async (ctx) => {
       // these (adjusted) bars and the raw prices a broker quotes is fresh and
       // visible; the chart surfaces this as a chip
       recent_div: hist.recent_div || null,
+      // DEEP ranges only (audit #38, 2026-10-08): how many of the stitcher's
+      // 5-year windows made it into a CONTIGUOUS run from today, out of how
+      // many were asked for. chunks < chunks_wanted = a shorter series than
+      // requested (a young listing, or the older windows failed this time);
+      // never a hole -- the stitcher refuses to join across one. Absent on
+      // every other path.
+      ...(hist.chunks_wanted ? { chunks: hist.chunks, chunks_wanted: hist.chunks_wanted } : {}),
     }));
   } catch (err) {
     return json(502, { ok: false, error: String(err && err.message ? err.message : err), symbol });
