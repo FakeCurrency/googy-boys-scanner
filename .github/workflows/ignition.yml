@@ -1,8 +1,10 @@
 name: Ignition scan
 
 # IGNITION -- the coil -> ignition lens. REPORT-ONLY: it publishes
-# public/data/ignition/<market>.json (+ <market>_backtest.json on demand) and
-# touches nothing else, ever. v1 screens crypto only (config.IGNITION_MARKETS).
+# public/data/ignition/<market>.json with its chart sidecar <market>_charts.json
+# (+ <market>_backtest.json on demand) and touches nothing else, ever. This
+# file screens crypto; the stock markets in config.IGNITION_MARKETS have their
+# own structural twins, ignition_asx.yml and ignition_nasdaq.yml.
 #
 # WHEN IT RUNS, AND WHY THAT OFTEN. The signal is judged on COMPLETED daily
 # bars, and a crypto bar completes at 00:00 UTC, so the run that matters is
@@ -184,6 +186,7 @@ jobs:
           # `git add`: `git add a b` is ALL-OR-NOTHING and the repo bans it.
           PATHS=""
           if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/crypto.json"; fi
+          if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/crypto_charts.json"; fi
           if [ "${BT_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/crypto_backtest.json"; fi
           for p in $PATHS; do
             if [ -e "$p" ]; then

@@ -202,22 +202,24 @@ def test_bad_values_become_none(tmp_path, shared_cache, yahoo):
 # the screen: where the hook sits, and what it must not do
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def asx_download(monkeypatch, shared_cache):
-    """screen_market('asx') down the DOWNLOAD path with every edge stubbed.
+def _stub_download(monkeypatch, market):
+    """screen_market(market) down the DOWNLOAD path with every edge stubbed.
     `events` proves the Yahoo ask comes before the frame download; the
-    previous file is whatever the test puts in `prev` (read path recorded)."""
-    syd = ZoneInfo(config.MARKETS["asx"].timezone)
-    end = dt.datetime.now(UTC).astimezone(syd).date() - dt.timedelta(days=1)
+    previous file is whatever the test puts in `prev` (read path recorded).
+    Symbols carry the market's own Yahoo suffix (".AX"; none on NASDAQ)."""
+    sfx = config.MARKETS[market].suffix
+    local = ZoneInfo(config.MARKETS[market].timezone)
+    end = dt.datetime.now(UTC).astimezone(local).date() - dt.timedelta(days=1)
     df = _ig.redate(_asx.asx_frame().iloc[:_asx.T + 3], end)
-    state = {"events": [], "read": [], "yahoo": Yahoo({"ZZZ.AX": 1.2e8}),
-             "prev": [{"symbol": "ZZZ", "yf": "ZZZ.AX", "mcap": 9e7, "mcap_asof": "2026-01-02"}]}
-    rows = [{"symbol": "ZZZ", "name": "Zed Ltd", "yf": "ZZZ.AX"},
-            {"symbol": "NEW", "name": "New Ltd", "yf": "NEW.AX"}]
+    state = {"events": [], "read": [], "yahoo": Yahoo({"ZZZ" + sfx: 1.2e8}),
+             "prev": [{"symbol": "ZZZ", "yf": "ZZZ" + sfx, "mcap": 9e7,
+                       "mcap_asof": "2026-01-02"}]}
+    rows = [{"symbol": "ZZZ", "name": "Zed Ltd", "yf": "ZZZ" + sfx},
+            {"symbol": "NEW", "name": "New Ltd", "yf": "NEW" + sfx}]
 
     def download(market, period, limit):
         state["events"].append("download")
-        return rows, {"ZZZ.AX": df.copy(), "NEW.AX": df.copy()}, {}
+        return rows, {"ZZZ" + sfx: df.copy(), "NEW" + sfx: df.copy()}, {}
 
     def yahoo(yf_syms):
         state["events"].append("yahoo")
@@ -230,6 +232,16 @@ def asx_download(monkeypatch, shared_cache):
     monkeypatch.setattr(mcap, "_previous_rows",
                         lambda path: state["read"].append(path) or state["prev"])
     return state
+
+
+@pytest.fixture
+def asx_download(monkeypatch, shared_cache):
+    return _stub_download(monkeypatch, "asx")
+
+
+@pytest.fixture
+def nasdaq_download(monkeypatch, shared_cache):
+    return _stub_download(monkeypatch, "nasdaq")
 
 
 def test_the_download_path_asks_yahoo_before_the_download(asx_download):
@@ -294,13 +306,52 @@ def test_the_lens_touches_only_the_read_only_surface_of_marketcaps():
     assert used == {"load_cache", "fetch_caps", "MAX_AGE_DAYS"}, used
 
 
-def test_a_full_asx_cli_run_writes_exactly_its_one_path(asx_download, monkeypatch):
+def test_a_full_asx_cli_run_writes_exactly_its_two_paths(asx_download, monkeypatch):
+    """The screen file, then its chart sidecar; published[0] is the screen."""
     published = []
     monkeypatch.setattr(output, "write_json", lambda path, payload, **kw:
                         published.append((pathlib.Path(path), payload)) or pathlib.Path(path))
     raw = _fences.record_writes(monkeypatch)
     assert RUN.main(["--market", "asx"]) == 0
     assert [p.relative_to(ROOT).as_posix() for p, _ in published] \
-        == ["public/data/ignition/asx.json"]
+        == ["public/data/ignition/asx.json", "public/data/ignition/asx_charts.json"]
+    assert published[1][1]["generated_at"] == published[0][1]["generated_at"]
     assert raw == []
     assert published[0][1]["summary"]["mcap"] == {"rows": 2, "have": 1}
+
+
+# ---------------------------------------------------------------------------
+# NASDAQ (2026-10-08): the same stock-market path, its own keys and file
+# ---------------------------------------------------------------------------
+
+def test_nasdaq_reads_only_its_own_cache_keys(tmp_path, shared_cache, yahoo):
+    shared_cache.update({
+        "nasdaq:CCH": {"mcap": 9.9e9, "ts": _day(1) + "T08:00:00+00:00"},
+        "asx:CCH": {"mcap": 1.0e8, "ts": _day(0) + "T08:00:00+00:00"},   # another market
+        "asx:ONLY": {"mcap": 2.0e8, "ts": _day(0) + "T08:00:00+00:00"},
+    })
+    caps = mcap.known("nasdaq", _prev(tmp_path, {"symbol": "CCH", "yf": "CCH"}), NOW)
+    assert caps == {"CCH": {"mcap": 9.9e9, "asof": _day(1), "src": "cache"}}
+    assert yahoo.calls == []
+
+
+def test_the_nasdaq_download_path_asks_yahoo_first_with_bare_symbols(nasdaq_download):
+    pl = RUN.screen_market("nasdaq")
+    assert nasdaq_download["events"] == ["yahoo", "download"]
+    assert nasdaq_download["yahoo"].calls == [["ZZZ"]]               # no suffix on NASDAQ
+    assert nasdaq_download["read"] == [RUN.out_path("nasdaq")]       # its OWN file
+    by = {r["symbol"]: [r[k] for k in KEYS] for r in pl["results"]}
+    assert by == {"ZZZ": [1.2e8, dt.datetime.now(UTC).date().isoformat(), "yahoo"],
+                  "NEW": [None, None, None]}
+
+
+def test_a_full_nasdaq_cli_run_writes_exactly_its_two_paths(nasdaq_download, monkeypatch):
+    published = []
+    monkeypatch.setattr(output, "write_json", lambda path, payload, **kw:
+                        published.append((pathlib.Path(path), payload)) or pathlib.Path(path))
+    raw = _fences.record_writes(monkeypatch)
+    assert RUN.main(["--market", "nasdaq"]) == 0
+    assert [p.relative_to(ROOT).as_posix() for p, _ in published] \
+        == ["public/data/ignition/nasdaq.json", "public/data/ignition/nasdaq_charts.json"]
+    assert published[0][1]["market"] == published[1][1]["market"] == "nasdaq"
+    assert raw == []

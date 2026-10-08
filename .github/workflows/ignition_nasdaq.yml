@@ -1,48 +1,47 @@
-name: Ignition scan (ASX)
+name: Ignition scan (NASDAQ)
 
-# IGNITION on the ASX (2026-09-29, owner: "Yes and factor in the converting
-# windows from calendar days to trading days"). REPORT-ONLY: it publishes
-# public/data/ignition/asx.json with its chart sidecar asx_charts.json
-# (+ asx_backtest.json on demand) and touches nothing else, ever. The crypto
-# screen is ignition.yml; this file is its structural twin
-# (tests/test_ignition_asx.py holds every step to ignition.yml's shape),
-# differing only where the ASX calendar differs. ignition_nasdaq.yml is the
-# NASDAQ twin.
+# IGNITION on NASDAQ (2026-10-08, owner: "build both"). REPORT-ONLY: it
+# publishes public/data/ignition/nasdaq.json with its chart sidecar
+# nasdaq_charts.json (+ nasdaq_backtest.json on demand) and touches nothing
+# else, ever. The crypto screen is ignition.yml; this file is its structural
+# twin, exactly as ignition_asx.yml is (tests/test_ignition_asx.py holds both
+# twins to ignition.yml's shape), differing only where the NASDAQ calendar
+# differs. The universe is NASDAQ Global Select (~1,430 names).
 #
-# WHEN IT RUNS. The rule reads COMPLETED daily bars, and an ASX bar completes
-# at the close (the auction prints ~16:10-16:12 Sydney), so the run that
-# matters is the first one after it: 06:24 UTC = 16:24 AEST / 17:24 AEDT, the
-# same instant-after-close in both DST regimes (the offset only moves it LATER
-# in summer). Backed up at 07:24 and 09:24 UTC; the gate skips a backstop once
-# a file generated after today's close is on the branch
-# (scripts/ignition_due.py asx). That close is 16:40 Sydney (2026-10-06):
-# Yahoo shows the auction ~20 min late, so under AEST the 16:24 run can read
-# pre-auction bars and the 07:24 backstop re-screens. The three intraday runs publish breaks on the
-# still-forming bar as "provisional" (never counted) and move RUNNING marks.
-# Weekdays only: there is no ASX bar on a weekend.
+# WHEN IT RUNS. The rule reads COMPLETED daily bars, and a NASDAQ bar is final
+# at 16:30 New York (the 16:00 closing cross + the delayed feed;
+# config.IGNITION_BAR_FINAL), so the run that matters is the first one after
+# it: 21:34 UTC = 17:34 EDT / 16:34 EST, past it in both DST regimes. Backed
+# up at 22:34 and 23:34 UTC (still the close's own UTC weekday, so 1-5 covers
+# Friday); the gate skips a backstop once a file generated after today's
+# 16:30 is on the branch (scripts/ignition_due.py nasdaq). The three intraday
+# runs (14:54 / 16:54 / 18:54 UTC: 10:54-14:54 EDT, 09:54-13:54 EST, all in
+# session and an hour clear of the close) publish breaks on the still-forming
+# bar as "provisional" (never counted) and move RUNNING marks. Weekdays only:
+# there is no NASDAQ bar on a weekend.
 #
 # THE BACKTEST is not scheduled. A manual dispatch with `backtest: true`, or a
-# push touching .github/ignition-asx-kick, runs the screen AND the replay and
-# commits both files back to the PUSHED branch. ~2,000 listings (a name that
-# never clears the turnover floors is dropped before the replay), full Yahoo
-# history: bounded at 300 minutes rather than the crypto job's 60.
+# push touching .github/ignition-nasdaq-kick, runs the screen AND the replay
+# and commits both files back to the PUSHED branch. ~1,430 listings (a name
+# that never clears the turnover floors is dropped before the replay), full
+# Yahoo history: bounded at 300 minutes rather than the crypto job's 60.
 #
-# ITS OWN CONCURRENCY GROUP, separate from the crypto twin's: the two write
-# different files, so they never need to exclude each other, and neither
+# ITS OWN CONCURRENCY GROUP, separate from both twins': the three write
+# different files, so they never need to exclude each other, and none
 # belongs in the `scan` mutex (it writes no book).
 
 on:
   schedule:
-    - cron: "24 6 * * 1-5"     # just past the ASX close in both DST regimes
-    - cron: "24 7,9 * * 1-5"   # scheduler-drop backstops for the run above
-    - cron: "54 0,2,4 * * 1-5" # intraday: provisional breaks + RUNNING marks
+    - cron: "34 21 * * 1-5"       # just past the 16:30 New York bar-final in both DST regimes
+    - cron: "34 22,23 * * 1-5"    # scheduler-drop backstops for the run above
+    - cron: "54 14,16,18 * * 1-5" # intraday: provisional breaks + RUNNING marks
   push:
     paths:
-      - ".github/ignition-asx-kick"
+      - ".github/ignition-nasdaq-kick"
   workflow_dispatch:
     inputs:
       backtest:
-        description: "Also replay the lens and publish asx_backtest.json"
+        description: "Also replay the lens and publish nasdaq_backtest.json"
         default: false
         required: false
         type: boolean
@@ -56,42 +55,44 @@ permissions:
   contents: write
 
 concurrency:
-  # One queue PER BRANCH, and not crypto's queue (see ignition.yml for why a
-  # shared group would let one cron evict another branch's queued kick).
-  group: ignition-asx-${{ github.ref_name }}
+  # One queue PER BRANCH, and not crypto's or the ASX's queue (see
+  # ignition.yml for why a shared group would let one cron evict another
+  # branch's queued kick).
+  group: ignition-nasdaq-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   ignition:
     runs-on: ubuntu-latest
-    # ~2,000 listings; the 5y screen download is several minutes, the
-    # full-history replay plus its 243-cell grid is the long part (~1.7s a
-    # name over 20y of bars, measured on synthetic frames). Bounded:
-    # an unbounded job holds this group for six hours.
+    # ~1,430 listings; the 5y screen download is several minutes, the
+    # full-history replay plus its 243-cell grid is the long part (the ASX's
+    # ~1,500-name replay took ~33 minutes; NASDAQ histories run longer).
+    # Bounded: an unbounded job holds this group for six hours.
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
 
-      # THE BACKSTOP GATE. The 07:24 / 09:24 crons exist only to cover a
-      # dropped 06:24; once a file generated AFTER today's ASX close is on the
-      # branch they stop here, before `pip install`, and commit nothing. The
-      # close is read in Sydney time by scripts/ignition_due.py (stdlib
-      # only, the runner's own python3), so DST cannot move it. Read from a
-      # FRESH fetch: a run that sat pending was created at an older SHA.
-      # Every other trigger is due. Unreadable anything FAILS OPEN.
+      # THE BACKSTOP GATE. The 22:34 / 23:34 crons exist only to cover a
+      # dropped 21:34; once a file generated AFTER today's NASDAQ bar went
+      # final is on the branch they stop here, before `pip install`, and
+      # commit nothing. The close is read in New York time by
+      # scripts/ignition_due.py (stdlib only, the runner's own python3), so
+      # DST cannot move it. Read from a FRESH fetch: a run that sat pending
+      # was created at an older SHA. Every other trigger is due. Unreadable
+      # anything FAILS OPEN.
       - name: Is this run due
         id: due
         env:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -u
-          if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "24 7,9 * * 1-5" ]; then
+          if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "34 22,23 * * 1-5" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           git fetch --quiet --depth=1 origin "${GITHUB_REF_NAME}" || true
-          STAMP=$(git show "origin/${GITHUB_REF_NAME}:public/data/ignition/asx.json" 2>/dev/null \
+          STAMP=$(git show "origin/${GITHUB_REF_NAME}:public/data/ignition/nasdaq.json" 2>/dev/null \
             | python3 -c "import json,sys; print(json.load(sys.stdin).get('generated_at',''))" 2>/dev/null || true)
-          VERDICT=$(python3 scripts/ignition_due.py asx "${STAMP}" || echo "run=true")
+          VERDICT=$(python3 scripts/ignition_due.py nasdaq "${STAMP}" || echo "run=true")
           case "$VERDICT" in
             *run=false*) echo "run=false" >> "$GITHUB_OUTPUT" ;;
             *) echo "run=true" >> "$GITHUB_OUTPUT" ;;
@@ -115,16 +116,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/frames
-          key: ignition-asx-frames-${{ github.run_id }}
+          key: ignition-nasdaq-frames-${{ github.run_id }}
           restore-keys: |
-            ignition-asx-frames-
+            ignition-nasdaq-frames-
 
-      - name: Screen ASX
+      - name: Screen NASDAQ
         id: scan
         if: steps.due.outputs.run == 'true'
         run: |
           set -u
-          ARGS="--market asx"
+          ARGS="--market nasdaq"
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           # THREE OUTCOMES, AND THE EXIT CODE IS WHAT TELLS THEM APART.
           #   0  screened and published
@@ -139,21 +140,21 @@ jobs:
             0) echo "published=true" >> "$GITHUB_OUTPUT" ;;
             3)
               echo "published=false" >> "$GITHUB_OUTPUT"
-              echo "::warning::ignition asx published nothing - the download came back empty and the previous file was kept. A REPORTED DECISION, not a fault."
+              echo "::warning::ignition nasdaq published nothing - the download came back empty and the previous file was kept. A REPORTED DECISION, not a fault."
               ;;
             *)
-              echo "::error::ignition asx screen failed with exit $RC"
+              echo "::error::ignition nasdaq screen failed with exit $RC"
               exit "$RC"
               ;;
           esac
 
-      - name: Backtest ASX
+      - name: Backtest NASDAQ
         id: bt
         if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true)
         run: |
           set -u
           set -o pipefail
-          ARGS="--market asx --backtest"
+          ARGS="--market nasdaq --backtest"
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           RC=0
           python -m scanner.ignition.run $ARGS | tee -a "$GITHUB_STEP_SUMMARY" || RC=$?
@@ -186,9 +187,9 @@ jobs:
           # ONLY the files this run reported publishing -- and one pathspec per
           # `git add`: `git add a b` is ALL-OR-NOTHING and the repo bans it.
           PATHS=""
-          if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/asx.json"; fi
-          if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/asx_charts.json"; fi
-          if [ "${BT_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/asx_backtest.json"; fi
+          if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/nasdaq.json"; fi
+          if [ "${SCAN_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/nasdaq_charts.json"; fi
+          if [ "${BT_PUBLISHED:-}" = "true" ]; then PATHS="$PATHS public/data/ignition/nasdaq_backtest.json"; fi
           for p in $PATHS; do
             if [ -e "$p" ]; then
               git add -- "$p"
@@ -214,7 +215,7 @@ jobs:
             echo "No data changes to commit."
             exit 0
           fi
-          git commit -m "data: ignition asx $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git commit -m "data: ignition nasdaq $(date -u +'%Y-%m-%d %H:%M UTC')"
           SHA=$(git rev-parse HEAD)
 
           # Rebase-and-retry. Only ever REPLACE a path THIS run generated, or a
@@ -230,7 +231,7 @@ jobs:
             done
             git add -A
             if git diff --cached --quiet; then echo "Nothing new vs $BRANCH."; exit 0; fi
-            git commit -m "data: ignition asx $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "data: ignition nasdaq $(date -u +'%Y-%m-%d %H:%M UTC')"
             if git push origin "HEAD:$BRANCH"; then
               echo "Pushed to $BRANCH."
               exit 0

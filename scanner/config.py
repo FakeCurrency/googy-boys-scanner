@@ -206,7 +206,7 @@ EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
 # NOT TRADED, NOT CONFLUENCE: nothing under scanner/broker/ can import the
 # lens and the lens cannot import the bot (tests/test_ignition_fences.py).
 IGNITION_RULESET_VERSION = "1.0.0"
-IGNITION_MARKETS = ("crypto", "asx")   # ASX added 2026-09-29 (owner: "Yes"), see below.
+IGNITION_MARKETS = ("crypto", "asx", "nasdaq")   # ASX 2026-09-29, NASDAQ 2026-10-08; see below.
 IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window + warm-up
 IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
 IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
@@ -235,8 +235,20 @@ IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, n
 #     through to the scalar).
 # DTR (Dateline Resources, +100% 28-29 Sep 2026) prompted the port and is a
 # DESIGN CASE: never scored, reported as a case study (see below).
-IGNITION_BARS_PER_YEAR = {"crypto": 365, "asx": 252}
-IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET = {"asx": 5}   # Easter: Thu bar read on Tue
+#
+# NASDAQ (2026-10-08, owner: "build both"). PRE-REGISTERED BEFORE THE FIRST
+# NASDAQ REPLAY RAN, by the ASX port's recipe: the same rule, ~252 trading
+# days a year, so every calendar window is the ASX's exactly (504/252/756/
+# 252/276/124/126). Universe = NASDAQ Global Select (~1,430 names, the VIVEK
+# scan's own list); widening to the smaller tiers is the owner's call. No
+# chart informed this port, so it has NO design case. EVERY non-crypto market
+# has an explicit key in every per-market dict below: a missing key would
+# silently fall through to crypto's values (QNT as a design case, 0.30 cost,
+# a 3-day age, a BTC regime), so tests/test_ignition_fences.py fails on one.
+IGNITION_BARS_PER_YEAR = {"crypto": 365, "asx": 252, "nasdaq": 252}
+IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET = {"asx": 5,    # Easter: Thu bar read on Tue
+                                        "nasdaq": 5}  # Good Friday / a Monday holiday peak
+                                        # at 4; 5 also clears a 2-day closure (Sandy, 2012)
 
 # THE COIL -- all four at once, on one bar. Measured on the bar, causally.
 IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
@@ -268,11 +280,16 @@ IGNITION_RVOL_LEN = 20
 IGNITION_RVOL_MIN = 3.0          # trigger-day volume >= 3x its prior 20-day average
 IGNITION_EXT_SMA = 9
 IGNITION_MAX_EXT = 0.60          # not already >60% over the 9-SMA (Specs' latecomer cap)
-IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000, "asx": 100_000}      # 20d avg $ before the trigger
-IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000, "asx": 300_000}   # trigger-day $ (= crypto floor)
+IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000, "asx": 100_000,      # 20d avg $ before the trigger
+                              "nasdaq": 1_000_000}
+IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000, "asx": 300_000,   # trigger-day $ (= crypto floor)
+                                 "nasdaq": 3_000_000}
 # ASX (A$, Close x Volume): a crypto-sized $1M/$3M would drop nearly every
 # small cap, which is where these bases live. A$100k is config.MARKETS["asx"]
 # .liquidity_min (the VIVEK scan's own floor); the trigger day asks 3x that.
+# NASDAQ (US$, Close x Volume): the same recipe -- US$1M is MARKETS["nasdaq"]
+# .liquidity_min, the trigger day 3x it. Equal to crypto's numbers by
+# coincidence; explicit because the fallback would make the trigger $1M.
 IGNITION_REARM_BARS = 20         # one trigger per move, not one per day of it
 
 # THE PLAN -- what the page shows and the backtest trades.
@@ -286,20 +303,35 @@ IGNITION_FRESH_BARS = 2          # IGNITING = fired on one of the last 2 complet
 IGNITION_KEEP_BARS = 20          # then RUNNING / CLOSED stays visible for 20 bars --
                                  # a setup that works must not vanish (QNT's A row
                                  # left the deck the day it started to run)
+# THE PAGE'S MINI CHARTS -- display only; nothing the rule or the replay reads.
+IGNITION_CHART_BARS = 120        # completed bars per row (+ the forming bar): a CLOSED trigger up
+                                 # to KEEP_BARS-1 back + its 60-bar base + ~40 bars before it. A
+                                 # chart convention in BARS like the base, never rescaled by
+                                 # engine.bars(): ~6 months on the ASX, ~4 on crypto
+IGNITION_CHART_SMAS = IGNITION_RIBBON_SMAS   # the lines drawn (the coil reads RIBBON_SMAS);
+                                 # chart.html draws 10/20/43/200 -- one line to match it
+IGNITION_CHART_SIG_FIGS = 5      # significant figures on chart prices, never fixed decimals
+                                 # (round(4.08e-06, 4) == 0.0); lossless for ASX ticks under $1,000
+IGNITION_CHART_VOL_SCALE = 100   # volume as 0..100 of the window's loudest bar. 100, not 99/999:
+                                 # the engine's retyped-number fence exempts exactly 100, and
+                                 # engine.py already uses a bare 99
 
 # THE BACKTEST (scanner/ignition/backtest.py, dispatched via ignition.yml)
 IGNITION_BT_PERIOD = "max"       # every bar Yahoo has; the regimes are the point
 IGNITION_BT_COST_PCT = 0.30      # round trip: 2 x 0.10% taker + slippage on thin alts
-IGNITION_BT_COST_PCT_BY_MARKET = {"asx": 1.0}   # ASX small caps: retail brokerage
+IGNITION_BT_COST_PCT_BY_MARKET = {"asx": 1.0,   # ASX small caps: retail brokerage
                                  # both ways + the spread -- under 10c a tick is 0.1c,
                                  # ~1% of a 9c price (DTR), so 0.30 would flatter it
+                                  "nasdaq": 0.5}  # a flat fee each way (~0.05-0.2% of a
+                                 # ~US$2,500 ticket) + the spread: a 1c tick is 0.1-0.5%
+                                 # of the $2-10 prices beaten-down names trade at
 IGNITION_BT_MAX_HOLD = 180       # bars; open trades past it exit at the close
 IGNITION_BT_SPLIT_DATE = "2024-01-01"   # in-sample before, out-of-sample from
 IGNITION_BT_RANDOM_DRAWS = 5     # random-timing baseline: draws per real trade
 IGNITION_BT_SEED = 20260928      # every random choice is seeded -> reproducible
 IGNITION_BT_BOOTSTRAP = 2000     # resamples for the expectancy confidence band
 IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
-IGNITION_BT_CASES_BY_MARKET = {"asx": ("DTR",)}
+IGNITION_BT_CASES_BY_MARKET = {"asx": ("DTR",), "nasdaq": ()}
 # THE DESIGN CASES ARE NEVER SCORED. QNT's Sep-2026 chart is the one piece of
 # market data that informed the thresholds above (the ribbon, drawdown and
 # coil-lookback comments quote it), so its triggers from this date on are
@@ -311,13 +343,20 @@ IGNITION_BT_DESIGN_CASES = {"QNT": "2026-09-01"}
 # DTR's Sep-2026 move is why the ASX port exists (no threshold was drawn from
 # it, but "the lens would have caught the stock that prompted it" is exactly
 # the claim that must not score itself), so it is excluded the same way.
-IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}}
+# NASDAQ has none: no chart informed its port, so every trigger is scored.
+IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}, "nasdaq": {}}
 IGNITION_BT_REGISTERED_DATE = "2026-09-28"   # triggers from here are the FORWARD bucket
-IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29"}
+IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29", "nasdaq": "2026-10-08"}
 # The regime line (CONTEXT, never a filter): the market's own benchmark vs its
-# 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200,
-# fetched beside the universe and never screened.
-IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200")}
+# 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200 and
+# NASDAQ's the NASDAQ Composite (every NASDAQ-listed common stock, history to
+# 1971 -- ^NDX is 100 mega-caps, where coils do not live), each fetched beside
+# the universe and never screened.
+IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200"),
+                         "nasdaq": ("^IXIC", "NASDAQ Composite")}
+# The time a session market's daily bar is FINAL for the backstop gate
+# (scripts/ignition_due.py) is IGNITION_BAR_FINAL, defined after
+# MORNING_PLAYS_SLOT_GATE because it derives from it.
 IGNITION_BT_RANDOM_WINDOW = 182  # random-timing draws: within +/- this many bars of the
                                  # real trigger -- same coin, same SEASON, random day.
                                  # Crypto regime is the biggest driver of a long's R;
@@ -1570,6 +1609,20 @@ MORNING_PLAYS_SLOTS = {
 MORNING_PLAYS_SLOT_GATE = {
     "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 40},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
+}
+# IGNITION's backstop gate (scripts/ignition_due.py, stdlib only): {market:
+# (timezone, hour, minute)} at which that market's daily bar is FINAL in the
+# free feed, read in the market's own calendar so DST cannot move it. A
+# backstop cron is skipped once the file on the branch was generated at/after
+# the latest weekday instance of it. DERIVED, never retyped: the ASX is the
+# digest's 16:40 Sydney close (Yahoo shows the auction ~20 min late);
+# NASDAQ is ALERT_RETURNS_BAR_FINAL's 16:30 New York (closing cross + the
+# delayed feed). Crypto has no entry: its bar is final at 00:00 UTC and
+# ignition.yml gates on the UTC date instead.
+IGNITION_BAR_FINAL = {
+    "asx": (MORNING_PLAYS_SLOT_GATE["asx"]["tz"], MORNING_PLAYS_SLOT_GATE["asx"]["hour"],
+            MORNING_PLAYS_SLOT_GATE["asx"]["minute"]),
+    "nasdaq": (MARKETS["nasdaq"].timezone,) + tuple(ALERT_RETURNS_BAR_FINAL["nasdaq"]),
 }
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.

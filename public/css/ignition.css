@@ -6,7 +6,10 @@
    rgba() lines are only the fallback for a browser without color-mix.
 
    Tabular figures go ONLY on the COILED table's numeric cells: on prose the
-   sans's tabular hyphen detaches a minus from its number ("- 0.74R"). */
+   sans's tabular hyphen detaches a minus from its number ("- 0.74R").
+
+   The mini-chart colours are tokens matched to chart.html's candle and SMA
+   slots (chart.js's literals noted beside each rule). */
 
 .fpill.ig, .ig-panel {
   --ig: var(--ema-21, #ffd23f);
@@ -227,11 +230,49 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
 /* Phone-only inline labels; on a desk the column heads say it. */
 .ig-ml, .ig-tbl .ig-cap-k { display: none; }
 
+/* ── mini charts: an inline SVG per row (js/ignition.js chartSVG) ─────────
+   The SVG stretches to its box (preserveAspectRatio none): bodies and volume
+   bars are vertical strokes that scale with the bar slot, wicks / SMAs /
+   levels are 1px hairlines that never scale. A dashed empty box holds the
+   slot while the bars load, or for a row the sidecar has no bars for. */
+.ig-chart {
+  display: block; box-sizing: border-box; overflow: hidden; border-radius: 8px;
+  background: var(--bg); content-visibility: auto;
+}
+.ig-chart.is-wait, .ig-chart.is-none { background: none; border: 1px dashed var(--border-soft); }
+a.ig-chart:hover { box-shadow: inset 0 0 0 1px var(--ig-line); }
+.ig-ch { display: block; width: 100%; height: 100%; }
+.ig-ch path { fill: none; }
+.ig-ch .ch-wu, .ig-ch .ch-bu, .ig-ch .ch-vu { stroke: var(--green); }      /* chart.js #2fd07f */
+.ig-ch .ch-wd, .ig-ch .ch-bd, .ig-ch .ch-vd { stroke: var(--red); }        /* chart.js #ff5b5b */
+.ig-ch .ch-vu, .ig-ch .ch-vd { stroke-opacity: 0.5; }
+.ig-ch .ch-form { opacity: 0.45; }
+.ig-ch .ch-s0 { stroke: var(--text-2); }                                   /* 9:   chart.js slot #e5e9f0 */
+.ig-ch .ch-s1 { stroke: var(--ig); }                                       /* 26:  #ffd23f (= --ema-21) */
+.ig-ch .ch-s2 { stroke: var(--purple); }                                   /* 43:  #a78bfa slot */
+.ig-ch .ch-s3 { stroke: var(--orange); stroke-width: 1.5px; }              /* 200: #ffb020 slot */
+.ig-ch .ch-base { fill: var(--ig-soft); }
+.ig-ch .ch-trig { fill: var(--ig); fill-opacity: 0.16; }
+.ig-ch .ch-exit { fill: var(--muted); fill-opacity: 0.16; }
+.ig-ch .ch-lvl { stroke: var(--teal); stroke-dasharray: 4 3; }
+.ig-ch .ch-stop { stroke: var(--red); stroke-dasharray: 3 3; }
+.ig-card .ig-chart { height: 160px; margin-top: 10px; }
+.ig-tbl.has-chart { max-width: 1360px; }
+.ig-tbl th.c-chart { text-align: left; }
+.ig-tbl td.c-chart { width: 240px; padding: 6px 4px 6px 8px; }
+.ig-tbl .ig-chart { width: 240px; height: 72px; }
+.ig-tbl tr.is-dim .ig-chart { opacity: 0.6; }
+/* 1001-1199px: the two quiet columns go to the row tooltip (it says both). */
+@media (min-width: 1001px) and (max-width: 1199px) {
+  .ig-tbl.has-chart .c-dd, .ig-tbl.has-chart .c-q { display: none; }
+}
+
 /* ── phones and tablets: the table folds into two-line rows ──────────────
    The 8-column table needs ~1000px. Line 1: symbol, name, cap. Line 2:
-   price → breakout, distance, bars coiled. The two quiet columns stay on the
-   desk: at 390px they would push a third line. The heads are hidden
-   visually, kept for screen readers. */
+   price → breakout, distance, bars coiled. With charts, the chart sits
+   between them at full width. The two quiet columns stay on the desk: at
+   390px they would push a third line. The heads are hidden visually, kept
+   for screen readers. */
 @media (max-width: 1000px) {
   .ig-panel { padding: 12px 10px; }
   .ig-card { padding: 11px 12px; }
@@ -249,8 +290,11 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
   .ig-tbl td.c-sym { order: 1; flex: 1 1 0; width: auto; max-width: none; min-width: 0; padding: 0; }
   .ig-tbl td.c-cap { order: 2; font-size: 13.5px; }
   .ig-tbl tr::after { content: ""; order: 3; flex-basis: 100%; height: 0; }
-  .ig-tbl td:not(.c-sym):not(.c-cap) { order: 4; }
+  .ig-tbl td:not(.c-sym):not(.c-cap):not(.c-chart) { order: 4; }
   .ig-tbl td.c-dd, .ig-tbl td.c-q { display: none; }
+  .ig-tbl.has-chart tr::after { content: none; }
+  .ig-tbl td.c-chart { order: 3; flex: 0 0 100%; width: auto; padding: 2px 0; }
+  .ig-tbl .ig-chart { width: 100%; height: 96px; }
   .ig-tbl td.c-brk, .ig-tbl td.c-gap { margin-left: -4px; }
   /* Sub-$0.001 prices are long: step the figures down to keep two lines. */
   .ig-tbl tr.is-longpx td:not(.c-sym):not(.c-cap) { font-size: 11.5px; letter-spacing: -0.01em; }

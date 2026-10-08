@@ -109,8 +109,9 @@ class Prepared:
 def _btc_regime(frames: Dict[str, pd.DataFrame],
                 market: str = "crypto") -> Optional[pd.Series]:
     """1.0 where the market's regime index (BTC for crypto, the ASX 200 for
-    the ASX -- config.IGNITION_REGIME_INDEX) closed above its 200-SMA, 0.0
-    below, NaN unknown. The name is historical: crypto came first."""
+    the ASX, the NASDAQ Composite for NASDAQ -- config.IGNITION_REGIME_INDEX)
+    closed above its 200-SMA, 0.0 below, NaN unknown. The name is historical:
+    crypto came first."""
     idx = (config.IGNITION_REGIME_INDEX.get(market) or ("BTC-USD", "BTC"))[0]
     btc = frames.get(idx)
     if btc is None:
@@ -129,8 +130,8 @@ def prepare(frames: Dict[str, pd.DataFrame], market: str,
     """Clean every frame, drop the too-short, compute base features once.
 
     `regime` is the market's regime-index frame when it is NOT one of the
-    screened frames (the ASX 200 is fetched beside the universe, never
-    replayed); crypto's BTC is read out of `frames` itself.
+    screened frames (the ASX 200 / NASDAQ Composite is fetched beside the
+    universe, never replayed); crypto's BTC is read out of `frames` itself.
 
     A symbol whose turnover NEVER clears both floors on the same bar is
     dropped here: no rule variant, baseline or grid cell can trade it (none
@@ -690,6 +691,15 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
     }
 
 
+# Why the replay's round-trip cost is what it is, per stock market (the cost
+# caveat's parenthesis; config.IGNITION_BT_COST_PCT_BY_MARKET holds the number).
+COST_WHY = {
+    "asx": "brokerage both ways + the spread; under 10c an ASX tick is ~1% of the price",
+    "nasdaq": "a flat broker fee both ways + the spread; a 1c tick is 0.1-0.5% of a "
+              "$2-10 price",
+}
+
+
 def _caveats(market: str, data_note: Optional[str], design: dict) -> List[str]:
     """The published honesty block. Crypto's wording is unchanged."""
     if market == "crypto":
@@ -707,7 +717,14 @@ def _caveats(market: str, data_note: Optional[str], design: dict) -> List[str]:
             "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample.",
         ]
     label = getattr(config.MARKETS.get(market), "label", market.upper())
-    names = ", ".join(sorted(design)) or "none"
+    rule = ("The rule is crypto's, thresholds unchanged; calendar windows are converted to "
+            "%d trading days a year. " % int(config.IGNITION_BARS_PER_YEAR.get(market, 365)))
+    if design:
+        rule += ("%s prompted the port, so it is excluded from every scored number and "
+                 "reported only as a case study." % ", ".join(sorted(design)))
+    else:
+        rule += ("No design case: no %s chart informed the port, so every trigger is "
+                 "scored." % label)
     return [
         "SURVIVORSHIP: today's %s listings only. A company that broke out and was later "
         "delisted, suspended or taken over is missing, along with every failed breakout it "
@@ -715,15 +732,12 @@ def _caveats(market: str, data_note: Optional[str], design: dict) -> List[str]:
         "zero." % label,
         "Realised trades only: open and pending trades are shown as marks beside the "
         "numbers, never inside them.",
-        "The rule is crypto's, thresholds unchanged; calendar windows are converted to "
-        "%d trading days a year. %s prompted the port, so it is excluded from every scored "
-        "number and reported only as a case study."
-        % (int(config.IGNITION_BARS_PER_YEAR.get(market, 365)), names),
+        rule,
         "Per-trade R, not a portfolio: overlapping trades are each counted at 1R, with no "
         "capital constraint or position cap.",
-        "Costs %.1f%% round trip (brokerage both ways + the spread; under 10c an ASX tick "
-        "is ~1%% of the price). Thin names can move more than that on the open."
-        % float(E.mkt(market, "IGNITION_BT_COST_PCT")),
+        "Costs %.1f%% round trip (%s). Thin names can move more than that on the open."
+        % (float(E.mkt(market, "IGNITION_BT_COST_PCT")),
+           COST_WHY.get(market, "brokerage both ways + the spread")),
         data_note or "Yahoo daily bars (split-adjusted); free history is thinner and "
         "noisier than a paid provider's.",
         "The sensitivity grid is a robustness read, not a menu: its best cell is in-sample.",

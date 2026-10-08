@@ -55,9 +55,14 @@ STEPS = JOB["steps"]
 # PyYAML parses a bare `on:` key as the boolean True.
 ON = DOC.get("on") or DOC[True]
 
+# CANON[1] stays the backtest; the chart sidecar (published with every
+# screen, same stamp) is appended as CANON[2].
 CANON = ("public/data/ignition/crypto.json",
-         "public/data/ignition/crypto_backtest.json")
+         "public/data/ignition/crypto_backtest.json",
+         "public/data/ignition/crypto_charts.json")
 KICK = ".github/ignition-kick"
+# The stock-market structural twins of this file (tests/test_ignition_asx.py).
+TWINS = ("ignition_asx.yml", "ignition_nasdaq.yml")
 PRIMARY_CRON = "14 0 * * *"
 BACKSTOP_CRON = "14 1,2 * * *"   # the scheduler-drop backstop the gate recognises
 GATE_OK = "steps.due.outputs.run == 'true'"
@@ -194,14 +199,16 @@ def test_it_has_its_own_concurrency_group_and_is_not_in_the_scan_mutex():
     assert "scan" not in group, group
     assert DOC["concurrency"]["cancel-in-progress"] is False, (
         "cancelling in progress would kill a run mid-push")
+    seen = {group}
     for path in sorted(WFDIR.glob("*.yml")):
         if path.name == WF.name:
             continue
-        if path.name == "ignition_asx.yml":
-            # The ASX twin has its OWN group, never this one (pinned in
-            # tests/test_ignition_asx.py).
+        if path.name in TWINS:
+            # Each stock-market twin has its OWN group, never this one and
+            # never another twin's (shapes pinned in tests/test_ignition_asx.py).
             other = yaml.safe_load(path.read_text(encoding="utf-8"))
-            assert str(other["concurrency"]["group"]) != group
+            assert str(other["concurrency"]["group"]) not in seen, path.name
+            seen.add(str(other["concurrency"]["group"]))
             continue
         other = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         groups = [str((other.get("concurrency") or {}).get("group", ""))]
@@ -736,7 +743,8 @@ def test_the_must_change_gate_runs_ONCE_PER_REPORTED_PATH():
     """assert_staged.sh is ANY-OF. One call naming both files would pass on
     the screen alone while a backtest the kick REPORTED publishing was lost
     (audit, 2026-09-28) -- so the gate is called once per path, inside the
-    loop over PATHS, and PATHS only ever holds the two canonical files."""
+    loop over PATHS, and PATHS only ever holds the three canonical files
+    (screen, chart sidecar, replay)."""
     code = _code(COMMIT["run"])
     calls = [ln for ln in code if "scripts/assert_staged.sh" in ln]
     assert len(calls) == 1, calls
@@ -763,12 +771,12 @@ def test_a_reported_backtest_that_is_missing_fails_even_though_the_screen_staged
     call went green here and pushed a commit without the backtest."""
     url, _, work = _commit_world(sh, "main")
     before = _tip(sh, url, "main")
-    (work / CANON[0]).write_text(_crypto("2031-03-04T00:14:31+00:00"), encoding="utf-8")
+    _screen(work, "2031-03-04T00:14:31+00:00")
     (work / CANON[1]).unlink()
     rc, _, log = _run_block(sh, COMMIT["run"], work,
                             _publish({"SCAN_PUBLISHED": "true", "BT_PUBLISHED": "true"}, "main"))
     assert rc != 0, log
-    assert "reported published but is not present" in log
+    assert f"{CANON[1]} was reported published but is not present" in log
     assert _tip(sh, url, "main") == before
 
 
@@ -776,11 +784,39 @@ def test_a_reported_backtest_that_is_missing_fails_even_though_the_screen_staged
 def test_a_reported_backtest_that_staged_nothing_fails_even_though_the_screen_staged(sh):
     url, _, work = _commit_world(sh, "main")
     before = _tip(sh, url, "main")
-    (work / CANON[0]).write_text(_crypto("2031-03-04T00:14:31+00:00"), encoding="utf-8")
+    _screen(work, "2031-03-04T00:14:31+00:00")
     rc, _, log = _run_block(sh, COMMIT["run"], work,
                             _publish({"SCAN_PUBLISHED": "true", "BT_PUBLISHED": "true"}, "main"))
     assert rc != 0, log
-    assert "ASSERT-STAGED FAILED" in log
+    assert f"ASSERT-STAGED FAILED (ignition {CANON[1]})" in log
+    assert _tip(sh, url, "main") == before
+
+
+@needs_shell
+def test_a_screen_whose_chart_sidecar_is_missing_fails_and_pushes_nothing(sh):
+    """The sidecar rides every screen publish. Reported published but gone
+    from disk is lost output, exactly like a missing screen file."""
+    url, _, work = _commit_world(sh, "main")
+    before = _tip(sh, url, "main")
+    _screen(work, "2031-03-04T00:14:31+00:00")
+    (work / CANON[2]).unlink()
+    rc, _, log = _run_block(sh, COMMIT["run"], work, _publish({"SCAN_PUBLISHED": "true"}, "main"))
+    assert rc != 0, log
+    assert f"{CANON[2]} was reported published but is not present" in log
+    assert _tip(sh, url, "main") == before
+
+
+@needs_shell
+def test_a_screen_whose_chart_sidecar_staged_nothing_fails_and_pushes_nothing(sh):
+    """Every sidecar carries its screen's generated_at, so a screen that
+    published while the sidecar stayed byte-identical means the sidecar was
+    lost -- the page would sit on placeholders for a stamp that never lands."""
+    url, _, work = _commit_world(sh, "main")
+    before = _tip(sh, url, "main")
+    (work / CANON[0]).write_text(_crypto("2031-03-04T00:14:31+00:00"), encoding="utf-8")
+    rc, _, log = _run_block(sh, COMMIT["run"], work, _publish({"SCAN_PUBLISHED": "true"}, "main"))
+    assert rc != 0, log
+    assert f"ASSERT-STAGED FAILED (ignition {CANON[2]})" in log
     assert _tip(sh, url, "main") == before
 
 
@@ -813,9 +849,10 @@ ASSERT_STAGED = (ROOT / "scripts" / "assert_staged.sh").read_text(encoding="utf-
 
 def _commit_world(sh, branch: str):
     """origin: main + (optionally) a feature branch, both carrying v0 of the
-    two lens files, the real assert_staged.sh and an unrelated file."""
+    three lens files, the real assert_staged.sh and an unrelated file."""
     base = {CANON[0]: _crypto("2031-03-01T00:14:00+00:00"),
             CANON[1]: '{"generated_at": "2031-02-01T00:00:00+00:00"}',
+            CANON[2]: _charts("2031-03-01T00:14:00+00:00"),
             "scripts/assert_staged.sh": ASSERT_STAGED,
             "other.txt": "v0\n"}
     branches = {"main": base}
@@ -824,6 +861,17 @@ def _commit_world(sh, branch: str):
     url, seed = _origin(sh, branches)
     work = _checkout(sh, url, branch)
     return url, seed, work
+
+
+def _charts(stamp: str) -> str:
+    return '{"generated_at": "%s", "rows": {}}' % stamp
+
+
+def _screen(work: pathlib.Path, stamp: str) -> None:
+    """What a real screen publish leaves on disk: the screen file AND its
+    chart sidecar, both carrying the run's stamp."""
+    (work / CANON[0]).write_text(_crypto(stamp), encoding="utf-8")
+    (work / CANON[2]).write_text(_charts(stamp), encoding="utf-8")
 
 
 def _tip(sh, url: str, branch: str) -> str:
@@ -859,7 +907,7 @@ def test_a_kick_on_a_feature_branch_writes_that_branch_and_leaves_main_untouched
     main_before = _tip(sh, url, "main")
     new_screen = _crypto("2031-03-04T09:00:00+00:00")
     new_bt = '{"generated_at": "2031-03-04T09:05:00+00:00", "n": 7}'
-    (work / CANON[0]).write_text(new_screen, encoding="utf-8")
+    _screen(work, "2031-03-04T09:00:00+00:00")
     (work / CANON[1]).write_text(new_bt, encoding="utf-8")
     rc, _, log = _run_block(sh, COMMIT["run"], work,
                             _publish({"SCAN_PUBLISHED": "true", "BT_PUBLISHED": "true"}, branch))
@@ -867,6 +915,7 @@ def test_a_kick_on_a_feature_branch_writes_that_branch_and_leaves_main_untouched
     assert _tip(sh, url, "main") == main_before, "a feature-branch kick moved main"
     assert _show(sh, url, branch, CANON[0]) == new_screen
     assert _show(sh, url, branch, CANON[1]) == new_bt
+    assert _show(sh, url, branch, CANON[2]) == _charts("2031-03-04T09:00:00+00:00")
     assert _changed_in_tip(sh, url, branch) == set(CANON)
 
 
@@ -874,14 +923,15 @@ def test_a_kick_on_a_feature_branch_writes_that_branch_and_leaves_main_untouched
 def test_only_the_files_the_run_reported_publishing_are_committed(sh):
     """The screen published, the backtest did not run. A backtest file lying
     modified in the working tree (a dry run, a leftover) must NOT ride along:
-    the commit carries exactly the reported publish."""
+    the commit carries exactly the reported publish -- the screen and its
+    chart sidecar."""
     url, _, work = _commit_world(sh, "main")
     bt_before = _show(sh, url, "main", CANON[1])
-    (work / CANON[0]).write_text(_crypto("2031-03-04T00:14:31+00:00"), encoding="utf-8")
+    _screen(work, "2031-03-04T00:14:31+00:00")
     (work / CANON[1]).write_text('{"stray": true}', encoding="utf-8")
     rc, _, log = _run_block(sh, COMMIT["run"], work, _publish({"SCAN_PUBLISHED": "true"}, "main"))
     assert rc == 0, log
-    assert _changed_in_tip(sh, url, "main") == {CANON[0]}
+    assert _changed_in_tip(sh, url, "main") == {CANON[0], CANON[2]}
     assert _show(sh, url, "main", CANON[1]) == bt_before
 
 
@@ -896,10 +946,11 @@ def test_a_siblings_newer_commit_survives_the_rebase_and_retry(sh):
                   "a sibling landed")
     _git(sh, seed, "push", "-q", url, "main")
     ours = _crypto("2031-03-04T00:14:31+00:00")
-    (work / CANON[0]).write_text(ours, encoding="utf-8")
+    _screen(work, "2031-03-04T00:14:31+00:00")
     rc, _, log = _run_block(sh, COMMIT["run"], work, _publish({"SCAN_PUBLISHED": "true"}, "main"))
     assert rc == 0, log
     assert _show(sh, url, "main", CANON[0]) == ours
+    assert _show(sh, url, "main", CANON[2]) == _charts("2031-03-04T00:14:31+00:00")
     assert _show(sh, url, "main", "other.txt") == "sibling\n"
     assert _show(sh, url, "main", CANON[1]) == '{"sibling": 1}'
 
@@ -945,23 +996,26 @@ def test_there_is_DELIBERATELY_no_watchdog_entry():
     assert "ignition.yml" not in config.WATCHDOG_RUNS
     cfg = (ROOT / "scanner" / "config.py").read_text(encoding="utf-8")
     assert '"ignition.yml"' not in cfg
+    for twin in TWINS:          # the same decision for the stock-market twins
+        assert twin not in config.WATCHDOG_RUNS and '"%s"' % twin not in cfg
     wd = (ROOT / "scanner" / "watchdog.py").read_text(encoding="utf-8")
     assert "ignition" not in wd.lower()
 
 
 def test_no_other_workflow_learned_about_the_lens():
-    """Removability, checked at the workflow layer: exactly two workflows may
-    name the lens's module, data, workflow file, kick file, cache namespace
-    or config prefix -- this one and its ASX twin, ignition_asx.yml
-    (2026-09-29; tests/test_ignition_asx.py holds it to this file's shape).
-    (A `node test/ignition.test.js` step in test.yml names none of those and
+    """Removability, checked at the workflow layer: exactly three workflows
+    may name the lens's module, data, workflow file, kick file, cache
+    namespace, gate script or config prefix -- this one and its stock-market
+    twins, ignition_asx.yml (2026-09-29) and ignition_nasdaq.yml (2026-10-08;
+    tests/test_ignition_asx.py holds both to this file's shape). (A
+    `node test/ignition.test.js` step in test.yml names none of those and
     stays allowed -- the JS suite has to be registered there or it never
     runs.)"""
     pattern = re.compile(r"scanner[./]ignition|data/ignition|ignition\.yml|"
                          r"ignition-kick|ignition-frames|IGNITION_|ignition_asx|"
-                         r"ignition-asx")
+                         r"ignition-asx|ignition_nasdaq|ignition-nasdaq|ignition_due")
     others = [p.name for p in sorted(WFDIR.glob("*.yml"))
-              if p.name not in (WF.name, "ignition_asx.yml")
+              if p.name not in (WF.name, *TWINS)
               and pattern.search(p.read_text(encoding="utf-8"))]
     assert others == [], others
 

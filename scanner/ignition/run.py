@@ -1,10 +1,12 @@
 """CLI: python -m scanner.ignition.run --market crypto [--backtest] [--dry-run]
 
-Screens one market and publishes ONE file, `public/data/ignition/<market>.json`;
-with --backtest it replays the market and publishes
-`public/data/ignition/<market>_backtest.json` instead.
+Screens one market and publishes the screen file
+`public/data/ignition/<market>.json` plus its chart sidecar
+`public/data/ignition/<market>_charts.json` (thumbs.py: the page's mini
+charts, display only); with --backtest it replays the market and publishes
+only `public/data/ignition/<market>_backtest.json`.
 
-THE WRITE-SET IS THE FENCE. This module writes those two paths and nothing
+THE WRITE-SET IS THE FENCE. This module writes those three paths and nothing
 else; `tests/test_ignition_fences.py` reads it to prove that -- it may not name
 another lens's artefact, the bot book, the alert history or the funnel ledger.
 Market caps (mcap.py) only READ the shared cap cache and this lens's own file.
@@ -37,7 +39,7 @@ from scanner import universe as suniverse
 
 from . import backtest as bt
 from . import engine as E
-from . import mcap
+from . import mcap, thumbs
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "public" / "data" / "ignition"
@@ -50,6 +52,10 @@ def out_path(market: str) -> pathlib.Path:
 
 def backtest_path(market: str) -> pathlib.Path:
     return OUT_DIR / f"{market}_backtest.json"
+
+
+def charts_path(market: str) -> pathlib.Path:
+    return OUT_DIR / f"{market}_charts.json"
 
 
 def bar_is_forming(market: str, last_idx, now: dt.datetime) -> bool:
@@ -110,13 +116,15 @@ def _age_days(frame: pd.DataFrame, market: str, now: dt.datetime) -> Optional[in
 
 def max_age_days(market: str) -> int:
     """Calendar days a frame's last completed bar may lag before it is skipped:
-    3 on 24/7 crypto, 5 on the ASX (a long weekend, Easter's Thu -> Tue)."""
+    3 on 24/7 crypto, 5 on the ASX and NASDAQ (a long weekend, Easter's
+    Thu -> Tue)."""
     return int(E.mkt(market, "IGNITION_MAX_DATA_AGE_DAYS"))
 
 
 def regime_frame(market: str, period: str) -> Optional[pd.DataFrame]:
     """The market's regime index when it is NOT in the universe (the ASX 200
-    for the ASX; crypto's BTC is a screened coin and is read from its frames).
+    for the ASX, the NASDAQ Composite for NASDAQ; crypto's BTC is a screened
+    coin and is read from its frames).
     Best effort: a failed fetch is no regime line, never a failed run."""
     idx = (config.IGNITION_REGIME_INDEX.get(market) or (None, None))[0]
     if not idx or market == "crypto":
@@ -249,10 +257,12 @@ def btc_regime(frames: Dict[str, pd.DataFrame]) -> Optional[dict]:
 def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = None,
                   rows: Optional[List[dict]] = None, limit: int = 0,
                   now: Optional[dt.datetime] = None,
-                  regime: Optional[pd.DataFrame] = None) -> Optional[dict]:
+                  regime: Optional[pd.DataFrame] = None,
+                  charts_out: Optional[dict] = None) -> Optional[dict]:
     """Screen one market -> payload, or None when there is no data at all.
     `frames`/`rows`/`regime` are injectable so everything but the download is
-    testable."""
+    testable. A `charts_out` dict is filled with the chart sidecar's body
+    (thumbs.py) for the same rows and stamp; the payload never carries it."""
     started = time.time()
     cache_stats: dict = {}
     src_report: dict = {}
@@ -365,6 +375,12 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "results": results,
         "errors": errs.sample(),
     }
+    if charts_out is not None:
+        # Display only, built from the frames the rows were screened on.
+        chart_rows, missing = thumbs.build(results, frames, forming)
+        charts_out.update(thumbs.payload(market, payload["generated_at"], chart_rows, missing))
+        print(f"ignition: charts {len(chart_rows)}/{len(results)} rows"
+              + (f"; no chart for {', '.join(missing[:10])}" if missing else ""), flush=True)
     errs.report(screened)   # prints its own line
     return payload
 
@@ -434,9 +450,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     mode = "backtest" if args.backtest else "screen"
     print(f"ignition: {mode} ruleset {config.IGNITION_RULESET_VERSION} "
           f"market={args.market}", flush=True)
+    charts: dict = {}
     try:
         payload = (backtest_market(args.market, limit=args.limit) if args.backtest
-                   else screen_market(args.market, limit=args.limit))
+                   else screen_market(args.market, limit=args.limit, charts_out=charts))
     except Exception as exc:                              # noqa: BLE001
         print(f"::error::ignition: {mode} {args.market} FAILED - "
               f"{type(exc).__name__}: {exc}", flush=True)
@@ -459,9 +476,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.dry_run:
         print("ignition: dry run - nothing written", flush=True)
         return 0
-    path = output.write_json(backtest_path(args.market) if args.backtest
-                             else out_path(args.market), payload, newline=True)
-    print(f"ignition: wrote {path.relative_to(ROOT)}", flush=True)
+    # The screen file first, then its sidecar (compact). A raising write is a
+    # crash: exit 1, the workflow's red arm, and nothing is committed.
+    writes = [(backtest_path(args.market) if args.backtest else out_path(args.market),
+               payload, {})]
+    if charts:
+        writes.append((charts_path(args.market), charts,
+                       {"indent": None, "separators": (",", ":")}))
+    for dest, body, fmt in writes:
+        dest = output.write_json(dest, body, newline=True, **fmt)
+        print(f"ignition: wrote {dest.relative_to(ROOT)}", flush=True)
     return 0
 
 

@@ -345,6 +345,17 @@ _ARTEFACTS = [
     # phasemap.yml, so a formatting drift would land as a whole-file diff.
     ("public/data/asx_spec.json",               {"indent": 1, "ensure_ascii": False}, True),
     ("public/data/nasdaq_spec.json",            {"indent": 1, "ensure_ascii": False}, True),
+    # The IGNITION mini-chart sidecars (scanner/ignition/run.py main(), compact,
+    # trailing newline). Added in the same commit as the publisher; they skip
+    # until the first screen run after the merge writes them.
+    ("public/data/ignition/crypto_charts.json", _COMPACT, True),
+    ("public/data/ignition/asx_charts.json",    _COMPACT, True),
+    ("public/data/ignition/nasdaq_charts.json", _COMPACT, True),
+    # The IGNITION screen files (the same main(), default kwargs, trailing
+    # newline). nasdaq.json skips until the first NASDAQ screen lands.
+    ("public/data/ignition/crypto.json",        {}, True),
+    ("public/data/ignition/asx.json",           {}, True),
+    ("public/data/ignition/nasdaq.json",        {}, True),
 ]
 
 
