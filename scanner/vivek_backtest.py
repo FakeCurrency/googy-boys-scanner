@@ -133,9 +133,14 @@ def _turnover_series(df: pd.DataFrame, market: str) -> np.ndarray:
 def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector: str):
     """Replicate scan.py's row build (grade + gate + plans), minus hysteresis.
 
-    PARITY: the armed/R:R gate reads the best bot-relevant plan (1W > 3D > 1D),
-    exactly like scan.py — a backtest gated differently from the live scan
-    would invalidate the evidence.
+    PARITY: the armed/R:R gate reads the same headline plan scan.py does --
+    ``vivek.headline_plan``, ONE function called by both (audit #14,
+    2026-10-08: the bot's cell plan first, else the first armed plan
+    1W > 3D > 1D) — a backtest gated differently from the live scan would
+    invalidate the evidence. Reports cut before that commit were measured
+    under the older first-armed gate (a non-cell 1W retest's R:R could demote
+    a row whose 3D reclaim / 1D break the cells count); split any comparison
+    there.
 
     TOP100 #57 — the docstring above said that before the code did. The R:R
     survival test ran on ``lv`` (the DAILY plan) where scan.py runs it on
@@ -163,9 +168,7 @@ def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector
         return None, None, None
     plans = vivek.build_plans(df_slice, sig)
     lv = plans.get("1D")
-    gate_tf = next((tf for tf in ("1W", "3D", "1D")
-                    if (plans.get(tf) or {}).get("armed")), None)
-    gate_plan = plans.get(gate_tf) if gate_tf else None
+    gate_tf, gate_plan = vivek.headline_plan(plans)          # audit #14 — scan.py's own
     armed = gate_plan is not None
     hp = gate_plan or lv
     if not hp or float(hp.get("rr") or 0) <= 0:

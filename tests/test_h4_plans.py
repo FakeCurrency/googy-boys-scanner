@@ -80,9 +80,20 @@ def test_the_gate_still_considers_only_weekly_3day_and_daily():
     """gate_tf decides `armed`, which decides the grade, which decides who is on
     the deck. Adding "4H" to this tuple would make a 4H trigger arm a name and
     change the owner's list. It is the single line that must not move."""
-    src = (scan.__file__ and open(scan.__file__, encoding="utf-8").read()) or ""
-    assert 'for tf in ("1W", "3D", "1D")' in src, (
+    # Audit #14 moved the gate into vivek.headline_plan (the bot's cell walk,
+    # then first-armed), called by scan.py and the backtest alike; the pin
+    # follows it there, and asserts the behaviour as well as the tuple.
+    src = open(scan.__file__, encoding="utf-8").read()
+    assert "vivek.headline_plan(plans)" in src, "scan.py stopped gating via headline_plan"
+    vsrc = open(vivek.__file__, encoding="utf-8").read()
+    body = vsrc[vsrc.index("def headline_plan("):]
+    body = body[:body.index("\ndef ")]
+    assert 'for tf in ("1W", "3D", "1D")' in body, (
         "the gate tuple changed — if 4H was added, arming and grades now move")
+    assert "4H" not in config.VIVEK_BOT_ENTRY_CELLS
+    only_4h = {"4H": {"armed": True, "entry_trigger": "reclaim", "entry": 1, "stop": 0.5,
+                      "tp1": 2, "tp2": 3, "tp3": 4}}
+    assert vivek.headline_plan(only_4h) == (None, None), "a 4H trigger armed the row"
 
 
 def test_the_4h_pass_runs_after_scoring_and_grading():

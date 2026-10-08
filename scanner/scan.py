@@ -377,18 +377,21 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             # Per-timeframe plans (Daily + 3-Day + Weekly) from the ONE engine.
             plans = vivek.build_plans(df, sig)
             lv = plans.get("1D")
-            gate_tf = next((tf for tf in ("1W", "3D", "1D")
-                            if (plans.get(tf) or {}).get("armed")), None)
-            gate_plan = plans.get(gate_tf) if gate_tf else None
+            # Audit #14 (2026-10-08): the bot's own cell walk first, then the
+            # first armed plan (vivek.headline_plan; vivek_backtest._build_row
+            # calls the same function). `armed` = any armed 1W/3D/1D plan.
+            gate_tf, gate_plan = vivek.headline_plan(plans)
             armed = gate_plan is not None
             # H1 (2026-07-20): the row HEADLINE is the plan the system actually
-            # trades — the gated timeframe when armed (1W > 3D > 1D, the same
-            # order the bot prefers), falling back to the Daily plan when merely
-            # watching. Before this the row always showed 1D numbers while the
-            # gate/bot read the armed TF: a weekly-armed A+ displayed a different
-            # entry/stop/R:R than the trade actually taken, and a weekly-armed
-            # setup whose 1D plan was missing/bad was dropped from the scan
-            # entirely.
+            # trades — the gated timeframe when armed, falling back to the Daily
+            # plan when merely watching. Before this the row always showed 1D
+            # numbers while the gate/bot read the armed TF: a weekly-armed A+
+            # displayed a different entry/stop/R:R than the trade actually
+            # taken, and a weekly-armed setup whose 1D plan was missing/bad was
+            # dropped from the scan entirely. Since audit #14 "the gated
+            # timeframe" is the bot's cell plan when the row has one (so a 1W
+            # retest no longer headlines -- or demotes through its R:R -- a row
+            # whose 3D reclaim the bot trades), else the first armed plan.
             hp = gate_plan or lv
             if not hp or float(hp.get("rr") or 0) <= 0:
                 funnel["no_plan"] += 1
@@ -591,7 +594,7 @@ def _attach_h4_plans(results: list[dict], market: str, frames: dict | None = Non
 
     DISPLAY ONLY, and the fence is deliberate. This runs AFTER scoring, grading
     and `gate_tf`, and writes into ONE key -- `row["plans"]["4H"]`. `gate_tf`
-    still considers only ("1W", "3D", "1D"), the headline plan `hp` is already
+    (vivek.headline_plan) still considers only ("1W", "3D", "1D"), the headline plan `hp` is already
     chosen, and no score, grade, arming decision or bot input can see this. The
     engine's own "h4" LEVEL inside evaluate() is still the Daily-200 proxy;
     changing THAT moves scores and grades and is the owner's call, not this

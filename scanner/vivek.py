@@ -432,7 +432,7 @@ def build_h4_plan(df_1h: pd.DataFrame, direction: str) -> dict | None:
 
     DISPLAY ONLY, and that fence is the whole design. It is built AFTER scoring
     and grading, attached to the published row's `plans` under "4H", and read by
-    nothing else: `gate_tf` in scan.py still considers only ("1W", "3D", "1D"),
+    nothing else: `gate_tf` (headline_plan) still considers only ("1W", "3D", "1D"),
     so arming, the headline plan, the grade and therefore which names appear are
     all untouched by it. The engine's own "h4" LEVEL in evaluate() is still the
     Daily-200 proxy -- changing THAT changes scores, and it is the owner's call.
@@ -705,6 +705,47 @@ def gate_grade(grade: str | None, sig: dict, rr: float, armed: bool = True) -> t
         grade = "B+"
         notes.append(f"LOW R:R ({rr:.1f})")
     return grade, notes
+
+
+_PLAN_LEVEL_KEYS = ("entry", "stop", "tp1", "tp2", "tp3")
+
+
+def headline_plan(plans: dict, cells: dict | None = None) -> tuple[str | None, dict | None]:
+    """The ARMED plan a row headlines and gates on: (timeframe, plan), or
+    (None, None) when nothing is armed (the row is WATCHING).
+
+    Audit #14 (2026-10-08, owner-approved "Do it all"). Since the 2026-09-21
+    cell ruling the bot trades the first armed, complete plan whose trigger
+    sits in a VIVEK_BOT_ENTRY_CELLS cell (vivek_bot._pick_plan: 1W > 3D > 1D),
+    but the row kept headlining -- and gate_grade kept reading the R:R of --
+    the first ARMED plan whatever its trigger. So a 1W retest the bot never
+    trades showed its entry/stop as "the one the bot trades", and a low-R:R
+    1W retest demoted to B+ a row whose 3D reclaim at 3R the bot would have
+    taken. Order now:
+      1. the bot's own walk -- the first armed plan with a complete level set
+         whose trigger is in its cell (the same table, the same test);
+      2. else the first ARMED plan, 1W > 3D > 1D (the pre-cell order: a
+         retest-only row still headlines its armed plan and the bot skips it
+         as no_cell_plan, exactly as before);
+      3. else (None, None) -- the caller falls back to the Daily plan.
+    `armed` (any armed 1W/3D/1D plan) is unchanged by construction. Only
+    ("1W", "3D", "1D") are ever considered: the 4H plan is display-only and
+    is attached after grading. scan.py and vivek_backtest._build_row both
+    call this, so the live gate and the replay that measures it cannot drift.
+    """
+    plans = plans if isinstance(plans, dict) else {}
+    cells = config.VIVEK_BOT_ENTRY_CELLS if cells is None else cells
+    for tf, triggers in (cells or {}).items():
+        p = plans.get(tf)
+        if (isinstance(p, dict) and p.get("armed")
+                and all(p.get(k) is not None for k in _PLAN_LEVEL_KEYS)
+                and p.get("entry_trigger") in set(triggers or ())):
+            return tf, p
+    for tf in ("1W", "3D", "1D"):
+        p = plans.get(tf)
+        if isinstance(p, dict) and p.get("armed"):
+            return tf, p
+    return None, None
 
 
 def apply_grade_hysteresis(score: int, raw_grade: str | None, prev_grade: str | None,
