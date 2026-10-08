@@ -18,7 +18,9 @@ backtestable server-side (no deep intraday history). Trades also carry the
 LEVEL that produced the signal (level_tf: weekly / 3d / h4-proxy) so the
 report can answer "does the 3D-200 level earn its keep?" separately from
 "which plan timeframe manages best". Honest caveats: today's universe →
-survivorship bias; yfinance data quality; A+ setups are rare so N is modest.
+survivorship bias; yfinance data quality for stocks (crypto is priced through
+``data.fetch`` like the live scan: exchange klines, identity-checked); A+
+setups are rare so N is modest.
 
 CLI:  python -m scanner.vivek_backtest --market all --limit 60 --period 10y
 """
@@ -179,7 +181,8 @@ def _turnover_series(df: pd.DataFrame, market: str) -> np.ndarray:
     no volume data at all keeps passing exactly as it does live.
     """
     if getattr(config.MARKETS[market], "volume_is_usd", False):
-        # Crypto: Yahoo "Volume" is already USD dollar-volume.
+        # Crypto: "Volume" is already USD dollar-volume -- the exchange klines'
+        # quote volume (single venue, audit #36) or Yahoo's for a fallback coin.
         s = df["Volume"]
     else:
         s = df["Close"] * df["Volume"]

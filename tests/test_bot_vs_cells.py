@@ -178,8 +178,9 @@ def test_a_missing_level_is_unknown_not_out():
 
 
 def test_the_grade_comes_from_the_scan_once_A_is_takeable():
-    """plan_trade stamps "A+" on every ticket, so after 2026-09-21 the book's
-    grade cannot be trusted; the scan row's grade_raw can."""
+    """plan_trade stamped "A+" on every ticket from 2026-09-21 until the BOT
+    HONESTY fix, so in that window the book's grade cannot be trusted; the scan
+    row's grade_raw can (after it, see tests/test_audit_1008_G_bot_vs_cells.py)."""
     late = _pos(entry_date=bvc.A_TAKEABLE_SINCE)
     assert bvc.classify(late)["unknown"] == ["grade"]
     c = bvc.classify(late, {"grade_raw": "A"})
