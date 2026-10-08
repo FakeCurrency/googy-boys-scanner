@@ -11,11 +11,14 @@ own closed R and nothing re-derived.
 
 Two readings of a position are taken from outside the book row, because the
 row cannot answer them:
-  * the GRADE it was taken at. plan_trade stamps every ticket "grade": "A+",
-    so since A became takeable (2026-09-21, cycle hc4-1) an A take is recorded
-    as A+. The true grade is the scan row's grade_raw in the commit that first
-    wrote the position (git history; a shallow clone reaches back only so far,
-    and a position older than the history keeps the book's stamp);
+  * the GRADE it was taken at -- for one window only. From A becoming takeable
+    (2026-09-21, cycle hc4-1) until the BOT HONESTY fix (2026-09-24),
+    plan_trade stamped every ticket "grade": "A+", so an A take in that window
+    reads A+. Its true grade is the scan row's grade_raw in the commit that
+    first wrote the position (git history; a shallow clone reaches back only so
+    far, and such a position stays grade-unknown). Since the fix plan_trade
+    records decision["grade"] -- the grade_raw it actually took -- so a row
+    entered from GRADE_TRUE_SINCE on is read off the book (audit #65);
   * the STOP the cap was tested on. The gate reads it off the plan's entry
     (the signal close); the book fills later at a live quote. The plan stop is
     entry - risk (risk is frozen at the fill), measured against signal_entry.
@@ -47,6 +50,12 @@ from scanner.journal_common import atomic_write  # noqa: E402
 MARKETS = ("asx", "nasdaq", "crypto")
 GRADE_RAW_SINCE = "2026-07-20"   # H2: evaluate_setup reads grade_raw from this day
 A_TAKEABLE_SINCE = "2026-09-21"  # A joined A+ (hc4-1); the ticket still stamps "A+"
+# Audit #65: the BOT HONESTY fix (plan_trade records decision["grade"], the
+# grade_raw taken) landed 2026-09-24. A row entered that day may predate it, so
+# the first trusted day is the 25th; the book holds no entries 2026-09-23..27
+# (the $150,000 notional ceiling was full until the SIZING 2 resize), so the
+# boundary moves no real row either way.
+GRADE_TRUE_SINCE = "2026-09-25"
 MECHANICAL = ("stop", "trail", "target", "time", "tp")
 
 
@@ -123,11 +132,14 @@ def classify(r: dict, scan: dict | None = None) -> dict:
         why.append("short")
     if _is_fund_or_reit({"name": r.get("name"), "sector": r.get("sector")}):
         why.append("fund/REIT")
+    entered = r.get("entry_date") or ""
     if scan and scan.get("grade_raw"):
         grade, src = scan["grade_raw"], "scan grade_raw"
-    elif (r.get("entry_date") or "") >= A_TAKEABLE_SINCE:
+    elif entered >= GRADE_TRUE_SINCE:
+        grade, src = r.get("grade"), "book (grade_raw as taken)"
+    elif entered >= A_TAKEABLE_SINCE:
         grade, src = None, "book stamp (A or A+)"
-    elif (r.get("entry_date") or "") >= GRADE_RAW_SINCE:
+    elif entered >= GRADE_RAW_SINCE:
         grade, src = r.get("grade"), "book (A+ only, raw)"
     else:
         grade, src = r.get("grade"), "book (displayed grade)"
