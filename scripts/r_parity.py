@@ -15,6 +15,10 @@ numbers can be read side by side:
   notional  LENS_BACKTEST_NOTIONAL ($1,000 a trade): $ = R x 1000 x risk/entry
   min stop  VIVEK_BOT_MIN_STOP_PCT (1%): a closer stop is not a trade
   universe  today's universe, less the bot's fund/REIT exclusion, for all four
+  bars      data.fetch, the live scan's entry point (audit #36): stocks from
+            Yahoo, crypto from exchange klines with the identity check (a
+            same-ticker stranger is refused, never replayed) -- one set of
+            bars for all four lenses; shard["data_sources"] says which venue
 
 Each lens keeps its OWN signals and management (5.0: armed A+/A plans, one
 slot per timeframe, the 3-target ladder; PhaseMap: A+/A signals, exit at the
@@ -266,20 +270,28 @@ def cmd_shard(a) -> int:
     if a.limit:
         mine = mine[: a.limit]
     by_yf = {u["yf"]: u for u in mine}
+    sources = None
     if a.frames_dir:
         frames = _load_frames(pathlib.Path(a.frames_dir), mine)
     else:
-        from scanner.data import download
-        frames = download(list(by_yf), period=a.period)
-        missed = [yf for yf in by_yf if frames.get(yf) is None or not len(frames[yf])]
+        # Audit #36: the live scan's entry point. Crypto comes from exchange
+        # klines with the identity check (a same-ticker stranger is refused,
+        # never replayed); stocks fall straight through to Yahoo's download().
+        from scanner.data import fetch, identity_kwargs, source_summary
+        ident = identity_kwargs(a.market, mine)
+        frames, rep = fetch(a.market, list(by_yf), period=a.period, **ident)
+        refused = set(rep.get("refused") or [])
+        missed = [yf for yf in by_yf
+                  if (frames.get(yf) is None or not len(frames[yf])) and yf not in refused]
         if missed:                       # one more pass once a throttled source has cooled
             time.sleep(a.retry_wait)
-            frames.update({k: v for k, v in download(missed, period=a.period).items()
-                           if v is not None and len(v)})
+            again, _ = fetch(a.market, missed, period=a.period, **ident)
+            frames.update({k: v for k, v in again.items() if v is not None and len(v)})
+        sources = source_summary(rep)
     frames = {k: v for k, v in frames.items() if v is not None and len(v)}
     doc = {"version": VERSION, "market": a.market, "shard": a.shard, "of": a.of,
            "period": a.period, "universe": len(uni), "shard_symbols": len(mine),
-           "downloaded": len(frames),
+           "downloaded": len(frames), "data_sources": sources,
            "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")}
     doc.update(replay_frames(a.market, frames, by_yf))
     doc["elapsed_s"] = round(time.time() - t0, 1)

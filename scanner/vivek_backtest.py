@@ -694,7 +694,7 @@ def run_market_trades(mk: str, limit: int | None, period: str,
                       exclude_funds: bool = True, long_only: bool = False) -> tuple[list[dict], dict]:
     """Backtest ONE market; return (slim trades, coverage entry)."""
     from .universe import load_universe
-    from .data import download
+    from .data import fetch, identity_kwargs, source_summary
 
     # TOP100 #58 — was `full=False`, the BUNDLED CSV: 99 curated NASDAQ mega-caps
     # against the ~1,430 names the live scan actually walks, and the smaller
@@ -708,7 +708,13 @@ def run_market_trades(mk: str, limit: int | None, period: str,
                    if not _is_fund_or_reit({"name": u.get("name"), "sector": u.get("sector")})]
     uni = _sample(uni_all, limit)
     log.info("[%s] downloading %d of %d tickers (%s) ...", mk, len(uni), len(uni_all), period)
-    frames = download([u["yf"] for u in uni], period=period)
+    # Audit #36: through `data.fetch`, the entry point the live scan and the bot
+    # price through. For crypto that is the exchange klines + the identity check
+    # (a Yahoo `<SYM>-USD` that is a different token is refused, not replayed)
+    # and single-venue volume under the $3M liquidity floor the owner kept; every
+    # other market falls straight through to `download()`, call shape unchanged.
+    frames, src = fetch(mk, [u["yf"] for u in uni], period=period,
+                        **identity_kwargs(mk, uni))
     meta = {u["yf"]: u for u in uni}
     trades: list[dict] = []
     for yf, df in frames.items():
@@ -727,6 +733,8 @@ def run_market_trades(mk: str, limit: int | None, period: str,
         "symbols": len(uni), "universe": len(uni_all),
         "sampled_pct": round(100 * len(uni) / max(len(uni_all), 1), 1),
         "trades": len(trades),
+        # Which venue priced the replay, and what the identity check refused.
+        "data_sources": source_summary(src),
     }
 
 
@@ -1009,7 +1017,10 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
         "trades": trades,
         "caveats": [
             "Survivorship bias — today's universe excludes delisted names.",
-            "yfinance daily data (dividend-adjusted); occasional gaps.",
+            "Stocks: yfinance daily data (dividend-adjusted); crypto: the live "
+            "scan's source through data.fetch -- exchange daily klines, "
+            "identity-checked, single-venue volume (coverage.<market>."
+            "data_sources); occasional gaps.",
             "Intrabar fills assume the stop fills before the target within a bar.",
             "A+ setups are rare, so trade counts (N) can be small and noisy.",
             "4H is not backtested (no deep intraday history).",

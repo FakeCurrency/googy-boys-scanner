@@ -769,7 +769,7 @@ def run_market_parity(mk: str, limit: int | None, period: str,
                       rules: ParityRules | None = None,
                       exclude_symbols: set[str] | None = None) -> tuple[list[dict], dict]:
     from .universe import load_universe
-    from .data import download
+    from .data import fetch, identity_kwargs, source_summary
 
     rules = rules or baseline_rules()
     uni_all = load_universe(mk, full=True)
@@ -785,7 +785,10 @@ def run_market_parity(mk: str, limit: int | None, period: str,
     uni = _sample(uni_all, limit)
     log.info("[parity/%s] %s — downloading %d of %d eligible (%s)",
              rules.name, mk, len(uni), len(uni_all), period)
-    frames = download([u["yf"] for u in uni], period=period)
+    # Audit #36: the live scan's entry point -- crypto from exchange klines with
+    # the identity check, everything else straight through to `download()`.
+    frames, src = fetch(mk, [u["yf"] for u in uni], period=period,
+                        **identity_kwargs(mk, uni))
     meta = {u["yf"]: u for u in uni}
     trades: list[dict] = []
     for yf, df in frames.items():
@@ -810,6 +813,7 @@ def run_market_parity(mk: str, limit: int | None, period: str,
         "sampled_pct": round(100 * len(uni) / max(len(uni_all), 1), 1),
         "trades": len(trades),                        # every takeable signal (#37)
         "chain_trades": len(_symbol_chain(trades)),   # one at a time per symbol
+        "data_sources": source_summary(src),
         "sampled_symbols": [u.get("symbol") for u in uni],
     }
 
@@ -868,7 +872,9 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
         "trades": published,
         "caveats": [
             "Survivorship bias — today's universe excludes delisted names.",
-            "yfinance daily data (dividend-adjusted); occasional gaps.",
+            "Stocks: yfinance daily data (dividend-adjusted); crypto: exchange "
+            "daily klines through data.fetch, identity-checked (coverage.<market>."
+            "data_sources); occasional gaps.",
             "Intrabar fills assume the stop fills before the target within a bar.",
             "Parity mode mirrors live bot lifecycle (A/A+ raw grade/long-only/"
             "weekly+3d level gate/cell walk, one plan per signal/28d pre-TP1 "

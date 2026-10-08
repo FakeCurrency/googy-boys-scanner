@@ -228,9 +228,34 @@ def load_taken(path: Path) -> list[dict]:
     return [t for t in r.get("trades") or [] if t.get("taken")]
 
 
+def _identity(mk: str, yfs: list[str]) -> dict:
+    """fetch() kwargs arming the crypto identity check for these tickers.
+
+    The trades carry no universe row, so today's universe supplies CoinGecko's
+    reference price; a coin no longer in it is fetched unchecked (no reference),
+    exactly as fetch() treats any coin CoinGecko gave no price. Stocks: none."""
+    if mk != "crypto":
+        return {}
+    from scanner.data import identity_kwargs
+    from scanner.universe import load_universe
+    want = set(yfs)
+    try:
+        rows = [u for u in load_universe(mk, full=True) if u.get("yf") in want]
+    except Exception as e:  # noqa: BLE001 -- no reference is a degraded check, not a failure
+        log.warning("crypto universe unavailable (%s) -- identity check off", e)
+        rows = []
+    return identity_kwargs(mk, rows)
+
+
 def download_frames(trades: list[dict], period: str = "5y") -> dict:
-    """(market, symbol) -> df"""
-    from scanner.data import download
+    """(market, symbol) -> df
+
+    Audit #36: through `data.fetch`, the entry point the parity replay that
+    produced these trades uses -- crypto from exchange klines with the identity
+    check, stocks straight through to Yahoo. Parity artefacts generated before
+    that switch were replayed on Yahoo's crypto bars; re-run the parity first
+    or the re-sim walks a different series from the one its trades came off."""
+    from scanner.data import fetch
     by_m = defaultdict(list)
     meta = {}
     for t in trades:
@@ -245,7 +270,7 @@ def download_frames(trades: list[dict], period: str = "5y") -> dict:
     frames = {}
     for mk, yfs in by_m.items():
         log.info("downloading %s: %d tickers", mk, len(yfs))
-        got = download(yfs, period=period)
+        got, _rep = fetch(mk, yfs, period=period, **_identity(mk, yfs))
         for yf, df in got.items():
             key = meta.get(yf)
             if key and df is not None and len(df):
