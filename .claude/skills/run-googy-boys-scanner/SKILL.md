@@ -101,6 +101,7 @@ eval document.querySelector(".market-btn.is-active").textContent
 click .row-wrap .row-expand
 wait .vk-ladder-h .vk-cell
 text .vk-ladder-h .vk-cell
+scroll .vk-ladder-h
 shot crypto-expanded
 CMDS
 ```
@@ -116,13 +117,56 @@ wait .row-wrap
 wait [data-ignition]
 click [data-ignition]
 wait #ignition-panel summary
-text #ignition-panel h3, #ignition-panel summary
+text #ignition-panel .ig-title, #ignition-panel .ig-h
 click #ignition-panel summary
 wait .ig-ch
 count .ig-tbl .ig-ch
-scroll .ig-tbl
+scroll #ignition-panel summary
 shot ignition-asx-coiled
 errors
+CMDS
+```
+
+Ignition selectors: panel title `.ig-title`; section headings `h4.ig-h`
+(IGNITING / RUNNING / CLOSED) and `summary.ig-h` (COILED); a card by state
+`.ig-card.ig-closed` (etc.), its chart `.ig-card.ig-closed .ig-ch`.
+
+The deck's SECOND filter bar (Reclaim / Retest / Break / High conviction /
+Triggered / Longs / Shorts) is `.vkf-chip`, not `#deck-pills`; the High
+conviction chip is `.vkf-highconv` and gains `.is-active` when on:
+
+```bash
+node .claude/skills/run-googy-boys-scanner/driver.js <<'CMDS'
+nav /index.html
+wait .row-wrap
+click .market-btn[data-market="nasdaq"]
+sleep 1500
+wait .vkf-highconv
+click .vkf-highconv
+sleep 600
+eval document.querySelector(".vkf-highconv").className
+count .row-wrap
+shot nasdaq-highconv
+CMDS
+```
+
+The momentum page (rows `article.mo-row`, chart link `a.mo-sym`; it shares
+`.market-btn[data-market]` with the deck, ASX by default). A click that
+NAVIGATES needs a wait on something only the new page has, then a sleep:
+cross-page view transitions fade the two pages together and a shot taken too
+early catches both. Pick a row whose symbol has a committed chart file, or
+the chart page dead-ends locally (see Gotchas):
+
+```bash
+node .claude/skills/run-googy-boys-scanner/driver.js --stub-price <<'CMDS'
+nav /momentum.html
+wait .mo-row
+count .mo-row
+click .rows article.mo-row:nth-of-type(2) a.mo-sym
+wait .tf-btn[data-tf="1D"]
+sleep 1500
+eval location.search
+shot momentum-row2-chart
 CMDS
 ```
 
@@ -147,11 +191,14 @@ CMDS
 
 Another git ref's site and data (e.g. a PR branch the CI bot committed data
 to) without touching your checkout: the driver serves the checkout it lives
-in, so run it from a scratch worktree, on another port. Swap `origin/main`
-for `origin/<branch>`:
+in, so run it from a scratch worktree, on another port. Swap both `main`s for
+`<branch>`. `wait .ig-card .ig-ch` needs at least one IGNITING / RUNNING /
+CLOSED card; on a market with only COILED rows use the COILED steps above.
+The cleanup runs even if the driver FAILs, so the next run's `worktree add`
+does not trip over a leftover:
 
 ```bash
-git worktree add -q --detach /tmp/vivek-ref origin/main && (cd /tmp/vivek-ref && PORT=8790 node .claude/skills/run-googy-boys-scanner/driver.js <<'CMDS'
+git fetch -q origin main && git worktree add -q --detach /tmp/vivek-ref origin/main && (cd /tmp/vivek-ref && PORT=8790 node .claude/skills/run-googy-boys-scanner/driver.js <<'CMDS'
 nav /index.html
 wait .row-wrap
 click .market-btn[data-market="nasdaq"]
@@ -162,7 +209,7 @@ count .ig-ch
 scroll .ig-card
 shot ref-nasdaq-ignition
 CMDS
-) && git worktree remove --force /tmp/vivek-ref && git worktree list
+); git worktree remove --force /tmp/vivek-ref; git worktree prune; git worktree list
 ```
 
 Pages: `index.html` (the deck), `chart.html?s=<SYM>&m=<asx|nasdaq|crypto>`,
@@ -177,9 +224,10 @@ python3 serve.py 8765 public
 
 Open http://localhost:8765/ and Ctrl-C to stop. It sends `no-store`, so a
 reload picks up JS/CSS edits. From an agent, start it in the background,
-poll with `curl -s -o /dev/null http://localhost:8765/index.html`, and stop it with:
+wait until it serves (prints 200), and stop it with the `lsof` line:
 
 ```bash
+(python3 serve.py 8765 public > /tmp/serve.log 2>&1 &); until curl -sf -o /dev/null http://localhost:8765/index.html; do sleep 0.5; done; curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8765/index.html
 lsof -ti:8765 -sTCP:LISTEN | xargs -r kill
 ```
 
@@ -202,6 +250,21 @@ python3 scripts/ignition_due.py nasdaq "2026-10-07T21:40:00+00:00" --now 2026-10
 python3 scripts/ignition_due.py asx "2026-10-08T05:10:00+00:00" --now 2026-10-08T07:30:00+00:00
 ```
 
+The Ignition chart sidecars, without a browser: rows per market, and whether
+each sidecar's `generated_at` matches its screen file (the page draws only
+when it does). Sidecar `rows` are keyed by the screen row's `yf` (`WNR.AX`,
+`XDC-USD`, `PCVX`), not `symbol`:
+
+```bash
+python3 - <<'EOF'
+import json,glob,os
+for cf in sorted(glob.glob("public/data/ignition/*_charts.json")):
+    m=os.path.basename(cf)[:-len("_charts.json")]
+    c=json.load(open(cf)); s=json.load(open(f"public/data/ignition/{m}.json"))
+    print(m, len(c['rows']), c['generated_at'], c['generated_at']==s.get('generated_at'), 'missing', c['missing'], 'chart_errors', c.get('chart_errors'))
+EOF
+```
+
 One Python test file, one JS suite:
 
 ```bash
@@ -217,14 +280,21 @@ read its run and job status. Keep `dry_run=true` unless you mean to publish:
 a non-dry dispatch on `main` commits fresh data to `main`.
 
 ```bash
-gh api -X POST repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/dispatches -f ref=main -F 'inputs[backtest]=false' -F 'inputs[dry_run]=true' && echo dispatched
-run=$(gh api "repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/runs?per_page=1" --jq '.workflow_runs[0].id') && echo run=$run && gh api repos/FakeCurrency/googy-boys-scanner/actions/runs/$run/jobs --jq '.jobs[] | "\(.id) \(.name) \(.status) \(.conclusion)"'
+before=$(gh api "repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/runs?per_page=1&event=workflow_dispatch" --jq '.workflow_runs[0].id'); gh api -X POST repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/dispatches -f ref=main -F 'inputs[backtest]=false' -F 'inputs[dry_run]=true' && until [ "$(gh api "repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/runs?per_page=1&event=workflow_dispatch" --jq '.workflow_runs[0].id')" != "$before" ]; do sleep 5; done; echo "dispatched; the new run exists"
+gh api "repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/runs?per_page=1&event=workflow_dispatch" --jq '.workflow_runs[0] | "\(.id) \(.status) \(.conclusion)"'
+run=$(gh api "repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/runs?per_page=1&event=workflow_dispatch" --jq '.workflow_runs[0].id') && gh api repos/FakeCurrency/googy-boys-scanner/actions/runs/$run/jobs --jq '.jobs[] | "\(.id) \(.name) \(.status) \(.conclusion)"'
 ```
 
-Read the job's log with the GitHub MCP tool `get_job_logs` (`job_id` from
-the line above, `return_content: true`, `tail_lines: 60`); a dry run ends
-with `ignition: charts N/N rows` and `ignition: dry run - nothing written`.
-`ignition_asx.yml` and `ignition_nasdaq.yml` take the same inputs.
+The first line waits until GitHub has created the new run (straight after a
+dispatch the newest run is still the previous one). Re-run the second line
+until it reads `completed success` (it can sit `pending` behind another
+Ignition run first; 3-6 minutes for crypto); the third
+prints the job id. Then read the log with the GitHub MCP tool `get_job_logs`
+(`job_id` from that line,
+`return_content: true`, `tail_lines: 80`): before the post-job cleanup a dry
+run prints `ignition: charts N/N rows`, `ignition: dry run - nothing written`
+and `rc=0` (it still saves the Actions frame cache). `ignition_asx.yml` and
+`ignition_nasdaq.yml` take the same inputs.
 
 ## Test
 
@@ -234,8 +304,9 @@ for f in test/*.test.js; do node "$f" > /dev/null 2>&1 || echo "FAIL $f"; done
 NODE_PATH=/opt/node22/lib/node_modules PW_CHROMIUM=/opt/pw-browsers/chromium node test/e2e/smoke.e2e.js
 ```
 
-The e2e smoke test serves `public/` itself on port 8943 and ends with
-`ALL E2E CHECKS PASSED`.
+The full pytest run takes about 6 minutes (2,400+ tests): give the Bash call
+`timeout: 600000` or run it in the background. The e2e smoke test serves
+`public/` itself on port 8943 and ends with `ALL E2E CHECKS PASSED`.
 
 ## Gotchas
 
@@ -254,15 +325,21 @@ The e2e smoke test serves `public/` itself on port 8943 and ends with
   `hidden` when no position is stale (always, on fixtures), so waiting on it
   times out. Wait on `#jr-pnl` for the journal, `.row-wrap` for the deck.
 - **The deck lists one grade tier at a time** (A+ by default), so
-  `count .row-wrap` is that tier's rows: the ⨂ Multi-lens pill read 25
-  while the filtered A+ list held 8. Do not assert one against the other.
+  `count .row-wrap` is that tier's rows: e.g. the ⨂ Multi-lens pill read 27
+  while the filtered A+ list held 7. The `.vkf-chip` counts (High conviction
+  etc.) also cover every tier. Do not assert a pill count against the list.
 - **Live data moves.** `public/data/` is whatever the last scan committed
   (row counts, "Last scanned: 50m ago"). Use `--fixtures` when you want the
-  same page twice; it reads "75d ago" and 404s the files the fixture set
+  same page twice; the deck reads "75d ago" and it 404s the files the fixture set
   lacks (`*_prices.json`, `phasemap/asx/latest.json`, ...), which is normal.
 - **Use `shot`, not `fullshot`, for anything you need to read.** The deck at
-  390px is ~8,000px tall and the journal ~5,000px at desktop width; a whole-page image is
-  shrunk until the text is a blur. Scroll to what matters, then `shot`.
+  390px is ~8,000px tall, the journal ~5,000px at desktop width and ~48,000px
+  at 390; a whole-page image is shrunk until the text is a blur. Scroll to
+  what matters, then `shot`.
+- **Trust a PNG only if THIS run printed `shot <path>`.** `/tmp/vivek-shots`
+  keeps every earlier session's files, and a run that FAILs before its `shot`
+  leaves the old PNG of the same name in place. Parallel runs need their own
+  `SHOTS=$(mktemp -d)` as well as their own `PORT`.
 - **The first-visit tour scrim swallows clicks.** The driver pre-sets
   `localStorage["gbs:onboarded"]="1"` and blocks the service worker, as the
   e2e tests do. Do the same in any new Playwright script.
@@ -273,7 +350,7 @@ The e2e smoke test serves `public/` itself on port 8943 and ends with
   `generated_at`, the join key). A missing sidecar just means no charts. If
   you hand-build one to look at the page, delete it before committing; a
   committed hand-built file would show charts from the wrong run.
-- **Pushing a branch that carries `.github/ignition-*-kick` runs that kick
+- **Pushing a branch that carries `.github/ignition*-kick` runs that kick
   again** (a force-push after a rebase re-ran the NASDAQ screen + replay), and
   the bot then commits data back to the branch: `git pull --rebase` before
   your next push. The bot's data commits show CI as "action_required"; that
