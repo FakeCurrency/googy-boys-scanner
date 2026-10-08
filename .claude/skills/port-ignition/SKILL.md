@@ -86,8 +86,14 @@ is the owner's decision, not a port step.
 
 ## What to tell the owner
 
-He reads this on his phone. Plain words, no jargon, no file paths in the
-first lines:
+Put this summary in your FINAL reply, not only in a file: a report file
+may not be writable, and the reply is what he reads. He reads it on his
+phone. Plain words, no jargon, no file paths in the first lines. Every
+number in it comes from a run you made: real test counts from the pytest
+and node output, real screened counts from the workflow log. Never leave a
+template placeholder (`<n>`, `TBD`, "~N tests") in the reply, the PR body
+or CLAUDE.md; if a number isn't known yet (the replay hasn't run), say so
+in words.
 
 - What is now live and where to see it ("NYSE now has an Ignition page:
   MORE → IGNITION → NYSE").
@@ -120,6 +126,18 @@ first lines:
 - **Sentinel markets.** Several tests use `"nyse"` as their example of a
   market Ignition does not cover. Porting NYSE means re-pointing them to an
   unused key such as `"zzz"`.
+- **A hand-typed stock list.** When the official list is down, the run
+  should keep the last published file (exit 3), not screen a few hundred
+  large caps typed from memory. Never bundle a made-up fallback list
+  (new-market.md section 1).
+- **Touching the existing markets' flow.** A port adds a market; it does
+  not change how crypto, the ASX or NASDAQ behave. The NYSE trial run
+  re-pointed every market's chart back-link to the new page. Pin the old
+  behaviour with a test whenever you touch shared code.
+- **Cron minute collisions.** The trial run without this skill put NYSE
+  on :44, a minute crypto's workflow already uses. Pick a minute no other
+  Ignition workflow uses (settings.md lists them), so the scheduler load is
+  spread and each market's runs are easy to tell apart.
 - **First-run market caps.** The shared cap cache only holds names VIVEK
   graded A+/A, so a new market's first screen has few or no caps. The
   second run fills them from Yahoo. Say so rather than "fixing" it.

@@ -55,11 +55,27 @@ The code shape (model it on `universe._fetch_nasdaq_listed` and its
 - `_fetch_<m>_listed()` in `scanner/universe.py`. It must live there: the
   lens may only import the modules the fences test allows.
 - An explicit `_CACHE_MIN[<m>]` (the default is 400).
-- A bundled fallback `data_universe/<m>_tickers.csv`. Nothing on GitHub
-  commits the last-good cache for an Ignition-only market, so the CSV is
-  the real fallback.
+- NO bundled `data_universe/<m>_tickers.csv`, and never a list typed from
+  memory. A hand-made list is a few hundred large caps, which is the
+  opposite of where coils live, and it would quietly stand in for the real
+  board. On a list outage `load_universe` falls back to the last-good cache
+  (`data/universe_cache/<m>.json`); with no cache it returns `[]`, and
+  `run.py` exits 3 and keeps the last published file. That is the honest
+  outcome. Nothing commits the cache for an Ignition-only market (scan.yml
+  does that for the VIVEK markets), so if you want it to survive between
+  runs, add `data/universe_cache/<m>.json` to the new workflow's
+  actions/cache `path`. Never commit it from the lens workflow.
+- Filter by the file's own symbology first, and by name words only as a
+  second fence. In `otherlisted.txt` the `NASDAQ Symbol` column marks
+  preferreds `-`, warrants `+`, units `=`, rights `^`, when-issued `#` and
+  called `*`; the ACT column uses `$`, `.WS`, `.U`, `.R`. A common stock
+  is a 1–5 letter root with an optional one-letter class (`BRK.B`). Keep
+  "Common Units" (MLP equity) and ADRs. Test the name fence against real
+  operating companies so it drops no company (the `is_product` lesson in
+  CLAUDE.md: bare "Depositary Shares" is a real company's ADR).
 - Tests: feed a canned list file through the parser, never the network
-  (`tests/conftest.py` refuses venues).
+  (`tests/conftest.py` refuses venues). Cover the outage path too: a failed
+  fetch with no cache gives `[]` and an exit 3, not a stand-in list.
 
 ## 2. The Ignition-only registry (never `config.MARKETS`)
 
@@ -137,9 +153,15 @@ one. Build it the first time; later ports only extend `IGNITION_MARKETS`.
   tab:<a glyph, not ⚡ (SPECS uses it)>}` to `MORE` in `public/js/nav.js`.
   Leave `PRIMARY` and the 5-slot bottom bar alone (test/momentum.test.js
   pins it).
-- chart.js: point `SRC_BACK_MAP.ignition` at `ignition.html?m=<market>`
-  (both uses, including the `fail()` rebuild), and update the pin in
-  test/deep_history.test.js.
+- chart.js back-link: ONLY an Ignition-only market's chart goes back to
+  `ignition.html?m=<market>`. The deck markets (crypto, ASX, NASDAQ) keep
+  going back to the deck exactly as before; changing their flow is not part
+  of a port. Branch on the market (`IGNITION_ONLY` list in chart.js, or
+  "not a deck market"), apply it everywhere `SRC_BACK_MAP` is read (three
+  places on 2026-10-08, including the `fail()` rebuilds; `grep -n
+  SRC_BACK_MAP public/js/chart.js`), and pin both directions in
+  test/deep_history.test.js: a deck market's back-link is unchanged, the
+  new market's goes to the page.
 - Tests:
   - slice the page-mode function in `test/ignition.test.js`;
   - in `tests/test_ignition_frontend.py`, check that ignition.html loads
