@@ -1307,6 +1307,16 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     closed_events: list[dict] = []          # for the end-of-run alert digest
     still_open = []
     max_hold = int(getattr(config, "VIVEK_BOT_MAX_HOLD_DAYS", 0) or 0)
+    # The price each held symbol was MANAGED at this run: after the stale-cache
+    # rule AND _mark_sanity, None when either refused it (audit #11, 2026-10-08).
+    # The loss guard below reads THIS, not price_of: price_of is the raw frame
+    # close, so a split / consolidation / bad print the sanity guard had just
+    # frozen was valued by the guard at exactly the print it rejected -- a 10:1
+    # split on one held name read as a -$13,500 day and halted entries, and a
+    # 1:10 consolidation read as a +$22,500 day and hid a real breach. A frozen
+    # row now reaches the guard unpriced, which values it at its stop (fail
+    # closed, TOP100 #15) -- the promise _mark_sanity's docstring always made.
+    managed_px: dict[str, float | None] = {}
     for pos in book["open"]:
         if pos.get("market") != market:
             still_open.append(pos)
@@ -1344,6 +1354,12 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # challenge budget on a run that could never have managed anything.
         if price is not None:
             price = _mark_sanity(pos, price, market, session_open=is_open)
+        # Two open rows of one symbol (never written by the bot, but a hand-
+        # edited book can hold them): if either was refused, the symbol is
+        # unpriced for the guard -- the fail-closed reading of the pair.
+        sym_key = pos["symbol"]
+        managed_px[sym_key] = (price if managed_px.get(sym_key, price) is not None
+                               else None)
         if price is not None and market == "crypto":
             _stamp_identity(pos, frames.get(yf_map.get(pos["symbol"])), src, anchor_of)
         if is_open and price is not None:
@@ -1376,7 +1392,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # The previous run's ping memory has to be read BEFORE the new guard dict
     # replaces it on the next line, or every scan re-announces the same breach.
     _prev_notified = ((book.get("guard") or {}).get(market) or {}).get("notified") or ""
-    guard = vivek_guard.check(book, market, day, equity, price_of)
+    # managed_px, not price_of (audit #11): a mark _mark_sanity froze is
+    # unpriced here too, so the guard values it at its stop, never at the print.
+    guard = vivek_guard.check(book, market, day, equity, managed_px.get)
     guard["notified"] = _prev_notified          # carried forward, stamped below
     book.setdefault("guard", {})[market] = guard
     if guard["breached"]:
