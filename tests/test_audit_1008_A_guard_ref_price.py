@@ -76,3 +76,18 @@ def test_a_manual_close_before_the_first_scan_is_charged_from_its_last_mark():
     pnl = vg.session_pnl({"open": [], "closed": [t]}, "asx", "2026-10-09",
                          lambda s: None)
     assert pnl["realised_usd"] == pytest.approx((0.70 - 0.765) / 0.1 * 5000.0)
+
+
+def test_restamp_after_a_pre_scan_manual_close_reads_an_untraded_day_as_flat():
+    """End to end through the writer #57 was found in: `vivek_run._restamp`,
+    which close_bot_position / close_bot_batch call before saving. ASX book
+    copy, ~10:30 Sydney on the 9th, nothing stamped for the 9th yet: the
+    saved guard used to carry 0.81 -> 0.765 (the OLDEST of nine marks to the
+    last mark) as the 9th's session. The day has not traded, so it is $0."""
+    from scanner.broker import vivek_run as vr
+    p = _row(symbol="NIC", entry=1.0, risk=0.1, risk_usd=5000.0,
+             entry_date="2026-09-01", day_marks=dict(NIC_MARKS), last_mark=0.765)
+    book = {"open": [p], "closed": [], "guard": {"asx": {"notified": ""}}}
+    vr._restamp(book, "asx", "2026-10-09")
+    assert book["guard"]["asx"]["session_usd"] == pytest.approx(0.0)
+    assert book["guard"]["asx"]["breached"] is False

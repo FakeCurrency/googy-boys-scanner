@@ -45,7 +45,12 @@ so the windows stopped telescoping at every close: a trailed runner giving a
 big move back to its stop read as roughly flat on a crash day, and an old loser
 stopping out re-charged its whole loss to a quiet one. Rows that cannot be
 measured that way (no complete dated exit ledger, no reference) keep the old
-whole-life charge, which errs toward halting.
+whole-life charge. That is the pre-fix number, not a conservative one: it
+over-charges a loser and over-credits a winner. Only legacy rows reach it —
+every closed row in the live books has a complete dated ledger, and every
+position a scan has touched since 2026-07-28 carries `day_marks` (a fill on a
+day's last run closed by hand before the next run carries none, and its whole
+life is that window, bar the entry cost already charged to its fill day).
 
 DIRECTION OF THE CHANGE, STATED PLAINLY: for a book full of older positions this
 makes the daily guard LOOSER (it no longer arrives pre-breached) and the weekly
@@ -69,8 +74,8 @@ _WEEK_DAYS = 7
 
 
 def _unreal_r(pos: dict, price: float) -> float:
-    """WHOLE-LIFE unrealised R of an open position at `price` (0 on bad risk
-    or a missing entry).
+    """WHOLE-LIFE unrealised R of an open position at `price` (0 on a bad,
+    NaN or non-numeric risk, or a missing entry).
 
     This is the number stamped on the book for display (`unreal_r`/`unreal_usd`)
     and `session_pnl`'s `open_total_usd` — "how is this position doing",
@@ -86,7 +91,7 @@ def _unreal_r(pos: dict, price: float) -> float:
     runners' unrealised P&L. The R already BANKED by those partial exits is
     counted separately, so nothing is dropped or double-counted.
     """
-    risk = pos.get("risk") or 0.0
+    risk = _num(pos.get("risk"))
     if risk <= 0:
         return 0.0
     remaining = _remaining(pos)
@@ -334,8 +339,9 @@ def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict
             continue
         # No complete exit ledger (legacy / hand-built rows) or no evidence of
         # what the trade carried into the window: the pre-2026-10-08 path. It
-        # charges the undated part whole-life to the exit day, which errs
-        # toward halting.
+        # charges the undated part whole-life to the exit day — the old
+        # number, which over-charges a loser AND over-credits a winner, so it
+        # is not a conservative choice, only the one with no reference needed.
         total = _num(t.get("realized_r")) * risk_usd
         if t.get("exits"):
             # Subtract the R this trade banked BEFORE the window opened — those

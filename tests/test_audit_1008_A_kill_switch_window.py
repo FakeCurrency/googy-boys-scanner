@@ -119,3 +119,30 @@ def test_a_non_finite_quote_falls_back_to_the_last_mark():
                                 quotes={("S0", "asx"): float("nan")})
     assert j["session"]["session_usd"] == pytest.approx(-60.0)     # (98-100)/10 x $300
     assert j["live_marks"] == 0
+
+
+def test_an_infinite_last_mark_is_not_a_price():
+    """The last_mark fallback is held to the quote's finite-positive test: an
+    infinite mark would read as an infinite gain and mask every real loss in
+    the market, so the switch could never fire for it."""
+    bad = _old(0, "asx", 100.0, last=float("inf"))
+    bad["day_marks"] = {"2026-10-08": 100.0}
+    loser = _old(1, "asx", 100.0, last=80.0, risk_usd=6000.0)
+    loser["day_marks"] = {"2026-10-08": 100.0}
+    j = ks._book_market_journal({"open": [bad, loser], "closed": []}, "asx",
+                                "2026-10-08", quotes={})
+    assert j["session"]["session_usd"] == pytest.approx(-12000.0)   # -2R x $6,000
+    assert ks.check_and_kill(j, dry_run=True, limit_usd=4500.0, brokers=()) is True
+
+
+def test_a_non_numeric_risk_does_not_crash_the_safety_net():
+    """The switch reaches `_unreal_r` through `session_pnl` (its old per-row
+    try/except went with the hand-rolled sum), so a row with a junk `risk`
+    must read 0 there, as `_window_r` already does, rather than raise and take
+    every market's check down with it."""
+    p = _old(0, "asx", 100.0, last=98.0, risk="n/a")
+    p["day_marks"] = {"2026-10-08": 100.0}
+    j = ks._book_market_journal({"open": [p], "closed": []}, "asx", "2026-10-08",
+                                quotes={("S0", "asx"): 97.0})
+    assert j["session"]["session_usd"] == pytest.approx(0.0)
+    assert vg._unreal_r(dict(p, risk=float("nan")), 97.0) == 0.0

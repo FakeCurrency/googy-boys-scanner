@@ -292,8 +292,10 @@ def _book_market_journal(book: dict, market: str, market_day: str,
 
     Prices: a live quote from `quotes` when it passed `_live_marks`'s sanity
     filter (and is a finite positive number — a NaN session would compare
-    False against the limit and FIRE), else the position's `last_mark` (the
-    same fallback `_restamp` uses between scans). With neither it is unpriced
+    False against the limit and FIRE), else the position's `last_mark`, held
+    to the same finite-positive test (the same fallback `_restamp` uses
+    between scans; an infinite mark would read as an infinite gain and mask
+    every real loss in the market). With neither it is unpriced
     and adds nothing measured: vivek_guard's fail-closed worst case is the
     runner's halt rule, not a reason to flatten a broker account.
 
@@ -322,7 +324,7 @@ def _book_market_journal(book: dict, market: str, market_day: str,
             live_n += 1
             continue
         last = vivek_guard._num(p.get("last_mark"))
-        if last > 0:
+        if last > 0 and math.isfinite(last):
             prices[sym] = last
     pnl = vivek_guard.session_pnl(book, market, market_day, prices.get)
     key = _session_day()
