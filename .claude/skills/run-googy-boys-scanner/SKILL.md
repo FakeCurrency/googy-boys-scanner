@@ -1,6 +1,6 @@
 ---
 name: run-googy-boys-scanner
-description: Run, start, drive, test and screenshot the Vivek 5.0 scanner site (googy-boys-scanner) locally - serve public/ with serve.py, click through the deck / chart / journal in headless Chromium with the committed driver, stub the price API so stock charts draw, and run the scan gate, pytest and JS suites directly.
+description: Run, start, drive, test and screenshot the Vivek 5.0 scanner site (googy-boys-scanner) locally - serve public/ with serve.py, click through the deck / chart / journal / Ignition panel in headless Chromium with the committed driver, stub the price API so stock charts draw, view another branch's data from a scratch worktree, run the scan and Ignition gates, pytest and JS suites directly, and dispatch a real (dry-run) scan in CI.
 ---
 
 # Run Vivek 5.0 (googy-boys-scanner)
@@ -11,7 +11,10 @@ you serve `public/` with `serve.py` and drive it with
 `.claude/skills/run-googy-boys-scanner/driver.js`: a Playwright script that
 starts its own server, reads commands from stdin (one per line), and writes
 screenshots to `/tmp/vivek-shots/`. The Python scanner is batch code with no
-UI; you exercise it through its CLIs and tests (see Direct invocation).
+UI and its data sources (Yahoo, exchanges) are unreachable from this
+container: you exercise it through its CLIs and tests (see Direct
+invocation), or run it for real on a GitHub runner (see Run the scanner in
+CI).
 
 All paths are relative to the repo root.
 
@@ -102,6 +105,27 @@ shot crypto-expanded
 CMDS
 ```
 
+The Ignition panel (coil -> breakout lens, every row has a mini chart). On
+the ASX every row is usually COILED, and COILED starts collapsed, so open it
+BEFORE waiting on a chart:
+
+```bash
+node .claude/skills/run-googy-boys-scanner/driver.js <<'CMDS'
+nav /index.html
+wait .row-wrap
+wait [data-ignition]
+click [data-ignition]
+wait #ignition-panel summary
+text #ignition-panel h3, #ignition-panel summary
+click #ignition-panel summary
+wait .ig-ch
+count .ig-tbl .ig-ch
+scroll .ig-tbl
+shot ignition-asx-coiled
+errors
+CMDS
+```
+
 Phone width on fixture data, journal first:
 
 ```bash
@@ -119,6 +143,26 @@ wait .vk-ladder-h .vk-cell
 scroll .vk-ladder-h
 shot deck-390-expanded
 CMDS
+```
+
+Another git ref's site and data (e.g. a PR branch the CI bot committed data
+to) without touching your checkout: the driver serves the checkout it lives
+in, so run it from a scratch worktree, on another port. Swap `origin/main`
+for `origin/<branch>`:
+
+```bash
+git worktree add -q --detach /tmp/vivek-ref origin/main && (cd /tmp/vivek-ref && PORT=8790 node .claude/skills/run-googy-boys-scanner/driver.js <<'CMDS'
+nav /index.html
+wait .row-wrap
+click .market-btn[data-market="nasdaq"]
+wait [data-ignition]
+click [data-ignition]
+wait .ig-card .ig-ch
+count .ig-ch
+scroll .ig-card
+shot ref-nasdaq-ignition
+CMDS
+) && git worktree remove --force /tmp/vivek-ref && git worktree list
 ```
 
 Pages: `index.html` (the deck), `chart.html?s=<SYM>&m=<asx|nasdaq|crypto>`,
@@ -150,12 +194,37 @@ python3 scripts/scan_gate.py --event schedule --schedule "7 0-5 * * 1-5" --now 2
 python3 scripts/scan_gate.py --event workflow_dispatch --reason heartbeat --market all --now 2026-10-08T21:30:00+00:00
 ```
 
+The Ignition backstop gate (has a screen landed since the market's last
+close?), at any instant:
+
+```bash
+python3 scripts/ignition_due.py nasdaq "2026-10-07T21:40:00+00:00" --now 2026-10-08T15:00:00+00:00
+python3 scripts/ignition_due.py asx "2026-10-08T05:10:00+00:00" --now 2026-10-08T07:30:00+00:00
+```
+
 One Python test file, one JS suite:
 
 ```bash
 python3 -m pytest tests/test_scan_windows.py
 node test/heartbeat.test.js
 ```
+
+## Run the scanner in CI
+
+The scanners need Yahoo / exchange data, so the real run happens on a GitHub
+runner. `gh api` (Claude Code's built-in client) can dispatch a workflow and
+read its run and job status. Keep `dry_run=true` unless you mean to publish:
+a non-dry dispatch on `main` commits fresh data to `main`.
+
+```bash
+gh api -X POST repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/dispatches -f ref=main -F 'inputs[backtest]=false' -F 'inputs[dry_run]=true' && echo dispatched
+run=$(gh api "repos/FakeCurrency/googy-boys-scanner/actions/workflows/ignition.yml/runs?per_page=1" --jq '.workflow_runs[0].id') && echo run=$run && gh api repos/FakeCurrency/googy-boys-scanner/actions/runs/$run/jobs --jq '.jobs[] | "\(.id) \(.name) \(.status) \(.conclusion)"'
+```
+
+Read the job's log with the GitHub MCP tool `get_job_logs` (`job_id` from
+the line above, `return_content: true`, `tail_lines: 60`); a dry run ends
+with `ignition: charts N/N rows` and `ignition: dry run - nothing written`.
+`ignition_asx.yml` and `ignition_nasdaq.yml` take the same inputs.
 
 ## Test
 
@@ -199,6 +268,16 @@ The e2e smoke test serves `public/` itself on port 8943 and ends with
   e2e tests do. Do the same in any new Playwright script.
 - **`python3 -m pytest -q` prints no summary.** `pytest.ini` already adds
   `-q`; a second one hides the "N passed" line. Run it without `-q`.
+- **Ignition charts come from CI, never from you.** Each screen run writes
+  `public/data/ignition/<market>_charts.json` beside `<market>.json` (same
+  `generated_at`, the join key). A missing sidecar just means no charts. If
+  you hand-build one to look at the page, delete it before committing; a
+  committed hand-built file would show charts from the wrong run.
+- **Pushing a branch that carries `.github/ignition-*-kick` runs that kick
+  again** (a force-push after a rebase re-ran the NASDAQ screen + replay), and
+  the bot then commits data back to the branch: `git pull --rebase` before
+  your next push. The bot's data commits show CI as "action_required"; that
+  is GitHub not running CI for bot pushes, not a failure.
 - **Leftover `.claude/worktrees/` break the full pytest run**
   (`tests/test_scanner_untouched_by_chart_depth.py` walks the whole tree).
   Remove them first: `git worktree remove --force <path>; git worktree prune`.
@@ -214,5 +293,12 @@ The e2e smoke test serves `public/` itself on port 8943 and ends with
   the chart failed to load and "Chart unavailable" replaced the whole page,
   `#tf-toggle` included. Add `--stub-price` (see Gotchas). Once a chart
   loads, its timeframe buttons are `.tf-btn[data-tf="1D"|"3D"|"1W"]`.
+- `FAIL wait .ig-ch` right after opening the Ignition panel: every row is
+  inside the collapsed COILED `<details>`, so no chart is visible yet.
+  `click #ignition-panel summary` first.
+- `gh: refusing a redirect to https://productionresults...blob.core.windows.net`
+  when fetching `actions/jobs/<id>/logs`: the built-in `gh` only talks to
+  api.github.com and logs live on Azure blobs. Use the GitHub MCP
+  `get_job_logs` tool instead.
 - `curl: (56) CONNECT tunnel failed, response 403`: the container's proxy
   refuses that host (Yahoo, Binance). Use the committed data or the stub.
