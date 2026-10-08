@@ -15,23 +15,32 @@ STATE_ORDER = {"RUNNING": 0, "DISPLACED": 1, "SWEPT": 2, "TRAP_SET": 3,
                "STALLED": 4, "COMPLETE": 5, "DEAD": 6}
 
 
-def drop_forming_bar(df, market: str, today=None):
-    """Drop the newest daily row when it is the STILL-FORMING session (v1.3.0).
+def drop_forming_bar(df, market: str, now=None):
+    """Drop the newest daily row while it is the STILL-FORMING session.
 
-    24/7 markets (CONFIG.drop_forming_bar_markets) have no close: yfinance's
-    latest "daily" row is the in-progress UTC day, so sweeps/displacement were
-    being detected off a partial candle that mutates until midnight — the same
-    pathology VIVEK guards against with VIVEK_DROP_FORMING_BAR (review H3).
-    `today` is injectable for tests; defaults to the current UTC date.
-    Equity markets pass through untouched (scanned post-close by schedule).
+    v1.3.0 (review H3): 24/7 markets have no close, so yfinance's latest
+    "daily" row is the in-progress UTC day, and sweeps/displacement were being
+    detected off a partial candle that mutates until midnight -- the same
+    pathology VIVEK guards against with VIVEK_DROP_FORMING_BAR.
+
+    v1.3.2 (audit #8, 2026-10-08): equity markets too. They were trusted to be
+    "scanned post-close by the nightly schedule", but GitHub fires the 08:30
+    UTC cron hours late: on 2026-10-07 the nightly committed at 11:52 EDT,
+    ~2.5h into the NASDAQ session, and 95 published NASDAQ records (sweeps,
+    displacements, DEAD kills) plus 16 confluence alerts hinged on that
+    partial bar. "Forming" is the repo's ONE answer,
+    scanner.config.daily_bar_forming(): a stock's bar dated market-local
+    today is forming until DAILY_BAR_FINAL in its own calendar (ASX 16:40
+    Sydney, NASDAQ 16:05 New York); crypto's until UTC midnight.
+
+    `now` is injectable for tests (an aware datetime; naive = UTC; None = the
+    current instant). Markets outside CONFIG.drop_forming_bar_markets pass
+    through untouched.
     """
     if market not in CONFIG.drop_forming_bar_markets or df is None or not len(df):
         return df
-    import datetime as _dt
-    today = today or _dt.datetime.now(_dt.timezone.utc).date()
-    last = df["Date"].iloc[-1]
-    last_date = last.date() if hasattr(last, "date") else last
-    return df.iloc[:-1] if last_date == today else df
+    from scanner.config import daily_bar_forming
+    return df.iloc[:-1] if daily_bar_forming(market, df["Date"].iloc[-1], now) else df
 
 
 def module0_tags(ind) -> list:

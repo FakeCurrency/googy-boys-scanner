@@ -152,12 +152,14 @@ def run_market(market: str, args, run_date: str, data_root: str) -> dict:
 
     results = []
     charted = set()
+    now = datetime.datetime.now(datetime.timezone.utc)   # one instant per market run
     for t in provider.universe():
         df = provider.get_daily_bars(t)
         if df is None:
             continue
-        # 24/7 markets: detection sees CLOSED bars only (v1.3.0, review H3).
-        df = drop_forming_bar(df, market)
+        # Detection sees CLOSED bars only: crypto since v1.3.0 (review H3),
+        # equities since v1.3.2 (audit #8 -- a late nightly lands mid-session).
+        df = drop_forming_bar(df, market, now=now)
         if df is None or not len(df):
             continue
         recs = scan_ticker(t, df, market=market,

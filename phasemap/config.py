@@ -87,13 +87,15 @@ class PhaseMapConfig:
     output_dir: str = "public/data/phasemap"   # frontend reads latest.json here
     timezone: str = "Australia/Melbourne"
 
-    # ---- Data hygiene (v1.3.0) ------------------------------------------------
+    # ---- Data hygiene (v1.3.0; equities v1.3.2) --------------------------------
     # 24/7 markets have no session close: yfinance's newest daily row is the
     # STILL-FORMING UTC day, so detection ran on a partial candle whose
-    # H/L/C mutate until midnight (non-reproducible tiers). These markets scan
-    # closed bars only. Equity markets are scanned post-close by the nightly
-    # schedule, so their last bar is already complete — listed markets only.
-    drop_forming_bar_markets: tuple = ("crypto",)
+    # H/L/C mutate until midnight (non-reproducible tiers). Listed markets
+    # scan closed bars only. Equities joined in v1.3.2 (audit #8): the nightly
+    # is NOT reliably post-close -- GitHub runs the 08:30 UTC cron hours late
+    # (11:52 EDT on 2026-10-07, mid NASDAQ session) -- so a stock's newest bar
+    # is dropped while scanner.config.daily_bar_forming() says it is forming.
+    drop_forming_bar_markets: tuple = ("asx", "nasdaq", "crypto")
 
     # ---- M4 backtest & proof harness -----------------------------------------
     fwd_return_bars: tuple = (5, 10, 20)   # forward-return horizons per signal
