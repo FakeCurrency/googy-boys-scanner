@@ -235,7 +235,12 @@ jobs:
           # public/data/funnel_history.json (2026-07-30, Task 2): this run's
           # crypto publish appends its funnel row there — same written-by-this-
           # run invariant as everything else in the list.
-          PATHS="public/data/crypto_vivek.json public/data/crypto_vivek_detail.json public/data/crypto_prices.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json data/scan_health.json public/data/funnel_history.json"
+          # public/data/crypto_arriving.json (audit #71, 2026-10-08): scan.py
+          # rewrites it on every crypto publish, but only scan.yml staged it, so
+          # each commit here paired crypto_vivek.json's fresh `arriving` count
+          # with whatever list a scan.yml crypto run last committed. Written
+          # only by scan-group workflows, so the replay invariant holds.
+          PATHS="public/data/crypto_vivek.json public/data/crypto_vivek_detail.json public/data/crypto_prices.json public/data/crypto_arriving.json public/data/sectors.json public/data/fx.json public/data/bot_rules.json public/data/vivek_bot_book.json journal/vivek_bot_book.json journal/vivek_bot_book.crypto.json journal/vivek_bot_book.unassigned.json data/universe_cache/crypto.json data/scan_health.json public/data/funnel_history.json"
           # ONE path per git add (2026-07-20 hotfix): `git add a b missing`
           # stages NOTHING when any single pathspec matches no file. The
           # unassigned book file only exists when migration finds strays, so
