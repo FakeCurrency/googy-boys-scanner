@@ -166,15 +166,17 @@ def _load_prev_grades(out_root: str | None, market_key: str) -> dict:
 
 def _bar_is_forming(market_key: str, last_date, now: dt.datetime) -> bool:
     """Is the trailing daily bar still forming (the current session's incomplete
-    bar)? True only when the last bar is TODAY in the market tz and today's session
-    has not yet closed; crypto (no session) forms until UTC midnight (all day)."""
-    if last_date != now.date():
-        return False                       # a prior, completed day's bar
-    sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
-    if not sess:
-        return True                        # crypto: today's bar forms until UTC midnight
-    ch, cm = sess[2], sess[3]
-    return (now.hour * 60 + now.minute) < (ch * 60 + cm)
+    bar)? True when the last bar is TODAY in the market tz and the bar is not yet
+    FINAL on the feed; crypto (no session) forms until UTC midnight (all day).
+
+    Audit #2 (2026-10-08): this used to end at the raw VIVEK_JOURNAL_SESSION
+    close (16:00), with no feed delay and no ASX auction. The bot's entry
+    window (vivek_journal.market_open) runs to 16:15, so a 16:00-16:15 scan
+    graded, armed and could OPEN on today's unfinished bar, and an ASX scan up
+    to 16:39 graded off the pre-auction bar. The answer now comes from the one
+    shared definition, config.daily_bar_forming (ASX 16:40 Sydney, NASDAQ 16:05
+    New York -- MORNING_PLAYS_SLOT_GATE)."""
+    return config.daily_bar_forming(market_key, last_date, now)
 
 
 # VIVEK grade ordering (A+/A/B+/WATCH).

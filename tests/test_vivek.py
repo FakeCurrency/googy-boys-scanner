@@ -220,9 +220,12 @@ def test_bar_is_forming_intraday_vs_after_close_and_prior_day():
     import datetime as _dt
     tz = ZoneInfo("Australia/Sydney")
     today = _dt.date(2026, 6, 26)
-    # today's bar is forming intraday (before the 16:00 close), complete after it
+    # today's bar is forming intraday and until it is FINAL on the feed
+    # (audit #2: 16:40 Sydney, config.DAILY_BAR_FINAL -- not the raw 16:00 bell;
+    # this line pinned 16:30 as complete, i.e. the pre-auction bar)
     assert scan._bar_is_forming("asx", today, _dt.datetime(2026, 6, 26, 11, 0, tzinfo=tz)) is True
-    assert scan._bar_is_forming("asx", today, _dt.datetime(2026, 6, 26, 16, 30, tzinfo=tz)) is False
+    assert scan._bar_is_forming("asx", today, _dt.datetime(2026, 6, 26, 16, 30, tzinfo=tz)) is True
+    assert scan._bar_is_forming("asx", today, _dt.datetime(2026, 6, 26, 16, 40, tzinfo=tz)) is False
     # a prior day's bar is always complete
     assert scan._bar_is_forming("asx", _dt.date(2026, 6, 25), _dt.datetime(2026, 6, 26, 11, 0, tzinfo=tz)) is False
 
