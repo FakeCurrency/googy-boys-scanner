@@ -204,6 +204,110 @@ def test_redispatch_can_actually_dispatch():
     # block is the only thing granting the dispatch scope.
     assert job["permissions"] == {"actions": "write"}
     assert "gh workflow run close_position.yml" in _redispatch_script()
+    # audit #6: no checkout in this job, so gh needs the repo named for it.
+    assert job["steps"][0]["env"].get("GH_REPO") == "${{ github.repository }}"
+
+
+# audit #6 (2026-10-08) - the redispatch job had no checkout and no GH_REPO,
+# so gh could not resolve which repo it was in and every call failed. The
+# string pins above all passed throughout. These EXECUTE the shipped step.
+
+_GH_STUB = r'''#!/usr/bin/env bash
+# Models gh's repo resolution: GH_REPO, an explicit --repo/-R, or the git
+# remotes of a checkout. GITHUB_REPOSITORY is NOT read (gh 2.89, measured).
+echo "gh $*" >> "$GH_LOG"
+has_repo=0
+for a in "$@"; do case "$a" in --repo|-R|--repo=*) has_repo=1 ;; esac; done
+if [ -z "${GH_REPO:-}" ] && [ "$has_repo" = 0 ] && [ "${STUB_HAS_CHECKOUT:-0}" != 1 ]; then
+  echo "failed to run git: fatal: not a git repository (or any of the parent directories): .git" >&2
+  exit 1
+fi
+case "$1 $2" in
+  "run view") echo 0 ;;
+  "run list") case "$*" in *databaseId*) ;; *) echo 0 ;; esac ;;
+esac
+exit 0
+'''
+
+
+def _render_env(env, ctx):
+    out = {}
+    for k, v in (env or {}).items():
+        out[k] = re.sub(r"\$\{\{\s*(.*?)\s*\}\}", lambda m: ctx.get(m.group(1), ""), str(v))
+    return out
+
+
+def _has_checkout(job):
+    return any(str(s.get("uses", "")).startswith("actions/checkout")
+               for s in job.get("steps", []))
+
+
+@pytest.mark.parametrize("push_exhausted", ["", "true"], ids=["evicted", "push-exhausted"])
+def test_the_redispatch_step_really_re_queues_the_close(tmp_path, push_exhausted):
+    import os
+    import subprocess
+
+    wf = _load(CLOSE)
+    job = wf["jobs"]["redispatch"]
+    step = job["steps"][0]
+    ctx = {
+        "github.token": "tok", "github.repository": "owner/repo",
+        "github.ref_name": "main",
+        "github.event.inputs.attempt": "1",
+        "needs.close.outputs.push_exhausted": push_exhausted,
+        "github.event.inputs.symbol": "BHP", "github.event.inputs.direction": "long",
+        "github.event.inputs.market": "asx", "github.event.inputs.price": "45.10",
+        "github.event.inputs.exit_date": "", "github.event.inputs.journal_type": "bot",
+        "github.event.inputs.batch": "",
+    }
+    env = {**_render_env(wf.get("env"), ctx), **_render_env(job.get("env"), ctx),
+           **_render_env(step.get("env"), ctx)}
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    gh = bindir / "gh"
+    gh.write_text(_GH_STUB, encoding="utf-8")
+    gh.chmod(0o755)
+    log, summary = tmp_path / "gh.log", tmp_path / "summary"
+    work = tmp_path / "workspace"     # the runner's empty workspace
+    work.mkdir()
+    script = tmp_path / "step.sh"
+    script.write_text(step["run"], encoding="utf-8")
+    full = {"PATH": f"{bindir}{os.pathsep}{os.environ['PATH']}", "HOME": str(tmp_path),
+            "GH_LOG": str(log), "GITHUB_RUN_ID": "111",
+            "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_REPOSITORY": "owner/repo",
+            "STUB_HAS_CHECKOUT": "1" if _has_checkout(job) else "0", **env}
+    p = subprocess.run(["bash", "-e", str(script)], cwd=work, env=full,
+                       capture_output=True, text=True, timeout=60)
+    assert p.returncode == 0, p.stdout + p.stderr
+    calls = log.read_text(encoding="utf-8").splitlines()
+    dispatched = [c for c in calls if c.startswith("gh workflow run close_position.yml")]
+    assert len(dispatched) == 1, calls
+    assert "-f symbol=BHP" in dispatched[0] and "-f attempt=2" in dispatched[0]
+    assert "--ref main" in dispatched[0]
+    assert "attempt 2 of 3" in summary.read_text(encoding="utf-8")
+
+
+def test_every_gh_call_in_ci_can_resolve_its_repo():
+    """The repo-wide form of audit #6: a step that runs `gh` needs a checkout
+    in its job, GH_REPO in scope, or --repo on every call. dispatch_scan.yml's
+    --repo form and the redispatch's GH_REPO both satisfy it."""
+    bad = []
+    for path in sorted(WF.glob("*.yml")):
+        wf = _load(path.name)
+        for jname, job in (wf.get("jobs") or {}).items():
+            for step in job.get("steps", []):
+                calls = [l.strip() for l in str(step.get("run", "")).splitlines()
+                         if re.search(r"(^|[$(\s])gh\s+\w", l) and not l.strip().startswith("#")]
+                if not calls:
+                    continue
+                scoped = any("GH_REPO" in (blk or {})
+                             for blk in (wf.get("env"), job.get("env"), step.get("env")))
+                if scoped or _has_checkout(job):
+                    continue
+                naked = [c for c in calls if "--repo" not in c and " -R " not in c]
+                if naked:
+                    bad.append(f"{path.name}:{jname}: {naked}")
+    assert not bad, "\n".join(bad)
 
 
 def test_every_dispatch_input_is_threaded_through_the_retry():

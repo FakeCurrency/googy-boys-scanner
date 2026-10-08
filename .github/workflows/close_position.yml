@@ -305,6 +305,13 @@ jobs:
       - name: Re-queue this close
         env:
           GH_TOKEN: ${{ github.token }}
+          # audit #6 (2026-10-08): THIS JOB HAS NO CHECKOUT, and gh resolves
+          # its repo from GH_REPO or the cwd's git remotes - never from
+          # GITHUB_REPOSITORY. Without this line every gh call below died with
+          # "fatal: not a git repository": the run queries were swallowed into
+          # 0 ("evicted, nothing pending") and `gh workflow run` then failed the
+          # step, so no evicted or push-exhausted close was ever re-queued.
+          GH_REPO: ${{ github.repository }}
           REF: ${{ github.ref_name }}
           ATTEMPT: ${{ github.event.inputs.attempt }}
           PUSH_EXHAUSTED: ${{ needs.close.outputs.push_exhausted }}
