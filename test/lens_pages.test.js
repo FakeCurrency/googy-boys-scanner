@@ -11,6 +11,7 @@
  *   #52  FLASHED compared event dates with run_date, the MELBOURNE date the
  *        nightly job ran. The job lands after Melbourne midnight, so no event
  *        date ever equalled it and the cue never rendered.
+ *   #83  specs.js: the same missing guard on the spec file and its confluence.
  *
  * Everything here EXECUTES the shipped page scripts (and the real
  * phasemap-shared.js under them) against a fake DOM and a fake network whose
@@ -335,6 +336,91 @@ test("the cue fires on today's REAL published scans (it never did against run_da
     assert.ok(p.cards().length > 0, `${m}: no cards rendered`);
     assert.ok(/FLASHED/.test(p.cards()[0]), `${m}: the freshest card is not FLASHED`);
   }
+});
+
+/* ── Specs fixtures ──────────────────────────────────────────────────────── */
+const spRow = (symbol) => ({ symbol, name: symbol + " Ltd", sector: "", grade: "A", score: 7,
+  score_max: 11, spike_ratio: 3.4, price: 0.2, entry: 0.2, stop: 0.17, target: 0.3, rr: 2.5, chips: [] });
+const spScan = (universe, cur, rows) => ({ generated_at: "2026-10-08T00:00:00Z", universe_size: universe,
+  currency_symbol: cur, results: rows });
+const ASX_SPEC = spScan(2047, "A$", [spRow("CXZ")]);
+const NAS_SPEC = spScan(1430, "$", [spRow("NVX")]);
+const spBoot = (market) => {
+  const p = boot("specs.js", {
+    groups: { "#sp-market .market-btn": [["market", "asx"], ["market", "nasdaq"]] },
+    storage: market ? { "sp-market": market } : {},
+  });
+  p.click = (m) => p.dom.group["#sp-market .market-btn"].find((b) => b.dataset.market === m).fire("click");
+  p.title = () => p.el("#sp-title").textContent;
+  p.sub = () => p.el("#sp-sub").innerHTML || p.el("#sp-sub").textContent;
+  p.list = () => p.el("#sp-list").innerHTML;
+  p.pills = () => p.el("#sp-pills").innerHTML;
+  return p;
+};
+
+suite("#83 Specs: the same guard on the spec file and its confluence");
+
+test("the old NASDAQ spec file landing after ASX's does not replace the ASX page", async () => {
+  const p = spBoot("nasdaq");
+  p.click("asx");
+  p.net.ok("data/asx_spec.json", ASX_SPEC);
+  await flush();
+  assert.equal(p.title(), "SPECS · ASX · 1 setups");
+  p.net.ok("data/nasdaq_spec.json", NAS_SPEC);
+  await flush();
+  assert.equal(p.title(), "SPECS · ASX · 1 setups");
+  assert.ok(/2047 names scanned/.test(p.sub()), `ASX's universe stays in the subtitle: ${p.sub()}`);
+  assert.ok(/CXZ/.test(p.list()) && !/NVX/.test(p.list()),
+    "ASX's rows stay — NASDAQ rows under ASX link to m=asx&s=NVX in the wrong currency");
+});
+
+test("an older NASDAQ confluence landing late does not strip ASX's multi-lens marks", async () => {
+  const p = spBoot("nasdaq");
+  p.net.ok("data/nasdaq_spec.json", NAS_SPEC);   // NASDAQ renders; its confluence is in flight
+  await flush();
+  p.click("asx");
+  p.net.ok("data/asx_spec.json", ASX_SPEC);
+  await flush();
+  // ASX's confluence: CXZ is VIVEK long + a spec -> a 2-lens alignment.
+  p.net.ok("data/asx_vivek.json", { results: [{ symbol: "CXZ", dir: "LONG", grade: "A" }] });
+  p.net.ok("data/phasemap/asx/latest.json", { results: [] });
+  p.net.ok("data/asx_spec.json", ASX_SPEC);
+  await flush();
+  assert.ok(/Multi-lens <b>1<\/b>/.test(p.pills()), `ASX's pill counts CXZ: ${p.pills()}`);
+  assert.ok(/2-LENS/.test(p.list()));
+  // ...then NASDAQ's slower (~1.9 MB) confluence resolves.
+  p.net.ok("data/nasdaq_vivek.json", { results: [] });
+  p.net.ok("data/phasemap/nasdaq/latest.json", { results: [] });
+  p.net.ok("data/nasdaq_spec.json", NAS_SPEC);
+  await flush();
+  assert.ok(/Multi-lens <b>1<\/b>/.test(p.pills()), `the pill must stay ASX's: ${p.pills()}`);
+  assert.ok(/2-LENS/.test(p.list()), "and CXZ keeps its 2-LENS chip");
+});
+
+test("a late NASDAQ failure does not wipe the loaded ASX page", async () => {
+  const p = spBoot("nasdaq");
+  p.click("asx");
+  p.net.ok("data/asx_spec.json", ASX_SPEC);
+  await flush();
+  p.net.status("data/nasdaq_spec.json", 503);
+  await flush();
+  assert.equal(p.title(), "SPECS · ASX · 1 setups");
+  assert.ok(!/NASDAQ/.test(p.sub()), `no NASDAQ error under ASX: ${p.sub()}`);
+  assert.ok(/CXZ/.test(p.list()));
+});
+
+test("ASX -> NASDAQ -> ASX: the first ASX request failing last does not wipe the third's page", async () => {
+  // Same market, older request — why the guard is a load sequence, not a market check.
+  const p = spBoot("asx");
+  p.click("nasdaq");
+  p.click("asx");
+  p.net.ok("data/asx_spec.json", ASX_SPEC, true);   // the newest ASX load
+  await flush();
+  assert.equal(p.title(), "SPECS · ASX · 1 setups");
+  p.net.status("data/asx_spec.json", 503);          // the first, abandoned ASX load
+  await flush();
+  assert.equal(p.title(), "SPECS · ASX · 1 setups");
+  assert.ok(/CXZ/.test(p.list()) && !/connection problem/.test(p.sub()));
 });
 
 (async () => {

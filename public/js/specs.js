@@ -230,36 +230,51 @@
     });
   }
 
+  // Only the NEWEST load may touch the page (audit #83, 2026-10-08) — the
+  // phasemap.js rule (#51). A market switch starts a new load while the
+  // previous market's spec file or its confluence (a VIVEK + PhaseMap
+  // payload, 1.2-1.9 MB) is still in flight, and whichever landed last used
+  // to be applied under the market selected now: NASDAQ rows priced in A$
+  // under the ASX tab, or ASX's multi-lens marks replaced by NASDAQ's.
+  let loadSeq = 0;
+
   async function load() {
-    $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()} · loading…`;
+    const seq = ++loadSeq;
+    const market = state.market;
+    const stale = () => seq !== loadSeq;
+    $("#sp-title").textContent = `SPECS · ${market.toUpperCase()} · loading…`;
     loadGrads();   // graduation strip rides beside the scan, never gates it
     try {
-      const res = await PM.fetchTimeout(`data/${state.market}_spec.json`, { cache: "no-cache" });
+      const res = await PM.fetchTimeout(`data/${market}_spec.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      state.data = await res.json();
+      const data = await res.json();
+      if (stale()) return;
+      state.data = data;
       $("#sp-title").textContent =
-        `SPECS · ${state.market.toUpperCase()} · ${state.data.results.length} setups`;
+        `SPECS · ${market.toUpperCase()} · ${data.results.length} setups`;
       $("#sp-sub").innerHTML = PM.esc(
-        `${PM.fmtMelb(state.data.generated_at)} · ${state.data.universe_size} names scanned · ` +
+        `${PM.fmtMelb(data.generated_at)} · ${data.universe_size} names scanned · ` +
         `volume-spike breakouts · sub-$0.50 · the discovery lens`)
-        + PM.staleBadgeHTML(state.data.generated_at);
+        + PM.staleBadgeHTML(data.generated_at);
       state.confl = null;
       renderPills();
-      PM.loadConfluence(state.market).then((c) => {
+      PM.loadConfluence(market).then((c) => {
+        if (stale()) return;
         state.confl = c;
         renderPills();
         render();
       });
     } catch (err) {
+      if (stale()) return;   // a newer load owns the page; its answer stands
       state.data = null;
-      $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()}`;
+      $("#sp-title").textContent = `SPECS · ${market.toUpperCase()}`;
       // Same split as the other lens pages (2026-07-29): only a 404 means the
       // scan is missing; a network/CDN failure gets the truth and a retry.
       if (PM.loadFailKind(err) === "missing") {
-        $("#sp-sub").textContent = `No ${state.market.toUpperCase()} specs scan yet (${err.message})`;
+        $("#sp-sub").textContent = `No ${market.toUpperCase()} specs scan yet (${err.message})`;
       } else {
         $("#sp-sub").innerHTML =
-          PM.esc(`Couldn't load the ${state.market.toUpperCase()} specs scan — connection problem. `) +
+          PM.esc(`Couldn't load the ${market.toUpperCase()} specs scan — connection problem. `) +
           PM.retryHTML("sp-retry-load");
         const b = document.getElementById("sp-retry-load");
         if (b) b.addEventListener("click", () => { b.disabled = true; load(); });
