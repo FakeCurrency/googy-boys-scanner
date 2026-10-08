@@ -37,6 +37,15 @@ never a guess. COMPLETED BARS ONLY (2026-10-05): Yahoo's daily series carries
 the session's still-forming bar, and a stamp is frozen, so a bar that may still
 be forming (final_bar_cutoff) is never read as a base or a horizon.
 
+THE BASE BAR IS PINNED (2026-10-08, audit #69). The first stamp records the
+base bar's date as `base_bar`; every later horizon is measured from THAT bar,
+found by date. An entry stamped before base_bar existed falls back to "the
+first bar on/after base_day", but only in a frame that reaches back to
+base_day and only within ALERT_RETURNS_BASE_MAX_GAP_DAYS of it: a fixed 3-month
+download used to slide past an old base_day (a suspension, a long-unmatured
+row) and silently re-anchor the base on a bar weeks later. Each ticker is now
+downloaded over a period that reaches its oldest wanted base_day.
+
 Prints ALERT_RETURNS_UNCHANGED when the run changed nothing, so the workflow
 skips its commit - the reco_note pattern; a quiet day is a legitimate no-op,
 which is exactly where a must-change gate would be the wrong tool.
@@ -96,7 +105,10 @@ def _fresh() -> dict:
     return {"schema_version": 1, "updated_at": "", "entries": []}
 
 
-def load_ledger(path: str = LEDGER) -> dict:
+def load_ledger(path: str | None = None) -> dict:
+    # Resolved at CALL time: a default bound at import would read the repo's
+    # real ledger even after a test (or a caller) repoints LEDGER.
+    path = path or LEDGER
     try:
         with open(path, encoding="utf-8") as fh:
             d = json.load(fh)
@@ -256,18 +268,58 @@ def final_bar_cutoff(market: str, now: dt.datetime) -> dt.date:
     return local.date()
 
 
+# Why a wanted entry was left unstamped this run, for the WARNING stamp()
+# prints (an unstamped row is retried next run; it is never re-anchored).
+_UNSTAMPED_WHY = {
+    "uncovered": "the frame starts after base_day, so the base bar is not in it",
+    "gap": "no bar within ALERT_RETURNS_BASE_MAX_GAP_DAYS of base_day (a suspension)",
+    "base_bar_missing": "the recorded base_bar is not in the frame",
+}
+
+
+def _base_index(e: dict, days: list, done: int, base_day: dt.date) -> tuple:
+    """(index of the entry's base bar in days[:done], or None; why not, or
+    None when the base simply has not completed yet).
+
+    An entry that recorded `base_bar` is measured from exactly that bar. One
+    without it takes the first completed bar on/after base_day -- but only in
+    a frame that reaches back to base_day (else the base bar may have slid
+    out of the window) and only within ALERT_RETURNS_BASE_MAX_GAP_DAYS (else
+    it is a suspension's resumption bar, not the alert session's close)."""
+    if e.get("base_bar"):
+        try:
+            pinned = dt.date.fromisoformat(str(e["base_bar"])[:10])
+        except ValueError:
+            pinned = None
+        if pinned is not None:
+            i = next((i for i, d in enumerate(days[:done]) if d == pinned), None)
+            return (i, None) if i is not None else (None, "base_bar_missing")
+    if not days or days[0] > base_day:
+        return None, "uncovered"
+    bi = next((i for i, d in enumerate(days[:done]) if d >= base_day), None)
+    if bi is None:
+        return None, None
+    gap = int(getattr(config, "ALERT_RETURNS_BASE_MAX_GAP_DAYS", 7))
+    if (days[bi] - base_day).days > gap:
+        return None, "gap"
+    return bi, None
+
+
 def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None) -> int:
     """Fill matured horizons from downloaded daily bars. Returns stamps made.
 
     base = the first bar ON or AFTER base_day (an alert fires during its own
-    session, so this is normally that session's close); horizon N = the close
-    N bars later. Only COMPLETED bars count: a bar dated on/after
+    session, so this is normally that session's close), pinned by date as
+    `base_bar` at the first stamp (see _base_index); horizon N = the close N
+    bars later. Only COMPLETED bars count: a bar dated on/after
     final_bar_cutoff(market, now) may still be forming, and a base or horizon
     read from it would freeze an intraday price for good. A missing frame, a
     not-yet-existing bar or a still-forming one leaves the horizon None for
-    the next run."""
+    the next run; so does a base bar that cannot be found honestly (counted
+    in a WARNING)."""
     now = now or dt.datetime.now(dt.timezone.utc)
     stamped = 0
+    unstamped: dict[str, list] = {}
     for sym, entries in want.items():
         df = frames.get(sym)
         if df is None or getattr(df, "empty", True):
@@ -281,14 +333,17 @@ def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None
                 continue
             cutoff = final_bar_cutoff(e.get("market", ""), now)
             done = sum(1 for d in days if d < cutoff)    # bars are date-ascending
-            bi = next((i for i, d in enumerate(days[:done]) if d >= base_day), None)
+            bi, why = _base_index(e, days, done, base_day)
             if bi is None:
+                if why:
+                    unstamped.setdefault(why, []).append(str(e.get("key") or sym))
                 continue
             base_close = float(closes.iloc[bi])
             if not (base_close > 0):
                 continue
             if e.get("base_close") is None:
                 e["base_close"] = round(base_close, 8)
+                e["base_bar"] = days[bi].isoformat()
                 stamped += 1        # recording the baseline is itself a change
             for h in HORIZONS:
                 key = str(h)
@@ -297,7 +352,46 @@ def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None
                 if bi + h < done:
                     e["fwd"][key] = round(float(closes.iloc[bi + h]) / base_close - 1.0, 6)
                     stamped += 1
+    for why, keys in sorted(unstamped.items()):
+        print(f"WARNING stamp: {len(keys)} entr{'y' if len(keys) == 1 else 'ies'} left "
+              f"unstamped - {_UNSTAMPED_WHY.get(why, why)}: {', '.join(keys[:8])}"
+              f"{' ...' if len(keys) > 8 else ''}")
     return stamped
+
+
+# yfinance periods and the calendar days each is SAFELY known to reach back
+# (the same table data.held_fetch_period uses). "3mo" -- the old fixed
+# window -- stays the floor, so a young entry asks for exactly what it did.
+_PERIODS = ((88, "3mo"), (180, "6mo"), (360, "1y"), (725, "2y"), (1820, "5y"))
+
+
+def period_for(entries: list, today: dt.date) -> str:
+    """The shortest download period whose frame reaches back past the oldest
+    base_day among `entries`, plus a week (so a weekend/holiday base_day still
+    has a bar before it and _base_index can see the frame covers it)."""
+    days = []
+    for e in entries:
+        try:
+            days.append((today - dt.date.fromisoformat(str(e.get("base_day", ""))[:10])).days)
+        except ValueError:
+            continue
+    need = max(days, default=0) + 7
+    return next((name for cap, name in _PERIODS if need <= cap), "max")
+
+
+def fetch_frames(want: dict, today: dt.date) -> dict:
+    """{want key: daily frame} for every ticker `want` asks about, each
+    downloaded over a period that reaches its oldest wanted base_day (audit
+    #69: a fixed '3mo' slid past it). One call per period. Shared by the
+    roster ledger (edge_rosters.py), so both ledgers price the same way."""
+    from scanner import data
+    by_period: dict[str, list] = {}
+    for key in sorted(want):
+        by_period.setdefault(period_for(want[key], today), []).append(key)
+    frames: dict = {}
+    for period, keys in sorted(by_period.items()):
+        frames.update(data.download(keys, period=period))
+    return frames
 
 
 def trim(ledger: dict, cap: int | None = None) -> int:
@@ -338,8 +432,7 @@ def main(argv=None) -> int:
     want = wanting_prices(ledger, today)
     stamped = 0
     if want:
-        from scanner.data import download
-        frames = download(sorted(want), period="3mo")
+        frames = fetch_frames(want, today)
         stamped = stamp(ledger, frames, want, now)
     dropped = trim(ledger)
 

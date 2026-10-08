@@ -48,7 +48,10 @@ def _fresh() -> dict:
     return {"schema_version": 1, "updated_at": "", "entries": []}
 
 
-def load_ledger(path: str = LEDGER) -> dict:
+def load_ledger(path: str | None = None) -> dict:
+    # Resolved at CALL time: a default bound at import would read the repo's
+    # real ledger even after a test (or a caller) repoints LEDGER.
+    path = path or LEDGER
     try:
         with open(path, encoding="utf-8") as fh:
             d = json.load(fh)
@@ -134,8 +137,7 @@ def main(argv=None) -> int:
     want = ar.wanting_prices(ledger, today)
     stamped = 0
     if want:
-        from scanner.data import download
-        frames = download(sorted(want), period="3mo")
+        frames = ar.fetch_frames(want, today)
         stamped = ar.stamp(ledger, frames, want, now)
     dropped = ar.trim(ledger, cap=CAP)
 

@@ -1224,6 +1224,13 @@ ALERT_RETURNS_CAP = 20000
 # (crypto, UTC daily bars): its today's bar is NEVER final. Later is always
 # safe; the only cost is a stamp waiting for the next daily run.
 ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": (16, 30)}
+# BASE-BAR DISTANCE (2026-10-08, audit #69). An entry's base is the first
+# completed bar on/after its base_day; a weekend or holiday puts it at most ~4
+# calendar days later (Good Friday / Christmas -> the Tuesday). A first bar
+# further out than this is a SUSPENSION, and the resumption bar is not the
+# alert session's close: the entry stays unstamped (counted, retried) instead
+# of freezing returns against a bar weeks after the alert.
+ALERT_RETURNS_BASE_MAX_GAP_DAYS = 7
 # Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
 # single-lens BASELINE cohort, stamped with the same forward returns on the
 # same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
