@@ -115,9 +115,13 @@ def _metrics(eng: SetupEngine, ind, i: int) -> dict:
         m["sweep_date"] = ind.dates[eng.sweep_index].isoformat()
         m["sweep_depth_pct"] = round(eng.sweep_depth_pct, nd)
         if eng.state == "SWEPT":
-            # sessions left for a displacement candle to print (window incl. sweep bar)
+            # sessions left for a displacement candle to print. The engine
+            # accepts one on bars sweep..sweep+N inclusive (it tests bar
+            # sweep+N BEFORE expiring), so after bar i that is sweep+N-i; the
+            # old "- 1" (a window counted from the sweep bar) said 0 sessions
+            # on sweep+4 while sweep+5 still counted (audit #29, 2026-10-08).
             m["bars_remaining"] = max(
-                0, eng.sweep_index + CONFIG.displacement_window_bars - 1 - i)
+                0, eng.sweep_index + CONFIG.displacement_window_bars - i)
     if eng.displacement_index >= 0:
         m["displacement_date"] = ind.dates[eng.displacement_index].isoformat()
     if eng.state == "TRAP_SET":
