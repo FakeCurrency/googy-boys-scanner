@@ -175,7 +175,10 @@ def market_open(market_key: str, now: dt.datetime) -> bool:
     """Is `market_key` inside its delay-adjusted trading session at `now`?
 
     `now` must be timezone-aware in the market's own timezone. Crypto (session
-    None) is always open; stock markets are closed on weekends.
+    None) is always open; stock markets are closed on weekends, on a day
+    config.VIVEK_JOURNAL_SPECIAL_DAYS lists as shut (None), and after an EARLY
+    close it lists as (h, m) (audit #15, 2026-10-08). An unlisted holiday is the
+    data proxy's to catch (`no_session_today`), since the clock cannot see it.
     """
     if not config.VIVEK_JOURNAL_MARKET_HOURS:
         return True
@@ -185,11 +188,74 @@ def market_open(market_key: str, now: dt.datetime) -> bool:
     if now.weekday() >= 5:
         return False                                 # weekend
     oh, om, ch, cm = sess
+    special = (getattr(config, "VIVEK_JOURNAL_SPECIAL_DAYS", {}) or {}).get(market_key) or {}
+    today = now.date().isoformat()
+    if today in special:
+        if special[today] is None:
+            return False                             # exchange holiday
+        ch, cm = special[today]                      # early close
     delay = config.VIVEK_JOURNAL_FEED_DELAY_MIN
     open_min = oh * 60 + om + delay
     close_min = ch * 60 + cm + delay
     cur = now.hour * 60 + now.minute
     return open_min <= cur <= close_min
+
+
+def _bar_date(df, tz: str):
+    """The market-local DATE of a frame's newest bar, or None if unreadable.
+
+    yfinance daily bars are naive exchange-local dates, exchange klines naive
+    UTC midnights (crypto, which has no session and never reaches here); an
+    aware index is converted to the market's zone first.
+    """
+    try:
+        if df is None or len(df) == 0:
+            return None
+        last = df.index[-1]
+        if getattr(last, "tzinfo", None) is not None:
+            last = last.tz_convert(ZoneInfo(tz))
+        return last.date()
+    except Exception:                                # noqa: BLE001
+        return None
+
+
+def no_session_today(market_key: str, frames: dict, now: dt.datetime) -> bool:
+    """A weekday session by the CLOCK in which the exchange did not trade.
+
+    THE DATA PROXY FOR AN EXCHANGE HOLIDAY (audit #15, 2026-10-08). The clock
+    and the weekday cannot see a public holiday, and cron-job.org's weekday
+    jobs plus the stale-price heartbeat keep dispatching scans on one, so the
+    runner saw an open session and a freshly downloaded frame whose newest bar
+    was the PREVIOUS session's close -- and filled new entries at it, and
+    tested stops on it, stamped with the holiday's date. The market's own
+    frames know better: on a day the exchange trades, the scan's download
+    (~2,000 ASX / ~1,400 NASDAQ names, including the cache back-fill) carries
+    bars dated the market-local today; on a holiday not one does.
+
+    True only for a stock market (a session in VIVEK_JOURNAL_SESSION), only
+    when `market_open` says the session is live, and only when at least one
+    frame carries a readable date and the newest of them all is before
+    today. No dated frame at all is no evidence (nothing can be priced off it
+    anyway), so the clock's verdict stands. `now` is aware, any zone.
+    """
+    sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
+    if sess is None:
+        return False                                 # 24/7 (crypto)
+    mkt = config.MARKETS.get(market_key)
+    tz = getattr(mkt, "timezone", None)
+    if not tz:
+        return False
+    local = now.astimezone(ZoneInfo(tz))
+    if not market_open(market_key, local):
+        return False                                 # the clock already says shut
+    newest = None
+    for df in (frames or {}).values():
+        d = _bar_date(df, tz)
+        if d is not None and (newest is None or d > newest):
+            newest = d
+            if newest >= local.date():
+                return False                         # something traded today
+    return newest is not None and newest < local.date()
 
 
 def _r_of(price, entry, risk, is_long):

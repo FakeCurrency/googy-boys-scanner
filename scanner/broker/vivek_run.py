@@ -49,7 +49,8 @@ from zoneinfo import ZoneInfo
 from .. import config
 from . import vivek_bot, vivek_guard
 from ..vivek_journal import (_apply_costs, _current_price, _mark, _r_of,
-                             _snapshot, costs_for, market_open)
+                             _snapshot, costs_for, market_open,
+                             no_session_today)
 from ..journal_common import atomic_write
 
 log = logging.getLogger("vivek_run")
@@ -1282,6 +1283,18 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         now = dt.datetime.now(ZoneInfo(mkt.timezone))
     day = now.strftime("%Y-%m-%d")
     is_open = market_open(market, now)
+    # An exchange HOLIDAY is a closed session (audit #15, 2026-10-08): the clock
+    # says open, but not one frame carries a bar dated today, so every price in
+    # hand is the previous session's close. Filling at it, or testing a stop on
+    # it, books a price nobody traded at, dated a day nobody traded. Closed
+    # means closed here exactly as at 18:00: no fills, no management, and the
+    # mark-sanity budget is not spent (session_open=False).
+    if is_open and no_session_today(market, frames, now):
+        log.warning("vivek_run [%s]: the clock says the session is open but no "
+                    "frame carries a bar dated %s - treating it as an exchange "
+                    "HOLIDAY (closed session): no fills, no stop tests",
+                    market, day)
+        is_open = False
     yf_map = {u["symbol"]: u["yf"] for u in universe}
     from ..data import anchor_of, mark_age_h, venue_of  # deferred, like fetch below
     costs = costs_for(market)                         # fees + slippage R-drag (None = off)

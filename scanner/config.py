@@ -493,6 +493,39 @@ VIVEK_JOURNAL_SESSION = {
     "nasdaq": (9, 30, 16, 0),
     "crypto": None,
 }
+# Exchange holidays and EARLY CLOSES (2026-10-08 audit #15, owner: "Do it all").
+# market_open() used to know only weekday + clock, so on a holiday every
+# weekday scan read the session as open and the paper bot filled new entries,
+# and tested stops, at the PREVIOUS session's close stamped with the holiday's
+# date -- a price nobody traded at. Two layers, read by vivek_journal:
+#   * the DATA PROXY (vivek_journal.no_session_today, used by the runner): a
+#     weekday session in which NOT ONE frame carries a bar dated the
+#     market-local today did not trade -- it catches any holiday, listed or not.
+#   * this TABLE, {market: {"YYYY-MM-DD": None | (close_h, close_m)}}, dates in
+#     the exchange's own calendar: None = shut all day (belt and braces for a
+#     feed that prints a holiday bar); (h, m) = an EARLY CLOSE, the base close
+#     before the feed delay -- the one thing no bar can reveal (a 13:00 New York
+#     close still prints a bar for the day). A past date is inert; extend it
+#     each year (NYSE/Nasdaq and ASX publish theirs a year ahead).
+VIVEK_JOURNAL_SPECIAL_DAYS = {
+    "nasdaq": {
+        "2026-11-26": None, "2026-11-27": (13, 0),          # Thanksgiving + day after
+        "2026-12-24": (13, 0), "2026-12-25": None,
+        "2027-01-01": None, "2027-01-18": None, "2027-02-15": None,
+        "2027-03-26": None, "2027-05-31": None, "2027-06-18": None,
+        "2027-07-05": None, "2027-09-06": None,
+        "2027-11-25": None, "2027-11-26": (13, 0),
+        "2027-12-24": None,
+    },
+    "asx": {
+        "2026-12-24": (14, 0), "2026-12-25": None, "2026-12-28": None,
+        "2026-12-31": (14, 0),
+        "2027-01-01": None, "2027-01-26": None,
+        "2027-03-26": None, "2027-03-29": None, "2027-06-14": None,
+        "2027-12-24": (14, 0), "2027-12-27": None, "2027-12-28": None,
+        "2027-12-31": (14, 0),
+    },
+}
 # Deck freshness, session + N hours (2026-09-23): the 5.0 deck marks a payload
 # stale once a session has been open this long with no scan from inside it, or
 # closed this long with no scan from after the close. DISPLAY ONLY -- nothing

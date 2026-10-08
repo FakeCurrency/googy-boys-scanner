@@ -48,8 +48,11 @@ def _row(symbol="BHP", direction="long", **kw):
     return r
 
 
-def _frame(last_close):
-    idx = pd.date_range(end="2024-01-02", periods=5, freq="D")
+def _frame(last_close, end="2024-01-02"):
+    # `end` = the session the frame was downloaded in. A frame whose newest bar
+    # is before the session date reads as an exchange HOLIDAY (audit #15), so a
+    # run on a later session must be handed that session's bars.
+    idx = pd.date_range(end=end, periods=5, freq="D")
     return pd.DataFrame({"Open": last_close, "High": last_close, "Low": last_close,
                          "Close": last_close, "Volume": 1e6}, index=idx)
 
@@ -163,7 +166,8 @@ def test_book_caps_hold_across_runs(tmp_path, monkeypatch):
     # A later run offering two MORE longs must not exceed the long cap.
     rows2 = [_row(symbol="L6"), _row(symbol="L7")]
     uni2 = uni + [{"symbol": "L6", "yf": "L6.AX"}, {"symbol": "L7", "yf": "L7.AX"}]
-    frames2 = {**frames, "L6.AX": _frame(101.0), "L7.AX": _frame(101.0)}
+    # audit #15: the 01-03 session's frames end on 01-03, or it reads as a holiday
+    frames2 = {t: _frame(101.0, end="2024-01-03") for t in [*frames, "L6.AX", "L7.AX"]}
     bk = vr.run_market("asx", rows2, frames2, uni2, now=_aest(2024, 1, 3, 11, 0))
     longs = [p for p in bk["open"] if p["direction"] == "long"]
     assert len(longs) == 6                                # still capped at 6 across runs
@@ -175,8 +179,8 @@ def test_open_position_marks_to_market_and_closes_on_stop(tmp_path, monkeypatch)
     vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
                   now=_aest(2024, 1, 2, 11, 0))
     # next session price falls through the 96 stop → position closes
-    bk = vr.run_market("asx", [], {"BHP.AX": _frame(95.0)}, uni,
-                       now=_aest(2024, 1, 3, 11, 0))
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(95.0, end="2024-01-03")}, uni,
+                       now=_aest(2024, 1, 3, 11, 0))         # audit #15: that day's bars
     assert len(bk["open"]) == 0 and len(bk["closed"]) == 1
     assert bk["closed"][0]["status"] == "closed" and bk["closed"][0]["realized_r"] < 0
 
@@ -778,7 +782,7 @@ def test_run_market_passes_the_real_session_state_not_a_constant(
                        now=_aest(2024, 1, 2, 11, 0))          # 11:00 = open
     assert len(bk["open"]) == 1
 
-    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1)}, uni,
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1, end="2024-01-03")}, uni,
                        now=_aest(2024, 1, 3, 20, 0))          # 20:00 = closed
     assert len(bk["open"]) == 1 and len(bk["closed"]) == 0
     assert "suspect_price_runs" not in bk["open"][0]          # budget intact
@@ -793,8 +797,8 @@ def test_sanity_guard_prevents_fake_stop_out_in_run_market(tmp_path, monkeypatch
                        now=_aest(2024, 1, 2, 11, 0))
     assert len(bk["open"]) == 1
     # next run the feed serves a 10:1-split price: 10.1 (would be a "stop hit")
-    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1)}, uni,
-                       now=_aest(2024, 1, 3, 11, 0))
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1, end="2024-01-03")}, uni,
+                       now=_aest(2024, 1, 3, 11, 0))         # audit #15: that day's bars
     assert len(bk["open"]) == 1 and len(bk["closed"]) == 0   # NOT closed
     assert bk["open"][0]["suspect_price_runs"] == 1
 
@@ -988,8 +992,8 @@ def test_day_ref_beats_mark_sanity_to_the_punch_in_run_market(tmp_path, monkeypa
     assert bk["open"][0]["last_mark"] == pytest.approx(101.0)
     # Next session gaps up to 103. The reference for 01-03 must be 101 — where
     # it CLOSED — so the gap counts as that session's P&L.
-    bk = vr.run_market("asx", [], {"BHP.AX": _frame(103.0)}, uni,
-                       now=_aest(2024, 1, 3, 11, 0))
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(103.0, end="2024-01-03")}, uni,
+                       now=_aest(2024, 1, 3, 11, 0))         # audit #15: that day's bars
     pos = bk["open"][0]
     assert pos["day_marks"]["2024-01-03"] == pytest.approx(101.0)
     assert pos["last_mark"] == pytest.approx(103.0)         # marked after

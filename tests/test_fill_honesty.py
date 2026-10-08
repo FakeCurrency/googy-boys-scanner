@@ -170,8 +170,10 @@ def test_pin_time_and_manual_exits_pay_slippage_like_stops():
 
 # ── 5. the RUNNER applies costs end-to-end (production path) ───────────────────
 
-def _frame(last_close):
-    idx = pd.date_range(end="2024-01-02", periods=5, freq="D")
+def _frame(last_close, end="2024-01-02"):
+    # `end` = the session the frame was downloaded in (audit #15: a frame whose
+    # newest bar predates the session date reads as an exchange holiday).
+    idx = pd.date_range(end=end, periods=5, freq="D")
     return pd.DataFrame({"Open": last_close, "High": last_close, "Low": last_close,
                          "Close": last_close, "Volume": 1e6}, index=idx)
 
@@ -206,7 +208,7 @@ def test_pin_runner_applies_costs_and_gap_pricing_end_to_end(tmp_path, monkeypat
     uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
     vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
                   now=_aest(2024, 1, 2, 11, 0))
-    bk = vr.run_market("asx", [], {"BHP.AX": _frame(88.0)}, uni,
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(88.0, end="2024-01-03")}, uni,
                        now=_aest(2024, 1, 3, 11, 0))
     assert len(bk["closed"]) == 1
     t = bk["closed"][0]
