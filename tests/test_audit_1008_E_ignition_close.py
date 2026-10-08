@@ -197,3 +197,47 @@ def test_a_run_wholly_after_the_close_satisfies_the_backstop_gate(monkeypatch):
     assert saved["ZZZ.AX"].index[-1].date() == day
     run, why = _due.due(pay["generated_at"], _at(day, 17, 24).astimezone(dt.timezone.utc))
     assert run is False, why
+
+
+# ---------------------------------------------------------------------------
+# review of #22 -- a cache written BEFORE the fix still holds partial bars
+# ---------------------------------------------------------------------------
+
+def _reused(df, fetched_at):
+    out = df.copy()
+    out.attrs = {RUN.sdata.CACHE_REUSED: True,
+                 RUN.sdata.FETCHED_AT: fetched_at.astimezone(dt.timezone.utc).isoformat(timespec="seconds")}
+    return out
+
+
+def test_a_reused_frame_cached_before_the_close_loses_its_partial_bar():
+    """The pre-#22 cache: a 15:54 AEDT run read its clock at ~16:01, called
+    the 16:00 bar complete and saved it. The fix stops new ones, but a post-
+    close run that reuses that frame for a ticker Yahoo dropped would still
+    screen the 16:01 print as the day's close."""
+    df = asx_frame(2)
+    day = df.index[-1].date()
+    out = RUN.trim_reused_forming({"OLD.AX": _reused(df, _at(day, 16, 1)),
+                                   "FIN.AX": _reused(df, _at(day, 17, 24)),
+                                   "NEW.AX": df.copy(),
+                                   "UNK.AX": _reused(df, _at(day, 16, 1)).pipe(
+                                       lambda f: (f.attrs.pop(RUN.sdata.FETCHED_AT), f)[1])},
+                                  "asx")
+    assert out["OLD.AX"].index[-1].date() < day        # fetched while forming
+    assert out["FIN.AX"].index[-1].date() == day       # fetched after the close
+    assert out["NEW.AX"].index[-1].date() == day       # not from the cache
+    assert out["UNK.AX"].index[-1].date() == day       # no stamp: left alone
+
+
+def test_screen_market_trims_what_the_cache_hands_back(monkeypatch):
+    df = asx_frame(2)
+    day = df.index[-1].date()
+    rows = [{"yf": "ZZZ.AX", "symbol": "ZZZ", "name": "Zed Ltd"}]
+    monkeypatch.setattr(RUN, "_download", lambda market, period, limit: (rows, {}, {}))
+    monkeypatch.setattr(RUN, "regime_frame", lambda market, period: None)
+    monkeypatch.setattr(RUN.mcap, "known", lambda *a, **k: {})
+    monkeypatch.setattr(RUN.sdata, "merge_with_cache",
+                        lambda key, done, tickers, **kw: ({"ZZZ.AX": _reused(df, _at(day, 16, 1))},
+                                                          {"reused": 1}))
+    pay = RUN.screen_market("asx", now=_at(day, 17, 24))
+    assert pay["last_closed_bar"] < day.isoformat()

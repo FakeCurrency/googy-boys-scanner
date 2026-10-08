@@ -166,6 +166,30 @@ def _split_all(frames: Dict[str, pd.DataFrame], market: str, now: dt.datetime,
     return done, forming
 
 
+def trim_reused_forming(frames: Dict[str, pd.DataFrame], market: str) -> Dict[str, pd.DataFrame]:
+    """A frame the cache handed back (merge_with_cache's `cache_reused` tag)
+    whose last bar was still FORMING when it was fetched (its `fetched_at`
+    stamp) loses that bar. _split_all keeps new partial bars out of the cache,
+    but a cache written before audit #22 (a 15:5x AEDT run read its clock at
+    ~16:01, before the 16:40 close) still holds them, and a run that reuses
+    one for a ticker Yahoo dropped would screen it as the day's close. A
+    reused frame with no readable stamp is left as it is: its age cannot be
+    judged here."""
+    out: Dict[str, pd.DataFrame] = {}
+    for yf, f in frames.items():
+        attrs = getattr(f, "attrs", None) or {}
+        if len(f) and attrs.get(sdata.CACHE_REUSED):
+            try:     # the cache holds _split_all's sorted `done` frames
+                when = dt.datetime.fromisoformat(str(attrs.get(sdata.FETCHED_AT)))
+                if bar_is_forming(market, f.index[-1], when):
+                    f = f.iloc[:-1]
+            except (TypeError, ValueError):
+                pass
+        if len(f):
+            out[yf] = f
+    return out
+
+
 def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFrame],
                   market: str, now: dt.datetime) -> dict:
     """How current the bars really are -- MEASURED, never assumed.
@@ -278,6 +302,7 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             f"ignition-{market}", done, [r["yf"] for r in rows],
             refused=src_report.get("refused") or (),
             rejected_venues=src_report.get("rejected_venues"))
+        frames = trim_reused_forming(frames, market)
     else:
         now = now or dt.datetime.now(dt.timezone.utc)
         frames, forming = _split_all(frames, market, now)

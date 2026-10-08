@@ -123,6 +123,30 @@ def drop_forming(frames: Mapping[str, pd.DataFrame], market: str, now: dt.dateti
     return out, dropped
 
 
+def trim_reused_forming(frames: Mapping[str, pd.DataFrame], market: str) -> Dict[str, pd.DataFrame]:
+    """A frame the cache handed back (merge_with_cache's `cache_reused` tag)
+    whose last bar was still FORMING when it was fetched (its `fetched_at`
+    stamp) loses that bar. drop_forming keeps new partial candles out of the
+    cache, but a cache written before audit #85 holds that morning's minutes-old
+    candle for every coin, and a run that reuses one for a coin Yahoo dropped
+    would screen it as a completed day. Judged at the fetch's own instant, so
+    it is right for any market; a reused frame with no readable stamp is left
+    as it is (its age cannot be judged here)."""
+    out: Dict[str, pd.DataFrame] = {}
+    for yf, f in frames.items():
+        attrs = getattr(f, "attrs", None) or {}
+        if f is not None and len(f) and attrs.get(sdata.CACHE_REUSED):
+            try:
+                when = dt.datetime.fromisoformat(str(attrs.get(sdata.FETCHED_AT)))
+                if scfg.daily_bar_forming(market, pd.Timestamp(f.index[-1]), when):
+                    f = f.iloc[:-1]
+            except (TypeError, ValueError):
+                pass
+        if f is not None and len(f):
+            out[yf] = f
+    return out
+
+
 def _last_bar(frame: pd.DataFrame) -> Optional[str]:
     try:
         return str(pd.Timestamp(frame.index[-1]).date())
@@ -159,6 +183,7 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
         fresh, forming = drop_forming(fresh, market, now, since)
         frames, cache_stats = sdata.merge_with_cache(
             f"momentum-{market}", fresh, [r["yf"] for r in rows])
+        frames = trim_reused_forming(frames, market)
     else:
         frames, forming = drop_forming(frames, market,
                                        now or dt.datetime.now(dt.timezone.utc))

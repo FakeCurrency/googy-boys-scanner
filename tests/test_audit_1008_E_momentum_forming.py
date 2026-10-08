@@ -131,3 +131,30 @@ def test_an_undatable_last_bar_does_not_sink_the_market():
                             dt.datetime(2026, 10, 8, 1, 0, tzinfo=UTC))
     assert len(out["BAD-USD"]) == len(bad)
     assert n == 1 and out["GOOD-USD"].index[-1].date() == dt.date(2026, 10, 7)
+
+
+def _reused(df, fetched_at):
+    out = df.copy()
+    out.attrs = {R.sdata.CACHE_REUSED: True,
+                 R.sdata.FETCHED_AT: fetched_at.isoformat(timespec="seconds")}
+    return out
+
+
+def test_a_partial_candle_already_in_the_cache_is_trimmed_on_reuse(monkeypatch):
+    """A cache written before #85 holds each coin's minutes-old candle; a coin
+    Yahoo drops on a later run is handed back from it and would be screened
+    as a completed day. Judged at the frame's own fetch instant."""
+    d = dt.date(2026, 10, 7)
+    stale = _reused(_coin(d), dt.datetime(2026, 10, 7, 0, 35, tzinfo=UTC))
+    fine = _reused(_coin(d), dt.datetime(2026, 10, 8, 0, 35, tzinfo=UTC))
+    out = R.trim_reused_forming({"OLD-USD": stale, "FIN-USD": fine, "NEW-USD": _coin(d)}, "crypto")
+    assert out["OLD-USD"].index[-1].date() == d - dt.timedelta(days=1)
+    assert out["FIN-USD"].index[-1].date() == d
+    assert out["NEW-USD"].index[-1].date() == d
+    # and the live path applies it to what the cache hands back
+    monkeypatch.setattr(R.sdata, "download", lambda tickers, **kw: {})
+    monkeypatch.setattr(R.sdata, "merge_with_cache",
+                        lambda key, fresh, tickers, **kw: ({"OLD-USD": stale}, {"reused": 1}))
+    p = R.screen_market("crypto", rows=[{"yf": "OLD-USD", "symbol": "OLD", "name": "Old"}],
+                        now=dt.datetime(2026, 10, 8, 1, 0, tzinfo=UTC))
+    assert p["last_closed_bar"] == (d - dt.timedelta(days=1)).isoformat()
