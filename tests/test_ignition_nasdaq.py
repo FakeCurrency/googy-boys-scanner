@@ -21,7 +21,10 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib.util
+import os
 import pathlib
+import re
+import shutil
 import subprocess
 import sys
 from zoneinfo import ZoneInfo
@@ -153,15 +156,50 @@ def test_a_nasdaq_frame_up_to_five_days_old_is_screened_and_six_is_not():
         assert (0 if pay is None else pay["summary"]["screened"]) == screened, days
 
 
-def test_the_nasdaq_bar_forms_until_the_new_york_close():
+def test_the_nasdaq_bar_forms_until_its_bar_final_not_the_bell():
+    """16:00 is the bell; the closing cross and the delayed feed's volume are
+    final at 16:30 (config.IGNITION_BAR_FINAL). A run that reads its clock in
+    between -- a cron hours late, a dispatch, a kick -- must screen today's
+    bar as FORMING (provisional), never as a completed bar on partial volume."""
     ny = ZoneInfo("America/New_York")
     day = pd.Timestamp("2026-10-08")
+    assert config.IGNITION_FORMING_UNTIL_BAR_FINAL == ("nasdaq",)
+    assert config.IGNITION_BAR_FINAL[M][1:] == (16, 30)
     assert RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 8, 15, 59, tzinfo=ny))
-    assert not RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 8, 16, 0, tzinfo=ny))
+    assert RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 8, 16, 0, tzinfo=ny))
+    assert RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 8, 16, 29, tzinfo=ny))
+    assert not RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 8, 16, 30, tzinfo=ny))
+    # winter (EST): 16:15 New York is 21:15 UTC, still forming
+    winter = pd.Timestamp("2026-12-15")
+    assert RUN.bar_is_forming(M, winter, dt.datetime(2026, 12, 15, 21, 15, tzinfo=dt.timezone.utc))
+    assert not RUN.bar_is_forming(M, winter, dt.datetime(2026, 12, 15, 21, 34, tzinfo=dt.timezone.utc))
     # 02:00 UTC next day is still the 8th in New York, after the close
     assert not RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 9, 2, 0, tzinfo=dt.timezone.utc))
     # a pre-open run the next morning: yesterday's bar is complete
     assert not RUN.bar_is_forming(M, day, dt.datetime(2026, 10, 9, 8, 0, tzinfo=ny))
+
+
+def test_a_late_run_between_the_bell_and_the_bar_final_splits_off_todays_bar():
+    """The whole screen, not just the predicate: at 16:15 New York today's bar
+    is held out of the completed frames (so it is never cached or screened
+    as final); at 16:30 it is completed."""
+    df = nasdaq_frame().iloc[:T + 3]
+    last = df.index[-1]
+    ny = ZoneInfo("America/New_York")
+    at = lambda hh, mm: dt.datetime(last.year, last.month, last.day, hh, mm, tzinfo=ny)
+    done, forming = RUN.split_forming(df, M, at(16, 15))
+    assert len(done) == len(df) - 1 and forming is not None and forming.index[0] == last
+    done, forming = RUN.split_forming(df, M, at(16, 30))
+    assert len(done) == len(df) and forming is None
+
+
+def test_the_asx_bar_still_completes_at_its_session_close():
+    """The NASDAQ-only scope is deliberate: the ASX still reads its 16:00
+    session close (its pinned tests and its 06:24 UTC primary rely on it)."""
+    assert "asx" not in config.IGNITION_FORMING_UNTIL_BAR_FINAL
+    syd = ZoneInfo("Australia/Sydney")
+    day = pd.Timestamp("2026-10-08")
+    assert not RUN.bar_is_forming("asx", day, dt.datetime(2026, 10, 8, 16, 0, tzinfo=syd))
 
 
 def test_nasdaq_freshness_has_no_expected_bar():
@@ -233,7 +271,13 @@ def test_the_nasdaq_backtest_payload(monkeypatch):
     # QNT is a crypto design case, never a NASDAQ one: its trades are scored
     assert not any(t["design_case"] for t in pay["trades"])
     cav = " ".join(pay["caveats"])
-    assert "NASDAQ listings" in cav and "252 trading days" in cav
+    assert "252 trading days" in cav
+    # The universe the replay really ran on, not "NASDAQ": Global Select in
+    # good standing -- and the two ways a failed breakout leaves it.
+    assert pay["caveats"][0].startswith(
+        "SURVIVORSHIP: today's NASDAQ Global Select (in good standing) listings only. ")
+    assert "moved down a tier or put on a deficiency notice is missing" in pay["caveats"][0]
+    assert "today's NASDAQ listings" not in cav
     assert "No design case: no NASDAQ chart informed the port, so every trigger is scored." in cav
     assert "Costs 0.5% round trip (a flat broker fee both ways + the spread;" in cav
     assert "none prompted" not in cav and "ASX" not in cav and "coins" not in cav.lower()
@@ -244,6 +288,10 @@ def test_the_port_did_not_move_the_asx_caveats():
     parenthesis) still read, on the ASX, EXACTLY as published before the port
     -- a frozen copy, so a reworded ASX payload fails here."""
     cav = BT._caveats("asx", None, {"DTR": "2026-09-01"})
+    assert cav[0] == ("SURVIVORSHIP: today's ASX listings only. A company that broke out and "
+                      "was later delisted, suspended or taken over is missing, along with every "
+                      "failed breakout it had. Long-breakout results are biased UP -- judge "
+                      "against random_timing, not zero.")
     assert cav[2] == ("The rule is crypto's, thresholds unchanged; calendar windows are "
                       "converted to 252 trading days a year. DTR prompted the port, so it "
                       "is excluded from every scored number and reported only as a case study.")
@@ -317,6 +365,101 @@ def test_every_intraday_cron_is_in_session_an_hour_clear_of_the_close(day):
         local = _ny(day, hh, mm)
         t = local.hour * 60 + local.minute
         assert o_h * 60 + o_m <= t <= c_h * 60 + c_m - 60, (day, hh)
+
+
+# ---------------------------------------------------------------------------
+# the late-intraday gate, EXECUTED (the due step is not a twin: it is the one
+# block the TWINS pins skip, so its shell is run here)
+# ---------------------------------------------------------------------------
+
+_BASH, _REAL_DATE = shutil.which("bash"), shutil.which("date")
+
+
+def _gnu_date() -> bool:
+    if not _REAL_DATE:
+        return False
+    p = subprocess.run([_REAL_DATE, "-u", "-d", "@0", "+%Y"], capture_output=True, text=True)
+    return p.returncode == 0 and p.stdout.strip() == "1970"
+
+
+_needs_shell = pytest.mark.skipif(not (_BASH and _gnu_date()),
+                                  reason="bash and GNU date (-d @epoch) run the gate")
+_GATE_RUN = next(s for s in NQ["jobs"]["ignition"]["steps"] if s.get("id") == "due")["run"]
+
+
+def _cutoff() -> tuple:
+    """The gate's New York cutoff as (hour, minute), read off the SHIPPED block."""
+    m = re.search(r'TZ=America/New_York date \+%H%M\)" -ge (\d{2})(\d{2})\b', _GATE_RUN)
+    assert m, "the late-intraday clause is gone - is the pin still aimed?"
+    return int(m.group(1)), int(m.group(2))
+
+
+def _run_gate(tmp_path, utc: str, event: str, schedule: str = "") -> tuple:
+    """Run the due step as Actions does (`bash -e`) at a frozen UTC instant:
+    `date` answers from that epoch (TZ still applies) and `git` refuses, so a
+    trigger the clause decides never reaches the backstop's fetch."""
+    epoch = int(dt.datetime.fromisoformat(utc).timestamp())
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    (bin_ / "date").write_text(f'#!/usr/bin/env bash\nexec "{_REAL_DATE}" -d "@{epoch}" "$@"\n')
+    (bin_ / "git").write_text("#!/usr/bin/env bash\necho git-was-called >&2\nexit 97\n")
+    for f in ("date", "git"):
+        (bin_ / f).chmod(0o755)
+    out = tmp_path / "out"
+    out.write_text("")
+    env = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}", "LC_ALL": "C",
+           "GITHUB_OUTPUT": str(out), "GITHUB_EVENT_NAME": event, "SCHEDULE": schedule,
+           "GITHUB_REF_NAME": "main"}
+    p = subprocess.run([_BASH, "-e", "-c", _GATE_RUN], env=env, cwd=tmp_path,
+                       capture_output=True, text=True, timeout=60)
+    return p.returncode, out.read_text().strip(), p.stdout + p.stderr
+
+
+def test_the_late_intraday_cutoff_clears_every_on_time_run_and_leaves_download_slack():
+    """15:30, not 16:00: the gate's clock is read BEFORE a multi-minute
+    download and run.py's after it. Every intraday cron, fired on time, must
+    still be well inside the cutoff in both DST regimes."""
+    assert '"%s"' % CRONS[2] in _GATE_RUN, "the clause must name the shipped intraday cron"
+    hh, mm = _cutoff()
+    cut = hh * 60 + mm
+    close = config.VIVEK_JOURNAL_SESSION[M][2] * 60 + config.VIVEK_JOURNAL_SESSION[M][3]
+    assert cut <= close - 30, "less than 30 minutes of download slack before the bell"
+    for day in ("2026-07-15", "2026-12-15"):
+        for h, m in _crons(2):
+            local = _ny(day, h, m)
+            assert local.hour * 60 + local.minute + 30 <= cut, (day, h)
+
+
+@_needs_shell
+@pytest.mark.parametrize("utc,want", [
+    ("2026-07-15T14:54:00+00:00", "run=true"),     # 10:54 EDT, on time
+    ("2026-07-15T18:54:00+00:00", "run=true"),     # 14:54 EDT, the last one on time
+    ("2026-07-15T19:29:00+00:00", "run=true"),     # 15:29 EDT
+    ("2026-07-15T19:30:00+00:00", "run=false"),    # 15:30 EDT: the cutoff
+    ("2026-07-15T20:14:00+00:00", "run=false"),    # 16:14 EDT: 18:54 started 80 min late
+    ("2026-07-15T23:54:00+00:00", "run=false"),    # 19:54 EDT: 14:54 started 9h late
+    ("2026-12-15T18:54:00+00:00", "run=true"),     # 13:54 EST, on time
+    ("2026-12-15T20:29:00+00:00", "run=true"),     # 15:29 EST
+    ("2026-12-15T21:14:00+00:00", "run=false"),    # 16:14 EST: 18:54 started 2h20 late
+])
+def test_a_late_intraday_cron_is_skipped_in_new_york_time(tmp_path, utc, want):
+    rc, out, log = _run_gate(tmp_path, utc, "schedule", CRONS[2])
+    assert (rc, out) == (0, want), log
+    assert "git-was-called" not in log
+    if want == "run=false":
+        assert "15:30 New York" in log
+
+
+@_needs_shell
+@pytest.mark.parametrize("event,schedule", [("schedule", CRONS[0]), ("push", ""),
+                                            ("workflow_dispatch", "")])
+def test_the_clock_clause_never_skips_the_primary_a_kick_or_a_dispatch(tmp_path, event, schedule):
+    """Only the INTRADAY cron is clock-gated; at 16:14 New York the primary,
+    a kick and a manual dispatch are still due (run.py screens the bar as
+    forming until 16:30)."""
+    rc, out, log = _run_gate(tmp_path, "2026-07-15T20:14:00+00:00", event, schedule)
+    assert (rc, out) == (0, "run=true"), log
+    assert "git-was-called" not in log
 
 
 def test_the_kick_is_not_dispatched_by_the_scan():

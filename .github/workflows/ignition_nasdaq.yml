@@ -16,9 +16,13 @@ name: Ignition scan (NASDAQ)
 # Friday); the gate skips a backstop once a file generated after today's
 # 16:30 is on the branch (scripts/ignition_due.py nasdaq). The three intraday
 # runs (14:54 / 16:54 / 18:54 UTC: 10:54-14:54 EDT, 09:54-13:54 EST, all in
-# session and an hour clear of the close) publish breaks on the still-forming
-# bar as "provisional" (never counted) and move RUNNING marks. Weekdays only:
-# there is no NASDAQ bar on a weekend.
+# session and an hour clear of the close WHEN THEY FIRE ON TIME) publish breaks
+# on the still-forming bar as "provisional" (never counted) and move RUNNING
+# marks. GitHub runs crons hours late, so on time is not guaranteed: the gate
+# below skips an intraday run that lands at/after 15:30 New York, and run.py
+# calls today's bar forming until the 16:30 bar-final (not the 16:00 bell), so
+# a manual dispatch or a kick in the 16:00-16:30 gap still screens it as
+# provisional. Weekdays only: there is no NASDAQ bar on a weekend.
 #
 # THE BACKTEST is not scheduled. A manual dispatch with `backtest: true`, or a
 # push touching .github/ignition-nasdaq-kick, runs the screen AND the replay
@@ -80,12 +84,29 @@ jobs:
       # DST cannot move it. Read from a FRESH fetch: a run that sat pending
       # was created at an older SHA. Every other trigger is due. Unreadable
       # anything FAILS OPEN.
+      #
+      # A LATE INTRADAY CRON is skipped too. GitHub has run free-tier crons
+      # 2-5 h late; an intraday run that lands near or past the close would
+      # download a bar whose volume is not final, and one that straddles 16:30
+      # New York stamps a file that makes ignition_due.py skip BOTH backstops.
+      # So from 15:30 New York to midnight the 21:34 primary and its gated
+      # backstops own the close. 15:30, not 16:00: this clock is read BEFORE
+      # the multi-minute download, run.py's after it, and the on-time 14:54
+      # EDT run still clears it by 36 minutes. An unreadable clock fails OPEN
+      # (run.py itself calls today's bar forming until 16:30, so a run in the
+      # gap still publishes it as provisional, never as confirmed).
       - name: Is this run due
         id: due
         env:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -u
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "${SCHEDULE:-}" = "54 14,16,18 * * 1-5" ] \
+             && [ "$(TZ=America/New_York date +%H%M)" -ge 1530 ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "gate: intraday run landed at/after 15:30 New York - the 21:34 primary and its gated backstops own the close"
+            exit 0
+          fi
           if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "34 22,23 * * 1-5" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi

@@ -1191,6 +1191,7 @@ function runModule(respond, opts) {
   const calls = [];
   const errors = [];
   const timers = [];
+  const delays = [];        // the ms each queued timer asked for, index-aligned with timers
   const listeners = [];
   const pills = [pillEl()];
   const host = { hidden: true, innerHTML: "", querySelector: () => null };
@@ -1204,8 +1205,8 @@ function runModule(respond, opts) {
   const con = { error: (...a) => errors.push(a), warn: (...a) => errors.push(a), log: () => {} };
   const { clock, FakeDate } = makeClock(o.now == null ? NOW : o.now);
   new Function("window", "document", "fetch", "console", "setTimeout", "Date", SRC)(
-    win, doc, fetchStub, con, (fn) => timers.push(fn), FakeDate);
-  return { Ig: win.Ignition, calls, errors, timers, host, listeners, clock, win, pills };
+    win, doc, fetchStub, con, (fn, ms) => { delays.push(ms); return timers.push(fn); }, FakeDate);
+  return { Ig: win.Ignition, calls, errors, timers, delays, host, listeners, clock, win, pills };
 }
 const ok200 = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 const r404 = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.reject(new Error("no")) });
@@ -1901,6 +1902,11 @@ test("CSS: explicit chart heights (card, row, fold), the fold's order, tokens on
     assert.ok(chartRules.some((m) => m[2].includes(`var(${tok})`)), "the chart lost token " + tok);
   }
   assert.match(CSS, /@media \(min-width: 1001px\) and \(max-width: 1199px\)\s*\{\s*\.ig-tbl\.has-chart \.c-dd, \.ig-tbl\.has-chart \.c-q \{ display: none; \}/);
+  // 1400px+: the row chart takes the Name column's spare width (cell and chart agree).
+  const wide = /@media \(min-width: 1400px\)\s*\{([^@]*?)\n\}/.exec(CSS);
+  assert.ok(wide, "the wide-desktop chart block is gone");
+  assert.match(wide[1], /\.ig-tbl\.has-chart td\.c-chart\s*\{\s*width:\s*380px;\s*\}/);
+  assert.match(wide[1], /\.ig-tbl\.has-chart \.ig-chart\s*\{\s*width:\s*380px;\s*height:\s*104px;\s*\}/);
 });
 
 // ── the sidecar through the real module: lazy, joined, re-read ──────────────
@@ -1966,6 +1972,161 @@ test("another run's sidecar waits, and is re-read CHART_RETRY_MS later on the ne
   m.clock.t += 2000;
   m.Ig.sync("crypto");
   assert.equal(n, 3, "and is re-read past it");
+  assert.deepEqual(m.errors, []);
+});
+
+// The two files disagree and NOTHING calls sync() again (2026-10-08 review):
+// the module must chase the stale one itself, not wait for the deck's next render.
+test("an OLDER sidecar re-reads itself on ONE timer: no other sync needed, and none once they match", async () => {
+  const other = chartsFor(CHART_SAMPLE, { generated_at: "2026-09-28T05:00:00+00:00" });
+  let n = 0;
+  const m = runModule((url) => (url.endsWith("_charts.json") ? ok200(++n === 1 ? other : CHARTS)
+    : ok200(url.endsWith("_backtest.json") ? BT2 : CHART_SAMPLE)));
+  m.Ig.pill("crypto", () => {});
+  await settle();
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  assert.match(m.host.innerHTML, /class="ig-chart is-wait"/);
+  assert.equal(m.timers.length, 1, "one re-read queued");
+  assert.ok(m.delays[0] > I.CHART_RETRY_MS, "and only once the retry time has passed");
+  m.Ig.sync("crypto");
+  m.Ig.sync("crypto");
+  assert.equal(m.timers.length, 1, "never a second timer while one is queued");
+  m.clock.t += m.delays[0];
+  m.timers[0]();                                         // the page sits idle: only the timer runs
+  assert.equal(n, 2, "the timer re-read the sidecar");
+  await settle();
+  assert.match(m.host.innerHTML, /<svg class="ig-ch"/, "the charts drew with no outside sync");
+  assert.equal(m.timers.length, 1, "matched: nothing re-queued");
+  assert.equal(m.calls.filter((c) => c.url === "data/ignition/crypto.json").length, 1,
+    "an older sidecar never re-reads the screen");
+  assert.deepEqual(m.errors, []);
+});
+
+test("a sidecar STILL behind after its re-read queues the next one, one at a time, until it matches", async () => {
+  const other = chartsFor(CHART_SAMPLE, { generated_at: "2026-09-28T05:00:00+00:00" });
+  let n = 0;
+  const m = runModule((url) => (url.endsWith("_charts.json") ? ok200(++n <= 2 ? other : CHARTS)
+    : ok200(url.endsWith("_backtest.json") ? BT2 : CHART_SAMPLE)));
+  m.Ig.pill("crypto", () => {});
+  await settle();
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  for (const round of [1, 2]) {
+    assert.equal(m.timers.length, round, "round " + round + ": exactly one queued");
+    m.clock.t += m.delays[round - 1];
+    m.timers[round - 1]();
+    await settle();
+    assert.equal(n, round + 1, "round " + round + ": the timer re-read the sidecar");
+  }
+  assert.match(m.host.innerHTML, /<svg class="ig-ch"/, "drawn once a matching copy landed");
+  assert.equal(m.timers.length, 2, "and nothing queued after that");
+  assert.deepEqual(m.errors, []);
+});
+
+test("a sidecar NEWER than the screen re-reads the SCREEN at once, through the deck, so pill and heading move together", async () => {
+  const NEWER = payload(CHART_ROWS, { counts: Object.assign({}, CHART_SAMPLE.summary.counts,
+    { igniting_confirmed: 4 }) }, { generated_at: "2026-09-28T06:30:00+00:00" });
+  let liveN = 0;
+  const m = runModule((url) => (url.endsWith("_charts.json") ? ok200(chartsFor(NEWER))
+    : ok200(url.endsWith("_backtest.json") ? BT2 : (++liveN === 1 ? CHART_SAMPLE : NEWER))));
+  const deck = [];
+  const onReady = (mk) => { deck.push(mk); m.Ig.pill(mk, onReady); m.Ig.sync(mk); };  // app.js's shape
+  m.Ig.pill("crypto", onReady);
+  await settle();
+  assert.equal(m.Ig.pill("crypto").n, 1);
+  m.clock.t += 3 * 60 * 1000;                            // a deploy lands; the screen copy is 3 min old
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  await settle();
+  assert.equal(liveN, 2, "the screen was re-read well inside LIVE_TTL_MS");
+  assert.ok(deck.length >= 2, "the re-read went back through the deck's own re-render");
+  assert.match(m.host.innerHTML, /<svg class="ig-ch"/, "the newer charts drew against the newer screen");
+  assert.ok(!/is-wait/.test(m.host.innerHTML));
+  assert.equal(m.Ig.pill("crypto").n, 4, "the pill moved with the panel");
+  assert.match(m.host.innerHTML, />Igniting <b>4<\/b>/, "the heading prints the same N");
+  assert.deepEqual(m.errors, []);
+});
+
+test("a NEWER sidecar read seconds after the screen still re-reads it: the timer carries it past the 30 s floor", async () => {
+  const NEWER = payload(CHART_ROWS, undefined, { generated_at: "2026-09-28T06:30:00+00:00" });
+  let liveN = 0;
+  const m = runModule((url) => (url.endsWith("_charts.json") ? ok200(chartsFor(NEWER))
+    : ok200(url.endsWith("_backtest.json") ? BT2 : (++liveN === 1 ? CHART_SAMPLE : NEWER))));
+  const onReady = (mk) => { m.Ig.pill(mk, onReady); m.Ig.sync(mk); };
+  m.Ig.pill("crypto", onReady);
+  await settle();
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  assert.equal(liveN, 1, "not hammered: the screen copy is seconds old");
+  assert.match(m.host.innerHTML, /is-wait/);
+  assert.equal(m.timers.length, 1);
+  m.clock.t += m.delays[0];
+  m.timers[0]();
+  await settle();
+  await settle();
+  assert.equal(liveN, 2, "the timer's sync re-read the screen");
+  assert.match(m.host.innerHTML, /<svg class="ig-ch"/);
+  assert.deepEqual(m.errors, []);
+});
+
+test("the queued re-read does nothing once the panel closed or the market changed", async () => {
+  const other = chartsFor(CHART_SAMPLE, { generated_at: "2026-09-28T05:00:00+00:00" });
+  const ASX_P = payload(CHART_ROWS, undefined, { market: "asx" });
+  for (const leave of ["close", "switch"]) {
+    const m = runModule((url) => (url.indexOf("/asx") >= 0
+      ? (url.endsWith("_charts.json") ? r404() : ok200(url.endsWith("_backtest.json") ? BT2 : ASX_P))
+      : both(CHART_SAMPLE, BT2, other)(url)));
+    m.Ig.pill("crypto", () => {});
+    await settle();
+    m.Ig.toggle("crypto");
+    m.Ig.sync("crypto");
+    await settle();
+    assert.equal(m.timers.length, 1, leave);
+    if (leave === "close") {
+      m.Ig.toggle("crypto");
+      m.Ig.sync("crypto");
+    } else {                                             // the owner moved on and opened the ASX panel
+      m.Ig.sync("asx");
+      m.Ig.pill("asx", () => {});
+      await settle();
+      m.Ig.toggle("asx");
+      m.Ig.sync("asx");
+      await settle();
+      assert.equal(m.host.hidden, false);
+    }
+    const before = m.calls.length;
+    const html = m.host.innerHTML;
+    m.clock.t += m.delays[0];
+    m.timers[0]();
+    await settle();
+    assert.equal(m.calls.length, before, leave + ": nothing fetched");
+    assert.equal(m.host.hidden, leave === "close", leave);
+    assert.equal(m.host.innerHTML, html, leave + ": the crypto timer never touches what is on screen");
+    if (leave === "switch") assert.equal(m.Ig.pill("asx").open, true, "the ASX panel stays open");
+    assert.equal(m.timers.length, 1, leave + ": nothing re-queued");
+  }
+});
+
+test("a sidecar with no readable stamp never re-reads the screen and queues nothing", async () => {
+  const m = runModule(both(CHART_SAMPLE, BT2, chartsFor(CHART_SAMPLE, { generated_at: undefined })));
+  const onReady = (mk) => { m.Ig.pill(mk, onReady); m.Ig.sync(mk); };
+  m.Ig.pill("crypto", onReady);
+  await settle();
+  m.clock.t += 3 * 60 * 1000;
+  m.Ig.toggle("crypto");
+  m.Ig.sync("crypto");
+  await settle();
+  m.clock.t += 60 * 1000;
+  m.Ig.sync("crypto");
+  await settle();
+  assert.equal(m.calls.filter((c) => c.url === "data/ignition/crypto.json").length, 1,
+    "'undefined' > '2026-...' as text: an unstamped file must not trigger a screen re-read");
+  assert.equal(m.timers.length, 0);
   assert.deepEqual(m.errors, []);
 });
 
@@ -2157,10 +2318,10 @@ test("index.html loads ignition.css and ignition.js (before app.js) and hosts th
   assert.match(HTML, /<div class="ig-panel" id="ignition-panel" hidden/);
 });
 
-test("the asset versions moved with this change (?v= floor: ignition.js 7, ignition.css 4, app.js 139)", () => {
+test("the asset versions moved with this change (?v= floor: ignition.js 8, ignition.css 5, app.js 139)", () => {
   const v = (re) => Number((re.exec(HTML) || [])[1] || 0);
-  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 7, "ignition.js edited without a ?v= bump");
-  assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 4, "ignition.css edited without a ?v= bump");
+  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 8, "ignition.js edited without a ?v= bump");
+  assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 5, "ignition.css edited without a ?v= bump");
   assert.ok(v(/js\/app\.js\?v=(\d+)/) >= 139, "app.js edited without a ?v= bump");
 });
 

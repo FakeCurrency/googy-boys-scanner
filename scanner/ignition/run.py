@@ -63,7 +63,10 @@ def bar_is_forming(market: str, last_idx, now: dt.datetime) -> bool:
 
     Mirrors scan._bar_is_forming (crypto forms until UTC midnight; a stock bar
     forms until its session close) WITHOUT importing the VIVEK scan module --
-    the lens keeps no edge into the files that decide trades.
+    the lens keeps no edge into the files that decide trades. One departure:
+    a market in config.IGNITION_FORMING_UNTIL_BAR_FINAL (NASDAQ) forms until
+    its IGNITION_BAR_FINAL (16:30 New York), when the free feed's volume is
+    final, not until the 16:00 bell.
     """
     mkt = config.MARKETS.get(market)
     tz = ZoneInfo(getattr(mkt, "timezone", "UTC") or "UTC")
@@ -80,6 +83,10 @@ def bar_is_forming(market: str, last_idx, now: dt.datetime) -> bool:
         # the new day's minutes-old bar). It is forming by definition -- the
         # old `!=` test called it completed and screened a partial bar.
         return True
+    if market in config.IGNITION_FORMING_UNTIL_BAR_FINAL:
+        # The bar-final zone IS the market's (derived from MARKETS, pinned).
+        _tz, hh, mm = config.IGNITION_BAR_FINAL[market]
+        return (local.hour * 60 + local.minute) < (hh * 60 + mm)
     sess = config.VIVEK_JOURNAL_SESSION.get(market)
     if not sess:
         return True
@@ -375,13 +382,28 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "results": results,
         "errors": errs.sample(),
     }
+    chart_errs = None
     if charts_out is not None:
-        # Display only, built from the frames the rows were screened on.
-        chart_rows, missing = thumbs.build(results, frames, forming)
+        # Display only, built from the frames the rows were screened on. A
+        # chart failure never costs the screen, but its REASON is kept: the
+        # same ErrorLog the screen uses (TOP100 #60/#66, spec_run's
+        # chart_errors precedent), so a break that hits every row prints its
+        # exception kinds, not just tickers. Not an alert channel: no
+        # ::warning:: (that is the owner's call); the "!!" marker past
+        # SCAN_ERROR_LOUD_PCT is the house escalation.
+        chart_errs = scanerrors.ErrorLog(f"ignition charts [{market}]")
+        chart_rows, missing = thumbs.build(results, frames, forming,
+                                           on_error=chart_errs.record)
         charts_out.update(thumbs.payload(market, payload["generated_at"], chart_rows, missing))
+        # ...and the committed sidecar carries the count + a capped sample
+        # (after `missing`), so a fix can start from the file, not from an
+        # Actions log that expires. The screen payload never sees these.
+        charts_out.update(chart_errs.payload("chart_"))
         print(f"ignition: charts {len(chart_rows)}/{len(results)} rows"
               + (f"; no chart for {', '.join(missing[:10])}" if missing else ""), flush=True)
     errs.report(screened)   # prints its own line
+    if chart_errs is not None:
+        chart_errs.report(len(results))
     return payload
 
 

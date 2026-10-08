@@ -1624,6 +1624,15 @@ IGNITION_BAR_FINAL = {
             MORNING_PLAYS_SLOT_GATE["asx"]["minute"]),
     "nasdaq": (MARKETS["nasdaq"].timezone,) + tuple(ALERT_RETURNS_BAR_FINAL["nasdaq"]),
 }
+# The IGNITION markets whose screen calls today's stock bar FORMING until its
+# IGNITION_BAR_FINAL above, not until the VIVEK_JOURNAL_SESSION close: the
+# closing cross and the delayed feed's volume land after the bell, so a run
+# reading its clock between 16:00 and 16:30 New York (a GitHub cron hours late,
+# a manual dispatch, a kick) would otherwise screen a not-final bar as
+# COMPLETED -- a break on partial volume published as confirmed. NASDAQ only:
+# moving the ASX to its 16:40 moves pinned ASX tests and its 06:24 UTC primary
+# (16:24 AEST precedes that close) -- a separate change.
+IGNITION_FORMING_UNTIL_BAR_FINAL = ("nasdaq",)
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.
 MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}
