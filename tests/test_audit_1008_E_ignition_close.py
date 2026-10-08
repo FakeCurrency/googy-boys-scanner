@@ -121,7 +121,10 @@ def test_the_live_run_reads_the_clock_before_the_download_too(monkeypatch):
         datetime=Clock, timezone=dt.timezone, timedelta=dt.timedelta, date=dt.date))
     pay = RUN.screen_market("asx")
     assert saved["ZZZ.AX"].index[-1].date() < day
-    assert pay["generated_at"].startswith(day.isoformat() + "T16:42")
+    # generated_at is the clock the bars were judged final against (review of
+    # #22): the BEFORE-download one, so the backstop gate reads this file as
+    # pre-close and re-screens -- see the gate test below
+    assert pay["generated_at"].startswith(day.isoformat() + "T16:36")
 
 
 def test_a_1620_breakout_is_provisional_not_a_confirmed_igniting(monkeypatch):
@@ -139,3 +142,58 @@ def test_a_1620_breakout_is_provisional_not_a_confirmed_igniting(monkeypatch):
     assert pay["results"][0]["provisional"] is False
     assert pay["summary"]["counts"]["igniting_confirmed"] == 1
     assert saved["ZZZ.AX"].index[-1].date() == day
+
+
+# ---------------------------------------------------------------------------
+# review of #22 -- the backstop gate must agree with the forming-bar verdict
+# ---------------------------------------------------------------------------
+
+_due_spec = importlib.util.spec_from_file_location("_ig_asx_due_e22",
+                                                   ROOT / "scripts" / "ignition_asx_due.py")
+_due = importlib.util.module_from_spec(_due_spec)
+_due_spec.loader.exec_module(_due)
+
+
+def _clocked_run(monkeypatch, df, start, end):
+    """screen_market('asx') with the download starting at `start` and the bars
+    in hand at `end` (Sydney times on the frame's last day)."""
+    import types
+    day = df.index[-1].date()
+    saved: dict = {}
+    _patch_download(monkeypatch, df, saved)
+    ticks = iter([_at(day, *start), _at(day, *end)])
+
+    class Clock(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return next(ticks)
+    monkeypatch.setattr(RUN, "dt", types.SimpleNamespace(
+        datetime=Clock, timezone=dt.timezone, timedelta=dt.timedelta, date=dt.date))
+    return RUN.screen_market("asx"), saved
+
+
+def test_a_run_straddling_the_close_leaves_the_backstop_due(monkeypatch):
+    """The AEST 06:24Z primary (16:24 Sydney), GitHub-delayed so its download
+    runs 16:36 -> 16:42: today's bar is provisional (it was not final when the
+    fetch started), so the 07:24Z backstop MUST still run and confirm it. With
+    generated_at stamped after the download (16:42 >= the 16:40 close)
+    ignition_asx_due skipped every backstop and the break stayed provisional
+    until the next morning's intraday run."""
+    df = asx_frame(0)                     # the trigger bar IS today's bar
+    day = df.index[-1].date()
+    pay, saved = _clocked_run(monkeypatch, df, (16, 36), (16, 42))
+    assert pay["results"][0]["provisional"] is True
+    assert saved["ZZZ.AX"].index[-1].date() < day
+    run, why = _due.due(pay["generated_at"], _at(day, 17, 24).astimezone(dt.timezone.utc))
+    assert run is True, why
+
+
+def test_a_run_wholly_after_the_close_satisfies_the_backstop_gate(monkeypatch):
+    df = asx_frame(0)
+    day = df.index[-1].date()
+    pay, saved = _clocked_run(monkeypatch, df, (16, 41), (16, 47))
+    assert pay["results"][0]["provisional"] is False
+    assert pay["summary"]["counts"]["igniting_confirmed"] == 1
+    assert saved["ZZZ.AX"].index[-1].date() == day
+    run, why = _due.due(pay["generated_at"], _at(day, 17, 24).astimezone(dt.timezone.utc))
+    assert run is False, why

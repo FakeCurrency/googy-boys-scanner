@@ -12,6 +12,10 @@ The close is the morning digest's own gate (config.MORNING_PLAYS_SLOT_GATE
 shows it ~20 min later), read in the market's own calendar so both DST
 regimes are right by construction. Under AEST the 06:24 UTC primary is 16:24
 Sydney, before that close, so the 07:24 UTC backstop re-screens on final bars.
+The lens stamps generated_at with the clock read BEFORE its download (audit
+#22 review), the same clock its forming-bar test asks: a file at/after the
+close here is exactly a file that treated today's bar as final, so a delayed
+primary fetching 16:36 -> 16:42 (today's bar provisional) leaves this due.
 
     python3 scripts/ignition_asx_due.py <generated_at or ""> [--now ISO]
 

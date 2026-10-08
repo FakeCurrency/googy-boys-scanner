@@ -339,7 +339,14 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
         "schema_version": SCHEMA_VERSION,
         "lens": "ignition",
         "market": market,
-        "generated_at": now.isoformat(timespec="seconds"),
+        # The clock read BEFORE the download when there was one (audit #22
+        # review): ignition_asx_due skips the 07:24/09:24 backstops once
+        # generated_at >= today's 16:40 close, and a bar counts as completed
+        # only if it was final at THIS clock too. Stamped after the download, a
+        # run fetching 16:36 -> 16:42 (the AEST 06:24Z primary, GitHub-delayed)
+        # left today's bar provisional yet read as "screened after the close",
+        # so no backstop confirmed it until the next morning.
+        "generated_at": (since or now).isoformat(timespec="seconds"),
         "ruleset_version": config.IGNITION_RULESET_VERSION,
         "timeframe": "1d",
         "last_closed_bar": max((r["last_bar"] for r in results), default=None),
