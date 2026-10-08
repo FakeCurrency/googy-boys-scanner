@@ -88,6 +88,7 @@ class PhaseMapConfig:
     # ~2e-5) published as 0.0 and narrated "0.0000-0.0000". The chart writer
     # (8 dp) and the harness (12 dp) were already widened for the same reason.
     price_sig_figs: int = 4
+    price_max_decimals: int = 12       # the harness's precision: the widening's cap
 
     # ---- Buffer function (Section 3.1) --------------------------------------
     buffer_atr_mult: float = 0.5

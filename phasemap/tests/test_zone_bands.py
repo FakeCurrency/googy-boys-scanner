@@ -8,7 +8,9 @@ gate only checked low <= high.
 
 import pytest
 
+import phasemap.engine.setup_engine as setup_engine_mod
 from phasemap.engine.scanner import scan_ticker
+from phasemap.engine.setup_engine import SetupEngine
 from phasemap.narrate.renderer import render
 from phasemap.output.writer import build_snapshot, validate_snapshot
 from phasemap.tests import synth
@@ -55,6 +57,24 @@ def test_the_bearish_mirror_publishes_a_supply_band():
     supply = next(z for z in rec["zones"] if z["id"] == "supply")
     assert supply["low"] < supply["high"]
     assert supply["high"] == pytest.approx(0.1 - 0.0480)  # the swept tick
+
+
+def test_a_padded_supply_never_reaches_zero(monkeypatch):
+    # the bearish pad points DOWN from the swept tick, so it takes the #27
+    # positive floor: a buffer over twice the price must not publish a
+    # SUPPLY low at or below zero
+    _rec0, eng = _rec(_equal_tick_taps(bull=False), "bearish")
+    k, ind = eng.sweep_index, eng.ind
+    extreme = float(ind.high[k])
+    fresh = SetupEngine(ind=ind, bull=False)
+    for i in range(k):
+        fresh.on_bar(i)
+    monkeypatch.setattr(fresh, "_buffer", lambda i: 4 * extreme)
+    monkeypatch.setattr(setup_engine_mod, "cluster_levels",
+                        lambda levels, tol: [(extreme, extreme, 3)])
+    fresh.on_bar(k)
+    assert fresh.sweep_index == k and fresh.sweep_variant == "equal_highs"
+    assert 0 < fresh.demand.low < fresh.demand.high == extreme
 
 
 def test_the_schema_gate_rejects_a_single_price_zone():

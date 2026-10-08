@@ -302,7 +302,9 @@ class SetupEngine:
                                  high=extreme, side="below",
                                  rule="close_below_low", created_date=created)
         else:
-            sup_low = key_level if key_level < extreme else extreme - half
+            # the pad points DOWN here, so it gets the #27 positive floor too
+            sup_low = key_level if key_level < extreme else \
+                self._positive_low(extreme - half, extreme)
             self.demand = Zone(id="supply", type="SUPPLY", low=sup_low,
                                high=extreme, side="above",
                                sources=["sweep_wick"], created_date=created)

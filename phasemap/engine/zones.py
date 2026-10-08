@@ -15,16 +15,15 @@ from dataclasses import dataclass, field
 
 from phasemap.config import CONFIG
 
-_MAX_PRICE_DECIMALS = 12   # the harness's precision; nothing finer is meaningful
-
 
 def _price_decimals(x: float) -> int:
     """CONFIG.price_decimals, widened to CONFIG.price_sig_figs significant
-    figures for small prices (audit #28). Unchanged at/above $0.10."""
+    figures for small prices (audit #28), capped at CONFIG.price_max_decimals.
+    Unchanged at/above $0.10."""
     nd = CONFIG.price_decimals
     if x and math.isfinite(x):
         nd = max(nd, CONFIG.price_sig_figs - 1 - math.floor(math.log10(abs(x))))
-    return min(nd, _MAX_PRICE_DECIMALS)
+    return min(nd, CONFIG.price_max_decimals)
 
 
 def price_round(x: float) -> float:
@@ -35,13 +34,18 @@ def price_round(x: float) -> float:
 def band_round(low: float, high: float) -> tuple:
     """Round a band's two edges for publishing. A band the engine built with
     width is never published as one price: when rounding would collapse it,
-    both edges take more decimals until they differ (audit #26/#28)."""
+    both edges take more decimals until they differ (audit #26/#28). A band
+    still collapsed at the decimal cap (narrower than ~1e-12) publishes its
+    unrounded edges: writer._validate_result requires low < high, and a
+    collapsed band there would abort the whole market's publish."""
     lo, hi = price_round(low), price_round(high)
     if low < high and lo >= hi:
         nd = max(_price_decimals(low), _price_decimals(high))
-        while nd < _MAX_PRICE_DECIMALS and round(low, nd) >= round(high, nd):
+        while nd < CONFIG.price_max_decimals and round(low, nd) >= round(high, nd):
             nd += 1
         lo, hi = round(low, nd), round(high, nd)
+        if lo >= hi:
+            lo, hi = float(low), float(high)
     return lo, hi
 
 

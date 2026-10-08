@@ -68,3 +68,29 @@ def test_fmt_price_speaks_sub_cent_prices():
     assert fmt_price(0.0485) == "0.0485"
     assert fmt_price(0.965) == "0.965"
     assert fmt_price(21.5) == "21.50"
+
+
+def test_a_sub_cent_trap_set_publishes_its_box_and_cluster():
+    # the TRAP_SET pre-alert's box/cluster levels went through the same flat
+    # 4 dp rounding: a ~2e-5 coin's range read 0.0-0.0001
+    df = synth.fixture_trap_only()
+    for c in ("Open", "High", "Low", "Close"):
+        df[c] = df[c] * 2e-5
+    df["Volume"] = 1e12
+    traps = [(r, e) for r, e in scan_ticker("BONK", df, market="crypto", volume_is_usd=True)
+             if r["state"] == "TRAP_SET"]
+    assert traps
+    for rec, eng in traps:
+        m = rec["metrics"]
+        assert m["box_low"] == price_round(eng.box_low) > 0
+        assert m["box_high"] == price_round(eng.box_high) > m["box_low"]
+        assert m["cluster_low"] == price_round(eng.trap_cluster[0]) > 0
+        assert m["cluster_high"] == price_round(eng.trap_cluster[1]) > 0
+        assert "0.0000–" not in render(rec) + " " + render_next(rec)
+
+
+def test_a_band_narrower_than_the_decimal_cap_keeps_its_raw_edges():
+    # 12 dp cannot separate these two edges; a collapsed band would fail the
+    # strict low < high gate and abort the market's whole publish
+    lo, hi = band_round(1.0000000000001e-9, 1.0000000000002e-9)
+    assert lo < hi
