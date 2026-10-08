@@ -7,15 +7,18 @@ It is stdlib-only (it runs with `python3 -I` from any checkout), so it COPIES
 a few times out of config instead of importing them. These tests are what stop
 that copy drifting:
 
-* parity: the copied windows, close gates and Momentum due times equal config;
-* read-only: the script can only run `git show/log/ls-tree/rev-parse` and
-  `git fetch`, opens no file, imports nothing outside the stdlib list, and the
-  skill's never-list still names the four endpoints that dispatch real work;
-* behaviour: a fixture repo with a known day in it (a missed ASX hour, an
-  unpriced coin, a position near its stop, an open and a stop-out) produces the
-  right lines and flags, and the same day without the faults says nothing looks
-  wrong. None of it reads the live repo's data, so a quiet tape cannot turn it
-  red (the Lighthouse lesson, CLAUDE.md).
+* parity: the copied windows, close gates, Momentum due times and Ignition
+  bar-final times equal config, and every cron-job.org id the skill names is
+  one CLAUDE.md knows;
+* read-only: the script can only run `git show/log/ls-tree/rev-parse` and two
+  shapes of `git fetch`, opens no file, imports nothing outside a stdlib list,
+  and the skill's never-list still carries all five rules;
+* behaviour: fixture repos with known days in them (a missed hour, a lost first
+  scan, a close still covered by its backstop, a stale everything, a weekend, a
+  shallow clone like a cloud session's) produce the right lines in the right
+  verdict list, and a clean day says nothing looks wrong. None of it reads the
+  live repo's data, so a quiet tape cannot turn it red (the Lighthouse lesson,
+  CLAUDE.md), and every git call runs with the user's git config switched off.
 """
 from __future__ import annotations
 
@@ -39,6 +42,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / ".claude" / "skills" / "vivek5-checkin"
 SCRIPT = SKILL / "scripts" / "scanner_status.py"
 MEL = ZoneInfo("Australia/Melbourne")
+UTC = dt.timezone.utc
+# A developer's commit.gpgsign / init.defaultBranch / hooks must not reach the fixtures.
+GIT_ENV = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",
+               GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
 
 
 def _mod():
@@ -58,6 +65,9 @@ def test_scan_windows_match_config():
         assert h0[0] * 60 + h0[1] == start, market
         assert h1[0] * 60 + h1[1] == end, market
     assert set(m.WINDOW) == set(config.MARKET_SCAN_WINDOWS)
+    assert set(m.FIRST_PING) == set(m.WINDOW) == set(m.CLOSE_GRACE_MIN)
+    for market, hm in m.FIRST_PING.items():   # the first ping sits inside the window
+        assert m.WINDOW[market][0] <= hm <= m.WINDOW[market][1]
 
 
 def test_close_gates_match_the_digest_gate():
@@ -79,16 +89,28 @@ def test_momentum_due_times_match_momentum_due():
     assert tuple(m.MOMENTUM_CRYPTO_DUE_UTC) == tuple(mcfg.CRYPTO_DUE_UTC)
 
 
+def test_ignition_markets_and_bar_final_times_match_config():
+    """scripts/ignition_due.py owes each stock market a screen from
+    IGNITION_BAR_FINAL; a market added to IGNITION_MARKETS must be checked too."""
+    m = _mod()
+    assert {"crypto", *m.IGNITION_BAR_FINAL} == set(config.IGNITION_MARKETS)
+    assert set(m.IGNITION_BAR_FINAL) == set(config.IGNITION_BAR_FINAL)
+    for market, (tz, hour, minute) in config.IGNITION_BAR_FINAL.items():
+        hm, mtz = m.IGNITION_BAR_FINAL[market]
+        assert (hm, mtz.key) == ((hour, minute), tz), market
+
+
 def test_every_cron_job_id_in_the_skill_is_one_claude_md_knows():
     known = set(re.findall(r"\b8\d{6}\b", (ROOT / "CLAUDE.md").read_text(encoding="utf-8")))
-    for doc in (SKILL / "SKILL.md", SKILL / "references" / "schedule.md", SKILL / "references" / "runs.md"):
+    docs = [SKILL / "SKILL.md", SCRIPT, *sorted((SKILL / "references").glob("*.md"))]
+    for doc in docs:
         ids = set(re.findall(r"\b8\d{6}\b", doc.read_text(encoding="utf-8")))
         assert ids <= known, f"{doc.name} names cron-job.org jobs CLAUDE.md does not: {sorted(ids - known)}"
 
 
 # ---------------------------------------------------------------------------
 # read-only by construction
-STDLIB = {"__future__", "argparse", "datetime", "json", "subprocess", "sys", "zoneinfo"}
+STDLIB = {"__future__", "argparse", "datetime", "json", "os", "subprocess", "sys", "zoneinfo"}
 GIT_READS = {"show", "log", "ls-tree", "rev-parse"}
 
 
@@ -107,26 +129,31 @@ def test_the_script_imports_only_the_stdlib_list():
 
 
 def test_the_script_only_reads_git_and_writes_nothing():
-    calls = [n for n in ast.walk(_tree()) if isinstance(n, ast.Call)]
+    tree = _tree()
+    # an ALLOW-list of what the os and subprocess modules may be used for
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            if node.value.id == "subprocess":
+                assert node.attr in {"run", "CalledProcessError"}, f"subprocess.{node.attr}"
+            if node.value.id == "os":
+                assert node.attr == "environ", f"os.{node.attr}"
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)]
     names = {getattr(c.func, "id", None) or getattr(c.func, "attr", None) for c in calls}
-    assert "open" not in names, "the status script must not open (or write) any file"
-    assert not names & {"system", "popen", "Popen", "call", "check_call", "check_output", "urlopen"}
-    git_subs = [c.args[0].value for c in calls
-                if getattr(c.func, "id", None) == "git" and c.args and isinstance(c.args[0], ast.Constant)]
-    git_dyn = [c for c in calls if getattr(c.func, "id", None) == "git"
-               and (not c.args or not isinstance(c.args[0], ast.Constant))]
-    assert git_subs and set(git_subs) <= GIT_READS, sorted(set(git_subs) - GIT_READS)
-    assert not git_dyn, "every git() call must name its subcommand literally"
-    runs = [c for c in calls if getattr(c.func, "attr", None) == "run"]
+    assert not names & {"open", "write_text", "write_bytes", "mkdir", "remove", "unlink", "rename", "rmtree"}
+    git_calls = [c for c in calls if getattr(c.func, "id", None) == "git"]
+    assert git_calls and all(c.args and isinstance(c.args[0], ast.Constant) for c in git_calls), \
+        "every git() call must name its subcommand literally"
+    assert {c.args[0].value for c in git_calls} <= GIT_READS
     argvs = []
-    for c in runs:
-        argv = c.args[0]
-        assert isinstance(argv, ast.List), "subprocess.run must take a literal argv"
-        head = [e.value for e in argv.elts if isinstance(e, ast.Constant)]
-        argvs.append(head)
-        assert head[:1] == ["git"], head
-    # exactly two: the git() helper (its subcommand is checked above) and the fetch
-    assert sorted(argvs) == [["git", "-C"], ["git", "-C", "fetch", "-q", "origin", "main"]], argvs
+    for c in calls:
+        if getattr(c.func, "attr", None) == "run":
+            argv = c.args[0]
+            assert isinstance(argv, ast.List), "subprocess.run must take a literal argv"
+            argvs.append([e.value for e in argv.elts if isinstance(e, ast.Constant)])
+    # the git() helper (subcommand checked above), the fetch, and the deepen fetch
+    assert sorted(argvs) == [["git", "-C"],
+                             ["git", "-C", "fetch", "-q", "--deepen=300", "origin", "main"],
+                             ["git", "-C", "fetch", "-q", "origin", "main"]], argvs
 
 
 def test_the_script_is_ascii_for_windows_consoles():
@@ -134,12 +161,16 @@ def test_the_script_is_ascii_for_windows_consoles():
     SCRIPT.read_bytes().decode("ascii")
 
 
-def test_the_never_list_still_names_the_endpoints_that_dispatch_real_work():
+def test_the_never_list_still_carries_every_rule():
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
-    never = text[text.index("Never, during a check-in"):]
+    start = text.index("- **Never, during a check-in:**")
+    end = text.index("\n- **", start + 1)          # the next top-level bullet
+    never = text[start:end]
     for ep in ("/api/heartbeat", "/api/scan", "/api/close", "/api/morning_plays"):
         assert ep in never, ep
-    assert "Re-send the digest" in never and "PhaseMap by hand" in never
+    for rule in ("Re-send the digest", "Dispatch PhaseMap by hand", "Dispatch a mutating ops action",
+                 "Rerun or cancel a run you did not start"):
+        assert rule in never, rule
 
 
 def test_skill_frontmatter():
@@ -175,26 +206,31 @@ def test_in_window_is_inclusive_and_weekday_only():
 
 
 # ---------------------------------------------------------------------------
-# behaviour on a fixture repo
+# behaviour on fixture repos
 NOW = "2026-10-08T17:25:00+11:00"   # Thu, after the ASX close and the digest
-UTC = dt.timezone.utc
+T0 = "2026-10-07T12:00:00+11:00"    # before the default 24 h window
+T1 = "2026-10-08T17:20:00+11:00"
 
 
 def _u(s):
     return dt.datetime.fromisoformat(s).astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
-def _asx_scans(skip_1pm):
-    hm = ["11:15", "12:16", "13:14", "14:16", "15:16", "16:15", "16:45"]
-    if skip_1pm:
-        hm.remove("13:14")
+ASX_HM = ["11:15", "12:16", "13:14", "14:16", "15:16", "16:15", "16:45"]
+NASDAQ_HM = ["10:43", "11:14", "12:14", "13:14", "14:14", "15:14", "16:10", "16:16"]
+
+
+def _asx(hm):
     return [_u(f"2026-10-08T{x}:00+11:00") for x in hm]
 
 
-NASDAQ = [_u(f"2026-10-07T{x}:00-04:00") for x in
-          ("10:43", "11:14", "12:14", "13:14", "14:14", "15:14", "16:10", "16:16")]
-CRYPTO = [_u((dt.datetime.fromisoformat(NOW) - dt.timedelta(hours=h)).replace(minute=25).isoformat())
-          for h in range(23, -1, -1)]
+def _nasdaq(hm):
+    return [_u(f"2026-10-07T{x}:00-04:00") for x in hm]
+
+
+def _crypto(end_iso, n=24):
+    end = dt.datetime.fromisoformat(end_iso)
+    return [_u((end - dt.timedelta(hours=h)).isoformat()) for h in range(n - 1, -1, -1)]
 
 
 def _pos(pid, sym, **kw):
@@ -204,36 +240,42 @@ def _pos(pid, sym, **kw):
     return p
 
 
-def _book(market, open_, closed, updated):
+def _book(market, open_, closed, updated, **guard):
+    g = {"breached": False, "session_usd": -393.28, "limit_usd": 4500, "week_usd": -1131.2, "week_limit_usd": 9000}
+    g.update(guard)
     return {"updated_at": updated, "summary": {"updated_day": "2026-10-08"},
-            "guard": {market: {"breached": False, "session_usd": -393.28, "limit_usd": 4500,
-                               "week_usd": -1131.2, "week_limit_usd": 9000}},
-            "open": open_, "closed": closed}
+            "guard": {market: g}, "open": open_, "closed": closed}
 
 
-def _files(*, faults):
+def _files(*, faults=False):
+    """(then, now): the repo before the 24 h window and at the check-in."""
     wafd = _pos("n1", "WAFD", entry=30.0, stop=28.0, risk=2.0, last_mark=29.0)
+    abc = _pos("n3", "ABC")
+    xyz = _pos("n4", "XYZ")
     adp = _pos("n2", "ADP", entry=263.12, stop=247.41, risk=15.71, last_mark=265.0)
-    aar = _pos("a1", "AAR", entry=0.18, stop=0.1609, risk=0.0191,
-               last_mark=0.165 if faults else 0.19)
+    aar = _pos("a1", "AAR", entry=0.18, stop=0.1609, risk=0.0191, last_mark=0.165 if faults else 0.19)
     nic = _pos("a2", "NIC", entry_date="2026-09-13" if faults else "2026-10-01")
     bnb = _pos("c1", "BNB", **({"unpriced_runs": 2} if faults else {}))
-    closed_wafd = dict(wafd, exit_reason="stop", exit_date="2026-10-07", realized_r=-1.11)
-    asx = _asx_scans(skip_1pm=faults)
+    closed = [dict(wafd, exit_reason="stop", exit_date="2026-10-07", realized_r=-1.11),
+              dict(xyz, exit_reason="manual", exit_date="2026-10-07", realized_r=0.5),
+              dict(abc, exit_date="2026-10-07", realized_r=-0.2)]          # no exit_reason: a human act
+    asx = _asx([x for x in ASX_HM if not (faults and x == "13:14")])
+    crypto = _crypto(NOW)
     then = {
         "journal/vivek_bot_book.asx.json": _book("asx", [aar, nic], [], "2026-10-07T05:46:00Z"),
-        "journal/vivek_bot_book.nasdaq.json": _book("nasdaq", [wafd], [], "2026-10-06T20:16:00Z"),
+        "journal/vivek_bot_book.nasdaq.json": _book("nasdaq", [wafd, abc, xyz], [], "2026-10-06T20:16:00Z"),
         "journal/vivek_bot_book.crypto.json": _book("crypto", [bnb], [], "2026-10-07T00:25:00Z"),
+        "public/data/phasemap/asx/latest.json": {"run_date": "2026-10-07"},
     }
     now = {
         "public/data/funnel_history.json": {"markets": {
             "asx": {"t": asx, "trigger": ["heartbeat"] * len(asx)},
-            "nasdaq": {"t": NASDAQ, "trigger": ["heartbeat"] * 6 + ["cron", "heartbeat"]},
-            "crypto": {"t": CRYPTO, "trigger": ["heartbeat"] * len(CRYPTO)}}},
+            "nasdaq": {"t": _nasdaq(NASDAQ_HM), "trigger": ["heartbeat"] * 6 + ["cron", "heartbeat"]},
+            "crypto": {"t": crypto, "trigger": ["heartbeat"] * len(crypto)}}},
         "data/scan_health.json": {"asx": {"dry": 0}, "nasdaq": {"dry": 0}, "crypto": {"dry": 0}},
         "public/data/asx_prices.json": {"generated_at": "2026-10-08T16:45:13+11:00"},
         "public/data/nasdaq_prices.json": {"generated_at": "2026-10-07T16:16:04-04:00"},
-        "public/data/crypto_prices.json": {"generated_at": CRYPTO[-1]},
+        "public/data/crypto_prices.json": {"generated_at": crypto[-1]},
         "public/data/asx_vivek.json": {"scanned": 1726, "universe_size": 1923, "from_cache": 0,
                                        "errors": 0, "funnel": {"setups": 225}},
         "public/data/nasdaq_vivek.json": {"scanned": 1430, "universe_size": 1430, "from_cache": 0,
@@ -246,13 +288,14 @@ def _files(*, faults):
                                              "last_closed_bar": "2026-10-07", "summary": {"hits": 2}},
         "public/data/ignition/crypto.json": {"generated_at": "2026-10-08T05:57:00Z", "last_closed_bar": "2026-10-07"},
         "public/data/ignition/asx.json": {"generated_at": "2026-10-07T13:43:00Z", "last_closed_bar": "2026-10-07"},
+        "public/data/ignition/nasdaq.json": {"generated_at": "2026-10-07T21:40:00Z", "last_closed_bar": "2026-10-07"},
         "public/data/phasemap/asx/latest.json": {"run_date": "2026-10-08"},
         "data/alert_forward_returns.json": {"updated_at": "2026-10-08T02:03:00Z"},
         "public/data/reco_note.json": {"generated_at": "2026-10-07T15:49:00Z"},
         "backups/2026-10-08T01-14-45/vivek_bot_book.json": {},
         "public/data/bot_rules.json": {"max_open_total": 4, "max_hold_days": 28},
         "journal/vivek_bot_book.asx.json": _book("asx", [aar, nic], [], "2026-10-08T05:46:08Z"),
-        "journal/vivek_bot_book.nasdaq.json": _book("nasdaq", [adp], [closed_wafd], "2026-10-07T20:16:00Z"),
+        "journal/vivek_bot_book.nasdaq.json": _book("nasdaq", [adp], closed, "2026-10-07T20:16:00Z"),
         "journal/vivek_bot_book.crypto.json": _book("crypto", [bnb], [], "2026-10-08T06:22:00Z"),
         "public/data/phasemap/alert_history.json": {"entries": [
             {"date": "2026-10-08T05:46:00Z", "count": 3, "market": "asx", "ticker": "DOW", "side": "long"},
@@ -262,41 +305,70 @@ def _files(*, faults):
     return then, now
 
 
+def _git(*args):
+    subprocess.run(["git", *args], check=True, env=GIT_ENV, capture_output=True)
+
+
 def _commit(repo, files, when):
     for path, doc in files.items():
         f = repo / path
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(json.dumps(doc), encoding="utf-8")
-    env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
-               GIT_COMMITTER_EMAIL="t@t", GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
+        f.write_text(doc if isinstance(doc, str) else json.dumps(doc), encoding="utf-8")
+    env = dict(GIT_ENV, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, env=env)
-    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", when], check=True, env=env)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "--allow-empty", "-m", when], check=True, env=env)
 
 
-def _run(tmp_path, *, faults, extra=()):
-    repo = tmp_path / "repo"
+def _repo(tmp_path, then, now, name="repo"):
+    repo = tmp_path / name
     repo.mkdir()
-    subprocess.run(["git", "init", "-q", str(repo)], check=True)
-    then, now = _files(faults=faults)
-    _commit(repo, then, "2026-10-07T12:00:00+11:00")
-    _commit(repo, now, "2026-10-08T17:20:00+11:00")
-    out = subprocess.run([sys.executable, "-I", str(SCRIPT), "--repo", str(repo), "--rev", "HEAD",
-                          "--now", NOW, *extra], capture_output=True, text=True)
+    _git("init", "-q", "-b", "main", str(repo))
+    _commit(repo, {"README": "fixture"}, "2026-10-01T12:00:00+10:00")   # a root that touches nothing else
+    _commit(repo, then, T0)
+    _commit(repo, now, T1)
+    return repo
+
+
+def _status(repo, now=NOW, *extra, rev="HEAD"):
+    args = [sys.executable, "-I", str(SCRIPT), "--repo", str(repo), "--now", now, *extra]
+    if rev:
+        args += ["--rev", rev]
+    out = subprocess.run(args, capture_output=True, text=True, env=GIT_ENV)
     assert out.returncode == 0, out.stderr
     assert "could not read a section" not in out.stdout, out.stdout
     return out.stdout
 
 
+def _run(tmp_path, *, faults=False, now=NOW, extra=(), edit=None):
+    then, files = _files(faults=faults)
+    if edit:
+        edit(then, files)
+    return _status(_repo(tmp_path, then, files), now, *extra)
+
+
 def _verdict(text):
-    """(the whole verdict, only its LOOKS WRONG list)"""
+    """(LOOKS WRONG list, NOT DUE YET list) as text."""
     v = text[text.index("== VERDICT"):]
-    end = v.index("NOT DUE YET") if "NOT DUE YET" in v else v.index("NOT CHECKED HERE")
-    return v, v[:end]
+    tail = v.index("NOT CHECKED HERE")
+    if "NOT DUE YET" in v:
+        mid = v.index("NOT DUE YET")
+        return v[:mid], v[mid:tail]
+    return v[:tail], ""
+
+
+def _set_asx(files, hm):
+    t = _asx(hm)
+    files["public/data/funnel_history.json"]["markets"]["asx"] = {"t": t, "trigger": ["heartbeat"] * len(t)}
+
+
+def _set_nasdaq(files, hm):
+    t = _nasdaq(hm)
+    files["public/data/funnel_history.json"]["markets"]["nasdaq"] = {"t": t, "trigger": ["heartbeat"] * len(t)}
 
 
 def test_a_day_with_faults_is_reported_line_by_line(tmp_path):
     text = _run(tmp_path, faults=True)
-    v, wrong = _verdict(text)
+    wrong, waiting = _verdict(text)
     # scans
     assert "asx: the Thu 08 Oct session: 6 scans" in text
     assert "closing scan: Thu 16:45 (counts from 16:40 Sydney)" in text
@@ -308,11 +380,16 @@ def test_a_day_with_faults_is_reported_line_by_line(tmp_path):
     # lenses
     assert "momentum asx: Thu 17:19" in text and "6 hits - fresh" in text
     assert "ignition crypto: Thu 16:57" in text and "STALE" not in text
-    assert "ignition ASX not screened since the Thu 16:40 close (0.8 h)" in v
+    assert "ignition nasdaq: Thu 08:40" in text
+    assert "ignition ASX not screened since the Thu 16:40 bar went final (0.8 h)" in waiting
     assert "ignition" not in wrong.lower()            # not due yet is not wrong
+    assert "phasemap: run_date 2026-10-08, last ran Thu 08 Oct 17:20" in text
     # paper bot
     assert "OPENED ADP A+ 3D reclaim at 263.12, stop 247.41" in text
     assert "CLOSED WAFD 2026-10-07 stop (the rules) -1.11R" in text
+    assert "CLOSED XYZ 2026-10-07 manual (you) +0.50R" in text
+    assert "CLOSED ABC 2026-10-07 by hand (you) -0.20R" in text
+    assert "OPENED ABC" not in text and "OPENED XYZ" not in text
     assert "WATCH AAR: 0.21R above its stop" in text
     assert "WATCH NIC: time stop in 4 day(s)" in text
     assert "total: 4/4 open - book FULL" in text
@@ -320,65 +397,163 @@ def test_a_day_with_faults_is_reported_line_by_line(tmp_path):
     assert "A$-393 of -A$4,500" in text
     # confluence: two new since yesterday, one of them a triple; the 1 Oct one is old
     assert "new multi-lens alignments since Wed 17:25: 2" in text
-    assert "TRIPLES (all three lenses agree): asx DOW long" in text and "asx OLD" not in text
+    assert "    TRIPLES (all three lenses agree): asx DOW long\n" in text
 
 
 def test_the_same_day_without_faults_says_nothing_looks_wrong(tmp_path):
-    text = _run(tmp_path, faults=False)
-    v, wrong = _verdict(text)
-    assert "LOOKS WRONG: nothing in the repo data" in v, wrong
+    text = _run(tmp_path)
+    wrong, waiting = _verdict(text)
+    assert "LOOKS WRONG: nothing in the repo data" in wrong, wrong
     assert "asx: the Thu 08 Oct session: 7 scans" in text
     assert "WATCH" not in text
-    assert "NOT DUE YET" in v                            # Ignition ASX after the close
+    assert "ignition ASX" in waiting                 # after the close, not yet screened
 
 
-def test_since_takes_git_dates_and_bare_times_mean_melbourne(tmp_path):
-    # 17:21 Thursday is after the last commit (17:20), so nothing changed since
-    text = _run(tmp_path, faults=False, extra=("--since", "2026-10-08 17:21"))
-    assert "PAPER BOT (changes since Thu 08 Oct 17:21)" in text
-    assert "OPENED" not in text and "CLOSED" not in text
+@pytest.mark.parametrize("hm,flagged", [
+    (["10:43", "12:14", "13:14", "14:14", "15:14", "16:10", "16:16"], True),    # the real 8 Oct miss: 91 min
+    (["10:43", "11:58", "13:13", "14:14", "15:14", "16:10", "16:16"], False),   # 75 min spacing is normal jitter
+])
+def test_the_gap_alarm_threshold_is_pinned_from_both_sides(tmp_path, hm, flagged):
+    text = _run(tmp_path, edit=lambda then, files: _set_nasdaq(files, hm))
+    wrong, _ = _verdict(text)
+    assert ("NASDAQ: 1 gap(s) over 80 min" in wrong) is flagged, wrong
 
 
-def test_since_accepts_git_relative_dates(tmp_path):
-    """Not ISO, so it goes through `git rev-parse --since` (no GNU date needed)."""
-    text = _run(tmp_path, faults=False, extra=("--since", "3 days ago"))
-    assert "PAPER BOT (changes since " in text
+def test_a_lost_first_scan_is_flagged_although_no_gap_reaches_80_minutes(tmp_path):
+    text = _run(tmp_path, edit=lambda then, files: _set_asx(files, ASX_HM[1:]))
+    wrong, _ = _verdict(text)
+    assert "gap(s)" not in wrong
+    assert "ASX: the session's first scan (due ~11:15 Melbourne) did not land until 12:16" in wrong
 
 
-def test_a_market_missing_its_close_is_flagged_once_the_gate_has_passed(tmp_path):
-    late = "2026-10-08T17:25:00+11:00"
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init", "-q", str(repo)], check=True)
-    then, now = _files(faults=False)
-    now["public/data/funnel_history.json"]["markets"]["asx"]["t"] = _asx_scans(False)[:-1]  # no 16:45
-    now["public/data/funnel_history.json"]["markets"]["asx"]["trigger"] = ["heartbeat"] * 6
-    _commit(repo, then, "2026-10-07T12:00:00+11:00")
-    _commit(repo, now, "2026-10-08T17:20:00+11:00")
-    out = subprocess.run([sys.executable, "-I", str(SCRIPT), "--repo", str(repo), "--rev", "HEAD",
-                          "--now", late], capture_output=True, text=True, check=True).stdout
-    _, wrong = _verdict(out)
-    assert "ASX: no closing scan for the Thu 08 Oct session" in wrong
-    # ...and before 16:55 Sydney it is only "not due yet"
-    early = subprocess.run([sys.executable, "-I", str(SCRIPT), "--repo", str(repo), "--rev", "HEAD",
-                            "--now", "2026-10-08T16:50:00+11:00"], capture_output=True, text=True,
-                           check=True).stdout
-    v, wrong = _verdict(early)
-    assert "no closing scan" not in wrong and "ASX closing scan not due yet" in v
+@pytest.mark.parametrize("now,where", [
+    ("2026-10-08T16:30:00+11:00", "not due yet"),
+    ("2026-10-08T17:05:00+11:00", "pending"),    # the 17:20 close probe has not had its turn
+    ("2026-10-08T17:35:00+11:00", "wrong"),
+])
+def test_a_missing_asx_close_waits_for_its_17_20_probe(tmp_path, now, where):
+    text = _run(tmp_path, now=now, edit=lambda then, files: _set_asx(files, ASX_HM[:-1]))
+    wrong, waiting = _verdict(text)
+    if where == "not due yet":
+        assert "ASX closing scan not due yet (from 16:40 Melbourne)" in waiting
+    elif where == "pending":
+        assert "ASX closing scan not in yet" in waiting and "17:20 close probe" in waiting
+        assert "closing scan" not in wrong
+    else:
+        assert "ASX: no closing scan for the Thu 08 Oct session" in wrong
+
+
+def test_a_stale_everything_is_flagged_item_by_item(tmp_path):
+    now = "2026-10-08T18:00:00+11:00"
+
+    def stale(then, files):
+        crypto = _crypto("2026-10-08T14:00:00+11:00")
+        files["public/data/funnel_history.json"]["markets"]["crypto"] = {"t": crypto, "trigger": ["heartbeat"] * 24}
+        files["public/data/crypto_prices.json"] = {"generated_at": crypto[-1]}
+        files["data/scan_health.json"]["asx"]["dry"] = 3
+        files["journal/vivek_bot_book.asx.json"]["guard"]["asx"].update(breached=True, breach_kind="daily")
+        files["journal/vivek_bot_book.crypto.json"]["updated_at"] = "2026-10-08T03:00:00Z"
+        files["public/data/momentum/nasdaq.json"]["generated_at"] = "2026-10-06T20:49:00Z"
+        files["public/data/momentum/crypto.json"]["generated_at"] = "2026-10-07T01:13:00Z"
+        files["public/data/ignition/crypto.json"]["last_closed_bar"] = "2026-10-05"
+        files["public/data/ignition/nasdaq.json"]["generated_at"] = "2026-10-06T21:40:00Z"
+        files["public/data/phasemap/asx/latest.json"] = {"run_date": "2026-10-06"}
+        files["data/alert_forward_returns.json"] = {"updated_at": "2026-10-06T22:00:00Z"}
+        del files["backups/2026-10-08T01-14-45/vivek_bot_book.json"]
+        then["backups/2026-10-06T01-00-00/vivek_bot_book.json"] = {}
+
+    wrong, _ = _verdict(_run(tmp_path, now=now, edit=stale))
+    for want in ("crypto has not scanned for 4.0 h",
+                 "asx: 3 dry scan run(s) in a row",
+                 "asx loss guard breached (daily)",
+                 "crypto bot book not updated for 4.0 h",
+                 "momentum nasdaq owed since Thu 07:30",
+                 "momentum crypto owed since Thu 11:30",
+                 "ignition crypto is STALE",
+                 "ignition NASDAQ not screened since the Thu 07:30 bar went final (10.5 h)",
+                 "PhaseMap has not run for Thu 08 Oct: newest run_date 2026-10-06",
+                 "edge ledgers not updated for",
+                 "newest bot-book backup is"):
+        assert want in wrong, (want, wrong)
+
+
+@pytest.mark.parametrize("now,stamp,weekend", [
+    ("2026-10-11T16:00:00+11:00", "2026-10-10T01:13:00Z", True),    # Sunday: GitHub's crons only
+    ("2026-10-13T16:00:00+11:00", "2026-10-12T01:13:00Z", False),   # Tuesday: 4.5 h late is wrong
+])
+def test_crypto_momentum_gets_its_measured_weekend_lag(tmp_path, now, stamp, weekend):
+    def edit(then, files):
+        files["public/data/momentum/crypto.json"]["generated_at"] = stamp
+    wrong, waiting = _verdict(_run(tmp_path, now=now, edit=edit))
+    if weekend:
+        assert "momentum crypto owed" in waiting and "Sundays and Mondays" in waiting
+        assert "momentum crypto" not in wrong
+    else:
+        assert "momentum crypto owed" in wrong
+
+
+def test_a_bare_now_means_melbourne(tmp_path):
+    then, files = _files()
+    repo = _repo(tmp_path, then, files)
+    bare = _status(repo, "2026-10-08T17:25:00")
+    assert bare.splitlines()[0].startswith("Vivek 5.0 status at Thu 08 Oct 17:25 AEDT Melbourne")
+    assert bare == _status(repo, NOW)
+
+
+@pytest.mark.parametrize("since,header,opened", [
+    ("2026-10-08 17:21", "Thu 08 Oct 17:21", False),        # ISO without offset: Melbourne; after T1
+    ("2026-10-07 13:00", "Wed 07 Oct 13:00", True),         # between T0 and T1: ADP is new since then
+    # git's own parser, read in Melbourne: in UTC 09:00 would be 20:00 Melbourne,
+    # after the check-in, and the header would fall back to Wed 17:25
+    ("Oct 8 2026 09:00", "Thu 08 Oct 09:00", True),
+])
+def test_since_sets_the_book_window_in_melbourne_time(tmp_path, since, header, opened):
+    text = _run(tmp_path, extra=("--since", since))
+    assert f"PAPER BOT (changes since {header})" in text
+    assert ("OPENED ADP" in text) is opened
+
+
+def test_a_since_after_the_check_in_falls_back_to_24_hours(tmp_path):
+    text = _run(tmp_path, extra=("--since", "2026-10-09 09:00"))
+    assert "is after the check-in time; using the last 24 h instead" in text
+    assert "PAPER BOT (changes since Wed 07 Oct 17:25)" in text and "OPENED ADP" in text
+
+
+def test_a_shallow_clone_never_dates_phasemap_from_its_boundary(tmp_path):
+    """A cloud session's clone is ~a day deep. git reports the boundary commit
+    as touching every file, so its date is not when PhaseMap ran."""
+    then, files = _files()
+    del files["public/data/phasemap/asx/latest.json"]          # PhaseMap last ran at T0
+    src = _repo(tmp_path, then, files)
+    shallow = tmp_path / "shallow"
+    _git("clone", "-q", "--depth", "1", "--no-local", f"file://{src}", str(shallow))
+    text = _status(shallow, NOW, "--no-fetch")
+    wrong, _ = _verdict(text)
+    assert "phasemap: run_date 2026-10-07, run time unknown (history too shallow)" in text
+    assert "PhaseMap has not run for Thu 08 Oct: newest run_date 2026-10-07" in wrong
+    assert "git history too shallow to diff" in text
+    full = _status(src, NOW)
+    assert "phasemap: run_date 2026-10-07, last ran Wed 07 Oct 12:00" in full
+
+
+def test_a_shallow_clone_is_deepened_when_the_book_window_needs_it(tmp_path):
+    then, files = _files()
+    src = _repo(tmp_path, then, files)
+    shallow = tmp_path / "shallow"
+    _git("clone", "-q", "--depth", "1", "--no-local", f"file://{src}", str(shallow))
+    text = _status(shallow, NOW, rev=None)          # the default: origin/main, fetched
+    assert "too shallow" not in text
+    assert "OPENED ADP" in text and "phasemap: run_date 2026-10-08, last ran Thu 08 Oct 17:20" in text
 
 
 @pytest.mark.parametrize("bad", ["public/data/funnel_history.json", "journal/vivek_bot_book.asx.json"])
 def test_one_unreadable_file_costs_one_section_not_the_report(tmp_path, bad):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init", "-q", str(repo)], check=True)
-    then, now = _files(faults=False)
-    _commit(repo, then, "2026-10-07T12:00:00+11:00")
-    _commit(repo, now, "2026-10-08T17:20:00+11:00")
+    then, files = _files()
+    repo = _repo(tmp_path, then, files)
     (repo / bad).write_text("{not json", encoding="utf-8")
     _commit(repo, {}, "2026-10-08T17:21:00+11:00")
     out = subprocess.run([sys.executable, "-I", str(SCRIPT), "--repo", str(repo), "--rev", "HEAD",
-                          "--now", NOW], capture_output=True, text=True)
+                          "--now", NOW], capture_output=True, text=True, env=GIT_ENV)
     assert out.returncode == 0
     assert "== VERDICT FROM REPO DATA" in out.stdout and "could not read a section" in out.stdout
     assert "== CONFLUENCE" in out.stdout

@@ -19,32 +19,52 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import subprocess
 import sys
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-MEL = ZoneInfo("Australia/Melbourne")
-SYD = ZoneInfo("Australia/Sydney")
-NY = ZoneInfo("America/New_York")
+try:
+    MEL = ZoneInfo("Australia/Melbourne")
+    SYD = ZoneInfo("Australia/Sydney")
+    NY = ZoneInfo("America/New_York")
+except ZoneInfoNotFoundError:  # Windows ships no tz database; the repo venv has tzdata (via pandas)
+    sys.exit("scanner_status: no time-zone data. Run it with the repo's venv python, or pip install tzdata.")
 UTC = dt.timezone.utc
 
 # Copied from scanner/config.py (MARKET_SCAN_WINDOWS, MORNING_PLAYS_SLOT_GATE,
-# VIVEK_JOURNAL_SESSION) and scanner/momentum/config.py (PUBLISH_AFTER_CLOSE_MIN,
-# CRYPTO_DUE_UTC). tests/test_vivek5_checkin.py fails if config moves and these
-# do not; the script stays stdlib-only so it runs with `python3 -I` anywhere.
+# VIVEK_JOURNAL_SESSION, IGNITION_MARKETS, IGNITION_BAR_FINAL) and
+# scanner/momentum/config.py (PUBLISH_AFTER_CLOSE_MIN, CRYPTO_DUE_UTC), and from
+# the cron-job.org jobs in CLAUDE.md. tests/test_vivek5_checkin.py fails if
+# config moves and these do not; the script stays stdlib-only so it runs with
+# `python3 -I` from any checkout.
 WINDOW = {"asx": ((11, 0), (16, 45), SYD), "nasdaq": ((10, 30), (16, 45), NY)}
 CLOSE_GATE = {"asx": (16, 40), "nasdaq": (16, 5)}
+# How long after the close gate a missing closing scan is still only "pending":
+# the ASX 17:20 close probe (job 8587683) heals a scan stamped 16:26-16:39 that
+# the 16:40 ping found too fresh; NASDAQ's 16:10 hourly ping covers its close.
+CLOSE_GRACE_MIN = {"asx": 50, "nasdaq": 30}
+FIRST_PING = {"asx": (11, 10), "nasdaq": (10, 40)}  # jobs 8587588 / 8587591
+FIRST_SCAN_LATE_MIN = 30   # first scan of a session this long after its ping = that ping was lost
 GAP_FLAG_MIN = 80          # hourly pings: a gap longer than this inside a session is a miss
 CRYPTO_GAP_FLAG_MIN = 120  # crypto pings hourly at :22; one ~100 min gap is normal
 MOMENTUM_OWE = {"asx": ((16, 30), SYD), "nasdaq": ((16, 30), NY)}  # session close + 30 min
 MOMENTUM_CRYPTO_DUE_UTC = (0, 30)  # crypto: daily, UTC
+MOMENTUM_FLAG_H = 3
+# Sunday and Monday (UTC) crypto Momentum rides GitHub's crons only (the digest
+# ladder that also wakes it runs Mon-Fri UTC); it has landed 5-6 h late every time.
+MOMENTUM_CRYPTO_WEEKEND_FLAG_H = 7
+IGNITION_BAR_FINAL = {"asx": ((16, 40), SYD), "nasdaq": ((16, 30), NY)}  # crypto: UTC daily bar
+IGNITION_FLAG_H = 10       # its GitHub crons land late; past this the screen is missing
+PHASEMAP_OWED_MEL = (12, 0)  # nightly (lands ~00:30-04:30); from noon Melbourne today's run is owed
 
 REPO = "."
 REV = "origin/main"
 
 
-def git(*args: str) -> str:
-    return subprocess.run(["git", "-C", REPO, *args], capture_output=True, text=True, check=True).stdout
+def git(*args: str, env: dict | None = None) -> str:
+    return subprocess.run(["git", "-C", REPO, *args], capture_output=True, text=True, check=True,
+                          env=env).stdout
 
 
 def load(path: str, rev: str | None = None):
@@ -157,12 +177,24 @@ def scans(now: dt.datetime) -> None:
                 FLAGS.append(f"{label}: {len(gaps)} gap(s) over {GAP_FLAG_MIN} min with no scan in the "
                              f"{sess_day:%a %d %b}{where} session, Melbourne {spans} "
                              f"(hourly pings should give a scan ~5 min past each hour)")
+            # the first ping's scan: a gap from the window open would not reach 80 min
+            first_ping = at(sess_day, FIRST_PING[m], tz)
+            late_by = first_ping + dt.timedelta(minutes=FIRST_SCAN_LATE_MIN)
+            in_win = [t for t, _ in sess if in_window(m, t)]
+            if in_win and now >= late_by and in_win[0] > late_by:
+                FLAGS.append(f"{label}: the session's first scan (due ~{mel(first_ping + dt.timedelta(minutes=5), '%H:%M')} "
+                             f"Melbourne) did not land until {mel(in_win[0], '%H:%M')}; that ping's scan was lost")
+            gate_txt = f"{CLOSE_GATE[m][0]:02d}:{CLOSE_GATE[m][1]:02d} {'Sydney' if m == 'asx' else 'New York'}"
+            grace_end = close_gate + dt.timedelta(minutes=CLOSE_GRACE_MIN[m])
             if closed_scan:
-                print(f"    closing scan: {mel(closed_scan)} (counts from {CLOSE_GATE[m][0]:02d}:{CLOSE_GATE[m][1]:02d} "
-                      f"{'Sydney' if m == 'asx' else 'New York'})")
-            elif now >= close_gate + dt.timedelta(minutes=15):
+                print(f"    closing scan: {mel(closed_scan)} (counts from {gate_txt})")
+            elif now >= grace_end:
                 FLAGS.append(f"{label}: no closing scan for the {sess_day:%a %d %b}{where} session (nothing stamped at/after "
-                             f"{CLOSE_GATE[m][0]:02d}:{CLOSE_GATE[m][1]:02d} {'Sydney' if m == 'asx' else 'New York'})")
+                             f"{gate_txt})")
+            elif now >= close_gate:
+                WAITING.append(f"{label} closing scan not in yet (counts from {mel(close_gate, '%H:%M')} Melbourne; "
+                               + ("the 17:20 close probe covers a late one; " if m == "asx" else "")
+                               + f"missing only if still absent at {mel(grace_end, '%H:%M')})")
             else:
                 WAITING.append(f"{label} closing scan not due yet (from {mel(close_gate, '%H:%M')} Melbourne)")
             if not sess and now >= open_today + dt.timedelta(minutes=30) and now.astimezone(tz).weekday() < 5:
@@ -193,8 +225,12 @@ def lenses(now: dt.datetime) -> None:
               f"{(d.get('summary') or {}).get('hits')} hits - {state}")
         if g < owe:
             late = (now - owe).total_seconds() / 3600
-            (FLAGS if late > 3 else WAITING).append(
-                f"momentum {m} owed since {mel(owe)} ({late:.1f} h)" + ("" if late > 3 else " - normally lands within ~1 h"))
+            weekend = m == "crypto" and owe.astimezone(UTC).weekday() in (6, 0)
+            limit = MOMENTUM_CRYPTO_WEEKEND_FLAG_H if weekend else MOMENTUM_FLAG_H
+            (FLAGS if late > limit else WAITING).append(
+                f"momentum {m} owed since {mel(owe)} ({late:.1f} h)" + ("" if late > limit else (
+                    " - on Sundays and Mondays it usually lands 5 to 6 h late" if weekend
+                    else " - normally lands within ~1 h")))
     ic = load("public/data/ignition/crypto.json")
     if ic:
         g = ts(ic["generated_at"])
@@ -204,24 +240,35 @@ def lenses(now: dt.datetime) -> None:
               + (" - STALE on the page" if stale else ""))
         if stale:
             FLAGS.append("ignition crypto is STALE on the page (no completed bar from UTC-yesterday)")
-    ia = load("public/data/ignition/asx.json")
-    if ia:
-        g = ts(ia["generated_at"])
-        close = last_weekday_at(now, CLOSE_GATE["asx"], SYD)
-        print(f"ignition asx: {mel(g)} ({ago(g, now)}), newest bar {ia.get('last_closed_bar')}"
-              + ("" if g >= close else f" - not yet screened since the {mel(close)} close"))
+    for m, (hm, tz) in IGNITION_BAR_FINAL.items():
+        d = load(f"public/data/ignition/{m}.json")
+        if not d:
+            FLAGS.append(f"ignition {m}: file missing")
+            continue
+        g = ts(d["generated_at"])
+        close = last_weekday_at(now, hm, tz)
+        print(f"ignition {m}: {mel(g)} ({ago(g, now)}), newest bar {d.get('last_closed_bar')}"
+              + ("" if g >= close else f" - not yet screened since the {mel(close)} bar went final"))
         if g < close:
             hrs = (now - close).total_seconds() / 3600
-            (FLAGS if hrs > 10 else WAITING).append(
-                f"ignition ASX not screened since the {mel(close)} close ({hrs:.1f} h)"
-                + ("" if hrs > 10 else " - its GitHub cron usually lands 17:45 to past midnight"))
-    pm = git("log", "-1", "--format=%cI", REV, "--", "public/data/phasemap/asx/latest.json").strip()
-    if pm:
-        g = ts(pm)
-        rd = (load("public/data/phasemap/asx/latest.json") or {}).get("run_date")
-        print(f"phasemap: last ran {mel(g, '%a %d %b %H:%M')} ({ago(g, now)}), run_date {rd}")
-        if now - g > dt.timedelta(hours=30):
-            FLAGS.append(f"PhaseMap last ran {ago(g, now)} (nightly; usually lands midnight to ~4am Melbourne)")
+            (FLAGS if hrs > IGNITION_FLAG_H else WAITING).append(
+                f"ignition {m.upper()} not screened since the {mel(close)} bar went final ({hrs:.1f} h)"
+                + ("" if hrs > IGNITION_FLAG_H else " - its GitHub cron usually lands within an hour or two, sometimes much later"))
+    pm_path = "public/data/phasemap/asx/latest.json"
+    rd = (load(pm_path) or {}).get("run_date")
+    # %P is empty on a shallow clone's boundary commit, which git reports as touching
+    # every file: its date is not when PhaseMap ran, so it must not be shown as one.
+    last = git("log", "-1", "--format=%cI %P", REV, "--", pm_path).split()
+    ran = ts(last[0]) if len(last) >= 2 else None
+    print(f"phasemap: run_date {rd}, " + (f"last ran {mel(ran, '%a %d %b %H:%M')} ({ago(ran, now)})" if ran
+                                          else "run time unknown (history too shallow)"))
+    local = now.astimezone(MEL)
+    owed = local.date() - dt.timedelta(days=0 if local.time() >= dt.time(*PHASEMAP_OWED_MEL) else 1)
+    if not rd:
+        FLAGS.append("PhaseMap latest.json has no run_date")
+    elif rd < owed.isoformat():
+        FLAGS.append(f"PhaseMap has not run for {owed:%a %d %b}: newest run_date {rd} "
+                     "(nightly; usually lands midnight to ~4am Melbourne)")
     for path, label, limit_h in (("data/alert_forward_returns.json", "edge ledgers", 30),
                                  ("public/data/reco_note.json", "reco note", 30)):
         d = load(path) or {}
@@ -340,25 +387,34 @@ def main() -> int:
     ap.add_argument("--no-fetch", action="store_true")
     a = ap.parse_args()
     REPO, REV = a.repo, a.rev
-    if not a.no_fetch and a.rev == "origin/main":
+    fetch = not a.no_fetch and a.rev == "origin/main"
+    if fetch:
         subprocess.run(["git", "-C", REPO, "fetch", "-q", "origin", "main"], check=False)
     now = ts(a.now) if a.now else dt.datetime.now(UTC)
     if now.tzinfo is None:
         now = now.replace(tzinfo=MEL)  # a bare --now means Melbourne
+    since = now - dt.timedelta(hours=24)
     if a.since:
         try:
             since = ts(a.since)
         except ValueError:
             # git's own date parser ("yesterday 9am", "3 hours ago"); unlike GNU
-            # `date -d` it works on Windows too. It prints --max-age=<epoch>.
-            # It is lenient: unreadable text means "now", which the PAPER BOT
-            # header line then shows, so check that line.
-            out = git("rev-parse", f"--since={a.since}").strip()
+            # `date -d` it works on Windows too, and TZ makes "9am" Melbourne's
+            # rather than the cloud machine's UTC. Relative forms count from the
+            # real clock, not --now. It prints --max-age=<epoch>; unreadable text
+            # means "now", which the PAPER BOT header then shows.
+            out = git("rev-parse", f"--since={a.since}", env=dict(os.environ, TZ="Australia/Melbourne")).strip()
             since = dt.datetime.fromtimestamp(int(out.split("=", 1)[1]), UTC)
         if since.tzinfo is None:
             since = since.replace(tzinfo=MEL)  # a bare "2026-10-08 09:00" means Melbourne
-    else:
-        since = now - dt.timedelta(hours=24)
+        if since > now:
+            print(f"(--since {a.since!r} is after the check-in time; using the last 24 h instead)")
+            since = now - dt.timedelta(hours=24)
+    # The book diff needs a commit from before `since`, and a fresh cloud clone is
+    # often under a day deep (main takes 30-70 commits a day). Deepen only then.
+    if (fetch and git("rev-parse", "--is-shallow-repository").strip() == "true"
+            and not git("log", "-1", f"--until={since.isoformat()}", "--format=%H", REV).strip()):
+        subprocess.run(["git", "-C", REPO, "fetch", "-q", "--deepen=300", "origin", "main"], check=False)
     head = git("log", "-1", "--format=%h %cI", REV).split()
     print(f"Vivek 5.0 status at {mel(now, '%a %d %b %H:%M %Z')} Melbourne; repo {REV} {head[0]} "
           f"(last commit {mel(ts(head[1]), '%H:%M')})")

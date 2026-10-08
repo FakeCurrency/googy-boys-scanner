@@ -15,7 +15,7 @@ Work from the repo (scanner/googy-boys-scanner, a Claude Code session) and the G
 python3 -I <this skill's folder>/scripts/scanner_status.py --repo <the repo>
 ```
 
-In the scanner repo the skill lives at `.claude/skills/vivek5-checkin/`, so from the repo root that is `python3 -I .claude/skills/vivek5-checkin/scripts/scanner_status.py --repo .`
+In the scanner repo the skill lives at `.claude/skills/vivek5-checkin/`, so from the repo root that is `python3 -I .claude/skills/vivek5-checkin/scripts/scanner_status.py --repo .` On Windows use the repo venv's python (`.venv\Scripts\python.exe`): there is often no `python3`, and Python there needs the `tzdata` package for time zones, which the venv has.
 
 It fetches origin/main and prints, in Melbourne time: each market's scans this session and whether the closing scan landed, crypto's last 24 hours, the after-close lenses, the paper bot (open count against 60, loss guards, what opened or closed, names with no price or near their stop), new multi-lens alignments, and a verdict list split into LOOKS WRONG and NOT DUE YET. Add `--since "<when>"` to measure changes from the last check-in in this chat instead of the last 24 hours. Read its output before deciding anything; its flags are where to dig, not the final word (a public holiday looks like a missing session).
 
@@ -38,7 +38,8 @@ Use a subagent for the run listing when the window is long; the raw listing is l
 - **NASDAQ belongs to New York's date.** At a Melbourne afternoon check-in, its book is 9 to 10 hours old by design.
 - **Late by design:**
   - PhaseMap and the reco note land overnight.
-  - Ignition ASX lands anywhere from 17:45 to past midnight.
+  - Ignition ASX's first screen lands about 17:30 to 18:15; Ignition NASDAQ's about 08:35 to 09:30 (its bar is final at 07:30). GitHub runs both, so either can slip hours.
+  - On Sundays and Mondays crypto Momentum lands 5 to 6 hours late (about 17:00).
   - Hundreds of ASX names showing a day-old price intraday is thin trading, not a fault.
 - **Green does not mean fine.**
   - A failed Ops action, a triggered kill switch and a digest still refused at its last rung are all green runs.
@@ -80,7 +81,7 @@ Use this shape and drop any section with nothing to say. Times are Melbourne wit
 
 **After the close**
 - ASX digest: sent <time>, <n> new plays. US digest: sent <time>, <n> new plays.
-- Momentum <time>. Ignition ASX <time or "not yet, usually by midnight">. PhaseMap <time>.
+- Momentum <time>. Ignition ASX <time or "not yet, usually by about 18:15">, NASDAQ <time>. PhaseMap <time>.
 
 **Paper bot**
 - <open>/60 open (ASX <a>, NASDAQ <b>, crypto <c>). <Book full, new setups skipped | n free>.

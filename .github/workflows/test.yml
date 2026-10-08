@@ -89,10 +89,13 @@ on:
       # and a push touching it is exactly the push that restates the open book
       # (resize_book.yml) - the one edit that must never ship unchecked.
       - ".github/resize-kick"
-      # .claude/skills/** (2026-10-08), same rule: tests/test_vivek5_checkin.py
-      # runs the check-in skill's status script and reads its SKILL.md and
-      # references, so an edit to the skill alone must still run the gate.
+      # .claude/skills/** and CLAUDE.md (2026-10-08), same rule:
+      # tests/test_vivek5_checkin.py runs the check-in skill's status script,
+      # reads its SKILL.md and references, and checks every cron-job.org id the
+      # skill names against CLAUDE.md, so an edit to either alone must still
+      # run the gate.
       - ".claude/skills/**"
+      - "CLAUDE.md"
   pull_request:
   workflow_dispatch:
 

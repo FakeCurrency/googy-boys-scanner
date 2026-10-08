@@ -29,7 +29,7 @@ Several workflows go red in the same window, and the next run of each is green. 
 - `BOOK VERIFY FAIL: <problem>` means the paper book failed its self-check and nothing was saved. A "STALE" combined book heals on the next scan; a duplicate symbol or cross-market row needs fixing.
 - `SCHEMA GATE FAILED` usually means a just-merged change and the data disagree.
 - `ERROR scanning <m>` then `!! N market(s) FAILED to scan` is a scanner crash. Yahoo throttling alone ("batch attempt 1/4 failed (empty result (likely throttled))") is normal and almost never turns a run red.
-- `Could not push after retries` means too many jobs were saving at once; the next run redoes it. In close_position.yml it is serious: the manual close did not land.
+- `Could not push after retries` means too many jobs were saving at once; the next run redoes it. close_position.yml prints its own version, `Could not push the close after 5 attempts`: the manual close did not land, and the workflow re-queues itself (up to 3 attempts). Check the next attempt before telling Viv.
 - PhaseMap `a must-change gate tripped ... the healthy markets were committed, this run is red for the starved one`: usually one market (often crypto) got no data; the others published.
 - `::error::morning_plays: Discord POST ... failed` or `Discord returned HTTP <n>`: the digest did not deliver; the next rung retries.
 
@@ -76,7 +76,7 @@ A heartbeat for crypto prints `scan gate: heartbeat:  -> crypto`.
 - **Momentum** (momentum.yml, job `momentum`, step `Which market is due`). It prints one line per market, `<m> DUE|skip owes <time Z> file <time Z> - <reason>`, then `picked: <market>` or `picked: nothing due`.
   - Every finished morning_plays run triggers it, so most runs are 15-second "nothing due" runs. That is normal.
   - The screen step then prints `momentum: <m> scanned X/Y ... hits H ...` and `Pushed.`.
-- **Ignition ASX** (ignition_asx.yml, job `ignition`, step `Is this run due`). Only the `24 7,9` backstop is gated. `backstop: already screened after the <close UTC> close` then `gate: run=false` is a correct skip.
+- **Ignition ASX and NASDAQ** (ignition_asx.yml / ignition_nasdaq.yml, job `ignition`, step `Is this run due`, both through `scripts/ignition_due.py <market>`). Only the backstops are gated (ASX `24 7,9` UTC, NASDAQ `34 22,23` UTC). `gate: run=false` after `backstop: already screened after the <market> <time> close` is a correct skip, and so is NASDAQ's `gate: intraday run landed at/after 15:30 New York`. The bar is final at 16:40 Sydney (ASX) and 16:30 New York (NASDAQ).
 - **Ignition crypto** (ignition.yml). It publishes the new UTC bar at about 16:45 to 17:00 Melbourne via its 05:44 UTC cron, because the 00:14 UTC primary has not fired in days.
 
 ## 7. Kill switch and watchdog (kill_switch.yml, job `check`)
@@ -106,7 +106,7 @@ A heartbeat for crypto prints `scan gate: heartbeat:  -> crypto`.
 - **cronjob-list**: per job `lastStatus` (1 = cron-job.org got HTTP 2xx), `lastExecution` and `nextExecution` (unix seconds UTC).
 - **cronjob-history**: `{"history": [newest first: date, datePlanned, httpStatus, status, statusText, duration], "predictions": [...]}`.
 - **No body in either.** `body` is false, so you cannot see whether a ping actually started a scan. The funnel ledger's `heartbeat` trigger (the status script prints `h`) is where a heal shows up.
-- **What a status means.** The heartbeat answers 200 whether it did nothing (market fresh) or dispatched a scan. A 503 means it could not heal: no token, the cap of 30 heals per market per day, or GitHub refused the dispatch.
+- **What a status means.** The heartbeat answers 200 whether it did nothing (market fresh) or dispatched a scan. A 503 means it could not heal, or could not tell: no token, the cap of 30 heals per market per day, GitHub refused the dispatch or timed out (a timeout may still have started a scan), or the site could not read its own data file. The body is not saved, so the scan ledger is how you tell which: a scan at that hour means it went through.
 - **A missed scan inside a session.** Match the gap to the job's ping at that hour (`datePlanned`):
   - **No entry at all:** cron-job.org did not fire.
   - **One 503 between 200s:** GitHub refused or dropped that one request. It needs nothing, because the next ping catches up. Example: the 02:10 NASDAQ ping on Thu 8 Oct 2026 got a 503 and no scan started; 03:10 was 200. Tell Viv "the timer fired on time, GitHub didn't take that one request, the next hour caught up".

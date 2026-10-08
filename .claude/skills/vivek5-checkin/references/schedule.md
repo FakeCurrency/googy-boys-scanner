@@ -10,10 +10,11 @@ Times are Melbourne. Melbourne and Sydney share a clock. Below is AEDT (Oct to A
 - 07:05 NASDAQ close counts from 16:05 New York. Post-close scan about 07:10 to 07:16 (GitHub's 20:07 UTC cron or the 07:10 ping).
 - 07:15 US digest (NASDAQ + crypto) from the first ladder rung. Rungs run every 30 min to 10:45. If the post-close scan lands at 07:16, a 07:15 refusal then a 07:45 send is normal.
 - About 07:49 Momentum NASDAQ.
+- About 08:35 to 09:30 Ignition NASDAQ (its bar is final from 07:30, which is 16:30 New York; GitHub cron 21:34 UTC, later when GitHub is slow).
 
 **Daytime: the ASX session**
 - 11:10 to 16:10 hourly pings (8587588). Scans land about :15 past.
-- 11:30 Momentum crypto due (00:30 UTC). It usually lands 11:30 to 12:15.
+- 11:30 Momentum crypto due (00:30 UTC). It usually lands 11:30 to 12:15, but on Sundays and Mondays about 16:30 to 17:15 (only GitHub's crons wake it then).
 - About 12:15 the nightly bot-book backup (GitHub's 21:35 UTC cron, landing late).
 - 11:45 to 13:25 the edge ledgers (22:20 UTC cron, landing late).
 - 16:40 ASX close ping (8587590). The close counts from 16:40 Sydney, because Yahoo shows the auction about 20 min late. Scan stamped about 16:45, saved by about 16:50.
@@ -21,7 +22,7 @@ Times are Melbourne. Melbourne and Sydney share a clock. Below is AEDT (Oct to A
 - 17:15 ASX digest from the first ladder rung. Rungs run every 30 min to 21:45.
 - About 17:16 to 17:25 Momentum ASX (it counts from 16:30).
 - 17:20 ASX close probe (8587683). It heals only if no scan at or after 16:40 landed. No run from it is healthy.
-- 17:45 to past midnight Ignition ASX (GitHub cron `24 6` UTC, landing hours late; a re-screen around 00:43 is common).
+- About 17:30 to 18:15 Ignition ASX's first screen (GitHub cron `24 6` UTC = 17:24); a re-screen around 00:30 to 02:00 is common. A very late GitHub day can push the first one past midnight.
 
 **Overnight again**
 - Midnight to about 04:30 PhaseMap + Specs (GitHub's 08:30 UTC cron lands 5 to 9 hours late). Its `run_date` is the Melbourne date it ran, so it usually reads the day after the bars it screened.
@@ -40,7 +41,7 @@ Times are Melbourne. Melbourne and Sydney share a clock. Below is AEDT (Oct to A
 - **Stale-looking prices.** ASX shows hundreds of names with a day-old price intraday, and around 1,000 at 11:15: thin names that have not traded yet. The close scan drops to about 300.
 - **Cache numbers.** ASX "from cache" in the hundreds intraday is normal and falls to about 0 at the close. About 30 crypto coins come from Yahoo because no exchange lists them.
 - **ASX coverage reads about 90% (about 1,726 of 1,923 names).** About 197 codes never come back from Yahoo: mostly funds, trusts and bond lines, none of them held. The scan log's two "recovery batches" that come back empty are these. Every run, not a fault. Only a drop well below 1,700, or a held name among the missing, is news.
-- **NASDAQ looks old by day.** Its book and scan are 9 to 10 hours old at a Melbourne afternoon check-in, and /api/health?market=nasdaq answers 503 overnight. Shut market, not a fault.
+- **NASDAQ looks old by day.** Its book and scan are 9 to 10 hours old at a Melbourne afternoon check-in, and /api/health?market=nasdaq answers 503 (its 4 h line) from late morning until the next open scan at about 01:43. Shut market, not a fault.
 - **Book full: 60 of 60 open.** Every new setup is skipped (global cap). That is the rules working.
 - **24 or so positions marked stalled.** That is a keep-or-close prompt on the journal page, not a fault. It turns the status lamp amber.
 - **A loss-guard breach.** The guard working: new entries pause for the day and nothing is sold. Amber, not red.
@@ -50,7 +51,7 @@ Times are Melbourne. Melbourne and Sydney share a clock. Below is AEDT (Oct to A
 ## Season shifts
 
 - **AEST (Apr to Oct).** ASX times stay the same in Melbourne. The ASX digest's 06:15 UTC rung becomes 16:15, before its 16:30 floor, so the digest goes at 16:45 or 17:15. Ignition ASX's 06:24 UTC primary (16:24) runs before the close; its 07:24 backstop re-screens.
-- **New York on EST (from 1 Nov 2026).** Every NASDAQ time is an hour later in Melbourne: open ping 02:40, close 08:00, close gate 08:05, US digest from about 08:15, Momentum NASDAQ about 08:49.
+- **New York on EST (from 1 Nov 2026).** Every NASDAQ time is an hour later in Melbourne: open ping 02:40, close 08:00, close gate 08:05, US digest from about 08:15, Momentum NASDAQ about 08:49. Ignition NASDAQ's bar is final at 08:30, just before its 08:34 cron.
 
 ## cron-job.org jobs
 

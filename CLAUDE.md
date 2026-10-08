@@ -367,7 +367,7 @@ historical — ASX now goes out in the AFTERNOON; see the schedule below.)
   timezone set to UTC, Mon–Fri, every 30 min — ASX 06:15..10:45Z, US
   20:15..23:45Z — hitting the URL with `&key=` (LIVE: cron-job.org job
   8424425 `slot=asx (post-close ladder, UTC)` and 8424432 `slot=us`, read back
-  with ops `cronjob-list` 2026-10-08). Until the pinger is live,
+  with ops `cronjob-list` 2026-10-08). If the pinger ever misses,
   GitHub's own cron still delivers — hours late, via the delay-proof gate. A
   Claude Routine was tried as an interim and REJECTED the same hour: Routine-
   fired sessions carry NO MCP connectors (the create_trigger result says so)
@@ -2544,11 +2544,15 @@ the heartbeat got a 503 because GitHub refused that one dispatch; 03:10 was 200)
   `git fetch` and `git show/log/ls-tree/rev-parse` against origin/main and
   prints scans per session, the after-close lenses, the paper book (diffed
   through its own git history) and a LOOKS WRONG / NOT DUE YET verdict. It
-  COPIES the scan windows, close gates and Momentum due times out of config
-  rather than importing them, so `tests/test_vivek5_checkin.py` pins each copy
-  to config, pins the read-only shape by AST (no open(), git reads + one fetch
-  only), and runs the script on a fixture repo. **Move a window or gate in
-  config and that test tells you to move the skill's copy.**
+  COPIES the scan windows, close gates, Momentum due times and Ignition
+  bar-final times out of config rather than importing them, so
+  `tests/test_vivek5_checkin.py` pins each copy to config, pins the read-only
+  shape by AST (no open(); git reads, one fetch, and a `--deepen=300` fetch
+  only when a shallow clone does not reach back to the book window), and runs
+  the script on fixture repos (incl. a shallow clone, which is what a cloud
+  session has: there PhaseMap's freshness is read from its `run_date`, never
+  from the boundary commit's date). **Move a window, gate or Ignition market
+  in config and that test tells you to move the skill's copy.**
 - **SKILL.md's never-list is a safety rail, test-pinned**: a check-in never
   calls `/api/heartbeat`, `/api/scan`, `/api/close` or `/api/morning_plays`,
   never re-sends the digest, never dispatches PhaseMap by hand, never runs a
@@ -2671,9 +2675,9 @@ webhook, distinct from the removed alert webhook — see MORNING PLAYS).
 `CLOUDFLARE_ACCOUNT_ID` — GitHub Actions secrets read ONLY by ops.yml; set
 them once and Claude can create/edit cron-job.org jobs and Cloudflare Pages
 env vars itself via `workflow_dispatch` (see the ops.yml row).
-**Pending owner:** `MORNING_PLAYS_TRIGGER_SECRET` (arms `/api/morning_plays`,
-the on-time external trigger for the plays digest — see MORNING PLAYS),
-data-provider key, Cloudflare Access.
+`MORNING_PLAYS_TRIGGER_SECRET` is SET (Cloudflare; the cron-job.org digest
+ladder delivers through it daily — see MORNING PLAYS).
+**Pending owner:** data-provider key, Cloudflare Access.
 
 ---
 
