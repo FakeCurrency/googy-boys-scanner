@@ -163,3 +163,16 @@ def test_scan_and_backtest_share_one_gate_function():
         src = open(mod.__file__, encoding="utf-8").read()
         assert "vivek.headline_plan(plans)" in src, mod.__name__
         assert 'gate_tf = next((tf for tf in ("1W", "3D", "1D")' not in src, mod.__name__
+
+
+def test_an_incomplete_cell_plan_is_skipped_exactly_as_the_bot_skips_it():
+    """Review: the walk's complete-level test is the bot's own (same keys), so
+    an armed 1W reclaim with a missing level falls through to the 3D reclaim
+    in both -- the headline never names a cell plan the bot refuses to read."""
+    assert vivek._PLAN_LEVEL_KEYS == vivek_bot._LEVEL_KEYS
+    for key in vivek._PLAN_LEVEL_KEYS:
+        w = _plan(103.0, trigger="reclaim")
+        w[key] = None
+        plans = {"1W": w, "3D": _plan(101.0, trigger="reclaim")}
+        assert vivek.headline_plan(plans) == vivek_bot._pick_plan({"plans": plans}), key
+        assert vivek.headline_plan(plans)[0] == "3D", key
