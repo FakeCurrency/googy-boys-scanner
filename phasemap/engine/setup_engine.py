@@ -345,6 +345,8 @@ class SetupEngine:
         self._build_targets(i, c)
         self._refresh_dynamic_zones(i)
         self._set_state(i, "DISPLACED")
+        # the day-of record is tiered like every later bar (audit #25)
+        self._update_anchor_context(i, c)
         return True
 
     # ---------------------------------------------------------- target zones
@@ -469,7 +471,20 @@ class SetupEngine:
                 self._reset(i)
             return
 
-        # anchor context: manipulation printed beyond an anchor, since reclaimed
+        self._update_anchor_context(i, c)
+
+        # COMPLETE: final target consumed (daily close through its far edge)
+        if self.targets and all(z.status == "CONSUMED" for z in self.targets):
+            self.terminal_index = i
+            self._set_state(i, "COMPLETE")
+
+    def _update_anchor_context(self, i: int, c: float) -> None:
+        """Anchor context: manipulation printed beyond an anchor, since reclaimed
+        (on a daily close). Runs on the displacement bar AND every RUNNING bar.
+        Until v1.3.2 (audit #25) it ran only inside module 4, which never runs on
+        the displacement bar, so the day-of DISPLACED record kept _reset's False
+        and published tier A with no ANCHOR_CONTEXT while the backtest harness
+        (reading swept_below_anchor directly) tiered the same signal A+."""
         for name, reclaimed in list(self.swept_below_anchor.items()):
             if not reclaimed:
                 v = self._anchors_at(i).get(name)
@@ -477,11 +492,6 @@ class SetupEngine:
                     self.swept_below_anchor[name] = True
         self.anchor_context = any(
             self.swept_below_anchor.get(k) for k in ("yearly_open", "quarterly_open"))
-
-        # COMPLETE: final target consumed (daily close through its far edge)
-        if self.targets and all(z.status == "CONSUMED" for z in self.targets):
-            self.terminal_index = i
-            self._set_state(i, "COMPLETE")
 
     def _update_static_zones(self, i: int, o, h, l, c) -> None:
         for z in (self.demand, self.inv_hard):
