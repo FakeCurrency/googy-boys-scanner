@@ -97,9 +97,10 @@ def _email(subject: str, body: str) -> bool:
         timeout = getattr(_cfg, "ALERT_SMTP_TIMEOUT_S", 15)
     except Exception:                                     # noqa: BLE001
         default_port, timeout = 587, 15
-    # Audit #63 (2026-10-08): the workflows export GBS_SMTP_PORT and
-    # GBS_ALERT_FROM from secrets, and an UNSET secret arrives as "", not
-    # absent -- so `or` the defaults, never os.environ.get(name, default).
+    # Audit #63 (2026-10-08): the alerting workflows export GBS_SMTP_PORT
+    # (and test_alerts.yml GBS_ALERT_FROM) from secrets, and an UNSET secret
+    # arrives as "", not absent -- so `or` the defaults, never
+    # os.environ.get(name, default).
     # Everything from here is inside the try: a sender that raises crashes
     # its caller (the watchdog step died before saving state), and a bad
     # port must fail THIS send with a warning, like any other SMTP fault.
