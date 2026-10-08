@@ -455,7 +455,7 @@ def test_a_stale_everything_is_flagged_item_by_item(tmp_path):
         files["journal/vivek_bot_book.crypto.json"]["updated_at"] = "2026-10-08T03:00:00Z"
         files["public/data/momentum/nasdaq.json"]["generated_at"] = "2026-10-06T20:49:00Z"
         files["public/data/momentum/crypto.json"]["generated_at"] = "2026-10-07T01:13:00Z"
-        files["public/data/ignition/crypto.json"]["last_closed_bar"] = "2026-10-05"
+        files["public/data/ignition/crypto.json"] = {"generated_at": "2026-10-06T05:57:00Z", "last_closed_bar": "2026-10-05"}
         files["public/data/ignition/nasdaq.json"]["generated_at"] = "2026-10-06T21:40:00Z"
         files["public/data/phasemap/asx/latest.json"] = {"run_date": "2026-10-06"}
         files["data/alert_forward_returns.json"] = {"updated_at": "2026-10-06T22:00:00Z"}
@@ -471,7 +471,7 @@ def test_a_stale_everything_is_flagged_item_by_item(tmp_path):
                  "momentum crypto owed since Thu 11:30",
                  "ignition crypto is STALE",
                  "ignition NASDAQ not screened since the Thu 07:30 bar went final (10.5 h)",
-                 "PhaseMap has not run for Thu 08 Oct: newest run_date 2026-10-06",
+                 "PhaseMap has not run since 2026-10-06",
                  "edge ledgers not updated for",
                  "newest bot-book backup is"):
         assert want in wrong, (want, wrong)
@@ -530,10 +530,50 @@ def test_a_shallow_clone_never_dates_phasemap_from_its_boundary(tmp_path):
     text = _status(shallow, NOW, "--no-fetch")
     wrong, _ = _verdict(text)
     assert "phasemap: run_date 2026-10-07, run time unknown (history too shallow)" in text
-    assert "PhaseMap has not run for Thu 08 Oct: newest run_date 2026-10-07" in wrong
+    assert "PhaseMap" not in wrong                     # yesterday's run_date is fine on a shallow clone
     assert "git history too shallow to diff" in text
     full = _status(src, NOW)
     assert "phasemap: run_date 2026-10-07, last ran Wed 07 Oct 12:00" in full
+
+
+@pytest.mark.parametrize("now,run_date,expect", [
+    ("2026-10-08T17:25:00+11:00", "2026-10-07", "clean"),      # last night's run, stamped before midnight (AEST shape)
+    ("2026-10-09T13:00:00+11:00", "2026-10-07", "stale_date"), # a whole night missed
+    ("2026-10-09T10:00:00+11:00", "2026-10-08", "stale_time"), # the date rule passes; 46 h since the commit does not
+])
+def test_phasemap_is_judged_by_run_date_then_by_commit_age(tmp_path, now, run_date, expect):
+    then, files = _files()
+    if expect == "stale_time":        # committed at T0 (Wed 12:00), untouched since
+        then["public/data/phasemap/asx/latest.json"] = {"run_date": run_date}
+        del files["public/data/phasemap/asx/latest.json"]
+    else:
+        files["public/data/phasemap/asx/latest.json"] = {"run_date": run_date}
+    wrong, _ = _verdict(_status(_repo(tmp_path, then, files), now))
+    if expect == "clean":
+        assert "PhaseMap" not in wrong, wrong
+    elif expect == "stale_date":
+        assert f"PhaseMap has not run since {run_date}" in wrong
+    else:
+        assert "PhaseMap last ran 46.0 h ago" in wrong
+
+
+def test_ignition_crypto_stale_badge_waits_for_its_cron_before_it_is_wrong(tmp_path):
+    def edit(then, files):
+        files["public/data/ignition/crypto.json"]["last_closed_bar"] = "2026-10-06"
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    wrong, waiting = _verdict(_run(tmp_path / "a", now="2026-10-08T17:30:00+11:00", edit=edit))   # 06:30 UTC
+    assert "ignition crypto is STALE" in waiting and "ignition crypto" not in wrong
+    wrong, _ = _verdict(_run(tmp_path / "b", now="2026-10-08T19:30:00+11:00", edit=edit))         # 08:30 UTC
+    assert "ignition crypto is STALE" in wrong
+
+
+@pytest.mark.parametrize("market", ["crypto", "asx", "nasdaq"])
+def test_a_missing_ignition_file_is_named_not_skipped(tmp_path, market):
+    def edit(then, files):
+        del files[f"public/data/ignition/{market}.json"]
+    wrong, _ = _verdict(_run(tmp_path, edit=edit))
+    assert f"ignition {market}: file missing" in wrong
 
 
 def test_a_shallow_clone_is_deepened_when_the_book_window_needs_it(tmp_path):

@@ -56,7 +56,13 @@ MOMENTUM_FLAG_H = 3
 MOMENTUM_CRYPTO_WEEKEND_FLAG_H = 7
 IGNITION_BAR_FINAL = {"asx": ((16, 40), SYD), "nasdaq": ((16, 30), NY)}  # crypto: UTC daily bar
 IGNITION_FLAG_H = 10       # its GitHub crons land late; past this the screen is missing
-PHASEMAP_OWED_MEL = (12, 0)  # nightly (lands ~00:30-04:30); from noon Melbourne today's run is owed
+# PhaseMap is nightly and its run_date is the Melbourne date it ran. GitHub's 08:30
+# UTC cron lands 00:30-04:30 AEDT, but 23:30-03:30 under AEST and 19:30 when on
+# time, so a run can carry yesterday's date and still be last night's. A run_date
+# older than YESTERDAY is the depth-proof rule; the commit time (full clones
+# only) catches a missed night about 15 h sooner.
+PHASEMAP_MAX_AGE_H = 30
+IGNITION_CRYPTO_GRACE_H = 2  # the page's STALE badge lights 6 h past the UTC bar; its cron lands ~16:45-17:00
 
 REPO = "."
 REV = "origin/main"
@@ -232,14 +238,22 @@ def lenses(now: dt.datetime) -> None:
                     " - on Sundays and Mondays it usually lands 5 to 6 h late" if weekend
                     else " - normally lands within ~1 h")))
     ic = load("public/data/ignition/crypto.json")
-    if ic:
+    if not ic:
+        FLAGS.append("ignition crypto: file missing")
+    else:
         g = ts(ic["generated_at"])
-        want = (now.astimezone(UTC) - dt.timedelta(hours=30)).date().isoformat()
+        utc = now.astimezone(UTC)
+        want = (utc - dt.timedelta(hours=30)).date().isoformat()
         stale = (ic.get("last_closed_bar") or "") < want or now - g > dt.timedelta(hours=26)
         print(f"ignition crypto: {mel(g)} ({ago(g, now)}), newest bar {ic.get('last_closed_bar')}"
               + (" - STALE on the page" if stale else ""))
         if stale:
-            FLAGS.append("ignition crypto is STALE on the page (no completed bar from UTC-yesterday)")
+            # the badge lights at 06:00 UTC sharp; the screen usually lands minutes later
+            past_grace = (utc.hour * 60 + utc.minute) >= (6 + IGNITION_CRYPTO_GRACE_H) * 60 \
+                or now - g > dt.timedelta(hours=26)
+            (FLAGS if past_grace else WAITING).append(
+                "ignition crypto is STALE on the page (no completed bar from UTC-yesterday)"
+                + ("" if past_grace else f" - its cron usually lands by {mel(utc.replace(hour=8, minute=0), '%H:%M')} Melbourne"))
     for m, (hm, tz) in IGNITION_BAR_FINAL.items():
         d = load(f"public/data/ignition/{m}.json")
         if not d:
@@ -262,13 +276,13 @@ def lenses(now: dt.datetime) -> None:
     ran = ts(last[0]) if len(last) >= 2 else None
     print(f"phasemap: run_date {rd}, " + (f"last ran {mel(ran, '%a %d %b %H:%M')} ({ago(ran, now)})" if ran
                                           else "run time unknown (history too shallow)"))
-    local = now.astimezone(MEL)
-    owed = local.date() - dt.timedelta(days=0 if local.time() >= dt.time(*PHASEMAP_OWED_MEL) else 1)
+    yesterday = now.astimezone(MEL).date() - dt.timedelta(days=1)
     if not rd:
         FLAGS.append("PhaseMap latest.json has no run_date")
-    elif rd < owed.isoformat():
-        FLAGS.append(f"PhaseMap has not run for {owed:%a %d %b}: newest run_date {rd} "
-                     "(nightly; usually lands midnight to ~4am Melbourne)")
+    elif rd < yesterday.isoformat():
+        FLAGS.append(f"PhaseMap has not run since {rd} (nightly; usually lands midnight to ~4am Melbourne)")
+    elif ran and now - ran > dt.timedelta(hours=PHASEMAP_MAX_AGE_H):
+        FLAGS.append(f"PhaseMap last ran {ago(ran, now)} (nightly; usually lands midnight to ~4am Melbourne)")
     for path, label, limit_h in (("data/alert_forward_returns.json", "edge ledgers", 30),
                                  ("public/data/reco_note.json", "reco note", 30)):
         d = load(path) or {}
@@ -390,6 +404,10 @@ def main() -> int:
     fetch = not a.no_fetch and a.rev == "origin/main"
     if fetch:
         subprocess.run(["git", "-C", REPO, "fetch", "-q", "origin", "main"], check=False)
+        try:
+            git("rev-parse", "--verify", "-q", "origin/main")
+        except subprocess.CalledProcessError:
+            REV = "FETCH_HEAD"  # a clone with no remote-tracking refspec only updates FETCH_HEAD
     now = ts(a.now) if a.now else dt.datetime.now(UTC)
     if now.tzinfo is None:
         now = now.replace(tzinfo=MEL)  # a bare --now means Melbourne
