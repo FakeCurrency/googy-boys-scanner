@@ -126,6 +126,13 @@ def _product_tag(info: dict) -> bool:
             _KW_RE_CACHE = _product_kw_re()
         if _KW_RE_CACHE.search(name):
             return True
+        # Audit #56: the name PATTERNS describe financial listing classes; a
+        # row carrying an operating GICS sector (PMV retail, NZK food) is an
+        # operating company whatever its name says. The keyword list above is
+        # deliberately not gated (it mirrors the bot's own exclusion).
+        hints = getattr(config, "PRODUCT_PATTERN_SECTOR_HINTS", ()) or ()
+        if sector and not any(h in sector for h in hints):
+            return False
         return any(rx.search(name) for rx in _PRODUCT_RES)
     except Exception:                                  # noqa: BLE001
         return False
