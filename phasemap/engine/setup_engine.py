@@ -169,6 +169,7 @@ class SetupEngine:
             self._set_state(i, "NEUTRAL")
             self.bars_in_box = 0
             self.trap_cluster = None
+            self._clear_box()
 
     def _resting_cluster(self, i: int):
         """Equal-lows (bull) / equal-highs (bear) cluster resting at/beyond the
@@ -235,7 +236,10 @@ class SetupEngine:
             return   # breakdown/blow-off, not a sweep — reject
 
         # the 40-bar box is always defined, even when the sweep fires without
-        # a prior TRAP_SET (compression is not a precondition for a sweep)
+        # a prior TRAP_SET (compression is not a precondition for a sweep).
+        # NaN here means "no live box": the box never outlives its setup
+        # (_clear_box, v1.3.2), so this is the box AT this sweep, never one
+        # left over from a months-old range.
         if math.isnan(self.box_low):
             self.box_low = float(ind.box_low[i])
             self.box_high = float(ind.box_high[i])
@@ -514,10 +518,21 @@ class SetupEngine:
         self.anchor_caution = caution
 
     # ---------------------------------------------------------------- lifecycle
+    def _clear_box(self) -> None:
+        """The box belongs to ONE setup (v1.3.2, audit #24). It used to survive
+        _reset() and the TRAP_SET -> NEUTRAL exit, so after a ticker's first
+        box the sweep-time fallback above never ran again: a later sweep from
+        NEUTRAL inherited a box from a different price regime and published
+        its edge as a 'top/bottom of the range' TARGET (live: ASX APE's
+        box_low target 16.32-16.74 against a real 40-bar box of 20.21-24.52)."""
+        self.box_low = math.nan
+        self.box_high = math.nan
+
     def _reset(self, i: int) -> None:
         self._set_state(i, "NEUTRAL")
         self.bars_in_box = 0
         self.trap_cluster = None
+        self._clear_box()
         self.sweep_index = -1
         self.sweep_extreme = math.nan
         self.key_level = math.nan
