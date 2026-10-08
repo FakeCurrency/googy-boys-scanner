@@ -77,8 +77,10 @@ def test_replay_symbol_smoke_does_not_crash():
 # ── portfolio-level simulation (bot book rules applied chronologically) ──────
 
 def _sim_trade(sym, entry_date, exit_date, r=1.0, sector="secA", **kw):
+    # level_tf: the sim applies the live weekly/3d level gate (audit #34), so a
+    # fixture with no level would be dropped fail-closed, as live drops it.
     t = {"symbol": sym, "market": "asx", "grade": "A+", "entry_type": "reclaim",
-         "direction": "long", "timeframe": "1W", "sector": sector,
+         "direction": "long", "timeframe": "1W", "sector": sector, "level_tf": "weekly",
          "entry": 100, "stop": 96, "entry_date": entry_date, "exit_date": exit_date,
          "exit_reason": "target", "realized_r": r}
     t.update(kw)

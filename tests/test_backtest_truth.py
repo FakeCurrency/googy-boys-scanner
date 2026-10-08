@@ -33,6 +33,7 @@ def _trade(**kw) -> dict:
           "entry": 100.0, "stop": 90.0, "risk": 10.0,
           "entry_date": "2026-01-05", "exit_date": "2026-02-05",
           "grade": "A+", "entry_type": "break", "timeframe": "1D",   # 1D break = an entry cell
+          "level_tf": "weekly",          # audit #34: portfolio_sim applies the live level gate
           "realized_r": 1.0, "exits": []}
     tr.update(kw)
     return tr

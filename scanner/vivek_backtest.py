@@ -807,6 +807,19 @@ def _bot_gate(tr: dict) -> str | None:
     return None
 
 
+def level_tf_allow() -> tuple[str, ...]:
+    """The live W3 level gate's allowlist, normalised the way
+    ``vivek_run._apply_level_gate`` normalises it. Empty = gate OFF."""
+    return tuple(str(a).strip().lower()
+                 for a in (getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()))
+
+
+def level_allowed(level_tf, allow: tuple[str, ...]) -> bool:
+    """Would the live level gate keep a row at ``level_tf``? FAIL-CLOSED, as
+    live: a blank or missing level is dropped whenever the gate is on."""
+    return not allow or str(level_tf or "").strip().lower() in allow
+
+
 def portfolio_sim(trades: list[dict]) -> dict:
     from collections import Counter
     from .broker.vivek_bot import _sector_key
@@ -815,6 +828,16 @@ def portfolio_sim(trades: list[dict]) -> dict:
     long_only = not getattr(config, "VIVEK_BOT_ALLOW_SHORTS", True)
     _c = getattr(config, "VIVEK_BOT_ENTRY_CELLS", None)
     cells = dict(_c) if isinstance(_c, dict) and _c else {}
+    # Audit #34: the live bot only ever sees rows at an allowed level
+    # (`vivek_run._apply_level_gate`, before `decide()`); h4-level trades were
+    # ~15% of this sim's "eligible" and "portfolio" cohorts.
+    allow = level_tf_allow()
+    # Audit #35: the bot's cell walk, 1W > 3D > 1D, as a rank.
+    cell_rank = {tf: i for i, tf in enumerate(cells)}
+
+    def rank(t: dict) -> int:
+        return cell_rank.get(t.get("timeframe"), len(cell_rank))
+
     # Slot count. The live book's binding constraint is now a GLOBAL cap shared
     # across markets (VIVEK_BOT_MAX_OPEN_TOTAL), but this sim runs one market at
     # a time and structurally cannot model cross-market contention. Using the
@@ -838,12 +861,39 @@ def portfolio_sim(trades: list[dict]) -> dict:
     # have been willing to take", and a 95%-stop plan was never one of those.
     gate_skips: Counter = Counter()
     ungated = 0
-    elig = []
+    cand = []
     for t in trades:
         if (t.get("grade") not in grades
                 or t.get("entry_type") not in set(cells.get(t.get("timeframe")) or ())
                 or (long_only and t.get("direction") != "long")
                 or not t.get("entry_date") or not t.get("exit_date")):
+            continue
+        if not level_allowed(t.get("level_tf"), allow):
+            gate_skips["level_gate"] += 1
+            continue
+        cand.append(t)
+    # Audit #35 -- ONE PLAN PER SIGNAL, the one `vivek_bot._pick_plan` takes.
+    # The replay opens one trade per armed timeframe, so a signal bar that arms
+    # a 3D reclaim AND a 1D break yields two trades with the same entry date
+    # (pending entries all open at the next bar). Live takes the first cell in
+    # the walk and nothing else from that row; the old sort key tied 3D with 1D
+    # and fell back to the replay's CLOSE order, so the 1D break usually won and
+    # the 3D reclaim was skipped as `dup_symbol` -- the opposite trade. The
+    # collapse runs BEFORE the tradeability gates on purpose: live tests the
+    # picked plan's stop and, if it fails, skips the ROW; it never falls
+    # through to the 1D plan. The dropped siblings were also double-counted in
+    # `eligible`.
+    pick: dict = {}
+    for t in cand:
+        key = (t.get("market"), t.get("symbol"), t.get("entry_date"))
+        cur = pick.get(key)
+        if cur is None or rank(t) < rank(cur):
+            pick[key] = t
+    keep = {id(t) for t in pick.values()}
+    same_signal = len(cand) - len(keep)
+    elig = []
+    for t in cand:
+        if id(t) not in keep:
             continue
         code = _bot_gate(t)
         if code:
@@ -858,7 +908,8 @@ def portfolio_sim(trades: list[dict]) -> dict:
     if not elig:
         return {"note": "no bot-eligible trades with entry dates (re-run the "
                         "backtest to regenerate trades with entry_date)",
-                "eligible": _metrics([]), "portfolio": _metrics([])}
+                "eligible": _metrics([]), "portfolio": _metrics([]),
+                "gated": dict(gate_skips), "same_signal_dropped": same_signal}
 
     def add_days(day: str, n: int) -> str:
         return (dt.date.fromisoformat(day) + dt.timedelta(days=n)).isoformat()
@@ -867,10 +918,12 @@ def portfolio_sim(trades: list[dict]) -> dict:
     skips: Counter = Counter()
     peak_open = 0
     for mk in sorted({t["market"] for t in elig}):
-        # Weekly first on ties — mirrors the bot's prefer_tf ordering.
+        # Cell-walk order on same-day ties (audit #35: 1W > 3D > 1D, where the
+        # old key tied 3D with 1D). After the collapse above a symbol has one
+        # trade per day, so this only orders different names competing for a
+        # slot on the same day.
         trs = sorted((t for t in elig if t["market"] == mk),
-                     key=lambda t: (t["entry_date"],
-                                    0 if t.get("timeframe") == "1W" else 1))
+                     key=lambda t: (t["entry_date"], rank(t)))
         open_pos: list[dict] = []
         open_syms: set = set()
         sector_count: Counter = Counter()
@@ -911,11 +964,13 @@ def portfolio_sim(trades: list[dict]) -> dict:
                    "cooldown_days": cooldown, "long_only": long_only,
                    "grades": list(grades),
                    "entry_cells": {tf: list(ets) for tf, ets in cells.items()},
+                   "level_tf_allow": list(allow),
                    # Say what IS replayed, not only what is not — a bare
                    # "not_simulated" list invites the reader to assume
                    # everything absent from it was modelled, which is the
                    # assumption #68 was about.
-                   "simulated_gates": ["min_price", "max_stop_pct", "min_stop_pct",
+                   "simulated_gates": ["level_gate", "one_plan_per_signal",
+                                       "min_price", "max_stop_pct", "min_stop_pct",
                                        "max_positions", "one_per_symbol",
                                        "max_per_sector", "reentry_cooldown"],
                    "not_simulated": ["time_stop", "daily_guard", "weekly_guard",
@@ -925,11 +980,15 @@ def portfolio_sim(trades: list[dict]) -> dict:
         "eligible": _metrics(elig),          # unconstrained: every bot-eligible signal
         "portfolio": _metrics(taken_all),    # what the book rules actually let through
         "taken": len(taken_all), "skipped": dict(skips), "peak_open": peak_open,
-        # Rejected at the door by `_bot_gate`, before slot contention. Kept
+        # Rejected at the door -- the level gate (#34) or `_bot_gate` -- before
+        # slot contention. Kept
         # apart from `skipped` on purpose: these are trades the bot would never
         # have wanted, `skipped` are trades it wanted and had no room for, and
         # summing them would answer neither question.
         "gated": dict(gate_skips), "gated_unknown_stop": ungated,
+        # Sibling plans of a signal the cell walk did not pick (#35). Not a
+        # skip and not a gate: the bot never sees more than one plan per row.
+        "same_signal_dropped": same_signal,
     }
 
 
@@ -959,8 +1018,9 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
             "changed it — a switch between risk-% and fixed-notional moves "
             "them by an order of magnitude on identical trades. Read total_r "
             "and expectancy_r, which are ratios and carry across.",
-            "Portfolio sim: the slot/symbol/sector/cooldown caps and the "
-            "price + stop-distance gates ARE replayed; the time stop, the "
+            "Portfolio sim: the weekly/3d level gate, one plan per signal "
+            "(the bot's 1W > 3D > 1D cell walk), the slot/symbol/sector/cooldown "
+            "caps and the price + stop-distance gates ARE replayed; the time stop, the "
             "daily/weekly loss guards, the earnings buffer and the ADV gates "
             "are not (no intra-trade price paths, earnings calendar or "
             "historical volume in the slim records), and it runs one market at "
