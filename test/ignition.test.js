@@ -99,7 +99,7 @@ const FNS = ["isMarket", "liveUrl", "btUrl", "num", "obj", "fmtPx", "fmtPxPair",
   "fmtN", "toneOf", "isDay", "utcDay", "shortDay", "weekdayHours", "staleOf", "rowRank", "groupRows", "countsOf",
   "provNote", "pillInfo", "loadingInfo", "melb", "utcText", "chartHref", "symLink", "tag", "sourceHTML", "mainSource",
   "capOf", "ccy", "fmtCap", "capProv", "capTip", "capHTML", "sortByCap",
-  "entryTip", "outcomeOf", "fig", "breakoutLine", "sinceLine", "exitLine", "heldLine", "storyHTML",
+  "costNote", "entryTip", "outcomeOf", "fig", "breakoutLine", "sinceLine", "exitLine", "heldLine", "storyHTML",
   "level", "levelsHTML", "footHTML", "tagsHTML", "triggerCardHTML",
   "coilGap", "isFlatBase", "flatTag", "coilTip", "coiledRowHTML", "coiledTableHTML", "coilNote",
   "entryStatus", "fmtP", "fmtCI", "evidenceHTML",
@@ -541,7 +541,8 @@ test("a trigger card says what happened in sentences, then the levels, then wher
 test("schema 2: Entry is shown with its basis; R now and the story are measured from the entry", () => {
   const h = I.triggerCardHTML(trig2(), "crypto", {});
   assert.match(h, /title="Entry: the next open after the trigger \(2026-09-26\)[^"]*"><dt>Entry<\/dt><dd>\$1\.188<\/dd>/);
-  assert.match(h, /class="ig-out is-down" title="Measured from the entry against the stop"><b>-0\.33R<\/b><span>R now<\/span>/);
+  // audit #23: a row without `cost_r` (a pre-#23 payload) is gross and says so
+  assert.match(h, /class="ig-out is-down" title="Measured from the entry against the stop, before costs"><b>-0\.33R<\/b><span>R now<\/span>/);
   assert.match(h, /<dt>Stop<\/dt><dd>\$1\.098 <span>-7\.6%<\/span><\/dd>/, "the stop carries its risk %");
   assert.match(text(h), /Now \$1\.158, -2\.5% since the 26 Sep open\./, "change_pct is measured from the entry");
   const tc = I.triggerCardHTML(trig2({ entry: 1.189, entry_basis: "trigger_close", entry_date: null }), "crypto", {});
@@ -549,6 +550,20 @@ test("schema 2: Entry is shown with its basis; R now and the story are measured 
   assert.match(text(tc), /since the trigger close/);
   const wide = I.triggerCardHTML(trig2({ wide_stop: true, risk_pct: 41.2 }), "crypto", { wide_stop_pct: 35 });
   assert.match(wide, /Risk 41\.2% of the entry/);
+});
+
+test("audit #23: the card's R is the replay's NET R, and the tooltips only claim one number when it is", () => {
+  const net = I.triggerCardHTML(trig2({ cost_r: 0.1143 }), "crypto", {});
+  assert.match(net, /title="Measured from the entry against the stop, net of the replay&#39;s 0\.11R round-trip cost"><b>-0\.33R<\/b><span>R now<\/span>/);
+  assert.match(net, /title="Entry: the next open after the trigger \(2026-09-26\) — the fill the replay books, net of its round-trip cost, so this R and the backtest&#39;s R are one number"/);
+  const gross = I.triggerCardHTML(trig2(), "crypto", {});
+  assert.ok(!/one number/.test(gross), "a gross (pre-#23) row must not claim to match the net replay");
+  assert.match(gross, /the fill the replay books; this R is before the replay&#39;s costs/);
+  const closed = I.outcomeOf(trig2({ state: "CLOSED", exit_reason: "stop", exit_r: -1.11, cost_r: 0.1143 }));
+  assert.equal(closed.cap, "exit R");
+  assert.equal(closed.tip, "The trade's result: the exit against the entry and stop, net of the replay's 0.11R round-trip cost");
+  const pend = I.outcomeOf(trig2({ state: "CLOSED", exit_reason: "trail", exit_r: 0.5, exit_pending: true }));
+  assert.match(pend.tip, /, before costs \(priced at the close; the exit fills at the next open\)$/);
 });
 
 test("AXS: a $1.19 trigger and a $1.10 stop are distinguishable (4 significant figures under $10)", () => {
@@ -1586,9 +1601,10 @@ test("index.html loads ignition.css and ignition.js (before app.js) and hosts th
   assert.match(HTML, /<div class="ig-panel" id="ignition-panel" hidden/);
 });
 
-test("the asset versions moved with this change (?v= floor: ignition.js 5, ignition.css 3, app.js 139)", () => {
+test("the asset versions moved with this change (?v= floor: ignition.js 6, ignition.css 3, app.js 139)", () => {
   const v = (re) => Number((re.exec(HTML) || [])[1] || 0);
-  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 5, "ignition.js edited without a ?v= bump");
+  // 6: audit #23's net-R tooltips (costNote)
+  assert.ok(v(/js\/ignition\.js\?v=(\d+)/) >= 6, "ignition.js edited without a ?v= bump");
   assert.ok(v(/css\/ignition\.css\?v=(\d+)/) >= 3, "ignition.css edited without a ?v= bump");
   assert.ok(v(/js\/app\.js\?v=(\d+)/) >= 139, "app.js edited without a ?v= bump");
 });

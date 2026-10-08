@@ -239,7 +239,7 @@ def trades_for(pr: Prepared, rules: pd.DataFrame, *, exit_spec: str = "trail9",
         sim = E.simulate(pr.o, pr.h, pr.lo, pr.c, trail, start=t0 + 1, entry=entry,
                          stop=stop, ladder=_ladder(exit_spec, entry, risk, mm[t0]),
                          max_hold=hold)
-        cost_r = (cost_pct / 100.0) * entry / risk
+        cost_r = E.round_trip_cost_r(cost_pct, entry, risk)   # the live row's too
         r = pr.bf.iloc[t0]
         btc = pr.btc_up.iloc[t0]
         out.append({
@@ -324,7 +324,7 @@ def random_timing(prepared: List[Prepared], real: List[dict], *, draws: int,
                 continue
             sim = E.simulate(pr.o, pr.h, pr.lo, pr.c, pr.trail9, start=t0 + 1,
                              entry=entry, stop=stop, max_hold=hold)
-            cost_r = (cost / 100.0) * entry / risk
+            cost_r = E.round_trip_cost_r(cost, entry, risk)
             out.append({"symbol": t["symbol"], "_t0": t0, "_mkt": pr.market,
                         "trigger_date": E._date(pr.df.index[t0]),
                         "entry_date": E._date(pr.df.index[t0 + 1]),

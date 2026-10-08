@@ -345,6 +345,18 @@ def simulate(o, h, lo, c, trail, *, start: int, entry: float, stop: float,
     return _outcome(fills, entry, stop, last, "open", mfe, mae, start)
 
 
+def round_trip_cost_r(cost_pct: float, entry: float, risk: float) -> float:
+    """The round trip's cost in R: cost_pct (a % of the entry) x entry / risk.
+
+    ONE implementation, two readers: the replay subtracts it from every
+    trade's gross R (backtest.trades_for -> net_r, the number every statistic
+    reads) and the live row subtracts it from its exit R / R now, so the page
+    and the evidence quote the same NET number (audit #23, 2026-10-08: the
+    page published GROSS R beside a net replay -- a median 0.11R gap on the
+    ASX's 1.0% round trip, up to ~0.9R on a tight stop)."""
+    return (float(cost_pct) / 100.0) * entry / risk
+
+
 def _outcome(fills, entry, stop, exit_bar, reason, mfe, mae, start) -> dict:
     risk = entry - stop
     gross = sum(frac * (px - entry) for frac, px, _, _ in fills)
@@ -402,6 +414,12 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
     close). Until that bar exists the trigger close is the only reference,
     and `entry_basis` says which one a row is using. A next open at or under
     the stop is no trade at all, exactly as the replay skips it.
+
+    AND THE R IS THE REPLAY'S R: `exit_r` (and screen_frame's `r_now`) are
+    NET of the replay's round-trip cost (config IGNITION_BT_COST_PCT, per
+    market), published beside them as `cost_r`; gross = exit_r + cost_r.
+    Until audit #23 the page's R was gross while every replay number is net.
+    `mfe_r` and `mm_r` stay price excursions (the replay's mfe_r is gross too).
     """
     r = feat.iloc[t0]
     trig_close, stop = float(r["close"]), float(r["stop"])
@@ -413,6 +431,8 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
     else:
         entry, basis = trig_close, "trigger_close"
     risk = entry - stop
+    cost_r = (round_trip_cost_r(mkt(market, "IGNITION_BT_COST_PCT"), entry, risk)
+              if risk > 0 else None)
     mm = float(r["mm_target"])
     out = {
         "trigger_date": _date(feat.index[t0]),
@@ -438,6 +458,7 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
         "mm_r": (_f((mm - entry) / risk, 2)
                  if risk > 0 and np.isfinite(mm) and mm > entry else None),
         "coil": _coil_block(feat, max(t0 - 1, 0)),
+        "cost_r": _f(cost_r, 4),
     }
     if not risk > 0:
         # Gapped to (or through) the stop at the open: the setup failed
@@ -456,7 +477,7 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
             out["exit_reason"] = sim["reason"]
             out["exit_date"] = _date(feat.index[sim["exit_bar"]])
             out["exit_price"] = _f(sim["exit_price"], 8)
-            out["exit_r"] = _f(sim["gross_r"], 2)
+            out["exit_r"] = _f(sim["gross_r"] - cost_r, 2)   # net, as the replay books it
             out["exit_pending"] = bool(sim["pending"])
     else:
         out["mfe_r"] = 0.0
@@ -536,7 +557,9 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
         en, st = row["entry"], row.get("stop")
         row["change_pct"] = _f((price / en - 1) * 100, 1)
         if st is not None and en - st > 0:
-            row["r_now"] = _f((price - en) / (en - st), 2)
+            # Net of the round trip, like exit_r and every replay mark (#23).
+            cost = round_trip_cost_r(mkt(market, "IGNITION_BT_COST_PCT"), en, en - st)
+            row["r_now"] = _f((price - en) / (en - st) - cost, 2)
         row["trail"] = _f(feat["trail"].iloc[-1], 8)
     return row
 

@@ -354,6 +354,8 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
             "base_bars": config.IGNITION_BASE_BARS,
             "trail_sma": config.IGNITION_TRAIL_SMA,
             "wide_stop_pct": config.IGNITION_WIDE_STOP_PCT,
+            # the round trip every row's exit_r / r_now is net of (#23)
+            "cost_pct_round_trip": float(E.mkt(market, "IGNITION_BT_COST_PCT")),
             "bars_per_year": int(config.IGNITION_BARS_PER_YEAR.get(market, 365)),
             "calendar_windows": {n: E.bars(market, n) for n in E.CALENDAR_WINDOWS},
         },

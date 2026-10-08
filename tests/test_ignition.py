@@ -881,7 +881,11 @@ def test_igniting_on_the_trigger_bar_and_the_next_then_running():
     # the coil block describes the bar BEFORE the trigger
     assert r0["coil"]["coiled"] is True
     assert r0["coil"]["coiled_bars"] == int(f["coiled_run"].iloc[T - 1])
-    assert r0["price"] == pytest.approx(entry, abs=1e-8) and r0["r_now"] == 0.0
+    # audit #23: R now is NET of the replay's round-trip cost, so a trade
+    # marked at its own entry reads -cost_r, not 0.00R
+    cost = config.IGNITION_BT_COST_PCT / 100.0 * entry / (entry - stop)
+    assert r0["cost_r"] == pytest.approx(round(cost, 4))
+    assert r0["price"] == pytest.approx(entry, abs=1e-8) and r0["r_now"] == round(-cost, 2)
 
     r1 = screen("base", T + 1)
     assert r1["state"] == "IGNITING" and r1["bars_since"] == 1
@@ -889,7 +893,8 @@ def test_igniting_on_the_trigger_bar_and_the_next_then_running():
     r2 = screen("base", T + 2)
     assert r2["state"] == "RUNNING" and r2["bars_since"] == 2
     assert r2["change_pct"] == pytest.approx(round((df["Close"].iloc[T + 2] / entry - 1) * 100, 1))
-    assert r2["r_now"] == pytest.approx(round((df["Close"].iloc[T + 2] - entry) / (entry - stop), 2))
+    assert r2["r_now"] == pytest.approx(round((df["Close"].iloc[T + 2] - entry) / (entry - stop)
+                                              - cost, 2))   # net (#23)
     assert r2["trail"] == pytest.approx(df["Close"].iloc[T - 6:T + 3].mean(), abs=1e-6)
 
 
@@ -930,7 +935,10 @@ def test_closed_by_stop_and_by_a_gap_through_it():
     stop = f["stop"].iloc[T]
     r = screen("failed", T + 5)
     assert r["state"] == "CLOSED" and r["exit_reason"] == "stop"
-    assert r["exit_price"] == pytest.approx(stop, abs=1e-8) and r["exit_r"] == -1.0
+    # audit #23: a stop-out books -1R GROSS; the page now shows the replay's
+    # NET number, -1R less the round trip
+    assert r["exit_price"] == pytest.approx(stop, abs=1e-8)
+    assert r["exit_r"] == round(-1.0 - r["cost_r"], 2) < -1.0
     g = fx("gap_through")
     r = screen("gap_through", T + 4)
     assert r["state"] == "CLOSED" and r["exit_reason"] == "stop"

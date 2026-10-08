@@ -412,11 +412,22 @@
 
   // ── trigger cards: IGNITING / RUNNING / CLOSED ───────────────────────────
 
+  // The card's R is NET of the replay's round-trip cost (the engine's
+  // `cost_r`, audit #23), the number the backtest books for the same trade.
+  // A payload from before that field is gross, and says so rather than
+  // claiming a match it does not have.
+  function costNote(r) {
+    const c = num(r.cost_r);
+    return c == null ? ", before costs" : ", net of the replay's " + c.toFixed(2) + "R round-trip cost";
+  }
+
   // What the entry price IS, in words — the engine's `entry_basis`.
   function entryTip(r) {
     if (r.entry_basis === "next_open") {
       return "Entry: the next open after the trigger" + (r.entry_date ? " (" + r.entry_date + ")" : "") +
-        " — the fill the replay books, so this R and the backtest's R are one number";
+        " — the fill the replay books" + (num(r.cost_r) == null
+          ? "; this R is before the replay's costs"
+          : ", net of its round-trip cost, so this R and the backtest's R are one number");
     }
     if (r.entry_basis === "trigger_close") {
       return "Entry: the trigger close, until the next bar opens — then the entry becomes that open";
@@ -429,13 +440,14 @@
   // otherwise today's R against the entry and stop.
   function outcomeOf(r) {
     if (r.state !== "CLOSED") {
-      return { text: fmtR(r.r_now), tone: toneOf(r.r_now), cap: "R now", tip: "Measured from the entry against the stop" };
+      return { text: fmtR(r.r_now), tone: toneOf(r.r_now), cap: "R now",
+        tip: "Measured from the entry against the stop" + costNote(r) };
     }
     if (r.exit_reason === "gap_below_stop") {
       return { text: DASH, tone: "", cap: "no trade", tip: "It opened under the stop, so the replay books no trade and no R" };
     }
     return { text: fmtR(r.exit_r), tone: toneOf(r.exit_r), cap: "exit R",
-      tip: "The trade's result: the exit against the entry and stop" +
+      tip: "The trade's result: the exit against the entry and stop" + costNote(r) +
         (r.exit_pending ? " (priced at the close; the exit fills at the next open)" : "") };
   }
 
