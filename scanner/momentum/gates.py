@@ -182,8 +182,9 @@ def reason_key(reason: str) -> str:
     screen's skipped_by_reason and the backtest's signals_gated share it: the
     screen used to key on the text before ' (', and the price and turnover
     reasons carry no bracket, so every distinct value became its own bucket
-    (798 keys in one ASX file -- audit #67)."""
-    m = re.match(r"[a-z][a-z\- ]*[a-z]", reason)
+    (798 keys in one ASX file -- audit #67). Case-insensitive: lower-case
+    only, 'all-NaN close column' keyed as 'all' (the review of #67)."""
+    m = re.match(r"[A-Za-z][A-Za-z\- ]*[A-Za-z]", reason)
     return m.group(0) if m else reason
 
 

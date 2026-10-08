@@ -53,6 +53,13 @@ def test_the_screen_and_the_backtest_share_one_key():
         assert G.reason_key(reason) == G.reason_key(reason.replace("0", "9"))
     assert G.reason_key("price 0.0060 below the asx floor 0.0200") == "price"
     assert G.reason_key("non-operating listing (fund / REIT)") == "non-operating listing"
+    # review of #67: an upper-case letter inside a gate's name does not cut it
+    # short ("all-NaN close column" used to key as "all"), and every reason
+    # gate_frame can return keys to a non-empty gate name
+    assert G.reason_key("all-NaN close column") == "all-NaN close column"
+    assert G.reason_key("last close is not positive (-1.0)") == "last close is not positive"
+    assert G.reason_key("turnover not computable") == "turnover not computable"
+    assert G.reason_key("no volume in the last 5 bars (suspended?)") == "no volume in the last"
     assert not hasattr(BT, "_reason_key"), "a second copy of the key"
     src = (ROOT / "scanner" / "momentum" / "run.py").read_text(encoding="utf-8")
     assert 'split(" (")' not in src
