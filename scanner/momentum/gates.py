@@ -48,6 +48,10 @@ _KEYWORD_RE = re.compile(
     r"\b(?:%s)\b" % "|".join(re.escape(k) for k in config.FUND_NAME_KEYWORDS),
     re.IGNORECASE)
 _PATTERN_RES = tuple(re.compile(p, re.IGNORECASE) for p in config.PRODUCT_NAME_PATTERNS)
+# A market with its own product words (crypto, #68) is matched on those alone.
+_MARKET_KEYWORD_RES = {
+    m: re.compile(r"\b(?:%s)\b" % "|".join(re.escape(k) for k in words), re.IGNORECASE)
+    for m, words in config.PRODUCT_KEYWORDS_BY_MARKET.items() if words}
 
 
 def dollar_adv(frame: pd.DataFrame, market: str = "",
@@ -87,16 +91,21 @@ def dollar_adv(frame: pd.DataFrame, market: str = "",
     return float(turn.mean())
 
 
-def is_product(name: Any, sector: Any = "") -> bool:
+def is_product(name: Any, sector: Any = "", market: str = "") -> bool:
     """True for a non-operating listing: a fund, REIT, ETF, LIC, preferred line,
     warrant, rights line or note.
 
     FAILS OPEN to False, like the display flag it mirrors: a missed tag on a
     report row is a cosmetic miss, whereas a false positive hides a real stock
-    from a human-review shortlist.
+    from a human-review shortlist. A market in
+    config.PRODUCT_KEYWORDS_BY_MARKET (crypto) is tested against its own words
+    only: the stock lists gated "Trust Wallet" out as a trust (audit #68).
     """
     try:
         nm = str(name or "")
+        if market in config.PRODUCT_KEYWORDS_BY_MARKET:
+            rx = _MARKET_KEYWORD_RES.get(market)
+            return bool(rx and rx.search(nm))
         sec = str(sector or "").strip().lower()
         if any(h in sec for h in config.FUND_SECTOR_HINTS):
             return True
@@ -140,7 +149,7 @@ def gate_frame(frame: pd.DataFrame, market: str, *, cfg=None,
         # every indicator here noise rather than signal.
         return "price %.4f below the %s floor %.4f" % (last, market, floor)
 
-    if config.EXCLUDE_PRODUCTS and is_product(name, sector):
+    if config.EXCLUDE_PRODUCTS and is_product(name, sector, market):
         return "non-operating listing (fund / REIT / LIC / preferred / warrant)"
 
     # SUSPENDED-BUT-QUOTED, caught two ways. A flat series produces no pivots

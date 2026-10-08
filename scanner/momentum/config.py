@@ -31,9 +31,12 @@ from scanner.config import (LENS_BACKTEST_NOTIONAL, VIVEK_BOT_MIN_STOP_PCT,  # n
                             VIVEK_COMMISSION_BPS, VIVEK_SLIPPAGE_BPS,
                             VIVEK_TP_SCALE_LONG, VIVEK_TP_SCALE_SHORT)
 
-RULESET_VERSION = "1.0.0"   # 1.0.0: first cut. Rule A (RSI divergence off
+RULESET_VERSION = "1.0.1"   # 1.0.0: first cut. Rule A (RSI divergence off
 #                             strict pivots) + Rule B (scored 20/50 cross),
 #                             daily bars, mode A default, 1-bar freshness.
+#                             1.0.1 (2026-10-08 audit): crypto screens its
+#                             last COMPLETED UTC bar (#85) and its product
+#                             gate reads coin names with crypto words (#68).
 
 # Frame columns the screen will accept as an indicator source. LOWERCASE on
 # purpose, matching the reference. `scanner/data.py` hands back yfinance's
@@ -340,6 +343,18 @@ FUND_NAME_KEYWORDS = ("REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
                       "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X")
 FUND_SECTOR_HINTS = ("reit", "real estate investment trust")
 NON_OPERATING_SECTORS = frozenset({"not applicable", "not applic", "n/a"})
+
+# A COIN NAME IS NOT A LISTING NAME (audit #68, 2026-10-08). The lists above are
+# ASX / NASDAQ wrapper words -- spec 5.6 scopes this gate to "ASX LICs/ETFs/
+# trusts, NASDAQ preferred/warrants/rights/notes" -- and on a CoinGecko name
+# they misfire: "Trust Wallet" (TWT, a real wallet/exchange token) matched
+# \bTRUST\b and was gated out of every crypto screen as a fund. Crypto pegs
+# and tokenised cash funds are the UNIVERSE's job (scanner.universe._is_stable,
+# where a new one is named). A market listed here is tested against ONLY its
+# own words -- no stock keywords, patterns or sector hints -- and these two
+# keep catching a tokenised fund or ETF the peg list has not named yet (SAFO,
+# "Spiko Amundi Overnight Swap Fund"; "... ETF (Ondo Tokenized)").
+PRODUCT_KEYWORDS_BY_MARKET: Dict[str, Tuple[str, ...]] = {"crypto": ("FUND", "ETF")}
 
 
 # ---------------------------------------------------------------------------

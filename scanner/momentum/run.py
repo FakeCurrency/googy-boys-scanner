@@ -191,7 +191,7 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
             row["name"] = meta.get("name") or ""
             row["sector"] = meta.get("sector") or ""
             row["yf"] = yf_ticker
-            row["is_product"] = gates.is_product(meta.get("name"), meta.get("sector"))
+            row["is_product"] = gates.is_product(meta.get("name"), meta.get("sector"), market)
             row["dollar_adv_20"] = gates.dollar_adv(frame, market)
             row["data_age_days"] = _frame_age_days(frame, market)
             results.append(row)
