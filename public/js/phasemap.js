@@ -70,6 +70,20 @@
          : (m.sweep_date || "");
   }
 
+  // The scan's newest daily bar, as far as the payload can say — what FLASHED
+  // compares against (audit #52, 2026-10-08). It used to compare with
+  // run_date, which is the MELBOURNE date the nightly job ran: the job lands
+  // after Melbourne midnight, NASDAQ's newest bar is the previous US session
+  // and crypto drops the forming UTC candle, so no event date ever equalled it
+  // and the cue never rendered. latest.json publishes no as-of bar, so the
+  // newest sweep/displacement date across every result stands in for it — on
+  // each real scan dozens of names print on the newest bar.
+  function newestBar(results) {
+    let best = "";
+    for (const r of results || []) { const d = eventDate(r); if (d > best) best = d; }
+    return best || null;
+  }
+
   function applySort(rows) {
     const bynum = (fn) => (a, b) => (fn(b) ?? -Infinity) - (fn(a) ?? -Infinity)
       || a.ticker.localeCompare(b.ticker);
@@ -124,10 +138,10 @@
     const speak = window.speechSynthesis
       ? `<button class="pm-speak" data-speak="${idx}" title="Read aloud" aria-label="Read analysis aloud">▶ READ</button>`
       : "";
-    // FLASH cue: the event printed on THIS scan's date — review the chart now
+    // FLASH cue: the event printed on this scan's newest bar — review the chart now
     const m = rec.metrics || {};
-    const rd = state.data && state.data.run_date;
-    const flashed = rd && (m.displacement_date === rd || m.sweep_date === rd);
+    const lb = state.lastBar;
+    const flashed = lb && (m.displacement_date === lb || m.sweep_date === lb);
     const ci = state.confl ? state.confl.of(rec.ticker) : null;
     const aligned = ci && ci.side === (rec.direction === "bearish" ? "short" : "long");
     const key = `${rec.ticker}|${rec.direction}`;
@@ -139,7 +153,7 @@
         ${isNew ? '<span class="pm-tag pm-tag-new" title="Appeared since your last visit">NEW</span>' : ""}
         ${was ? `<span class="pm-tag pm-tag-new" title="State changed since your last visit">${PM.esc(was.replace("_", " "))} → ${PM.esc(rec.state.replace("_", " "))}</span>` : ""}
         ${aligned ? PM.confluenceChipHTML(ci, "PHASEMAP") : ""}
-        ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the latest scan day — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
+        ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the newest bar in this scan — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
         ${rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : ""}
         ${PM.headBadgesHTML(rec)}
         ${speak}
@@ -564,6 +578,7 @@
       }
       if (stale()) return;
       state.data = data;
+      state.lastBar = newestBar(data.results);
       $("#pm-sub").innerHTML = PM.esc(
         `${market.toUpperCase()} · scan ${data.run_date} · ruleset v${data.ruleset_version} · ` +
         `${data.universe_size} tickers scanned · ${data.results.length} results`)

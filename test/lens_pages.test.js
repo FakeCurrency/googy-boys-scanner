@@ -8,6 +8,9 @@
  *        under the CRYPTO tab, chart links of m=crypto&s=<ASX ticker>, and
  *        pm-seen:crypto (the "since you last checked" memory) overwritten with
  *        ASX keys. The confluence fetch had the same gap.
+ *   #52  FLASHED compared event dates with run_date, the MELBOURNE date the
+ *        nightly job ran. The job lands after Melbourne midnight, so no event
+ *        date ever equalled it and the cue never rendered.
  *
  * Everything here EXECUTES the shipped page scripts (and the real
  * phasemap-shared.js under them) against a fake DOM and a fake network whose
@@ -287,6 +290,51 @@ test("while the next market loads, a re-render does not draw the previous market
   p.tab("all");                            // any filter click calls render()
   assert.ok(!/ASXA|ASXB/.test(p.list()),
     "ASX cards must not be redrawn under the CRYPTO tab (their links would read m=crypto)");
+});
+
+suite("#52 PhaseMap: FLASHED is the scan's newest bar, not the Melbourne run date");
+
+test("rows whose sweep or displacement printed on the newest bar are FLASHED", async () => {
+  // run_date 2026-10-08 is the Melbourne date the job ran; the newest bar in
+  // the scan is 2026-10-07. Under the old comparison nothing could ever match.
+  const scan = pmScan("2026-10-08", 1923, [
+    pmRec("DISP", { sweep_date: "2026-10-03", displacement_date: "2026-10-07" }),
+    pmRec("SWEP", { sweep_date: "2026-10-07", displacement_date: undefined }, { state: "SWEPT" }),
+    pmRec("OLDR", { sweep_date: "2026-10-01", displacement_date: "2026-10-06" }),
+  ]);
+  const p = pmBoot({ "pm-view": "all" });
+  p.land("asx", scan);
+  await flush();
+  const flashed = (t) => p.cards().find((c) => c.includes(`pm-ticker">${t}<`)).includes("FLASHED");
+  assert.ok(flashed("DISP"), "a displacement on the newest bar is FLASHED");
+  assert.ok(flashed("SWEP"), "so is a sweep on the newest bar");
+  assert.ok(!flashed("OLDR"), "an event one bar older is not");
+});
+
+test("a scan with no dated events flashes nothing and does not throw", async () => {
+  const scan = pmScan("2026-10-08", 10, [pmRec("NODT", { sweep_date: undefined, displacement_date: undefined })]);
+  const p = pmBoot({ "pm-view": "all" });
+  p.land("asx", scan);
+  await flush();
+  assert.equal(p.cards().length, 1);
+  assert.ok(!/FLASHED/.test(p.list()));
+});
+
+test("the cue fires on today's REAL published scans (it never did against run_date)", async () => {
+  // Sorted FRESH over every state, the first card carries the scan's newest
+  // event, so it must be FLASHED whenever the file has a dated event at all.
+  for (const m of ["asx", "nasdaq", "crypto"]) {
+    const f = path.join(ROOT, "public", "data", "phasemap", m, "latest.json");
+    if (!fs.existsSync(f)) continue;
+    const scan = JSON.parse(fs.readFileSync(f, "utf8"));
+    const dated = (scan.results || []).some((r) => r.metrics && (r.metrics.sweep_date || r.metrics.displacement_date));
+    if (!dated) continue;
+    const p = pmBoot({ "pm-market": m, "pm-view": "all", "pm-sort": "fresh" });
+    p.land(m, scan);
+    await flush();
+    assert.ok(p.cards().length > 0, `${m}: no cards rendered`);
+    assert.ok(/FLASHED/.test(p.cards()[0]), `${m}: the freshest card is not FLASHED`);
+  }
 });
 
 (async () => {
