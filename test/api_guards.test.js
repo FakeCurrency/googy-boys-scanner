@@ -249,6 +249,29 @@ const scanTests = async () => {
     }
   });
 
+  // Audit #48 (2026-10-08): the crypto universe admits any str.isalnum()
+  // symbol, CJK included, and the scan prices one. The ASCII-only rule here
+  // 400'd the WHOLE batch on it, so with that coin held no close button on
+  // the site could close anything.
+  await test("batch + single: a non-ASCII crypto symbol the universe admits is accepted, verbatim", async () => {
+    const CJK = "币安人生";
+    const calls = [];
+    const S = loadC((url, opts) => { calls.push(opts); return Promise.resolve(new Response(null, { status: 204 })); });
+    const r = await callBatch(S, { GH_DISPATCH_TOKEN: "t" },
+      [good("AAA"), { symbol: CJK, market: "crypto", direction: "long", price: 0.4786 }]);
+    assert.equal(r.status, 202, "one held CJK coin must not block the whole close-all");
+    const batch = JSON.parse(JSON.parse(calls[0].body).inputs.batch);
+    assert.equal(batch[1].symbol, CJK, "the symbol must reach the workflow exactly as the book holds it");
+    const one = await S.onRequestPost({ env: { GH_DISPATCH_TOKEN: "t" }, request: new Request("https://x/api/close", {
+      method: "POST", body: JSON.stringify({ symbol: CJK, market: "crypto", price: 0.4786, journal_type: "bot" }) }) });
+    assert.equal(one.status, 202, "the single-close shape shares the same rule");
+    // Widening to letters/numbers lets nothing else through.
+    for (const sym of ["币；", "币　安", "A‍B", "X́", "A".repeat(16)]) {
+      const bad = await callBatch(S, { GH_DISPATCH_TOKEN: "t" }, [good("AAA"), { ...good("BBB"), symbol: sym }]);
+      assert.equal(bad.status, 400, "accepted: " + JSON.stringify(sym));
+    }
+  });
+
   await test("batch: capped at 60 (a full book, owner 2026-09-27) and never empty", async () => {
     const S = loadC(ghFetchStub(204));
     const full = Array.from({ length: 60 }, (_, i) => good("S" + i));

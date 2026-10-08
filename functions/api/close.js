@@ -21,6 +21,16 @@
  */
 import { withAccessLog } from "./_access_log.js";
 import { dispatchWorkflow } from "./_dispatch.js";
+
+// ONE symbol rule for both shapes (audit #48, 2026-10-08). It used to be ASCII
+// letters, digits, "." and "-" only, but the crypto universe admits any symbol
+// Python's str.isalnum() accepts (universe._fetch_crypto) and the scan already
+// prices a CJK-named coin -- so the day the bot held one, "Close all" and the
+// stalled strip would 400 the WHOLE batch on it and no button on the site
+// could close anything. Unicode letters and numbers keep the defence intact:
+// no punctuation, whitespace or shell metacharacter can pass, and the inputs
+// still reach the workflow only as env vars.
+const SYMBOL_RE = /^[\p{L}\p{N}.\-]{1,15}$/u;
 export const onRequestPost = withAccessLog("/api/close", async ({ request, env }) => {
   const token = env.GH_DISPATCH_TOKEN;
   const repo  = env.GH_REPO     || "FakeCurrency/googy-boys-scanner";
@@ -68,7 +78,7 @@ export const onRequestPost = withAccessLog("/api/close", async ({ request, env }
       const sym = String(c?.symbol || "").trim().toUpperCase();
       const mkt = String(c?.market || "").trim().toLowerCase();
       const px  = parseFloat(c?.price);
-      if (!/^[A-Z0-9.\-]{1,15}$/.test(sym) || !isFinite(px) || px <= 0) {
+      if (!SYMBOL_RE.test(sym) || !isFinite(px) || px <= 0) {
         return json(400, { ok: false, message: `Batch entry ${sym || "?"}: symbol and a positive price are required.` });
       }
       if (!["asx", "nasdaq", "crypto"].includes(mkt)) {
@@ -106,7 +116,7 @@ export const onRequestPost = withAccessLog("/api/close", async ({ request, env }
   const symbol = String(body?.symbol || "").trim().toUpperCase();
   const market = String(body?.market || "").trim().toLowerCase();
   const price  = parseFloat(body?.price);
-  if (!/^[A-Z0-9.\-]{1,15}$/.test(symbol) || !isFinite(price) || price <= 0) {
+  if (!SYMBOL_RE.test(symbol) || !isFinite(price) || price <= 0) {
     return json(400, { ok: false, message: "symbol and a positive price are required." });
   }
   if (!["asx", "nasdaq", "crypto", "scalp", ""].includes(market)) {
