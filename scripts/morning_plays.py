@@ -31,7 +31,9 @@ DE-DUP (owner ask, 2026-09-09): a ticker already SENT within the last
 MORNING_PLAYS_DEDUP_DAYS days is skipped, so the reader (who charts each name)
 is never handed the same ticker twice inside the window. Only tickers that were
 ACTUALLY DELIVERED are recorded -- a failed post, a dry run or a missing webhook
-records nothing, so no name is ever silently buried. The record is counted from
+records nothing, and a name folded into a market's '...+N more' line was never
+named, so it is not recorded either (it stays eligible for the next slot) --
+so no name is ever silently buried. The record is counted from
 when a name was SENT, not from when it went high-conviction, so a still-valid
 setup reappears once the window passes.
 
@@ -233,6 +235,22 @@ HEADER_TEXT = {
 }
 
 
+def max_rows() -> int:
+    """How many names one market's block NAMES (config.MORNING_PLAYS_MAX_ROWS);
+    the rest fold into '...+N more (see the app)'. One reader for the cap, so
+    what is rendered and what is recorded as sent cannot drift apart."""
+    return int(getattr(config, "MORNING_PLAYS_MAX_ROWS", 20) or 20)
+
+
+def shown(picks_by_market: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    """The rows the digest actually NAMES, per market: picks[:cap], exactly
+    the slice _market_block renders. A name folded into '+N more' never
+    appeared in any message, so it must not be recorded as sent (audit #32,
+    2026-10-08: they were, and the 7-day dedup then buried them unseen)."""
+    cap = max_rows()
+    return {m: list(rows[:cap]) for m, rows in picks_by_market.items()}
+
+
 def _market_block(market: str, picks: list[dict], cap: int,
                   age: float | None, stale_h: float) -> list[str]:
     """One market, GROUPED BY LABEL (owner, 2026-09-17): a bold `MARKET PLAYS`
@@ -289,7 +307,7 @@ def build_messages(picks_by_market: dict[str, list[dict]],
         return [header + f"\nNo high-conviction plays across {markets_label} "
                 "this morning."]
 
-    cap = int(getattr(config, "MORNING_PLAYS_MAX_ROWS", 20) or 20)
+    cap = max_rows()
     stale_h = float(getattr(config, "MORNING_PLAYS_STALE_H", 20.0) or 0)
     lines = [header]
     for market, picks in picks_by_market.items():
@@ -581,10 +599,12 @@ def main(argv=None, now=None) -> int:
 
     rc, delivered = deliver(messages, args.dry_run)
     if delivered and use_state:
-        # Record ONLY what actually went out; mark the slot done so its other DST
-        # cron (and any repeat run today) stays silent. A failed send records
-        # nothing, so it retries next run.
-        record_sent(sent, new_by_market, today, window)
+        # Record ONLY what actually went out -- the names the messages NAMED,
+        # not the ones folded into '+N more', which stay eligible for the next
+        # slot (audit #32). Mark the slot done so its other DST cron (and any
+        # repeat run today) stays silent. A failed send records nothing, so it
+        # retries next run.
+        record_sent(sent, shown(new_by_market), today, window)
         if slot_name:
             state["slots"][slot_name] = today.isoformat()
         state["sent"] = sent
