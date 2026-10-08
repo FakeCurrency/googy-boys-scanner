@@ -13,7 +13,10 @@ each close). Whichever wake-up arrives first does the work; the rest find
 nothing due and stop in seconds. The morning_plays delay-proof gate
 (`slot_due` + `scan_is_post_close`) is the precedent.
 
-THE WINDOW, per equity market: from (local close + PUBLISH_AFTER_CLOSE_MIN) on
+THE WINDOW, per equity market: from the LATER of (local close +
+PUBLISH_AFTER_CLOSE_MIN) and the instant the feed shows that day's FINAL bar
+(scanner.config.DAILY_BAR_FINAL -- the ASX at 16:40 Sydney, the 2026-10-06
+close ruling; audit #66 found the ASX due at 16:30, on pre-auction closes) on
 a weekday until the NEXT session opens. Never inside a session -- spec 5.11:
 the screen does not drop a forming bar, so a run during trading would screen a
 bar that is still moving. If a whole window is missed the market waits for the
@@ -70,6 +73,16 @@ def _session(market: str) -> Optional[Tuple[int, int, int, int]]:
     return scfg.VIVEK_JOURNAL_SESSION.get(market)
 
 
+def _bar_final(market: str, day: dt.date) -> Optional[dt.datetime]:
+    """When `day`'s daily bar is final on the feed (scanner.config
+    .DAILY_BAR_FINAL), or None for a market with no entry there."""
+    final = scfg.DAILY_BAR_FINAL.get(market)
+    if not final:
+        return None
+    zone, h, m = final
+    return dt.datetime.combine(day, dt.time(h, m), tzinfo=ZoneInfo(zone))
+
+
 def due_point(market: str, now: dt.datetime) -> dt.datetime:
     """The latest instant <= now after which `market` owes a fresh file."""
     session = _session(market)
@@ -86,6 +99,9 @@ def due_point(market: str, now: dt.datetime) -> dt.datetime:
             continue
         p = (dt.datetime.combine(day, dt.time(close_h, close_m), tzinfo=tz)
              + dt.timedelta(minutes=mcfg.PUBLISH_AFTER_CLOSE_MIN))
+        final = _bar_final(market, day)
+        if final is not None and final > p:
+            p = final            # never before the close is final (audit #66)
         if p <= now:
             return p
     raise AssertionError("no weekday in the last eight days")  # unreachable

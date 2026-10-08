@@ -358,7 +358,11 @@ NON_OPERATING_SECTORS = frozenset({"not applicable", "not applic", "n/a"})
 #
 # 30 minutes is the lag the original fixed crons (06:30 / 21:30 UTC) gave in
 # the winter half of the year; keeping it means the first due instant is never
-# earlier than it ever was. The ASX closing auction prints ~16:10-16:12.
+# earlier than it ever was. It is a FLOOR beside scanner.config.DAILY_BAR_FINAL:
+# the gate waits for whichever is later. The ASX auction prints ~16:10-16:12
+# but Yahoo shows it ~20 min later (the 2026-10-06 close ruling), so the ASX is
+# due at 16:40 Sydney, not 16:30 (audit #66); NASDAQ's 16:05 final instant
+# sits inside its 30 minutes, so it stays 16:30 New York.
 PUBLISH_AFTER_CLOSE_MIN: int = 30
 
 # Crypto has no close: its daily bar rolls at 00:00 UTC, and the original cron

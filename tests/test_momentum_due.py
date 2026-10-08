@@ -48,19 +48,21 @@ INCIDENT = {
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("now, market, expected", [
-    # AEST (winter): 16:30 Sydney = 06:30Z
-    ("2026-09-23T11:00:00Z", "asx", "2026-09-23T06:30:00Z"),
-    # AEDT (summer): 16:30 Sydney = 05:30Z
-    ("2026-01-14T07:00:00Z", "asx", "2026-01-14T05:30:00Z"),
+    # audit #66: the ASX owes its file from scanner.config.DAILY_BAR_FINAL's
+    # 16:40 Sydney (the 2026-10-06 close ruling), not close + 30 = 16:30.
+    # AEST (winter): 16:40 Sydney = 06:40Z
+    ("2026-09-23T11:00:00Z", "asx", "2026-09-23T06:40:00Z"),
+    # AEDT (summer): 16:40 Sydney = 05:40Z
+    ("2026-01-14T07:00:00Z", "asx", "2026-01-14T05:40:00Z"),
     # EDT: 16:30 New York = 20:30Z
     ("2026-09-23T22:00:00Z", "nasdaq", "2026-09-23T20:30:00Z"),
     # EST: 16:30 New York = 21:30Z
     ("2026-01-14T22:00:00Z", "nasdaq", "2026-01-14T21:30:00Z"),
     # before today's close it is still yesterday's
-    ("2026-09-23T03:00:00Z", "asx", "2026-09-22T06:30:00Z"),
+    ("2026-09-23T03:00:00Z", "asx", "2026-09-22T06:40:00Z"),
     # the weekend owes Friday
-    ("2026-09-26T12:00:00Z", "asx", "2026-09-25T06:30:00Z"),
-    ("2026-09-28T03:00:00Z", "asx", "2026-09-25T06:30:00Z"),
+    ("2026-09-26T12:00:00Z", "asx", "2026-09-25T06:40:00Z"),
+    ("2026-09-28T03:00:00Z", "asx", "2026-09-25T06:40:00Z"),
     ("2026-09-27T12:00:00Z", "nasdaq", "2026-09-25T20:30:00Z"),
     # crypto every day at 00:30Z, weekends included
     ("2026-09-26T00:29:00Z", "crypto", "2026-09-25T00:30:00Z"),
@@ -78,6 +80,7 @@ def test_the_sessions_are_read_from_scanner_config_not_restated():
         assert literal not in src, literal
     assert "scfg.VIVEK_JOURNAL_SESSION" in src
     assert "scfg.MARKETS[market].timezone" in src
+    assert "scfg.DAILY_BAR_FINAL" in src        # the close instant, not a copy (#66)
     assert mcfg.PUBLISH_AFTER_CLOSE_MIN == 30
     assert mcfg.CRYPTO_DUE_UTC == (0, 30)
 
@@ -122,10 +125,11 @@ def test_a_missed_window_waits_for_the_next_close_rather_than_screening_mid_sess
     # Tuesday's ASX run never happened; it is now Wednesday 12:00 Sydney.
     now = Z("2026-09-23T02:00:00Z")
     ok, point, why = due.status("asx", Z("2026-09-21T07:00:00Z"), now)
-    assert not ok and point == Z("2026-09-22T06:30:00Z") and "session" in why
-    # ...and at Wednesday's 16:30 it is due again, for Wednesday's close.
-    ok, point, _ = due.status("asx", Z("2026-09-21T07:00:00Z"), Z("2026-09-23T06:30:00Z"))
-    assert ok and point == Z("2026-09-23T06:30:00Z")
+    assert not ok and point == Z("2026-09-22T06:40:00Z") and "session" in why
+    # ...and at Wednesday's 16:40 (the final instant, #66) it is due again,
+    # for Wednesday's close.
+    ok, point, _ = due.status("asx", Z("2026-09-21T07:00:00Z"), Z("2026-09-23T06:40:00Z"))
+    assert ok and point == Z("2026-09-23T06:40:00Z")
 
 
 # ---------------------------------------------------------------------------
