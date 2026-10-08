@@ -139,6 +139,11 @@ jobs:
           for f in public/js/*.js; do node --check "$f"; done
       - name: SWR cache-layer tests (#97)
         run: node test/cache.test.js
+      # The shipped sw.js against a Pages-shaped fake (2026-10-08, audit #73):
+      # Pages 308s /x.html -> /x, a redirected response cannot answer a
+      # navigation, so the offline fallback must be stored un-redirected.
+      - name: Service-worker offline fallback behind Pages redirects (audit #73)
+        run: node test/sw_offline.test.js
       - name: Design-token contrast gate (#96)
         run: node test/contrast.test.js
       - name: Freshness-probe tests (/api/health per-market mode)
