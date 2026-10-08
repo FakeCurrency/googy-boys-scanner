@@ -142,6 +142,20 @@ def _liquidity(df, market) -> float:
     return float(turnover)
 
 
+def _turnover_today(df, market) -> float:
+    """The LAST bar's dollar turnover, on the same basis as _liquidity.
+
+    Audit #21 (2026-10-08): the "liquidity arriving" list computed this inline
+    as Close x Volume for every market. Crypto Volume is already USD, so that
+    was price x dollar-volume -- a $20 coin's $2.5M day read $50M and cleared
+    the floor, a $0.05 coin's $5M day read $250k and never did (the bug
+    vivek_run._enrich_adv had until 2026-09-28). One helper beside _liquidity
+    so the two bases cannot drift again."""
+    if getattr(market, "volume_is_usd", False):
+        return float(df["Volume"].iloc[-1])
+    return float(df["Close"].iloc[-1]) * float(df["Volume"].iloc[-1])
+
+
 def _spark(df) -> list[float]:
     closes = df["Close"].iloc[-config.SPARK_BARS:].tolist()
     return [round(float(c), 8) for c in closes]
@@ -311,7 +325,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                     # average. The name is STILL DROPPED (this branch ends in
                     # `continue` exactly as before) — it is recorded for the
                     # fenced report file only, with no grade/plan/entry fields.
-                    today_turnover = float(df["Close"].iloc[-1]) * float(vol.iloc[-1])
+                    today_turnover = _turnover_today(df, market)
                     if (today_turnover >= market.liquidity_min
                             and rvol >= float(getattr(config, "SCAN_ARRIVING_MIN_RVOL", 3.0))):
                         info = meta.get(yf_ticker, {})
