@@ -1,39 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-09T15:15:19+11:00",
+  "generated_at": "2026-10-09T16:14:59+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "PCG",
-      "name": "Pengana Capital Group Limited",
-      "sector": "Financial Services",
-      "dir": "SHORT",
-      "price": 0.73000002,
-      "turnover_avg20": 30390,
-      "turnover_today": 509726,
-      "rvol": 16.7,
-      "adv_usd": 30390.49,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "NTI",
-      "name": "Neurotech International Limited",
-      "sector": "Health Care Equipment & Services",
-      "dir": "LONG",
-      "price": 0.014,
-      "turnover_avg20": 77314,
-      "turnover_today": 429505,
-      "rvol": 5.5,
-      "adv_usd": 77314.26,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "VVA",
       "name": "Viva Leisure Limited",
@@ -48,15 +22,28 @@
       "is_product": false
     },
     {
-      "symbol": "SHM",
-      "name": "Shriro Holdings Limited",
-      "sector": "Consumer Durables & Apparel",
+      "symbol": "AQN",
+      "name": "Aquirian Limited",
+      "sector": "Commercial & Professional Services",
       "dir": "SHORT",
-      "price": 0.745,
-      "turnover_avg20": 37991,
-      "turnover_today": 223471,
-      "rvol": 6.0,
-      "adv_usd": 37991.56,
+      "price": 0.40000001,
+      "turnover_avg20": 47115,
+      "turnover_today": 309913,
+      "rvol": 6.5,
+      "adv_usd": 47115.31,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "GRX",
+      "name": "Greenx Metals Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.95499998,
+      "turnover_avg20": 31866,
+      "turnover_today": 278675,
+      "rvol": 8.8,
+      "adv_usd": 31866.36,
       "fund": false,
       "is_product": false
     }
