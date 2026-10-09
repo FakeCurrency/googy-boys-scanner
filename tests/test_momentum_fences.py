@@ -203,7 +203,7 @@ def test_the_protected_files_do_not_reference_the_lens():
     5.0 surfaces say. v1 is display-only, so none of them may know the lens
     exists -- in particular confluence_alert.py, because a fourth voice would
     change what every existing confluence surface SHOWS (the pill counts, the
-    Eyes strip, the ALERTS log, and the edge pipeline that ingests
+    row chips, the ALERTS log, and the edge pipeline that ingests
     alert_history.json)."""
     offenders = []
     for path in PROTECTED:

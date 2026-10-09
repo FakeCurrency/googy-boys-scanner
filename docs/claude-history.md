@@ -619,3 +619,59 @@ Lighthouse budget was measuring the TAPE" below.
   becomes real the moment one is opened. `test/risk_manager.test.js` 54 → 65
   (suite 9, with a `captureLog` helper); `bot.html` bumped `risk_manager.js?v=9`
   → `?v=10` per the asset-version rule.
+
+---
+
+<!-- moved from CLAUDE.md: WHAT NEEDS MY EYES (removed 2026-10-09) -->
+
+## WHAT NEEDS MY EYES — the deck's confluence strip (2026-08-01) — REMOVED ENTIRELY 2026-10-09, HISTORY ONLY
+
+> **Removed 2026-10-09** (owner: *"Get rid of the what needs my eyes. Its
+> annoying"*). Nothing below describes code that still exists; the ⨂
+> Multi-lens pill, the row confluence chips, which names `PM.loadConfluence`
+> qualifies, and the ALERTS page are untouched (the loader's `detail` /
+> `pmBest` / `pmLegQuality` display payload went with the strip, its only
+> reader). `git log -S renderEyes` finds the removal commit.
+
+From "Two owner-ruled surfaces, 2026-08-01":
+
+- **WHAT NEEDS MY EYES — confluence prominence on the deck** (`renderEyes()`
+  in app.js + `eyes.css`, `#eyes-strip` inside `#deck`, ABOVE the pills).
+  Owner: "make dual/triple lens agreement and any name that is both A+ and
+  multi-lens the loudest thing on the main deck." Ranked chips from the same
+  client-computed confluence set the ⨂ pill counts — triple beats dual, A+
+  first inside each tier, triples pulse, a triple turns the strip amber-hot,
+  "+N more" engages the Multi-lens filter. Partially reverses the Wave 3
+  banner retirement BY OWNER RULING (the pill and row chips stay; this is
+  additive). The A+ tag claims the DISPLAYED grade — the bot buys grade_raw.
+  `test/eyes.test.js`.
+
+From "is_product — LIC / preferred honesty" (2026-08-19, Session C):
+
+- **Eyes strip**: the marker tag now reads **PRODUCT** (STRF is not a "FUND"),
+  and leg-strength ranking is completed — the VIVEK leg's SCORE breaks the
+  last tie inside a grade band, strictly AFTER count → product penalty →
+  grade → PM leg quality. Missing score reads 0 (old payloads degrade to the
+  previous order).
+
+Later (2026-09-19 → 09-21, recorded in the removed `js/eyes-store.js` header
+and app.js's Eyes block — see the removal commit): products were filtered out of the strip entirely; a chip click, or an arrow step on the
+chart (`src=eyes` walked the strip's order), dismissed a name; "clear all"
+dismissed the lot. The dismissal rule took four attempts — keyed to the scan's
+`generated_at` (every hourly ASX rescan brought the list back), to the
+Melbourne day (midnight brought it back), to a 7-day window (a fortnight-long
+setup came back on day 8), and finally to a FINGERPRINT of why the name was
+there (lenses + direction + VIVEK grade): dismissed until its alignment
+materially changed. Per device, localStorage only (`gbs:eyes_seen`,
+`gbs:eyes_chain`; cleared on removal by app.js `purgeLegacyKeys`, marker
+`gbs:purged:v2`).
+
+**Found on the way out:** `.eyes { display: flex }` beat the `hidden`
+attribute (the site has no global `[hidden]` rule), so whenever the strip had
+nothing to show it still drew an empty blue box above the deck pills —
+while the page loaded, and whenever the list was empty or fully dismissed
+(the screenshot gate's fixtures photographed it every run). Removing it
+shortened the 390px deck by 44px (screenshot baselines v22 → v23: index-390
+5.82%, the other three views 0.00%). Any element that is `hidden` by default
+AND has a class-level `display` rule needs its own `.x[hidden] { display:
+none; }` (ignition.css does this for `.ig-panel`).

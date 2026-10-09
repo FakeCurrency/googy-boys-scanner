@@ -303,20 +303,6 @@ ok(!/const\s+pad\s*=\s*\(/.test(code("js/journal.js")),
        `js/phasemap-shared.js: PM.${name} had no reader and was dropped from the export 2026-09-23`);
 }
 
-// window.EYES exported its two storage-key names, which nothing outside
-// eyes-store.js reads (app.js, chart.js and eyes.test.js use the methods).
-// The vars stay; the pin reads the EYES object literal only.
-{
-  const src = code("js/eyes-store.js");
-  const at = src.indexOf("var EYES = {");
-  ok(at > 0, "js/eyes-store.js moved -- pin would be vacuous");
-  const head = src.slice(at, src.indexOf("MAX_MARKS", at));
-  ok(head.includes("UNKNOWN"), "EYES object head not found -- pin would be vacuous");
-  for (const name of ["SEEN_KEY", "CHAIN_KEY"])
-    ok(!new RegExp(`\\b${name}\\s*:`).test(head),
-       `js/eyes-store.js: EYES.${name} had no reader and was dropped from the export 2026-09-23`);
-}
-
 // status.js published window.GBSStatus as a "test hook", but its own comment
 // said nothing read it: status.test.js slices the eight functions out of the
 // source. The functions stay (status.js calls every one of them).

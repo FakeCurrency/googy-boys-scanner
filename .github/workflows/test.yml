@@ -174,8 +174,6 @@ jobs:
         run: node test/statekeep.test.js
       - name: Stalled-position decision surface (read-only, probe marks only)
         run: node test/stalled.test.js
-      - name: What-needs-my-eyes confluence strip (ranking + wiring)
-        run: node test/eyes.test.js
       # Runs in the CHEAP job on purpose. It exercises the baseline-provenance
       # sentinel out of the e2e file without a browser, so the rule that keeps
       # the screenshot gate from going red on a stale baseline is checked on
@@ -426,7 +424,15 @@ jobs:
           # 6.20% drift) and a 34px one still grew it 3px (3.65%). At 30px on
           # phones the header height is byte-for-byte what it was and the drift
           # is 0.05%. Chrome that costs a page nothing is worth measuring for.
-          key: screenshot-baselines-v22-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+          #
+          # v22 -> v23 (2026-10-09): INTENTIONAL — the WHAT NEEDS MY EYES strip
+          # was removed (owner: "Its annoying"). Its `.eyes { display: flex }`
+          # beat the `hidden` attribute, so with nothing to show it still drew
+          # an empty blue box above the deck pills. Measured against the v22
+          # baselines in the same commit: index-390 5.82% (the box and its
+          # margin gone, the deck 44px shorter), index-desktop, journal-desktop
+          # and journal-390 0.00%.
+          key: screenshot-baselines-v23-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
