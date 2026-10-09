@@ -209,8 +209,9 @@ test("every in-memory cache write records when it was fetched", () => {
 const SHARED = fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap-shared.js"), "utf8");
 
 // Run the real PM factory in a minimal DOM-less sandbox and take the real
-// loadFailKind — not a re-typed copy of it.
-const loadFailKind = (() => {
+// PM object — loadFailKind and isFundReit are tested as shipped, not as a
+// re-typed copy.
+const SHARED_PM = (() => {
   const sandbox = { window: {}, localStorage: { getItem: () => null, setItem: () => {} },
     document: undefined, fetch: () => Promise.reject(new Error("no net in tests")),
     console, JSON, Math, Date, String, Number, Array, Object, Promise, RegExp, parseFloat, parseInt };
@@ -221,8 +222,9 @@ const loadFailKind = (() => {
   }
   assert.ok(sandbox.window.PM && typeof sandbox.window.PM.loadFailKind === "function",
     "PM.loadFailKind is missing — the cold-fail split lost its shared classifier");
-  return sandbox.window.PM.loadFailKind;
+  return sandbox.window.PM;
 })();
+const loadFailKind = SHARED_PM.loadFailKind;
 
 test("both real throw shapes classify: bare status (app.js) and 'HTTP N' (lens pages)", () => {
   assert.strictEqual(loadFailKind(new Error("404")), "missing");
@@ -673,8 +675,8 @@ test("deckCounts: junk input degrades to zeros rather than throwing", () => {
 test("deckCounts: the deck's fund test uses WORD BOUNDARIES, like PM's", () => {
   // app.js was still on the includes() that phasemap-shared.js fixed on
   // 2026-08-01, so `includes("ETF")` matched inside "N-ETF-LIX" and the deck
-  // dimmed NETFLIX and cut it from `tradeable` — while the Eyes chip beside
-  // it, reading PM's fixed copy, correctly called it an operating company.
+  // dimmed NETFLIX and cut it from `tradeable` — while PM's fixed copy (read
+  // by the deck's confluence strip at the time) called it an operating company.
   // Measured on the committed scans, NFLX was the ONLY row they disagreed on.
   // FUND_KW_RE is BUILT from FUND_NAME_KEYWORDS, so both come out of the
   // shipped file — evaluating a re-typed keyword list here would test a copy.
@@ -690,6 +692,33 @@ test("deckCounts: the deck's fund test uses WORD BOUNDARIES, like PM's", () => {
   // The shipped source must not have slipped back to includes()
   assert.ok(/FUND_KW_RE\.test\(name\)/.test(APP),
     "app.js isFundReit no longer uses the word-boundary regex");
+});
+
+// PM.isFundReit is the OTHER half of the is_product contract (the PhaseMap,
+// Specs and Recs pages read it). Its behavioural pins lived in eyes.test.js
+// until the Eyes strip was removed (2026-10-09); they run the shipped function.
+test("PM.isFundReit: a REIT, an ETF and a keyword-invisible LIC are products", () => {
+  const f = SHARED_PM.isFundReit;
+  assert.strictEqual(typeof f, "function", "PM.isFundReit is no longer exported");
+  assert.strictEqual(f({ name: "Charter Hall Social Infrastructure REIT", sector: "Real Estate" }), true);
+  assert.strictEqual(f({ name: "BETASHARES AUSTRALIA 200 ETF", sector: "Unclassified" }), true);
+  // AFI-class: nothing in the name matches the keyword list, so ONLY the
+  // scanner's published verdict can catch it.
+  assert.strictEqual(f({ name: "Australian Foundation Investment Company Limited",
+                         sector: "Financials", is_product: true }), true);
+});
+
+test("PM.isFundReit: an explicit is_product:false wins over a fund-looking name", () => {
+  // The classifier looked and says operating company — the keyword fallback
+  // must not overrule it. (Absent stays a guess; false is a verdict.)
+  assert.strictEqual(SHARED_PM.isFundReit({ name: "Extra Trust Holdings", sector: "Industrials",
+                                            is_product: false }), false);
+});
+
+test("PM.isFundReit: NETFLIX is clean — ETF does not match inside a word", () => {
+  assert.strictEqual(SHARED_PM.isFundReit({ name: "Netflix, Inc. - Common Stock",
+                                            sector: "Communication Services" }), false);
+  assert.strictEqual(SHARED_PM.isFundReit({ name: "Fortescue Ltd", sector: "Materials" }), false);
 });
 
 test("deckCounts: renderDeckPills actually USES it, and reports the products", () => {
@@ -809,9 +838,36 @@ test("the first-visit snapshot key is NOT evidence, and must never become it", (
 test("the app's own maintenance keys are not evidence either", () => {
   // Written by the app, not by a person: a one-shot purge marker and the alert
   // dedupe map. Neither says anyone has USED anything.
-  for (const k of ["gbs:purged:v1", "gbs:notified", "gbs:cache:asx", "gbs:view-apply"]) {
+  for (const k of ["gbs:purged:v1", "gbs:purged:v2", "gbs:notified", "gbs:cache:asx", "gbs:view-apply"]) {
     assert.strictEqual(usedBefore({ [k]: "1" }), false, `${k} must not count as prior use`);
   }
+});
+
+// The one-shot legacy purge, run as shipped. v2 (2026-10-09) exists so the
+// removed Eyes strip's per-device keys are cleared even in a browser whose v1
+// marker says the purge already ran.
+function runPurge(seed) {
+  const s = store(seed);
+  Object.defineProperty(s, "length", { get: () => s._map.size });
+  s.key = (i) => Array.from(s._map.keys())[i] ?? null;
+  const at = APP.indexOf("(function purgeLegacyKeys()");
+  assert.ok(at > 0, "app.js no longer has the purgeLegacyKeys IIFE");
+  const end = APP.indexOf("})();", at) + "})();".length;
+  new Function("localStorage", APP.slice(at, end))(s);
+  return s._map;
+}
+
+test("the legacy purge clears the Eyes keys even after v1 already ran", () => {
+  const m = runPurge({ "gbs:purged:v1": "1", "gbs:eyes_seen": "{}", "gbs:eyes_chain": "{}",
+                       "gbs:prefs": "{}", "gbs:cache:asx:vivek": "{}" });
+  assert.ok(!m.has("gbs:eyes_seen") && !m.has("gbs:eyes_chain"), "the Eyes keys survived the purge");
+  assert.ok(!m.has("gbs:purged:v1"), "the superseded v1 marker was left behind");
+  assert.strictEqual(m.get("gbs:purged:v2"), "1", "the purge did not record itself");
+  assert.ok(m.has("gbs:prefs") && m.has("gbs:cache:asx:vivek"), "the purge removed a live key");
+  // One-shot: a later Eyes key (an old tab still open) is not chased again.
+  m.set("gbs:eyes_seen", "{}");
+  const again = runPurge(Object.fromEntries(m));
+  assert.ok(again.has("gbs:eyes_seen"), "the purge must run once, not on every load");
 });
 
 test("an unreadable localStorage degrades to 'not returning', never throws", () => {
@@ -941,14 +997,6 @@ test("the stalled strip's write controls clear a 44px tap target on mobile", () 
   const mob = st.slice(st.indexOf("@media (max-width: 640px)"));
   assert.ok(/\.st-x[^{]*\{[^}]*min-height:\s*44px/.test(mob), ".st-x has no 44px floor on mobile");
   assert.ok(/\.st-go[^{]*\{[^}]*min-height:\s*44px/.test(mob), ".st-go has no 44px floor on mobile");
-});
-
-test("the eyes strip has a width breakpoint at all, with a 40px floor", () => {
-  // eyes.css shipped with zero @media width rules; its chips were ~27px on the
-  // strip that is deliberately the first thing on the deck.
-  const ey = css("eyes.css");
-  assert.ok(/@media\s*\(max-width:/.test(ey), "eyes.css still has no width breakpoint");
-  assert.ok(/min-height:\s*40px/.test(ey), "the chips have no tap-target floor");
 });
 
 test("the 1MB backtest fetch is idle work, and is called AFTER whenIdle exists", () => {

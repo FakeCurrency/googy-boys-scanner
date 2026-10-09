@@ -45,7 +45,8 @@ ASX and, since 2026-10-08, NASDAQ; see IGNITION below).
 **Multi-lens confluence** is the headline feature: direction-aligned 2+/3-lens
 agreements get banners everywhere, a permanent ALERTS page log
 (`scanner/confluence_alert.py`, state-deduped — push DELIVERY REMOVED
-2026-08-27, see ALERT DELIVERY below) and the deck's WHAT NEEDS MY EYES strip.
+2026-08-27, see ALERT DELIVERY below) and the deck's ⨂ Multi-lens pill + row
+chips. (The deck's WHAT NEEDS MY EYES strip was REMOVED 2026-10-09 — see below.)
 (The ★ MY NAMES page was REMOVED 2026-09-21 with the stars — see MY JOURNAL.)
 
 ---
@@ -810,18 +811,10 @@ can verify whether claude or I should take the position or not."* A plan whose
   stays manual via close_position.yml. Day arithmetic uses the book's own
   `summary.updated_day`. Hides when the cohort is empty (e2e fixtures carry
   no stamps, so the screenshot gate is untouched). `test/stalled.test.js`.
-- **WHAT NEEDS MY EYES — confluence prominence on the deck** (`renderEyes()`
-  in app.js + `eyes.css`, `#eyes-strip` inside `#deck`, ABOVE the pills).
-  Owner: "make dual/triple lens agreement and any name that is both A+ and
-  multi-lens the loudest thing on the main deck." Ranked chips from the same
-  client-computed confluence set the ⨂ pill counts — triple beats dual, A+
-  first inside each tier, triples pulse, a triple turns the strip amber-hot,
-  "+N more" engages the Multi-lens filter. Partially reverses the Wave 3
-  banner retirement BY OWNER RULING (the pill and row chips stay; this is
-  additive). The A+ tag claims the DISPLAYED grade — the bot buys grade_raw.
-  `test/eyes.test.js`.
+- **WHAT NEEDS MY EYES** (the deck's confluence strip) — **REMOVED ENTIRELY
+  2026-10-09**; see the removal section below.
 
-Both are pure surface: nothing in `broker/` reads them, no trade changes.
+STALLED is pure surface: nothing in `broker/` reads it, no trade changes.
 
 ---
 
@@ -857,23 +850,21 @@ now publishes `is_product` on every result row and the UI trusts it.
   eligibility change), AND the bot's substring matcher must stay byte-shaped
   as it is (a "fix" there is a trade change). `VIVEK_BOT_EXCLUDE_FUNDS`,
   `decide()`, w3-1 gates: untouched.
-- **UI contract, three readers, one rule**: `is_product === true` → product;
+- **UI contract, two readers, one rule**: `is_product === true` → product;
   `=== false` → operating company (a verdict beats a guess — the keyword
   fallback may NOT overrule it); ABSENT → keyword heuristic, so cached
   payloads keep working. Honoured in `app.js::isFundReit` (deck counts,
-  dimming, ranking pick it up transitively), `PM.isFundReit`
-  (phasemap-shared), and the Eyes chips via `loadConfluence`'s detail.
-- **Eyes strip**: the marker tag now reads **PRODUCT** (STRF is not a "FUND"),
-  and leg-strength ranking is completed — the VIVEK leg's SCORE breaks the
-  last tie inside a grade band, strictly AFTER count → product penalty →
-  grade → PM leg quality. Missing score reads 0 (old payloads degrade to the
-  previous order).
+  dimming, ranking pick it up transitively) and `PM.isFundReit`
+  (phasemap-shared). (A third reader, the Eyes strip via `loadConfluence`'s
+  `detail`, went with the strip 2026-10-09.)
 - **Measured effect at head**: ASX real A+ 41 → 37 (AFI, BTI, HM1, RG8 dimmed);
   NASDAQ 103 → 101 (STRF, STRD). Screenshot drift 0.00% ×4 — the e2e fixtures
   carry no flag, so the keyword fallback keeps the photographed pages
   byte-identical; no baseline bump.
 - Tests: `tests/test_product_flag.py` (13, incl. both fence directions),
-  `test/eyes.test.js` 25 → 30, `test/staleview.test.js` 136 → 139.
+  `test/eyes.test.js` 25 → 30 (deleted 2026-10-09 with the strip; its
+  `PM.isFundReit` behaviour pins moved to staleview's `PM.isFundReit: …`
+  tests, which run the shipped function), `test/staleview.test.js` 136 → 139.
   12 mutations, every one caught (one survivor found and closed:
   app.js's flag-honour lines had no pin until the mutation exposed it).
 
@@ -2530,6 +2521,44 @@ machinery changed. **Do not re-add it.** If the owner ever wants a breakout
 system again it starts from `git log -- scanner/turtle.py` at the removal
 commit, not from memory — the engine's three audit-found bugs, the ½N stop
 5%-risk arithmetic and the System-1 filter are all recorded there.
+
+## WHAT NEEDS MY EYES — REMOVED ENTIRELY (2026-10-09)
+
+Owner: *"Get rid of the what needs my eyes. Its annoying."* The deck strip
+(owner-ruled 2026-08-01) that ranked dual/triple-lens names above the pills is
+gone, with everything that existed only to serve it: the `renderEyes` /
+`eyesHTML` / `eyesRank` / `eyesFingerprint` block in app.js and its two calls in
+the confluence load, `#eyes-strip` in index.html, `css/eyes.css`,
+`js/eyes-store.js` (`window.EYES`; its script tag on index.html and
+chart.html), the chart's `src=eyes` arrow chain in chart.js, and in
+`PM.loadConfluence` the `detail` payload (`detail.vivek` name/sector/
+is_product/score/grade, `detail.phasemap`, `detail.specs`), the per-side
+`pmBest` leg and `PM_STATE_RANK` / `PM_TIER_RANK` / `pmLegQuality` (plus its
+export) — the strip was their only reader. Tests: `test/eyes.test.js` + its
+test.yml step, the eyes.css breakpoint pin in staleview, the EYES-export pin in
+hygiene; eyes.test.js's `PM.isFundReit` behaviour pins moved to staleview
+(still live: PhaseMap/Specs/Recs read it), plus a pin on the purge below.
+Screenshot baselines v22 → v23 (below).
+
+- **What STAYS:** the ⨂ Multi-lens pill and its filter, the row confluence
+  chips, `PM.loadConfluence` (its `of()` / `all()` rows are now
+  `{ticker, lenses, side, count}`; WHICH names qualify is byte-for-byte
+  unchanged), `notifyTriples`, the ALERTS page, `confluence_alert.py` and
+  everything in `scanner/`. No trade path touched.
+- An old `chart.html?...&src=eyes` link still opens; its arrows step the
+  ordinary deck list (what a stale chain already did). The strip's per-device
+  localStorage (`gbs:eyes_seen` / `gbs:eyes_chain`) is cleared once by app.js
+  `purgeLegacyKeys`, whose marker moved to `gbs:purged:v2` so it re-runs for
+  browsers that already ran v1 (pinned in staleview).
+- **Found on the way out:** `.eyes { display: flex }` beat the `hidden`
+  attribute (the site has no global `[hidden]` rule), so whenever the strip had
+  nothing to show it still drew an empty blue box above the deck pills.
+  Removing it shortened the 390px deck by 44px: index-390 5.82% drift, the
+  other three views 0.00%, hence the v23 key. Any element that is `hidden` by
+  default AND has a class-level `display` rule needs its own
+  `.x[hidden] { display: none; }` (ignition.css does this for `.ig-panel`).
+- The write-up of what the strip was (ranking, the four dismissal rules) is in
+  `docs/claude-history.md`. Do not re-add it.
 
 ## CHECK-IN SKILL — "how's the scanner?" (2026-10-08, owner: "I'm very happy")
 

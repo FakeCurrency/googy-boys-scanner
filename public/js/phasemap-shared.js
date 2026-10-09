@@ -280,17 +280,6 @@ window.PM = (() => {
      full house). Computed client-side from the three latest scan files so
      it's always as fresh as whatever each lens last published. */
   const PM_ACTIVE_STATES = ["SWEPT", "DISPLACED", "RUNNING"];
-
-  // PM leg quality — DISPLAY ORDERING ONLY (2026-08-01, owner fix #1): a
-  // stronger state outranks a stronger tier, mirroring the engine's own
-  // escalation. NOT part of qualification — a SWEPT/Watch leg still aligns;
-  // it just sorts after RUNNING/A+ when a surface orders its chips.
-  const PM_STATE_RANK = { RUNNING: 3, DISPLACED: 2, SWEPT: 1 };
-  const PM_TIER_RANK = { "A+": 3, A: 2, B: 1, Watch: 0 };
-  function pmLegQuality(leg) {
-    if (!leg) return -1;
-    return (PM_STATE_RANK[leg.state] || 0) * 10 + (PM_TIER_RANK[leg.tier] || 0);
-  }
   async function loadConfluence(market, vivekData = null) {
     const grab = (url) => fetchTimeout(url, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -304,35 +293,21 @@ window.PM = (() => {
       market !== "crypto" ? grab(`data/${market}_spec.json`) : null,
     ]);
     const map = {};
-    const ent = (t) => (map[t] = map[t] || { long: [], short: [], detail: {} });
+    const ent = (t) => (map[t] = map[t] || { long: [], short: [] });
     ((vivek && vivek.results) || []).forEach((r) => {
       const e = ent(r.symbol);
       const side = String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long";
       if (!e[side].includes("VIVEK")) e[side].push("VIVEK");
-      // name + sector + the published product flag + score ride along for
-      // DISPLAY (the Eyes strip filters products out and breaks ties on leg
-      // strength) — the qualification rule reads none of this.
-      e.detail.vivek = { grade: r.grade, side, name: r.name, sector: r.sector,
-                         is_product: r.is_product, score: r.score };
     });
     ((pm && pm.results) || []).forEach((r) => {
       if (!PM_ACTIVE_STATES.includes(r.state)) return;
       const e = ent(r.ticker);
       const side = r.direction === "bearish" ? "short" : "long";
       if (!e[side].includes("PHASEMAP")) e[side].push("PHASEMAP");
-      const leg = { state: r.state, tier: r.tier, side };
-      // ~97 ASX names carry ACTIVE rows in BOTH directions. Keep the best
-      // leg PER SIDE so of() can hand back the ALIGNED one — a long chip's
-      // tooltip used to cite whichever row happened to load last, including
-      // the bearish read (2026-08-01 fix; qualification untouched).
-      e.pmBest = e.pmBest || {};
-      if (pmLegQuality(leg) > pmLegQuality(e.pmBest[side])) e.pmBest[side] = leg;
-      e.detail.phasemap = leg;
     });
     ((spec && spec.results) || []).forEach((r) => {
       const e = ent(r.symbol);
       if (!e.long.includes("SPECS")) e.long.push("SPECS");
-      e.detail.specs = { grade: r.grade };
     });
     return {
       of(ticker) {
@@ -341,10 +316,7 @@ window.PM = (() => {
         const side = e.long.length >= e.short.length ? "long" : "short";
         const lenses = e[side];
         if (lenses.length < 2) return null;
-        const detail = e.pmBest && e.pmBest[side]
-          ? Object.assign({}, e.detail, { phasemap: e.pmBest[side] })
-          : e.detail;
-        return { ticker, lenses, side, count: lenses.length, detail };
+        return { ticker, lenses, side, count: lenses.length };
       },
       all() {
         return Object.keys(map)
@@ -472,5 +444,5 @@ window.PM = (() => {
            isFundReit, toggleSpeak,
            loadConfluence, confluenceChipHTML, confluenceBannerHTML,
            staleBadgeHTML, fmtMelb, loadFailKind, retryHTML,
-           fetchTimeout, DATA_FETCH_TIMEOUT_MS, pmLegQuality };
+           fetchTimeout, DATA_FETCH_TIMEOUT_MS };
 })();
