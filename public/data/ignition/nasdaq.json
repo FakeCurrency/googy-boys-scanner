@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-08T06:36:03+00:00",
+  "generated_at": "2026-10-09T01:22:16+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-07",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 27538.69,
-    "sma200": 24798.61,
+    "close": 27193.34,
+    "sma200": 24818.04,
     "above_200": true,
-    "vs_200_pct": 11.0,
-    "as_of": "2026-10-07"
+    "vs_200_pct": 9.6,
+    "as_of": "2026-10-08"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 1429,
-    "downloaded": 1429,
-    "screened": 1324,
+    "universe": 1427,
+    "downloaded": 1427,
+    "screened": 1323,
     "skipped": {
-      "short history": 105
+      "short history": 104
     },
     "counts": {
       "IGNITING": 0,
@@ -65,23 +65,25 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-07",
-      "raw_last": "2026-10-07",
+      "completed_last": "2026-10-08",
+      "raw_last": "2026-10-08",
       "expected_completed": null,
       "lagging": 0,
       "completed_dist": {
-        "2026-10-07": 1428,
+        "2026-10-08": 118,
+        "2026-10-07": 1308,
         "2026-10-06": 1
       },
       "raw_dist": {
-        "2026-10-07": 1428,
+        "2026-10-08": 118,
+        "2026-10-07": 1308,
         "2026-10-06": 1
       }
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1429
+        "yahoo": 1427
       },
       "dead": {},
       "errors": {},
@@ -95,10 +97,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1429,
+      "fresh": 1427,
       "reused": 0,
-      "merged": 1429,
-      "universe": 1429,
+      "merged": 1427,
+      "universe": 1427,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -106,7 +108,7 @@
       "rows": 22,
       "have": 22
     },
-    "elapsed_s": 198.5
+    "elapsed_s": 212.6
   },
   "results": [
     {
@@ -204,9 +206,9 @@
       "change_pct": -6.8,
       "r_now": -0.62,
       "trail": 5.73333338,
-      "mcap": 763001728.0,
-      "mcap_asof": "2026-10-04",
-      "mcap_src": "cache"
+      "mcap": 696710272.0,
+      "mcap_asof": "2026-10-09",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "INMD",
