@@ -130,6 +130,240 @@ SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (mar
                               # disabled for crypto, where per-coin price is meaningless)
 
 # ---------------------------------------------------------------------------
+# EXCHANGE KLINES -- scanner/exchange_data.py (2026-09-28)
+# ---------------------------------------------------------------------------
+# Public, KEYLESS daily candles, tried in this order per coin. Binance and
+# Bybit geo-block US IPs and GitHub's runners are US-based, so Binance's
+# market-data mirror leads and US-hosted Coinbase closes. Which answer from a
+# runner is measured and published every run, never assumed. Only the
+# order is Binance first because it is what the owner charts on.
+# THE SWITCH (owner, 2026-09-28: "make the VIVEK crypto scan and paper bot go
+# to the binance or bybit ... so it's all in SYNC"). "exchange" = every crypto
+# price the scan, the paper bot, the kill switch and the IGNITION lens use
+# comes from these klines via data.fetch(); "yahoo" = the old path, restored
+# in one line. Stocks are untouched either way.
+CRYPTO_DATA_SOURCE = "exchange"
+CRYPTO_YAHOO_FALLBACK = True     # a coin no exchange lists still gets priced
+EXCHANGE_KLINE_SOURCES = ("binance_vision", "binance", "bybit", "coinbase")
+# IDENTITY CHECK. The first side-by-side run (2026-09-28) found Yahoo pricing
+# a DIFFERENT token under the same ticker for AERO (+2,623,839% vs Binance),
+# JUP (+96,729%), ARB (+35,210%), PRL, SKY, XCN... -- so a ticker is not an
+# identity. Every source's latest close must sit within this band of
+# CoinGecko's current price for the coin (universe `cg_price`), or that source
+# is rejected for that coin and the next is tried; a coin no source confirms is
+# dropped for the run rather than scanned as the wrong instrument. 0.40 =
+# [0.71x, 1.40x]: wide enough for minutes of drift in a squeeze, far inside
+# every collision measured (the smallest, MET, was -43%).
+CRYPTO_IDENTITY_TOL = 0.40
+# There is deliberately NO wider "stale" band. One shipped for a few hours on
+# 2026-09-28 ([0.2x, 5x] when CoinGecko was down) and the pre-merge review
+# proved it let MET-class strangers (-43%, measured above) price a HELD coin and
+# fire its stop on a coin that never moved. Venue PINS replaced it and a second
+# review broke those too (an unchecked frame became a pin; a pinned venue had
+# no check at all; a pinned venue's outage froze the mark). What stands:
+# HISTORY ANCHORS. When no fresh CoinGecko price exists -- the universe is the
+# snapshot, or the caller prices HELD positions (kill switch, off-universe
+# fetch) -- a venue's frame must reproduce a price the system already RECORDED
+# for this coin on a past date (the last identity-checked cached frame, or the
+# position's own day_marks): its close on that date within this band. A real
+# move since cannot fail it; a same-ticker stranger does; a venue outage falls
+# through to the next venue. 0.15: day_marks[D] is the last mark taken BEFORE
+# day D's first run, which can sit a few hours before the D-1 close.
+CRYPTO_ANCHOR_TOL = 0.15
+# A venue whose newest daily bar is older than this does NOT list the coin any
+# more (Binance's market-data mirror keeps serving a delisted pair's frozen
+# klines -- XMR/BTT/LIT on 2026-09-28): the next venue is asked instead, and the
+# report names it under `stale_rejected`. 0 = off. ONE day, not three: crypto
+# trades 24/7 and every venue opens today's candle at 00:00 UTC, so a live
+# pair's newest bar is today; at 3 a pair frozen two days ago still beat a live
+# venue and froze a held coin's mark (fourth pre-merge review). A thin coin with
+# no trade today or yesterday falls through to the next venue / Yahoo.
+EXCHANGE_MAX_BAR_AGE_DAYS = 1
+EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
+EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
+EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit
+EXCHANGE_DEAD_AFTER_ERRORS = 8   # a venue erroring this often is dropped for the run
+EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
+
+# ---------------------------------------------------------------------------
+# IGNITION -- the coil -> ignition lens (2026-09-28, owner: "build it"). REPORT-ONLY.
+# ---------------------------------------------------------------------------
+# Thesis (the QNT move of 24-27 Sep 2026, 71 -> 373 intraday): a coin that
+# has gone QUIET for months -- every moving average stacked on top of each
+# other, volatility and volume at a 1-year low, far below its old highs --
+# then closes out of its base on a multiple of normal volume. The edge, if
+# there is one, lives in the few that run 10R+, so the lens is judged on a
+# TRAILING exit, never a fixed TP ladder (the Specs replay's ladder averaged
+# a 1.03R win: it cut every runner). The engine is scanner/ignition/; it
+# publishes public/data/ignition/<market>.json and writes nothing else.
+#
+# PRE-REGISTERED 2026-09-28, BEFORE the first backtest ran. These values are
+# the hypothesis, not a fit. The backtest publishes a sensitivity grid around
+# them as a ROBUSTNESS read -- picking the best cell off that grid and calling
+# it the rule is exactly the overfit this block exists to prevent. Any change
+# bumps IGNITION_RULESET_VERSION and says why.
+#
+# NOT TRADED, NOT CONFLUENCE: nothing under scanner/broker/ can import the
+# lens and the lens cannot import the bot (tests/test_ignition_fences.py).
+IGNITION_RULESET_VERSION = "1.0.0"
+IGNITION_MARKETS = ("crypto", "asx", "nasdaq")   # ASX 2026-09-29, NASDAQ 2026-10-08; see below.
+IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window + warm-up
+IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
+IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
+                                 # a fresh-looking signal off a stale bar is the worst output
+
+# ASX (2026-09-29, owner ruling after the DTR miss: "Yes and factor in the
+# converting windows from calendar days to trading days"). PRE-REGISTERED
+# BEFORE THE FIRST ASX REPLAY RAN -- the same rule, re-expressed for a market
+# that trades ~252 days a year instead of 365:
+#   * Windows that stand for CALENDAR TIME ("2 years", "3 years", "a year of
+#     warm-up", "half a year" of holding) are written below in CRYPTO bars and
+#     rescaled per market by scanner/ignition/engine.py bars():
+#     round(n x IGNITION_BARS_PER_YEAR[market] / 365). Crypto is x1 exactly,
+#     so ruleset 1.0.0 is byte-unchanged there. ASX: rank window 730 -> 504,
+#     rank / drawdown warm-up 365 -> 252, drawdown lookback 1095 -> 756,
+#     minimum history 400 -> 276, replay max hold 180 -> 124, random-timing
+#     window 182 -> 126.
+#   * Windows that are CHART CONVENTIONS stay in bars on every market: the
+#     9/26/43/200 SMAs (the owner reads a 200-SMA as 200 trading days on an
+#     ASX chart, like VIVEK does), ATR 14, the 20-bar volume average and
+#     RVOL, the 60-bar base, the 10-bar coil lookback, the 20-bar rearm /
+#     keep, the 9-SMA trail. A "60-bar base" is ~3 months on the ASX vs ~2 on
+#     crypto -- a LONGER base to clear, i.e. stricter, never looser.
+#   * Floors, costs, staleness, the regime index and the forward date are per
+#     market (the *_BY_MARKET dicts; engine.mkt() reads them, crypto falls
+#     through to the scalar).
+# DTR (Dateline Resources, +100% 28-29 Sep 2026) prompted the port and is a
+# DESIGN CASE: never scored, reported as a case study (see below).
+#
+# NASDAQ (2026-10-08, owner: "build both"). PRE-REGISTERED BEFORE THE FIRST
+# NASDAQ REPLAY RAN, by the ASX port's recipe: the same rule, ~252 trading
+# days a year, so every calendar window is the ASX's exactly (504/252/756/
+# 252/276/124/126). Universe = NASDAQ Global Select (~1,430 names, the VIVEK
+# scan's own list); widening to the smaller tiers is the owner's call. No
+# chart informed this port, so it has NO design case. EVERY non-crypto market
+# has an explicit key in every per-market dict below: a missing key would
+# silently fall through to crypto's values (QNT as a design case, 0.30 cost,
+# a 3-day age, a BTC regime), so tests/test_ignition_fences.py fails on one.
+IGNITION_BARS_PER_YEAR = {"crypto": 365, "asx": 252, "nasdaq": 252}
+IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET = {"asx": 5,    # Easter: Thu bar read on Tue
+                                        "nasdaq": 5}  # Good Friday / a Monday holiday peak
+                                        # at 4; 5 also clears a 2-day closure (Sandy, 2012)
+
+# THE COIL -- all four at once, on one bar. Measured on the bar, causally.
+IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
+IGNITION_RIBBON_MAX = 0.12       # highest/lowest of those SMAs - 1. QNT on 23 Sep:
+                                 # 9/26/43 ~64-66 vs 200 ~70 => ~9%.
+IGNITION_ATR_LEN = 14
+IGNITION_RANK_WINDOW = 730       # "quiet" = percentile rank inside the last TWO years.
+                                 # 365 was drafted first and failed on a synthetic flat
+                                 # base before any real data was seen: a base that lasts
+                                 # ~a year becomes its OWN reference, so its volatility
+                                 # stops ranking low exactly when the base is longest.
+                                 # QNT's base ran for years; 2y keeps the pre-base
+                                 # history in the comparison.
+IGNITION_RANK_MIN_PERIODS = 365  # a rank over less than a year is not context
+IGNITION_ATR_PCTL_MAX = 0.25     # ATR%-of-price in the quietest quarter of 2 years
+IGNITION_VOL_AVG_LEN = 20
+IGNITION_VOL_PCTL_MAX = 0.35     # 20d avg volume in the quietest ~third of 2 years
+IGNITION_DD_LOOKBACK = 1095      # "far below its old highs": max High over 3y...
+IGNITION_DD_MIN_PERIODS = 365
+IGNITION_MIN_DRAWDOWN = 0.50     # ...and price at least 50% under it. QNT ~-60% vs
+                                 # its Dec-2024 high; 60% would have been a near-miss.
+
+# THE TRIGGER -- on a completed daily bar.
+IGNITION_COIL_LOOKBACK = 10      # coiled on ANY of the 10 bars before the trigger:
+                                 # the pre-break poke (QNT 23 Sep) can un-coil a bar
+IGNITION_BASE_BARS = 60          # the base = the 60 bars before the trigger bar
+IGNITION_BREAKOUT_TOL = 0.0      # close strictly above the base's highest high
+IGNITION_RVOL_LEN = 20
+IGNITION_RVOL_MIN = 3.0          # trigger-day volume >= 3x its prior 20-day average
+IGNITION_EXT_SMA = 9
+IGNITION_MAX_EXT = 0.60          # not already >60% over the 9-SMA (Specs' latecomer cap)
+IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000, "asx": 100_000,      # 20d avg $ before the trigger
+                              "nasdaq": 1_000_000}
+IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000, "asx": 300_000,   # trigger-day $ (= crypto floor)
+                                 "nasdaq": 3_000_000}
+# ASX (A$, Close x Volume): a crypto-sized $1M/$3M would drop nearly every
+# small cap, which is where these bases live. A$100k is config.MARKETS["asx"]
+# .liquidity_min (the VIVEK scan's own floor); the trigger day asks 3x that.
+# NASDAQ (US$, Close x Volume): the same recipe -- US$1M is MARKETS["nasdaq"]
+# .liquidity_min, the trigger day 3x it. Equal to crypto's numbers by
+# coincidence; explicit because the fallback would make the trigger $1M.
+IGNITION_REARM_BARS = 20         # one trigger per move, not one per day of it
+
+# THE PLAN -- what the page shows and the backtest trades.
+IGNITION_STOP_ATR_MULT = 1.0     # stop = max(base low, base high - 1 x pre-trigger ATR):
+                                 # a close back inside the base is a failed breakout
+IGNITION_TRAIL_SMA = 9           # exit at the next open after a daily close < 9-SMA
+IGNITION_WIDE_STOP_PCT = 35.0    # flag (never skip) a plan risking more than this %
+
+# THE PAGE
+IGNITION_FRESH_BARS = 2          # IGNITING = fired on one of the last 2 completed bars
+IGNITION_KEEP_BARS = 20          # then RUNNING / CLOSED stays visible for 20 bars --
+                                 # a setup that works must not vanish (QNT's A row
+                                 # left the deck the day it started to run)
+# THE PAGE'S MINI CHARTS -- display only; nothing the rule or the replay reads.
+IGNITION_CHART_BARS = 120        # completed bars per row (+ the forming bar): a CLOSED trigger up
+                                 # to KEEP_BARS-1 back + its 60-bar base + ~40 bars before it. A
+                                 # chart convention in BARS like the base, never rescaled by
+                                 # engine.bars(): ~6 months on the ASX, ~4 on crypto
+IGNITION_CHART_SMAS = IGNITION_RIBBON_SMAS   # the lines drawn (the coil reads RIBBON_SMAS);
+                                 # chart.html draws 10/20/43/200 -- one line to match it
+IGNITION_CHART_SIG_FIGS = 5      # significant figures on chart prices, never fixed decimals
+                                 # (round(4.08e-06, 4) == 0.0); lossless for ASX ticks under $1,000
+IGNITION_CHART_VOL_SCALE = 100   # volume as 0..100 of the window's loudest bar. 100, not 99/999:
+                                 # the engine's retyped-number fence exempts exactly 100, and
+                                 # engine.py already uses a bare 99
+
+# THE BACKTEST (scanner/ignition/backtest.py, dispatched via ignition.yml)
+IGNITION_BT_PERIOD = "max"       # every bar Yahoo has; the regimes are the point
+IGNITION_BT_COST_PCT = 0.30      # round trip: 2 x 0.10% taker + slippage on thin alts
+IGNITION_BT_COST_PCT_BY_MARKET = {"asx": 1.0,   # ASX small caps: retail brokerage
+                                 # both ways + the spread -- under 10c a tick is 0.1c,
+                                 # ~1% of a 9c price (DTR), so 0.30 would flatter it
+                                  "nasdaq": 0.5}  # a flat fee each way (~0.05-0.2% of a
+                                 # ~US$2,500 ticket) + the spread: a 1c tick is 0.1-0.5%
+                                 # of the $2-10 prices beaten-down names trade at
+IGNITION_BT_MAX_HOLD = 180       # bars; open trades past it exit at the close
+IGNITION_BT_SPLIT_DATE = "2024-01-01"   # in-sample before, out-of-sample from
+IGNITION_BT_RANDOM_DRAWS = 5     # random-timing baseline: draws per real trade
+IGNITION_BT_SEED = 20260928      # every random choice is seeded -> reproducible
+IGNITION_BT_BOOTSTRAP = 2000     # resamples for the expectancy confidence band
+IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
+IGNITION_BT_CASES_BY_MARKET = {"asx": ("DTR",), "nasdaq": ()}
+# THE DESIGN CASES ARE NEVER SCORED. QNT's Sep-2026 chart is the one piece of
+# market data that informed the thresholds above (the ribbon, drawdown and
+# coil-lookback comments quote it), so its triggers from this date on are
+# excluded from EVERY scored number -- primary, splits, baselines, grid -- and
+# reported only under `cases`. Scoring the example a rule was drawn from as
+# evidence for the rule is look-ahead at the research-design level (audit,
+# 2026-09-28). Symbol -> first excluded trigger date.
+IGNITION_BT_DESIGN_CASES = {"QNT": "2026-09-01"}
+# DTR's Sep-2026 move is why the ASX port exists (no threshold was drawn from
+# it, but "the lens would have caught the stock that prompted it" is exactly
+# the claim that must not score itself), so it is excluded the same way.
+# NASDAQ has none: no chart informed its port, so every trigger is scored.
+IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}, "nasdaq": {}}
+IGNITION_BT_REGISTERED_DATE = "2026-09-28"   # triggers from here are the FORWARD bucket
+IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29", "nasdaq": "2026-10-08"}
+# The regime line (CONTEXT, never a filter): the market's own benchmark vs its
+# 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200 and
+# NASDAQ's the NASDAQ Composite (every NASDAQ-listed common stock, history to
+# 1971 -- ^NDX is 100 mega-caps, where coils do not live), each fetched beside
+# the universe and never screened.
+IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200"),
+                         "nasdaq": ("^IXIC", "NASDAQ Composite")}
+# The time a session market's daily bar is FINAL for the backstop gate
+# (scripts/ignition_due.py) is IGNITION_BAR_FINAL, defined after
+# MORNING_PLAYS_SLOT_GATE because it derives from it.
+IGNITION_BT_RANDOM_WINDOW = 182  # random-timing draws: within +/- this many bars of the
+                                 # real trigger -- same coin, same SEASON, random day.
+                                 # Crypto regime is the biggest driver of a long's R;
+                                 # an unmatched draw would test the regime, not the signal.
+IGNITION_BT_GRID_MIN_N = 10      # a grid cell with fewer trades is reported, not counted
+
+# ---------------------------------------------------------------------------
 # VIVEK — 5.0Trading.Bull style: reactions at the 200 SMA on higher timeframes
 # ---------------------------------------------------------------------------
 # Core idea: price reacting (bounce / reject / break+retest) at the 200 SMA on
@@ -155,21 +389,36 @@ VIVEK_SCHEMA_VERSION   = 5
 # THE LITE-PLAN DRIFT-PIN (owner clarification, 2026-07-31 ruling): the exact
 # per-timeframe plan fields the SUMMARY keeps, named so they cannot drift.
 # Every list-path consumer reads ONLY these:
-#   app.js  isHighConviction()  -> armed, entry_trigger, structural_tps
+#   app.js  convictionCells()   -> armed, entry_trigger (every TF the rule reads)
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
-# recs.js, mynames.js, journal.js, phasemap-shared.js, confluence_alert.py,
-# marketcaps/sectorcache/breadth/regime read ROW-level fields only — no plans.
+# recs.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
 # test/staleview.test.js proves isHighConviction passes on a lite-only plan.
+# (structural_tps stays in the tuple for the row chips; the conviction rule
+# stopped reading it on 2026-09-20 — see scanner/conviction.py.)
 VIVEK_SUMMARY_PLAN_FIELDS = ("armed", "entry_trigger", "structural_tps",
                              "level_tf", "direction")
 VIVEK_DETAIL_ROW_FIELDS   = ("plans", "detail", "analysis", "markers")
 VIVEK_SMA              = 200       # the moving average everything keys off
 VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
+# How many tradeable coins the crypto universe holds, by market-cap rank
+# (owner, 2026-09-21: "see if you can branch into the top 200 coins rather
+# than the current selection"). Honest expectation, measured at 100: of 101
+# names in the universe only 69 had Yahoo data under "<SYM>-USD", and the
+# $100M crypto liquidity floor (LIQUID_TIER) cuts more of the tail. Doubling
+# the rank depth should scan ~110-130, not 200 — the bottom of the top 200 is
+# thin alt territory where a paper fill is the most fictional, and the
+# liquidity gate is what keeps it honest.
+# NOT DELIVERED UNTIL 2026-09-28: the one-page CoinGecko request asked for
+# per_page=260, above CoinGecko's 250 cap, which silently serves its default
+# 100 -- the universe SHRANK 101 -> 86. universe._fetch_crypto now pages at
+# the cap (tests/test_crypto_universe.py).
+CRYPTO_UNIVERSE_SIZE   = 200
 # Coins pinned into the crypto universe regardless of market-cap rank
 # (2026-07-02, the FLASH gap: not in CoinGecko's top-100 -> invisible to
 # every scanner). Add symbols here to guarantee coverage; Yahoo-less coins
@@ -229,6 +478,30 @@ VIVEK_BREAK_VOL_MULT   = 1.5       # a structure break needs >= this x average v
 VIVEK_TRIGGER_PRIORITY = ["reclaim", "retest", "break"]   # first match wins
 VIVEK_MIN_TF_BARS      = 30        # min bars to build a per-timeframe plan (e.g. Weekly)
 
+# ── 4H PLANS (owner, 2026-09-19) ─────────────────────────────────────────────
+# "I need to see genuine set ups forming on d and weekly 3d and then if i toggle
+# down i want to see a genuine set up on the 4hr."
+#
+# Until now the chart's 4H toggle borrowed the DAILY plan and said so in a
+# tooltip, because the scan downloads daily bars only and never built a 4H plan.
+# The engine still uses the Daily 200 SMA as its "h4" LEVEL in evaluate() -- that
+# one is signal path (it feeds scoring and grading) and is deliberately NOT
+# touched here. This block is the DISPLAY half: a real 4H plan, from real 4H
+# bars, published as its own timeframe like 3D and 1W.
+#
+# Measured 2026-09-19 on a runner before building it: Yahoo serves 2 full years
+# of 1h bars (~3,500), which buckets to ~1,200 4H bars -- six times the 200 a
+# 200-period average needs -- at 0.18s a symbol, so the whole published row set
+# costs about a minute of scan time.
+VIVEK_H4_PLANS         = True      # build a real 4H plan for published rows
+VIVEK_H4_PERIOD        = "2y"      # Yahoo's intraday ceiling is ~730 days
+VIVEK_H4_INTERVAL      = "1h"      # bucketed to 4H locally (Yahoo has no 4h)
+VIVEK_H4_BUCKET_HOURS  = 4
+# Cap the extra download so a huge result set cannot stretch a scheduled scan.
+# Rows beyond this simply keep today's behaviour (the chart falls back to the
+# Daily plan and labels it), which is a degrade, never a failure.
+VIVEK_H4_MAX_SYMBOLS   = 400
+
 VIVEK_RISK_PCT_MAX     = 0.5
 VIVEK_MAX_LEVERAGE     = 5         # hard cap; 2.5–3× preferred
 VIVEK_TP_SCALE_LONG    = [0.25, 0.50, 0.15]   # book at TP1 / TP2 / TP3 (10% runner left)
@@ -259,9 +532,27 @@ VIVEK_JOURNAL_SESSION = {
     "nasdaq": (9, 30, 16, 0),
     "crypto": None,
 }
+# Deck freshness, session + N hours (2026-09-23): the 5.0 deck marks a payload
+# stale once a session has been open this long with no scan from inside it, or
+# closed this long with no scan from after the close. DISPLAY ONLY -- nothing
+# in scanner/ or broker/ reads it. app.js mirrors it and the table above as
+# SESSION_STALE; tests/test_deck_session_stale.py holds the two in step.
+VIVEK_DECK_SESSION_GRACE_H = 2
+
+# Lens backtests (2026-09-23): every lens replay reports its R alongside the
+# dollars a flat position of this size would have made -- the owner's reading
+# ("assume every position was 1k"). Dollars only: R never depends on it.
+LENS_BACKTEST_NOTIONAL = 1000.0
 
 # Autonomous bot — strict VIVEK 5.0 rules (see scanner/broker/vivek_bot.py).
-VIVEK_BOT_MIN_GRADE    = "A+"      # A+ ONLY — never A / B+ / WATCH
+# GRADES (owner ruling 2026-09-21: "the paper bot should only take the highest
+# R and conviction plays so it needs to take what we're changing the high
+# conviction list [to]"). A+ AND A, matching the deck's HIGH CONVICTION rule.
+# Evidence (600-name long-only replay): HC cells at A/A+ +0.212R n=2403 PF 1.47
+# vs A+ only +0.216R n=1423 — the same edge per trade, on 70% more trades.
+# Compare the rule it replaces: A+ / 1W>3D>1D / no retest = +0.094R n=2718.
+# Read against grade_raw (unsmoothed), never the displayed grade.
+VIVEK_BOT_GRADES       = ("A+", "A")
 VIVEK_BOT_MIN_RR       = 1.5       # skip setups whose R:R (to TP2) is below this
 # Skip non-operating vehicles (REITs / ETFs / LICs / managed funds) — they hug
 # their 200 SMA so they over-produce reactions, but aren't what we want the bot
@@ -278,7 +569,7 @@ VIVEK_BOT_EXCLUDE_FUNDS = True
 # THE FENCE, stated where the patterns live: scan.py publishes the flag for the
 # UI to dim/mark/rank with. NOTHING in scanner/broker/ may read `is_product` or
 # this constant — the bot's fund test is _is_fund_or_reit and it stays
-# byte-untouched, because changing what the bot may take mid-w3-1 is a rule
+# byte-untouched, because changing what the bot may take mid-cycle is a rule
 # change by stealth. tests/test_product_flag.py greps the broker tree and goes
 # red on the first reference.
 #
@@ -303,10 +594,19 @@ PRODUCT_NAME_PATTERNS = (
     r"\bWARRANTS?\b",
     r"\bRIGHTS? \(",       # listing-class "Rights (…)" lines, not names containing Rights
 )
-# Favour the strongest trigger: the walk-forward backtest showed "retest" is
-# flat-to-negative while "reclaim" carries the edge, so the bot skips these
-# entry types. Selection-only; the scanner still shows them. Empty list = take all.
-VIVEK_BOT_SKIP_ENTRY_TYPES = ["retest"]
+# ENTRY CELLS (owner ruling 2026-09-21): the bot trades a plan ONLY when its
+# (timeframe, trigger) is one of the deck's four HIGH CONVICTION cells, walked
+# in this order and taking the FIRST armed, complete plan that sits in a cell:
+#   1W reclaim +0.299R n=691 · 1W break +0.161R n=122 ·
+#   3D reclaim +0.196R n=1309 · 1D break +0.091R n=281   (long-only replay)
+# A 1W plan whose trigger is a retest no longer blocks the row — the walk
+# falls through to the 3D / 1D plan. Retest is in no cell (worst trigger on
+# every timeframe). This table MUST equal scanner/conviction.py HC_CELLS —
+# tests/test_bot_alignment.py pins it — so the bot and the badge agree about
+# what is worth taking; the bot deliberately does NOT import that module
+# (its ruleset stays its own, and the fence in test_conviction.py stays).
+# The level gate below (VIVEK_BOT_LEVEL_TF_ALLOW) still applies on top.
+VIVEK_BOT_ENTRY_CELLS = {"1W": ("reclaim", "break"), "3D": ("reclaim",), "1D": ("break",)}
 # W3-ONLY LEVEL GATE (owner-signed 2026-08-02, pre-registered cycle "w3-1").
 # The bot considers only candidate rows whose headline plan level_tf is in this
 # tuple. Evidence: three disjoint pre-registered samples (IS / OOS / C3) each
@@ -323,8 +623,11 @@ VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
 # cycle runs (the sizing_mode precedent: nothing reads it to decide anything;
 # it exists so pre-gate and in-cycle cohorts never blur in later reads).
 # Empty string = no active cycle, no stamp.
-VIVEK_BOT_CYCLE_TAG = "w3-1"
-VIVEK_BOT_PREFER_TF    = "1W"      # Weekly plans are primary (less noise); fall back to 1D
+# 2026-09-21: cycle "w3-1" (A+ only, 1W>3D>1D, no retest) ENDED when the
+# entry rules were aligned to the four conviction cells; rows it opened keep
+# their tag (the journal's w3-1 evidence strip still reads them). New rows
+# carry "hc4-1": grades A/A+, VIVEK_BOT_ENTRY_CELLS, same level gate.
+VIVEK_BOT_CYCLE_TAG = "hc4-1"
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # LONG-ONLY: the walk-forward backtest showed the short side loses ~0.5R per
@@ -332,32 +635,38 @@ VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # so the bot is long-only for now — shorts disabled and no short slots reserved.
 # The short machinery is retained behind the flag in case it's reworked later.
 VIVEK_BOT_ALLOW_SHORTS   = False   # False → bot never opens a short
-# Book size (owner, 2026-07-28): 30 open positions TOTAL across every market,
-# free to distribute wherever the A+ setups actually are. The per-market number
-# below is therefore NOT the binding constraint any more -- it is set equal to
-# the global cap so one market CAN hold the whole book, and the ceiling that
-# really bites is VIVEK_BOT_MAX_OPEN_TOTAL. The per-sector cap (3) still stops
-# the book becoming one macro bet. Sizing is fixed-notional -- see
-# VIVEK_BOT_POSITION_NOTIONAL below -- so 30 slots x $5,000 = the $150,000
-# portfolio ceiling exactly.
-VIVEK_BOT_MAX_POSITIONS  = 30      # max concurrent open positions PER MARKET
+# Book size (owner, 2026-07-28; raised 30 -> 60 by the owner on 2026-09-27):
+# 60 open positions TOTAL across every market, free to distribute wherever the
+# A/A+ cell setups actually are. The per-market number below is therefore NOT
+# the binding constraint -- it is set equal to the global cap so one market CAN
+# hold the whole book, and the ceiling that really bites is
+# VIVEK_BOT_MAX_OPEN_TOTAL. The per-sector cap (6) still stops the book becoming
+# one macro bet. Sizing is fixed-notional -- see VIVEK_BOT_POSITION_NOTIONAL
+# below -- so 60 slots x $2,500 = the $150,000 portfolio ceiling exactly (30 x
+# $5,000 = $150,000 from 2026-07-28 until 2026-09-27).
+VIVEK_BOT_MAX_POSITIONS  = 60      # max concurrent open positions PER MARKET
 # Global ceiling across ALL markets, enforced in vivek_run by counting the other
 # markets' canonical book files before deciding. This is race-free by
 # construction: scan.yml and crypto_bot.yml share `concurrency: group: scan`
 # with cancel-in-progress false, so no two market runs are ever live at once and
 # a run's read of the other books cannot be stale. 0 = off (per-market only).
-VIVEK_BOT_MAX_OPEN_TOTAL = 30
+VIVEK_BOT_MAX_OPEN_TOTAL = 60
 VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 # ---------------------------------------------------------------------------
 # SIZING — FIXED NOTIONAL (owner decision, 2026-07-28):
 #   "5k position moving forward on each 30 stocks and a cap of 150k"
+# RESIZED 2026-09-27 (owner): $2,500 a position on 60 slots. Same $150,000
+#   ceiling, same equity, same loss guards -- half the size, twice the slots.
+#   The open $5,000 rows are restated to $2,500 at merge by
+#   scripts/resize_book_notional.py (the 2026-07-28 RESIZE precedent); closed
+#   rows keep the size they were really held at.
 #
-# THE 5,000 IS IN EACH MARKET'S OWN CURRENCY (owner decision, 2026-07-29:
-# "It's fine make the US 5k USD and the AUS 5k AUD"). The constant is
-# currency-less and `notional / entry` prices entry in the market's local
-# currency, so an ASX position buys A$5,000 of stock and a NASDAQ one US$5,000
-# — that asymmetry (~US$3,500 vs US$5,000 at 0.70) was flagged as #61's live
-# half and the owner EXPLICITLY KEPT IT. Do not "fix" it by converting the
+# THE NOTIONAL IS IN EACH MARKET'S OWN CURRENCY (owner decision, 2026-07-29,
+# made at 5,000: "It's fine make the US 5k USD and the AUS 5k AUD"; it carries
+# to 2,500 unchanged). The constant is currency-less and `notional / entry`
+# prices entry in the market's local currency, so an ASX position buys A$2,500
+# of stock and a NASDAQ one US$2,500 — that asymmetry (~US$1,750 vs US$2,500 at
+# 0.70) was flagged as #61's live half and the owner EXPLICITLY KEPT IT. Do not "fix" it by converting the
 # notional through FX before sizing; that exact one-liner was offered and
 # declined. Cross-market AGGREGATES (report dollars, drawdown) still convert
 # to REPORT_CURRENCY — that half shipped in the backtest and stays.
@@ -370,9 +679,10 @@ VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 #   * Risk per trade is no longer constant. Under risk-% sizing every loss was
 #     the same dollar amount and the STOP DISTANCE moved the share count. Under
 #     fixed notional the share count is constant and the STOP DISTANCE moves the
-#     loss: risk_usd = 5,000 x (stop distance / entry). The stop-distance gates
+#     loss: risk_usd = 2,500 x (stop distance / entry). The stop-distance gates
 #     bound it -- MIN_STOP_PCT 1% and MAX_STOP_PCT 25% -- so a 1R loss lands
-#     between $50 and $1,250, typically $250-$500 on a 5-10% structural stop.
+#     between $25 and $625, typically $125-$250 on a 5-10% structural stop
+#     ($50-$1,250 / $250-$500 at the 2026-07-28 $5,000).
 #   * Position count, not position size, is now the risk dial.
 #
 # WHY ACCOUNT_EQUITY MOVED WITH IT (see below): vivek_guard's daily/weekly
@@ -380,15 +690,18 @@ VIVEK_BOT_MIN_SHORTS     = 0       # reserved short slots (0 while long-only)
 # old $10,000 paper equity would have tripped the 3% ($300) daily stop on the
 # FIRST ordinary stop-out and halted the bot more or less permanently. Equity is
 # therefore set to the owner's stated book size, which also makes the numbers
-# self-consistent: 30 x $5,000 = $150,000 = 1.0x equity, no margin implied.
-VIVEK_BOT_POSITION_NOTIONAL = 5_000     # target $ invested per position (0 = risk-% mode)
+# self-consistent: 60 x $2,500 = $150,000 = 1.0x equity (30 x $5,000 until
+# 2026-09-27), no margin implied.
+VIVEK_BOT_POSITION_NOTIONAL = 2_500     # target $ invested per position (0 = risk-% mode)
 # Ceiling on TOTAL open notional across every market, enforced in decide() the
 # same way the position ceiling is: the runner sums the sibling books and passes
-# what the other markets already hold. Redundant with 30 x $5,000 by
-# construction today -- deliberately so. It is the backstop that keeps the
-# dollar exposure honest if the slot count or the per-position size is ever
-# changed independently, and it is what actually binds if a future sizing mode
-# makes positions unequal. 0 = off.
+# what the other markets already hold. Redundant with 60 x $2,500 (30 x $5,000
+# until 2026-09-27) by construction -- deliberately so. It is the backstop that
+# keeps the dollar exposure honest if the slot count or the per-position size is
+# ever changed independently, and it is what actually binds if a future sizing
+# mode makes positions unequal -- or in the window after a size cut before the
+# open book is restated: on 2026-09-27 the 30 open $5,000 rows filled the whole
+# $150,000 by themselves and would have blocked every $2,500 entry. 0 = off.
 VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL = 150_000
 VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade — ONLY used when
                                    # VIVEK_BOT_POSITION_NOTIONAL is 0 (0.25–0.5 band)
@@ -473,6 +786,25 @@ VIVEK_BOT_STALE_PROBE_PUSH       = True
 #    so the bot skips rows older than this. 0 = off. The scan still DISPLAYS
 #    stale rows (age-badged); this gates the bot's entries only.
 VIVEK_BOT_MAX_DATA_AGE_DAYS = 3
+#  • MAX_MARK_AGE_H (2026-09-28, owner: "Fix it"): the last-good frame cache
+#    back-fills a ticker the source skipped this run, and until now the bot
+#    MANAGED held positions off that frame's last close as if it were live:
+#    stops and time stops tested, mae/mfe and the loss guard updated, and
+#    `unpriced_runs` reset to 0 -- so a coin a venue skipped for days froze at
+#    its old price with nothing counting the freeze. Now `merge_with_cache`
+#    stamps every fresh frame with its fetch time and tags a reused one, and a
+#    held position whose frame was fetched more than this many hours ago is
+#    UNPRICED for the run: not marked, no stop/target/time-stop test, counted
+#    by `unpriced_runs` (alerts at 3/10/30), and the loss guard values it at
+#    its own stop (fail closed, TOP100 #15). 2h tolerates ONE missed fetch
+#    after an on-time run (crypto runs hourly, stock scans ~every 45-60 min),
+#    and no more: a coin missing after a dropped-schedule gap, or a stock
+#    reusing yesterday's frame at the open, is unpriced. A reused frame with no
+#    fetch stamp (a cache written before this) counts as too old. NEW ENTRIES
+#    are stricter -- a fill needs a price fetched THIS run, because a skipped
+#    fill is simply re-tried next run while a stale fill books a price nobody
+#    traded at. 0 = off (reused frames price everything, the old behaviour).
+VIVEK_BOT_MAX_MARK_AGE_H = 2.0
 # Earnings gap-avoidance (best-effort, fail-open): skip NEW entries when the
 # name reports within the buffer. Gapping through a stop is the one tail the
 # stop can't manage. Lookup is one yfinance call per candidate FILL (a handful
@@ -485,92 +817,17 @@ VIVEK_BOT_EARNINGS_MARKETS     = ("nasdaq",)   # ASX earnings data on yfinance i
 # normal VIVEK_BOT_MAX_PER_SECTOR cap applies.
 VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # Correlation control: cap open positions per GICS sector per market so the book
-# can't quietly become one macro bet (e.g. 6 ASX materials names = one iron-ore
-# trade). Empty/unknown sectors (crypto) are exempt. 0 = off.
-VIVEK_BOT_MAX_PER_SECTOR = 3
+# can't quietly become one macro bet (a book of ASX materials names is one
+# iron-ore trade). 6 since 2026-09-27 (was 3; owner, 2026-09-27): he kept the
+# DOLLARS, not the count -- 6 x $2,500 = 3 x $5,000 = $15,000 of one sector per
+# market. Empty/unknown stock sectors are exempt (crypto is bucketed above).
+# 0 = off.
+VIVEK_BOT_MAX_PER_SECTOR = 6
 
-# ── SECTOR BREADTH / HORIZON (2026-07-28, scanner/sectorbreadth.py) ───────────
-# REPORT-ONLY. None of these change which trades get taken; they decide what the
-# rotation surface can see and remember. Written after the July post-mortem, in
-# which an entire sector ran for four weeks while the only published sector
-# number (a RAW setup count, dominated by how many names each sector lists) said
-# nothing, and the book sat at its ceiling for 20 straight sessions unable to
-# act even if it had.
-SECTOR_BREADTH_ENABLED   = True
-#  • MIN_NAMES: a sector with fewer listed names than this is computed but never
-#    RANKED. Participation rate on a 3-name sector is 0% or 33% and would top
-#    every leaderboard on noise alone.
-SECTOR_BREADTH_MIN_NAMES = 15
-#  • TOP_N: how many sectors count as "leading" for the unheld-leaders alarm.
-SECTOR_BREADTH_TOP_N     = 3
-#  • HISTORY_MAX: rows kept in data/sector_history.json (one per market per DAY,
-#    ~2 markets x 250 sessions = a year at 500). This file is the ONLY long
-#    sector memory in the system — the 7-day PhaseMap archive was too short to
-#    reconstruct the July rotation after the fact — so keep it generous.
-SECTOR_BREADTH_HISTORY_MAX = 2000
-#  • PUBLISH_DAYS: how much of that history is republished for the page to plot.
-SECTOR_BREADTH_PUBLISH_DAYS = 180
-#  • RUN_ALERT: sessions a top-N sector may lead on breadth with NOTHING held
-#    before the surface stops describing it and starts shouting. One day is a
-#    coincidence and the page should stay calm; a run this long is a rotation
-#    being missed in progress, which is the whole reason this module exists.
-#    July ran nineteen. Report-only -- it changes the volume, never the trades.
-SECTOR_BREADTH_RUN_ALERT = 5
-#  • RUN_ALERT_PUSH: also push that run alarm through the NOTICE tier
-#    (config.ALERT_CHANNELS; Discord until the 2026-08-27 removal, currently
-#    no live channel) instead of only colouring the page. A
-#    surface you have to open to be warned by is a surface that warns you after
-#    you already looked, which in July was never. Rate-limited through
-#    journal/alert_state.json so a 19-session run pings once, not nineteen times.
-SECTOR_BREADTH_RUN_ALERT_PUSH = True
-#  • RUN_ALERT_REPEAT_DAYS: re-ping an already-alerted sector only after this
-#    many days. 0 = never repeat while the run continues.
-SECTOR_BREADTH_RUN_ALERT_REPEAT_DAYS = 7
-
-# ── REGIME / RELATIVE STRENGTH (2026-07-28, scanner/regime.py) ────────────────
-# REPORT-ONLY, same as breadth above: nothing here reaches decide(). This block
-# is the OTHER half of the July post-mortem. Breadth answers "which sector is
-# setting up today"; this answers "is the market actually as bad as the index
-# says, and who is beating it" — the two things the owner could feel but could
-# not read anywhere. Every number below is arithmetic on daily closes, so the
-# full history recomputes on each run: no state file, no backfill, correct on
-# the first execution and able to describe JUNE.
-REGIME_ENABLED = True
-#  • DAYS: published sessions per market (~6 months). Long enough that a run
-#    that started in June is visible in full; the cost is only JSON size.
-REGIME_DAYS = 126
-#  • RET_WINDOWS: (fast, slow) return lookbacks in sessions, ~1 and ~3 months.
-#    The fast one is what "consumer discretionaries ran for a month" means.
-REGIME_RET_WINDOWS = (21, 63)
-#  • HL_WINDOW: lookback for new-highs-minus-new-lows.
-REGIME_HL_WINDOW = 20
-#  • FAST_SMA: the shorter participation line. The slow one is deliberately
-#    VIVEK_SMA (200) — the engine's OWN level — so "above the average" on this
-#    page means the same thing it means in a setup.
-REGIME_FAST_SMA = 50
-#  • TOP_N: how many sectors count as leading on relative strength, and the
-#    membership the rs_streak counter tests against.
-REGIME_TOP_N = 3
-#  • BENCHMARK: the cap-weighted index per market, used ONLY to state the
-#    divergence between it and the equal-weight median name. Markets absent
-#    from this map are skipped entirely (crypto has no sectors to rank).
-#    The relative-strength maths never uses it — the benchmark for rs21/rs63 is
-#    the market's own median name, which is survivorship-consistent with the
-#    numerator and cannot fail to download.
-REGIME_BENCHMARK = {"asx": "^AXJO", "nasdaq": "^IXIC"}
-#  • RISK_ON/RISK_OFF_ABOVE200: the two cut points of the three-way state read
-#    (BROAD / MIXED / NARROW). Coarse on purpose — a count of names above a
-#    moving average does not support a finer scale than thirds.
-REGIME_RISK_ON_ABOVE200 = 0.55
-REGIME_RISK_OFF_ABOVE200 = 0.35
-#  • DIVERGENCE_MIN: how far the median name and the index must part before the
-#    page says so. Below this they are the same story told twice.
-REGIME_DIVERGENCE_MIN = 0.02
-#  • MIN_DAY_COVERAGE: a date on which fewer than this share of the market's
-#    best-covered session has a bar is a pseudo-session (a mis-dated bar, a
-#    half day, a foreign holiday) and is dropped rather than published as a day
-#    the market vanished.
-REGIME_MIN_DAY_COVERAGE = 0.5
+# HORIZON (sector breadth) and REGIME (relative strength) were REMOVED ENTIRELY
+# on 2026-09-20 (owner: "get rid of it entirely, rip out the guts of it"). The
+# SECTOR_BREADTH_* / REGIME_* blocks that lived here are gone with the engines;
+# the bot's per-sector correlation cap above is unrelated and stays.
 
 # Push a digest of the bot's opens/closes through alert_dispatch each run.
 # OFF by default: the scan workflow exports SMTP creds, and alert_dispatch fires
@@ -587,17 +844,19 @@ VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 # the trailing 7 calendar days + open unrealised falls to -this% of equity,
 # new entries halt until the window rolls off. 0 = off.
 VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
-# REVIEW threshold (2026-07-28, owner's instruction). NOT a gate — nothing is
-# ever skipped for crossing it. When a plan the bot has already decided to take
-# would risk this % or more of the daily loss guard above, the ticket carries a
-# `review` flag so the owner can decide whether to let the bot take it or take
-# it himself, sized his own way. The two numbers it sits between: the hard
-# MAX_STOP_PCT gate caps any new position at 25% x $5,000 = $1,250 of risk,
-# which is 27.8% of the $4,500 guard, so a threshold at or above ~28 could
-# never fire; a typical A+ plan runs a 5-12% stop, i.e. $250-$600, i.e. 6-13%
-# of the guard. 15 therefore flags the genuinely wide half without crying wolf
-# on ordinary trades. 0 = off.
-VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 15.0
+# REVIEW threshold (2026-07-28, owner's instruction; 15.0 -> 7.5 with the
+# notional on 2026-09-27, owner). NOT a gate — nothing is ever skipped for
+# crossing it. When a plan the bot has already decided to take would risk this %
+# or more of the daily loss guard above, the ticket carries a `review` flag so
+# the owner can decide whether to let the bot take it or take it himself, sized
+# his own way. The two numbers it sits between: the hard MAX_STOP_PCT gate caps
+# any new position at 25% x $2,500 = $625 of risk, which is 13.9% of the $4,500
+# guard, so a threshold at or above ~14 could never fire; a typical A+ plan
+# runs a 5-12% stop, i.e. $125-$300, i.e. 3-7% of the guard. 7.5 is $337.50 =
+# a 13.5% stop on $2,500 -- the SAME stop width 15.0 flagged on $5,000 ($675),
+# so what gets flagged did not move. Left at 15.0 beside $2,500 it would have
+# needed a 27% stop, which the 25% gate never admits: dead code. 0 = off.
+VIVEK_BOT_REVIEW_DAILY_LOSS_PCT = 7.5
 
 # Push the review flag through the NOTICE tier when a flagged position is opened
 # (`vivek_run._notify_reviews`). ON, unlike VIVEK_BOT_NOTIFY_TRADES next to it,
@@ -634,6 +893,9 @@ VIVEK_BOT_MODE           = {"asx": "paper", "nasdaq": "paper", "crypto": "paper"
 # ordinary 1R loss — and the bot would have sat halted. At 150,000 the guard
 # keeps roughly the same headroom in R that it had before: $4,500/day against a
 # typical $250–$500 loss is ~9–18R, versus $300 against $35 (8.6R) before.
+# UNCHANGED on 2026-09-27 when the notional halved to $2,500: the book is still
+# $150,000 of exposure, so the guards stay $4,500/day and $9,000/week; per trade
+# the headroom doubled (a typical $125–$250 loss is ~18–36R of the daily guard).
 VIVEK_BOT_ACCOUNT_EQUITY = 150_000  # book size; scales the loss guards, NOT position size
 VIVEK_LIVE_CONFIRMED     = False   # extra hard lock for any future live order
 
@@ -747,12 +1009,6 @@ ALERT_SEVERITY = {
     "daily_report":    "INFO",
     "health":          "WARNING",
     "info":            "INFO",
-    # HORIZON's sustained-run alarm (2026-07-28, scanner/sectorbreadth.notify).
-    # Its own tier because neither existing one fits: INFO is silent, and the
-    # module is REPORT-ONLY, so calling a rotation a WARNING would put it beside
-    # order rejections and circuit breakers in the same feed and at the same
-    # volume. Nothing is wrong when this fires -- something is HAPPENING.
-    "sector_run":      "NOTICE",
     # A position was opened carrying a review flag (2026-07-28, owner: "Flag
     # this in the future so i can verify whether claude or I should take the
     # position or not"). Same tier and the same reason: the trade passed every
@@ -825,13 +1081,9 @@ ALERT_RATE_LIMITS = {
     "daily_report":    82800,    # max 1 per 23h
     "weekly_report":   518400,   # max 1 per 6 days
     "health":          3600,     # max 1 per hour
-    # 0 = the router never suppresses this one; sectorbreadth.notify owns the
-    # dedupe entirely (per market AND per sector, memory in the history file).
-    # A limit here would be per EVENT TYPE, so the first market to fire would
-    # silence the second — and scan.yml runs the markets sequentially inside a
-    # single job, which makes that the normal case rather than an edge one.
-    "sector_run":      0,
-    # 0 for the same per-EVENT-TYPE reason, plus a sharper one: this fires only
+    # 0 = the router never suppresses this one (per-EVENT-TYPE limits would let
+    # the first market to fire silence the second — scan.yml runs the markets
+    # sequentially inside a single job). Plus a sharper reason: this fires only
     # when a flagged position was actually OPENED, which is inherently one-shot
     # -- a position is opened once and never again -- so there is no storm to
     # limit. What a limit WOULD do is silently drop the second flagged open of a
@@ -913,6 +1165,18 @@ ALERT_RETURNS_HORIZONS = (1, 5, 10, 20)   # 1-session added 2026-08-20: the
 # entry would silently un-measure the feature). ~57 alignments/day today, so
 # 20,000 is roughly a year of memory.
 ALERT_RETURNS_CAP = 20000
+# FORWARD-RETURN BAR FINALITY (2026-10-05). A return is FROZEN at first
+# measurement, so stamp() may only read a daily bar whose close is final.
+# Yahoo's daily series carries the session's still-forming bar while it trades,
+# and the ledger runs land late (00:00-03:00 UTC), inside the ASX session in
+# AEST and AEDT alike, so ASX horizons were frozen at a late-morning price.
+# Market-local (hour, minute) from which TODAY's bar counts as final: the
+# closing print (ASX auction ~16:10-16:12, the NASDAQ closing cross by 16:00:xx)
+# plus the ~15-20 min delayed feed, rounded up. Read in MARKETS[m].timezone, so
+# DST on either side needs no handling. A market with no entry trades 24/7
+# (crypto, UTC daily bars): its today's bar is NEVER final. Later is always
+# safe; the only cost is a stamp waiting for the next daily run.
+ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": (16, 30)}
 # Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
 # single-lens BASELINE cohort, stamped with the same forward returns on the
 # same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
@@ -929,52 +1193,43 @@ WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
 # LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
 # GitHub already emails failures; the watchdog only covers SILENT problems.
+# MARKET SCAN WINDOWS (owner, 2026-09-21) — the canonical session table.
+# (market -> (tz, first-scan minute-of-day, last-scan minute-of-day), market-local,
+# weekdays only.) First scan is one hour after the open; the tail runs past the
+# close so the closing auction is captured and the Discord plays digest has a
+# post-close scan to gate on.
+#
+# THE MIRROR: scan.yml's gate job checks out nothing (contents: read, by
+# design), so it cannot import this — it carries the same numbers inline and
+# tests/test_scan_windows.py parses them back out and fails if the two drift.
+MARKET_SCAN_WINDOWS = {
+    "asx":    ("Australia/Sydney",  11 * 60,      16 * 60 + 45),
+    "nasdaq": ("America/New_York",  10 * 60 + 30, 16 * 60 + 45),
+}
+
 WATCHDOG_RUNS = {
     "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
     "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
-    "scan.yml":        {"max_age_h": 24.0, "severity": "WARNING"},
+    # SESSION-AWARE (2026-09-21). scan.yml stopped running outside market
+    # hours, so wall-clock age alarms every weekend: Friday's last scan to
+    # Monday's first is ~52h, and a long weekend is ~75h. Raising the limit
+    # past that would make a genuine weekday outage invisible for three days.
+    # `session_aware` measures only the hours a market was actually OPEN, which
+    # accrue at ~11h/day on weekdays and not at all at the weekend — so 12h is
+    # about one missed session, and a quiet Sunday is correctly silent.
+    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True},
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
-    # 5-min cron, so 1h of no SUCCESSFUL run means ~12 misses (2026-07-28).
-    # It commits nothing, which is exactly why it needs an entry here: every
-    # other watchdog target is caught by its output going stale, and this one
-    # has no output. This entry now answers exactly ONE question -- "is the
-    # 5-minute cron still firing at all?" -- because the workflow deliberately
-    # exits 0 on a 503 (see stop_watcher.yml and WATCHDOG_TICK_URL below), so a
-    # green run no longer implies a healthy endpoint. Endpoint HEALTH is
-    # probe_endpoints()'s job; schedule health is this one's. CRITICAL because
-    # while the cron is dead no paper stop or target is evaluated unless a
-    # chart page happens to be open.
-    "stop_watcher.yml": {"max_age_h": 1.0, "severity": "CRITICAL"},
 }
 
-# Cloud stop/target watcher endpoint (functions/api/tick.js), probed directly by
-# watchdog.probe_endpoints (2026-07-28). Committed files cannot vouch for this
-# service: it writes nothing to the repo, so the ONLY way to know it works is to
-# ask it.
-#
-# PROBED UNAUTHENTICATED, ON PURPOSE. tick.js validates its own configuration
-# and then the caller's credential BEFORE it touches KV or evaluates a single
-# position, so an anonymous GET can never fire a stop, close a trade or read a
-# journal. Never add the real TICK_SECRET here to "probe it properly" -- that
-# would make the monitor run an extra unscheduled tick every 30 minutes, i.e.
-# the monitor would start moving the thing it is monitoring.
-#
-# The three answers, and why the middle one is the healthy one:
-#   503 -> TICK_SECRET (or JOURNAL_KV) missing in Cloudflare. The watcher has
-#          never been switched on; paper stops/targets only fire while a chart
-#          page is open. WARNING: a setup gap the owner closes in Cloudflare.
-#   401 -> configured, and correctly refusing an anonymous caller. HEALTHY --
-#          this is the response a working deployment gives this probe, so no
-#          finding is raised.
-#   200 -> it ran for a caller with no secret at all. The endpoint is WIDE OPEN
-#          and anyone who knows the URL can walk every synced journal. CRITICAL,
-#          and a security finding rather than a freshness one.
-WATCHDOG_TICK_URL = "https://googy-boys-scanner.pages.dev/api/tick"
-WATCHDOG_TICK_ENABLED = True
+# THE CLOUD STOP/TARGET WATCHER IS GONE (2026-09-21). functions/api/tick.js
+# and stop_watcher.yml existed solely to close MANUAL paper positions inside
+# Cloudflare KV; the manual journal was removed with the rest of the "Me" side,
+# so there was nothing left for them to watch. The bot book has never used them
+# — it is marked and stop-checked by the scan and by kill_switch.yml.
 
 
 # ---------------------------------------------------------------------------
@@ -1107,7 +1362,7 @@ SCAN_SKIP_MARKER = ".scan-skipped"
 # cuts both ways: every ASX scan of the morning session ran dry and nothing
 # said so anywhere. The counter lives in SCAN_HEALTH_FILE (committed by
 # scan.yml's SHARED staging list, so it survives the Actions container — the
-# same lesson as sectorbreadth's ping memory), resets on the first successful
+# same container-death lesson as scan_health), resets on the first successful
 # publish, and pushes a NOTICE ONCE per episode, exactly at the threshold.
 SCAN_DRY_ALERT_RUNS = 3
 SCAN_HEALTH_FILE = "data/scan_health.json"
@@ -1176,8 +1431,10 @@ class MarketConfig:
     suffix: str            # yfinance ticker suffix (".AX" ASX, "" NASDAQ, "-USD" crypto)
     currency: str
     currency_symbol: str
-    timezone: str          # IANA tz for the "scanned at" timestamp
-    tz_label: str          # short label shown in the UI
+    timezone: str          # IANA tz for the "scanned at" timestamp. The scan
+                           # publishes its abbreviation AT THAT INSTANT as
+                           # tz_label (AEDT/AEST, EDT/EST, UTC) -- never a
+                           # fixed string: "AEST" was wrong half the year.
     liquidity_min: float   # minimum average daily turnover, in local currency
     volume_is_usd: bool = False   # crypto: Yahoo volume is already USD dollar-volume
 
@@ -1186,19 +1443,23 @@ MARKETS = {
     "asx": MarketConfig(
         key="asx", label="ASX", suffix=".AX",
         currency="AUD", currency_symbol="A$",
-        timezone="Australia/Sydney", tz_label="AEST",
+        timezone="Australia/Sydney",
         liquidity_min=100_000,
     ),
     "nasdaq": MarketConfig(
         key="nasdaq", label="NASDAQ", suffix="",
         currency="USD", currency_symbol="$",
-        timezone="America/New_York", tz_label="ET",
+        timezone="America/New_York",
         liquidity_min=1_000_000,
     ),
     "crypto": MarketConfig(
         key="crypto", label="CRYPTO", suffix="-USD",
         currency="USD", currency_symbol="$",
-        timezone="UTC", tz_label="UTC",
+        timezone="UTC",
+        # $3M/20d turnover. Since the exchange-klines switch (2026-09-28) this
+        # reads ONE venue's volume, not Yahoo's aggregate, so fewer thin alts
+        # clear it (65/108 vs 91/108 measured). Put to the owner the same day:
+        # "Keep". Do not lower it, or re-raise it, without his ask.
         liquidity_min=3_000_000, volume_is_usd=True,
     ),
 }
@@ -1296,27 +1557,82 @@ MORNING_PLAYS_SLOTS = {
 # close -- the 2026-09-11 06:35 US digest ran on time and read a 1:43pm New York
 # MID-SESSION scan (the post-close scan committed at 07:06 Melbourne), so it
 # missed the three names that set up in the last hours of trade and posted
-# "nothing new". Keyed on the payload's own `generated_at` in the market's own
-# zone, so DST on either side is irrelevant. Before the gate passes the run is a
+# "nothing new". Keyed on the payload's own `generated_at` and the clock, both
+# read in the market's own zone (never a fixed UTC offset -- the two sides
+# change DST on different dates). Before the gate passes the run is a
 # silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
 # cron-job.org jobs are a ladder of attempts every 30 min after the close, and
 # the first post-close one sends (the per-day marker silences the rest).
-#   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
-#                            is pre-close. scan.yml's 05:07 UTC cron generates
-#                            ~16:0x-16:28 AEST; its 06:37 UTC closing cron ~17:4x.
+#   asx    16:40 Sydney   -- NOT the auction time. The closing auction prints
+#                            ~16:10-16:12, but Yahoo's ASX feed runs ~20 min
+#                            behind and `generated_at` is stamped AFTER a ~4-5
+#                            min download. Measured 2026-10-05: the scan stamped
+#                            16:32 (download from 16:28:52) still held the
+#                            pre-auction price on 332 of 1,739 names (19%) and
+#                            one digest name changed; 25 Sep (download from
+#                            16:31) was final; 21 Sep (stamp 16:36) still had
+#                            ~11% pre-final. Until 2026-10-06 this was 16:12,
+#                            harmless only while evening heals rescanned the
+#                            ASX; since scan_gate.py (2026-10-05) the first scan
+#                            past this time IS the day's close and nothing
+#                            rescans it, so it must mean "the data is final".
+#                            16:40 = download from ~16:35, still inside the
+#                            16:45 scan window. The on-time closing scan is
+#                            cron-job.org's 16:40 Sydney 'scan ASX close' ping
+#                            of /api/heartbeat (GitHub has not delivered
+#                            scan.yml's closing crons since 18 Sep), backed by a
+#                            17:20 Sydney heal probe, scan.yml's "41 5,6" and
+#                            "57 5,6" crons and heals.
 #   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
-#                            16:00:xx. NOT 16:15: scan.yml's LAST NASDAQ cron is
-#                            21:07 UTC, which is 16:07 New York under EST, so a
-#                            later gate would refuse every winter session's only
-#                            post-close scan and the US digest would never send
-#                            Nov-Mar. Under EDT the 20:07 UTC hourly (16:07 NY)
-#                            passes too and the digest lands an hour earlier.
+#                            16:00:xx. NOT 16:15: scan.yml's only post-close
+#                            NASDAQ scan is its hourly at 16:07 New York (20:07
+#                            UTC under EDT, 21:07 UTC under EST -- the 16:45
+#                            window shuts the next hourly out), so a later gate
+#                            would refuse every session's one post-close scan
+#                            and the US digest would never send.
+# SESSION IN PROGRESS (2026-10-05). Before today's close the "latest close" is
+# YESTERDAY's, so any scan from earlier in today's session used to pass. Under
+# AEDT+EST the US slot's 06:30 Melbourne floor is 14:30 New York and the
+# ladder's 20:15/20:45 UTC rungs are 15:15/15:45 New York -- the digest went out
+# mid-session and marked itself done. So the gate also refuses while the session
+# the slot OWES is running: a weekday between the gated market's OPEN
+# (VIVEK_JOURNAL_SESSION, the canonical session table: ASX 10:00 Sydney, NASDAQ
+# 09:30 New York) and the close above, for a session that opened at/before the
+# slot's floor on that Melbourne date. One that opened after the floor is the
+# NEXT slot's: under AEST+EDT, 23:30-23:59 Melbourne is 09:30-09:59 New York on
+# the same date, and that evening's US slot still owes the previous session.
+# The ASX slot's 16:30 floor sits before the 16:40 Sydney close (Melbourne and
+# Sydney share their DST dates), so a rung between 16:30 and 16:40 is refused
+# as "session running" and the next rung retries -- harmless.
 # crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
-# gate reads (`<market>_vivek.json`'s generated_at).
+# gate reads (`<market>_vivek.json`'s generated_at) and the session it waits on.
 MORNING_PLAYS_SLOT_GATE = {
-    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
+    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 40},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
+# IGNITION's backstop gate (scripts/ignition_due.py, stdlib only): {market:
+# (timezone, hour, minute)} at which that market's daily bar is FINAL in the
+# free feed, read in the market's own calendar so DST cannot move it. A
+# backstop cron is skipped once the file on the branch was generated at/after
+# the latest weekday instance of it. DERIVED, never retyped: the ASX is the
+# digest's 16:40 Sydney close (Yahoo shows the auction ~20 min late);
+# NASDAQ is ALERT_RETURNS_BAR_FINAL's 16:30 New York (closing cross + the
+# delayed feed). Crypto has no entry: its bar is final at 00:00 UTC and
+# ignition.yml gates on the UTC date instead.
+IGNITION_BAR_FINAL = {
+    "asx": (MORNING_PLAYS_SLOT_GATE["asx"]["tz"], MORNING_PLAYS_SLOT_GATE["asx"]["hour"],
+            MORNING_PLAYS_SLOT_GATE["asx"]["minute"]),
+    "nasdaq": (MARKETS["nasdaq"].timezone,) + tuple(ALERT_RETURNS_BAR_FINAL["nasdaq"]),
+}
+# The IGNITION markets whose screen calls today's stock bar FORMING until its
+# IGNITION_BAR_FINAL above, not until the VIVEK_JOURNAL_SESSION close: the
+# closing cross and the delayed feed's volume land after the bell, so a run
+# reading its clock between 16:00 and 16:30 New York (a GitHub cron hours late,
+# a manual dispatch, a kick) would otherwise screen a not-final bar as
+# COMPLETED -- a break on partial volume published as confirmed. NASDAQ only:
+# moving the ASX to its 16:40 moves pinned ASX tests and its 06:24 UTC primary
+# (16:24 AEST precedes that close) -- a separate change.
+IGNITION_FORMING_UNTIL_BAR_FINAL = ("nasdaq",)
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.
 MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}
