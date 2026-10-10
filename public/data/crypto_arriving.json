@@ -1,25 +1,11 @@
 {
   "schema_version": 1,
   "market": "crypto",
-  "generated_at": "2026-10-10T06:25:28+00:00",
+  "generated_at": "2026-10-10T08:25:41+00:00",
   "rule": {
     "floor": 3000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "OHM",
-      "name": "Olympus",
-      "sector": "",
-      "dir": "SHORT",
-      "price": 19.97403908,
-      "turnover_avg20": 70104,
-      "turnover_today": 4472147,
-      "rvol": 3.2,
-      "adv_usd": 70104.65,
-      "fund": false,
-      "is_product": false
-    }
-  ]
+  "results": []
 }
