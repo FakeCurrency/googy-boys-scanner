@@ -1,5 +1,5 @@
 {
-  "run_date": "2026-10-11",
+  "run_date": "2026-10-12",
   "ruleset_version": "1.3.1",
   "universe_size": 1428,
   "narrations_file": "narrations.json",
@@ -4485,14 +4485,14 @@
         {
           "id": "t1",
           "type": "TARGET",
-          "low": 6.6576,
+          "low": 6.6449,
           "high": 7.2452,
           "status": "RESPECTED",
           "confluence": 5,
           "sources": [
+            "equal_lows",
             "fib_ext_1618",
             "box_low",
-            "equal_lows",
             "quarterly_open",
             "fib_ext_10"
           ],
@@ -4536,7 +4536,7 @@
       "route_to": null,
       "name": "BCP Investment Corporation - Closed End Fund",
       "sector": "",
-      "next": "bounces staying below 7.23–7.26; next objective the 6.66–7.25 zone (T1)"
+      "next": "bounces staying below 7.23–7.26; next objective the 6.64–7.25 zone (T1)"
     },
     {
       "ticker": "BHFAP",
@@ -34909,7 +34909,7 @@
         {
           "id": "t3",
           "type": "TARGET",
-          "low": 18.8397,
+          "low": 18.6164,
           "high": 19.1684,
           "status": "UNTESTED",
           "confluence": 2,
@@ -34922,12 +34922,12 @@
         {
           "id": "t4",
           "type": "TARGET",
-          "low": 18.6164,
-          "high": 18.7982,
+          "low": 18.4454,
+          "high": 18.5863,
           "status": "UNTESTED",
           "confluence": 1,
           "sources": [
-            "equal_lows"
+            "prior_low"
           ],
           "created_date": "2026-09-24"
         }
@@ -38468,8 +38468,8 @@
           "status": "UNTESTED",
           "confluence": 2,
           "sources": [
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-09-23"
         },
@@ -39455,7 +39455,7 @@
           "id": "t2",
           "type": "TARGET",
           "low": 305.6434,
-          "high": 323.0337,
+          "high": 323.0336,
           "status": "UNTESTED",
           "confluence": 3,
           "sources": [
@@ -43015,6 +43015,112 @@
       "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
     },
     {
+      "ticker": "OXLCO",
+      "direction": "bearish",
+      "state": "STALLED",
+      "tier": null,
+      "tags": [
+        "ILLIQUID"
+      ],
+      "regime": "ROTATION",
+      "zones": [
+        {
+          "id": "supply",
+          "type": "SUPPLY",
+          "low": 23.8676,
+          "high": 23.9227,
+          "status": "RESPECTED",
+          "confluence": 1,
+          "sources": [
+            "sweep_wick"
+          ],
+          "created_date": "2026-09-02"
+        },
+        {
+          "id": "inv_hard",
+          "type": "INVALIDATION_HARD",
+          "low": 23.9227,
+          "high": 24.0418,
+          "status": "UNTESTED",
+          "rule": "close_above_high",
+          "created_date": "2026-09-02"
+        },
+        {
+          "id": "inv_soft",
+          "type": "INVALIDATION_MOMENTUM",
+          "low": 23.6923,
+          "high": 23.7516,
+          "status": "VIOLATED",
+          "rule": "touch",
+          "created_date": "2026-09-10"
+        },
+        {
+          "id": "entry",
+          "type": "ENTRY_CONTINUATION",
+          "low": 23.5707,
+          "high": 23.638,
+          "status": "UNTESTED",
+          "created_date": "2026-09-10"
+        },
+        {
+          "id": "t1",
+          "type": "TARGET",
+          "low": 23.2124,
+          "high": 23.6933,
+          "status": "RESPECTED",
+          "confluence": 5,
+          "sources": [
+            "quarterly_open",
+            "equal_lows",
+            "fib_ext_1618",
+            "box_low",
+            "fib_ext_10"
+          ],
+          "created_date": "2026-09-10"
+        },
+        {
+          "id": "t2",
+          "type": "TARGET",
+          "low": 22.6859,
+          "high": 23.0622,
+          "status": "UNTESTED",
+          "confluence": 1,
+          "sources": [
+            "equal_lows"
+          ],
+          "created_date": "2026-09-10"
+        },
+        {
+          "id": "t3",
+          "type": "TARGET",
+          "low": 22.2055,
+          "high": 22.5992,
+          "status": "UNTESTED",
+          "confluence": 3,
+          "sources": [
+            "prior_yearly_close",
+            "equal_lows",
+            "yearly_open"
+          ],
+          "created_date": "2026-09-10"
+        }
+      ],
+      "metrics": {
+        "retrace_pct": 0.5601,
+        "dist_to_yearly_open_pct": 0.0551,
+        "avg_turnover_20d": 68559,
+        "close": 23.72,
+        "sweep_date": "2026-09-02",
+        "sweep_depth_pct": 0.0023,
+        "displacement_date": "2026-09-10"
+      },
+      "smt": null,
+      "route_to": "fib_reversal",
+      "name": "Oxford Lane Capital Corp. - Preferred Stock Shares, 6.00% Series 2029",
+      "sector": "",
+      "next": "nothing here — the expansion thesis is done; deep-retracement (rotation) logic owns it now"
+    },
+    {
       "ticker": "PDFS",
       "direction": "bearish",
       "state": "STALLED",
@@ -44090,8 +44196,8 @@
           "confluence": 3,
           "sources": [
             "equal_highs",
-            "yearly_open",
-            "prior_yearly_close"
+            "prior_yearly_close",
+            "yearly_open"
           ],
           "created_date": "2026-09-23"
         },
@@ -45088,8 +45194,8 @@
           "status": "UNTESTED",
           "confluence": 2,
           "sources": [
-            "prior_yearly_close",
-            "yearly_open"
+            "yearly_open",
+            "prior_yearly_close"
           ],
           "created_date": "2026-09-17"
         }
