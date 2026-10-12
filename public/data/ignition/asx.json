@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-12T06:50:33+00:00",
+  "generated_at": "2026-10-12T15:50:16+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-12",
@@ -61,7 +61,7 @@
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 0,
-      "COILED": 94,
+      "COILED": 95,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -71,22 +71,22 @@
       "expected_completed": null,
       "lagging": 0,
       "completed_dist": {
-        "2026-10-12": 1011,
-        "2026-10-09": 640,
-        "2026-10-08": 74,
+        "2026-10-12": 1110,
+        "2026-10-09": 561,
+        "2026-10-08": 54,
         "2026-10-01": 1
       },
       "raw_dist": {
-        "2026-10-12": 1011,
-        "2026-10-09": 640,
-        "2026-10-08": 74,
+        "2026-10-12": 1110,
+        "2026-10-09": 561,
+        "2026-10-08": 54,
         "2026-10-01": 1
       }
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1238
+        "yahoo": 1359
       },
       "dead": {},
       "errors": {},
@@ -100,18 +100,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1238,
-      "reused": 488,
+      "fresh": 1359,
+      "reused": 367,
       "merged": 1726,
       "universe": 1923,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 94,
-      "have": 93
+      "rows": 95,
+      "have": 94
     },
-    "elapsed_s": 270.1
+    "elapsed_s": 336.5
   },
   "results": [
     {
@@ -140,7 +140,7 @@
       "price": 0.008,
       "mcap": 1228797.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ADY",
@@ -168,7 +168,7 @@
       "price": 0.006,
       "mcap": 15776877.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CAQ",
@@ -196,7 +196,7 @@
       "price": 0.009,
       "mcap": 6460076.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "UCM",
@@ -224,7 +224,7 @@
       "price": 0.012,
       "mcap": 3121765.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "TFL",
@@ -252,7 +252,7 @@
       "price": 0.005,
       "mcap": 1937952.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "SFG",
@@ -280,22 +280,22 @@
       "price": 0.002,
       "mcap": 9733499.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "TEE",
       "name": "Top End Energy Limited",
       "yf": "TEE.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 0.65,
+        "ribbon_pct": 0.55,
         "atr_pctl": 0.2,
-        "vol_pctl": 11.8,
+        "vol_pctl": 11.9,
         "drawdown_pct": 78.2,
         "coiled": true,
-        "coiled_bars": 128,
-        "last_coiled": "2026-10-08"
+        "coiled_bars": 129,
+        "last_coiled": "2026-10-09"
       },
       "base": {
         "high": 0.037,
@@ -304,11 +304,11 @@
       },
       "breakout_level": 0.037,
       "provisional": false,
-      "last_bar": "2026-10-08",
+      "last_bar": "2026-10-09",
       "price": 0.037,
       "mcap": 10348657.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "VIG",
@@ -336,7 +336,7 @@
       "price": 0.041,
       "mcap": 30752488.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PIL",
@@ -392,7 +392,7 @@
       "price": 0.14,
       "mcap": 18229862.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AQC",
@@ -420,7 +420,7 @@
       "price": 0.0065,
       "mcap": 4202805.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ICU",
@@ -448,7 +448,7 @@
       "price": 0.001,
       "mcap": 304511.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CGO",
@@ -476,7 +476,7 @@
       "price": 0.09,
       "mcap": 3770763.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "BDM",
@@ -504,22 +504,22 @@
       "price": 0.017,
       "mcap": 24168936.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ZLD",
       "name": "Zelira Therapeutics Limited",
       "yf": "ZLD.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 2.3,
+        "ribbon_pct": 2.39,
         "atr_pctl": 0.2,
-        "vol_pctl": 13.7,
+        "vol_pctl": 13.8,
         "drawdown_pct": 56.5,
         "coiled": true,
-        "coiled_bars": 107,
-        "last_coiled": "2026-10-08"
+        "coiled_bars": 108,
+        "last_coiled": "2026-10-09"
       },
       "base": {
         "high": 0.5,
@@ -528,11 +528,11 @@
       },
       "breakout_level": 0.5,
       "provisional": false,
-      "last_bar": "2026-10-08",
+      "last_bar": "2026-10-09",
       "price": 0.5,
       "mcap": 6573577.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "MPR",
@@ -560,7 +560,7 @@
       "price": 0.005,
       "mcap": 1718515.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "LTP",
@@ -588,7 +588,7 @@
       "price": 0.47499999,
       "mcap": 86580448.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "HCF",
@@ -616,7 +616,7 @@
       "price": 0.03,
       "mcap": 582194.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "NFL",
@@ -644,7 +644,7 @@
       "price": 0.11,
       "mcap": 12108376.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "WSR",
@@ -672,7 +672,7 @@
       "price": 0.006,
       "mcap": 4848012.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "EME",
@@ -700,7 +700,7 @@
       "price": 0.086,
       "mcap": 17823082.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "S2R",
@@ -728,7 +728,7 @@
       "price": 0.07,
       "mcap": 42526908.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AAM",
@@ -756,7 +756,7 @@
       "price": 0.037,
       "mcap": 53864872.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "EE1",
@@ -784,7 +784,7 @@
       "price": 0.005,
       "mcap": 3751622.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AVG",
@@ -840,7 +840,7 @@
       "price": 0.0045,
       "mcap": 2118376.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "TDO",
@@ -868,7 +868,7 @@
       "price": 0.08,
       "mcap": 41938144.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "EYE",
@@ -896,7 +896,7 @@
       "price": 0.13500001,
       "mcap": 38464348.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "IRI",
@@ -924,7 +924,7 @@
       "price": 0.27500001,
       "mcap": 50156884.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "KNO",
@@ -952,7 +952,7 @@
       "price": 0.022,
       "mcap": 4755052.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "HFY",
@@ -980,7 +980,7 @@
       "price": 0.011,
       "mcap": 5687975.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AX1",
@@ -1008,13 +1008,13 @@
       "price": 0.65499997,
       "mcap": 393776608.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "WYX",
       "name": "Western Yilgarn Nl",
       "yf": "WYX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 4.14,
@@ -1036,35 +1036,7 @@
       "price": 0.04,
       "mcap": 6880096.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
-    },
-    {
-      "symbol": "AUG",
-      "name": "Augustus Minerals Limited",
-      "yf": "AUG.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.34,
-        "atr_pctl": 6.9,
-        "vol_pctl": 27.2,
-        "drawdown_pct": 79.5,
-        "coiled": true,
-        "coiled_bars": 10,
-        "last_coiled": "2026-10-12"
-      },
-      "base": {
-        "high": 0.044,
-        "low": 0.027,
-        "bars": 60
-      },
-      "breakout_level": 0.044,
-      "provisional": false,
-      "last_bar": "2026-10-12",
-      "price": 0.038,
-      "mcap": 10216660.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "E79",
@@ -1092,22 +1064,50 @@
       "price": 0.031,
       "mcap": 10960226.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "AUG",
+      "name": "Augustus Minerals Limited",
+      "yf": "AUG.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 7.47,
+        "atr_pctl": 5.0,
+        "vol_pctl": 24.6,
+        "drawdown_pct": 78.4,
+        "coiled": true,
+        "coiled_bars": 9,
+        "last_coiled": "2026-10-09"
+      },
+      "base": {
+        "high": 0.044,
+        "low": 0.027,
+        "bars": 60
+      },
+      "breakout_level": 0.044,
+      "provisional": false,
+      "last_bar": "2026-10-09",
+      "price": 0.04,
+      "mcap": 10216660.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "previous"
     },
     {
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.48,
-        "atr_pctl": 11.3,
-        "vol_pctl": 10.1,
-        "drawdown_pct": 66.4,
+        "ribbon_pct": 9.04,
+        "atr_pctl": 9.1,
+        "vol_pctl": 4.8,
+        "drawdown_pct": 65.8,
         "coiled": true,
-        "coiled_bars": 8,
-        "last_coiled": "2026-10-09"
+        "coiled_bars": 9,
+        "last_coiled": "2026-10-12"
       },
       "base": {
         "high": 1.16999996,
@@ -1116,11 +1116,11 @@
       },
       "breakout_level": 1.16999996,
       "provisional": false,
-      "last_bar": "2026-10-09",
-      "price": 0.935,
+      "last_bar": "2026-10-12",
+      "price": 0.94999999,
       "mcap": 656299904.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "OLI",
@@ -1148,7 +1148,7 @@
       "price": 0.007,
       "mcap": 3785123.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "29M",
@@ -1176,22 +1176,22 @@
       "price": 0.33000001,
       "mcap": 577525312.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "SMN",
       "name": "Structural Monitoring Systems Plc",
       "yf": "SMN.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.88,
-        "atr_pctl": 23.8,
-        "vol_pctl": 27.4,
-        "drawdown_pct": 55.4,
+        "ribbon_pct": 6.17,
+        "atr_pctl": 19.4,
+        "vol_pctl": 28.0,
+        "drawdown_pct": 56.1,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-09"
+        "coiled_bars": 6,
+        "last_coiled": "2026-10-12"
       },
       "base": {
         "high": 0.42500001,
@@ -1200,11 +1200,11 @@
       },
       "breakout_level": 0.42500001,
       "provisional": false,
-      "last_bar": "2026-10-09",
-      "price": 0.34999999,
+      "last_bar": "2026-10-12",
+      "price": 0.345,
       "mcap": 53684340.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "TMS",
@@ -1232,7 +1232,7 @@
       "price": 0.008,
       "mcap": 11973277.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AZI",
@@ -1260,7 +1260,7 @@
       "price": 0.026,
       "mcap": 20733876.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "MVP",
@@ -1288,7 +1288,7 @@
       "price": 0.43000001,
       "mcap": 48443080.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CAT",
@@ -1316,7 +1316,7 @@
       "price": 3.19000006,
       "mcap": 1007961920.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "RDS",
@@ -1370,6 +1370,34 @@
       "provisional": false,
       "last_bar": "2026-10-12",
       "price": 0.009,
+      "mcap": 9270653.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "yahoo"
+    },
+    {
+      "symbol": "SER",
+      "name": "Strategic Energy Resources Limited",
+      "yf": "SER.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.72,
+        "atr_pctl": 21.4,
+        "vol_pctl": 25.4,
+        "drawdown_pct": 71.4,
+        "coiled": true,
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-12"
+      },
+      "base": {
+        "high": 0.20999999,
+        "low": 0.11,
+        "bars": 60
+      },
+      "breakout_level": 0.20999999,
+      "provisional": false,
+      "last_bar": "2026-10-12",
+      "price": 0.2,
       "mcap": null,
       "mcap_asof": null,
       "mcap_src": null
@@ -1378,7 +1406,7 @@
       "symbol": "WEB",
       "name": "Webbeds Group Limited",
       "yf": "WEB.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.55,
@@ -1400,7 +1428,35 @@
       "price": 3.4000001,
       "mcap": 1221692544.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "GEN",
+      "name": "Genmin Limited",
+      "yf": "GEN.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.87,
+        "atr_pctl": 16.3,
+        "vol_pctl": 0.2,
+        "drawdown_pct": 96.4,
+        "coiled": true,
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-09"
+      },
+      "base": {
+        "high": 0.009,
+        "low": 0.006,
+        "bars": 60
+      },
+      "breakout_level": 0.009,
+      "provisional": false,
+      "last_bar": "2026-10-09",
+      "price": 0.0065,
+      "mcap": 20757216.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "previous"
     },
     {
       "symbol": "PKD",
@@ -1428,7 +1484,7 @@
       "price": 0.03,
       "mcap": 4480521.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "WOA",
@@ -1484,7 +1540,7 @@
       "price": 0.007,
       "mcap": 8438551.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "NRX",
@@ -1543,6 +1599,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "VEE",
+      "name": "Veem Ltd",
+      "yf": "VEE.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.09,
+        "atr_pctl": 23.4,
+        "vol_pctl": 4.8,
+        "drawdown_pct": 72.1,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-12"
+      },
+      "base": {
+        "high": 0.60000002,
+        "low": 0.46000001,
+        "bars": 60
+      },
+      "breakout_level": 0.60000002,
+      "provisional": false,
+      "last_bar": "2026-10-12",
+      "price": 0.56,
+      "mcap": 82179648.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "ADH",
       "name": "Adairs Limited",
       "yf": "ADH.AX",
@@ -1566,9 +1650,9 @@
       "provisional": false,
       "last_bar": "2026-10-12",
       "price": 1.23000002,
-      "mcap": 272387296.0,
-      "mcap_asof": "2026-08-11",
-      "mcap_src": "cache"
+      "mcap": 221750512.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "NGS",
@@ -1577,10 +1661,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.98,
-        "atr_pctl": 46.0,
-        "vol_pctl": 34.3,
-        "drawdown_pct": 88.9,
+        "ribbon_pct": 3.46,
+        "atr_pctl": 37.3,
+        "vol_pctl": 34.1,
+        "drawdown_pct": 88.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-06"
@@ -1592,11 +1676,11 @@
       },
       "breakout_level": 0.025,
       "provisional": false,
-      "last_bar": "2026-10-12",
-      "price": 0.02,
+      "last_bar": "2026-10-09",
+      "price": 0.021,
       "mcap": 19280826.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AEI",
@@ -1624,7 +1708,7 @@
       "price": 0.042,
       "mcap": 10356971.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "WOT",
@@ -1652,7 +1736,7 @@
       "price": 0.56999999,
       "mcap": 93107968.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ECS",
@@ -1680,19 +1764,19 @@
       "price": 0.005,
       "mcap": 8030247.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "TER",
       "name": "Terracom Limited",
       "yf": "TER.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.33,
-        "atr_pctl": 63.7,
-        "vol_pctl": 43.7,
-        "drawdown_pct": 85.4,
+        "ribbon_pct": 4.79,
+        "atr_pctl": 51.2,
+        "vol_pctl": 43.5,
+        "drawdown_pct": 84.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-07"
@@ -1704,11 +1788,11 @@
       },
       "breakout_level": 0.088,
       "provisional": false,
-      "last_bar": "2026-10-09",
-      "price": 0.063,
+      "last_bar": "2026-10-12",
+      "price": 0.067,
       "mcap": 122109056.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "HMC",
@@ -1736,7 +1820,7 @@
       "price": 2.91000009,
       "mcap": 1200711808.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "MOV",
@@ -1764,7 +1848,7 @@
       "price": 0.145,
       "mcap": 18504032.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "1CG",
@@ -1820,13 +1904,13 @@
       "price": 0.16,
       "mcap": 102432040.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "TGH",
       "name": "Terragen Holdings Limited",
       "yf": "TGH.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 7.51,
@@ -1848,7 +1932,7 @@
       "price": 0.018,
       "mcap": 14817581.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "BLZ",
@@ -1876,7 +1960,7 @@
       "price": 0.001,
       "mcap": 3306250.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "WNX",
@@ -1904,7 +1988,7 @@
       "price": 0.075,
       "mcap": 5257930.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "LPE",
@@ -1960,7 +2044,7 @@
       "price": 0.013,
       "mcap": 8435463.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "BSA",
@@ -1988,7 +2072,7 @@
       "price": 0.25999999,
       "mcap": 20878068.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "A3D",
@@ -2016,35 +2100,7 @@
       "price": 0.055,
       "mcap": 28799080.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
-    },
-    {
-      "symbol": "VEE",
-      "name": "Veem Ltd",
-      "yf": "VEE.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.64,
-        "atr_pctl": 25.8,
-        "vol_pctl": 4.0,
-        "drawdown_pct": 74.6,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-08"
-      },
-      "base": {
-        "high": 0.60000002,
-        "low": 0.46000001,
-        "bars": 60
-      },
-      "breakout_level": 0.60000002,
-      "provisional": false,
-      "last_bar": "2026-10-09",
-      "price": 0.50999999,
-      "mcap": 82179648.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ESR",
@@ -2128,7 +2184,7 @@
       "price": 0.026,
       "mcap": 5440163.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "HRE",
@@ -2156,7 +2212,7 @@
       "price": 0.038,
       "mcap": 10657740.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AQD",
@@ -2185,34 +2241,6 @@
       "mcap": 65708160.0,
       "mcap_asof": "2026-10-08",
       "mcap_src": "previous"
-    },
-    {
-      "symbol": "GEN",
-      "name": "Genmin Limited",
-      "yf": "GEN.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 12.5,
-        "atr_pctl": 41.7,
-        "vol_pctl": 0.4,
-        "drawdown_pct": 96.7,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-09"
-      },
-      "base": {
-        "high": 0.009,
-        "low": 0.006,
-        "bars": 60
-      },
-      "breakout_level": 0.009,
-      "provisional": false,
-      "last_bar": "2026-10-12",
-      "price": 0.006,
-      "mcap": 20757216.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
     },
     {
       "symbol": "DMP",
@@ -2268,7 +2296,7 @@
       "price": 0.017,
       "mcap": 7129127.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "BUX",
@@ -2296,7 +2324,7 @@
       "price": 0.034,
       "mcap": 14758344.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "OZM",
@@ -2324,35 +2352,7 @@
       "price": 0.072,
       "mcap": 20894536.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
-    },
-    {
-      "symbol": "OMX",
-      "name": "Orange Minerals Nl",
-      "yf": "OMX.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 13.75,
-        "atr_pctl": 13.7,
-        "vol_pctl": 3.8,
-        "drawdown_pct": 50.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-09-30"
-      },
-      "base": {
-        "high": 0.074,
-        "low": 0.054,
-        "bars": 60
-      },
-      "breakout_level": 0.074,
-      "provisional": false,
-      "last_bar": "2026-10-12",
-      "price": 0.06,
-      "mcap": 13003270.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PGD",
@@ -2380,35 +2380,7 @@
       "price": 0.13,
       "mcap": 14222913.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
-    },
-    {
-      "symbol": "ZNC",
-      "name": "Zenith Minerals Limited",
-      "yf": "ZNC.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 14.09,
-        "atr_pctl": 5.6,
-        "vol_pctl": 10.1,
-        "drawdown_pct": 64.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-05"
-      },
-      "base": {
-        "high": 0.115,
-        "low": 0.07,
-        "bars": 60
-      },
-      "breakout_level": 0.115,
-      "provisional": false,
-      "last_bar": "2026-10-08",
-      "price": 0.072,
-      "mcap": 47398912.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "OD6",
@@ -2436,7 +2408,7 @@
       "price": 0.094,
       "mcap": 27717058.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ALY",
@@ -2464,7 +2436,7 @@
       "price": 0.007,
       "mcap": 8316534.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AJX",
@@ -2492,7 +2464,63 @@
       "price": 0.006,
       "mcap": 19005758.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "OMX",
+      "name": "Orange Minerals Nl",
+      "yf": "OMX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 15.3,
+        "atr_pctl": 8.3,
+        "vol_pctl": 6.6,
+        "drawdown_pct": 50.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-09-30"
+      },
+      "base": {
+        "high": 0.074,
+        "low": 0.054,
+        "bars": 60
+      },
+      "breakout_level": 0.074,
+      "provisional": false,
+      "last_bar": "2026-10-09",
+      "price": 0.06,
+      "mcap": 13003270.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "ZNC",
+      "name": "Zenith Minerals Limited",
+      "yf": "ZNC.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 15.49,
+        "atr_pctl": 4.0,
+        "vol_pctl": 11.5,
+        "drawdown_pct": 63.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-05"
+      },
+      "base": {
+        "high": 0.115,
+        "low": 0.07,
+        "bars": 60
+      },
+      "breakout_level": 0.115,
+      "provisional": false,
+      "last_bar": "2026-10-12",
+      "price": 0.074,
+      "mcap": 47398912.0,
+      "mcap_asof": "2026-10-12",
+      "mcap_src": "previous"
     },
     {
       "symbol": "RCR",
@@ -2520,7 +2548,7 @@
       "price": 0.012,
       "mcap": 6266749.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "M4M",
@@ -2548,7 +2576,7 @@
       "price": 0.006,
       "mcap": 27453786.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "NXM",
@@ -2576,7 +2604,7 @@
       "price": 0.047,
       "mcap": 33165380.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AGE",
@@ -2604,7 +2632,7 @@
       "price": 0.035,
       "mcap": 169179440.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "DES",
@@ -2632,7 +2660,7 @@
       "price": 0.115,
       "mcap": 31830340.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "RAU",
@@ -2660,7 +2688,7 @@
       "price": 0.23,
       "mcap": 27968382.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "KNB",
@@ -2688,7 +2716,7 @@
       "price": 0.021,
       "mcap": 25900610.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "G88",
@@ -2697,10 +2725,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 20.63,
-        "atr_pctl": 15.5,
+        "ribbon_pct": 19.74,
+        "atr_pctl": 13.3,
         "vol_pctl": 0.2,
-        "drawdown_pct": 81.5,
+        "drawdown_pct": 79.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-06"
@@ -2713,21 +2741,21 @@
       "breakout_level": 0.009,
       "provisional": false,
       "last_bar": "2026-10-12",
-      "price": 0.005,
+      "price": 0.0055,
       "mcap": 3755258.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "SVY",
       "name": "Stavely Minerals Limited",
       "yf": "SVY.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 20.84,
-        "atr_pctl": 12.1,
-        "vol_pctl": 0.4,
+        "ribbon_pct": 21.16,
+        "atr_pctl": 5.8,
+        "vol_pctl": 0.2,
         "drawdown_pct": 82.7,
         "coiled": false,
         "coiled_bars": 0,
@@ -2740,11 +2768,11 @@
       },
       "breakout_level": 0.019,
       "provisional": false,
-      "last_bar": "2026-10-09",
+      "last_bar": "2026-10-12",
       "price": 0.013,
       "mcap": 13423963.0,
       "mcap_asof": "2026-10-12",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
