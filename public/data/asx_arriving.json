@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-09T16:44:43+11:00",
+  "generated_at": "2026-10-12T11:17:43+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "VVA",
-      "name": "Viva Leisure Limited",
-      "sector": "Consumer Services",
-      "dir": "SHORT",
-      "price": 1.505,
-      "turnover_avg20": 91873,
-      "turnover_today": 419154,
-      "rvol": 4.6,
-      "adv_usd": 91873.85,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "AQN",
       "name": "Aquirian Limited",
