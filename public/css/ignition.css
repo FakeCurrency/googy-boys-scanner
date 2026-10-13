@@ -58,7 +58,7 @@
 /* STALE is red on purpose: the evidence this lens reads is not current. */
 .ig-stale {
   display: inline-block; margin-left: 6px; padding: 3px 7px; border-radius: 6px;
-  font: 800 12px/1.2 var(--sans); color: var(--red); background: var(--red-soft); cursor: help;
+  font: 800 12px/1.2 var(--sans); color: var(--red-ink); background: var(--red-soft); cursor: help;
 }
 /* Regime + "N coins behind": context, so the lag line stays muted. */
 .ig-meta {
@@ -80,7 +80,7 @@
 .ig-ev-k { font-weight: 800; color: var(--text-2); cursor: help; }
 .ig-ev-i[title] { cursor: help; }
 .ig-ev-cav { color: var(--orange); cursor: help; }
-.ig-ev-warn { color: var(--red); font-weight: 700; }
+.ig-ev-warn { color: var(--red-ink); font-weight: 700; }
 .ig-ev.is-pending { color: var(--muted-2); font-style: italic; }
 /* The decision number (edge over random timing) is set apart from the rest. */
 .ig-ev-dec {
@@ -113,6 +113,13 @@ details.ig-coiled > summary::before {
 }
 details.ig-coiled[open] > summary::before { transform: rotate(90deg); }
 details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+/* An open COILED list runs to ~15,000px on a phone and could only be folded
+   from its top. The heading now rides under the top bar while the list is
+   open, so it can be closed from anywhere in it (UI review 2026-10-13). */
+#ignition-panel details.ig-coiled[open] > summary {
+  position: sticky; top: var(--topbar-h, 53px); z-index: 3;
+  background: var(--panel-2); padding-block: 8px;
+}
 /* What a trigger IS, in one line, under the COILED heading. */
 .ig-explain { max-width: 1120px; margin: 0 0 10px; font: 500 13px/1.5 var(--sans); color: var(--muted); }
 
@@ -121,7 +128,7 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
   font: 800 14.5px/1.25 var(--sans); color: var(--text); text-decoration: none;
   overflow-wrap: anywhere; min-width: 0;
 }
-.ig-sym:hover { color: var(--blue); text-decoration: underline; }
+.ig-sym:hover { color: var(--blue-ink); text-decoration: underline; }
 .ig-sym:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
 .ig-name { font: 500 13px/1.3 var(--sans); color: var(--muted); min-width: 0; }
 /* Where the bars came from (Binance / Coinbase / Yahoo / Cached). */
@@ -138,7 +145,7 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
 }
 .ig-tag[title] { cursor: help; }
 .ig-tag.is-prov { color: var(--orange); background: var(--orange-soft); }
-.ig-tag.is-wide { color: var(--red); background: var(--red-soft); }
+.ig-tag.is-wide { color: var(--red-ink); background: var(--red-soft); }
 .ig-tag.is-flat { color: var(--muted-2); background: transparent; border: 1px dashed var(--border-2); font-weight: 600; }
 /* Market cap: plain, one colour. Nearly every coiled ASX name is small, so a
    size colour would read as hype on a report-only lens. */
@@ -179,7 +186,7 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
 .ig-out { flex: 0 0 auto; text-align: right; cursor: help; }
 .ig-out b { display: block; font: 800 24px/1.1 var(--sans); color: var(--text); white-space: nowrap; }
 .ig-out.is-up b { color: var(--green); }
-.ig-out.is-down b { color: var(--red); }
+.ig-out.is-down b { color: var(--red-ink); }
 .ig-out span { display: block; margin-top: 3px; font: 600 12px/1.25 var(--sans); color: var(--muted-2); white-space: nowrap; }
 .ig-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 6px; margin-top: 8px; }
 
@@ -187,7 +194,7 @@ details.ig-coiled > summary:focus-visible { outline: 2px solid var(--blue); outl
 .ig-story p { margin: 7px 0 0; font: 500 14px/1.5 var(--sans); color: var(--text-2); }
 .ig-story b { font-weight: 650; color: var(--text); }
 .ig-story b.is-up { color: var(--green); }
-.ig-story b.is-down { color: var(--red); }
+.ig-story b.is-down { color: var(--red-ink); }
 
 .ig-levels {
   display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 10px 0 0; padding-top: 10px;

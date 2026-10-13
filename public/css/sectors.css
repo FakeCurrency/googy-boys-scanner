@@ -5,7 +5,18 @@
 
 /* two columns side by side; stack on narrow screens */
 .sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
-.sec-col { min-width: 0; }
+/* scroll-margin: the jump link must land the column head BELOW the sticky topbar */
+.sec-col { min-width: 0; scroll-margin-top: 72px; }
+
+/* Once the columns stack (<=900px) the US column starts ~3,000px down;
+   this link is the way there. Hidden while both columns sit side by side. */
+.sec-jump { display: none; }
+.sec-jump a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px;
+  border-radius: 999px; background: var(--fill); border: 1px solid var(--border);
+  font: 700 13px/1 var(--sans); color: var(--text); text-decoration: none;
+}
+.sec-jump a:hover { border-color: var(--blue); }
 
 .col-head { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 2px solid var(--separator); }
 .col-flag { font-size: 22px; line-height: 1; }
@@ -26,24 +37,27 @@
 .mv-col { background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .mv-head { font: 700 12px/1 var(--sans); padding: 12px 14px; border-bottom: 0.5px solid var(--separator); }
 .mv-head.up { color: var(--green); }
-.mv-head.down { color: var(--red); }
+.mv-head.down { color: var(--red-ink); }
 .mv-list { list-style: none; margin: 0; padding: 0; }
 .mv-tier-label {
-  font: 700 9.5px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase;
+  font: 700 11px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); padding: 9px 14px 6px; background: var(--fill-2);
   border-bottom: 0.5px solid var(--border-soft);
 }
 .mv-item { display: grid; grid-template-columns: auto 1fr auto auto; align-items: baseline; gap: 8px; padding: 9px 14px; border-bottom: 0.5px solid var(--border-soft); }
 .mv-item:last-child { border-bottom: 0; }
 .mv-sym { font: 800 13px/1 var(--sans); color: var(--text); }
-.mv-name { font: 500 11px/1.3 var(--sans); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Names wrap (capped at 3 lines) instead of clipping: on one line most were
+   cut to "National Australia Bank Li…" with no way to read the rest on a phone. */
+.mv-name { font: 500 11px/1.3 var(--sans); color: var(--muted); overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow-wrap: anywhere; }
 .mv-cap { font: 600 11px/1 var(--sans); color: var(--muted-2); white-space: nowrap; }
 .mv-pct { font: 700 13px/1 var(--sans); }
 .mv-empty { padding: 12px 14px; color: var(--muted); font-size: 13px; }
 
 /* up / down figures */
 .sec-up { color: var(--green); }
-.sec-down { color: var(--red); }
+.sec-down { color: var(--red-ink); }
 
 /* upcoming events */
 .sec-upcoming { background: var(--panel); border-radius: var(--radius); padding: 6px 18px; box-shadow: var(--shadow); border-left: 5px solid var(--green); }
@@ -52,8 +66,8 @@
 .upc-item:last-child { border-bottom: 0; }
 .upc-when { font: 600 12px/1 var(--sans); color: var(--muted); min-width: 116px; }
 .upc-title { font: 700 13.5px/1.3 var(--sans); color: var(--text); flex: 1; min-width: 140px; }
-.upc-impact { font: 700 9.5px/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 8px; border-radius: 100px; }
-.upc-impact.high { color: var(--red); background: var(--red-soft); }
+.upc-impact { font: 700 11px/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 8px; border-radius: 100px; }
+.upc-impact.high { color: var(--red-ink); background: var(--red-soft); }
 .upc-impact.medium { color: var(--orange); background: var(--orange-soft); }
 .upc-fp { font: 500 11.5px/1 var(--sans); color: var(--muted); width: 100%; }
 .upc-empty { font-size: 13px; color: var(--muted); padding: 12px 0; list-style: none; }
@@ -66,13 +80,13 @@
 .macro-label { font: 700 11px/1 var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .macro-title { font: 800 17px/1.2 var(--sans); color: var(--text); margin: 8px 0 4px; }
 .macro-when { font: 600 12.5px/1 var(--sans); color: var(--muted); }
-.macro-countdown { font: 800 24px/1.1 var(--sans); color: var(--blue); margin: 8px 0; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.macro-countdown { font: 800 24px/1.1 var(--sans); color: var(--blue-ink); margin: 8px 0; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .macro-countdown.live { color: var(--orange); font-size: 17px; }
 .macro-exp { font: 500 13.5px/1.5 var(--sans); color: var(--text-2); }
 .macro-result-row { display: flex; gap: 12px; flex-wrap: wrap; font: 600 13.5px/1.4 var(--sans); color: var(--text-2); margin: 6px 0; }
 .macro-actual b { color: var(--text); }
 .macro-tone { font: 700 14px/1.4 var(--sans); margin: 6px 0 4px; }
-.macro-tone.tone-hawkish { color: var(--red); }
+.macro-tone.tone-hawkish { color: var(--red-ink); }
 .macro-tone.tone-dovish { color: var(--green); }
 .macro-tone.tone-neutral { color: var(--muted); }
 .macro-note { font: 500 11px/1.4 var(--sans); color: var(--muted-2); }
@@ -101,6 +115,7 @@
 
 @media (max-width: 900px) {
   .sec-grid { grid-template-columns: 1fr; gap: 32px; }
+  .sec-jump { display: flex; margin-top: 12px; }
   .topbar { flex-wrap: wrap; gap: 10px; }
 }
 @media (max-width: 460px) {

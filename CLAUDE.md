@@ -2560,6 +2560,38 @@ Screenshot baselines v22 → v23 (below).
 - The write-up of what the strip was (ranking, the four dismissal rules) is in
   `docs/claude-history.md`. Do not re-add it.
 
+## UI REVIEW — mobile + desktop (2026-10-13, owner: "Complete user interface REVIEW and FIX")
+
+~150 findings from 16 specialist reviewers plus 4 post-fix verifiers; layout,
+readability, reachability and a11y only — no data, signal, grade or trade path
+moved. The decisions a later session must not undo:
+
+- **Text uses the -ink tokens** (`--blue-ink #4da3ff`, `--red-ink #ff6961`,
+  `--purple-ink #da8fff`; `--grade-a` is `#4da3ff`): the system blue/red/purple
+  failed WCAG AA as TEXT on the dark panels (blue 4.37:1, 3.57 on its tint).
+  Fills, borders and white-on-colour buttons stay on the base tokens (white on
+  a lighter blue would fail instead). New text colour = the -ink twin.
+- **The top pill strip is hidden on phones again** (`.nav-pills, .deck-top
+  .nav-pills { display:none }` at <=680): a later `.deck-top .nav-pills{display:flex}`
+  had re-shown a clipped duplicate of the tab bar on every deck-top page. Above
+  680 the pills take their OWN header row in per-header width bands (`:has()`
+  on what the header holds: clocks to 1919, momentum to 1699, PhaseMap to 1599,
+  market-switch pages to 1299, the rest to 1199), so every pill incl. MORE is
+  visible at every width. Every page now uses `topbar deck-top`.
+- **Journal on phones**: two-column cards, the closed list previews 10 (the card
+  CSS used to beat `.jr-row-more{display:none}`, rendering all 110), the STALLED
+  strip is two-line rows with an internal scroll; a failed book load shows a
+  failure message, never a fake $150,000 / 0-open book.
+- **Chart MACD/RSI panes** keep one point per candle (warm-up bars are empty
+  `{time}` points): the three charts sync by bar INDEX, so dropping warm-up
+  bars had drawn the panes up to ~150px out of step with the price.
+- Deck rows on phones: chips get their own full-width line (`.row-main{display:
+  contents}`); the last visible chip takes the squeeze (1000:1 shrink weights).
+  The sort control is pinned again (`#toolbar .tb-line > .tb-sort`).
+- Touch: `nav.js tipPop()` shows a non-interactive `[title]` as a popover on
+  `(hover:none)` — never preventDefault, so the row still expands.
+- Screenshot baselines v23 -> v24 (drift recorded in test.yml).
+
 ## CHECK-IN SKILL — "how's the scanner?" (2026-10-08, owner: "I'm very happy")
 
 `.claude/skills/vivek5-checkin/` answers the owner's status questions ("how's

@@ -140,6 +140,10 @@
   // stays in its home slot. Pure DOM moves, no measuring, so a media-query
   // listener can drive it and a test can run it without a browser.
   const PHONE_MQ = "(max-width: 560px)";   // the #72 breakpoint in chart.css
+  // Below this CANVAS width the on-chart text goes terse: level tags drop
+  // their "% vs live" / "· nR" suffix and Momentum labels drop their words.
+  // Read off the canvas, not the viewport, so a narrow desktop window counts.
+  const NARROW_CHART_PX = 560;
   function placeMomTfBar(bar, beforePane, home, phone) {
     if (!bar || !home || !home.parent) return;
     if (phone) {
@@ -1071,16 +1075,24 @@
   }
 
   // MACD + RSI pane series for a timeframe, Pine-seeded throughout.
+  //
+  // ONE POINT PER BAR, ALWAYS (2026-10-13). The panes are separate charts kept
+  // in step with the price chart by LOGICAL index (bar number), so pane bar i
+  // must be price bar i. Warm-up bars used to be dropped, which made the MACD
+  // pane's bar 0 the price chart's bar ~25 and the RSI pane's bar ~14: both
+  // panes were drawn that many bars early against the candles. A warm-up bar
+  // is now a whitespace point ({ time } with no value): nothing is drawn, but
+  // it still counts as a bar. No value is changed.
   function momentumPanes(bars) {
     const cl = bars.map((b) => b.close);
     const m = macdPine(cl, TV_PLAN.macd[0], TV_PLAN.macd[1], TV_PLAN.macd[2]);
     const rsi = rsiPine(cl, TV_PLAN.rsiLen);
-    const at = (arr) => bars.map((b, i) => (isFinite(arr[i]) ? { time: b.time, value: arr[i] } : null)).filter(Boolean);
+    const at = (arr) => bars.map((b, i) => (isFinite(arr[i]) ? { time: b.time, value: arr[i] } : { time: b.time }));
     return {
       macd: at(m.line), macdSignal: at(m.signal),
       macdHist: bars.map((b, i) => (isFinite(m.hist[i])
         ? { time: b.time, value: m.hist[i],
-            color: m.hist[i] >= 0 ? "rgba(47,208,127,0.7)" : "rgba(255,91,91,0.7)" } : null)).filter(Boolean),
+            color: m.hist[i] >= 0 ? "rgba(47,208,127,0.7)" : "rgba(255,91,91,0.7)" } : { time: b.time })),
       rsi: at(rsi),
       // RSI+ draws the RSI and its MA together with a fill between them; the
       // MA is an SMA(14) of the RSI by default (maType "SMA").
@@ -2551,6 +2563,7 @@
     // (see THREE REAL PANES below). Momentum only -- a 5.0 chart adds no
     // series and keeps its scale margins.
     let macdHistS = null, macdLineS = null, macdSigS = null, rsiS = null, rsiSigS = null;
+    let alignPaneScales = () => {};   // set below; equal price-axis widths on all three charts
     let subCharts = [];
     if (d._momentum) {
       // ── THREE REAL PANES ──────────────────────────────────────────────────
@@ -2628,12 +2641,36 @@
       // Time-sync, both ways, behind one re-entrancy guard.
       let syncing = false;
       const chain = [chart, macdChart, rsiChart];
+      // EQUAL AXIS WIDTHS (2026-10-13). A shared logical range only puts bar i
+      // at the same x on all three charts if their PLOT areas are equally wide,
+      // and each chart sizes its price axis to its own labels ("100" on the RSI
+      // pane was 64px against the price chart's 58px), so the panes drifted
+      // against the candles towards the right edge. Every chart's axis is held
+      // at least as wide as the widest one; re-checked once per frame after a
+      // range change, because the labels (and so the widths) move with zoom.
+      let alignRaf = 0;
+      alignPaneScales = () => {
+        if (alignRaf) return;
+        alignRaf = requestAnimationFrame(() => {
+          alignRaf = 0;
+          try {
+            const ws = chain.map((c) => c.priceScale("right").width());
+            const w = Math.max(...ws);
+            if (!(w > 0)) return;
+            chain.forEach((c, i) => {
+              if (ws[i] !== w) c.applyOptions({ rightPriceScale: { minimumWidth: w } });
+            });
+          } catch (_) { /* a refused width must never cost the chart */ }
+        });
+      };
+      onRenderTeardown(() => { if (alignRaf) cancelAnimationFrame(alignRaf); alignRaf = 0; });
       chain.forEach((c) => {
         c.timeScale().subscribeVisibleLogicalRangeChange((r) => {
           if (syncing || !r) return;
           syncing = true;
           try { chain.forEach((o) => { if (o !== c) o.timeScale().setVisibleLogicalRange(r); }); }
           finally { syncing = false; }
+          alignPaneScales();
         });
       });
       // Crosshair follows across the panes, as TV's does.
@@ -2807,7 +2844,7 @@
           `<b>WANTED NEXT</b> · ${esc(pmRec.next)}</span>` : "") +
         `<span style="flex:1 1 100%;color:#98a2b5;line-height:1.5">${esc(pmRec.narration || "")}</span>` +
         `<span style="flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center">` +
-          `<span style="color:#6d7889">ZONES</span>` +
+          `<span style="color:var(--muted-2)">ZONES</span>` +
           groups.map((g) => `<button class="pm-zone-toggle" data-zg="${g}" style="cursor:pointer;` +
             `font:inherit;padding:2px 9px;border-radius:999px;border:1px solid #2a3242;` +
             `background:${zHide[g] ? "transparent" : "#1a2130"};color:${zHide[g] ? "#5b6577" : GROUP_COL[g]};` +
@@ -2818,7 +2855,13 @@
             `title="Cycle band opacity — subtle / normal / bold (saved)">◐ ${esc(zOp.toUpperCase())}</button>` +
         `</span>` +
         `<a href="phasemap.html" style="color:#37d0c4">PhaseMap tab →</a>`;
-      el.insertAdjacentElement("afterend", strip);
+      // In the footer, not straight after the canvas (2026-10-13): on phones
+      // the D / 3D / W bar sits under .chart-main (chart.css #72), so a strip
+      // inside .chart-main pushed it ~250px down and off the first screen.
+      // Desktop reads the same: chart, then this strip, then the metrics.
+      const foot = document.querySelector(".chart-foot");
+      if (foot) foot.prepend(strip); else el.insertAdjacentElement("afterend", strip);
+      onRenderTeardown(() => strip.remove());
       strip.querySelectorAll(".pm-zone-toggle").forEach((btn) => btn.addEventListener("click", () => {
         const g = btn.dataset.zg;
         zHide[g] = !zHide[g];
@@ -3033,11 +3076,18 @@
       vkHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
       vkHandles = [];
       const ep = lv.entry;
+      // NARROW CHARTS (phones, < 560px): the bare name only. "200 SMA·D +1.90%
+      // vs live" spanned over half a 322px plot and sat on the newest candles;
+      // the axis tag still prints the price and the footer carries the
+      // distances and the R ladder. Read once per timeframe paint.
+      const bare = el.clientWidth > 0 && el.clientWidth < NARROW_CHART_PX;
       // weight: 2 = the actionable trade (SL/Entry/TP1), 1 = context/secondary.
       const line = (price, color, label, weight, dotted) => {
         if (price == null || !isFinite(price)) return;
         let t = label;
-        if (ep && ep > 0 && price !== ep) {
+        if (bare) {
+          // no suffix: see NARROW CHARTS above
+        } else if (ep && ep > 0 && price !== ep) {
           const pct = (price - ep) / ep * 100;
           t += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
           const rd = lv.stop ? Math.abs(ep - lv.stop) : 0;
@@ -3331,6 +3381,7 @@
             try { c.timeScale().setVisibleLogicalRange(momView); } catch (_) { /* never cost the chart */ }
           });
         }
+        alignPaneScales();
       }
       if (d._momentum && typeof candle.setMarkers === "function") {
         // Rule A marks for THIS timeframe (only 1D carries any) PLUS the scored
@@ -3340,7 +3391,13 @@
         // ?pm=1 brings a PhaseMap record with a sweep/displacement,
         // applyPmZones re-seeds from tfs[key].markers (Rule A marks only) and
         // so drops these cross labels on that timeframe.
-        const base = ((tfs[key] || {}).markers || []).slice();
+        // NARROW CHARTS (< 560px): "BULL DIV" -> "DIV", "confirmed" -> a tick,
+        // and a cross reads as its signed score alone ("+2"), because on a
+        // phone the words piled into each other and under the TP tags.
+        const narrow = el.clientWidth > 0 && el.clientWidth < NARROW_CHART_PX;
+        const SHORT_TXT = { "BULL DIV": "DIV", "BEAR DIV": "DIV", confirmed: "\u2713" };
+        const base = ((tfs[key] || {}).markers || []).map((m) =>
+          (narrow && SHORT_TXT[m.text] ? Object.assign({}, m, { text: SHORT_TXT[m.text] }) : m));
         const cs = (tfs[key] || {}).candles || [];
         // P5 LABEL DIET. Every cross in five years carried a text label, so the
         // flat 2021-2024 tape wore a pile-up of them that no one will ever read
@@ -3356,11 +3413,12 @@
           if (!b) continue;
           const inWindow = b.time >= tMin && x.score !== 0 && !titled.has(b.time);
           if (inWindow) titled.add(b.time);
+          const signed = `${x.bull ? "+" : "-"}${x.score}`;
           base.push({
             time: b.time, position: x.bull ? "belowBar" : "aboveBar",
             color: x.bull ? "rgba(59,130,246,0.85)" : "rgba(239,68,68,0.85)",
             shape: "circle",
-            text: inWindow ? `${x.bull ? "+" : "-"}${x.score} ${x.bull ? "Bullish" : "Bearish"}` : "",
+            text: inWindow ? (narrow ? signed : `${signed} ${x.bull ? "Bullish" : "Bearish"}`) : "",
           });
         }
         // setMarkers requires ascending unique times; a cross and a Rule A mark
@@ -3804,6 +3862,10 @@
       ts.subscribeVisibleLogicalRangeChange(redraw);
 
       function selectTool(name, btn) {
+        // Phones: the tools live in the bottom sheet, which covered the chart
+        // you just picked a tool to draw on. Close it so the next tap lands on
+        // the canvas.
+        if (name !== "cursor" && window.__ctSheet) window.__ctSheet.close();
         tool = name; pending = null; hover = null; measureDrag = null; eraseIdx = -1;
         if (name !== "measure") { measure = null; }     // leaving measure clears the box
         if (tools && btn) tools.querySelectorAll(".draw-btn[data-tool]").forEach((x) => x.classList.toggle("is-active", x === btn));
@@ -4002,6 +4064,9 @@
         replayCtl.active = true;
         btn.classList.add("is-active");
         bar.hidden = false;
+        // chart.css hides the phone ✏ FAB while this is set: it sat on top of
+        // the bar's ✕, so a tap meant to exit replay opened the tools sheet.
+        document.body.classList.add("is-replay");
         slider.min = "12"; slider.max = String(c.length);
         rApply(sigIdx());
       }
@@ -4011,6 +4076,7 @@
         replayCtl.active = false;
         btn.classList.remove("is-active");
         bar.hidden = true;
+        document.body.classList.remove("is-replay");
         applyTF(curTF);                 // full restore of the real view
       }
       replayCtl.abort = () => {         // applyTF repaints anyway — just reset UI state
@@ -4018,6 +4084,7 @@
         replayCtl.active = false;
         btn.classList.remove("is-active");
         bar.hidden = true;
+        document.body.classList.remove("is-replay");
       };
       const togglePlay = () => {
         if (timer) { stopPlay(); return; }
@@ -4492,9 +4559,11 @@
   // reclaim at the 200-SMA can grade as a short reject hours later — so the
   // chart must state loudly what direction the position was TAKEN as, and
   // shout when the current read disagrees.
-  // Mounted from boot() into the STATIC .chart-main container, so it shows
-  // on every render path (held position, Momentum, VIVEK, PhaseMap-only,
-  // live fallback).
+  // Mounted from boot() just ABOVE the STATIC .chart-main container, so it
+  // shows on every render path (held position, Momentum, VIVEK, PhaseMap-only,
+  // live fallback). Outside it, not inside (2026-10-13): .chart-main is the
+  // positioned box the SMA legend is pinned to (top:20px), so a banner as its
+  // first child sat UNDER the legend and "CLAUDE IS LONG" was overprinted.
   async function wireBotPosBanner() {
     if (market === "scalp") return;
     const host = document.querySelector(".chart-main");
@@ -4531,7 +4600,7 @@
         `<div class="bpb-head">🤖 CLAUDE IS <b class="bpb-dir">${isLong ? "▲ LONG" : "▼ SHORT"}</b> ${esc(want)}` +
         `<span class="bpb-sub">taken ${esc(pos.entry_date || "")} @ ${fp(pos.entry)} · SL ${fp(pos.stop)} · TP1 ${fp(pos.tp1)}</span></div>` +
         flip;
-      host.insertBefore(div, host.firstChild);
+      host.parentNode.insertBefore(div, host);
     } catch (_) { /* banner is best-effort */ }
   }
 
@@ -4797,6 +4866,9 @@
     window.__ctSheet = { close: () => setOpen(false), analyzeRow: anRow };
     fab.addEventListener("click", () => setOpen(sheet.hidden));
     scrim.addEventListener("click", () => setOpen(false));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !sheet.hidden) { setOpen(false); fab.focus(); }
+    });
     document.body.append(scrim, sheet, fab);
   }
 

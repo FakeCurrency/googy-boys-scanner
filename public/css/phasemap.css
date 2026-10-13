@@ -4,11 +4,11 @@
    green = targets / expansion · grey = neutral · blue = current price marker */
 :root {
   --pm-trap: var(--orange);      --pm-trap-soft: var(--orange-soft);
-  --pm-kill: var(--red);         --pm-kill-soft: var(--red-soft);
+  --pm-kill: var(--red-ink);         --pm-kill-soft: var(--red-soft);
   --pm-target: var(--green);     --pm-target-soft: var(--green-soft);
   --pm-neutral: var(--muted);    --pm-neutral-soft: rgba(109,120,137,0.12);
   --pm-entry: var(--teal);       --pm-entry-soft: rgba(55,208,196,0.12);
-  --pm-price: var(--blue);
+  --pm-price: var(--blue-ink);
 }
 .pm-legend-link { color: var(--teal); }
 
@@ -64,7 +64,7 @@
 .pm-ticker { font-family: var(--mono); font-weight: 700; font-size: 16px; letter-spacing: 0.03em; }
 .pm-dir { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 .pm-dir-long  { color: var(--green); background: var(--green-soft); }
-.pm-dir-short { color: var(--red);   background: var(--red-soft); }
+.pm-dir-short { color: var(--red-ink);   background: var(--red-soft); }
 .pm-state { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.06em; }
 .pm-state-TRAP_SET  { color: var(--pm-trap); background: var(--pm-trap-soft); }
 .pm-state-SWEPT     { color: var(--pm-trap); background: var(--pm-trap-soft); }
@@ -83,7 +83,7 @@
   border: 1px solid var(--border-2); padding: 1px 6px; border-radius: 3px; letter-spacing: 0.05em;
 }
 .pm-tag-illiquid { color: var(--orange); border-color: rgba(255,178,36,0.45); }
-.pm-tag-halt     { color: var(--red); border-color: rgba(255,91,91,0.45); }
+.pm-tag-halt     { color: var(--red-ink); border-color: rgba(255,91,91,0.45); }
 .pm-speak {
   margin-left: auto; cursor: pointer; border: 1px solid var(--border);
   background: var(--fill); color: var(--text-2); border-radius: var(--radius-sm);
@@ -100,7 +100,7 @@
   border: 1px solid var(--border); padding: 1px 6px; border-radius: 3px;
   letter-spacing: 0.04em;
 }
-.pm-tag-fund { color: var(--purple); border-color: rgba(167,139,250,0.45); }
+.pm-tag-fund { color: var(--purple-ink); border-color: rgba(167,139,250,0.45); }
 
 /* ------------------------------------------------------------- zone ladder */
 .pm-ladder { margin: 12px 0 10px; display: flex; flex-direction: column; gap: 3px; }
@@ -216,10 +216,14 @@
 .al-search:focus { border-color: var(--blue); }
 
 @media (max-width: 560px) {
-  .pm-rung { grid-template-columns: 96px 1fr; }
-  .pm-rung-prices { font-size: 9.5px; }
+  /* 104px holds the longest band at 11px ("-0.2951–-0.1705"); the CURRENT
+     price row uses the same column so its label lines up with the bands. */
+  .pm-rung { grid-template-columns: 104px 1fr; }
+  .pm-price-row { grid-template-columns: 104px 1fr; }
+  .pm-rung-prices { font-size: 11px; }
   .pm-band-sources { display: none; }
-  .pm-search { width: 100%; margin-left: 0; }
+  /* the phone .pm-search rule lives at the END of this file (later width
+     rules used to override one placed here) */
 }
 
 /* Legibility pass 2 — bolder, bigger controls to match the dashboard */
@@ -260,7 +264,7 @@
 .pm-dir, .pm-state, .pm-tier { padding: 3px 10px; font-weight: 700; }
 .pm-tag { padding: 2px 8px; font-size: 10px; }
 .pm-speak { border-radius: 999px; font-family: var(--sans); font-weight: 600; padding: 5px 12px; }
-.pm-title { font-family: var(--sans); font-weight: 800; letter-spacing: -0.015em; font-size: 22px; }
+.pm-title { font-family: var(--sans); font-weight: 800; letter-spacing: -0.015em; font-size: 26px; }
 .pm-sub { font-family: var(--sans); font-weight: 500; }
 .pm-lg-section h3 { font-family: var(--sans); font-weight: 800; letter-spacing: 0.02em; }
 .al-lenses { font-family: var(--sans); }
@@ -325,7 +329,7 @@
 /* presets + active-filter chips */
 .pm-presets { display: flex; gap: 6px; flex-wrap: wrap; margin: -6px 0 10px; }
 .pm-preset-x { margin-left: 6px; color: var(--muted-2); }
-.pm-preset-x:hover { color: var(--red); }
+.pm-preset-x:hover { color: var(--red-ink); }
 .pm-preset-save { color: var(--teal); border-style: dashed; }
 .pm-active { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0 0 10px; }
 .pm-active-chip, .pm-active-clear {
@@ -333,7 +337,7 @@
   padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-2);
   background: var(--fill); color: var(--text-2);
 }
-.pm-active-clear { color: var(--red); border-color: rgba(255,69,58,0.4); background: transparent; }
+.pm-active-clear { color: var(--red-ink); border-color: rgba(255,69,58,0.4); background: transparent; }
 
 /* density modes — compact: head + stepper only · cozy: clamp the prose */
 .pm-density-compact .pm-ladder, .pm-density-compact .pm-narration,
@@ -367,7 +371,7 @@
 .pm-since b { color: var(--text); }
 .pm-since-x { margin-left: auto; background: none; border: 0; cursor: pointer;
   color: var(--muted); font-size: 13px; padding: 2px 6px; }
-.pm-tag-new { color: var(--blue); border-color: rgba(10,132,255,0.5); font-weight: 700; }
+.pm-tag-new { color: var(--blue-ink); border-color: rgba(10,132,255,0.5); font-weight: 700; }
 
 /* keyboard focus — a visible ring the mouse never shows */
 .pm-card-link:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
@@ -379,7 +383,9 @@
   background: var(--panel-3); color: var(--teal); font: 800 17px/1 var(--sans);
   box-shadow: var(--shadow);
 }
-.pm-gloss { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,0.45); }
+/* z 90: above the phone tab bar (.site-tabs, z 80), so the drawer's last
+   entries are not hidden under it */
+.pm-gloss { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,0.45); }
 .pm-gloss-panel {
   position: absolute; top: 0; right: 0; bottom: 0; width: min(400px, 92vw);
   background: var(--panel); box-shadow: -8px 0 30px rgba(0,0,0,0.5);
@@ -392,7 +398,7 @@
 .pm-gloss-head b { font-size: 15px; letter-spacing: 0.04em; }
 .pm-gloss-head a { font-size: 11px; font-weight: 700; color: var(--teal); text-decoration: none; }
 .pm-gloss-head button { margin-left: auto; background: none; border: 0; cursor: pointer;
-  color: var(--muted); font-size: 15px; padding: 4px 8px; }
+  color: var(--muted); font-size: 15px; padding: 4px 8px; min-width: 40px; min-height: 40px; }
 .pm-gloss-body { overflow-y: auto; padding: 6px 16px 20px; }
 .pm-gloss-item { padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
 .pm-gloss-item b { font-family: var(--sans); font-size: 13.5px; color: var(--text); }
@@ -469,3 +475,99 @@ body.pm-gloss-open { overflow: hidden; }
   border: 1px solid var(--green); border-radius: 999px; padding: 2.5px 7px;
 }
 .spg-days { margin-left: auto; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+
+/* ═══ UI review fixes (2026-10-13) — layout and legibility only. Nothing
+   here changes what a page shows or computes. ═══ */
+
+/* PHASEMAP: the deck holds a title and one status line. The index page's
+   CLS reservations (.deck / .deck-status min-height, styles.css) left
+   100-140px of empty panel here on phones and tablets. */
+.pm-wrap .deck, .pm-wrap .deck-status { min-height: 0; }
+
+/* KEY & LEGEND / INSIGHTS diagrams: a scroll box so phones can draw them
+   at a readable size instead of shrinking 10px labels to ~4.5px */
+.pm-lg-scroll { overflow-x: auto; }
+
+/* header copies of INSIGHTS / KEY & LEGEND, shown in the page on phones */
+.pm-xlinks { display: none; }
+
+@media (max-width: 680px) {
+  /* "?" glossary button sat under the tab bar (z 80) — lift it above it */
+  .pm-gloss-btn { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); right: 14px; }
+  /* multi-lens links: 35x17 targets 8px apart -> 32px tall */
+  .pm-wrap .conf-banner { gap: 4px 10px; }
+  .pm-wrap .conf-banner a {
+    display: inline-flex; align-items: center; min-height: 32px; padding: 0 4px;
+    border-bottom: 0; text-decoration: underline dotted var(--muted); text-underline-offset: 3px;
+  }
+  /* filter chips and view tabs: 30px -> thumb-sized, a little more air */
+  .pm-chip { min-height: 34px; white-space: nowrap; }
+  .pm-filter-group { gap: 6px; flex-wrap: wrap; }
+  .pm-tab { min-height: 32px; }
+  /* 9.5-10.5px card text -> 11px */
+  .pm-chart-cue, .pm-tag, .pm-sector, .pm-stepper, .pm-band-status { font-size: 11px; }
+  .pm-lg-scroll svg { width: 820px; max-width: none; }
+  /* say it scrolls: the right edge fades out */
+  .pm-lg-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }
+  .pm-lg-figure figcaption { font-size: 13px; }
+}
+
+@media (max-width: 560px) {
+  /* INSIGHTS / KEY & LEGEND: the two header links wrapped the sticky header
+     onto a second row; on phones they live under the page title instead.
+     The status lamp stays in .deck-top-right. */
+  .deck-top-right .pm-hdr-xl { display: none; }
+  .pm-xlinks { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
+  .pm-xlinks .howto-link { font-size: 12.5px; padding: 6px 0; min-height: 32px; }
+}
+
+/* ALERTS: line the row columns up (tablet / desktop) */
+@media (min-width: 561px) {
+  .al-row .pm-conf { min-width: 86px; text-align: center; }
+  .al-row .pm-ticker { min-width: 64px; }
+  .al-row .pm-dir { min-width: 76px; text-align: center; }
+  .al-row .pm-sector { min-width: 66px; text-align: center; }
+}
+@media (max-width: 560px) {
+  .al-time { font-size: 12px; }
+  .al-row .pm-conf, .al-row .pm-sector { font-size: 11px; }
+  .al-row { column-gap: 7px; }   /* the 11px chips need the room on one line */
+  /* the ticker filter takes the rest of its row so the placeholder fits */
+  .pm-filter-group:has(.al-search) { flex: 1 1 100%; min-width: 0; }
+  .al-search { flex: 1 1 auto; width: auto; min-width: 0; }
+  #al-triples { flex: none; white-space: nowrap; }
+}
+/* hold the page while the log loads (no footer jump) */
+#al-list:empty { min-height: 60vh; }
+
+/* SPECS rows */
+.sp-row .row-chips { flex-wrap: wrap; }   /* specs has no "+N" chip: wrap, never clip */
+@media (max-width: 900px) {                 /* a long GICS name squeezed the company name to one letter */
+  .sp-row .badge.sector { max-width: min(100%, 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+/* a closed row's "View chart" link was still a Tab stop; hide it once the
+   collapse has finished (0.2s), show it at once on open */
+.sp-row .detail-inner { visibility: hidden; transition: visibility 0s linear 0.2s; }
+.sp-row.open .detail-inner { visibility: visible; transition-delay: 0s; }
+@media (max-width: 768px) {
+  .sp-row .rbadge.wk, .sp-row .badge.sector, .sp-row .dp-lbl, .sp-row .chip { font-size: 11px; }
+}
+@media (max-width: 680px) {
+  /* the graduates strip sat between the deck and the results (433px on a
+     phone, first row below the fold): on phones it follows the results */
+  main.wrap:has(#sp-list) { display: flex; flex-direction: column; }
+  main.wrap:has(#sp-list) > #sp-grads { order: 1; }
+  main.wrap:has(#sp-list) > .pm-disclaimer { order: 2; }
+  main.wrap:has(#sp-list) > #sp-tabs { align-self: flex-start; }
+  /* the grade / sort / search strip scrolled sideways with the search box
+     off-screen: wrap it instead */
+  .controls:has(#sp-search) { flex-wrap: wrap; overflow-x: visible; }
+}
+
+/* ONE phone rule for the ticker search box (PHASEMAP + SPECS). It has to sit
+   last: three earlier .pm-search rules set width:130px and would override it.
+   It takes the rest of its row, or a row of its own, so the placeholder
+   is never cut. */
+@media (max-width: 680px) {
+  .pm-search { flex: 1 1 130px; width: auto; min-width: 0; margin-left: 0; }
+}

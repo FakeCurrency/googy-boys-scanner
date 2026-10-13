@@ -150,13 +150,26 @@ window.PM = (() => {
     STALLED: "⏸", COMPLETE: "✓", DEAD: "✕",
   };
 
+  /* Plain-English meaning of each scan tag (hover title on the card; the
+     same words are in the glossary drawer and the WHY FLAGGED list).
+     Restates phasemap/engine (scanner.py _tags / module0_tags,
+     setup_engine.py) — explanation only, nothing here decides a tag. */
+  const TAG_HELP = {
+    FAST_FLIP: "The sweep printed early in the week (Monday or Tuesday). A bonus tag; a late-week sweep (Thursday or Friday) drops the tier one step instead.",
+    ANCHOR_CONTEXT: "The sweep ran past the yearly or quarterly open and price has since closed back over it (under it, for a short). It is the condition for the A+ tier.",
+    ANCHOR_CAUTION: "Price is just short of a yearly, quarterly or monthly open and no sweep has printed yet this quarter. Manipulation often happens just beyond an anchor, so treat that level with care.",
+    ILLIQUID: "Average turnover is below the $200k/day floor. A warning, never a filter.",
+    HALT_RISK: "Somewhere in the last 60 bars there is a gap of more than 5 calendar days between bars (a possible trading halt).",
+  };
+
   function headBadgesHTML(rec) {
     const long = rec.direction === "bullish";
     const tier = rec.tier
       ? `<span class="pm-tier ${TIER_CLASS[rec.tier] || ""}">${esc(rec.tier)}</span>` : "";
     const tags = rec.tags.map((t) => {
       const extra = t === "ILLIQUID" ? " pm-tag-illiquid" : t === "HALT_RISK" ? " pm-tag-halt" : "";
-      return `<span class="pm-tag${extra}">${esc(t)}</span>`;
+      const help = TAG_HELP[t] ? ` title="${esc(TAG_HELP[t])}"` : "";
+      return `<span class="pm-tag${extra}"${help}>${esc(t)}</span>`;
     }).join("");
     return `
       <span class="pm-dir ${long ? "pm-dir-long" : "pm-dir-short"}">${long ? "▲ LONG" : "▼ SHORT"}</span>
@@ -224,6 +237,9 @@ window.PM = (() => {
     if (rec.tier) rows.push(`Scan ${term("tier", "tier")}: <b>${esc(rec.tier)}</b>.`);
     if (rec.tags.includes("ILLIQUID")) rows.push(`<b>ILLIQUID</b> — average turnover is below the $200k/day floor; fills and exits will be harder than the chart implies.`);
     if (rec.tags.includes("HALT_RISK")) rows.push(`<b>HALT RISK</b> — this name carries a trading-halt risk flag from the scan.`);
+    if (rec.tags.includes("FAST_FLIP")) rows.push(`${term("FAST_FLIP", "fast_flip")} — the sweep printed early in the week (Mon/Tue).`);
+    if (rec.tags.includes("ANCHOR_CONTEXT")) rows.push(`${term("ANCHOR_CONTEXT", "anchor_context")} — the sweep ran past the yearly or quarterly open and price has closed back over it.`);
+    if (rec.tags.includes("ANCHOR_CAUTION")) rows.push(`${term("ANCHOR_CAUTION", "anchor_caution")} — price is just short of an anchor open, with no sweep yet this quarter.`);
     return `<details class="pm-why"><summary>WHY FLAGGED <span class="pm-why-chev">▾</span></summary>
       <ul>${rows.filter(Boolean).map((r) => `<li>${r}</li>`).join("")}</ul></details>`;
   }
@@ -247,6 +263,9 @@ window.PM = (() => {
     ["complete", "Complete", "The final target zone was reached — the setup fully played out."],
     ["running", "Running", "Displacement confirmed and price is travelling toward its targets — the setup is live."],
     ["trap", "Trap (demand/supply)", "The amber zones where the liquidity grab happens — accumulation territory in the spec's colour system."],
+    ["fast_flip", "FAST_FLIP tag", TAG_HELP.FAST_FLIP],
+    ["anchor_context", "ANCHOR_CONTEXT tag", TAG_HELP.ANCHOR_CONTEXT],
+    ["anchor_caution", "ANCHOR_CAUTION tag", TAG_HELP.ANCHOR_CAUTION],
   ];
   function glossaryHTML() {
     return GLOSSARY.map(([key, name, body]) =>

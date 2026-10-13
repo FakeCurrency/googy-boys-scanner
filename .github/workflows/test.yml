@@ -432,7 +432,17 @@ jobs:
           # baselines in the same commit: index-390 5.82% (the box and its
           # margin gone, the deck 44px shorter), index-desktop, journal-desktop
           # and journal-390 0.00%.
-          key: screenshot-baselines-v23-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+          #
+          # v23 -> v24 (2026-10-13): INTENTIONAL — the mobile + desktop UI
+          # review (owner: "Complete user interface REVIEW and FIX"). Measured
+          # against the v23 baselines before this bump, in the same commit as
+          # the visuals: index-desktop 4.74% (the header nav pills now get
+          # their own row instead of a clipped strip), index-390 6.20% (the
+          # duplicate pill strip hidden on phones, the SMA legend hidden at
+          # <=480px, row chips on their own full-width line, the sort control
+          # pinned again), journal-390 3.84% (the LONG pill no longer clipped,
+          # two-column phone cards, coloured R/$), journal-desktop 1.72%.
+          key: screenshot-baselines-v24-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"

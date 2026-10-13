@@ -36,6 +36,12 @@
   color: var(--muted-2);
   letter-spacing: 0.02em;
   white-space: nowrap;
+  /* Hold the stamp's loaded width ("scanned Tue, 13 Oct, 5:20 pm Melb" is
+     ~34 characters) from first paint. It arrives with the data, and on a
+     phone that late text re-wrapped the whole top bar and pushed the page
+     down (CLS 0.24 at 390px). */
+  display: inline-block;
+  min-width: 35ch;
 }
 
 /* ---- partial coverage -------------------------------------------------- */
@@ -170,10 +176,18 @@
   border-radius: 6px; text-decoration: none;
 }
 .mo-spark.is-empty {
-  border: 1px dashed rgba(140,158,190,.28); background: rgba(140,158,190,.05);
+  border: 1px dashed transparent; background: none;   /* the slot keeps its size; no placeholder look */
 }
+/* WHY THERE IS NO SPARK: the momentum scanner publishes no price series
+   (each result carries `close` and `n_bars`, never `spark`), so the slot is
+   empty on every row of every market. The words stay for screen readers and
+   the box keeps its tooltip, but a visible "NO SPARK" on every card read as
+   a fault, so the caption is visually hidden and the slot reads as a blank. */
 .mo-nospark {
-  font: 600 9px/1 var(--sans); color: #6d7889; letter-spacing: .04em;
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0;
+  font: 600 9px/1 var(--sans); color: var(--muted-2); letter-spacing: .04em;
   text-transform: uppercase;
 }
 .mo-pricewrap { text-align: right; min-width: 92px; }
@@ -181,4 +195,15 @@
   /* Still a CARD at 390px: the spark slot narrows rather than wrapping the row. */
   .mo-spark { width: 44px; flex-basis: 44px; }
   .mo-pricewrap { min-width: 74px; }
+}
+
+/* The explainer under the list takes styles.css's .pm-disclaimer look; here
+   it also gets a reading measure (it ran 1,400px wide at 1440). */
+.pm-disclaimer { max-width: 80ch; }
+
+/* Phones: five filter pills wrap onto a second line instead of scrolling,
+   which hid BEAR past the right edge with nothing to say it was there
+   (styles.css makes .deck-pills a nowrap scroller at <= 680px). */
+@media (max-width: 680px) {
+  #mo-pills { flex-wrap: wrap; overflow-x: visible; }
 }

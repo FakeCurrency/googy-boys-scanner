@@ -464,9 +464,18 @@
     const stamps = MARKETS.map((m) => prices[m.key] && prices[m.key].generated_at).filter(Boolean)
       .sort((a, b) => Date.parse(b) - Date.parse(a));
     const sub = $("#rec-sub");
+    const dot = document.querySelector(".rec-deck .deck-dot");
     if (sub && stamps[0]) {
       sub.textContent = `Consensus recomputed from the latest published scans · freshest ${agoText(stamps[0])}`;
       sub.title = `Freshest scan: ${fmtMelb(stamps[0])}`;
+      if (dot) dot.classList.remove("warn");
+    } else if (sub) {
+      // states-4: every scan file failed to load. Say so — "Loading latest
+      // scans…" under a green dot read as "fine, nearly there" for ever. The
+      // 5-minute re-load below retries on its own.
+      sub.textContent = "Couldn't load the latest scans — check your connection. This page retries every 5 minutes, or reload now.";
+      sub.title = "";
+      if (dot) dot.classList.add("warn");
     }
     // Record today's breadth per market, THEN render (so today's bar shows in
     // the strip and the delta compares against a genuine prior day).

@@ -18,11 +18,11 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=119" />
-  <link rel="stylesheet" href="css/status.css?v=3" />
-  <link rel="stylesheet" href="css/phasemap.css?v=22" />
-  <script src="js/nav.js?v=26"></script>
-  <script src="js/status.js?v=9"></script>
+  <link rel="stylesheet" href="css/styles.css?v=120" />
+  <link rel="stylesheet" href="css/status.css?v=4" />
+  <link rel="stylesheet" href="css/phasemap.css?v=23" />
+  <script src="js/nav.js?v=27"></script>
+  <script src="js/status.js?v=10"></script>
   <script src="js/sw-register.js?v=4" defer></script>
 </head>
 <body>
@@ -36,8 +36,8 @@
     </div>
     <div class="nav-pills" id="site-nav"></div>
     <div class="deck-top-right">
-      <a class="howto-link" href="phasemap.html">← PhaseMap</a>
-      <a class="howto-link pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
+      <a class="howto-link pm-hdr-xl" href="phasemap.html">← PhaseMap</a>
+      <a class="howto-link pm-hdr-xl pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
     </div>
   </header>
 
@@ -45,12 +45,17 @@
     <div class="pm-head">
       <h2 class="pm-title">KEY &amp; LEGEND <span class="pm-title-sub">every badge, colour and term on the cards</span></h2>
       <p class="pm-sub">PhaseMap reads one repeating cycle: a range forms (accumulation), the range's lows or highs get run (manipulation), then the real move leaves (expansion). Everything on a card is a zone — a price band — never a single price.</p>
+      <nav class="pm-xlinks" aria-label="Related pages">
+        <a class="howto-link" href="phasemap.html">← PhaseMap</a>
+        <a class="howto-link pm-legend-link" href="phasemap-insights.html">INSIGHTS</a>
+      </nav>
     </div>
 
     <!-- =========================================== diagram 1: candle anatomy -->
     <section class="pm-lg-section">
       <h3>THE CANDLE, READ AS A CYCLE</h3>
       <figure class="pm-lg-figure">
+        <div class="pm-lg-scroll">
         <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of a single candle: open then accumulation, the low wick is the manipulation, the body is the expansion, close near the high.">
           <style>
             .lg-txt { font: 600 13px "JetBrains Mono", monospace; fill: var(--text-2); }
@@ -66,7 +71,7 @@
           <text class="lg-txt-sm" x="340" y="252">the range builds; stops collect under the lows</text>
 
           <line class="lg-line" x1="180" y1="300" x2="330" y2="300"/>
-          <text class="lg-txt" x="340" y="296" fill="var(--red)">LOW — manipulation</text>
+          <text class="lg-txt" x="340" y="296" fill="var(--red-ink)">LOW — manipulation</text>
           <text class="lg-txt-sm" x="340" y="312">the wick IS the trap: lows swept, then reclaimed</text>
 
           <line class="lg-line" x1="210" y1="160" x2="330" y2="160"/>
@@ -77,6 +82,7 @@
           <text class="lg-txt" x="340" y="66">HIGH &amp; CLOSE</text>
           <text class="lg-txt-sm" x="340" y="82">displacement candles finish near their high</text>
         </svg>
+        </div>
         <figcaption>The wick is the trap; the body is the move. Price is fractal — a weekly candle's wick is a visible multi-day down-move on the daily chart.</figcaption>
       </figure>
     </section>
@@ -85,13 +91,14 @@
     <section class="pm-lg-section">
       <h3>THE FULL CYCLE ON A CHART</h3>
       <figure class="pm-lg-figure">
+        <div class="pm-lg-scroll">
         <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schematic chart showing an accumulation box, a manipulation dip below its lows, then an expansion rally above it.">
           <!-- accumulation box -->
           <rect x="40" y="120" width="240" height="80" rx="4" fill="var(--orange)" opacity="0.10" stroke="var(--orange)" stroke-width="1.2" stroke-dasharray="4 3"/>
           <text x="60" y="110" font-size="12" font-family="JetBrains Mono, monospace" font-weight="700" fill="var(--orange)">1 · ACCUMULATION</text>
           <!-- manipulation dip zone -->
           <rect x="280" y="200" width="90" height="55" rx="4" fill="var(--red)" opacity="0.10" stroke="var(--red)" stroke-width="1.2" stroke-dasharray="4 3"/>
-          <text x="250" y="282" font-size="12" font-family="JetBrains Mono, monospace" font-weight="700" fill="var(--red)">2 · MANIPULATION</text>
+          <text x="250" y="282" font-size="12" font-family="JetBrains Mono, monospace" font-weight="700" fill="var(--red-ink)">2 · MANIPULATION</text>
           <!-- expansion zone -->
           <rect x="380" y="30" width="280" height="150" rx="4" fill="var(--green)" opacity="0.08" stroke="var(--green)" stroke-width="1.2" stroke-dasharray="4 3"/>
           <text x="480" y="22" font-size="12" font-family="JetBrains Mono, monospace" font-weight="700" fill="var(--green)">3 · EXPANSION</text>
@@ -103,8 +110,9 @@
                     fill="none" stroke="var(--text)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
           <!-- sweep marker -->
           <circle cx="320" cy="245" r="5" fill="var(--red)"/>
-          <text x="338" y="250" font-size="10.5" font-family="JetBrains Mono, monospace" fill="var(--red)">the sweep</text>
+          <text x="338" y="250" font-size="10.5" font-family="JetBrains Mono, monospace" fill="var(--red-ink)">the sweep</text>
         </svg>
+        </div>
         <figcaption>The setup only begins when the lows are swept <em>and</em> price closes back inside the range — then a displacement candle has to prove it. No displacement, no setup.</figcaption>
       </figure>
     </section>
@@ -113,7 +121,8 @@
     <section class="pm-lg-section">
       <h3>ZONE ANATOMY — WHAT EACH BAND ON A CARD MEANS</h3>
       <figure class="pm-lg-figure">
-        <svg viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stacked zone bands: target zones above price, entry continuation band, fifty percent momentum invalidation, demand zone, hard invalidation below.">
+        <div class="pm-lg-scroll">
+        <svg viewBox="0 0 770 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stacked zone bands: target zones above price, entry continuation band, fifty percent momentum invalidation, demand zone, hard invalidation below.">
           <style>
             .zb-label { font: 700 12px "JetBrains Mono", monospace; }
             .zb-note { font: 500 10.5px "JetBrains Mono", monospace; fill: var(--muted); }
@@ -130,7 +139,7 @@
           <text class="zb-note" x="470" y="84">consumed only on a daily CLOSE through it</text>
           <!-- current price -->
           <line x1="30" y1="118" x2="450" y2="118" stroke="var(--blue)" stroke-width="1.6"/>
-          <text class="zb-label" x="470" y="122" fill="var(--blue)">current price</text>
+          <text class="zb-label" x="470" y="122" fill="var(--blue-ink)">current price</text>
           <!-- entry continuation -->
           <rect x="30" y="140" width="420" height="34" rx="4" fill="var(--teal)" opacity="0.12"/>
           <rect x="30" y="140" width="4" height="34" fill="var(--teal)"/>
@@ -139,7 +148,7 @@
           <!-- momentum invalidation -->
           <rect x="30" y="182" width="420" height="34" rx="4" fill="var(--red)" opacity="0.12"/>
           <rect x="30" y="182" width="4" height="34" fill="var(--red)"/>
-          <text class="zb-label" x="46" y="204" fill="var(--red)">50% INVALIDATION — ONE TOUCH ends the run</text>
+          <text class="zb-label" x="46" y="204" fill="var(--red-ink)">50% INVALIDATION — ONE TOUCH ends the run</text>
           <text class="zb-note" x="470" y="204">a wick is enough → becomes a rotation candidate</text>
           <!-- demand -->
           <rect x="30" y="244" width="420" height="40" rx="4" fill="var(--orange)" opacity="0.14"/>
@@ -149,11 +158,12 @@
           <!-- hard invalidation -->
           <rect x="30" y="292" width="420" height="34" rx="4" fill="var(--red)" opacity="0.12"/>
           <rect x="30" y="292" width="4" height="34" fill="var(--red)"/>
-          <text class="zb-label" x="46" y="314" fill="var(--red)">HARD INVALIDATION — daily CLOSE below kills it</text>
+          <text class="zb-label" x="46" y="314" fill="var(--red-ink)">HARD INVALIDATION — daily CLOSE below kills it</text>
           <text class="zb-note" x="470" y="314">wicks through are a TEST, not a kill</text>
           <!-- gap note -->
           <text class="zb-note" x="46" y="352">Bearish setups are the exact mirror: SUPPLY above, invalidations above, targets below.</text>
         </svg>
+        </div>
         <figcaption>The two invalidation zones have different rules on purpose: the 50% zone dies on a touch (momentum kill), the hard zone dies only on a daily close through its floor (structure kill).</figcaption>
       </figure>
     </section>

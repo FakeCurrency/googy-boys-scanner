@@ -1,6 +1,8 @@
 /* "How it works" page — dark, layered on top of styles.css */
-.doc { max-width: 760px; margin: 0 auto; padding: 30px 22px 72px; }
-.doc-title { font-size: 30px; font-weight: 800; letter-spacing: -0.4px; margin: 8px 0 14px; color: var(--text); }
+.doc { max-width: 760px; margin: 0 auto; padding: 30px 22px 72px;
+  /* viewport-fit=cover: keep the text clear of a landscape notch */
+  padding-left: max(22px, env(safe-area-inset-left, 0px)); padding-right: max(22px, env(safe-area-inset-right, 0px)); }
+.doc-title { font-size: 26px; font-weight: 800; letter-spacing: -0.4px; margin: 8px 0 14px; color: var(--text); }
 .lead { font-size: 16px; line-height: 1.65; color: var(--text-2); margin: 0 0 8px; }
 .lead em { color: var(--orange); font-style: normal; }
 
@@ -21,8 +23,12 @@
 
 .chip-list, .def-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 13px; }
 .chip-list li, .def-list li { font-size: 14px; line-height: 1.5; color: var(--text-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.chip-list li em, .def-list li em { color: var(--muted); font-style: normal; font-weight: 600; margin-left: auto; font: 600 12px/1 var(--mono); }
+.chip-list li em { color: var(--muted); margin-left: auto; font: 600 12px/1 var(--mono); }
 .def-list li { display: list-item; list-style: none; }
+/* an <em> inside the lens prose is emphasis, not a right-hand tag */
+.def-list li em { font: inherit; font-style: italic; color: var(--text); }
+/* a paragraph after a list/grid inside a card needs air (it sat flush, 0px) */
+.doc-section .def-list + p, .doc-section .chip-list + p, .doc-section .grade-grid + p { margin-top: 14px; }
 
 .grade-grid { display: grid; gap: 10px; }
 .grade-row {

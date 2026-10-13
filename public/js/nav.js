@@ -143,8 +143,16 @@
           window.addEventListener("scroll", close, { once: true, passive: true });
         });
         document.addEventListener("click", close);
-        document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+        // a11y-8: Escape closes AND returns focus to MORE — closing a menu that
+        // held focus used to drop the keyboard user back at <body>.
+        document.addEventListener("keydown", (e) => {
+          if (e.key !== "Escape" || menu.hidden) return;
+          const had = menu.contains(document.activeElement);
+          close();
+          if (had || document.activeElement === btn) btn.focus();
+        });
       }
+      stripOverflow(mount);
     }
 
     // Bottom tab bar (mobile only via CSS). Appended once per page.
@@ -173,6 +181,89 @@
       buildMoreSheet(here);
       a2hsNudge();
     }
+  }
+
+  // design-6 / chart-15 (UI review 2026-10-13): when the pill strip is wider
+  // than the room it has, say so and keep "you are here" visible. The strip
+  // gets .nav-ovf while it overflows (styles.css fades its cut edge) and
+  // .nav-end once it is scrolled to the end; on first layout the current
+  // page's pill is scrolled into view WITHIN the strip — scrollLeft only, so
+  // the page itself never moves. No-op when everything fits.
+  function stripOverflow(strip) {
+    let scrolled = false;
+    const sync = () => {
+      const ovf = strip.scrollWidth > strip.clientWidth + 1;
+      strip.classList.toggle("nav-ovf", ovf);
+      strip.classList.toggle("nav-end", ovf && strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2);
+      if (ovf && !scrolled) {
+        scrolled = true;
+        const here = strip.querySelector(".howto-link.is-here");
+        if (here) {
+          const s = strip.getBoundingClientRect(), h = here.getBoundingClientRect();
+          if (h.right > s.right - 32 || h.left < s.left) {
+            strip.scrollLeft += h.left - s.left - Math.max(0, (s.width - h.width) / 2);
+          }
+        }
+      }
+    };
+    strip.addEventListener("scroll", () => {
+      strip.classList.toggle("nav-end", strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2);
+    }, { passive: true });
+    if (typeof ResizeObserver === "function") new ResizeObserver(sync).observe(strip);
+    else window.addEventListener("resize", sync, { passive: true });
+    requestAnimationFrame(sync);
+  }
+
+  // hover-4 (UI review 2026-10-13): on a touch screen a title= tooltip can
+  // never be read — there is no hover. A tap on a NON-interactive element that
+  // carries a title shows the text in one shared popover for 4s or until the
+  // next tap. It never takes the tap: the listener is passive, calls no
+  // preventDefault/stopPropagation, and the popover is pointer-events:none,
+  // so a row still expands and a link still navigates. Taps on links,
+  // buttons, inputs and other controls show nothing (their title is a label
+  // for the action, and the action is what the tap is for). No storage, no
+  // network.
+  function tipPop() {
+    if (!(window.matchMedia && window.matchMedia("(hover: none)").matches)) return;
+    const CONTROL = "a[href], button, input, select, textarea, label, summary, [role='button'], [role='tab'], [role='link'], [contenteditable]";
+    let pop = null, timer = 0, y0 = 0, down = null;
+    const hide = () => { clearTimeout(timer); if (pop) pop.hidden = true; };
+    // The browser's touch adjustment re-targets a tap (touchstart, pointer
+    // and click alike) to a nearby box — a 40x11px day-% arrives as the price
+    // column it sits in. So the element under the finger is looked up from
+    // the pointerdown's raw coordinates.
+    document.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY, at: Date.now() }; }, { passive: true, capture: true });
+    document.addEventListener("click", (e) => {
+      const under = down && Date.now() - down.at < 1000 ? document.elementFromPoint(down.x, down.y) : null;
+      const t = under && e.target && e.target.contains && e.target.contains(under) ? under : e.target;
+      down = null;
+      const el = t && t.closest ? t.closest("[title]") : null;
+      const text = el ? (el.getAttribute("title") || "").trim() : "";
+      const ctl = t && t.closest ? t.closest(CONTROL) : null;
+      // a control inside (or being) the titled element owns this tap
+      if (!el || !text || (ctl && (ctl === el || el.contains(ctl)))) { hide(); return; }
+      if (!pop) {
+        pop = document.createElement("div");
+        pop.id = "tip-pop";
+        pop.setAttribute("role", "status");
+        pop.hidden = true;
+        document.body.appendChild(pop);
+      }
+      pop.textContent = text;
+      pop.hidden = false;
+      const r = el.getBoundingClientRect();
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      const left = Math.max(12, Math.min(window.innerWidth - pw - 12, r.left + r.width / 2 - pw / 2));
+      const below = r.bottom + 8 + ph <= window.innerHeight - 70;   // clear of the tab bar
+      pop.style.left = `${Math.round(left)}px`;
+      pop.style.top = `${Math.round(below ? r.bottom + 8 : Math.max(8, r.top - ph - 8))}px`;
+      clearTimeout(timer);
+      timer = setTimeout(hide, 4000);
+      y0 = window.scrollY;
+    }, { passive: true });
+    // A real scroll moves the element out from under its tip. (A tap that
+    // also expands a row can nudge the page a few px — that is not a scroll.)
+    window.addEventListener("scroll", () => { if (Math.abs(window.scrollY - y0) > 24) hide(); }, { passive: true });
   }
 
   // #43: one-time "Add to Home Screen" nudge on phones. Uses the Chrome/
@@ -530,7 +621,7 @@
       .catch(() => {});
   }
 
-  function init() { render(); renderFooter(); stampVersion(); }
+  function init() { render(); renderFooter(); stampVersion(); tipPop(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
