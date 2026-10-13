@@ -36,7 +36,7 @@
 .st-days em { font-style: normal; color: var(--muted-2); }
 .st-r { font-family: var(--mono, var(--sans)); font-weight: 700; text-align: right; }
 .st-up { color: var(--green); }
-.st-down { color: var(--red); }
+.st-down { color: var(--red-ink); }
 .st-grade { font-weight: 800; color: var(--grade-aplus); text-align: center; }
 
 /* The call chip: quiet amber outline for a decision, red once the time-stop is
@@ -48,39 +48,39 @@
   border-radius: 999px; padding: 4px 9px; white-space: nowrap;
   cursor: help;
 }
-.st-row.st-due .st-call { color: var(--red); border-color: var(--red); }
+.st-row.st-due .st-call { color: var(--red-ink); border-color: var(--red); }
 
 /* Wide content scrolls inside its own container — the page body must never
    scroll horizontally (repo rule; the 390px journal screenshot is a gate). */
 .st-rows { overflow-x: auto; }
 
 @media (max-width: 640px) {
+  /* TWO LINES PER ROW ON A PHONE (UI review 2026-10-13). This used to keep a
+     528px one-line row that scrolled sideways with the Close button pinned
+     to the right edge — and the pinned button sat on top of exactly the two
+     columns the row exists for (Open R and Your call), so on a 390px phone
+     you saw the ticker, the stall and a Close button, never the R or the call.
+     Now nothing scrolls sideways: line 1 is ticker + stall, line 2 is R +
+     call, and Close is the right-hand column on line 1. The header row goes
+     (each value says what it is: "+0.05R", "time-stop in 2d"); grade stays
+     dropped, as before. */
   .st-row {
-    /* Five visible columns (grade is dropped below) will not fit 390px without
-       squeezing "29d held · flagged 3d ago" to nothing — which removes the one
-       fact the row exists to state. So the row keeps honest widths and .st-rows
-       scrolls, the pattern this file already uses for wide content: the PAGE
-       body must never scroll sideways, an inner container may. */
-    min-width: 528px;
-    grid-template-columns: minmax(56px, auto) minmax(140px, 1fr) 52px minmax(84px, auto) minmax(100px, auto);
-    gap: 8px;
+    grid-template-columns: minmax(56px, auto) minmax(0, 1fr) auto;
+    grid-template-areas: "sym days x" "r call call";
+    gap: 4px 10px; padding: 8px 2px;
   }
-  .st-grade { display: none; }
-  .st-row.st-cols span:nth-child(4) { display: none; }
-  .st-days { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .st-row.st-cols, .st-grade { display: none; }
+  .st-sym  { grid-area: sym; }
+  .st-days { grid-area: days; }
+  .st-r    { grid-area: r; text-align: left; }
+  .st-call { grid-area: call; }
+  .st-row > .st-x, .st-row > .st-x-off { grid-area: x; align-self: start; }
   .st-sym em { display: block; margin: 2px 0 0; }
-
-  /* The row scrolls, but the ACTION must never be the thing that scrolls out of
-     reach — a Close button you have to go looking for is a Close button that
-     does not get used on a phone. Pinned to the right edge of the scroller with
-     its own background so the columns pass underneath it cleanly. */
-  .st-row > .st-x, .st-row > .st-x-off,
-  .st-row.st-cols > span:last-child {
-    position: sticky; right: 0;
-    background: var(--card, #12151c);
-    padding-left: 10px; box-shadow: -10px 0 10px -6px rgba(0,0,0,.55);
-  }
-  .st-row > .st-x { background: var(--card, #12151c); }
+  /* 32 stalled rows at ~70px each pushed the book ~2,000px down the page
+     and reflowed it on load (CLS ~0.95 at 390). The list scrolls inside a
+     box of about half the screen instead; the summary line above still
+     states the totals for all of them. */
+  .st-rows { max-height: 45vh; overflow-y: auto; overscroll-behavior: contain; }
 
   /* A WRITE PATH (it closes real book positions), and it shipped at ~22px tall
      (2026-08-13). journal.css already fixed this class of miss for the SORT
@@ -125,7 +125,7 @@
 .st-x:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
 .st-x.st-sent { color: var(--green); border-color: var(--green); background: transparent; }
-.st-x.st-fail { color: var(--red); border-color: var(--red); background: transparent; }
+.st-x.st-fail { color: var(--red-ink); border-color: var(--red); background: transparent; }
 .st-x:disabled { cursor: default; opacity: .85; }
 
 /* No usable last mark -> no button at all. Fail-closed is a state worth

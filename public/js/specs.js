@@ -55,7 +55,7 @@
           <div class="row-line1">
             <a class="tkr" href="${chartHref}" title="Open chart">${PM.esc(r.symbol)}</a>
             <span class="badge dir long">LONG</span>
-            ${r.sector ? `<span class="badge sector">${PM.esc(r.sector)}</span>` : ""}
+            ${r.sector ? `<span class="badge sector" title="${PM.esc(r.sector)}">${PM.esc(r.sector)}</span>` : ""}
             <span class="cname">${PM.esc(r.name)}</span>
             <span class="rprice">${cur}${fp(r.price)}</span>
           </div>
@@ -66,7 +66,7 @@
             <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span></span>
             <span class="rk-rr ${r.low_rr ? "low" : ""}">${r.rr != null ? r.rr.toFixed(1) + "R" : "—"}</span>
           </div>
-          <button class="row-expand" title="Details" aria-label="Toggle details">
+          <button class="row-expand" title="Details" aria-label="Toggle details" aria-expanded="false">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
         </div>
@@ -129,7 +129,7 @@
     const n = (g) => res.filter((r) => r.grade === g).length;
     const nConf = state.confl ? res.filter((r) => alignedOf(r)).length : null;
     const pill = (attrs, cls, label, count, title, active) =>
-      `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} title="${PM.esc(title)}">` +
+      `<button class="fpill ${cls}${active ? " is-active" : ""}" ${attrs} aria-pressed="${active ? "true" : "false"}" title="${PM.esc(title)}">` +
       `${label}${count == null ? "" : ` <b>${count}</b>`}</button>`;
     box.innerHTML =
       pill(`data-g="A+"`, "g", "A+", n("A+"), "Filter to A+ specs", state.grade === "A+") +
@@ -150,6 +150,13 @@
 
   function render() {
     const list = $("#sp-list");
+    // No scan loaded (a failed load): #sp-sub already says why and offers a
+    // retry, so do not ALSO claim "no setups / the gates are strict".
+    if (!state.data) {
+      list.innerHTML = "";
+      renderCounts();
+      return;
+    }
     const rows = visibleRows();
     list.innerHTML = rows.length
       ? rows.map(rowHTML).join("")
@@ -161,7 +168,9 @@
     $$(".row-wrap", list).forEach((row) => {
       row.querySelector(".row").addEventListener("click", (e) => {
         if (e.target.closest("a.tkr")) return;
-        row.classList.toggle("open");
+        const open = row.classList.toggle("open");
+        const btn = row.querySelector(".row-expand");
+        if (btn) btn.setAttribute("aria-expanded", String(open));
       });
     });
     renderCounts();

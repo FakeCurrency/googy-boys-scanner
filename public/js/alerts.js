@@ -14,19 +14,24 @@
   const melbFmtT = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne",
     hour: "numeric", minute: "2-digit" });
   const melbDay = (iso) => { const d = new Date(iso); return isNaN(d) ? String(iso).slice(0, 10) : melbFmtD.format(d); };
-  const melbTime = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : melbFmtT.format(d) + " Melb"; };
+  const melbClock = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : melbFmtT.format(d); };
+  const melbTime = (iso) => { const c = melbClock(iso); return c ? c + " Melb" : ""; };
   // #88: relative time on screen (the daily glance), full Melbourne + UTC in
-  // the tooltip. "just now" under a minute; minutes / hours / days after.
+  // the tooltip. The row also prints the Melbourne clock time beside it
+  // ("5h · 4:46 pm"), since a phone has no hover; the day group's heading
+  // carries the date. Compact on purpose ("now", "12m", "5h", "3d" -- no
+  // "ago"): at 360px a 5-letter NASDAQ row's second line has no room for
+  // "23h ago · 12:59 pm", and the time would drop onto a third line.
   const relTime = (iso) => {
     const t = Date.parse(iso || ""); if (!isFinite(t)) return "";
     const s = Math.max(0, (Date.now() - t) / 1000);
-    if (s < 60) return "just now";
-    const m = s / 60; if (m < 60) return Math.round(m) + "m ago";
-    const h = m / 60; if (h < 24) return Math.round(h) + "h ago";
-    const d = Math.floor(h / 24); return d === 1 ? "1d ago" : d + "d ago";
+    if (s < 60) return "now";
+    const m = s / 60; if (m < 60) return Math.round(m) + "m";
+    const h = m / 60; if (h < 24) return Math.round(h) + "h";
+    return Math.floor(h / 24) + "d";
   };
 
-  const state = { entries: [], market: "all", q: "", triplesOnly: false };
+  const state = { entries: [], market: "all", q: "", triplesOnly: false, failed: false };
 
   // "Since you last looked": entries newer than the previous visit get a NEW
   // dot. The watermark advances once per page load, not per render.
@@ -47,13 +52,24 @@
       `<span class="pm-dir ${e.side === "short" ? "pm-dir-short" : "pm-dir-long"}">${arrow} ${esc(String(e.side).toUpperCase())}</span>` +
       `<span class="pm-sector">${esc(String(e.market).toUpperCase())}</span>` +
       `<span class="al-lenses">${(e.lenses || []).map(esc).join(" + ")}</span>` +
-      `<span class="al-time" title="${esc(melbTime(e.date))} · UTC ${esc(String(e.date).slice(11, 16))}">${esc(relTime(e.date))}</span>` +
+      `<span class="al-time" title="${esc(melbTime(e.date))} · UTC ${esc(String(e.date).slice(11, 16))}">` +
+        `${esc([relTime(e.date), melbClock(e.date)].filter(Boolean).join(" · "))}</span>` +
       `</a>`;
   }
 
   function render() {
     const list = document.getElementById("al-list");
     const sub = document.getElementById("al-sub");
+    if (state.failed) {
+      // A failed load is not an empty log: say so, and offer a retry (a filter
+      // tap must not repaint it as "No alignments logged yet").
+      sub.textContent = "Couldn't load the alert history (connection problem).";
+      list.innerHTML = '<div class="pm-empty"><button type="button" class="pm-chip" ' +
+        'id="al-retry">Tap to retry</button></div>';
+      const retry = document.getElementById("al-retry");
+      if (retry) retry.addEventListener("click", () => location.reload());
+      return;
+    }
     const q = state.q.trim().toUpperCase();
     const rows = state.entries.filter((e) =>
       (state.market === "all" || e.market === state.market) &&
@@ -105,7 +121,7 @@
   if (search) search.addEventListener("input", () => { state.q = search.value || ""; render(); });
 
   fetch("data/phasemap/alert_history.json", { cache: "no-cache" })
-    .then((r) => (r.ok ? r.json() : null))
+    .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then((j) => {
       state.entries = (j && j.entries) || [];
       render();
@@ -114,7 +130,8 @@
       try { localStorage.setItem(SEEN_KEY, String(Date.now())); } catch (_) {}
     })
     .catch(() => {
-      document.getElementById("al-sub").textContent = "Alert history unavailable.";
+      state.failed = true;
+      render();
     });
 
   // ── Fix-10 #2: YOUR price-alert lines, managed here ───────────────────────

@@ -38,28 +38,34 @@
 
 .jr-sym { font-weight: 700; color: var(--text); }
 .jr-symlink { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; }
-.jr-symlink:hover { color: var(--blue); }
+.jr-symlink:hover { color: var(--blue-ink); }
 .jr-stamp { font: 600 11px/1.3 var(--mono); color: var(--muted); white-space: nowrap; }
-/* setup chip — timeframe + entry trigger (e.g. "Weekly reclaim"), coloured by trigger */
+/* setup chip — timeframe + entry trigger (e.g. "Weekly reclaim"), coloured by trigger.
+   CHIP SIZES (UI review 2026-10-13): the market + setup chips were 8.5-9px, the
+   smallest content text on the page, on the screen the owner reads most. One
+   set now: 10.5px everywhere, 11px on phones (bottom of the card block). The
+   review chip below is deliberately NOT in this set — it stays the quiet one.
+   nowrap: a chip is one fact; it may move to the next line, never split. */
 .jr-setup {
   display: inline-block; margin-left: 8px; vertical-align: middle;
-  font: 700 9px/1 var(--sans); letter-spacing: .3px; text-transform: uppercase;
+  font: 700 10.5px/1 var(--sans); letter-spacing: .3px; text-transform: uppercase;
   padding: 3px 6px; border-radius: 4px; background: var(--fill-2); color: var(--muted);
+  white-space: nowrap;
 }
-.jr-setup.su-reclaim { background: rgba(45,208,127,.14); color: #2dd07f; }
-.jr-setup.su-retest  { background: rgba(255,91,91,.14);  color: #ff5b5b; }
-.jr-setup.su-break   { background: rgba(255,176,32,.16); color: #ffb020; }
-.side .jr-setup { margin-left: 6px; font-size: 8.5px; padding: 2px 5px; }
+.jr-setup.su-reclaim { background: var(--green-soft);  color: var(--green); }
+.jr-setup.su-retest  { background: var(--red-soft);    color: var(--red-ink); }
+.jr-setup.su-break   { background: var(--orange-soft); color: var(--orange); }
+.side .jr-setup { margin-left: 6px; }
 /* market chip — which book the ticker belongs to (ASX / NASDAQ / Crypto) */
 .jr-mkt {
   display: inline-block; margin-left: 8px; vertical-align: middle;
-  font: 700 9px/1 var(--sans); letter-spacing: .4px;
-  padding: 3px 6px; border-radius: 4px;
+  font: 700 10.5px/1 var(--sans); letter-spacing: .4px;
+  padding: 3px 6px; border-radius: 4px; white-space: nowrap;
 }
-.jr-mkt-asx    { background: var(--blue-soft);          color: var(--blue); }
+.jr-mkt-asx    { background: var(--blue-soft);          color: var(--blue-ink); }
 .jr-mkt-nasdaq { background: var(--green-soft);         color: var(--green); }
 .jr-mkt-crypto { background: rgba(247,147,26,.14);      color: #f7931a; }
-.side .jr-mkt  { margin-left: 6px; font-size: 8.5px; padding: 2px 5px; }
+.side .jr-mkt  { margin-left: 6px; }
 /* review chip — flagged heavy at entry (a big share of the daily loss guard in
    one name). Deliberately quieter than .jr-flip: that one is a live warning
    that the chart turned against an open position, this is a fact about how the
@@ -69,8 +75,8 @@
   display: inline-block; margin-left: 8px; vertical-align: middle;
   font: 700 9px/1 var(--sans); letter-spacing: .3px; white-space: nowrap;
   padding: 3px 6px; border-radius: 4px; cursor: help;
-  background: rgba(255,176,32,.12); color: #ffb020;
-  box-shadow: inset 0 0 0 1px rgba(255,176,32,.35);
+  background: color-mix(in srgb, var(--orange) 12%, transparent); color: var(--orange);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orange) 35%, transparent);
 }
 .side .jr-review { margin-left: 6px; font-size: 8.5px; padding: 2px 5px; }
 .g-aplus { color: var(--grade-aplus); }
@@ -78,13 +84,17 @@
 .g-b     { color: var(--grade-b); }
 .g-c     { color: var(--grade-c); }
 .r-pos   { color: var(--green); }
-.r-neg   { color: var(--red); }
+.r-neg   { color: var(--red-ink); }
+/* A table cell's own colour (.jr-table td, two classes) outranked the one-class
+   .r-pos/.r-neg, so every R and $ cell rendered grey (UI review 2026-10-13). */
+.jr-table td.r-pos { color: var(--green); }
+.jr-table td.r-neg { color: var(--red-ink); }
 
 .jr-empty { padding: 40px; text-align: center; color: var(--muted); font-size: 13.5px; }
 
 /* ── direction chips ── */
-.dir-long  { background: rgba(45,208,127,.15); color: #2dd07f; }
-.dir-short { background: rgba(255,91,91,.15);  color: #ff5b5b; }
+.dir-long  { background: var(--green-soft); color: var(--green); }
+.dir-short { background: var(--red-soft);   color: var(--red-ink); }
 
 .jr-note-tag { cursor: help; }
 
@@ -92,18 +102,19 @@
    Claude's paper book — single-book layout (the Me side went 2026-09-21)
    ══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --bot: #5b9cff;            /* Claude accent (blue) */
+  --bot: var(--blue-ink);        /* Claude accent — the site's system blue (was a one-off #5b9cff) */
 }
 
 /* grade + direction + misc inline chips */
 .g { font-weight: 800; }
+/* No fixed width/height here: the 16x16 square this rule used to set was never
+   reset by the full-word pill rule further down, so "▲ LONG" was clipped to a
+   20x16 "LON" blob on every row at every width (UI review 2026-10-13). The
+   colours live on that later rule too. */
 .dir {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px; border-radius: 4px; margin-right: 6px;
-  font: 800 10px/1 var(--sans); vertical-align: middle;
+  margin-right: 6px; vertical-align: middle;
 }
-.dir-l { background: rgba(45,208,127,.16); color: #2dd07f; }
-.dir-s { background: rgba(255,91,91,.16);  color: #ff5b5b; }
 .jr-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .num-sub { font-size: 11px; color: var(--muted); }
 .stat-sub { font: 500 11px/1 var(--sans); color: var(--muted); }
@@ -119,10 +130,10 @@
    MECHANICAL (the frozen rules acted): target / trail / stop / time — tinted.
    MANUAL (a human acted): outlined, not filled, so it reads as a different
    KIND of event rather than a different flavour of the same one. */
-.jr-reason-target { background: rgba(45,208,127,.15); color: #2dd07f; }
-.jr-reason-trail  { background: rgba(91,156,255,.15); color: var(--bot); }
-.jr-reason-stop   { background: rgba(255,91,91,.15);  color: #ff5b5b; }
-.jr-reason-time   { background: rgba(167,139,250,.15); color: #a78bfa; }
+.jr-reason-target { background: var(--green-soft); color: var(--green); }
+.jr-reason-trail  { background: var(--blue-soft);  color: var(--bot); }
+.jr-reason-stop   { background: var(--red-soft);   color: var(--red-ink); }
+.jr-reason-time   { background: color-mix(in srgb, var(--purple) 16%, transparent); color: var(--purple-ink); }
 .jr-reason-manual {
   background: transparent; color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line);
@@ -172,7 +183,9 @@
 
 .jr-w3-list { list-style: none; margin: 2px 0 0; padding: 0; }
 .jr-w3-list li {
-  display: grid; grid-template-columns: 52px 42px 1fr auto 34px;
+  /* 50px market column: "NASDAQ" / "CRYPTO" at 10px need ~44px; at 42 they
+     ran into the who-column (UI review 2026-10-13) */
+  display: grid; grid-template-columns: 52px 50px 1fr auto 34px;
   align-items: center; gap: 8px;
   padding: 6px 0; border-top: 1px solid var(--border-soft);
   font: 600 11.5px/1.35 var(--sans);
@@ -183,9 +196,9 @@
 .w3-who-bot { color: var(--bot); }
 .w3-r { font-family: var(--mono); font-weight: 800; text-align: right; }
 .w3-r.pos { color: var(--green); }
-.w3-r.neg { color: var(--red); }
+.w3-r.neg { color: var(--red-ink); }
 .w3-held { color: var(--muted-2); font-weight: 500; text-align: right; font-size: 10.5px; }@media (max-width: 420px) {
-  .jr-w3-list li { grid-template-columns: 46px 36px 1fr auto 30px; gap: 6px; font-size: 11px; }
+  .jr-w3-list li { grid-template-columns: 46px 48px 1fr auto 30px; gap: 6px; font-size: 11px; }
 }
 
 .jr-decider {
@@ -248,6 +261,13 @@
    would leave half the row empty on a wide screen. Capped rather than full
    bleed: a table stretched to 1800px is harder to read across, not easier. */
 .sides-one { grid-template-columns: minmax(0, 1fr); max-width: 1100px; }
+/* ONE READING WIDTH (UI review 2026-10-13). The book was capped at 1100px but
+   the blocks above it (title, P&L, STALLED, the performance fold, new
+   positions) ran the full 1460px .wrap, so at 1440 the page had three right
+   edges and STALLED's Close buttons sat 1,300px from the ticker they close.
+   Everything now shares the book's cap, left-aligned on the same edge as the
+   title. Below ~1140px the cap never engages, so nothing jumps between widths. */
+.jr-head, .jr-pnl, .st-strip, .jr-fold-perf, .jr-new-wrap { max-width: 1100px; }
 .sides .side { margin-bottom: 0; }
 .side {
   border: 1px solid var(--border); border-radius: var(--radius);
@@ -263,23 +283,46 @@
   font: 800 14px/1 var(--sans); letter-spacing: .2px;
   padding: 7px 12px; border-radius: 8px;
 }
-.side-badge.bot { background: rgba(91,156,255,.12); color: var(--bot); }
+.side-badge.bot { background: var(--blue-soft); color: var(--bot); }
 .side-note { font: 500 12px/1.4 var(--sans); color: var(--muted); }
 
 /* The book's tables are made compact so they read on one screen without
    scrolling sideways. */
-.side .jr-table th { padding: 9px 8px; font-size: 9.5px; letter-spacing: .3px; }
+.side .jr-table th { padding: 9px 8px; font-size: 10.5px; letter-spacing: .3px; }
 .side .jr-table td { padding: 9px 8px; font-size: 11.5px; }
 
 /* Single column on narrower screens (a no-op for .sides-one, which is
    already one column; kept for the base .sides grid). */
 @media (max-width: 1100px) { .sides { grid-template-columns: 1fr; } }
 
+/* TABLE MODE FITS ITS CARD (UI review 2026-10-13). Every td is nowrap, so a
+   symbol cell carrying LONG + ticker + market + setup + review + "chart now
+   reads short" chips made the open table 972px in a 686px card at 768 (and
+   wider than the card at 1024): R, $ and Opened scrolled out of sight. The
+   symbol cell and the closed table's Reason cell may now wrap their chips
+   (each chip is nowrap, so it moves whole, and the line-height gives a wrapped
+   line room to breathe); auto table layout only wraps when the row would not
+   fit. Numbers and dates stay on one line. */
+@media (min-width: 681px) {
+  .side .jr-table td:first-child, .side .jr-table td[data-label="Reason"] { white-space: normal; }
+}
+@media (min-width: 681px) and (max-width: 1199px) {   /* where the chips really wrap */
+  .side .jr-table td:first-child, .side .jr-table td[data-label="Reason"] { line-height: 1.8; }
+}
+/* At tablet-portrait widths the widest unbreakable thing left was the
+   "⚠ CHART NOW READS SHORT" chip (172px), which held the open table 5px wider
+   than its card at 768 on the fixture book. Let it break into two lines there
+   (only when the column needs it — auto layout) rather than push Opened out. */
+@media (min-width: 681px) and (max-width: 900px) {
+  .side .jr-table .jr-flip { white-space: normal; line-height: 1.2; border-radius: 8px; }
+}
+
 /* ═══ NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05) — the daily-glance
    boxes at the top of the journal: one per side, positions opened in the
    last 7 days. Styled to match the iOS revamp. ═══ */
 .jr-new-wrap {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;
+  /* one card since 2026-09-21 — a two-up grid left half the row empty */
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 18px;
 }
 .jr-new-card {
   background: var(--panel); border-radius: var(--radius);
@@ -301,7 +344,7 @@
 .jr-new-sym { font: 800 14px/1 var(--sans); letter-spacing: -0.01em; }
 .jr-new-entry { font: 600 12.5px/1 var(--mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
 .jr-new-lens {
-  font: 700 9.5px/1 var(--sans); letter-spacing: 0.06em; color: var(--purple);
+  font: 700 9.5px/1 var(--sans); letter-spacing: 0.06em; color: var(--purple-ink);
   background: rgba(191,90,242,0.16); border-radius: 999px; padding: 3px 8px;
 }
 .jr-new-closed {
@@ -317,7 +360,7 @@
    the opposite way to an open position. ═══ */
 .dir {
   font: 800 10.5px/1 var(--sans); letter-spacing: 0.05em;
-  padding: 5px 10px; border-radius: 999px;
+  padding: 5px 10px; border-radius: 999px; white-space: nowrap;
 }
 .dir-l { background: var(--green); color: #04140a; }
 .dir-s { background: var(--red);   color: #1a0606; }
@@ -368,7 +411,7 @@
   font-variant-numeric: tabular-nums;
 }
 .jr-pnl-total.r-pos { color: var(--green); }
-.jr-pnl-total.r-neg { color: var(--red); }
+.jr-pnl-total.r-neg { color: var(--red-ink); }
 .jr-pnl-sub { font: 500 12px/1.4 var(--sans); color: var(--muted-2); }
 .jr-pnl-split { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
 .jr-pnl-chip {
@@ -377,7 +420,7 @@
   background: var(--fill-2); border: 1px solid var(--border-soft);
   font-variant-numeric: tabular-nums;
 }
-.jr-pnl-chip b.r-pos { color: var(--green); } .jr-pnl-chip b.r-neg { color: var(--red); }
+.jr-pnl-chip b.r-pos { color: var(--green); } .jr-pnl-chip b.r-neg { color: var(--red-ink); }
 
 /* fold-away sections: the analytics stay one click away instead of stacking */
 details.jr-fold { margin: 0 0 14px; }
@@ -394,7 +437,13 @@ details.jr-fold[open] > summary { border-radius: var(--radius-md) var(--radius-m
 details.jr-fold.jr-fold-quiet > summary {
   background: transparent; box-shadow: none; padding: 4px 0;
   font-weight: 600; color: var(--muted-2);
-}@media (max-width: 600px) {
+}
+/* The headline is on screen from first paint with a "—" placeholder and grew
+   from 56px to ~160px when the book landed, shoving the whole page down (the
+   larger half of the phone's ~0.99 CLS). Reserve the filled height. */
+@media (max-width: 420px) { .jr-pnl { min-height: 162px; align-content: flex-start; } }
+@media (min-width: 421px) and (max-width: 680px) { .jr-pnl { min-height: 137px; align-content: flex-start; } }
+@media (max-width: 600px) {
   .jr-pnl { padding: 14px 16px; }
   .jr-pnl-total { font-size: 28px; }
   .jr-pnl-split { margin-left: 0; }
@@ -410,7 +459,7 @@ details.jr-fold.jr-fold-quiet > summary {
 .side .stats, .side .jr-table-wrap, .side .jr-equity-chart,
 .side .side-hd { min-width: 0; max-width: 100%; }
 .side .jr-equity-chart { overflow: hidden; }
-.side .jr-equity-chart svg { max-width: 100%; height: auto; }
+.side .jr-equity-chart svg { max-width: 100%; height: 110px; }   /* was height:auto -> 35px tall at 390 (viewBox 1000x120, preserveAspectRatio none) */
 /* Belt-and-suspenders: any stray wide table on a phone scrolls in place. */
 @media (max-width: 680px) {
   .jr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -449,6 +498,44 @@ details.jr-fold.jr-fold-quiet > summary {
   .jr-cardable td.jr-sym::before { display: none; }
   .side .jr-cardable td { font-size: 13px; padding: 8px 0; }   /* undo the tight half-width cells */
   .jr-stamp .num-sub { color: var(--muted-2); }
+  /* The label takes the slack, so a value made of several pieces ("Oct 13
+     02:18 AM" + "· 9h", a chip + a mark) stays together on the right instead
+     of space-between scattering the pieces across the card. */
+  .jr-cardable td::before { margin-right: auto; }
+  /* A cell paired with a taller one (a printed note, below) keeps its line at
+     the top, level with its neighbour's, rather than floating mid-cell. */
+  .jr-cardable td { flex-wrap: wrap; align-content: flex-start; }
+  /* CLOSED PREVIEW IN CARD MODE (UI review 2026-10-13). `.jr-cardable tr`
+     (display:block) outranks the one-class `.jr-row-more { display: none; }`
+     further down, so a phone rendered all 110 closed cards (a 49,000px page)
+     and, after Show all, rows 11+ flipped to table-row and lost the card
+     styling. The base rules stay as they are for table mode. */
+  .jr-cardable tr.jr-row-more { display: none; }
+  .jr-closed-wrap.is-open .jr-cardable tr.jr-row-more { display: grid; }
+  /* TWO COLUMNS OF SHORT FACTS (UI review 2026-10-13). One label:value per
+     line made each open card ~285px and the 60-card list ~17,000px. The short
+     pairs (grade, entry, stop, now, R, $) now sit two to a line — every pair
+     still fits at 360px without truncation — and the long ones (the symbol
+     header, the date stamps, the reason chips) keep the full width. Closed
+     cards give Grade the full line so R and $ pair up, as on open cards. */
+  .jr-cardable tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; }
+  .jr-cardable td.jr-sym, .jr-cardable td.jr-stamp, .jr-cardable td[data-label="Reason"],
+  .jr-closed-wrap .jr-cardable td[data-label="Grade"] { grid-column: 1 / -1; }
+  /* Chips at the phone size of the one chip set (see .jr-setup). */
+  .side .jr-setup, .side .jr-mkt { font-size: 11px; padding: 3px 6px; }
+}
+
+/* TOOLTIPS A THUMB CAN READ (UI review 2026-10-13). Stop distance, the
+   open trade's high-water, a stale mark's age and a closed trade's best/worst
+   R lived only in title tooltips, which a touch phone never shows. Printed
+   under the value instead, from the short data-note journal.js writes beside
+   each title (attr(title) is a sentence; three lines in a half-width cell). */
+@media (max-width: 680px) and (hover: none) {
+  .jr-cardable td[data-note] { row-gap: 1px; }
+  .jr-cardable td[data-note]::after {
+    content: attr(data-note); flex: 1 0 100%; text-align: right;
+    font: 500 11px/1.3 var(--sans); color: var(--muted-2); white-space: normal;
+  }
 }
 
 /* #81: realised-R colour-scale chips in the closed lists — deeper green the
@@ -461,7 +548,7 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-rchip.rc-p2   { background: color-mix(in srgb, var(--green) 22%, transparent); color: var(--green); }
 .jr-rchip.rc-p1   { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green); }
 .jr-rchip.rc-flat { background: var(--fill); color: var(--muted); }
-.jr-rchip.rc-n1   { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+.jr-rchip.rc-n1   { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red-ink); }
 .jr-rchip.rc-n2   { background: color-mix(in srgb, var(--red) 28%, transparent); color: #ff9089; }
 .jr-rchip.rc-na   { color: var(--muted); }
 
@@ -480,7 +567,7 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-dg-label { font: 600 10px/1 var(--sans); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
 .jr-dg-val { font: 800 16px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
 .jr-dg-val.r-pos { color: var(--green); }
-.jr-dg-val.r-neg { color: var(--red); }
+.jr-dg-val.r-neg { color: var(--red-ink); }
 
 /* ── UX top-10 #8: edge headline card ────────────────────────────────────── */
 .jr-edge-card {
@@ -491,9 +578,9 @@ details.jr-fold.jr-fold-quiet > summary {
 }
 .jr-edge-card[hidden] { display: none; }
 .jr-ec-lbl { font-weight: 800; color: var(--text); }
-.jr-ec-cell { font: 700 12px/1 var(--mono); color: var(--blue); background: var(--blue-soft); padding: 4px 9px; border-radius: 999px; }
+.jr-ec-cell { font: 700 12px/1 var(--mono); color: var(--blue-ink); background: var(--blue-soft); padding: 4px 9px; border-radius: 999px; }
 .jr-ec-r { font: 800 14px/1 var(--mono); font-variant-numeric: tabular-nums; }
-.jr-ec-r.r-pos { color: var(--green); } .jr-ec-r.r-neg { color: var(--red); }
+.jr-ec-r.r-pos { color: var(--green); } .jr-ec-r.r-neg { color: var(--red-ink); }
 .jr-ec-sub { color: var(--muted-2); }
 .jr-ec-warn { font: 600 11.5px/1.3 var(--sans); color: var(--orange); margin-left: auto; }
 
@@ -529,7 +616,7 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-rd-bar.pos { background: linear-gradient(180deg, var(--green), rgba(47,208,127,.45)); }
 .jr-rd-bar.neg { background: linear-gradient(180deg, var(--red), rgba(255,91,91,.4)); }
 .jr-rd-lbl { font: 600 10px/1 var(--mono); color: var(--muted); white-space: nowrap; }
-.jr-rdist-note { margin: 10px 0 0; font: 500 11.5px/1.55 var(--sans); color: var(--muted); }@media (max-width: 560px) { .jr-rdist-bars { gap: 5px; } .jr-rd-lbl { font-size: 8.5px; } }
+.jr-rdist-note { margin: 10px 0 0; font: 500 11.5px/1.55 var(--sans); color: var(--muted); }@media (max-width: 560px) { .jr-rdist-bars { gap: 5px; } .jr-rd-lbl { font-size: 10px; } }
 
 /* ── UX-20 #13: trade-card export button ─────────────────────────────────── */
 .jr-card-btn {
@@ -537,6 +624,12 @@ details.jr-fold.jr-fold-quiet > summary {
   opacity: .5; padding: 2px 4px; border-radius: 6px; vertical-align: middle;
 }
 .jr-card-btn:hover { opacity: 1; background: rgba(120,120,128,.18); }
+/* Tap floors for the two small icon buttons on a phone (they were 28x26 and
+   24x19). Placed after both base rules so it wins at equal specificity. */
+@media (max-width: 680px) {
+  .jr-wk-btn { width: 40px; height: 36px; }
+  .jr-card-btn { min-width: 36px; min-height: 32px; }
+}
 
 /* ── open-positions sort (owner-requested 2026-08-07) ─────────────────────── */
 /* Lives in the section-title line rather than a row of its own, so nothing
@@ -583,7 +676,7 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-close-all {
   margin-left: 10px; border: 1px solid var(--red-soft); background: none; cursor: pointer;
   font: 600 10.5px/1 var(--sans); letter-spacing: .4px; text-transform: uppercase;
-  color: var(--red); padding: 4px 7px; border-radius: 6px; vertical-align: middle;
+  color: var(--red-ink); padding: 4px 7px; border-radius: 6px; vertical-align: middle;
   transition: border-color .15s, background-color .15s;
 }
 .jr-close-all:hover:not([disabled]) { border-color: var(--red); background: var(--red-soft); }
@@ -622,3 +715,25 @@ details.jr-fold.jr-fold-quiet > summary {
 /* The performance fold gets a little air from the strips above it. */
 .jr-fold-perf { margin-top: 4px; }
 
+/* ── UI review 2026-10-13: desktop odds and ends ─────────────────────────── */
+/* Six stat tiles in styles.css's four-column grid left a 4 + 2 ragged block
+   above 1200px; three columns give two full rows inside the 1100px cap. */
+@media (min-width: 1201px) { #bot-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* The rules/you split and the by-exit / by-timeframe lines sit inside the
+   closed table's card; at table widths their text touched the card's border.
+   Indented to the table's own 8px cell padding. Card mode has no border. */
+@media (min-width: 681px) {
+  .jr-table-wrap > .jr-decider, .jr-table-wrap > .jr-mech { padding-left: 8px; padding-right: 8px; }
+  .jr-table-wrap > .jr-decider:first-child, .jr-table-wrap > .jr-mech:first-child { padding-top: 10px; }
+}
+
+/* ── BOOK FAILED TO LOAD (UI review 2026-10-13, states-1) ────────────────────
+   journal.js paintLoadFailure() sets this class only when the load failed AND
+   nothing is in memory. Every block that would print a zero as if it were
+   real goes; #bot-open carries the plain-words message instead. */
+.jr-book-failed #bot-stats, .jr-book-failed .jr-new-wrap, .jr-book-failed #jr-topsum,
+.jr-book-failed #bot-tide, .jr-book-failed #bot-equity, .jr-book-failed #bot-closed { display: none; }
+/* Separate rule: a browser without :has() drops only this one. */
+.jr-book-failed .jr-section-title:has(+ #bot-equity),
+.jr-book-failed .jr-section-title:has(+ #bot-closed) { display: none; }
+.jr-load-err { color: var(--text); background: var(--panel); border-radius: var(--radius-md); border-left: 3px solid var(--red); text-align: left; padding: 18px 20px; }

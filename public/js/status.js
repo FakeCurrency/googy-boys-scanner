@@ -445,6 +445,26 @@
 
   // ── sheet plumbing ────────────────────────────────────────────────────────
   let scrim = null;
+  let hideTimer = 0;
+
+  // Page scroll lock while the sheet is open — a wheel or a swipe on the scrim
+  // used to scroll the page behind it. A CLASS on <html> (status.css), not an
+  // inline overflow, so closeSheet releases it with one remove whichever way
+  // the sheet was closed, and nothing another script set on <html> is
+  // overwritten. The width of the scrollbar it hides is handed to the CSS as
+  // --sys-sbw so the page does not jump sideways. A style property: nothing is
+  // stored, so the read-only promise above still holds.
+  function lockScroll(on) {
+    const html = document.documentElement;
+    if (on) {
+      const sbw = window.innerWidth - html.clientWidth;
+      html.style.setProperty("--sys-sbw", `${sbw > 0 ? sbw : 0}px`);
+      html.classList.add("sys-lock");
+    } else {
+      html.classList.remove("sys-lock");
+      html.style.removeProperty("--sys-sbw");
+    }
+  }
 
   function buildSheet() {
     if (scrim) return scrim;
@@ -455,7 +475,7 @@
       `<section class="sys-sheet" role="dialog" aria-modal="true" aria-label="System status">` +
       `<div class="sys-grip"></div>` +
       `<button class="sys-x" type="button" aria-label="Close">✕</button>` +
-      `<div class="sys-body" id="sys-body"></div>` +
+      `<div class="sys-body" id="sys-body" tabindex="0"></div>` +
       `</section>`;
     document.body.appendChild(scrim);
     scrim.addEventListener("click", (e) => { if (e.target === scrim) closeSheet(); });
@@ -470,7 +490,14 @@
     const btn = document.getElementById("sysdot");
     if (btn) btn.setAttribute("aria-expanded", "true");
     body.innerHTML = `<p class="sys-empty">reading…</p>`;
+    // A reopen inside the 200ms close must not be hidden by that close's timer
+    // (it would vanish the sheet and leave the page locked).
+    clearTimeout(hideTimer);
     s.hidden = false;
+    lockScroll(true);
+    // Focus goes INTO the dialog (aria-modal tells assistive tech the page
+    // behind is inert), onto the one control every state of the sheet has.
+    s.querySelector(".sys-x").focus({ preventScroll: true });
     requestAnimationFrame(() => s.classList.add("is-open"));
     // Refresh the light's own inputs on open — a sheet opened on a tab that
     // has sat for an hour must not describe the hour-old fetch.
@@ -480,12 +507,21 @@
       .catch(() => { body.innerHTML = `<p class="sys-empty">status unavailable — check your connection.</p>`; });
   }
 
+  // Every close path (Escape, a click on the scrim, the ✕) ends here, so the
+  // scroll lock is released here and nowhere else.
   function closeSheet() {
     if (!scrim || scrim.hidden) return;
     scrim.classList.remove("is-open");
+    lockScroll(false);
     const btn = document.getElementById("sysdot");
     if (btn) btn.setAttribute("aria-expanded", "false");
-    setTimeout(() => { if (scrim) scrim.hidden = true; }, 200);
+    // Focus back to the lamp — but only from inside the sheet, or from <body>
+    // where a click on the scrim drops it; never away from somewhere the
+    // reader has since put it.
+    const a = document.activeElement;
+    if (btn && (!a || a === document.body || scrim.contains(a))) btn.focus({ preventScroll: true });
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { if (scrim) scrim.hidden = true; }, 200);
   }
 
   // ── mount ─────────────────────────────────────────────────────────────────

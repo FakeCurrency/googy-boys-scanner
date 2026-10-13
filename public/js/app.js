@@ -388,8 +388,20 @@
     const top = document.querySelector(".topbar");
     const setH = () =>
       document.documentElement.style.setProperty("--topbar-h", `${top ? top.offsetHeight : 0}px`);
-    setH();
+    // --toolbar-h (UI review 2026-10-13): the sticky grade-group headers sit
+    // under the toolbar, whose height changes with its slim state and with
+    // how many lines its chips wrap to — a fixed 46px guess slid them under
+    // it. A ResizeObserver also catches the header growing once nav.js has
+    // injected its pills (no resize event fires for that).
+    const setTB = () =>
+      document.documentElement.style.setProperty("--toolbar-h", `${bar.offsetHeight}px`);
+    setH(); setTB();
     window.addEventListener("resize", setH, { passive: true });
+    if (typeof ResizeObserver === "function") {
+      const ro = new ResizeObserver(() => { setH(); setTB(); });
+      ro.observe(bar, { box: "border-box" });            // .is-slim only changes padding
+      if (top) ro.observe(top, { box: "border-box" });
+    }
     let raf = 0;
     window.addEventListener("scroll", () => {
       if (raf) return;
@@ -983,13 +995,21 @@
   // Three tiny dots read cross-timeframe state without expanding the row:
   // filled green = that TF's plan is ARMED, amber ring = plan exists
   // (watching), dim = no plan on that TF.
-  function tfDots(r) {
+  const TF_DOTS = [["1W", "W"], ["3D", "3D"], ["1D", "D"]];
+  // The dots' words ("W armed · 3D watching · D quiet"). Shared by the row's
+  // tooltip and the expanded panel's header chip, which is where a phone
+  // (no hover) reads it — hover-2, 2026-10-13.
+  function tfDotsText(r) {
     if (!r.plans) return "";
-    const TFS = [["1W", "W"], ["3D", "3D"], ["1D", "D"]];
-    const txt = TFS.map(([k, l]) => {
+    return TF_DOTS.map(([k, l]) => {
       const p = r.plans[k];
       return `${l} ${p ? (p.armed ? "armed" : "watching") : "quiet"}`;
     }).join(" · ");
+  }
+  function tfDots(r) {
+    if (!r.plans) return "";
+    const TFS = TF_DOTS;
+    const txt = tfDotsText(r);
     return `<span class="tfdots" title="${esc(txt)}">` +
       TFS.map(([k]) => {
         const p = r.plans[k];
@@ -1075,6 +1095,11 @@
     if (!btn) return;
     let menu = null;
     const close = () => { if (menu) { menu.remove(); menu = null; btn.setAttribute("aria-expanded", "false"); } };
+    // a11y-3: Escape closes the menu and hands focus back to ☰ (the menu is
+    // appended to <body>, so without this a keyboard user was stranded).
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && menu) { close(); btn.focus(); }
+    });
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (menu) { close(); return; }
@@ -1095,6 +1120,9 @@
       menu.style.left = `${Math.round(r.left)}px`;
       document.body.appendChild(menu);
       btn.setAttribute("aria-expanded", "true");
+      // a11y-3: a keyboard-opened menu takes focus (a mouse click on ☰ is a
+      // keyboard-less event with detail > 0, and is left where it is).
+      if (e.detail === 0) { const first = menu.querySelector("button"); if (first) first.focus(); }
       menu.addEventListener("click", (ev) => {
         const t = ev.target;
         if (t.classList.contains("vm-save")) {
@@ -1522,8 +1550,19 @@
         const l = Math.min(X(a), X(b)), w = Math.abs(X(b) - X(a));
         return `<span class="vk-axis-seg ${cls}" style="left:${l.toFixed(1)}%;width:${w.toFixed(1)}%"></span>`;
       };
+      // Labels that land within 7% of one already placed overprinted each
+      // other ("TP2" over "TP3"). Place them by priority — IN, SL, then the
+      // TPs in order — and draw a later one's tick without its label; the
+      // tick keeps its title, and the cell ladder below names every level.
+      const placed = [], quiet = new Set();
+      [[r.entry, "IN"], [r.stop, "SL"], [r.tp1, "TP1"], [r.tp2, "TP2"], [r.tp3, "TP3"]].forEach(([p, lbl]) => {
+        if (p == null || !isFinite(p)) return;
+        const x = X(p);
+        if (placed.every((q) => Math.abs(q - x) >= 7)) placed.push(x);
+        else quiet.add(lbl);
+      });
       const tick = (p, lbl, cls) => p == null ? "" :
-        `<span class="vk-axis-tick ${cls}" style="left:${X(p).toFixed(1)}%" title="${esc(lbl)} ${esc(cur)}${num(p)}"><i></i>${esc(lbl)}</span>`;
+        `<span class="vk-axis-tick ${cls}" style="left:${X(p).toFixed(1)}%" title="${esc(lbl)} ${esc(cur)}${num(p)}"><i></i>${quiet.has(lbl) ? "" : esc(lbl)}</span>`;
       const nowPct = now != null && r.entry ? ((r.entry - now) / now * 100) : null;
       const rr = r.rr || 0;
       const rwW = Math.max(8, Math.min(88, (rr / (1 + rr)) * 100));
@@ -1573,6 +1612,7 @@
             <span class="vk-tf-chip">${tfTxt}${r.confluence ? " · W+H4 confluence" : ""}</span>
             ${r.headline_tf && r.headline_tf !== "1D"
               ? `<span class="vk-tf-chip" title="Entry/SL/TP and R:R shown are the ${esc(r.headline_tf)} plan — the timeframe the trigger armed on (and the one the bot trades)">${esc(r.headline_tf)} PLAN</span>` : ""}
+            ${tfDotsText(r) ? `<span class="vk-tf-chip vk-tf-states" title="Plan state on each timeframe (the row's three dots)">${esc(tfDotsText(r))}</span>` : ""}
             <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
             ${scanAge()}
             <a class="vk-chart-btn" href="${chartHref}">View chart →</a>
@@ -2287,12 +2327,19 @@
   function _scrollActiveIntoStrip() {
     const line = document.querySelector("#toolbar .tb-line");
     if (!line || line.scrollWidth <= line.clientWidth) return;
-    const el = document.querySelector("#vk-filters .vkf-chip.is-active")
+    // The default "All" chip is not a choice the user made: chasing it on
+    // load scrolled the ☰ views button off the left edge of every phone.
+    // Only a real filter (or the grade tab) is brought into view.
+    const el = document.querySelector('#vk-filters .vkf-chip.is-active:not([data-type="all"])')
             || document.querySelector("#tabs .seg-btn.is-active");
     if (!el) return;
     const lr = line.getBoundingClientRect(), er = el.getBoundingClientRect();
+    // On phones the sort control is pinned over the strip's right edge, so the
+    // visible window ends at its left side, not at the strip's.
+    const sort = line.querySelector(".tb-sort");
+    const pinned = sort && getComputedStyle(sort).position === "sticky" ? sort.getBoundingClientRect().width : 0;
     if (er.left < lr.left + 8) line.scrollBy({ left: er.left - lr.left - 8, behavior: "smooth" });
-    else if (er.right > lr.right - 8) line.scrollBy({ left: er.right - lr.right + 8, behavior: "smooth" });
+    else if (er.right > lr.right - pinned - 8) line.scrollBy({ left: er.right - lr.right + pinned + 8, behavior: "smooth" });
   }
 
   let _rowsToken = 0;   // invalidates in-flight rAF batches when a newer render starts
@@ -2947,6 +2994,9 @@
     if (input) input.value = "";
     const res = document.getElementById("search-results");
     if (res) res.innerHTML = "";
+    // a11y-9: focus returns to the control that opened the overlay.
+    const trig = document.getElementById("search-trigger");
+    if (trig && trig.offsetParent !== null) trig.focus({ preventScroll: true });
   }
 
   // ----------------------------------------------------------- keyboard
@@ -2961,7 +3011,7 @@
       }
       if (e.key === "Escape") {
         if (isSearchOpen) { closeSearch(); return; }
-        document.querySelectorAll(".row-wrap.open").forEach((w) => w.classList.remove("open"));
+        document.querySelectorAll(".row-wrap.open").forEach((w) => { w.classList.remove("open"); w.setAttribute("aria-expanded", "false"); });
         return;
       }
       if (e.key === "D" && e.ctrlKey && e.shiftKey) {
@@ -3298,6 +3348,11 @@
         return;
       }
       if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
+      // On touch, a tap on a titled element INSIDE the open panel only reads
+      // its tip (nav.js tipPop); collapsing the row under the reader would
+      // point the tip at a panel that just closed. The header still toggles.
+      if (window.matchMedia && matchMedia("(hover: none)").matches &&
+          e.target.closest(".row-detail [title]")) return;
       // #49: the "+N" overflow chip expands the row directly (explicit — it
       // also fell through before, but now it's an obvious affordance).
       const wrap = e.target.closest(".row-wrap");

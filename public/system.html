@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>System — Vivek 5.0</title>
   <script src="js/telemetry.js?v=1"></script>
   <meta name="theme-color" content="#080b11" />
@@ -14,8 +14,8 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=119" />
-  <link rel="stylesheet" href="css/status.css?v=3" />
+  <link rel="stylesheet" href="css/styles.css?v=120" />
+  <link rel="stylesheet" href="css/status.css?v=4" />
   <style>
     /* doc-local layout — everything else inherits the app theme */
     .syswrap { max-width: 920px; margin: 0 auto; padding: 22px 18px 60px; }
@@ -24,10 +24,14 @@
     .sys-live { display: inline-flex; gap: 6px; align-items: center; font: 600 11px/1 var(--mono);
       color: var(--green); background: var(--green-soft); padding: 5px 10px; border-radius: 7px; }
     .sys-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 8px; }
-    .sys-toc a { font: 600 11px/1 var(--sans); color: var(--blue); background: var(--blue-soft);
+    .sys-toc a { font: 600 11px/1 var(--sans); color: var(--blue-ink); background: var(--blue-soft);
       padding: 6px 10px; border-radius: 999px; text-decoration: none; }
     section.sys { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 18px 20px; margin: 18px 0; }
+    /* A contents jump must land the heading BELOW the sticky top bar, which
+       wraps to a different height per width; --sys-bar is its measured height
+       (set by the script at the foot of the page), 72px until then. */
+    section.sys { scroll-margin-top: calc(var(--sys-bar, 62px) + 10px); }
     section.sys h2 { font: 800 16px/1.2 var(--sans); margin: 0 0 4px; }
     section.sys h3 { font: 700 13px/1.2 var(--sans); margin: 18px 0 6px; color: var(--text-2);
       text-transform: uppercase; letter-spacing: 0.06em; }
@@ -39,10 +43,15 @@
     .sys-t td { font: 500 12.5px/1.45 var(--sans); color: var(--text-2); padding: 8px 10px;
       border-bottom: 1px solid var(--border-soft); vertical-align: top; }
     .sys-t tr:last-child td { border-bottom: 0; }
+    /* The backtest R cells: `.sys-t td` above out-ranks styles.css's
+       .bt-pos/.bt-neg/.bt-flat, so restate them at this specificity. */
+    .sys-t td.bt-pos { color: var(--green); font-weight: 700; }
+    .sys-t td.bt-neg { color: var(--red-ink); font-weight: 700; }
+    .sys-t td.bt-flat { color: var(--muted); }
     .sys-t code, section.sys code { font: 600 11.5px/1.4 var(--mono); color: var(--text);
       background: var(--fill); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
     .rule { font: 700 12.5px/1 var(--mono); color: var(--green); }
-    .rule.red { color: var(--red); } .rule.blue { color: var(--blue); } .rule.amber { color: var(--orange); }
+    .rule.red { color: var(--red-ink); } .rule.blue { color: var(--blue-ink); } .rule.amber { color: var(--orange); }
     .sys-note { font: 500 11.5px/1.55 var(--sans); color: var(--muted); background: var(--fill-2);
       border-radius: 10px; padding: 10px 13px; margin-top: 10px; }
     .pill-g { color: var(--grade-aplus); font-weight: 800; } .pill-a { color: var(--grade-a); font-weight: 800; }
@@ -56,11 +65,28 @@
       .sys-t th, .sys-t td { padding-left: 7px; padding-right: 7px; }
       .sys-t code, section.sys code { white-space: normal; overflow-wrap: anywhere; }
       .sys-t.bt-t th:nth-child(n+2) { white-space: normal; }
+      /* At 360px the backtest tables' nowrap number columns still ran up to
+         13px past the panel border; the coverage table sat 2px off it. */
+      .sys-t.bt-t th, .sys-t.bt-t td, #sys-cov-t th, #sys-cov-t td { padding-left: 4px; padding-right: 4px; }
+      /* Contents links were 23px tall: too small to hit with a thumb. */
+      .sys-toc { gap: 8px; }
+      .sys-toc a { padding: 10px 12px; font-size: 12.5px; }
+      /* The bot rulebook's three columns left WHY ~105px wide and stacked the
+         table 3,589px tall at 360px. On phones each rule is a two-column grid
+         (Rule | Value) with its Why underneath, full width. Every cell stays. */
+      #bot .sys-t, #bot .sys-t tbody { display: block; }
+      #bot .sys-t tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        border-bottom: 1px solid var(--border-soft); }
+      #bot .sys-t tr:first-child { border-bottom-color: var(--border); }
+      #bot .sys-t tr:last-child { border-bottom: 0; }
+      #bot .sys-t th, #bot .sys-t td { border-bottom: 0; }
+      #bot .sys-t th:nth-child(3) { display: none; }
+      #bot .sys-t td:nth-child(3) { grid-column: 1 / -1; padding-top: 0; color: var(--muted); }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar deck-top">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 7-8" /><path d="M16 4h4v4" /></svg>
@@ -339,10 +365,21 @@
     <footer class="site-footer"><p class="disclaimer">General information only — not financial advice. Markets carry risk.</p></footer>
   </main>
 
-  <script src="js/nav.js?v=26"></script>
-  <script src="js/status.js?v=9"></script>
+  <script src="js/nav.js?v=27"></script>
+  <script src="js/status.js?v=10"></script>
   <script src="js/system-backtest.js?v=2"></script>
   <script>
+  /* Contents jumps: publish the sticky top bar's height as --sys-bar so
+     section.sys's scroll-margin-top clears it at every width (the bar wraps
+     to two or three rows on tablets, and nav.js fills it after load). */
+  (() => {
+    const bar = document.querySelector("header.topbar");
+    if (!bar) return;
+    const set = () => document.documentElement.style.setProperty("--sys-bar", bar.offsetHeight + "px");
+    set();
+    if (window.ResizeObserver) new ResizeObserver(set).observe(bar);
+  })();
+
   /* Fix-10 #7: scan-coverage panel — Range-read the first 2KB of each scan
      file (the header fields precede the results array), pull universe_size +
      generated_at, and grade them against each market's typical floor. Falls
@@ -425,8 +462,12 @@
       if (j.max_weekly_loss_pct != null) set("max_weekly_loss_pct", j.max_weekly_loss_pct ? `−${j.max_weekly_loss_pct}% / market / trailing 7 days` : "off");
       if (j.commission_bps) set("commission_bps", `ASX ${j.commission_bps.asx} · NASDAQ ${j.commission_bps.nasdaq} · crypto ${j.commission_bps.crypto} bps`);
       if (j.slippage_bps) set("slippage_bps", `ASX ${j.slippage_bps.asx} · NASDAQ ${j.slippage_bps.nasdaq} · crypto ${j.slippage_bps.crypto} bps`);
+      // One timestamp convention: Melbourne on screen, UTC in the tooltip.
       const t = new Date(j.generated_at);
-      live.textContent = "● live values — published " + (isNaN(t) ? "recently" : t.toLocaleString());
+      live.textContent = "● live values — published " + (isNaN(t) ? "recently"
+        : new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", day: "numeric",
+            month: "short", hour: "numeric", minute: "2-digit" }).format(t) + " Melb");
+      if (!isNaN(t)) live.title = "UTC " + t.toISOString().slice(0, 16).replace("T", " ");
     } catch (_) {
       live.textContent = "⚠ live values unavailable — showing last-known defaults";
       live.style.color = "var(--orange)"; live.style.background = "var(--orange-soft)";

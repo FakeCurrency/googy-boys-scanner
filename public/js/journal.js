@@ -529,9 +529,15 @@
       // batch-100 item 25: the open trade's high-water (MFE) on the R cell —
       // an open +0.1R that has already been +1.2R is a different position.
       const hw = typeof t.mfe_r === "number"
-        ? ` title="High-water ${t.mfe_r >= 0 ? "+" : ""}${t.mfe_r.toFixed(2)}R (best unrealized so far)"` : "";
+        ? ` title="High-water ${t.mfe_r >= 0 ? "+" : ""}${t.mfe_r.toFixed(2)}R (best unrealized so far)"` +
+          ` data-note="high-water ${t.mfe_r >= 0 ? "+" : ""}${t.mfe_r.toFixed(2)}R"` : "";
+      // data-note: the same fact as the title, short enough to PRINT under the
+      // value on a touch phone, where a title is unreachable (journal.css,
+      // hover:none). A sentence-length title wraps to three lines in a card.
+      const note = d > 0 ? ` data-note="stale: close ${staleWord(d)} old"`
+        : (dist != null && isFinite(dist) ? ` data-note="stop ${(dist * 100).toFixed(1)}% away"` : "");
       return {
-        now: `<td class="${cls}" data-label="Now"${tip}>${now != null ? px(now) : "—"}</td>`,
+        now: `<td class="${cls}" data-label="Now"${tip}${note}>${now != null ? px(now) : "—"}</td>`,
         ur: `<td class="num jr-ur ${ur != null ? rcls(ur) : ""}" data-label="R"${hw}>${ur != null ? rfmt(ur) : "—"}</td>`,
         ud: `<td class="num jr-ud ${ud != null ? pcls(ud) : ""}${legacyCell(t, side).cls}" data-label="$"${legacyCell(t, side).tip}>${ud != null ? d2(ud) : "—"}</td>`,
       };
@@ -866,7 +872,8 @@
     const bits = [];
     if (typeof t.mfe_r === "number") bits.push(`high-water ${t.mfe_r >= 0 ? "+" : ""}${t.mfe_r.toFixed(2)}R`);
     if (typeof t.mae_r === "number") bits.push(`worst ${t.mae_r.toFixed(2)}R`);
-    return bits.length ? ` title="${esc(bits.join(" · "))}"` : "";
+    // data-note: printed under the R on a touch phone (journal.css, hover:none).
+    return bits.length ? ` title="${esc(bits.join(" · "))}" data-note="${esc(bits.join(" · "))}"` : "";
   };
   const wrongFromEntry = (t) =>
     String(t.exit_reason || "").toLowerCase() === "stop"
@@ -902,7 +909,7 @@
         <td class="num ${d == null ? "" : pcls(d)}${lg.cls}" data-label="$"${lg.tip}>${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
         <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
-        <td data-label="Reason">${t.entry_type ? `<span class="jr-pat" title="Entry pattern">${esc(t.entry_type)}</span> ` : ""}<span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}" title="${esc(reasonTip(t.exit_reason))}">${esc(t.exit_reason || "manual")}</span>${wfeMark(t)}${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image">📤</button>` : ""}</td></tr>`;
+        <td data-label="Reason">${t.entry_type ? `<span class="jr-pat" title="Entry pattern">${esc(t.entry_type)}</span> ` : ""}<span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}" title="${esc(reasonTip(t.exit_reason))}">${esc(t.exit_reason || "manual")}</span>${wfeMark(t)}${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image" aria-label="Download trade card">📤</button>` : ""}</td></tr>`;
     }).join("");
     const hidden = Math.max(0, sorted.length - CLOSED_PREVIEW);
     const more = hidden
@@ -1356,8 +1363,14 @@
     const botOpen = state.bot.open || [];
     const total = botOpen.reduce((s, t) => s + (t.unreal_usd != null ? t.unreal_usd * fxOf(t) : 0), 0);
     const nOpen = botOpen.length;
-    if (!nOpen) { box.hidden = true; return; }
-    box.hidden = false;
+    // style.display as well as `hidden`: journal.css's `.jr-pnl { display:flex }`
+    // outranks the [hidden] UA rule, so the attribute alone never hid it. The
+    // card is deliberately ON SCREEN from first paint (its "—" placeholder and
+    // the phone min-height reserve the space the figures will fill — UI review
+    // 2026-10-13, CLS); it only goes once a load has been TRIED and the book
+    // has no positions — init's first paint runs before the book arrives.
+    if (!nOpen) { box.hidden = true; if (botTried) box.style.display = "none"; return; }
+    box.hidden = false; box.style.display = "";
     const totEl = $("#jr-pnl-total");
     totEl.textContent = d2(total);
     totEl.className = "jr-pnl-total " + pcls(total);
@@ -1625,6 +1638,7 @@
         `<span class="ts-who">· ${openN} open</span>`;
       ts.innerHTML = cell("🤖", sb, state.bot.open.length);
     }
+    paintLoadFailure();
     const fxn = $("#fx-note");
     if (fxn) fxn.textContent = ` · $ figures in US$ — ASX P&L converted at AUD/USD ${FX_AUDUSD.toFixed(4)}`;
     // Strategy-review checkpoint (owner decision, locked until the evidence
@@ -1650,11 +1664,31 @@
     }
   }
 
+  // A load that FAILED with nothing in memory (UI review 2026-10-13, states-1)
+  // used to paint as a real, empty, all-green book: $150,000 account value,
+  // +$0, 0 open, "No open positions", under one small red line. Zeros that are
+  // not real are worse than no figures, so the body class hides every block
+  // that would print one (journal.css, .jr-book-failed) and the open table
+  // says plainly what happened. A failed REFRESH over a good copy is TOP100
+  // #29's case and is untouched: those rows are real, just frozen. The next
+  // successful load clears the class and repaints #bot-open.
+  function paintLoadFailure() {
+    const failed = !!botLoadErr && !state.bot.open.length && !state.bot.closed.length;
+    document.body.classList.toggle("jr-book-failed", failed);
+    if (!failed) return;
+    const host = $("#bot-open");
+    if (host) {
+      host.innerHTML = `<div class="jr-empty jr-load-err" role="alert">Couldn't load Claude's book ` +
+        `(${esc(botLoadErr)}). Check your connection and reload — any zero figures are not real.</div>`;
+    }
+  }
+
   // TOP100 #29: a failed refresh keeps the LAST GOOD BOOK on screen, so the
   // error has to be surfaced or a frozen book looks like an unchanged one.
   // r.ok is checked too: a 404 (never published) and a 500 both used to fall
   // through in silence.
   let botLoadErr = null;
+  let botTried = false;        // a load has completed (either way) — see renderPnlHeadline
   async function loadBot() {
     try {
       const r = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
@@ -1663,6 +1697,8 @@
       botLoadErr = null;   // cleared only by a load that actually succeeded
     } catch (e) {
       botLoadErr = "unreachable";
+    } finally {
+      botTried = true;
     }
   }
 
