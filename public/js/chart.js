@@ -1303,6 +1303,7 @@
     }
     const assetType = m.asset_type || (market === "crypto" ? "crypto" : null);
     VIVEK_CRYPTO_SRC = cryptoSrcFor(m);
+    VIVEK_CRYPTO_REF = isCryptoMarket(assetType) && +m.price > 0 ? +m.price : null;   // #115
     const dir = m.dir || "LONG";
     const cur = m.currency_symbol || (market === "asx" || assetType === "asx" ? "A$" : "$");
     const d = {
@@ -1406,7 +1407,7 @@
         renderDataHonesty();
         render(d);
       });
-    }).catch(() => fail(`No chart data for ${SYM.toUpperCase()} yet, and live history is unavailable right now.`));
+    }).catch((e) => fail(chartFailMsg(e, SYM)));
   }
 
   // BROWSER-DIRECT BINANCE (2026-09-28). Measured on the LIVE proxy from a
@@ -1468,20 +1469,48 @@
     return fromHost(0);
   }
 
+  // CRYPTO IDENTITY ON THE CHART (REFINE200 #115). The scan only reports a
+  // coin's venue after checking that the venue's latest close sits within
+  // CRYPTO_IDENTITY_TOL of CoinGecko's price for THAT coin -- a ticker is not
+  // an identity (Yahoo's "JUP-USD" is a different token ~1000x cheaper than
+  // Binance's JUP). The chart had no such check on its FALLBACK: a
+  // Binance-sourced coin whose browser cannot reach Binance went to the proxy,
+  // which from Cloudflare answers with Yahoo's "<SYM>-USD", and drew a
+  // stranger's candles under the scan's levels (and the header quote did the
+  // same). A proxy series or quote is now accepted only inside the scan's own
+  // band around the row's scan price; outside it the chart says the price
+  // source is unavailable. No reference price (no row) = no check, as before.
+  // PARITY: scanner/config.py CRYPTO_IDENTITY_TOL (test/chart_refine.test.js),
+  // and the band is exchange_data.identity_ok's, [1/(1+tol), 1+tol].
+  const CRYPTO_IDENTITY_TOL = 0.40;
+  let VIVEK_CRYPTO_REF = null;
+  function cryptoIdentityOk(last, ref) {
+    if (!(ref > 0)) return true;                 // nothing to check against
+    if (!(last > 0)) return false;
+    const r = last / ref;
+    return r >= 1 / (1 + CRYPTO_IDENTITY_TOL) && r <= 1 + CRYPTO_IDENTITY_TOL;
+  }
+  const venueRefused = (got) => Object.assign(new Error("venue refused"),
+    { venueRefused: true, got, ref: VIVEK_CRYPTO_REF, venue: VIVEK_CRYPTO_SRC });
+
   // VIVEK crypto history from the venue the SCAN read (VIVEK_CRYPTO_SRC, set
   // from the row's data_source) — Binance when the scan confirmed the pair,
-  // else the Yahoo <base>-USD series. Never a guessed pair.
+  // else the Yahoo <base>-USD series. Never a guessed pair, and never a
+  // proxy series that prices a different instrument (above).
   function vivekCryptoBars(sym, range, interval, capture) {
     const usd = String(sym || "").toUpperCase().replace(/-USD$/, "") + "-USD";
     const viaProxy = () => fetch(`/api/price?symbol=${encodeURIComponent(usd)}&type=crypto&range=${range}&interval=${interval}&src=${VIVEK_CRYPTO_SRC}`,
       { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((j) => {
+        const bars = (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
+        const last = bars.length ? +bars[bars.length - 1].close : null;
+        if (last != null && !cryptoIdentityOk(last, VIVEK_CRYPTO_REF)) throw venueRefused(last);
         if (capture && j && j.ok) {
           DATA_META = { bars: j.bars || 0, flat: j.flat || 0,
                         basis: j.basis || null, degraded: !!j.degraded };
         }
-        return (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
+        return bars;
       });
     if (VIVEK_CRYPTO_SRC !== "binance") return viaProxy();
     // Depth matches the proxy's targetBars: 5y daily = 1900, 2y hourly = 3300
@@ -1519,6 +1548,7 @@
     // a Binance-sourced TAO no longer asks Yahoo for a "TAO-USD" that is not
     // Bittensor and dead-ends. No row -> Yahoo <base>-USD, as before.
     VIVEK_CRYPTO_SRC = cryptoSrcFor(m);
+    VIVEK_CRYPTO_REF = isCryptoMarket(assetType) && +m.price > 0 ? +m.price : null;   // #115
     const bull = rec ? rec.direction === "bullish" : true;
     const d = {
       symbol: String(SYM).toUpperCase(), name: m.name || (rec && rec.name) || SYM,
@@ -1569,7 +1599,11 @@
       ? vivekCryptoBars(SYM, "2y", "1h")
       : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
     pmChartBars(d.symbol)
-      .then((bars) => (bars.length >= 6 ? bars : liveDaily()))
+      // PhaseMap's committed crypto candles are Yahoo's <SYM>-USD; with a
+      // row price to check against, a stranger series is passed over (#115).
+      .then((bars) => (bars.length >= 6 &&
+        (!isCryptoMarket(assetType) || cryptoIdentityOk(+bars[bars.length - 1].close, VIVEK_CRYPTO_REF))
+        ? bars : liveDaily()))
       .then((daily) => {
         if (!daily || daily.length < 6) throw new Error("thin");
         d.timeframes["1D"] = barsToVivekTF(daily);
@@ -1590,7 +1624,7 @@
           render(d);
         });
       })
-      .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
+      .catch((e) => fail(chartFailMsg(e, SYM)));
   }
 
   // ── MOMENTUM chart (2026-09-22) ────────────────────────────────────────────
@@ -1904,6 +1938,21 @@
   function hideSkeleton() {
     const sk = document.getElementById("chart-skeleton");
     if (sk) sk.remove();
+  }
+
+  // The words for a chart that could not draw. A refused venue (#115) is its
+  // own state: the data exists, it just is not this coin's.
+  function chartFailMsg(e, SYM) {
+    const sym = String(SYM).toUpperCase();
+    if (e && e.venueRefused) {
+      return `Price source unavailable for ${sym}. ` +
+        (e.venue === "binance"
+          ? "The scan priced it on Binance and this browser could not reach Binance; the fallback feed's "
+          : "The chart's feed for ") +
+        `${sym} (last ${fmt(e.got)}) is a different instrument from the one the scan priced (${fmt(e.ref)}), ` +
+        "so nothing is drawn rather than another coin's candles.";
+    }
+    return `No chart data for ${sym} yet, and live history is unavailable right now.`;
   }
 
   function fail(msg) {
@@ -2465,6 +2514,9 @@
           const j = await r.json();
           if (j == null || j.price == null) return;
           px = +j.price;
+          // The proxy's crypto quote is Yahoo's <SYM>-USD from Cloudflare: a
+          // quote for a different instrument is not this coin's price (#115).
+          if (isCryptoQuote && !cryptoIdentityOk(px, VIVEK_CRYPTO_REF)) return;
         }
         liveState.price = px;
         // The "~15m delayed" chip is an EQUITIES exchange-licensing fact
