@@ -110,6 +110,59 @@ test("the run date is shown, so a stale report is visible as stale", async () =>
   assert.ok(/run 2026-09-20/.test(h));
 });
 
+suite("one report, one population (REFINE200 #184)");
+
+/* Each block's tables, as {title: [n, n, ...]} — the trades column of every
+ * row, read off the rendered HTML. */
+function tablesOf(blockHtml) {
+  const out = {};
+  for (const t of blockHtml.split("<table").slice(1)) {
+    const title = (/<th>([^<]*)<\/th>/.exec(t) || [])[1];
+    out[title] = [...t.matchAll(/<tr><td>[\s\S]*?<\/td><td>(\d+)<\/td>/g)].map((m) => +m[1]);
+  }
+  return out;
+}
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+const blocksOf = (h) => {
+  const at = h.indexOf("Both directions");
+  return { lo: at < 0 ? h : h.slice(0, at), both: at < 0 ? "" : h.slice(at) };
+};
+
+test("the both-directions block reads the both-direction cohorts, never the *_long ones", async () => {
+  const both = REPORT();
+  both.results.overall = M({ n: 30 });
+  both.results.by_conviction = { high: M({ n: 12 }), rest: M({ n: 18 }) };
+  both.results.by_timeframe = { "1W": M({ n: 5 }), "3D": M({ n: 10 }), "1D": M({ n: 15 }) };
+  both.results.by_entry_type = { reclaim: M({ n: 11 }), retest: M({ n: 9 }), break: M({ n: 10 }) };
+  both.results.by_grade = { "A+": M({ n: 14 }), A: M({ n: 16 }) };
+  // the *_long cohorts (REPORT's defaults) sum to something else entirely
+  const t = tablesOf(blocksOf(await render(null, both)).both);
+  assert.equal(sum(t["Overall"]), 30);
+  for (const k of ["High conviction", "By timeframe", "By grade", "By entry trigger"])
+    assert.equal(sum(t[k]), 30, `${k} sums to ${sum(t[k])}, not the block's own 30`);
+});
+
+test("the per-cell table in the both-directions block says it is longs", async () => {
+  const r = REPORT();
+  r.results.by_conviction_cell_long = { "1W reclaim": M({ n: 4 }) };
+  const { lo, both } = blocksOf(await render(r, r));
+  assert.ok(/By conviction cell</.test(lo) && !/\(longs\)/.test(lo));
+  assert.ok(/By conviction cell \(longs\)/.test(both));
+});
+
+test("against the REAL reports every table sums to its own block's Overall", async () => {
+  const lo = readJSON("public/data/vivek_backtest_longonly.json");
+  const both = readJSON("public/data/vivek_backtest.json");
+  if (!lo || !both) return;
+  const blocks = blocksOf(await render(lo, both));
+  for (const [name, html] of Object.entries(blocks)) {
+    const t = tablesOf(html);
+    const total = sum(t["Overall"]);
+    for (const k of ["High conviction", "By timeframe", "By grade", "By entry trigger"])
+      assert.equal(sum(t[k]), total, `${name}: ${k} sums to ${sum(t[k])}, Overall is ${total}`);
+  }
+});
+
 suite("honesty under missing data");
 
 test("a missing cohort reads as missing, never as zero", async () => {

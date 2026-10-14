@@ -67,9 +67,20 @@
       `This is a SLICE of each market, not the whole of it — the percentages above are the coverage.</p>`;
   }
 
-  function block(d, title, lead) {
+  /* REFINE200 #184: one report, one population. The long-only report reads
+   * the *_long cohorts (falling back to the unsuffixed ones, which in that
+   * file ARE long-only); the both-directions report reads the unsuffixed,
+   * both-direction cohorts. Before this, the both-directions block read the
+   * *_long keys first, so its conviction / timeframe / trigger tables summed
+   * to the 837 longs while its grade table and Overall counted all 1,457 —
+   * one table set whose rows did not add up to its own total. The per-cell
+   * table is long-only by construction and says so in that block. */
+  const pick = (res, key, longOnly) =>
+    (longOnly ? (res[key + "_long"] || res[key]) : res[key]) || {};
+
+  function block(d, title, lead, longOnly) {
     const res = d.results || {};
-    const conv = (res.by_conviction_long || res.by_conviction || {});
+    const conv = pick(res, "by_conviction", longOnly);
     const gen = d.generated_at ? String(d.generated_at).slice(0, 10) : "—";
 
     let html = `<h3 class="bt-h">${esc(title)} <span class="bt-when">run ${esc(gen)}</span></h3>`;
@@ -93,17 +104,17 @@
     // The four cells the widened rule is built from, one at a time (long only).
     const cells = res.by_conviction_cell_long;
     if (cells && Object.keys(cells).length) {
-      html += table("By conviction cell",
+      html += table(longOnly ? "By conviction cell" : "By conviction cell (longs)",
         Object.keys(cells).map((k) => row(k, cells[k])).join(""));
     }
 
-    const byTf = res.by_timeframe_long || res.by_timeframe || {};
+    const byTf = pick(res, "by_timeframe", longOnly);
     html += table("By timeframe", ["1W", "3D", "1D"].map((k) => row(k, byTf[k])).join(""));
 
     const byGrade = res.by_grade || {};
     html += table("By grade", ["A+", "A"].map((k) => row(k, byGrade[k])).join(""));
 
-    const byEt = res.by_entry_type_long || res.by_entry_type || {};
+    const byEt = pick(res, "by_entry_type", longOnly);
     html += table("By entry trigger",
       ["reclaim", "retest", "break"].map((k) => row(k, byEt[k])).join(""));
 
@@ -126,12 +137,12 @@
     if (lo) {
       html += block(lo, "Long-only replay",
         "The one that matches how these plays are actually traded: longs only, " +
-        "no shorts. Read this first.");
+        "no shorts. Read this first.", true);
     }
     if (both) {
       html += block(both, "Both directions",
         "The canonical record, longs and shorts together. Kept because it is the " +
-        "full picture, not because it is the one being traded.");
+        "full picture, not because it is the one being traded.", false);
     }
     host.innerHTML = html;
   }).catch(() => {
