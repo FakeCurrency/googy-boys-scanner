@@ -1,6 +1,9 @@
 # Vivek 5.0 — Operations Runbook
 
-Last updated: 2026-07-21 (bottom-half runbooks rewritten for the bot-book era — the previous versions described the retired scalp system)
+Last updated: 2026-10-14 (REFINE200 #88/#100: every workflow, the cron-job.org
+clock, "Who triggers what", and the kill switch / watchdog / alert sections as
+they work now). `CLAUDE.md` holds the rules; this file is how to run it and
+what to do when something breaks.
 
 ---
 
@@ -8,522 +11,453 @@ Last updated: 2026-07-21 (bottom-half runbooks rewritten for the bot-book era �
 
 | What | Command |
 |------|---------|
-| Run a VIVEK scan | `python -m scanner.run --market asx` (or nasdaq / crypto) |
-| ~~Run Bybit executor~~ | REMOVED 2026-09-17 — `scanner/broker/bybit_run.py` no longer exists (see Circuit breakers below) |
-| Check kill-switch | `python -m scanner.broker.kill_switch` |
+| Run a VIVEK scan | `python -m scanner.run --market asx` (or nasdaq / crypto; `--limit 40` for a quick slice) |
+| Check the kill switch (loss check, flattens only on a breach) | `python -m scanner.broker.kill_switch --dry-run` |
 | Audit bot-book integrity (read-only) | `python -m scanner.broker.vivek_run --verify` |
-| Rebuild derived combined book | `python -m scanner.broker.vivek_run --rebuild-combined` |
+| Rebuild the derived combined book | `python -m scanner.broker.vivek_run --rebuild-combined` |
 | Is every open row at the configured notional? (read-only) | `python scripts/resize_book_notional.py --check` — exit 0 yes / 3 rows to restate / 4 an off-target row it cannot restate (Runbook 7) |
 | Freshness watchdog (read-only preview) | `python -m scanner.watchdog --dry-run` |
-| Run all tests | `pytest tests/ -v` |
-| Serve frontend locally | `python -m http.server 8000 --directory public` |
+| Decision-pack checkpoints (read-only) | `python scripts/decision_pack.py` |
+| Run all tests | `pip install -r requirements-dev.txt && python -m pytest -n 4 --dist loadfile`, then every `node test/*.test.js` |
+| Serve the site locally | `python serve.py` (http://localhost:8765) |
 
 ---
 
 ## How the system runs day-to-day
 
-GitHub Actions handles everything automatically:
+Two clocks drive everything. **cron-job.org** (free, keeps real time) pings the
+site's `/api/heartbeat` and `/api/morning_plays`, which dispatch GitHub Actions
+workflows; **GitHub's own crons** are the backups (GitHub runs them late or not
+at all: in the week to 5 Oct it ran 5/35 ASX, 8/35 NASDAQ and 41/~168 crypto
+scans). Cloudflare Pages serves `public/` on every push to `main`.
 
-| Workflow | Schedule | What it does |
-|----------|----------|--------------|
-| `scan.yml` | Market-hours crons (weekend = crypto-only) | VIVEK scans SEQUENTIALLY (nasdaq, crypto, asx) + paper bot book + confluence alert |
-| `crypto_bot.yml` | Hourly, 24/7 | Crypto VIVEK scan + crypto slice of the bot book |
-| `backup_book.yml` | Daily 21:35 UTC | Snapshots the bot book + journal state into `backups/` |
-| `phasemap.yml` | Nightly 08:30 UTC | PhaseMap + Specs + confluence + schema gate |
-| `lens_backtest.yml` | Weekly Sun | PhaseMap/Specs/VIVEK replays -> Insights stats |
-| `vivek_backtest.yml` | Monthly 1st | Long-only VIVEK evidence file |
-| `kill_switch.yml` | Every 30 min, 24/7 | Standalone loss check on the BOT BOOK (per market) — open positions re-priced with LIVE quotes, falling back to last-scan marks per symbol. Also hosts the freshness watchdog |
-| ~~`stop_watcher.yml`~~ | — | REMOVED 2026-09-21 with the manual journal and /api/tick it watched (CLAUDE.md "MY JOURNAL"). The bot book's stops are evaluated by the scans and `kill_switch.yml` |
-| `close_position.yml` | Manual dispatch | journal_type=bot closes a BOT BOOK position (the real track record); swing/scalp edit the legacy journals. Re-dispatches itself (max 3) if the scan mutex evicts it — Runbook 4 |
-| `resize_book.yml` | Push touching `.github/resize-kick`, or manual (dry run by default) | One-shot restatement of the OPEN bot book at the configured notional (approved 2026-09-27: $5,000 -> $2,500), republishing `public/data/bot_rules.json` in the same commit — Runbook 7 |
-| `test.yml` | Every push/PR | pytest + JS tests |
+### The cron-job.org jobs
 
-(Table rewritten 2026-07-20 — the previous one listed retired workflows:
-crypto_scalp.yml, backtest.yml, and a 15-min stop watcher no longer exist.)
+Managed from a session with `ops.yml` (`cronjob-list` / `cronjob-get` /
+`cronjob-history` / `cronjob-update` …; confirm every change with a read-back).
+Each job runs in its market's own timezone, so DST never moves it.
 
-Cloudflare Pages serves `public/` automatically on every push to `main`.
+| Job id | Name / schedule | Calls | Effect |
+|---|---|---|---|
+| 8587588 | ASX hourly, :10 11:10–16:10 Sydney, weekdays | `/api/heartbeat?market=asx&stale_min=…` | heals an overdue ASX scan |
+| 8587590 | `scan ASX close (Sydney)`, 16:40 Sydney, weekdays | `/api/heartbeat?market=asx&stale_min=15` | **the on-time ASX closing scan** (the 16:10 ping's scan lands ~16:20, so at 16:40 the ASX is stale and heals on final prices) |
+| 8587683 | `scan ASX close probe (Sydney)`, 17:20 Sydney, weekdays | `/api/heartbeat?market=asx&stale_min=40` | heals only when no scan stamped at/after 16:40 has landed |
+| 8587599 | crypto, :22 every hour UTC, every day | `/api/heartbeat?market=crypto&stale_min=45` | heals crypto when `crypto_bot.yml` was dropped |
+| 8587591 | NASDAQ open, 10:40 New York, weekdays | `/api/heartbeat?market=nasdaq…` | the first NASDAQ scan |
+| 8587598 | NASDAQ hourly, :10 11:10–16:10 New York, weekdays | `/api/heartbeat?market=nasdaq…` | heals an overdue NASDAQ scan; the 16:10 one is the post-close scan |
+| 8424425 | `slot=asx (post-close ladder, UTC)`, every 30 min 06:15–10:45 UTC, Mon–Fri | `/api/morning_plays?slot=asx&key=…` | dispatches morning_plays.yml; the first rung after the ASX closing scan sends the ASX digest |
+| 8424432 | `slot=us`, every 30 min 20:15–23:45 UTC, Mon–Fri | `/api/morning_plays?slot=us&key=…` | the NASDAQ + Crypto digest, the same way |
+
+`/api/heartbeat` dispatches `scan.yml` only when that market's
+`public/data/<m>_prices.json` is older than `stale_min` (floored per market:
+asx/nasdaq 15, crypto 45, all 90), at most 30 heals per market per UTC day,
+with a 25-minute heal window per market. `scan.yml`'s gate
+(`scripts/scan_gate.py`) then scans only a market that is in its hours (or owes
+its closing scan). Each completed morning_plays run also wakes `momentum.yml`.
+
+### Workflows (all 26)
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `scan.yml` | heartbeat dispatches + GitHub superset crons (gate decides) | VIVEK scan of the market(s) in hours + their slice of the paper book + the confluence alert. ASX 11:00–16:45 Sydney, NASDAQ 10:30–16:45 New York, weekdays; never crypto on a schedule |
+| `crypto_bot.yml` | `:22` hourly, every day; `:52` freshness backstop | crypto scan + crypto slice of the book; hosts the watchdog (annotates only) |
+| `kill_switch.yml` | `15,45` every hour | per-market session-loss check on the book; hosts the watchdog; the `watchdog-alarm` job goes red once per CRITICAL episode |
+| `close_position.yml` | manual | closes bot-book positions (`journal_type=bot`, batch up to 60) — Runbook 4 |
+| `resize_book.yml` | push touching `.github/resize-kick`; manual (dry run by default) | one-shot restatement of the OPEN book at the configured notional + republished `bot_rules.json` — Runbook 7 |
+| `phasemap.yml` | `30 8` UTC (usually lands midnight–4am Melbourne) | PhaseMap + Specs + schema gate |
+| `confluence.yml` | when PhaseMap nightly completes; `45 8` UTC backstop | post-nightly confluence check |
+| `ignition.yml` | `14 0` UTC + backstops `14 1,2` + intraday `44 5,11,17,21` + Sunday `37 3` replay; push `.github/ignition-kick` | IGNITION crypto screen + mini charts (+ replay) |
+| `ignition_asx.yml` | `24 6` UTC Mon–Fri + backstops `24 7,9` + intraday `54 0,2,4` + Sunday `17 2` replay; push `.github/ignition-asx-kick` | IGNITION ASX |
+| `ignition_nasdaq.yml` | `34 21` UTC Mon–Fri + backstops `34 22,23` + intraday `54 14,16,18` + Sunday `47 4` replay; push `.github/ignition-nasdaq-kick` | IGNITION NASDAQ |
+| `momentum.yml` | `30 6`, `30 21` Mon–Fri, `30 0` daily, `41 */3` backstop; after every morning_plays run | MOMENTUM: screens the newest market due |
+| `morning_plays.yml` | dispatched by the cron-job.org ladders; backstop crons `58 5,6`, `50 7,8` (ASX) and `50 21,22` (US), Mon–Fri | the HIGH CONVICTION digest to Discord |
+| `alert_returns.yml` | `20 22` UTC + `50 23` backstop | the edge pipeline: forward returns, rosters, book stress, report, `edge_summary.json` |
+| `evidence_brief.yml` | `0 21` UTC | read-only evidence brief into the run's step summary |
+| `reco_note.yml` | `52 8` UTC | auto-written `public/data/reco_note.json` |
+| `backup_book.yml` | `35 21` UTC + `35 23` backstop | nightly `backups/<stamp>/` + 90-day artifact |
+| `lens_backtest.yml` | Sunday `0 8` UTC | PhaseMap/Specs/VIVEK replays → Insights (`vivek_backtest.json`) |
+| `vivek_backtest.yml` | 1st of the month `0 8` UTC | long-only evidence `vivek_backtest_longonly.json` |
+| `decision_replay.yml` | push touching `.github/replay-kick`; manual | READ-ONLY replay of the live rules + decision variants; artifact + step summary |
+| `dispatch_scan.yml` | push touching `.github/scan-kick` | dispatches `scan.yml` (market=all) — how a cloud session triggers a scan |
+| `ops.yml` | manual | cron-job.org / Cloudflare actions for a Claude session (a failed action is a green run; read the `OPS RESULT` line) |
+| `test.yml` | push to main (path-filtered) / PR | the CI gate (pytest, JS suites, e2e) |
+| `test_alerts.yml` | manual | alert-path self-test — sends one test message through every configured channel |
+| `commit_sentinel.yml` | every push to main | flags unknown pushers / identities and force-pushes (detection only) |
+| `crypto_source_check.yml` | manual; push `.github/crypto-source-kick` | read-only crypto venue check + a dry crypto scan |
+| `data_depth.yml` | manual | read-only probe of how much free history each source serves |
 
 ---
 
-## Starting the system
+## Who triggers what
 
-No manual start is needed — GitHub Actions runs on schedule.
+For every scheduled job: what normally starts it, what catches a miss, and
+what a missed run looks like from the outside. "Heal" = a cron-job.org ping
+through `/api/heartbeat` that dispatches `scan.yml`.
 
-To enable live broker execution:
-1. Add `BYBIT_API_KEY` and `BYBIT_API_SECRET` to GitHub repo Settings → Secrets
-2. Set `BYBIT_TESTNET=true` first for at least 2 weeks of paper-trading
-3. Only set `BYBIT_TESTNET=false` when ready for real capital (requires deliberate opt-in)
+| Job | Primary clock | Backstops | A missed run looks like |
+|---|---|---|---|
+| ASX intraday scans | cron-job.org **8587588** (hourly :10 Sydney) | GitHub `scan.yml` `7 0-6 * * 1-5` superset; any later heal | deck "Last scanned" for ASX over ~1h in session; status lamp amber past 90 min; watchdog `scan.yml` WARNING after ~12 session-hours |
+| ASX closing scan | cron-job.org **8587590** (16:40 Sydney) | **8587683** probe (17:20 Sydney); GitHub `41 5,6` and `57 5,6`; the next heal ("missed closing scan") | the ASX scan stamped before 16:40 (pre-auction prices on the deck and the bot's ASX marks); the ASX digest waits — the ladder keeps retrying until a post-close scan exists |
+| NASDAQ scans (incl. the post-close one) | cron-job.org **8587591** (10:40 NY) + **8587598** (hourly :10 NY, the 16:10 ping is the closing scan) | GitHub `37 14,15`, `7 16-21`, closing `47 20,21`; any later heal | NASDAQ "Last scanned" over ~1h in session; the US digest waits for a scan stamped after 16:05 NY |
+| Crypto scan + book | GitHub `crypto_bot.yml` `:22` hourly | its own `:52` backstop; cron-job.org **8587599** (heals via `scan.yml` market=crypto when over 45 min) | crypto "Last scanned" over ~1h; `/api/health` goes 503 once the book is 4h old; watchdog `crypto_bot.yml` WARNING at 3h, crypto scan WARNING at 4h |
+| Kill switch + watchdog | GitHub `kill_switch.yml` `15,45` | none (crypto_bot also runs the watchdog) | crypto_bot's watchdog annotates `kill_switch.yml` CRITICAL after 2h with no successful `check` job |
+| Morning plays — ASX slot | cron-job.org **8424425** ladder (06:15–10:45 UTC) | GitHub `58 5,6`, `50 7,8` | no ASX post in the Discord channel by ~17:30 Melbourne; morning_plays runs that say "not post-close yet" (normal before the closing scan lands) |
+| Morning plays — US slot | cron-job.org **8424432** ladder (20:15–23:45 UTC) | GitHub `50 21,22` | no NASDAQ + Crypto post by the Melbourne morning |
+| Momentum | each completed morning_plays run (so the ladders) + GitHub `30 6`, `30 21`, `30 0` | GitHub `41 */3` | the Momentum page's stale dot (30 weekday hours stocks / 30 h crypto); no watchdog entry by decision |
+| Ignition crypto | GitHub `14 0` UTC | `14 1,2` (skip once today's file is on the branch) | the ⚡ pill shows STALE (run over 26h, or the newest bar older than UTC-yesterday after 06:00 UTC) |
+| Ignition ASX | GitHub `24 6` UTC Mon–Fri | `24 7,9` (`scripts/ignition_due.py asx`, also re-runs on a lagging tape) | STALE after 50 weekday hours, or more than half the names behind the last close |
+| Ignition NASDAQ | GitHub `34 21` UTC Mon–Fri | `34 22,23` (`ignition_due.py nasdaq`) | as for the ASX |
+| Ignition weekly replays | GitHub Sunday `37 3` / `17 2` / `47 4` UTC | a manual dispatch with `backtest` or a kick push | the forward bucket stops growing; `<m>_backtest.json` older than a week |
+| PhaseMap + Specs | GitHub `phasemap.yml` `30 8` UTC | none scheduled; dispatch "PhaseMap nightly scan" by hand | PhaseMap page `run_date` a day behind; watchdog WARNING at 26h (run history) / 2 days (`latest.json`) |
+| Confluence ping | `workflow_run` when PhaseMap completes | GitHub `45 8` UTC | no new nightly alignments on the ALERTS page; watchdog WARNING at 26h |
+| Edge pipeline | GitHub `alert_returns.yml` `20 22` UTC | `50 23` (skips when the ledgers are already updated) | `edge_summary.json` older than a day; watchdog WARNING at 26h |
+| Evidence brief | GitHub `evidence_brief.yml` `0 21` UTC | none | no brief in that day's run summary (nothing else depends on it) |
+| Reco note | GitHub `reco_note.yml` `52 8` UTC | none | the RECS page note dated yesterday; watchdog WARNING at 26h |
+| Nightly backup | GitHub `backup_book.yml` `35 21` UTC | `35 23` (skips when the newest snapshot is at/after the 21:00Z slot) | newest `backups/<stamp>` over 26h → watchdog CRITICAL → a red "Watchdog CRITICAL" run in kill_switch.yml |
+| Weekly lens backtest | GitHub `lens_backtest.yml` Sunday `0 8` UTC | none | Insights numbers a week stale; watchdog WARNING after 8 days |
+| Monthly long-only backtest | GitHub `vivek_backtest.yml` 1st `0 8` UTC | none | watchdog WARNING after 32 days |
 
-Without `BYBIT_API_KEY`, the system runs in **SIMULATED mode** — full pipeline, no actual orders.
+If GitHub's scheduler and cron-job.org are both down, `/api/health` (watched by
+the external monitor) is the alarm: it goes 503 once the published book is 4h
+old.
 
 ---
 
-## Stopping the system
+## Starting and stopping
 
-**Pause new orders only** (without touching existing positions):
-- Disable `scan.yml` and `crypto_bot.yml` in GitHub → Actions → (select workflow) → … → Disable workflow
+No manual start is needed. The system is **paper only**: nothing places real
+orders, and no broker keys are set.
 
-**Emergency flatten** (kill all positions now):
-```bash
-python -m scanner.broker.kill_switch
-```
-Or trigger the `kill_switch.yml` workflow manually in GitHub Actions.
-
-**Full stop** (no scans, no orders):
-- Disable `scan.yml` AND `crypto_bot.yml` in GitHub Actions
+- **Pause the paper book** (no scans, no new trades): disable `scan.yml` and
+  `crypto_bot.yml` in GitHub → Actions → (workflow) → … → Disable workflow, and
+  pause the six heartbeat jobs (`ops.yml cronjob-update` with `enabled: false`,
+  then `cronjob-get` to confirm) so `/api/heartbeat` stops trying to dispatch a
+  disabled workflow.
+- **Resume:** re-enable both workflows and the jobs; the next heal catches up.
+- The kill switch never liquidates the paper book; it only flattens a broker
+  account that holds a market, and none are configured.
 
 ---
 
 ## Kill switch
 
-The standalone check (kill_switch.yml, every 30 min, 24/7) reads the BOT BOOK
-per market and fires when a market's session P&L (today's realised + open
-unrealised) breaches VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY.
-
-**The dollar figure moved on 2026-07-28** with fixed-notional sizing: equity is
-now $150,000 (was $10,000), so the 3% daily limit is **$4,500 per market** and
-the 6% weekly limit is $9,000 — up from $300/$600. Equity no longer sizes
-positions (that is `VIVEK_BOT_POSITION_NOTIONAL`, a flat $2,500 x 60 slots since
-the sizing-change merge (approved 2026-09-27; CLAUDE.md "SIZING 2") — $5,000 x 30 before; the same $150,000 book either way, so these
-guards did not move);
-it survives precisely to scale these guards and the leverage ceiling, which is
-why it had to move with the book rather than stay at the old figure.
-Open positions are re-priced with LIVE quotes at check time (2026-07-20
-Phase 4) — one batched fetch; any symbol that can't be quoted falls back to
-the mark stamped at the last scan, so the check degrades gracefully instead
-of failing.
+`kill_switch.yml` (job `check`, every 30 min) reads the BOT BOOK per market and
+measures each market's session the same way the runner's guard does
+(`vivek_guard.session_pnl` over the market-local day), with LIVE quotes where it
+can get them and the last stamped mark otherwise. It fires when a market's
+session loss reaches `VIVEK_BOT_MAX_DAILY_LOSS_PCT` (3%) of
+`VIVEK_BOT_ACCOUNT_EQUITY` ($150,000) = **$4,500 per market**. Unlike the
+runner's guard it does not value an unpriced position at its stop, and a limit
+of 0 switches it off.
 
 When it fires:
-1. All Bybit orders are cancelled (only if broker keys are configured)
-2. All Bybit positions are closed at market (same condition)
-3. An alert fires via Telegram/Discord/email (if configured)
-4. The paper book itself is NOT modified — the runner's own guard halts new
-   entries for the session
-
-**Manual kill switch:**
-```bash
-python -m scanner.broker.kill_switch          # add --dry-run to log only
-```
-(Note 2026-07-20: the previously documented FORCE_KILL env var never existed
-in code; the switch fires on the bot book's daily-loss limit.)
+1. It flattens only the broker that holds that market
+   (`VIVEK_KILL_SWITCH_BROKERS`: ASX paper-only, NASDAQ Alpaca, crypto Bybit) —
+   and only if that broker's keys are set (none are).
+2. It sends a `kill_switch` CRITICAL alert through the router (no channel is
+   configured, so it is logged and annotated).
+3. The paper book is NOT modified; the runner's own guard halts new entries for
+   that market's session.
 
 ---
 
-## Watchdog alerts (2026-07-20, Phase 5)
+## Watchdog alerts
 
-`scanner/watchdog.py` runs inside kill_switch.yml (every 30 min) and
-crypto_bot.yml (hourly). It exists because of the 2026-07-20 incident: runs
-can finish GREEN while committing nothing, and GitHub's cron can silently
-skip runs for hours — neither produced any alert. The watchdog covers both:
-content probes (timestamps inside committed files) and run-history probes
-(GitHub API: each critical workflow's last successful run).
+`scanner/watchdog.py` runs inside `kill_switch.yml` (every 30 min) and
+`crypto_bot.yml` (hourly). It exists because of the 2026-07-20 staging incident:
+runs can finish GREEN while committing nothing, and GitHub's cron can silently
+skip runs for hours. It covers both with **content probes** (timestamps inside
+committed files: the book, the crypto scan, PhaseMap, backups, universes) and
+**run-history probes** (`WATCHDOG_RUNS` in config: each workflow's last run in
+which its working job actually ran — a gate-skipped run does not count; scan.yml
+is judged on market-session hours only).
 
-**Noise contract:** one alert on first detection, one reminder every 6h
-while unresolved, one recovery notice — never a message per check. If a run
-FAILED outright, GitHub's own failure email is the alert; the watchdog stays
-quiet about that workflow. CRITICAL = Discord/Telegram + email; WARNING = no
-email. Thresholds live in scanner/config.py (WATCHDOG_*).
+**How a finding reaches you (2026-10-14).** No alert channel is configured, so:
+- every due finding is annotated on the run page — `::error::` for CRITICAL,
+  `::warning::` for WARNING, `::notice::` for a recovery;
+- a CRITICAL finding is handed ONCE per episode to `kill_switch.yml`'s
+  **`watchdog-alarm`** job, which fails ("Watchdog CRITICAL (the kill-switch
+  check itself passed)"), so GitHub's failure email carries it. The `check`
+  job stays green.
 
-**What each alert means / what to do:**
+Noise contract: first detection, a reminder every 6h while unresolved, one
+recovery notice. If a workflow FAILED outright, GitHub's own email is the alert
+and the watchdog stays quiet about it. Thresholds: `WATCHDOG_*` in config.
+
+**What each finding means / what to do:**
 
 - *"bot book updated_at is Nh old"* (CRITICAL) — no run has SAVED the track
-  record recently. Check Actions: are crypto_bot/scan runs green but
-  committing nothing (staging problem — see the assert_staged gate), or not
-  firing at all (scheduler)? Dispatch "Crypto bot" manually; if its commit
-  step stages nothing, that run's log now says exactly why.
-- *"book MISSING / unreadable"* (CRITICAL) — restore from git history or
-  `backups/` (see Runbooks), then `python -m scanner.broker.vivek_run
-  --verify`.
+  record recently. Runbook 1.
+- *"book MISSING / unreadable"* (CRITICAL) — Runbook 2.
 - *"<workflow>: last successful run Nh ago"* — the schedule is being skipped
-  or the workflow is failing silently. Open Actions → that workflow. If
-  GitHub's scheduler is degraded (runs simply absent), dispatch manually;
-  it self-heals when the scheduler recovers.
-- *"newest backup is Nh old"* (CRITICAL) — the track record isn't being
-  snapshotted. Dispatch "Backup bot book" manually today, then investigate.
-- *"PhaseMap latest.json is N days behind"* — the nightly didn't publish;
-  dispatch "PhaseMap nightly scan" manually.
+  or the work is being skipped. Check "Who triggers what" for that job's
+  primary clock (for scans: is cron-job.org firing? `ops.yml cronjob-history`)
+  and dispatch it by hand.
+- *"newest backup is Nh old"* (CRITICAL) — dispatch "Backup bot book" today,
+  then investigate.
+- *"PhaseMap latest.json is N days behind"* — dispatch "PhaseMap nightly scan".
 
-**Must-change gates:** scan.yml / crypto_bot.yml / phasemap.yml /
-backup_book.yml now FAIL (red run → email + Discord) when a scheduled run
-stages none of its must-change outputs (`scripts/assert_staged.sh`). A red
-run with "ASSERT-STAGED FAILED" means output is being produced but LOST
-between the scan step and git — exactly the Phase 3 staging bug pattern.
-Manual dispatches only warn (dry-runs/tests legitimately stage nothing).
+**Must-change gates.** Every workflow that commits data FAILS (red run → email)
+when a scheduled run stages none of its must-change outputs
+(`scripts/assert_staged.sh`). A red run with "ASSERT-STAGED FAILED" means output
+was produced but LOST between the scan step and git — the 2026-07-20 staging
+incident pattern. Manual dispatches only warn.
 
-**External heartbeat (2026-07-21, Phase 6):** `GET /api/health` on the site
-returns 200 while the published bot book is under 4h old, 503 otherwise —
-served entirely by Cloudflare, zero GitHub involvement. Point a free external
-monitor at it so pipeline silence alerts you even if GitHub's scheduler (and
-therefore the in-repo watchdog) is down:
+**External heartbeat.** `GET /api/health` returns 200 while the published bot
+book is under 4h old, 503 otherwise — served by Cloudflare, no GitHub
+involvement. Point a free monitor at it:
 
-1. Sign up at uptimerobot.com (free tier is fine).
-2. Add monitor → type "HTTP(s)" → URL
-   `https://googy-boys-scanner.pages.dev/api/health` → interval 5 min.
-3. Add your email as the alert contact. Done — it emails on 503/timeouts
-   and again on recovery. (`?max_h=N` overrides the threshold per-probe.)
+1. uptimerobot.com (free) → Add monitor → HTTP(s) →
+   `https://googy-boys-scanner.pages.dev/api/health`, every 5 min.
+2. Alert after 2–3 consecutive failures (a deploy blip lasts one check).
 
-**Per-market mode (2026-07-28):** `?market=asx|nasdaq|crypto` asks "did THIS
-market scan?" instead of "is the pipeline alive?", reading that market's
-`public/data/<m>_prices.json` sidecar rather than the combined book. Use it when
-you want to know whether one market has gone quiet — the default answer stays
-green off any other market's commit, which is right for an uptime monitor and
-wrong for a per-market check. scan.yml's `:47` ASX backstop uses it; an unknown
-market name returns 400 rather than a misleadingly healthy 200.
+`?max_h=N` overrides the threshold. `?market=asx|nasdaq|crypto` is a **manual
+probe only** ("did THIS market scan?" — it reads `<m>_prices.json`); nothing
+automated calls it.
 
-**Prove the alert channels deliver:**
-```bash
-python -m scanner.watchdog --test-alert   # with DISCORD_WEBHOOK_URL / GBS_SMTP_* / TELEGRAM_* exported
-```
-Prints, per severity route, which channels actually delivered and which are
-unconfigured/failing. Run it once after any secret change — an unexercised
-email path is a CRITICAL that silently degrades to Discord-only.
+**Prove the alert channels deliver:** Actions → "Alert-path self-test", or
+locally `python -m scanner.watchdog --test-alert` with `GBS_SMTP_*` /
+`TELEGRAM_*` exported. It prints, per severity, which channels delivered and
+why the others did not (Telegram is muted by `config.TELEGRAM_ENABLED = False`;
+SMTP is unset). Run it after any alert-secret change. Adding a channel: see
+CLAUDE.md "Alerts".
 
-**Mark-sanity guard (2026-07-21, Phase 6):** a position mark that moves more
-than VIVEK_MARK_SANITY_PCT (ASX/NASDAQ 35%, crypto 60%) against its last
-accepted mark — a split under auto_adjust, or a vendor bad print — does NOT
-manage the position: stops/TPs pause, `suspect_price_runs` counts on the
-position (visible in the book), an "anomaly" alert fires on the 2nd
-consecutive hit, and the price is ACCEPTED on the 3rd so a real crash is
-delayed at most two runs, never ignored. The kill switch drops such quotes
-the same way (falls back to the stamped mark). If you get the alert: check
-the symbol for a split/halt; nothing to do if it's real — the guard
-self-resolves either way.
+**Mark-sanity guard.** A mark that moves more than `VIVEK_MARK_SANITY_PCT`
+(ASX/NASDAQ 35%, crypto 60%) against the last accepted mark does NOT manage the
+position: stops/TPs pause, `suspect_price_runs` counts on the row, an `anomaly`
+alert fires on the 2nd consecutive hit, and the price is ACCEPTED on the 3rd, so
+a real crash is delayed at most two runs. A clean split ratio is restated into
+the new basis (R unchanged, recorded under `splits`) rather than read as a crash.
+The kill switch drops such quotes the same way. Nothing to do if you see one.
 
 ---
 
-## Environment variables
+## Environment variables and secrets
 
-### Required for live trading
 | Variable | Where | Purpose |
-|----------|-------|---------|
-| `BYBIT_API_KEY` | GitHub Secret | Bybit key ID |
-| `BYBIT_API_SECRET` | GitHub Secret | Bybit HMAC secret (or use RSA below) |
-| `BYBIT_PRIVATE_KEY` | GitHub Secret | RSA private key PEM (alternative to API_SECRET) |
+|---|---|---|
+| `GH_DISPATCH_TOKEN` | Cloudflare Pages | fine-grained PAT, **this repo only**, "Actions: Read and write" — lets `/api/scan`, `/api/heartbeat` and `/api/morning_plays` dispatch workflows |
+| `MORNING_PLAYS_TRIGGER_SECRET` | Cloudflare Pages | the key the cron-job.org digest ladders pass to `/api/morning_plays` |
+| `DISCORD_MORNING_WEBHOOK_URL` | GitHub secret | the morning-plays digest's Discord webhook (absent = a green no-op) |
+| `CRONJOB_API_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | GitHub secrets | read only by `ops.yml` |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | GitHub secrets | alert channel — muted by `config.TELEGRAM_ENABLED = False` |
+| `GBS_SMTP_HOST/PORT/USER/PASS`, `GBS_ALERT_TO`, `GBS_ALERT_FROM` | GitHub secrets | email alert channel — unset (an owner action, REFINE200 #78) |
+| `BYBIT_API_KEY`/`SECRET`, `BYBIT_TESTNET`, `ALPACA_*` | GitHub secrets | only the kill switch's flatten path; unset in practice |
 
-### Optional — broker mode
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `BYBIT_TESTNET` | `true` | Use testnet endpoint. Set to `false` ONLY for live capital. |
-
-### Optional — alerts
-| Variable | Purpose |
-|----------|---------|
-| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
-| `TELEGRAM_CHAT_ID` | Target chat ID (negative for group chats) |
-| `DISCORD_WEBHOOK_URL` | Discord webhook URL |
-| `GBS_SMTP_HOST` | SMTP hostname for email alerts |
-| `GBS_SMTP_PORT` | SMTP port (default 587) |
-| `GBS_SMTP_USER` | SMTP username |
-| `GBS_SMTP_PASS` | SMTP password |
-| `GBS_ALERT_TO` | Alert recipient email |
-| `GBS_ALERT_FROM` | Alert sender email (defaults to SMTP_USER) |
-
-### Required for GitHub dispatch (Cloudflare Functions)
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `GH_DISPATCH_TOKEN` | Cloudflare Pages env | Fine-grained PAT scoped to **this repo only** with "Actions: Read and write" (see functions/api/scan.js). Avoid classic account-wide `repo`+`workflow` tokens — they can touch every repo on the account. |
+Orphaned (nothing reads them; safe to delete): the old Discord alert webhook,
+`TICK_SECRET`, `GBS_SYNC_CODE`.
 
 ---
 
-## What to do when things break (runbooks — bot-book era)
-
-*(Rewritten 2026-07-21. The old runbooks 1–5 described the retired scalp
-system — scalp_journal.json, crypto_scalp.yml, SCALP_* knobs — and would have
-walked an incident responder into dead files. Git history has them.)*
+## What to do when things break (runbooks)
 
 ### Runbook 1 — Watchdog CRITICAL: "bot book updated_at is Nh old"
-No run has SAVED the track record recently. See "Watchdog alerts" above for
-the full decision tree; the short version:
-1. GitHub → Actions: are `crypto_bot` / `scan` runs green but committing
-   nothing (the run log's assert_staged line says exactly why), or absent
-   (scheduler outage)?
-2. Dispatch "Crypto bot" manually. If it commits, the scheduler was skipping;
-   it self-heals. If it stages nothing, read that run's log — the staging gate
-   prints the missing outputs.
-3. Never edit the book by hand to "fix" freshness.
+No run has SAVED the track record recently.
+1. Actions: are `crypto_bot` / `scan` runs green but committing nothing (the
+   run log's assert_staged line says why), or absent (scheduler outage)?
+2. Is cron-job.org firing? `ops.yml cronjob-history` for 8587599 (crypto).
+3. Dispatch "Crypto bot" manually. If it commits, the scheduler was skipping;
+   it self-heals. If it stages nothing, read that run's log.
+4. Never edit the book by hand to "fix" freshness.
 
 ### Runbook 2 — Book corrupt or missing
-The runner ABORTS on an unreadable book (BookCorruptError) and touches
-nothing, so the damage is contained at detection.
+The runner ABORTS on an unreadable book (BookCorruptError) and touches nothing.
 1. `python -m scanner.broker.vivek_run --verify` — read-only; lists exactly
-   what is wrong (unparseable file, cross-market strays, duplicate opens,
-   stale combined view).
-2. Stale/missing COMBINED view only → `python -m scanner.broker.vivek_run
-   --rebuild-combined` (the canonical per-market files are the record; the
-   combined file is derived and always regenerable).
-3. A damaged CANONICAL file → restore it (see "Backup and restore" below),
-   then `--verify` again, then let the next scheduled run proceed.
-4. Never hand-edit position rows. If a single position is genuinely wrong,
-   close it via close_position.yml with a note, and record why.
+   what is wrong (unparseable file, cross-market strays, duplicate opens, stale
+   combined view).
+2. Stale/missing COMBINED view only → `--rebuild-combined` (the canonical
+   per-market files are the record; the combined file is derived).
+3. A damaged CANONICAL file → restore it ("Backup and restore" below), then
+   `--verify` again, then let the next run proceed.
+4. Never hand-edit position rows; never edit a closed row.
 
-### Runbook 3 — Daily/weekly loss guard or kill switch fired
-1. The alert names the market and the breached limit
-   (`VIVEK_BOT_MAX_DAILY_LOSS_PCT` 3% / `VIVEK_BOT_MAX_WEEKLY_LOSS_PCT` 6% of
-   `VIVEK_BOT_ACCOUNT_EQUITY` — $4,500 / $9,000 since the 2026-07-28 equity
-   move; see Kill switch above). The runner halts NEW entries for that market;
-   open positions keep being managed. The half-hourly kill switch
-   (kill_switch.yml) independently re-checks the book with live quotes and
-   only flattens a broker if broker keys are set (none are, in paper).
-2. Read the guard block in `journal/vivek_bot_book.<market>.json` for the
-   session numbers it saw.
-3. Do nothing to the book. The guard resets on the next session day. If the
-   loss came from ONE position gapping, check the symbol for news/corporate
-   action; the mark-sanity guard (above) covers splits/bad prints.
-4. Only investigate rules if guards fire repeatedly — and remember: no rule
-   changes while the sample is accumulating (ROADMAP P1).
+### Runbook 3 — Daily/weekly loss guard or the kill switch fired
+1. The finding names the market and the limit (`VIVEK_BOT_MAX_DAILY_LOSS_PCT`
+   3% / `VIVEK_BOT_MAX_WEEKLY_LOSS_PCT` 6% of $150,000 = $4,500 / $9,000 per
+   market; the week is the last 7 calendar days including today). The runner
+   halts NEW entries for that market; open positions keep being managed.
+2. Read the `guard` block in `journal/vivek_bot_book.<market>.json`. A guard
+   that says `unmeasured` could not price part of the book (an unpriced
+   position is valued at its stop) or could not read the week — fix the data,
+   not the guard.
+3. Do nothing to the book. The guard resets with the window. If one position
+   gapped, check it for news/corporate action (mark-sanity covers splits).
+4. No rule changes mid-cycle — the decision pack's checkpoints decide.
 
-### Runbook 4 — Close one bot-book position manually
-GitHub → Actions → "Close position (manual)" → Run workflow:
-`journal_type=bot`, symbol, direction, market, exit price (use the live
-quote), exit date blank for today. Leave `attempt` at 1 — it is the internal
-retry counter, not something you set. The close runs the `--verify` gate after
-writing. `swing`/`scalp` journal_types edit the RETIRED legacy journals — never
-use them for the track record.
+### Runbook 4 — Close one bot-book position by hand (emergencies only)
+Since 2026-10-14 the owner does not close positions by hand: hc4-1 is a clean
+test of the rules. For a genuine emergency: Actions → "Close position (manual)"
+→ `journal_type=bot`, symbol, direction, market, exit price (the live quote),
+exit date blank for today; leave `attempt` at 1. The journal page's buttons do
+the same through `/api/close` (inside the collapsed "Emergency close" folds;
+the exit price must sit within ±50% of the published mark; 60 closes per UTC
+day). `swing`/`scalp` edit the RETIRED legacy journals — never use them.
 
-It queues behind any running scan (same `scan` concurrency group — one book
-writer at a time; expect up to ~15 min). GitHub keeps only ONE run pending per
-group, so a close waiting behind a scan can be evicted by a later arrival —
-**since 2026-07-28 it re-dispatches itself when that happens** (REFINEMENTS
-#109), up to 3 attempts, and you will see a fresh "Close position (manual)" run
-appear a couple of minutes later with `attempt=2`. What you should still check:
-
-- If the re-dispatch chain hits attempt 3 the last run FAILS loudly with a job
-  summary saying so. Run the close by hand at a quieter time.
-- A close that FAILED (red, not cancelled) is never retried — that is a real
-  error, usually a symbol/direction that matches no open position. Read the log.
-- A run you cancel yourself is not resurrected: the re-dispatch only fires when
-  the close job executed zero steps, which is what an eviction looks like.
+It queues behind any running scan (the `scan` concurrency group; up to ~15
+min). If a later arrival evicts it, it re-dispatches itself (up to 3 attempts;
+a fresh run appears with `attempt=2`). Attempt 3 failing is loud — close it by
+hand at a quieter time. A close that FAILED (red, not cancelled) is a real
+error, usually no matching open position; it is never retried.
 
 ### Runbook 5 — Frontend stale or site down
-1. `https://googy-boys-scanner.pages.dev/api/health` — 200 = the published
-   book is <4h old (the pipeline is fine; it's a display problem);
-   503 = the pipeline is stale (see Runbook 1).
-2. Check the last Actions run, then Cloudflare Pages deploy log.
+1. `https://googy-boys-scanner.pages.dev/api/health` — 200 = the published book
+   is under 4h old (the pipeline is fine; a display problem); 503 = Runbook 1.
+2. Check the last Actions run, then the Cloudflare Pages deploy
+   (`ops.yml cf-deployments`; `site-probe` shows the asset versions live).
 3. Hard-reload (Ctrl+Shift+R). The service worker is network-first for data
-   and HTML, so a normal reload usually suffices.
+   and HTML.
 
 ### Runbook 6 — Scan produced nothing / garbage
-yfinance outages happen. A scan with no results does not touch open
-positions' management (they re-mark on whatever prices ARE available; a
-symbol with no price gets `unpriced_runs` counted on the position instead of
-a silent stale mark). The next run usually recovers. Only investigate after
-two consecutive empty scheduled runs — then check the run log's download
-errors and yfinance GitHub issues before touching anything.
+Yahoo outages happen. An empty scan does not touch open positions' management:
+held names are refetched first, and a name with no fresh price is counted in
+`unpriced_runs` (alerts at 3/10/30) instead of a silent stale mark. A market
+whose download came back fully blocked publishes nothing and keeps yesterday's
+file. Investigate after two consecutive empty scheduled runs: read the run
+log's download errors before touching anything. A bot crash fails the run
+after publishing — the log names the layer that failed.
 
-### Runbook 7 — Open-book resize (resize_book.yml, 2026-09-27)
-The $5,000 -> $2,500 sizing change (approved 2026-09-27, live from the merge)
-restates the 30 open rows through `resize_book.yml`, fired by the merge push
-because it touches `.github/resize-kick` (`target=2500`; the script refuses
-unless it equals config). It is a restatement, not a trade: entry, stop, every R
-field and every CLOSED row stay frozen (a partial already banked on an OPEN row
-restates with it — GLBE's tp1 — and the report names it). Until it lands the
-$150,000 notional ceiling is full, so the bot takes no new entries
-(`notional_cap`) — fail-safe, never more exposure. The resize commit carries the
-3 per-market books, the combined book, its public twin AND
-`public/data/bot_rules.json` (republished from the same checkout), so the site
-never shows the old rules beside the restated book.
+### Runbook 7 — Open-book resize (`resize_book.yml`)
+The 2026-09-27 sizing change ($5,000 × 30 → $2,500 × 60) restated the open rows
+through `resize_book.yml`, fired by a push that touches `.github/resize-kick`
+(`target=2500`; the script refuses unless it equals config). It is a
+restatement, not a trade: entry, stop, every R field and every CLOSED row stay
+frozen. The resize commit carries the three per-market books, the combined
+book, its public twin AND `public/data/bot_rules.json`.
 
-- **Before pushing the merge:** Actions -> confirm no "Scheduled scan",
-  "Crypto bot (24/7 paper)" or "Close position (manual)" run is queued or in
-  progress (GitHub MCP `actions_list`). A run created before the merge runs the
-  OLD workflow file at its trigger SHA and, if it reaches the mutex after the
-  resize, replays the pre-resize book and republishes the old rules — and
-  `--verify` still passes. Also: timing outside both stock sessions and away
-  from :15–:35 past the hour (crypto fires at :22).
-- **The merge commit message must carry no CI skip token** (`[skip ci]`,
-  `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`) — it would
-  suppress the push trigger and the resize would silently never run. After the
-  push, confirm a "Resize open book" run exists for the merge SHA; if none,
-  dispatch it from main with `apply` = true.
-- **After the merge, NEVER "Re-run" a scan / crypto / close run created before
-  it.** A re-run reuses the old SHA and the old YAML and replays the pre-resize
-  book. Dispatch a fresh run instead.
-- **1–2 hours after the merge** (once the next crypto run and one stock scan
-  have committed): Actions -> "Resize open book" -> Run workflow, `apply` =
-  false (a dry run). The plan must read `CHECK: 0 open row(s) off the $2,500
-  target` and the summary **Nothing to resize**, and main's
-  `public/data/bot_rules.json` must show `position_notional` 2500,
-  `max_open_total` 60, `max_per_sector` 6. If rows are listed, run again with
-  `apply` = true — rows already at the target are skipped, so a repeat is always
-  safe. Repeat the check after any accidental re-run of a pre-merge run.
-- **`--check` exit codes:** 0 = every open row at target; 3 = rows to restate;
-  **4 = an open row off target that the script cannot restate** (no usable
-  entry/risk basis, or the sizer returned nothing — printed as NOT
-  RESTATABLE with the symbols; it wins over 3, so no writer is queued for
-  it): red, and
-  `--apply` refuses with 4 before writing anything. Fix or close that row by
-  hand, then dispatch again. 2 = refused (kick/config mismatch); 1 = crash.
-- **Red "NOT applied" run:** the resize job was evicted from the scan mutex,
-  cancelled or timed out; it almost certainly pushed nothing. It does NOT
-  re-dispatch itself — use the dry-run / apply steps above.
+- **Before a resize merge:** confirm no "Scheduled scan", "Crypto bot" or
+  "Close position" run is queued or running — a run created before the merge
+  runs the OLD workflow at its trigger SHA and can replay the pre-resize book.
+  Time it outside both stock sessions and away from :15–:35 (crypto at :22).
+- **No CI skip token** in the merge message (`[skip ci]` and friends) — it
+  suppresses the push trigger. Confirm a "Resize open book" run exists for the
+  merge SHA; if not, dispatch it from main with `apply` = true.
+- **Never "Re-run" a scan/crypto/close run created before the merge** — it
+  reuses the old SHA and YAML. Dispatch a fresh run instead.
+- **1–2 hours after:** dispatch "Resize open book" with `apply` = false. It must
+  read `CHECK: 0 open row(s) off the $2,500 target`, and main's
+  `bot_rules.json` must show `position_notional` 2500, `max_open_total` 60,
+  `max_per_sector` 6. Rows listed → run with `apply` = true (idempotent).
+- **`--check` exit codes:** 0 at target; 3 rows to restate; 4 an off-target row
+  it cannot restate (named; `--apply` refuses before writing); 2 refused; 1
+  crash.
+- **Red "NOT applied" run:** evicted, cancelled or timed out; it pushed
+  nothing and does not re-dispatch itself — use the steps above.
 - **Merged by an automation token** (a GITHUB_TOKEN push triggers nothing):
   dispatch `apply` = true from main by hand.
-- Leaving the kick file on main is harmless (a re-touch is a no-op; deleting it
-  is a green no-op too).
 
 ---
 
-## Key file locations (current)
+## Key file locations
 
 | File | Purpose |
 |------|---------|
-| `journal/vivek_bot_book.<market>.json` | CANONICAL per-market track record — the record itself |
-| `journal/vivek_bot_book.json` + `public/data/vivek_bot_book.json` | Derived combined view (regenerable) |
-| `public/data/bot_rules.json` | The executing bot's rule constants, published each scan and by the resize commit (dashboard reads them) |
-| `public/data/<m>_vivek.json` | Latest VIVEK scan per market |
-| `public/data/phasemap/<m>/latest.json` (+ `narrations.json`) | Latest PhaseMap per market |
-| `public/data/<m>_spec.json` | Latest Specs (discovery) scan |
-| `public/data/vivek_backtest.json` / `vivek_backtest_longonly.json` | Weekly / monthly backtest evidence |
-| `public/data/events.json` | Economic event calendar (owner-maintained, update monthly) |
-| `backups/<timestamp>/` | Nightly book snapshots (see below) |
-| `journal/journal.json`, `journal/scalp_journal.json` | FROZEN legacy history — kept for reference, never written |
-
-*(2026-07-21: the scalp-era `public/data` files — health.json,
-performance.json, expectancy.json, attribution.json, fill_analysis.json,
-health_runtime.json, journal.json, bot data charts/scalp/ — were deleted; they
-had frozen in June and contradicted the real record. `bot_status.json` remains
-only as the AI-BOT page's frozen seed; the page labels it stale.)*
-
----
-
-## Updating the event calendar
-
-Edit `public/data/events.json` monthly to keep FOMC, CPI, NFP dates current.
-Format:
-```json
-{"date": "YYYY-MM-DD", "event": "FOMC Rate Decision", "impact": "high"}
-```
-Impact levels: `"high"` (blocks the parked live executor), `"medium"`
-(informational).
+| `journal/vivek_bot_book.<market>.json` | CANONICAL per-market track record |
+| `journal/vivek_bot_book.json` + `public/data/vivek_bot_book.json` | derived combined view (regenerable) |
+| `public/data/bot_rules.json` | the bot's rules + live state (open/closed totals), published each scan and by the resize commit |
+| `public/data/<m>_vivek.json` (+ `_detail`, `_prices`) | latest VIVEK scan per market |
+| `public/data/phasemap/<m>/latest.json` (+ `narrations.json`, `confluence.json`) | latest PhaseMap per market |
+| `public/data/<m>_spec.json` | latest Specs scan |
+| `public/data/ignition/<m>.json` (+ `_charts`, `_backtest`) · `public/data/momentum/<m>.json` | the report-only lenses |
+| `public/data/vivek_backtest.json` / `vivek_backtest_longonly.json` | weekly / monthly backtest evidence |
+| `public/data/edge_summary.json` · `data/alert_forward_returns.json` · `data/edge_rosters/` | the edge ledgers and their summary |
+| `data/sector_map.json` | sector cache — a SIGNAL path (it feeds the per-sector cap) |
+| `data/research/` | parity / OOS / C3 replays, fill sensitivity, confluence study (research; not on the site) |
+| `backups/<timestamp>/` | nightly snapshots (below) |
+| `journal/journal.json`, `journal/scalp_journal.json` | FROZEN legacy history — never written |
 
 ---
 
 ## Backup and restore
 
-**What runs:** backup_book.yml, nightly 21:35 UTC. It snapshots the canonical
-book files + legacy journals + events.json + config.py into
-`backups/<timestamp>/` (keep 30), commits ONLY that directory, and — since
-2026-07-21 — also uploads the whole `backups/` set as a GitHub Actions
-artifact (90-day retention). The artifact is the OFF-TREE copy: a bad
-force-push or repo corruption can no longer take the record and every backup
-with it in one stroke. The watchdog alerts (CRITICAL) if the newest snapshot
-is >26h old.
+**What runs:** `backup_book.yml`, nightly 21:35 UTC (23:35 backstop). It
+snapshots the canonical books, the legacy journals, the confluence state and
+alert history, the sector map and the funnel history into `backups/<timestamp>/`
+(keep 30); the big ledgers (`alert_forward_returns`, `edge_rosters`,
+`funnel_history`) ride only the newest 7 snapshots. `scanner/config.py` is
+copied for REFERENCE (the rules in force that night) and is never restored. It
+commits only that directory and uploads the whole set as a 90-day artifact (the
+off-tree copy). The watchdog raises CRITICAL if the newest snapshot is over 26h
+old.
 
 **Restore (repo copy):**
 ```bash
 python scripts/backup_journal.py list
-python scripts/backup_journal.py restore <backup-dir>   # asks for "yes"
+python scripts/backup_journal.py restore <backup-dir>   # verifies, asks for "yes", data files only
 python -m scanner.broker.vivek_run --rebuild-combined
 python -m scanner.broker.vivek_run --verify
 ```
 
-**Restore (artifact copy, if the tree itself is damaged):** Actions →
-"Backup bot book" → pick a run → download the `book-backups-*` artifact →
-unzip into `backups/` → same restore commands.
+**Restore (artifact copy, if the tree itself is damaged):** Actions → "Backup
+bot book" → a run → download `book-backups-*` → unzip into `backups/` → the same
+commands.
 
-**Drill protocol (run one every ~3 months):** restore the latest snapshot
-into a scratch clone, run `--rebuild-combined` + `--verify`, confirm "book
-verify OK" with plausible open/closed counts, discard the clone. A backup
-that has never been restored is a hope, not a backup.
-
-- 2026-07-21 — drill on snapshot `2026-07-20T22-32-20` in a scratch clone:
-  restore + rebuild + verify OK (3 market files, 24 open / 4 closed).
+**Drill (every ~3 months):** restore the latest snapshot into a scratch clone,
+`--rebuild-combined` + `--verify`, confirm "book verify OK" with plausible
+counts, discard the clone. A backup never restored is a hope, not a backup.
+(2026-07-21: drill on `2026-07-20T22-32-20` — OK, 24 open / 4 closed.)
 
 ---
 
-## Circuit breakers (Bybit live-executor path — REMOVED 2026-09-17)
+## Alert routing
 
-HISTORY: `pre_trade_check.py` / `circuit_breaker.py` gated the BYBIT executor
-(`bybit_run.py`), which never ran on a schedule. All three were DELETED on
-2026-09-17 with the AI BOT page (CLAUDE.md "AI BOT — REMOVED ENTIRELY"); live
-execution would have to rebuild them. Only `kill_switch.py`'s flatten path
-(`bybit_client.py` / `alpaca_client.py`) survives.
-The PAPER book's active protections are the ones above: daily/weekly loss
-guards, the 60-open-across-all-markets ceiling (30 until the sizing-change merge) + the
-$150,000 notional ceiling + one-per-symbol and 6-per-sector-per-market caps,
-re-entry cooldown
-(`VIVEK_BOT_REENTRY_COOLDOWN_DAYS` 7), time stop (`VIVEK_BOT_MAX_HOLD_DAYS`
-28), mark-sanity guard, book integrity gates.
+All scanner alerts go through `alert_router.smart_send()` / `alert_dispatch`,
+routed by `ALERT_SEVERITY`, `ALERT_CHANNELS` and `ALERT_RATE_LIMITS` in
+`scanner/config.py`:
 
-HISTORY — the deleted breakers' headline thresholds (the `SCALP_*` / `BYBIT_*`
-constants may still sit in `scanner/config.py`, inert with no reader): portfolio heat 7%,
-drawdown pause 12% / flatten 15%, ≥4 consecutive losses, order notional
-$10–$5,000, daily loss and trade caps, sector/correlation caps, slippage
-reject. Re-verify every number against config before relying on this
-paragraph — config is the source of truth, prose is not.
+| Severity | Channels (config) | Live today | Typical events |
+|---|---|---|---|
+| CRITICAL | telegram + email | none (Telegram muted, SMTP unset) | `kill_switch`, `scan_error`, `vivek_guard` (a loss-guard breach), watchdog CRITICAL (also the red alarm run) |
+| WARNING | telegram | none | `anomaly` (mark-sanity), watchdog staleness warnings |
+| NOTICE | — | none | `trade_review`, `stale_position`, `scan_dry` |
+| INFO | — | log only | `order_placed` |
 
-### Environment modes (unchanged — the three-key live gate)
-
-| Mode | BYBIT_API_KEY | BYBIT_TESTNET | BYBIT_LIVE_CONFIRMED | What happens |
-|------|--------------|---------------|----------------------|--------------|
-| **SIMULATED** | not set | any | any | Full pipeline; orders logged only |
-| **TESTNET** | set | `true` (default) | any | Real API calls to testnet — no real money |
-| **LIVE** | set | `false` | `true` | Real capital at risk |
-
-`BYBIT_TESTNET=false` alone is NOT enough — without `BYBIT_LIVE_CONFIRMED=true`
-the executor logs an error and falls back to dry-run. The per-market mode flip
-in config.py is the third gate.
-
-### Path to live capital (condensed — ROADMAP P3 is the source of truth)
-
-1. **First:** the paper book proves or kills the edge (~30 closed, untouched
-   rules). No live work before that.
-2. One supervised END-TO-END testnet drill: place → fill → reconcile →
-   kill-switch flatten.
-3. Live tiny (0.1%/trade), crypto only, ≥2 weeks in parallel with paper.
-4. Normal sizing only after the parallel period matches expectations.
+Until a channel exists every routable event logs "NOBODY WAS TOLD"; the alarms
+that reach you are GitHub's red-run emails (including the watchdog alarm run)
+and the run-page annotations. Rate-limit state does not survive between runs
+(per-run limiter); the watchdog's first/6h/recovery contract prevents storms.
+The morning-plays digest is a separate daily post on its own webhook, not an
+alert.
 
 ---
 
-## Alert routing (current)
+## Weekly review (~10 minutes)
 
-All scanner alerts go through `alert_dispatch` / `alert_router.smart_send()`:
-
-| Severity | Channels | Typical events |
-|----------|----------|----------------|
-| CRITICAL | Discord + Telegram + Email | book corrupt, book/backup stale (watchdog), kill_switch, scan_error |
-| WARNING  | Discord + Telegram | suspect price (mark-sanity), loss guard, staleness warnings |
-| INFO     | log only | routine events |
-
-Tuning lives in `scanner/config.py` (`ALERT_SEVERITY`, `ALERT_CHANNELS`,
-`ALERT_RATE_LIMITS`). Note: rate-limit state does NOT survive between Actions
-runs (nothing commits `journal/alert_state.json` — deliberately), so treat
-the limiter as per-run; the watchdog's own first/6h/recovery contract is what
-prevents alert storms across runs.
-
-**Proving delivery:** Actions → "Alert-path self-test" → Run workflow (added
-2026-07-21). It sends one clearly-labelled test message through every
-configured channel and prints per-channel delivery in the job summary. Run it
-after ANY alert-secret change. A green job does NOT mean all channels
-delivered — read the summary.
+1. JOURNAL page: open/closed counts, the hc4-1 cell board, anything with
+   `suspect_price_runs` or `unpriced_runs` stuck on.
+2. `/api/health` returns 200; the external monitor shows no incidents.
+3. Actions: any red runs this week? Any watchdog annotations or "Watchdog
+   CRITICAL" runs?
+4. `backups/` has last night's snapshot; the artifact uploaded.
+5. `python scripts/decision_pack.py` — has a pre-registered checkpoint reached
+   its read? Read it once, on its day. No rule changes otherwise.
 
 ---
 
-## Weekly review (current files — every Sunday, ~10 minutes)
+## Retired (history)
 
-1. JOURNAL page (or `public/data/vivek_bot_book.json`): open/closed counts,
-   anything with `suspect_price_runs` or `unpriced_runs` stuck on.
-2. `/api/health` returns 200; external monitor (UptimeRobot) shows no
-   incidents this week.
-3. Actions: any red runs this week? Any watchdog Discord messages?
-4. `backups/` has last night's snapshot; artifact uploaded.
-5. Insights page (weekly backtest) — context only. NO rule changes while the
-   book sample accumulates (ROADMAP P1).
+- **The Bybit live executor, circuit breakers and pre-trade checks** were
+  deleted with the AI BOT page on 2026-09-17. Live execution would have to
+  rebuild them; only `kill_switch.py`'s flatten path (`bybit_client.py` /
+  `alpaca_client.py`) survives. The paper book's protections are the loss
+  guards, the 60-open / $150,000 / one-per-symbol / 6-per-sector caps, the
+  7-day re-entry cooldown, the 28-day time stop, mark-sanity and the book
+  integrity gates.
+- `stop_watcher.yml` and `/api/tick` went with the manual journal (2026-09-21);
+  the bot book's stops are evaluated by the scans and the kill switch.
 
 ---
 
 ## Architecture in one paragraph
 
-GitHub Actions runs the three Python lenses on crons and writes JSON into
-`public/data/`, committed to `main`; Cloudflare Pages serves `public/` as a
-static site (no build step) plus a few Pages Functions (`/api/*`: scan/close
-dispatch, KV journal sync, price proxies, and the GitHub-independent
-`/api/health` heartbeat). The paper-book runner (`vivek_run.py`) fills A+
-plans at observed intraday prices into per-market canonical book files —
-the system's only track record — under daily/weekly loss guards, slot caps,
-a mark-sanity guard and hard integrity gates (corrupt book → loud abort;
-post-write `--verify`; must-change staging asserts). A half-hourly
-kill-switch workflow re-prices the book with live quotes, and the freshness
-watchdog alerts (Discord/Telegram/email, strict noise rules) when anything
-stops updating. Bybit live execution exists behind three explicit gates and
-is parked until the paper record earns it.
+cron-job.org pings and GitHub Actions crons run the Python lenses and write JSON
+into `public/data/`, committed to `main`; Cloudflare Pages serves `public/` as a
+static site plus a few Pages Functions (`/api/*`: scan/close dispatch, the
+heartbeat healer, the digest trigger, price proxies and the GitHub-independent
+`/api/health`). The paper-book runner (`vivek_run.py`) fills A/A+ four-cell long
+plans at observed prices into per-market canonical book files — the system's
+only track record — under windowed daily/weekly loss guards, slot / notional /
+sector caps, mark-sanity and hard integrity gates (corrupt book → loud abort;
+post-write `--verify`; must-change staging asserts). A half-hourly kill switch
+re-measures each market's session with live quotes, and the watchdog annotates
+every stale or missing output and raises one red run per CRITICAL episode.
+Nothing trades real money.
