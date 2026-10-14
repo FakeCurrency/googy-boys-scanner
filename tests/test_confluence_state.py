@@ -193,3 +193,32 @@ class TestSessionDay:
         wired.run()
         hist = json.loads(ca.HISTORY_FILE.read_text(encoding="utf-8"))
         assert len(hist["entries"]) == 1
+
+
+# ── REFINE200 #139: the VIVEK context rides on the history entry ─────────────
+
+def test_the_history_entry_carries_the_vivek_rows_context_at_alert_time(wired, monkeypatch):
+    """The edge ledger copies grade_raw / score / is_product from the history
+    entry. Stamped here, at the moment the alignment is seen, because the
+    ledger's own later join only matched the one scan on disk on the alert's
+    day and ~2/3 of ASX rows froze blank."""
+    wired.scan(count=2)
+    vk = ca.DATA / "asx_vivek.json"
+    vk.write_text(json.dumps({"results": [{"symbol": "WES", "dir": "LONG", "grade": "A",
+                                           "grade_raw": "A+", "score": 9,
+                                           "is_product": False}]}), encoding="utf-8")
+    wired.run()
+    e = json.loads(ca.HISTORY_FILE.read_text(encoding="utf-8"))["entries"][0]
+    assert (e["grade_raw"], e["score"], e["is_product"]) == ("A+", 9, False)
+    assert e["lenses"] == ["PHASEMAP", "VIVEK"] and e["count"] == 2
+
+
+def test_an_alignment_without_a_vivek_row_carries_no_invented_context(wired):
+    wired.scan(count=2)
+    (ca.DATA / "asx_vivek.json").write_text(json.dumps({"results": []}), encoding="utf-8")
+    (ca.DATA / "asx_spec.json").write_text(json.dumps({"results": [{"symbol": "WES", "grade": "A"}]}),
+                                           encoding="utf-8")
+    wired.run()
+    e = json.loads(ca.HISTORY_FILE.read_text(encoding="utf-8"))["entries"][0]
+    assert e["lenses"] == ["PHASEMAP", "SPECS"]
+    assert not {"grade_raw", "score", "is_product"} & set(e), "never a guessed grade"

@@ -1212,12 +1212,82 @@ BAR_FINAL = {"asx": ("Australia/Sydney", 16, 40),
 # min download. The runs land hours after the close, so the margin costs
 # nothing in practice. Never EARLIER than BAR_FINAL (pinned).
 ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": BAR_FINAL["nasdaq"][1:]}
+# EXCESS RETURNS (REFINE200 #28, 2026-10-14): every NEW forward-return stamp in
+# both edge ledgers also stamps this benchmark's return between the SAME two
+# bar dates (`bench`), so the edge summary publishes signal minus market beside the
+# raw move. Fetch keys, spelled as IGNITION_REGIME_INDEX spells them (crypto
+# prices through data.fetch like every crypto path). Going forward only.
+ALERT_RETURNS_BENCHMARK = {"asx": "^AXJO", "nasdaq": "^IXIC", "crypto": "BTC-USD"}
+# A row's base bar must sit within this many CALENDAR days of its base_day
+# (REFINE200, 2026-10-14). A weekend alert waits 2 days for Monday's bar, Easter
+# 4; anything longer is a suspension, or a download that did not reach back to
+# base_day, and stamp() used to take the window's FIRST bar as the base and
+# freeze every horizon off it. Such a row stays unstamped and is retried.
+ALERT_RETURNS_BASE_MAX_GAP_DAYS = 5
+# The frames alert_returns.py hands edge_rosters.py in the same job (one Yahoo
+# walk for both ledgers) are refused once older than this: a stale hand-off is
+# a fresh download, never a stale price.
+ALERT_RETURNS_FRAMES_MAX_AGE_H = 3.0
 # Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
 # single-lens BASELINE cohort, stamped with the same forward returns on the
-# same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
-# answering itself without git archaeology. ~160 A+ rows/day -> 20k is ~4
-# months of memory; trim only ever drops fully-stamped rows.
-ALERT_ROSTER_CAP = 20000
+# same plumbing as the alerts — so "does alignment beat plain A+" keeps
+# answering itself without git archaeology. NO CAP since 2026-10-14
+# (REFINE200 #62): the 20k cap would have started deleting MEASURED rows in
+# ~December, so the ledger is sharded by base_day month under
+# data/edge_rosters/<YYYY-MM>.json and nothing is ever trimmed.
+# Each session's roster is the scan in force at its CLOSE (stocks: the newest
+# scan stamped at/after MORNING_PLAYS_SLOT_GATE, the digest's own "post-close"
+# line; crypto: the last scan of the finished UTC day), read from git history
+# that alert_returns.yml fetches for this many calendar days back. A missed
+# session inside the window is backfilled the same way.
+ALERT_ROSTER_LOOKBACK_DAYS = 6
+# ANALYSIS ONLY (REFINE200 #40): sector label variants folded to the 11 GICS
+# sectors for the edge report/summary splits. The scan rows carry GICS
+# industry groups and Yahoo labels side by side ("Financial Services",
+# "Banks", "Insurance" are one sector). NEVER read by scanner/ or broker/ --
+# the bot's sector cap keeps its own labels (REFINEMENTS #112 is the owner's);
+# tests/test_alert_edge_report.py pins the fence.
+EDGE_SECTOR_ALIASES = {
+    "Technology": "Information Technology",
+    "Software & Services": "Information Technology",
+    "Technology Hardware & Equipment": "Information Technology",
+    "Semiconductors & Semiconductor Equipment": "Information Technology",
+    "Healthcare": "Health Care",
+    "Health Care Equipment & Services": "Health Care",
+    "Pharmaceuticals, Biotechnology & Life Sciences": "Health Care",
+    "Financial Services": "Financials",
+    "Banks": "Financials",
+    "Insurance": "Financials",
+    "Diversified Financials": "Financials",
+    "Consumer Cyclical": "Consumer Discretionary",
+    "Consumer Discretionary Distribution & Retail": "Consumer Discretionary",
+    "Consumer Services": "Consumer Discretionary",
+    "Consumer Durables & Apparel": "Consumer Discretionary",
+    "Automobiles & Components": "Consumer Discretionary",
+    "Retailing": "Consumer Discretionary",
+    "Consumer Defensive": "Consumer Staples",
+    "Consumer Staples Distribution & Retail": "Consumer Staples",
+    "Food, Beverage & Tobacco": "Consumer Staples",
+    "Food & Staples Retailing": "Consumer Staples",
+    "Household & Personal Products": "Consumer Staples",
+    "Basic Materials": "Materials",
+    "Capital Goods": "Industrials",
+    "Commercial & Professional Services": "Industrials",
+    "Transportation": "Industrials",
+    "Telecommunication Services": "Communication Services",
+    "Media & Entertainment": "Communication Services",
+    "Equity Real Estate Investment Trusts (REITs)": "Real Estate",
+    "Real Estate Management & Development": "Real Estate",
+    "Unclassified": "(no sector)",
+    "Not Applic": "(no sector)",
+    "Class Pend": "(no sector)",
+}
+# ANALYSIS ONLY: a legacy crypto ledger row (stamped from Yahoo <SYM>-USD
+# before the edge ledgers priced crypto through data.fetch, so no
+# `price_source`) whose base_close is more than this factor away from the
+# coin's current scan price is a different token (JUP: 0.000327 vs 0.335) and
+# is left out of summary statistics, counted. The rows stay in the ledger.
+EDGE_CRYPTO_WRONG_TOKEN_FACTOR = 20.0
 # Book tide-stress shocks (scripts/book_stress.py, batch-100 WS-D): uniform
 # beta-1 mark drawdowns tested against every long's REAL stop. -3% is roughly
 # a reversion of breadth to its 6-month mean as measured 2026-08-20; -10% is

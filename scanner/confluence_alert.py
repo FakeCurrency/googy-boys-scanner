@@ -63,6 +63,12 @@ def compute_alignments(market: str) -> list[dict]:
     spec = _read(DATA / f"{market}_spec.json")
 
     entries: dict[str, dict] = {}
+    # The VIVEK row's research context AT THE MOMENT the alignment is seen
+    # (REFINE200 #139): the edge ledger copies it from the history entry. Its
+    # own later join could only match the ONE scan on disk on the alert's own
+    # day, and the daily run lands after the next ASX session's first scan,
+    # so ~2/3 of ASX ledger rows froze blank. Same session, no look-ahead.
+    context: dict[str, dict] = {}
 
     def ent(t):
         return entries.setdefault(t, {"long": {}, "short": {}})
@@ -70,6 +76,8 @@ def compute_alignments(market: str) -> list[dict]:
     for r in (vivek or {}).get("results", []):
         side = "short" if str(r.get("dir", "LONG")).upper() == "SHORT" else "long"
         ent(r["symbol"])[side]["VIVEK"] = f"VIVEK {r.get('grade', '')}".strip()
+        context[r["symbol"]] = {k: r[k] for k in ("grade_raw", "score", "is_product")
+                                if r.get(k) is not None}
     for r in (pm or {}).get("results", []):
         if r.get("state") not in PM_ACTIVE:
             continue
@@ -90,6 +98,7 @@ def compute_alignments(market: str) -> list[dict]:
             "count": len(lenses),
             "lenses": sorted(lenses),                 # e.g. ["PHASEMAP", "VIVEK"]
             "labels": [lenses[k] for k in sorted(lenses)],
+            **({"context": context[ticker]} if context.get(ticker) else {}),
         })
     out.sort(key=lambda x: (-x["count"], x["ticker"]))
     return out
@@ -186,7 +195,7 @@ def append_history(fresh: list[dict]) -> None:
             continue
         entries.insert(0, {"date": now, "market": a["market"], "ticker": a["ticker"],
                            "side": a["side"], "count": a["count"],
-                           "lenses": a["lenses"]})
+                           "lenses": a["lenses"], **(a.get("context") or {})})
     # TOP100 #64 — atomic + NaN-safe
     output.write_json(HISTORY_FILE, {"entries": entries[:HISTORY_CAP]},
                       indent=1, newline=True)
