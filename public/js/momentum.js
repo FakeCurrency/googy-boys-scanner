@@ -39,8 +39,21 @@
     ["bull", "BULL", "bullish direction"],
     ["bear", "BEAR", "bearish direction"],
   ];
+  // Mode A lists Rule A only, so a RULE A pill always equals ALL and a RULE B
+  // pill is always 0: the page read as if crosses were screened when they are
+  // not (REFINE200 #183). Those two pills show in modes B and C only.
+  const RULE_PILLS = ["a", "b"];
+  // A stock market publishes once per weekday after its close; past this many
+  // WEEKDAY hours since the last run it has missed a close. Crypto publishes
+  // daily: past this many calendar hours it has missed a day (its Sunday and
+  // Monday runs land a few hours late, so a day plus that slack).
+  const STALE_WEEKDAY_H = 30;
+  const STALE_CRYPTO_H = 30;
+  const BAR_24_7 = ["crypto"];
+  const LONG_SHORT = { bull: "long", bear: "short" };
 
-  const state = { market: "asx", filter: "all", data: null, err: null, loading: true };
+  const state = { market: "asx", filter: "all", data: null, err: null, loading: true,
+                  bt: {} };   // {market: backtest payload | null}, loaded lazily
 
   const $ = (id) => document.getElementById(id);
 
@@ -55,6 +68,7 @@
     state.loading = true;
     state.err = null;
     render();
+    loadBacktest(market);   // rides beside the screen, never gates it
     let payload = null;
     try {
       // Scoped to the fetch and the parse. The renderer runs AFTER, outside.
@@ -63,6 +77,9 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       payload = await res.json();
     } catch (err) {
+      // A slow failure for the PREVIOUS market must not wipe the rows the
+      // current one already loaded (REFINE200 #175): same guard as success.
+      if (market !== state.market) return;
       state.err = err;
       state.data = null;
       state.loading = false;
@@ -77,6 +94,19 @@
     state.data = payload;
     state.loading = false;
     render();
+  }
+
+  // The market's replay, if one is published (only some markets have one).
+  // Absent or broken reads as "no evidence", never as an error on the page.
+  async function loadBacktest(market) {
+    if (Object.prototype.hasOwnProperty.call(state.bt, market)) return;
+    state.bt[market] = null;
+    try {
+      const res = await fetchTimeout(`data/momentum/${market}_backtest.json`, { cache: "no-cache" });
+      if (!res.ok) return;
+      state.bt[market] = await res.json();
+    } catch (_) { return; }
+    if (market === state.market && state.data) render();
   }
 
   /* ---- derived --------------------------------------------------------- */
@@ -123,6 +153,67 @@
       `stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   }
 
+  /* ---- staleness and evidence (read off the files, never computed) ------ */
+
+  // Hours between two instants (ms) that fall on a UTC weekday.
+  function weekdayHours(from, to) {
+    if (!(to > from)) return 0;
+    let ms = 0;
+    let t = from;
+    while (t < to) {
+      const next = Math.min(to, (Math.floor(t / 86400000) + 1) * 86400000);
+      const dow = new Date(t).getUTCDay();
+      if (dow !== 0 && dow !== 6) ms += next - t;
+      t = next;
+    }
+    return ms / 3600000;
+  }
+
+  // null when fresh, else one sentence saying why not. A stock market is
+  // stale past STALE_WEEKDAY_H weekday hours since its last run (a weekend
+  // never counts); crypto past STALE_CRYPTO_H hours. An unreadable run time is
+  // never fresh. `now` is a parameter so the rule is testable.
+  function staleOf(data, market, now) {
+    if (!data || typeof data !== "object") return null;
+    const gen = Date.parse(data.generated_at);
+    if (!isFinite(gen)) return "the file carries no readable run time";
+    const is247 = BAR_24_7.includes(String(market || "").toLowerCase());
+    const h = is247 ? (now - gen) / 3600000 : weekdayHours(gen, now);
+    const limit = is247 ? STALE_CRYPTO_H : STALE_WEEKDAY_H;
+    if (h <= limit) return null;
+    return `last run ${fmtMelb(data.generated_at)}, over ${limit}` +
+      `${is247 ? "" : " weekday"} hours ago`;
+  }
+
+  // The replay stream a row of this direction belongs to, by the payload's
+  // mode: mode A lists Rule A hits only, so its rows are Rule A's stream.
+  function btStream(bt, mode, dir) {
+    const side = LONG_SHORT[dir];
+    const s = bt && bt.summary;
+    if (!side || !s || typeof s !== "object") return null;
+    const key = String(mode || "A") === "A" ? `rule_a_${side}` : side;
+    const st = s[key];
+    return st && typeof st === "object" ? { key, st } : null;
+  }
+
+  // "no edge in the ASX backtest" when the market's OWN replay scores this
+  // direction at or below zero R a trade (REFINE200 #50: ASX shorts -0.10R
+  // over 2,235 Rule A trades). Threshold logic on a published number only.
+  function noEdgeOf(bt, mode, dir, market) {
+    const got = btStream(bt, mode, dir);
+    if (!got) return null;
+    const exp = got.st.expectancy_r, n = got.st.trades;
+    if (typeof exp !== "number" || !isFinite(exp) || exp > 0) return null;
+    if (typeof n !== "number" || !(n > 0)) return null;
+    const mk = String(market || "").toUpperCase();
+    const label = `no edge in the ${mk} backtest`;
+    const what = got.key.startsWith("rule_a") ? `Rule A ${LONG_SHORT[dir]}s` : `${LONG_SHORT[dir]}s`;
+    const tip = `The ${mk} replay (${bt.period || "5y"}, run ${String(bt.generated_at || "").slice(0, 10)}) ` +
+      `scores ${what} at ${exp >= 0 ? "+" : ""}${exp}R a trade over ${n.toLocaleString("en-AU")} ` +
+      `trades: no edge. Report only — shown, not filtered.`;
+    return { label, tip };
+  }
+
   /* ---- chrome ---------------------------------------------------------- */
 
   // COVERAGE, in counts and never as a percentage. The first scheduled ASX
@@ -166,18 +257,21 @@
     if (!state.data) {
       title.textContent = "MOMENTUM · no data";
       dot.className = "deck-dot is-stale warn";
-      sub.textContent = "RSI divergence and scored 20/50 crosses · report only";
+      sub.textContent = "RSI divergence screen · report only";
       if (cover) { cover.textContent = ""; cover.hidden = true; }
       return;
     }
     const n = ((state.data.results) || []).length;
     title.textContent = `MOMENTUM · ${n} ${n === 1 ? "name" : "names"}`;
     const cov = coverage(s);
-    dot.className = cov.partial ? "deck-dot is-partial warn" : "deck-dot is-fresh";
+    const stale = staleOf(state.data, state.market, Date.now());
+    dot.className = stale ? "deck-dot is-stale warn"
+      : (cov.partial ? "deck-dot is-partial warn" : "deck-dot is-fresh");
     const mode = String(state.data.mode || "A");
     const win = (state.data.params && state.data.params.div_fresh_bars) || 1;
     const bits = [
-      `mode ${mode}`,
+      ...(stale ? [`⚠ STALE: ${stale}`] : []),
+      mode === "A" ? "mode A: divergence only" : `mode ${mode}`,
       `${win}-bar window`,
       ...(cov.line ? [cov.line] : []),
       `${s.scanned == null ? "?" : s.scanned} scanned`,
@@ -202,12 +296,17 @@
   // browser-default grey buttons reading "ALL4", "RULE A4".
   function renderPills() {
     const c = counts();
-    $("mo-pills").innerHTML = FILTERS.map(([key, label, why]) => {
-      const on = state.filter === key;
-      return `<button class="fpill${on ? " is-active" : ""}" data-pill="${esc(key)}" ` +
-        `aria-pressed="${on ? "true" : "false"}" title="${esc(why)}">` +
-        `${esc(label)} <b>${c[key]}</b></button>`;
-    }).join("");
+    const mode = String((state.data && state.data.mode) || "A");
+    const bt = (state.bt || {})[state.market];
+    $("mo-pills").innerHTML = FILTERS.filter(([key]) => mode !== "A" || !RULE_PILLS.includes(key))
+      .map(([key, label, why]) => {
+        const on = state.filter === key;
+        const ne = noEdgeOf(bt, mode, key, state.market);
+        return `<button class="fpill${on ? " is-active" : ""}" data-pill="${esc(key)}" ` +
+          `aria-pressed="${on ? "true" : "false"}" title="${esc(ne ? why + " — " + ne.tip : why)}">` +
+          `${esc(label)} <b>${c[key]}</b>` +
+          (ne ? ` <span class="mo-noedge">${esc("no edge")}</span>` : "") + `</button>`;
+      }).join("");
   }
 
   function renderMarkets() {
@@ -271,6 +370,17 @@
         "A fund, REIT, LIC, preferred line or warrant rather than an " +
         "operating company."));
     }
+    // A row screened on an older bar than the file's newest (its source had
+    // not served the latest close yet) says so (REFINE200 #174).
+    const lastDay = String(r.last_bar || "").slice(0, 10);
+    const fileDay = String((state.data && state.data.last_closed_bar) || "").slice(0, 10);
+    if (lastDay && fileDay && lastDay < fileDay) {
+      chips.push(chip(`as of ${lastDay}`, "mo-chip-warn",
+        `Screened on its ${lastDay} bar: its source had not served the ${fileDay} ` +
+        "close when this ran, so this signal is a session older than the rest."));
+    }
+    const ne = noEdgeOf((state.bt || {})[state.market], state.data && state.data.mode, dir, state.market);
+    if (ne) chips.push(chip(ne.label, "mo-chip-noedge", ne.tip));
 
     const cls = ["mo-row"];
     if (dir) cls.push("is-" + dir);

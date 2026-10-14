@@ -325,14 +325,20 @@ def test_no_look_ahead_on_the_real_corpus():
         S.assert_no_lookahead(CORPUS[sym], cfg)
 
 
-def test_screen_frames_takes_the_downloader_return_type_unchanged():
+def test_the_screen_takes_the_downloader_return_type_unchanged():
     """`data.download()` hands back {ticker: DataFrame} with TITLE-case columns.
     It must feed straight in -- if this needed a rename, the loader would be
-    carrying knowledge that belongs at the screen's front door."""
-    out = S.screen_frames({k: CORPUS[k] for k in ("walk0", "ramp400", "flat300")},
-                          MomentumConfig(mode="B"), market="test")
-    assert isinstance(out, pd.DataFrame)
-    assert {"symbol", "passes", "rule_a", "rule_b"} <= set(out.columns)
+    carrying knowledge that belongs at the screen's front door. Ranked by
+    gates.select, the one order the page publishes (the reference's
+    screen_frames ranked differently and is gone, REFINE200 #182)."""
+    from scanner.momentum import gates as G
+    frames = {k: CORPUS[k] for k in ("walk0", "ramp400", "flat300")}
+    rows = [S.screen_symbol(frames[k], MomentumConfig(mode="B"), symbol=k, market="test")
+            for k in sorted(frames)]
+    assert all({"symbol", "passes", "rule_a", "rule_b"} <= set(r) for r in rows)
+    hits = G.select(rows, "B")
+    assert [r["rank"] for r in hits] == list(range(1, len(hits) + 1))
+    assert not hasattr(S, "screen_frames")
 
 
 def test_the_unsatisfiable_rule_b_config_is_refused_by_assert_screenable():
@@ -424,7 +430,7 @@ def _install_shim():
             owner[n] = mod
             types.ModuleType.__setattr__(shim, n, getattr(mod, n))
     for n in ("rsi_divergence", "cross_signal", "evaluate", "screen_symbol",
-              "screen_frames", "assert_no_lookahead"):
+              "assert_no_lookahead"):
         owner[n] = S
         types.ModuleType.__setattr__(shim, n, wrap(getattr(S, n)))
     for n, v in (("ScreenConfig", make), ("DEFAULT_CONFIG", ref_default),
