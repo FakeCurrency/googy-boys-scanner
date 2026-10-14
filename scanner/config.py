@@ -1240,13 +1240,13 @@ ALERT_RETURNS_FRAMES_MAX_AGE_H = 3.0
 # line; crypto: the last scan of the finished UTC day), read from git history
 # that alert_returns.yml fetches for this many calendar days back. A missed
 # session inside the window is backfilled the same way.
-ALERT_ROSTER_LOOKBACK_DAYS = 6
+ALERT_ROSTER_LOOKBACK_DAYS = 5
 # ANALYSIS ONLY (REFINE200 #40): sector label variants folded to the 11 GICS
 # sectors for the edge report/summary splits. The scan rows carry GICS
 # industry groups and Yahoo labels side by side ("Financial Services",
 # "Banks", "Insurance" are one sector). NEVER read by scanner/ or broker/ --
 # the bot's sector cap keeps its own labels (REFINEMENTS #112 is the owner's);
-# tests/test_alert_edge_report.py pins the fence.
+# the edge-report tests pin the fence.
 EDGE_SECTOR_ALIASES = {
     "Technology": "Information Technology",
     "Software & Services": "Information Technology",

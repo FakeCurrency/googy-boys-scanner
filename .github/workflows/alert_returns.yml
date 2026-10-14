@@ -106,20 +106,37 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         run: pip install -r requirements.txt
 
+      # --frames-out (REFINE200): the frames this pass downloaded are handed
+      # to the roster step below, so one Yahoo walk prices both ledgers (410
+      # symbols were fetched twice a run). /tmp is this job's own.
       - name: Ingest + stamp forward returns
         if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
-          python scripts/alert_returns.py 2>&1 | tee /tmp/alert_returns_out.txt
+          python scripts/alert_returns.py --frames-out /tmp/edge_frames.json 2>&1 | tee /tmp/alert_returns_out.txt
 
-      # The single-lens BASELINE cohort (batch-100 WS-B): today's A+ rosters,
-      # stamped by the same imported machinery on the same Yahoo plumbing —
-      # so "does alignment beat plain A+" keeps answering itself.
+      # Each session's A+ roster is the scan in force at its CLOSE, read from
+      # git history (REFINE200): the checkout is depth 1, so deepen it over
+      # the roster's lookback window (config.ALERT_ROSTER_LOOKBACK_DAYS, +2
+      # for slack). FAIL-OPEN: without history the roster reads only the scan
+      # on disk, and files it only when it is itself post-close.
+      - name: Fetch recent scan history
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          DAYS=$(python -c "from scanner import config; print(config.ALERT_ROSTER_LOOKBACK_DAYS + 2)")
+          SINCE=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          git fetch --quiet --shallow-since="$SINCE" origin main \
+            || echo "::warning::scan history fetch failed - the roster reads only the scan on disk this run"
+
+      # The single-lens BASELINE cohort (batch-100 WS-B): each finished
+      # session's A+ roster, stamped by the same imported machinery on the
+      # same plumbing — so "does alignment beat plain A+" keeps answering
+      # itself. Sharded by month under data/edge_rosters/ (REFINE200 #62).
       - name: Build the A+ roster baseline
         if: steps.gate.outputs.run == 'true'
         run: |
           set -o pipefail
-          python scripts/edge_rosters.py 2>&1 | tee /tmp/edge_rosters_out.txt
+          python scripts/edge_rosters.py --frames-in /tmp/edge_frames.json 2>&1 | tee /tmp/edge_rosters_out.txt
 
       # Tide transparency (batch-100 WS-D): how much of the open book's
       # unrealized R survives a uniform pullback, against the REAL stops.
@@ -169,12 +186,14 @@ jobs:
           # run where the roster script had nothing to write the file may not
           # exist yet, and a missing pathspec exits 128 under bash -e.
           git add -- data/edge_rosters.json 2>/dev/null || true
+          # The roster's monthly shards (REFINE200 #62): one pathspec, the dir.
+          git add -- data/edge_rosters 2>/dev/null || true
           git add -- public/data/book_stress.json 2>/dev/null || true
           git add -- public/data/edge_summary.json 2>/dev/null || true
           # Must-change gate (ANY-OF across the artefacts): reaching here
           # means at least one script CLAIMED a change, so staging nothing is
           # always a bug.
-          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json public/data/book_stress.json public/data/edge_summary.json
+          bash scripts/assert_staged.sh "edge ledgers" data/alert_forward_returns.json data/edge_rosters.json data/edge_rosters public/data/book_stress.json public/data/edge_summary.json
           git commit -m "data: edge ledgers $(date -u +'%Y-%m-%d')"
           SHA=$(git rev-parse HEAD)
           for i in 1 2 3 4 5; do
@@ -182,10 +201,12 @@ jobs:
             git reset --hard origin/main
             git checkout "$SHA" -- data/alert_forward_returns.json
             git checkout "$SHA" -- data/edge_rosters.json 2>/dev/null || true
+            git checkout "$SHA" -- data/edge_rosters 2>/dev/null || true
             git checkout "$SHA" -- public/data/book_stress.json 2>/dev/null || true
             git checkout "$SHA" -- public/data/edge_summary.json 2>/dev/null || true
             git add -- data/alert_forward_returns.json
             git add -- data/edge_rosters.json 2>/dev/null || true
+            git add -- data/edge_rosters 2>/dev/null || true
             git add -- public/data/book_stress.json 2>/dev/null || true
             git add -- public/data/edge_summary.json 2>/dev/null || true
             if git diff --cached --quiet; then echo "Nothing new vs main."; exit 0; fi
