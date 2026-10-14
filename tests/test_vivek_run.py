@@ -1310,3 +1310,84 @@ def test_a_failed_lookup_fails_open_and_is_not_retried_that_day(monkeypatch):
     assert vr._earnings_within("AAPL", 3, today=d, cache=cache) is False
     assert vr._earnings_within("AAPL", 3, today=d, cache=cache) is False
     assert calls == ["AAPL"]
+
+
+# ── REFINE200 #6: a plan refused at the fill releases its capacity ────────────
+
+def _one_slot_left(tmp_path, monkeypatch, symbols, blocked):
+    """Book one slot short of the global cap; `blocked` report earnings at
+    the fill. Returns (universe, frames, decide-call counter)."""
+    from scanner.broker import vivek_bot
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 3)
+    monkeypatch.setattr(config, "VIVEK_BOT_EARNINGS_MARKETS", ("asx",))
+    _write_market_book(tmp_path, "asx", open_=[_held("XXX"), _held("YYY")])
+    monkeypatch.setattr(vr, "_earnings_within",
+                        lambda yf, buf, today=None, cache=None: yf in blocked)
+    calls = []
+    real = vivek_bot.decide
+
+    def counting(rows, *a, **k):
+        calls.append([r["symbol"] for r in rows])
+        return real(rows, *a, **k)
+    monkeypatch.setattr(vivek_bot, "decide", counting)
+    uni = [{"symbol": s, "yf": f"{s}.AX"} for s in symbols + ["XXX", "YYY"]]
+    frames = {u["yf"]: _frame(101.0) for u in uni}
+    return uni, frames, calls
+
+
+def test_the_next_ranked_plan_fills_when_the_top_one_is_refused_at_the_fill(
+        tmp_path, monkeypatch):
+    uni, frames, calls = _one_slot_left(tmp_path, monkeypatch, ["AAA", "BBB"], {"AAA.AX"})
+    bk = vr.run_market("asx", [_row("AAA"), _row("BBB")], frames, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    held = sorted(p["symbol"] for p in bk["open"])
+    assert held == ["BBB", "XXX", "YYY"]                    # BBB took the freed slot
+    assert calls == [["AAA", "BBB"], ["BBB"]]               # AAA sat out the refill
+
+
+def test_the_refill_keeps_the_caps(tmp_path, monkeypatch):
+    """Same caps: two candidates, one slot -- the refill fills ONE, never two."""
+    uni, frames, calls = _one_slot_left(tmp_path, monkeypatch,
+                                        ["AAA", "BBB", "CCC"], {"AAA.AX"})
+    bk = vr.run_market("asx", [_row("AAA"), _row("BBB"), _row("CCC")], frames, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert sorted(p["symbol"] for p in bk["open"]) == ["BBB", "XXX", "YYY"]
+
+
+def test_no_refill_when_no_cap_turned_anyone_away(tmp_path, monkeypatch):
+    """With room to spare every eligible row was already planned, so asking
+    again could add nothing."""
+    uni, frames, calls = _one_slot_left(tmp_path, monkeypatch, ["AAA", "BBB"], {"AAA.AX"})
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 10)
+    bk = vr.run_market("asx", [_row("AAA"), _row("BBB")], frames, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert "BBB" in {p["symbol"] for p in bk["open"]} and len(calls) == 1
+
+
+def test_the_refill_is_bounded(tmp_path, monkeypatch):
+    """Every replacement refused too: VIVEK_BOT_REFILL_PASSES (2) extra asks,
+    then stop -- DDD never gets looked at this run."""
+    uni, frames, calls = _one_slot_left(
+        tmp_path, monkeypatch, ["AAA", "BBB", "CCC", "DDD"], {"AAA.AX", "BBB.AX", "CCC.AX"})
+    rows = [_row(s) for s in ("AAA", "BBB", "CCC", "DDD")]
+    bk = vr.run_market("asx", rows, frames, uni, now=_aest(2024, 1, 2, 11, 0))
+    assert sorted(p["symbol"] for p in bk["open"]) == ["XXX", "YYY"]
+    assert calls == [["AAA", "BBB", "CCC", "DDD"], ["BBB", "CCC", "DDD"], ["CCC", "DDD"]]
+
+
+def test_refill_off_is_the_old_single_pass(tmp_path, monkeypatch):
+    uni, frames, calls = _one_slot_left(tmp_path, monkeypatch, ["AAA", "BBB"], {"AAA.AX"})
+    monkeypatch.setattr(config, "VIVEK_BOT_REFILL_PASSES", 0)
+    bk = vr.run_market("asx", [_row("AAA"), _row("BBB")], frames, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert sorted(p["symbol"] for p in bk["open"]) == ["XXX", "YYY"] and len(calls) == 1
+
+
+def test_a_wide_stop_at_the_fill_releases_its_slot_too(tmp_path, monkeypatch):
+    """The don't-chase / stop-cap refusals inside _ticket_to_position count."""
+    uni, frames, calls = _one_slot_left(tmp_path, monkeypatch, ["AAA", "BBB"], set())
+    frames["AAA.AX"] = _frame(130.0)                        # beyond TP1: don't chase
+    bk = vr.run_market("asx", [_row("AAA"), _row("BBB")], frames, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert sorted(p["symbol"] for p in bk["open"]) == ["BBB", "XXX", "YYY"]

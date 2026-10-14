@@ -1217,6 +1217,20 @@ def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
             continue
 
 
+#: decide() skip codes that mean "a cap had no room" -- the only refusals a
+#: plan freed at the fill can change (see the refill in run_market).
+_CAPACITY_SKIPS = frozenset({"book_full", "global_cap", "notional_cap",
+                             "long_cap", "sector_cap"})
+
+
+def _open_book_view(book: dict, market: str) -> list[dict]:
+    """The projection of this market's open rows that decide() counts caps from."""
+    return [{"symbol": p["symbol"], "direction": p.get("direction"),
+             "sector": p.get("sector", ""),
+             "notional": p.get("notional", 0)}
+            for p in book["open"] if p.get("market") == market]
+
+
 # ── per-market run ────────────────────────────────────────────────────────────
 
 def run_market(market: str, results: list[dict], frames: dict, universe: list[dict],
@@ -1229,7 +1243,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     does NOT write the book — the final safety gate.
     """
     if not config.VIVEK_BOT_ENABLED:
-        log.info("vivek_run [%s]: disabled (VIVEK_BOT_ENABLED=False) - no-op", market)
+        log.info("vivek_run [%s]: disabled (VIVEK_BOT_ENABLED=False) — no-op", market)
         return _combined_view()
 
     equity = config.VIVEK_BOT_ACCOUNT_EQUITY if equity is None else equity
@@ -1240,7 +1254,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     if mode == "live":
         if not (config.VIVEK_LIVE_CONFIRMED and not dry_run):
             log.warning("vivek_run [%s]: MODE=live but live execution is NOT wired "
-                        "(LIVE_CONFIRMED=%s, dry_run=%s) - treating as PAPER",
+                        "(LIVE_CONFIRMED=%s, dry_run=%s) — treating as PAPER",
                         market, config.VIVEK_LIVE_CONFIRMED, dry_run)
         mode = "paper"
 
@@ -1320,13 +1334,13 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             yf_map = {**yf_map, **yf_missing}
             if missing:
                 log.info("vivek_run [%s]: %d open position(s) no longer in the "
-                         "universe - fetched directly (%d priced): %s",
+                         "universe — fetched directly (%d priced): %s",
                          market, len(missing),
                          sum(1 for s in missing if yf_missing[s] in got),
                          ", ".join(missing))
             if refetch:
                 log.info("vivek_run [%s]: %d held position(s) had no fresh frame "
-                         "from the scan download - refetched directly (%d priced): %s",
+                         "from the scan download — refetched directly (%d priced): %s",
                          market, len(refetch),
                          sum(1 for s in refetch if yf_map[s] in got),
                          ", ".join(refetch))
@@ -1361,7 +1375,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             pos["unpriced_runs"] = int(pos.get("unpriced_runs") or 0) + 1
             if pos["unpriced_runs"] in (3, 10, 30):
                 log.warning("vivek_run [%s]: %s has had NO price for %d "
-                            "consecutive runs - stop cannot fire",
+                            "consecutive runs — stop cannot fire",
                             market, pos["symbol"], pos["unpriced_runs"])
         else:
             pos.pop("unpriced_runs", None)
@@ -1392,7 +1406,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                     and not pos.get("tp1_hit")
                     and (_held_days(pos, day) or 0) > max_hold):
                 _close_time_stop(pos, price, day, costs)
-                log.info("vivek_run [%s]: TIME-STOP %s - %s days without TP1, "
+                log.info("vivek_run [%s]: TIME-STOP %s — %s days without TP1, "
                          "closed @ %g (%+.2fR)", market, pos["symbol"],
                          _held_days(pos, day), price, pos.get("realized_r") or 0)
         if pos.get("status") == "closed":
@@ -1452,8 +1466,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             if blind:
                 body += (f" NOTE: {len(blind)} position(s) unpriced this run "
                          f"({', '.join(blind)}) — the real number may be worse.")
-        log.warning("vivek_run [%s]: %s-LOSS GUARD - P&L $%.2f <= -$%.2f "
-                    "- halting new entries for %s",
+        log.warning("vivek_run [%s]: %s-LOSS GUARD — P&L $%.2f <= -$%.2f "
+                    "— halting new entries for %s",
                     market, kind.upper(), hit_usd, hit_lim, day)
         # ROUTED, and deduped in the BOOK (2026-07-28). Three things were wrong
         # with the old `alert_dispatch.send` call here:
@@ -1586,10 +1600,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # checks on every other position, which is a worse failure than the caps
     # miscounting. decide() classifies an unreadable direction as neither side,
     # counts the slot it is really holding, and says so loudly.
-    open_book = [{"symbol": p["symbol"], "direction": p.get("direction"),
-                  "sector": p.get("sector", ""),
-                  "notional": p.get("notional", 0)}
-                 for p in book["open"] if p.get("market") == market]
+    open_book = _open_book_view(book, market)
     # Global ceiling across every market (owner, 2026-07-28): the book may hold
     # VIVEK_BOT_MAX_OPEN_TOTAL positions distributed however the setups fall,
     # instead of a fixed slice per market. decide() sees one market, so the
@@ -1624,9 +1635,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                  "before decide()", market,
                  "/".join(getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()),
                  level_gate_skipped)
+    cooldown = _cooldown_symbols(book, market, day)
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book,
-                                cooldown_syms=_cooldown_symbols(book, market, day),
-                                **gate)
+                                cooldown_syms=cooldown, **gate)
 
     # 4) fill new entries at the current intraday price (session only, guard clear).
     added, chased, earnings_skipped = 0, 0, 0
@@ -1639,42 +1650,80 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         for r in (results or []) if r.get("symbol")
     }
     if is_open and not guard["breached"]:
-        for out in decision["plans"]:
-            sym = out["plan"]["symbol"]
-            # A FILL needs a price fetched THIS run (VIVEK_BOT_MAX_MARK_AGE_H):
-            # skipping is re-tried next run; a fill off a cached frame books a
-            # price nobody traded at.
-            if max_mark_h and mark_age_h(frames.get(yf_map.get(sym)), now) > 0:
-                log.info("SKIP  %-8s [stale_cache] only a cached frame this run - "
-                         "no fill off a past price", sym)
-                continue
-            price = _current_price(frames, yf_map.get(sym))
-            if price is None:
-                continue
-            # Earnings gap-avoidance (best-effort, fail-open) — only for the
-            # handful of names actually being filled, never the universe.
-            if earnings_gate and _earnings_within(yf_map.get(sym), earnings_buffer,
-                                                  today=now.date(), cache=_EARNINGS_CACHE):
-                earnings_skipped += 1
-                log.info("SKIP  %-8s [earnings] reports within %dd - gap risk",
-                         sym, earnings_buffer)
-                continue
-            pos = _ticket_to_position(
-                out, price, market, day,
-                level_tf=level_tf_by_sym.get(str(sym or "").upper()),
-            )
-            if pos is None:                              # don't chase
-                chased += 1
-                continue
-            if market == "crypto":
-                _stamp_identity(pos, frames.get(yf_map.get(sym)),
-                                venue_of(frames, yf_map.get(sym)), anchor_of)
-            # guard against a duplicate already in the persistent book
-            if any(p["symbol"] == sym and p.get("market") == market for p in book["open"]):
-                continue
-            book["open"].append(pos)
-            opened_events.append(pos)
-            added += 1
+        plans = decision["plans"]
+        refused: set[str] = set()        # skipped at the fill this run
+        refills = 0
+        max_refills = int(config.VIVEK_BOT_REFILL_PASSES or 0)
+        while True:
+            skipped_now: set[str] = set()
+            for out in plans:
+                sym = out["plan"]["symbol"]
+                # A FILL needs a price fetched THIS run (VIVEK_BOT_MAX_MARK_AGE_H):
+                # skipping is re-tried next run; a fill off a cached frame books a
+                # price nobody traded at.
+                if max_mark_h and mark_age_h(frames.get(yf_map.get(sym)), now) > 0:
+                    log.info("SKIP  %-8s [stale_cache] only a cached frame this run - "
+                             "no fill off a past price", sym)
+                    skipped_now.add(str(sym).upper())
+                    continue
+                price = _current_price(frames, yf_map.get(sym))
+                if price is None:
+                    skipped_now.add(str(sym).upper())
+                    continue
+                # Earnings gap-avoidance (best-effort, fail-open) — only for the
+                # handful of names actually being filled, never the universe.
+                if earnings_gate and _earnings_within(yf_map.get(sym), earnings_buffer,
+                                                      today=now.date(), cache=_EARNINGS_CACHE):
+                    earnings_skipped += 1
+                    log.info("SKIP  %-8s [earnings] reports within %dd — gap risk",
+                             sym, earnings_buffer)
+                    skipped_now.add(str(sym).upper())
+                    continue
+                pos = _ticket_to_position(
+                    out, price, market, day,
+                    level_tf=level_tf_by_sym.get(str(sym or "").upper()),
+                )
+                if pos is None:                              # don't chase / wide at fill
+                    chased += 1
+                    skipped_now.add(str(sym).upper())
+                    continue
+                if market == "crypto":
+                    _stamp_identity(pos, frames.get(yf_map.get(sym)),
+                                    venue_of(frames, yf_map.get(sym)), anchor_of)
+                # guard against a duplicate already in the persistent book
+                if any(p["symbol"] == sym and p.get("market") == market for p in book["open"]):
+                    skipped_now.add(str(sym).upper())
+                    continue
+                book["open"].append(pos)
+                opened_events.append(pos)
+                added += 1
+            # CAPACITY RELEASE (REFINE200 #6). decide() counted every plan it
+            # returned against the slot, notional and sector caps; a plan the
+            # fill then refused (stale frame, no price, earnings, don't-chase,
+            # stop wider than the cap at the fill) left its capacity reserved
+            # for nothing, so the next-ranked eligible row waited a whole run
+            # for a slot that was free. Ask decide() again over the rows it has
+            # not refused this run, against the book AS FILLED: same rows, same
+            # order, same caps -- the refused names simply sit out until the
+            # next run. Only when a cap actually turned a row away (otherwise
+            # every eligible row was already planned) and at most
+            # VIVEK_BOT_REFILL_PASSES times.
+            if not skipped_now or refills >= max_refills:
+                break
+            capped = set(decision["summary"]["skip_reasons"]) & _CAPACITY_SKIPS
+            if not capped:
+                break
+            refused |= skipped_now
+            refills += 1
+            log.info("vivek_run [%s]: refill %d - %d plan(s) refused at the fill (%s) "
+                     "freed capacity a cap had refused (%s); re-deciding",
+                     market, refills, len(skipped_now), ", ".join(sorted(skipped_now)),
+                     ", ".join(sorted(capped)))
+            decision = vivek_bot.decide(
+                [r for r in results if str(r.get("symbol") or "").upper() not in refused],
+                equity, market=market, open_book=_open_book_view(book, market),
+                cooldown_syms=cooldown, **gate)
+            plans = decision["plans"]
 
     book_open = sum(1 for p in book["open"] if p.get("market") == market)
     book_short = sum(1 for p in book["open"]
@@ -1684,15 +1733,15 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     book["summary"] = _summary_of(book, day)
 
     if dry_run:
-        log.info("vivek_run [%s]: DRY-RUN | %s | would add %d, close %d "
-                 "(book unchanged: %d open, %d short) | decision: %s",
+        log.info("vivek_run [%s]: DRY-RUN · %s · would add %d, close %d "
+                 "(book unchanged: %d open, %d short) · decision: %s",
                  market, "OPEN" if is_open else "closed-session", added, closed_now,
                  book_open, book_short, decision["summary"]["skip_reasons"] or "none")
         # Combined view with THIS market's in-memory (unsaved) slice overlaid.
         return _combined_view(override={market: book})
 
     _save_market_book(market, book)
-    log.info("vivek_run [%s]: %s | %s | +%d new, %d closed (%d open, %d short)",
+    log.info("vivek_run [%s]: %s · %s · +%d new, %d closed (%d open, %d short)",
              market, mode.upper(), "OPEN" if is_open else "closed-session",
              added, closed_now, book_open, book_short)
 
@@ -1821,7 +1870,7 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     if not config.VIVEK_BOT_ENABLED:
-        print("VIVEK_BOT_ENABLED is False - runner is a no-op. "
+        print("VIVEK_BOT_ENABLED is False — runner is a no-op. "
               "Set it True in config.py to exercise the paper book.")
         return
 
@@ -1834,7 +1883,7 @@ def main() -> None:
     for market_key in markets:
         pub = ROOT / "public" / "data" / f"{market_key}_vivek.json"
         if not pub.exists():
-            print(f"[{market_key}] no scan JSON ({pub.name}) - run the scanner first")
+            print(f"[{market_key}] no scan JSON ({pub.name}) — run the scanner first")
             continue
         results = json.loads(pub.read_text(encoding="utf-8")).get("results", [])
         # v5 payload split (2026-07-31): the published summary carries LITE
@@ -1850,9 +1899,9 @@ def main() -> None:
             try:
                 drows = (json.loads(det.read_text(encoding="utf-8")) or {}).get("rows") or {}
             except (OSError, ValueError):
-                print(f"[{market_key}] detail sidecar unreadable - rows stay lite (fail-closed)")
+                print(f"[{market_key}] detail sidecar unreadable — rows stay lite (fail-closed)")
         elif results and not any("analysis" in r for r in results[:5]):
-            print(f"[{market_key}] no detail sidecar ({det.name}) - lite rows, entries will be skipped")
+            print(f"[{market_key}] no detail sidecar ({det.name}) — lite rows, entries will be skipped")
         for r in results:
             extra = drows.get(str(r.get("symbol") or ""))
             if isinstance(extra, dict):

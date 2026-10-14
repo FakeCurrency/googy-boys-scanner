@@ -95,8 +95,11 @@ def test_it_runs_at_entry_only():
     src = (ROOT / "scanner" / "broker" / "vivek_run.py").read_text(encoding="utf-8")
     assert src.count("_ticket_to_position(") == 2, "one definition, one call: the new-entry fill"
     call = src.index("pos = _ticket_to_position(")
-    loop = src.rindex('for out in decision["plans"]:', 0, call)
-    assert src.count("\n", loop, call) < 20, "the call sits in the new-entry loop"
+    # the new-entry loop walks decide()'s plans (and, after a fill refusal,
+    # the refill's -- REFINE200 #6); either way only NEW tickets reach it
+    loop = src.rindex("for out in plans:", 0, call)
+    assert src.rindex('plans = decision["plans"]', 0, loop) > 0
+    assert src.count("\n", loop, call) < 40, "the call sits in the new-entry loop"
     assert "[wide_stop_at_fill]" in src, "a refusal is logged with its own code"
 
 
