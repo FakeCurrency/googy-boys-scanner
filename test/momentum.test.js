@@ -348,7 +348,12 @@ function slice(name) {
  * takes a `momentum` mode. The pins below are about the SEAM: the row asks for
  * it, the chart honours it, and a 5.0 link never trips it.
  */
-const CHART = fs.readFileSync(path.join(PUB, "js", "chart.js"), "utf8");
+// The chart's SHIPPED code: chart.js plus the pure indicator maths split out
+// to chart-indicators.js (REFINE200 #96). Appended AFTER chart.js, so every
+// name-based slice below still finds its function, and a slice bounded by two
+// chart.js landmarks never reaches into the indicator file.
+const IND = fs.readFileSync(path.join(PUB, "js", "chart-indicators.js"), "utf8");
+const CHART = fs.readFileSync(path.join(PUB, "js", "chart.js"), "utf8") + "\n" + IND;
 const APP = fs.readFileSync(path.join(PUB, "js", "app.js"), "utf8");
 
 // --- the ask: the row sends what the chart reads -----------------------------
@@ -912,8 +917,10 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok(/rsiSigS/.test(CHART), "the RSI pane carries its MA, as RSI+ draws it");
 
   // TV PALETTE on the price stack, not the 5.0 one.
-  const mas = CHART.slice(CHART.indexOf("function momentumMAs"),
-                          CHART.indexOf("function barsToMomentumTF"));
+  // momentumMAs lives in chart-indicators.js since REFINE200 #96; bounded at
+  // the next function in that file.
+  const mas = IND.slice(IND.indexOf("function momentumMAs"), IND.indexOf("function rmaPine"));
+  ok(mas.length > 300, "the momentumMAs slice is non-empty");
   ok(/#2196f3/.test(mas), "fast is TV blue");
   ok(/#26a69a/.test(mas), "slow is TV green");
   for (const c of ["#ffd23f", "#a78bfa", "#e5e9f0"])

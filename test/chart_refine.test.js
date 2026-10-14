@@ -753,6 +753,37 @@ test("a marker with ts lands on that bar; a date-only one keeps the old snap", (
   assert.equal(between[0].time, t("2026-10-12T00:00:00Z"), "a ts inside a bar snaps to the bar that holds it");
 });
 
+/* ═══════════════ #96 the indicator maths is its own file ═══════════════ */
+suite("#96 chart-indicators.js: pure maths, loaded before chart.js");
+
+const IND = fs.readFileSync(path.join(ROOT, "public", "js", "chart-indicators.js"), "utf8");
+test("chart.html loads the indicator file first, and chart.js takes its names from it", () => {
+  const html = fs.readFileSync(path.join(ROOT, "public", "chart.html"), "utf8");
+  const ind = html.search(/<script src="js\/chart-indicators\.js\?v=\d+"><\/script>/);
+  assert.ok(ind > 0 && ind < html.indexOf('src="js/chart.js?v='), "indicators must load before chart.js");
+  assert.match(CODE, /const \{[\s\S]{0,300}\} = window\.ChartIndicators;/);
+  for (const name of ["computeScalp", "emaPine", "momentumPlan", "momentumPanes", "TV_PLAN"]) {
+    assert.ok(!new RegExp(`(function|const)\\s+${name}\\b`).test(CODE), `${name} is defined in chart.js again (duplicate)`);
+    assert.ok(new RegExp(`(function|const)\\s+${name}\\b`).test(IND), `${name} must live in chart-indicators.js`);
+  }
+});
+
+test("the indicator file is pure: it runs with no DOM and no network", () => {
+  const code = IND.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  assert.ok(!/\bdocument\b|\bfetch\(|localStorage|\$\(/.test(code), "no DOM, network or storage in the maths file");
+  const win = {};
+  new Function("window", IND)(win);
+  const I = win.ChartIndicators;
+  assert.ok(Object.isFrozen(I), "exported as a frozen table");
+  const bars = Array.from({ length: 300 }, (_, i) => {
+    const c = 10 + Math.sin(i / 9) * 2 + i * 0.01;
+    return { time: 1700000000 + i * 86400, open: c, high: c * 1.01, low: c * 0.99, close: c, volume: 1000 };
+  });
+  assert.equal(I.momentumPanes(bars).rsi.length, bars.length, "one pane point per bar (2026-10-13 rule)");
+  assert.equal(I.computeScalp(bars, 120).lineData.length, 7);
+  assert.ok(Array.isArray(I.momentumCrosses(bars, null)));
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
