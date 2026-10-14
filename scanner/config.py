@@ -1200,6 +1200,24 @@ ALERT_RATE_LIMITS = {
 # room (real 40%+ days happen).
 VIVEK_MARK_SANITY_PCT = {"asx": 0.35, "nasdaq": 0.35, "crypto": 0.60}
 VIVEK_MARK_SANITY_ACCEPT_RUNS = 3
+# SPLITS (REFINE200 #8). When a suspect price is accepted on that Nth run,
+# vivek_run first asks whether the vendor REWROTE the price history by a clean
+# split ratio: the frame's close for the session of the last accepted mark is
+# compared with that mark. A split (auto_adjust back-adjusts the whole series)
+# puts the two a clean ratio apart; a crash leaves history alone, so they agree
+# (ratio ~1). On a match the position is restated into the new basis (prices
+# / ratio, units x ratio, R and notional unchanged) instead of being stopped
+# out against a stop in the old basis. Ratio = old price / new price (2 = a
+# 2-for-1 split, 1/10 = a 1-for-10 consolidation); only moves past the sanity
+# band above are ever challenged, so a 3-for-2 split (-33%) never reaches this.
+VIVEK_SPLIT_RATIOS = (2, 3, 4, 5, 8, 10, 15, 20, 25, 50, 100, 3 / 2,
+                      1 / 2, 1 / 3, 1 / 4, 1 / 5, 1 / 8, 1 / 10, 1 / 15,
+                      1 / 20, 1 / 25, 1 / 50, 1 / 100, 2 / 3)
+# How close (fraction) the mark-vs-history ratio must sit to a clean ratio.
+# Both numbers describe the SAME session close, so a real split lands within
+# rounding of the ratio; 3% leaves room for a mark taken shortly before that
+# close, and stays far from a crash's ~1.0.
+VIVEK_SPLIT_RATIO_TOL = 0.03
 
 # ── Freshness watchdog (2026-07-20, Phase 5 — scanner/watchdog.py) ────────────
 # Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). The

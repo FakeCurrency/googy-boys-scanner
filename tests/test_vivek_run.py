@@ -1391,3 +1391,133 @@ def test_a_wide_stop_at_the_fill_releases_its_slot_too(tmp_path, monkeypatch):
     bk = vr.run_market("asx", [_row("AAA"), _row("BBB")], frames, uni,
                        now=_aest(2024, 1, 2, 11, 0))
     assert sorted(p["symbol"] for p in bk["open"]) == ["BBB", "XXX", "YYY"]
+
+
+# ── REFINE200 #8: a split is restated, not booked as a crash ──────────────────
+
+def _dated(closes: dict):
+    """A daily frame from {iso_date: close}."""
+    idx = pd.DatetimeIndex([pd.Timestamp(d) for d in closes])
+    c = list(closes.values())
+    return pd.DataFrame({"Open": c, "High": c, "Low": c, "Close": c, "Volume": 1e6},
+                        index=idx)
+
+
+def _split_pos(**kw):
+    p = _held("BHP", entry=100.0)
+    p.update({"stop": 90.0, "risk": 10.0, "tp1": 120.0, "tp2": 140.0, "tp3": 160.0,
+              "units": 25.0, "notional": 2500.0, "risk_usd": 250.0,
+              "mae": 95.0, "mfe": 105.0, "mae_r": -0.5, "mfe_r": 0.5,
+              "signal_entry": 100.5, "last_mark": 104.0, "last_mark_day": "2024-01-02",
+              "day_marks": {"2024-01-02": 103.0, "2024-01-03": 104.0}})
+    p.update(kw)
+    return p
+
+
+ADJUSTED = {"2023-12-29": 50.0, "2024-01-01": 51.0, "2024-01-02": 52.0, "2024-01-03": 51.0}
+UNADJUSTED = {"2023-12-29": 100.0, "2024-01-01": 102.0, "2024-01-02": 104.0, "2024-01-03": 52.0}
+
+
+def _challenge(pos, price, frame, runs=3):
+    out = None
+    for _ in range(runs):
+        out = vr._mark_sanity(pos, price, "asx", frame=frame, day="2024-01-03")
+    return out
+
+
+def test_a_two_for_one_split_restates_the_position(stub_alerts):
+    pos = _split_pos()
+    assert _challenge(pos, 51.0, _dated(ADJUSTED), runs=2) is None   # still challenged
+    assert pos["entry"] == 100.0
+    assert vr._mark_sanity(pos, 51.0, "asx", frame=_dated(ADJUSTED), day="2024-01-03") == 51.0
+    assert (pos["entry"], pos["stop"], pos["risk"]) == (50.0, 45.0, 5.0)
+    assert (pos["tp1"], pos["tp2"], pos["tp3"]) == (60.0, 70.0, 80.0)
+    assert (pos["mae"], pos["mfe"], pos["signal_entry"]) == (47.5, 52.5, 50.25)
+    assert pos["units"] == 50.0
+    assert pos["day_marks"] == {"2024-01-02": 51.5, "2024-01-03": 52.0}
+    # basis-free fields do not move
+    assert (pos["notional"], pos["risk_usd"], pos["mae_r"], pos["mfe_r"]) == (2500.0, 250.0, -0.5, 0.5)
+    assert pos["units"] * pos["entry"] == pos["notional"]
+    (sp,) = pos["splits"]
+    assert sp == {"date": "2024-01-03", "ratio": 2.0, "mark_before": 104.0, "mark_after": 51.0}
+    assert pos["last_mark"] == 51.0 and pos["last_mark_day"] == "2024-01-03"
+    # ...and the same run's mark is an ordinary one, not a fake stop
+    vj = __import__("scanner.vivek_journal", fromlist=["_mark"])
+    vj._mark(pos, 51.0, "2024-01-03", vj.costs_for("asx"))
+    assert pos["status"] == "open"
+
+
+def test_a_genuine_fifty_percent_crash_is_not_a_split(stub_alerts):
+    """Same -50% move, but the vendor's history is untouched: a real gap."""
+    pos = _split_pos()
+    assert _challenge(pos, 52.0, _dated(UNADJUSTED)) == 52.0
+    assert pos["entry"] == 100.0 and "splits" not in pos and pos["units"] == 25.0
+    vj = __import__("scanner.vivek_journal", fromlist=["_mark"])
+    vj._mark(pos, 52.0, "2024-01-03", None)
+    assert pos["status"] == "closed" and pos["exit_reason"] == "stop"
+
+
+def test_a_one_for_ten_consolidation_restates_upward(stub_alerts):
+    pos = _split_pos(entry=0.5, stop=0.45, risk=0.05, tp1=0.6, tp2=0.7, tp3=0.8,
+                     units=5000.0, mae=0.48, mfe=0.53, signal_entry=0.5,
+                     last_mark=0.52, day_marks={"2024-01-02": 0.52})
+    frame = _dated({"2024-01-01": 5.1, "2024-01-02": 5.2, "2024-01-03": 5.1})
+    assert _challenge(pos, 5.1, frame) == 5.1
+    assert pos["splits"][0]["ratio"] == 0.1
+    assert (pos["entry"], pos["stop"], pos["units"]) == (5.0, 4.5, 500.0)
+
+
+def test_no_clean_ratio_in_history_means_no_split(stub_alerts):
+    """History moved, but by 1.7x -- not a split ratio: accepted as a move."""
+    pos = _split_pos()
+    frame = _dated({"2024-01-02": 104.0 / 1.7, "2024-01-03": 52.0})
+    assert _challenge(pos, 52.0, frame) == 52.0 and "splits" not in pos
+
+
+@pytest.mark.parametrize("why", ["no_mark_day", "same_session", "no_frame"])
+def test_a_split_that_cannot_be_checked_is_accepted_as_before(why, stub_alerts):
+    pos = _split_pos()
+    frame = _dated(ADJUSTED)
+    if why == "no_mark_day":
+        pos.pop("last_mark_day")                 # a row written before #8
+    elif why == "same_session":
+        pos["last_mark_day"] = "2024-01-03"      # marked off today's own bar
+    else:
+        frame = None
+    assert _challenge(pos, 51.0, frame) == 51.0
+    assert "splits" not in pos and pos["entry"] == 100.0
+
+
+def test_a_split_keeps_every_r_figure_with_a_banked_partial(stub_alerts):
+    from scanner import vivek_journal as vj
+    costs = vj.costs_for("asx")
+    pos = _split_pos(tp1_hit=True, booked_pct=0.25, stop=100.0,
+                     exits=[{"reason": "tp1", "price": 120.0, "pct": 0.25, "date": "2023-12-29"}],
+                     gross_r=0.5)
+    vj._apply_costs(pos, costs)
+    before = {k: pos[k] for k in ("gross_r", "cost_r", "realized_r", "mae_r", "mfe_r")}
+    assert _challenge(pos, 52.0, _dated(ADJUSTED)) == 52.0   # inside the old MAE..MFE
+    assert pos["exits"][0]["price"] == 60.0 and pos["stop"] == 50.0
+    vj._mark(pos, 52.0, "2024-01-03", costs)               # re-derives costs + excursions
+    assert pos["status"] == "open"
+    for k, v in before.items():
+        assert pos[k] == pytest.approx(v, abs=1e-3), k
+
+
+def test_run_market_restates_a_split_instead_of_stopping_out(tmp_path, monkeypatch, stub_alerts):
+    """End to end: fill on day 1; day 2 the vendor serves the split-adjusted
+    series. Three in-session runs later the position is restated and open."""
+    _enable(monkeypatch, tmp_path)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))
+    assert bk["open"][0]["last_mark_day"] == "2024-01-02"
+    adjusted = _dated({"2023-12-29": 50.5, "2024-01-01": 50.5, "2024-01-02": 50.5,
+                       "2024-01-03": 51.0})
+    for hh in (11, 12, 13):
+        bk = vr.run_market("asx", [], {"BHP.AX": adjusted}, uni, now=_aest(2024, 1, 3, hh, 0))
+    assert bk["closed"] == []
+    (pos,) = bk["open"]
+    assert pos["splits"][0]["ratio"] == 2.0
+    assert pos["entry"] == 50.5 and pos["stop"] == 48.0           # 96 / 2
+    assert pos["day_marks"]["2024-01-03"] == 50.5
