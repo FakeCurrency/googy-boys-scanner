@@ -173,9 +173,34 @@
     }).join("");
   }
 
-  function columnHTML(key, m) {
+  // REFINE200 #142: every scan rewrites sectors.json, so a stamp inside a
+  // market's session means its numbers are that session SO FAR, not "the last
+  // session" (the box read "What happened (last ASX session)" over 12:26 pm
+  // intraday moves). Read in the market's own clock, weekdays, open until the
+  // delayed feed shows the close (ASX 16:40 Sydney, the closing-scan gate;
+  // US 16:30 New York, the bar-final time).
+  const SESSION = {
+    asx: { tz: SYD, open: 10 * 60, close: 16 * 60 + 40 },
+    us:  { tz: "America/New_York", open: 9 * 60 + 30, close: 16 * 60 + 30 },
+  };
+  function sessionLive(iso, key) {
+    const ses = SESSION[key];
+    const t = new Date(iso || "");
+    if (!ses || isNaN(t)) return false;
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: ses.tz, weekday: "short",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(t);
+    const get = (type) => (parts.find((p) => p.type === type) || {}).value;
+    if (get("weekday") === "Sat" || get("weekday") === "Sun") return false;
+    const mins = (+get("hour") % 24) * 60 + +get("minute");
+    return mins >= ses.open && mins < ses.close;
+  }
+
+  function columnHTML(key, m, generatedAt) {
     const isAsx = key === "asx";
-    const summaryTitle = isAsx ? "What happened (last ASX session)" : "What happened overnight (US session)";
+    const live = sessionLive(generatedAt, key);
+    const summaryTitle = live
+      ? `Today so far (${isAsx ? "ASX" : "US"} session in progress)`
+      : isAsx ? "What happened (last ASX session)" : "What happened overnight (US session)";
     const rotation = (esc(m.rotation) || "—") + (m.rotation_detail ? ` <span class="rot-detail">${esc(m.rotation_detail)}</span>` : "");
     return `
       <div class="col-head"><span class="col-flag">${isAsx ? "🇦🇺" : "🇺🇸"}</span><h3>${esc(m.label || (isAsx ? "ASX" : "US"))}</h3></div>
@@ -252,7 +277,7 @@
   function render(data) {
     ["asx", "us"].forEach((key) => {
       const m = (data.markets && data.markets[key]) || {};
-      document.getElementById(`col-${key}`).innerHTML = columnHTML(key, m);
+      document.getElementById(`col-${key}`).innerHTML = columnHTML(key, m, data.generated_at);
     });
     ["asx", "us"].forEach(mountWidgets);
     tickCountdowns();
