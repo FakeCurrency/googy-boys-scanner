@@ -1,0 +1,111 @@
+# Decision replay -- the READ-ONLY evidence pack behind the bot's live rule
+# (REFINE200 #5 / #32, 2026-10-14). It answers the owner's open questions
+# about hc4-1 (A/A+ grade_raw, the four cells, the weekly/3d level gate, the
+# 28-day time stop, $2,500 x 60): drop ASX or only ASX's 3D reclaim, a kill
+# threshold on 3D reclaim, A+ only vs A/A+, weekly level only, and what the
+# time stop is worth -- every variant re-run as a whole chronological book
+# (scanner/vivek_parity.py), by market, by cell, by grade.
+#
+# It runs `python -m scanner.vivek_backtest --parity` and delivers TWO things:
+# the decision tables in the step summary, and the full JSON report (+ the run
+# log) as a 30-day artifact. It COMMITS NOTHING: contents: read, no git
+# writes, so no assert_staged and no WATCHDOG_RUNS entry (evidence_brief /
+# crypto_source_check pattern), and its own concurrency group -- the `scan`
+# group serialises book writers and this writes no book. The report goes to
+# $RUNNER_TEMP, never public/data; the last step fails the run if anything
+# under public/data changed anyway.
+#
+# RUNTIME. Nearly all of it is vivek.evaluate on every candidate bar (~50-65 ms
+# each, measured; ~400 per name over 5y, ~2x that over 10y), split across the
+# runner's cores (--workers 0 = every CPU). Defaults 300 names/market x 5y:
+# ~300k engine calls = ~4.6 CPU-hours, ~70 min on a 4-vCPU runner, ~2.5 h on
+# 2 vCPUs. 600 x 10y is ~17 CPU-hours (~4+ h even on 4 vCPUs) and does not fit
+# the 330-minute budget; 600 x 5y fits on 4 vCPUs only. limit 0 = every name.
+#
+# Triggers: a manual dispatch, or a push touching .github/replay-kick on any
+# branch (a cloud session can push but cannot call the dispatch API).
+
+name: Decision replay
+
+on:
+  push:
+    paths:
+      - ".github/replay-kick"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Names sampled per market (0 = the whole universe; bigger = slower)"
+        default: "300"
+      period:
+        description: "History depth (e.g. 5y; 10y roughly doubles the runtime)"
+        default: "5y"
+      markets:
+        description: "all, asx, nasdaq or crypto"
+        default: "all"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: decision-replay-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Replay the live rules and the decision variants (writes nothing to the repo)
+        env:
+          # Free-text inputs via env, never ${{ }} in run: (2026-07-20 security pass)
+          IN_LIMIT: ${{ github.event.inputs.limit }}
+          IN_PERIOD: ${{ github.event.inputs.period }}
+          IN_MARKETS: ${{ github.event.inputs.markets }}
+        run: |
+          set -o pipefail
+          LIM="${IN_LIMIT:-300}"
+          PER="${IN_PERIOD:-5y}"
+          MKT="${IN_MARKETS:-all}"
+          case "$LIM" in ''|*[!0-9]*) echo "::error::limit must be a whole number, got '$LIM'"; exit 2;; esac
+          case "$PER" in ''|*[!0-9a-z]*) echo "::error::period must look like 5y / 10y / max, got '$PER'"; exit 2;; esac
+          case "$MKT" in all|asx|nasdaq|crypto) ;; *) echo "::error::markets must be all/asx/nasdaq/crypto, got '$MKT'"; exit 2;; esac
+          OUT="$RUNNER_TEMP/decision-replay"
+          mkdir -p "$OUT"
+          # The report converts its secondary $ columns at the rate the scan
+          # publishes (fx.json beside --out). Copied, never written back.
+          cp public/data/fx.json "$OUT/fx.json" || echo "no fx.json: the report says FALLBACK rate"
+          echo "limit=$LIM period=$PER markets=$MKT workers=$(nproc)"
+          python -m scanner.vivek_backtest --parity --market "$MKT" --limit "$LIM" --period "$PER" \
+            --tag decision_replay --workers 0 \
+            --out "$OUT/decision_replay.json" --summary-md "$GITHUB_STEP_SUMMARY" \
+            2>&1 | tee "$OUT/replay.log"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: decision-replay-${{ github.run_id }}
+          path: ${{ runner.temp }}/decision-replay/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Nothing under public/data moved
+        if: always()
+        run: |
+          CHANGED="$(git status --porcelain -- public/data)"
+          if [ -n "$CHANGED" ]; then
+            echo "::error::the decision replay wrote under public/data -- it must write only to RUNNER_TEMP"
+            echo "$CHANGED"
+            exit 1
+          fi
+          echo "public/data untouched"
