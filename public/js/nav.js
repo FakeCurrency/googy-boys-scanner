@@ -460,7 +460,7 @@
     const f = document.createElement("footer");
     f.className = "site-footer gbs-shared-foot";
     f.innerHTML =
-      '<p class="credit">Vivek 5.0 · three-lens scanner · data via Yahoo Finance (~15&nbsp;min delayed) · refreshed daily after each market close</p>';
+      '<p class="credit">Vivek 5.0 · three-lens scanner · stocks via Yahoo Finance (~15&nbsp;min delayed) · crypto via exchange bars (Binance, Coinbase) · scanned hourly while each market trades, crypto around the clock</p>';
     document.body.appendChild(f);
   }
 
