@@ -49,6 +49,15 @@
 // Fixed allowlist — the asset path is NEVER interpolated from raw input.
 const MARKETS = new Set(["asx", "nasdaq", "crypto"]);
 
+// The markets whose loss guard has halted new entries, as the book's `guard`
+// block records them (vivek_run writes breached + breach_kind per market).
+const breachedOf = (guard) => {
+  const g = guard && typeof guard === "object" ? guard : {};
+  return Object.keys(g)
+    .filter((m) => g[m] && g[m].breached)
+    .map((m) => ({ market: m, kind: String(g[m].breach_kind || "loss limit") }));
+};
+
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
     status,
@@ -88,8 +97,13 @@ export async function onRequestGet(context) {
       max_h: maxH,
       updated_at: stamp,
       // Kept for the whole-pipeline probe's existing consumers; the per-market
-      // sidecar carries no book, so it reports the market instead.
-      ...(market ? { market } : { open: Array.isArray(doc.open) ? doc.open.length : null }),
+      // sidecar carries no book, so it reports the market instead. `breached`
+      // (REFINE200 #68) is the loss guards' state off the same book, so the
+      // status lamp can show a breach without every page downloading the book.
+      ...(market ? { market } : {
+        open: Array.isArray(doc.open) ? doc.open.length : null,
+        breached: breachedOf(doc.guard),
+      }),
     };
     return json(body.ok ? 200 : 503, body);
   } catch (e) {

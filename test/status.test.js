@@ -25,13 +25,20 @@ const fs = require("fs");
 const path = require("path");
 
 let passed = 0, failed = 0;
+const PENDING = [];
+function report(name, e) {
+  if (!e) { console.log(`  ✓  ${name}`); passed++; return; }
+  const loc = (e.stack || "").split("\n").slice(1).find((l) => l.includes("status.test.js"));
+  console.error(`  ✗  ${name}\n     ${e.message}${loc ? "\n     " + loc.trim() : ""}`);
+  failed++;
+}
+// An async test is queued and awaited in order before the summary prints, so
+// the count can never go green ahead of a test still running.
 function test(name, fn) {
-  try { fn(); console.log(`  ✓  ${name}`); passed++; }
-  catch (e) {
-    const loc = (e.stack || "").split("\n").slice(1).find((l) => l.includes("status.test.js"));
-    console.error(`  ✗  ${name}\n     ${e.message}${loc ? "\n     " + loc.trim() : ""}`);
-    failed++;
-  }
+  let r;
+  try { r = fn(); } catch (e) { report(name, e); return; }
+  if (r && typeof r.then === "function") PENDING.push(() => r.then(() => report(name), (e) => report(name, e)));
+  else report(name);
 }
 function suite(name) { console.log(`\n── ${name} ──`); }
 
@@ -52,13 +59,27 @@ function sliceConst(name) {
   assert.fail(`could not slice "${name}" out of status.js`);
 }
 
-const NAMES = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "MECHANICAL_EXITS",
-               "esc", "agoText", "bookState", "cohort", "mergeStamps", "marketAges",
-               "uptime", "overall", "triggerMix"];
+// Function declarations, sliced the same way: the parser decides which `}`
+// closes the body.
+function sliceFn(name) {
+  const at = SRC.search(new RegExp(`\\n  function\\s+${name}\\s*\\(`));
+  assert.ok(at >= 0, `status.js no longer declares function "${name}" — was it renamed?`);
+  const start = at + 1;
+  for (let i = SRC.indexOf("}", start); i > 0 && i - start < 20000; i = SRC.indexOf("}", i + 1)) {
+    const candidate = SRC.slice(start, i + 1);
+    try { new Function(`return (${candidate});`); return candidate; }
+    catch (_) { /* unbalanced — keep walking */ }
+  }
+  assert.fail(`could not slice function "${name}" out of status.js`);
+}
+
+const NAMES = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "CYCLE_TAG", "MECHANICAL_EXITS",
+               "esc", "agoText", "bookState", "cycleTagOf", "cohort", "mergeStamps", "marketAges",
+               "uptime", "overall", "triggerMix", "integrity", "healthBreaches"];
 const body = NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`;
-const { HEALTH_MAX_H, HEAL_STALE_MIN, FALLBACK_CAP, MECHANICAL_EXITS,
-        esc, agoText, bookState, cohort, mergeStamps, marketAges,
-        uptime, overall, triggerMix } = new Function(body)();
+const { HEALTH_MAX_H, HEAL_STALE_MIN, FALLBACK_CAP, CYCLE_TAG, MECHANICAL_EXITS,
+        esc, agoText, bookState, cycleTagOf, cohort, mergeStamps, marketAges,
+        uptime, overall, triggerMix, integrity, healthBreaches } = new Function(body)();
 
 // CODE-only view: every ban below asks whether status.js DOES something, and
 // the reasoning for each ban is written into the source beside it — the header
@@ -170,12 +191,22 @@ test("A LOSS GUARD BREACH IS AMBER, NOT RED — AND THAT IS THE POINT", () => {
   assert.ok(/asx/.test(o.why));
 });
 
-test("amber when positions are stamped stalled", () => {
-  assert.equal(overall(sig({ stalled: ["CAKE"] })).level, "amber");
+test("stalled rows do NOT light the lamp — they are routine (REFINE200 #189)", () => {
+  // 35 of 60 open rows carried stale_pinged, most waiting on the 28-day
+  // time-stop the rules apply, and the lamp read CHECK on every page for days.
+  // Same lesson as the breach: an alarm that fires on routine operation gets
+  // muted. The sheet still lists them under Book.
+  const o = overall(sig({ stalled: ["CAKE", "RHC"] }));
+  assert.equal(o.level, "green");
+  assert.ok(!/stall/.test(o.why), `the reason still talks about stalls: "${o.why}"`);
 });
 
 test("a fresh pipeline with an unreadable book is amber, not green", () => {
   assert.equal(overall(sig({ bookReadable: false })).level, "amber");
+});
+
+test("a book the page never tried to read is not 'unreadable' (the lamp reads health)", () => {
+  assert.equal(overall(sig({ bookReadable: null })).level, "green");
 });
 
 test("staleness outranks a breach — the older fault is named first", () => {
@@ -411,6 +442,15 @@ test("4h matches functions/api/health.js's max_h default", () => {
   assert.equal(HEALTH_MAX_H, Number(m[1]));
 });
 
+test("the 90m mark is labelled the WHOLE-PIPELINE line, approximate for one market", () => {
+  // heartbeat floors each market's stale_min (asx 15 / nasdaq 15 / crypto 45),
+  // so a single market heals well before 90m; the sheet must not present the
+  // combined line as any market's heal trigger, nor cite a 24/day budget.
+  assert.ok(/whole pipeline's \$\{HEAL_STALE_MIN\}m overdue mark/.test(CODE), "the amber reason lost its scope");
+  assert.ok(/each market's own heal ping uses a shorter line/.test(CODE), "the sheet no longer says 90m is approximate");
+  assert.ok(!/24\/day/.test(SRC), "the retired 24/day heal budget is cited again (it is 30 per market)");
+});
+
 test("90m matches functions/api/heartbeat.js's DEFAULT_STALE_MIN", () => {
   const hb = fs.readFileSync(path.resolve(__dirname, "../functions/api/heartbeat.js"), "utf8");
   const m = /const\s+DEFAULT_STALE_MIN\s*=\s*(\d+)/.exec(hb);
@@ -500,13 +540,143 @@ test("the sheet does not describe the stop watcher (removed 2026-09-21)", () => 
   // component existed that does not.
   assert.ok(!/<b>Stop watcher<\/b>/i.test(CODE) && !/runs every 5 min/i.test(CODE),
     "the status sheet describes the removed stop watcher again");
-  assert.ok(/<b>Healer<\/b>/.test(CODE), "the 'not visible from here' block moved -- pin would be vacuous");
+  assert.ok(/<b>Scheduler<\/b>/.test(CODE), "the 'not visible from here' block moved -- pin would be vacuous");
 });
 
-test("the sheet names what a self-heal IS when one shows up", () => {
-  assert.ok(SRC.includes("self-heal = the cron missed"),
-    "the heartbeat count must carry its meaning — a bare number reads as noise");
+test("heartbeat-dispatched scans read as the primary clock, never as a missed cron (REFINE200 #189)", () => {
+  // Since 2026-10-06 cron-job.org pings /api/heartbeat as THE scheduler; 86%
+  // of a week's scans were heartbeat-dispatched and the sheet called every one
+  // of them "self-heal = the cron missed", in amber.
+  assert.ok(!/self-heal = the cron missed/.test(CODE), "the old 'cron missed' gloss is back");
+  assert.ok(!/sys-amber">\$\{tm\.heartbeat\}/.test(CODE), "the heartbeat count is amber again");
+  assert.ok(/cron-job\.org = the primary clock/.test(CODE), "the count must still carry its meaning");
+  assert.ok(/GitHub cron/.test(CODE), "GitHub's crons must be named as the backup");
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+// ── cycle tag (REFINE200 #125) ──────────────────────────────────────────────
+suite("cycle tag — read from bot_rules.json, the literal is only the fallback");
+
+test("the published cycle_tag wins", () => {
+  assert.equal(cycleTagOf({ cycle_tag: "hc5-1" }), "hc5-1");
+});
+
+test("no rules, or a rules file without the key, falls back to the config literal", () => {
+  assert.equal(cycleTagOf(null), CYCLE_TAG);
+  assert.equal(cycleTagOf({}), CYCLE_TAG);
+  assert.equal(cycleTagOf({ cycle_tag: "  " }), CYCLE_TAG, "a blank tag is not a tag");
+  assert.equal(cycleTagOf({ cycle_tag: 7 }), CYCLE_TAG);
+});
+
+test("the sheet counts and titles the cohort with the PUBLISHED tag", () => {
+  assert.ok(/const tag = cycleTagOf\(STATE\.rules\)/.test(CODE), "the sheet no longer reads the published tag");
+  assert.ok(/cohort\(STATE\.book, tag\)/.test(CODE));
+  assert.ok(!/cohort\(STATE\.book, CYCLE_TAG\)/.test(CODE), "the cohort is counted off the literal again");
+});
+
+// ── integrity + the unloaded book (REFINE200 #188) ─────────────────────────
+suite("an unloaded book is unknown, never an all-clear");
+
+const NOW_I = Date.parse("2026-10-14T08:00:00Z");
+
+test("integrity passes only for a loaded book inside the 4h alarm", () => {
+  assert.equal(integrity({ updated_at: "2026-10-14T07:00:00Z" }, NOW_I).passed, true);
+  const old = integrity({ updated_at: "2026-10-14T02:00:00Z" }, NOW_I);
+  assert.equal(old.passed, false, "a 6h-old book cannot vouch for the last verify");
+  assert.ok(/past the 4h alarm/.test(old.why), old.why);
+  assert.equal(integrity(null, NOW_I).passed, false);
+  assert.equal(integrity({ updated_at: "garbage" }, NOW_I).passed, false);
+});
+
+// The real sheet, sliced with everything it reads, rendered against a page
+// whose book failed to load while /api/health is fresh and clean.
+const SHEET_NAMES = ["CYCLE_TARGET", "REPO", "pct1", "WORD"];
+const sheetBody = NAMES.map(sliceConst).join("\n") + "\n" + SHEET_NAMES.map(sliceConst).join("\n") + "\n" +
+  "let STATE = null;\n" + sliceFn("row") + "\n" + sliceFn("sheetHTML") + "\n" +
+  "return (st) => { STATE = st; return sheetHTML(); };";
+const renderSheet = new Function(sheetBody)();
+
+const sheetFor = (book, hj) => renderSheet({
+  sig: { healthReachable: true, healthOk: true, bookAgeH: 0.3, bookReadable: book ? true : false,
+         breached: [], stalled: [] },
+  book, rules: { max_open_total: 60, cycle_tag: "hc4-1" },
+  health: { ok: true, status: 200, json: hj }, funnel: null,
+  book_state: book ? bookState(book, 60) : null,
+});
+
+test("a failed book read prints UNKNOWN, not '0 / 60 · 60 slots free' and 'passed'", () => {
+  const h = sheetFor(null, { ok: true, age_h: 0.3, breached: [] });
+  assert.ok(!/<b>0<\/b> \/ 60/.test(h), "the sheet invented an empty book");
+  assert.ok(!/60 slots free/.test(h), "the sheet invented 60 free slots");
+  assert.ok(!/<b>passed<\/b>/.test(h), "Integrity 'passed' over a book that never loaded");
+  assert.ok(!/Gated open<\/span><span class="sys-v"><b>0<\/b>/.test(h), "the cycle invented zero opens");
+  assert.ok((h.match(/<b>unknown<\/b>/g) || []).length >= 3, "open / integrity / cycle must read unknown");
+  assert.ok(/<b>clear<\/b>/.test(h), "health read the book server-side, so its clean guards still count");
+});
+
+test("with no health breaches either, the guards are unknown too", () => {
+  const h = sheetFor(null, { ok: true, age_h: 0.3 });
+  assert.ok(!/<b>clear<\/b>/.test(h), "'clear' printed with no source for it");
+});
+
+test("a loaded, fresh book still reads the real figures and 'passed'", () => {
+  const book = { updated_at: new Date(Date.now() - 10 * 6e4).toISOString(),
+    open: [{ symbol: "CAKE", stale_pinged: "2026-10-01", cycle: "hc4-1" }], closed: [] };
+  const h = sheetFor(book, { ok: true, age_h: 0.2, breached: [] });
+  assert.ok(/<b>1<\/b> \/ 60/.test(h), h);
+  assert.ok(/<b>passed<\/b>/.test(h));
+  assert.ok(/hc4-1 cycle/.test(h));
+  assert.ok(/CAKE/.test(h) && !/sys-amber">1</.test(h), "stalled is listed as information, not amber");
+});
+
+// ── the lamp's reads (REFINE200 #68) ────────────────────────────────────────
+suite("one book read per page — the lamp reads health, the sheet reads the book");
+
+function lampHarness(healthJson) {
+  const calls = [];
+  const VB = {
+    get: (o) => { calls.push(["book", !!(o && o.fresh)]); return Promise.resolve({ updated_at: "x", open: [], closed: [] }); },
+    rules: (o) => { calls.push(["rules", !!(o && o.fresh)]); return Promise.resolve({ max_open_total: 60 }); },
+  };
+  const bodyL = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "bookState", "healthBreaches"].map(sliceConst).join("\n") +
+    "\nconst window = { VivekBook: VB };\n" +
+    "const getJSON = (u) => { calls.push([u]); return Promise.resolve({ ok: true, status: 200, json: HJ }); };\n" +
+    sliceConst("STATE") + "\n" + sliceConst("shared") + "\n" + sliceFn("loadLight") + "\n" +
+    "return { loadLight, STATE };";
+  const h = new Function("VB", "calls", "HJ", bodyL)(VB, calls, healthJson);
+  return { calls, ...h };
+}
+
+test("the lamp does NOT download the book when health reports the guards", async () => {
+  const { calls, loadLight, STATE } = lampHarness({ ok: true, age_h: 0.2,
+    breached: [{ market: "nasdaq", kind: "weekly" }] });
+  await loadLight();
+  assert.ok(!calls.some((c) => c[0] === "book"), "the lamp fetched the book: " + JSON.stringify(calls));
+  assert.ok(!calls.some((c) => /vivek_bot_book/.test(c[0])), "the lamp fetched the book directly");
+  assert.deepEqual(STATE.sig.breached, [{ market: "nasdaq", kind: "weekly" }]);
+  assert.equal(STATE.sig.bookReadable, null, "a book never asked for is not 'unreadable'");
+});
+
+test("an older health answer without `breached` falls back to the shared book read", async () => {
+  const { calls, loadLight } = lampHarness({ ok: true, age_h: 0.2 });
+  await loadLight();
+  assert.deepEqual(calls.filter((c) => c[0] === "book"), [["book", false]]);
+});
+
+test("opening the sheet re-reads the book and the rules FRESH, through the shared loader", async () => {
+  const { calls, loadLight, STATE } = lampHarness({ ok: true, age_h: 0.2, breached: [] });
+  await loadLight(true);
+  assert.deepEqual(calls.filter((c) => c[0] === "book"), [["book", true]]);
+  assert.deepEqual(calls.filter((c) => c[0] === "rules"), [["rules", true]]);
+  assert.equal(STATE.sig.bookReadable, true);
+});
+
+test("the sheet open path asks for the book; the mount path does not", () => {
+  assert.ok(/loadLight\(true\)\.then\(paintLamp\)/.test(CODE), "openSheet no longer reads the book fresh");
+  assert.ok(/\n    loadLight\(\)\.then\(paintLamp\)/.test(CODE), "mount no longer lights the lamp off health alone");
+});
+
+(async () => {
+  for (const t of PENDING) await t();
+  console.log(`\n${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+})();
