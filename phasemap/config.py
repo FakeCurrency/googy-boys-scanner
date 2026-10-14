@@ -91,21 +91,62 @@ class PhaseMapConfig:
     # 24/7 markets have no session close: yfinance's newest daily row is the
     # STILL-FORMING UTC day, so detection ran on a partial candle whose
     # H/L/C mutate until midnight (non-reproducible tiers). These markets scan
-    # closed bars only. Equity markets are scanned post-close by the nightly
-    # schedule, so their last bar is already complete — listed markets only.
+    # closed bars only. Session markets (asx, nasdaq) get the same treatment
+    # from phasemap/data/session.py, keyed off each market's bar-final time:
+    # the nightly cron lands hours late, i.e. inside the NASDAQ session
+    # (REFINE200 #131) — this tuple stays the 24/7 list.
     drop_forming_bar_markets: tuple = ("crypto",)
 
     # ---- M4 backtest & proof harness -----------------------------------------
     fwd_return_bars: tuple = (5, 10, 20)   # forward-return horizons per signal
     stats_window_bars: int = 20            # "reached T1 within N sessions" window
-    backtest_horizon_bars: int = 40        # how long a signal is tracked forward
     stats_min_signals: int = 30            # {stats} slot stays empty below this
     oos_split_date: str = "2025-07-01"     # in-sample before, out-of-sample after
     backtest_seed: int = 7                 # random-entry baseline (deterministic)
 
-    # ---- Feature flags ---------------------------------------------------------
-    enable_smt: bool = False           # Module 6 — Phase 2, do not build in v1
-    enable_chop_zones: bool = False    # Phase 3 heatmap — deferred
+    # (REFINE200 #122, 2026-10-14: three fields nothing read were removed —
+    # backtest_horizon_bars, whose "how long a signal is tracked forward" was
+    # false (the harness tracks until the engine drops the setup); enable_smt,
+    # which scanner.py never consulted (Module 6 is Phase 2: smt_confirmed is
+    # a literal False until that module exists, and a flag flipped with no
+    # module behind it would grade every setup on a confirmation never
+    # computed); and enable_chop_zones (Phase 3, unbuilt). No output moved.)
 
 
 CONFIG = PhaseMapConfig()
+
+
+# ---- Publishing & data plumbing — NOT ruleset parameters ---------------------
+# These decide WHETHER a snapshot ships, how many dated copies are kept, how
+# the prototype feed is asked for bars and how many digits a price is printed
+# with. None of them changes a detection, zone, state, tier or narration rule,
+# so moving one does not bump RULESET_VERSION (the {stats} guardrail keys off
+# that version; a bump silences every narration claim until the weekly replay).
+#
+# REFINE200 #197: a Yahoo outage published `results: []` over the last good
+# snapshot and pruned every chart file. A market whose fetched frames are
+# below this share of its universe keeps the last good files and exits
+# non-zero. A healthy night fetches ~90% (the rest are names Yahoo does not
+# carry); a throttled one 60-70%, which still publishes (and says so on the
+# page, "fetched N of M").
+PUBLISH_MIN_COVERAGE = 0.50
+# REFINE200 #60: dated snapshots kept beside latest.json. Nothing reads a
+# dated file (grep 2026-10-14: scanner/, scripts/, public/js, tests/,
+# workflows) — they are the full-schema archival copy of the newest run plus
+# the one before it, for a by-hand diff. Was 7 (~10 MB of ASX+NASDAQ JSON).
+DATED_SNAPSHOTS_KEEP = 2
+# REFINE200 #132: prices publish at price_decimals (4 dp) OR this many
+# significant figures, whichever keeps MORE digits — 4 dp alone printed BONK
+# (3e-06) as 0.0 and made sub-cent bands zero-width. Prices >= ~$100 are
+# byte-identical to 4 dp; nothing below that loses a digit.
+PRICE_SIG_FIGS = 6
+# Chart-page candles: significant figures, not fixed decimals (8 dp kept 3
+# digits of a 3e-06 coin and 11 of a $300 stock's float noise).
+CHART_SIG_FIGS = 8
+# REFINE200 #45: one recovery sweep over the symbols a throttled first pass
+# returned empty, after this cooldown (scanner/data.py's pattern).
+FETCH_RECOVERY_COOLDOWN_S = 20.0
+# Per-ticker faults (a renderer KeyError, a malformed frame) are logged and
+# skipped; more than this share of the fetched universe failing means the
+# code, not the data, is broken — the market fails instead of publishing.
+TICKER_FAULT_MAX_SHARE = 0.05

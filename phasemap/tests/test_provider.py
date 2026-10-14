@@ -8,12 +8,22 @@ fine. A symbol with no usable columns must be treated exactly like an empty
 download: skipped.
 """
 
+import math
 import sys
 import types
 
 import pandas as pd
+import pytest
 
 from phasemap.data.provider import YFinanceProvider
+
+
+@pytest.fixture(autouse=True)
+def _no_real_sleep(monkeypatch):
+    """The recovery sweep cools down before retrying; tests never wait."""
+    slept = []
+    monkeypatch.setattr("phasemap.data.provider.time.sleep", slept.append)
+    return slept
 
 
 def _stub_yfinance(monkeypatch, frame):
@@ -104,3 +114,56 @@ def test_healthy_multi_symbol_batch_still_caches_and_drops_nan(monkeypatch):
     p.fetch_all()
     assert len(p.get_daily_bars("AAA")) == 5
     assert len(p.get_daily_bars("BBB")) == 4  # NaN row dropped, not fatal
+
+
+def test_a_dead_feed_is_fetched_once_not_once_per_ticker(monkeypatch):
+    """REFINE200 #199: get_daily_bars lazily fetched whenever the CACHE was
+    empty, so after an outage every ticker in run.py's loop re-downloaded
+    the whole universe (300 tickers: 4 calls became 1,204). The attempt is
+    what is remembered now, not its success."""
+    calls = _stub_yfinance(monkeypatch, pd.DataFrame())
+    syms = {f"T{i:03d}": f"T{i:03d}.AX" for i in range(300)}
+    p = YFinanceProvider(syms)
+    p.fetch_all()
+    for t in p.universe():
+        assert p.get_daily_bars(t) is None
+    assert len(calls) == math.ceil(300 / 75)      # no sweep on a TOTAL outage
+    assert p.fetched() == 0
+
+
+def test_get_daily_bars_still_fetches_lazily_when_nobody_called_fetch_all(monkeypatch):
+    calls = _stub_yfinance(monkeypatch, pd.concat({"AAA.AX": _bars()}, axis=1))
+    p = YFinanceProvider({"AAA": "AAA.AX"})
+    assert p.get_daily_bars("AAA") is not None
+    assert p.get_daily_bars("AAA") is not None
+    assert len(calls) == 1
+
+
+def test_a_partial_throttle_gets_one_recovery_sweep(monkeypatch, _no_real_sleep):
+    """REFINE200 #45: the swing between 549 and 773 ASX results on identical
+    weekend bars was Yahoo starving the back chunks. Symbols a partial pass
+    returned empty are asked for once more, after a cooldown."""
+    good = pd.concat({"AAA.AX": _bars(), "BBB.AX": _bars()}, axis=1)
+    responses = [pd.concat({"AAA.AX": _bars()}, axis=1),   # pass 1 chunk 1
+                 pd.DataFrame(),                            # pass 1 chunk 2: throttled
+                 good]                                      # the sweep
+    calls = _stub_yfinance(monkeypatch, lambda: responses.pop(0))
+    p = YFinanceProvider({"AAA": "AAA.AX", "BBB": "BBB.AX"})
+    p.fetch_all(chunk_size=1)
+    assert calls == [["AAA.AX"], ["BBB.AX"], ["BBB.AX"]]
+    assert p.get_daily_bars("BBB") is not None and p.fetched() == 2
+    assert len(_no_real_sleep) == 1
+
+
+def test_a_raising_download_is_an_empty_chunk_not_a_dead_market(monkeypatch):
+    def download(chunk, **kwargs):
+        if chunk == ["AAA.AX"]:
+            raise RuntimeError("YFRateLimitError")
+        return pd.concat({chunk[0]: _bars()}, axis=1)
+    mod = types.ModuleType("yfinance")
+    mod.download = download
+    monkeypatch.setitem(sys.modules, "yfinance", mod)
+    p = YFinanceProvider({"AAA": "AAA.AX", "BBB": "BBB.AX"})
+    p.fetch_all(chunk_size=1)        # must not raise
+    assert p.get_daily_bars("AAA") is None
+    assert p.get_daily_bars("BBB") is not None
