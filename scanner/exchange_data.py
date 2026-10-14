@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -52,6 +53,9 @@ from . import config
 _UA = {"User-Agent": "vivek5-scanner/1.0 (+market data, read-only)"}
 _DEAD_STATUSES = (401, 403, 451)
 _COLS = ["Open", "High", "Low", "Close", "Volume"]
+# Days of probe-pair history fetched when the probe pair was not itself asked
+# for: enough for one small page on every venue, liveness only (#21).
+_PROBE_DAYS = 3
 
 HOSTS = {
     "binance_vision": "https://data-api.binance.vision",
@@ -334,11 +338,25 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
     now = now or dt.datetime.now(dt.timezone.utc)
     dead: Dict[str, str] = {}
     errors: Dict[str, int] = {}
+    # The pool's workers share `errors` and `dead`; `errors[src] += 1` is a
+    # read-modify-write, so two threads failing on one venue at once could
+    # lose a count (REFINE200 #21). One lock covers both.
+    lock = threading.Lock()
     frames: Dict[str, pd.DataFrame] = {}
     refs = {str(k).upper(): v for k, v in (ref_prices or {}).items()}
     anch = {str(k).upper(): v for k, v in (anchors or {}).items() if v}
     rejected: Dict[str, List[str]] = {}
     stale: Dict[str, List[str]] = {}
+
+    def fail(src: str, e: Exception, probe: bool) -> None:
+        # The PROBE pair is BTC (listed on every venue), so a network error on
+        # it is the venue, not the coin -- drop the venue now rather than let
+        # 200 coins each wait out its timeout. Any other coin's error only
+        # counts towards EXCHANGE_DEAD_AFTER_ERRORS.
+        with lock:
+            errors[src] = errors.get(src, 0) + 1
+            if probe or errors[src] >= int(config.EXCHANGE_DEAD_AFTER_ERRORS):
+                dead.setdefault(src, f"{type(e).__name__}: {str(e)[:80]}")
 
     def one(sym: str, probe: bool = False) -> Tuple[str, Optional[pd.DataFrame]]:
         for src in sources:
@@ -347,16 +365,11 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
             try:
                 df = _fetch_one(src, sym, days, timeout, interval)
             except SourceDead as e:
-                dead.setdefault(src, str(e))
+                with lock:
+                    dead.setdefault(src, str(e))
                 continue
             except Exception as e:  # noqa: BLE001 - one coin, one venue: try the next
-                errors[src] = errors.get(src, 0) + 1
-                # The PROBE coin is the universe's first (BTC: listed on every
-                # venue), so a network error there is the venue, not the coin
-                # -- drop it now rather than let 200 coins each wait out its
-                # timeout.
-                if probe or errors[src] >= int(config.EXCHANGE_DEAD_AFTER_ERRORS):
-                    dead.setdefault(src, f"{type(e).__name__}: {str(e)[:80]}")
+                fail(src, e, probe)
                 continue
             if df is not None and len(df):
                 age = bar_age_days(df, now)
@@ -373,15 +386,49 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
                 return sym, df
         return sym, None
 
-    # Probe serially on the FIRST coin so a dead venue is known before the
-    # thread pool fans out and asks it 200 times.
+    def probe_only(sym: str) -> None:
+        # Liveness only: walk the venues until one ANSWERS for the probe pair.
+        # The frame is thrown away and nothing is reported against the coin --
+        # it was never asked for. An HTTP error status is an answer (the host
+        # is reachable; a geo/auth refusal is SourceDead, above it); what
+        # kills a venue here is no answer at all -- a timeout, a reset.
+        for src in sources:
+            if src in dead:
+                continue
+            try:
+                df = _fetch_one(src, sym, _PROBE_DAYS, timeout, interval)
+            except SourceDead as e:
+                with lock:
+                    dead.setdefault(src, str(e))
+                continue
+            except urllib.error.HTTPError:
+                return
+            except Exception as e:  # noqa: BLE001 - the probe pair failing IS the venue
+                fail(src, e, True)
+                continue
+            if df is not None and len(df):
+                return
+
+    # Probe serially on a KNOWN pair (config.EXCHANGE_PROBE_SYMBOL, BTC) so a
+    # dead venue is known before the thread pool fans out and asks it 200
+    # times. REFINE200 #21: this used to probe `todo[0]` and assume it was
+    # BTC -- true for the universe-wide scan, false for the kill switch and
+    # the held-coin refetch, where todo[0] is the first HELD coin, so one
+    # coin's network error marked the whole venue dead for every other held
+    # coin. A requested BTC is fetched first as the probe (no extra request);
+    # otherwise a small BTC window is fetched for liveness only.
     todo = list(dict.fromkeys(s.upper() for s in symbols if s))
-    if todo:
-        s0, f0 = one(todo[0], probe=True)
+    asked = list(todo)
+    pair = str(getattr(config, "EXCHANGE_PROBE_SYMBOL", "BTC") or "BTC").upper()
+    if pair in todo:
+        todo.remove(pair)
+        s0, f0 = one(pair, probe=True)
         if f0 is not None:
             frames[s0] = f0
+    elif todo:
+        probe_only(pair)
     with ThreadPoolExecutor(max_workers=int(config.EXCHANGE_THREADS)) as pool:
-        for sym, df in pool.map(one, todo[1:]):
+        for sym, df in pool.map(one, todo):
             if df is not None:
                 frames[sym] = df
     by_source: Dict[str, int] = {}
@@ -392,7 +439,7 @@ def download_klines(symbols: List[str], *, days: Optional[int] = None,
         "dead": dead,
         "errors": errors,
         "by_source": by_source,
-        "missing": sorted(s for s in todo if s not in frames),
+        "missing": sorted(s for s in asked if s not in frames),
         "identity_rejected": dict(sorted(rejected.items())),
         "stale_rejected": dict(sorted(stale.items())),
     }

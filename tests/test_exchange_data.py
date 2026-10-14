@@ -188,7 +188,7 @@ def test_a_venue_that_keeps_erroring_is_dropped_for_the_run(route, monkeypatch, 
 
     def h(url):
         if "api.binance.com" in url:
-            if "C0USDT" in url:                     # the probe coin works...
+            if "BTCUSDT" in url or "C0USDT" in url:  # the probe pair and C0 work...
                 return binance_rows(2)
             raise TimeoutError("slow")              # ...then the venue degrades
         return {"retCode": 0, "result": {"list": [[str(T0), "1", "2", "0.5", "1.5", "1", "9"]]}}
@@ -197,7 +197,9 @@ def test_a_venue_that_keeps_erroring_is_dropped_for_the_run(route, monkeypatch, 
     frames, rep = X.download_klines([f"C{i}" for i in range(6)], days=None)
     assert len(frames) == 6 and "binance" in rep["dead"]
     assert frames["C0"].attrs["source"] == "binance"
-    assert sum("api.binance.com" in u for u in r.calls) == 3    # probe + 2 errors, then dropped
+    assert "BTC" not in frames, "the probe pair was not asked for: liveness only"
+    # BTC probe + C0 + 2 errors, then dropped
+    assert sum("api.binance.com" in u for u in r.calls) == 4
 
 
 def test_frames_are_clean_daily_utc_dates():
@@ -243,6 +245,88 @@ def test_a_network_error_on_the_probe_coin_drops_the_venue_at_once(route, monkey
     frames, rep = X.download_klines(["BTC", "ETH", "SOL"], days=None)
     assert len(frames) == 3 and "binance" in rep["dead"]
     assert sum("api.binance.com" in u for u in r.calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# REFINE200 #21: the probe is BTC, not whichever coin was asked for first
+# ---------------------------------------------------------------------------
+
+def _bybit_ok(url):
+    return {"retCode": 0, "result": {"list": [[str(T0), "1", "2", "0.5", "1.5", "1", "9"]]}}
+
+
+def test_one_held_coins_network_error_does_not_kill_the_venue(route, monkeypatch, ageless):
+    """The kill switch and the held-coin refetch ask for HELD coins only, so
+    todo[0] used to be the first held coin and ITS network error marked the
+    whole venue dead -- every other held coin then left the venue it is
+    charted on. The probe is now BTC, which these calls never asked for."""
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance", "bybit"))
+
+    def h(url):
+        if "api.binance.com" in url:
+            if "XLMUSDT" in url:
+                raise TimeoutError("one coin's hiccup")
+            return binance_rows(3)
+        return _bybit_ok(url)
+
+    r = route(h)
+    frames, rep = X.download_klines(["XLM", "WLD", "QNT"], days=None)
+    assert "binance" not in rep["dead"], "one coin's error is not the venue's"
+    assert frames["WLD"].attrs["source"] == "binance"
+    assert frames["QNT"].attrs["source"] == "binance"
+    assert frames["XLM"].attrs["source"] == "bybit"     # that coin walks on
+    assert "BTC" not in frames and rep["missing"] == []
+    assert "BTCUSDT" in r.calls[0], "the probe pair goes first, serially"
+
+
+def test_the_probe_pair_failing_still_drops_the_venue_at_once(route, monkeypatch, ageless):
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance", "bybit"))
+
+    def h(url):
+        if "api.binance.com" in url:
+            raise TimeoutError("unreachable")
+        return _bybit_ok(url)
+
+    r = route(h)
+    frames, rep = X.download_klines(["XLM", "WLD"], days=None)
+    assert "binance" in rep["dead"]
+    assert sum("api.binance.com" in u for u in r.calls) == 1, "asked once, for BTC"
+    assert {f.attrs["source"] for f in frames.values()} == {"bybit"}
+    assert set(frames) == {"XLM", "WLD"}
+
+
+def test_a_requested_btc_is_the_probe_wherever_it_sits(route, monkeypatch, ageless):
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance",))
+    r = route(lambda url: binance_rows(2))
+    frames, rep = X.download_klines(["ETH", "BTC", "SOL"], days=None)
+    assert set(frames) == {"ETH", "BTC", "SOL"}
+    assert "BTCUSDT" in r.calls[0]
+    assert sum("BTCUSDT" in u for u in r.calls) == 1, "no second BTC request"
+
+
+def test_the_error_counter_is_exact_under_threads(route, monkeypatch, ageless):
+    """Every failed request is counted once, whichever worker hit it (the
+    counter is shared by the pool; #21 put it under a lock)."""
+    monkeypatch.setattr(config, "EXCHANGE_KLINE_SOURCES", ("binance", "bybit"))
+    monkeypatch.setattr(config, "EXCHANGE_THREADS", 8)
+    monkeypatch.setattr(config, "EXCHANGE_DEAD_AFTER_ERRORS", 10_000)
+
+    def h(url):
+        if "api.binance.com" in url:
+            if "BTCUSDT" in url:
+                return binance_rows(2)
+            raise TimeoutError("flaky")
+        return _bybit_ok(url)
+
+    r = route(h)
+    frames, rep = X.download_klines([f"C{i}" for i in range(120)], days=None)
+    failed = sum("api.binance.com" in u and "BTCUSDT" not in u for u in r.calls)
+    assert failed == 120 and rep["errors"]["binance"] == failed
+    assert len(frames) == 120
+
+
+def test_the_probe_pair_is_config():
+    assert config.EXCHANGE_PROBE_SYMBOL == "BTC"
 
 
 # ---------------------------------------------------------------------------
