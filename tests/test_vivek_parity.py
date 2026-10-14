@@ -134,7 +134,7 @@ def test_portfolio_sim_parity_global_cap():
         trades.append({
             "symbol": f"S{i}", "market": "asx" if i < 20 else "nasdaq",
             "grade": "A+", "entry_type": "reclaim", "direction": "long",
-            "timeframe": "1W", "sector": f"sec{i}",
+            "timeframe": "1W", "sector": f"sec{i}", "level_tf": "weekly",
             "entry_date": "2024-01-02", "exit_date": "2024-06-01",
             "exit_reason": "time", "realized_r": 0.1,
             "entry": 100, "stop": 95, "risk": 5,
@@ -188,18 +188,18 @@ def test_exclude_map_and_taken_flag_schema():
         assert m["asx"] == {"AAA", "BBB"}
     trades = [
         {"symbol": "A", "market": "asx", "grade": "A+", "entry_type": "reclaim",
-         "direction": "long", "timeframe": "1W", "sector": "s1",
+         "direction": "long", "timeframe": "1W", "sector": "s1", "level_tf": "weekly",
          "entry_date": "2024-01-02", "exit_date": "2024-02-01",
          "exit_reason": "time", "realized_r": 0.1, "entry": 10, "stop": 9, "risk": 1},
         {"symbol": "B", "market": "asx", "grade": "A+", "entry_type": "reclaim",
-         "direction": "long", "timeframe": "1W", "sector": "s2",
+         "direction": "long", "timeframe": "1W", "sector": "s2", "level_tf": "3d",
          "entry_date": "2024-01-02", "exit_date": "2024-02-01",
          "exit_reason": "time", "realized_r": -0.1, "entry": 10, "stop": 9, "risk": 1},
     ]
     rep = build_parity_report(trades, {"asx": {"symbols": 2}}, {"mode": "t"}, {})
     assert all("taken" in t for t in rep["trades"])
     assert all("close_r_at" in t for t in rep["trades"])
-    assert sum(1 for t in rep["trades"] if t["taken"]) == rep["baseline"]["portfolio"]["taken"]
+    assert sum(1 for t in rep["trades"] if t["taken"]) == rep["baseline"]["portfolio"]["taken"] == 2
 
 
 def test_the_report_echoes_the_cap_the_sim_actually_used(monkeypatch):
