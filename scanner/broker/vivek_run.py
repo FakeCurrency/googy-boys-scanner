@@ -1106,34 +1106,68 @@ def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
             and cutoff <= str(t.get("exit_date") or "") <= day}
 
 
-def _earnings_within(yf_symbol: str | None, buffer_days: int) -> bool:
-    """Best-effort: does this name report within `buffer_days`? Fail-OPEN —
-    any lookup problem returns False so a data hiccup never blocks trading.
-    Called only for the handful of fills per run, never the universe."""
-    if not yf_symbol or buffer_days <= 0:
-        return False
+# Earnings calendars already looked up in THIS process, keyed by
+# (yf_symbol, market-local day) -> [report dates]. One scan process walks every
+# market, and the refill passes (#6) can revisit the fill loop, so a name is
+# asked about once per day per process, not once per fill attempt. A lookup
+# that failed is cached as [] for the day too: it fails open either way, and a
+# throttled Yahoo is not helped by asking again a minute later.
+_EARNINGS_CACHE: dict[tuple[str, str], list] = {}
+
+
+def _earnings_dates(yf_symbol: str) -> list:
+    """The report dates Yahoo lists for `yf_symbol`, as plain dates ([] on any
+    lookup problem -- the caller fails OPEN)."""
     try:
         import yfinance as yf
         cal = yf.Ticker(yf_symbol).calendar
-        dates = []
+        raw = []
         if isinstance(cal, dict):
-            raw = cal.get("Earnings Date") or []
-            dates = raw if isinstance(raw, (list, tuple)) else [raw]
+            got = cal.get("Earnings Date") or []
+            raw = got if isinstance(got, (list, tuple)) else [got]
         elif cal is not None and hasattr(cal, "loc"):        # legacy DataFrame shape
-            dates = list(cal.loc["Earnings Date"]) if "Earnings Date" in getattr(cal, "index", []) else []
-        today = dt.date.today()
-        horizon = today + dt.timedelta(days=buffer_days)
-        for d in dates:
-            # Normalise datetime/pandas-Timestamp → plain date. A datetime IS a
-            # date subclass, so comparing it against a date raises TypeError —
-            # without this the gate would silently fail-open on Timestamps.
-            if isinstance(d, dt.datetime):
-                d = d.date()
-            if isinstance(d, dt.date) and today <= d <= horizon:
-                return True
+            raw = list(cal.loc["Earnings Date"]) if "Earnings Date" in getattr(cal, "index", []) else []
     except Exception:
-        pass
-    return False
+        return []
+    out = []
+    for d in raw:
+        # Normalise datetime/pandas-Timestamp -> plain date. A datetime IS a
+        # date subclass, so comparing it against a date raises TypeError --
+        # without this the gate would silently fail-open on Timestamps.
+        if isinstance(d, dt.datetime):
+            d = d.date()
+        if isinstance(d, dt.date):
+            out.append(d)
+    return out
+
+
+def _earnings_within(yf_symbol: str | None, buffer_days: int,
+                     today: dt.date | None = None, cache: dict | None = None) -> bool:
+    """Best-effort: does this name report within `buffer_days`? Fail-OPEN —
+    any lookup problem returns False so a data hiccup never blocks trading.
+    Called only for the handful of fills per run, never the universe.
+
+    `today` is the MARKET's date (REFINE200 #10): run_market passes its
+    market-local clock. It used to be `dt.date.today()`, the runner's date --
+    UTC on GitHub, which is the PREVIOUS day for the whole ASX morning
+    (10:00 AEDT = 23:00 UTC), so the window sat a day early there. The
+    runner's date is only the fallback for a caller with no clock. `cache`
+    (run_market passes _EARNINGS_CACHE) memoises the calendar per symbol per
+    day; None = look it up every call."""
+    if not yf_symbol or buffer_days <= 0:
+        return False
+    today = today or dt.date.today()
+    key = (str(yf_symbol), today.isoformat())
+    if cache is not None and key in cache:
+        dates = cache[key]
+    else:
+        dates = _earnings_dates(yf_symbol)
+        if cache is not None:
+            for stale in [k for k in cache if k[1] != key[1]]:
+                cache.pop(stale, None)                        # a past day's answers
+            cache[key] = dates
+    horizon = today + dt.timedelta(days=buffer_days)
+    return any(today <= d <= horizon for d in dates)
 
 
 def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
@@ -1619,7 +1653,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 continue
             # Earnings gap-avoidance (best-effort, fail-open) — only for the
             # handful of names actually being filled, never the universe.
-            if earnings_gate and _earnings_within(yf_map.get(sym), earnings_buffer):
+            if earnings_gate and _earnings_within(yf_map.get(sym), earnings_buffer,
+                                                  today=now.date(), cache=_EARNINGS_CACHE):
                 earnings_skipped += 1
                 log.info("SKIP  %-8s [earnings] reports within %dd - gap risk",
                          sym, earnings_buffer)
