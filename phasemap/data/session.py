@@ -8,11 +8,12 @@ tiers were read off a partial candle. 24/7 markets have engine.scanner's
 drop_forming_bar (v1.3.0); this module is the same rule for session
 markets, keyed off each market's BAR-FINAL time.
 
-The bar-final table is scanner.config.IGNITION_BAR_FINAL — the repo's one
-"when is today's stock bar final" answer (ASX 16:40 Sydney: the auction plus
-Yahoo's ~20 min lag; NASDAQ 16:30 New York: closing cross plus the delayed
-feed), shared with the morning digest gate, alert_returns and the Ignition
-backstops. Read, never retyped. A market missing from it is treated as 24/7.
+The bar-final table is scanner.config.ALERT_RETURNS_BAR_FINAL — market-local
+(hour, minute) from which TODAY's bar counts as final (the closing print plus
+the ~15-20 min delayed feed: ASX 16:45 Sydney, NASDAQ 16:30 New York), read
+in MARKETS[m].timezone so DST needs no handling. The edge ledger freezes its
+forward returns on the same rule. Read, never retyped; a market missing from
+it trades 24/7 and is left to drop_forming_bar.
 
 Data hygiene only — nothing here touches detection maths: the engine simply
 never sees a bar that is not finished yet.
@@ -25,14 +26,15 @@ import zoneinfo
 def bar_final(market: str):
     """(tz, hour, minute) when `market`'s daily bar is final, or None."""
     try:
-        from scanner.config import IGNITION_BAR_FINAL
+        from scanner import config as house
     except Exception:                       # the engine stays importable alone
         return None
-    v = IGNITION_BAR_FINAL.get(market)
-    if not v:
+    v = house.ALERT_RETURNS_BAR_FINAL.get(market)
+    mc = house.MARKETS.get(market)
+    if not v or mc is None:
         return None
-    tz, hh, mm = v
-    return zoneinfo.ZoneInfo(tz), int(hh), int(mm)
+    hh, mm = v
+    return zoneinfo.ZoneInfo(mc.timezone), int(hh), int(mm)
 
 
 def latest_final_session(market: str, now: dt.datetime = None):

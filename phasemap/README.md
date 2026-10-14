@@ -33,7 +33,7 @@ scan" → Run workflow, or `gh workflow run phasemap.yml`.
 
 - **No unfinished bar is ever scanned.** Crypto drops the forming UTC candle;
   ASX and NASDAQ drop today's bar until its bar-final time
-  (`scanner.config.IGNITION_BAR_FINAL`: 16:40 Sydney / 16:30 New York) — a
+  (`scanner.config.ALERT_RETURNS_BAR_FINAL`: 16:45 Sydney / 16:30 New York) — a
   late cron otherwise read a mid-session NASDAQ candle (`data/session.py`).
 - **No new bar, no rescan.** When a stock market has no newly completed bar
   since the last snapshot (weekends, a pre-final run), the last scan's
