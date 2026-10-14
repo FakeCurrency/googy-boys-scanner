@@ -1,8 +1,17 @@
-/* Cloudflare Pages Function — GET /api/heartbeat[?stale_min=N][&market=all]
+/* Cloudflare Pages Function — GET /api/heartbeat[?market=asx|nasdaq|crypto|all][&stale_min=N]
  *
  * THE SELF-HEAL LEG (2026-08-04, owner-approved). Pinged on a timer by an
- * EXTERNAL monitor (UptimeRobot). Reads how stale the committed book is; if a
+ * EXTERNAL scheduler. Reads how stale the market's published data is; if a
  * scan is overdue it dispatches one itself. Fresh -> does nothing.
+ *
+ * WHO CALLS IT (updated 2026-10-14). The primary caller is cron-job.org, one
+ * job per market in that market's own timezone (2026-10-06: ASX hourly :10
+ * 11-16 Sydney + the 16:40 close + the 17:20 close probe, NASDAQ 10:40 + hourly
+ * :10 11-16 New York, crypto :22 hourly UTC), each with its own stale_min --
+ * because GitHub's own crons ran only 5 of 35 ASX scans that week, this is the
+ * real scheduler now. An UptimeRobot monitor on market=all (the original
+ * 2026-08-04 caller) is optional. Jobs are listed/edited with ops.yml
+ * cronjob-*.
  *
  * WHY THIS EXISTS — the incident, not a hypothetical
  * --------------------------------------------------
@@ -38,7 +47,8 @@
  * scheduler plus a silent healer looks identical to a healthy system until
  * /api/health trips four hours later), so it is the one thing worth waking
  * someone for. Same split as tick.js: "never switched on / now broken" are
- * two different questions and must not share an icon.
+ * two different questions and must not share an icon. (An unknown ?market= is
+ * a 400: a caller's typo, not the healer failing.)
  *
  * UNAUTHENTICATED BY CONSTRUCTION, and that is safe here
  * -----------------------------------------------------
@@ -49,13 +59,23 @@
  * most an abuser achieves is a scan the pipeline already needed. The token
  * never leaves the server and the upstream GitHub body is never echoed.
  *
+ * "Overdue" is partly the caller's to say (stale_min), so that argument holds
+ * only with a FLOOR per market (REFINE200 #159, 2026-10-14): below it a caller
+ * could declare an hourly-refreshed market overdue every few minutes and force
+ * ~30 scans a day on a healthy pipeline, spending the heal budget a real
+ * outage needs. The floors are the smallest values the real jobs use
+ * (STALE_FLOOR_MIN below), and the 25-minute heal window per market
+ * (HEAL_COOL_SEC) caps any caller at about 2-3 heals an hour per market. Every
+ * dispatched heal is access-logged, so a forced one leaves a trace.
+ *
  * Setup: needs GH_DISPATCH_TOKEN in Cloudflare (the same one /api/scan uses)
- * and the JOURNAL_KV binding. Point an UptimeRobot HTTP(s) monitor here on a
- * 5-minute interval and leave the /api/health monitor alone — it stays the
- * alarm.
+ * and the JOURNAL_KV binding. Point the per-market cron-job.org jobs here and
+ * leave /api/health alone — it stays the alarm.
  */
 
+import { logAccess } from "./_access_log.js";
 import { dispatchWorkflow } from "./_dispatch.js";
+import { cleanSecret } from "./_secrets.js";
 
 // Default staleness before a heal fires. Deliberately BETWEEN the two numbers
 // either side of it and not settable without checking both: a healthy full
@@ -64,6 +84,17 @@ import { dispatchWorkflow } from "./_dispatch.js";
 // ~180 would let the owner get paged before the healer ever tried). 90 min
 // means the pipeline has missed at least one whole cycle before this acts.
 const DEFAULT_STALE_MIN = 90;
+
+// The smallest stale_min a caller may set, per market (REFINE200 #159). A lower
+// value is raised to the floor, never obeyed. asx/nasdaq keep 15 because the
+// 16:40 Sydney closing-scan job uses it (an hourly in-session cadence needs the
+// close caught within minutes); crypto refreshes hourly and its job uses 45;
+// market=all reads the combined book, which crypto keeps fresh, and only ever
+// had the default. Raise a floor only after checking the jobs (ops.yml
+// cronjob-list): a job asking for less than its floor silently heals later.
+const STALE_FLOOR_MIN = { asx: 15, nasdaq: 15, crypto: 45, all: 90 };
+const STALE_MAX_MIN = 720;
+const MARKETS = Object.keys(STALE_FLOOR_MIN);
 
 // Separate from /api/scan's cap ON PURPOSE. They share the 5-minute cooldown
 // below — that is correctness, it stops a manual SCAN and a heal dispatching
@@ -75,7 +106,7 @@ const DEFAULT_STALE_MIN = 90;
 // market (?market=asx|nasdaq|crypto) as the real scheduler, because GitHub's
 // own crons ran only 5 of 35 ASX, 8 of 35 NASDAQ and 41 of ~168 crypto scans
 // in the week to 5 Oct. One shared 24/day budget would be spent by crypto
-// alone by midnight; each market (and UptimeRobot's market=all) gets its own.
+// alone by midnight; each market (and market=all) gets its own 30 a UTC day.
 const HEAL_DAILY_CAP = 30;
 
 // HEAL-ONLY COOLDOWN (2026-08-28) — the budget-burn fix, measured live.
@@ -89,7 +120,9 @@ const HEAL_DAILY_CAP = 30;
 // burned the whole 24/day cap by 18:52 UTC — so the NEXT ordinary episode
 // paged the owner with heal_cap_reached while every heal had succeeded.
 // This window covers the dispatch->fresh-asset latency with slack, so one
-// episode now costs one heal and the cap means 24 EPISODES. Deliberately a
+// episode now costs one heal and the cap means 30 EPISODES per market (24 in
+// one shared budget until 2026-10-06). It is also the per-market minimum
+// interval between heals that bounds an anonymous caller (#159). Deliberately a
 // SECOND key, not a longer shared TTL: stretching the shared key would lock
 // the owner's SCAN button for 25 min after every heal. Worst case of too
 // long: a silently-lost heal delays the retry by this window — /api/health
@@ -115,21 +148,27 @@ export async function onRequestGet(context) {
   const { env, request } = context;
   const params = new URL(request.url).searchParams;
 
-  let staleMin = parseFloat(params.get("stale_min"));
-  if (!Number.isFinite(staleMin) || staleMin < 15 || staleMin > 720) {
-    staleMin = DEFAULT_STALE_MIN;
+  // A MISSING market means the whole pipeline ("all"), as it always has. A
+  // PRESENT but unknown one is a 400 (REFINE200 #170): it used to fall back to
+  // "all", whose combined book crypto keeps fresh, so a typo'd per-market job
+  // answered 200 "none" for ever and its market was never healed. health.js
+  // has refused a typo'd market the same way since 2026-07-28.
+  const market = String(params.get("market") || "all").trim().toLowerCase();
+  if (!MARKETS.includes(market)) {
+    return json(400, { ok: false, error: `unknown market '${market.slice(0, 32)}' (use ${MARKETS.join("|")})` });
   }
 
-  const m = String(params.get("market") || "all").toLowerCase();
-  const market = ["asx", "nasdaq", "crypto", "all"].includes(m) ? m : "all";
+  let staleMin = parseFloat(params.get("stale_min"));
+  if (!Number.isFinite(staleMin) || staleMin > STALE_MAX_MIN) staleMin = DEFAULT_STALE_MIN;
+  staleMin = Math.max(staleMin, STALE_FLOOR_MIN[market]);
 
   // ---- how stale is the relevant freshness source? --------------------------
   // "all" -> combined book (updated_at), unchanged. A specific market -> its
   // own /data/<market>_prices.json sidecar (generated_at), so the healer can
   // actually detect a market-scoped gap instead of always answering for
   // whichever market last committed to the combined book. `market` is already
-  // constrained to the asx/nasdaq/crypto/all allowlist above, so marketPath()
-  // is never called with untrusted input.
+  // constrained to the MARKETS allowlist above, so marketPath() is never called
+  // with untrusted input.
   const assetPath = market === "all" ? BOOK : marketPath(market);
   const stampKey = market === "all" ? "updated_at" : "generated_at";
 
@@ -164,7 +203,7 @@ export async function onRequestGet(context) {
   }
 
   // ---- overdue: heal ------------------------------------------------------
-  const token = env.GH_DISPATCH_TOKEN;
+  const token = cleanSecret(env.GH_DISPATCH_TOKEN);
   if (!token) {
     // The healer is installed and disarmed. Nothing else in the system can see
     // that, so it is worth the alert rather than a quiet 200.
@@ -238,6 +277,11 @@ export async function onRequestGet(context) {
   });
 
   if (r.ok) {
+    // Logged ONLY when a heal goes out (at most HEAL_DAILY_CAP per market per
+    // day): an ordinary probe is a poll and must never cost a KV write.
+    const logged = logAccess(env, request, "/api/heartbeat", 200);
+    if (typeof context.waitUntil === "function") context.waitUntil(logged);
+    else await logged;
     return json(200, { ok: true, healthy: false, action: "dispatched", market, ...base });
   }
 

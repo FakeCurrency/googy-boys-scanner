@@ -35,6 +35,14 @@
  * actually scanned. The market name is checked against a fixed allowlist; the
  * asset path is never built from raw user input.
  *
+ * WHO CALLS WHICH MODE (updated 2026-10-14). The default mode is the external
+ * uptime monitor's alarm and the deck/status lamp's read (app.js, status.js).
+ * The per-market mode has NO automated caller any more: scan.yml's backstop
+ * was replaced by scripts/scan_gate.py on 2026-10-05, which reads the market
+ * calendar itself, and /api/heartbeat (the healer) reads the same sidecars
+ * directly. It stays as a manual / diagnostic probe -- e.g. ops.yml site-probe
+ * with paths=/api/health?market=asx -- and its answers are unchanged.
+ *
  * No secrets, read-only, never cached (a cached "ok" would defeat the point).
  */
 

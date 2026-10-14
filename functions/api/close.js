@@ -1,38 +1,62 @@
 /* Cloudflare Pages Function — POST /api/close
  *
- * Receives a manual position-close request from the journal UI and dispatches
- * the GitHub Actions "close_position" workflow to record it in the journal JSON,
- * commit, and let Cloudflare Pages redeploy.
+ * Receives a bot-book close request from the site and dispatches the GitHub
+ * Actions "close_position" workflow to record it in the book, commit, and let
+ * Cloudflare Pages redeploy.
  *
  * Requires the same GH_DISPATCH_TOKEN used by /api/scan (Actions: read+write).
  *
- * Request body (JSON) — two shapes:
- *   { symbol, direction, market, price, exit_date, journal_type }     — one close
+ * Request: POST, Content-Type application/json, same-origin (_same_origin.js,
+ * REFINE200 #52), body
  *   { journal_type: "bot", closes: [{symbol, market, direction, price}, ...] }
  *
- * The `closes` array (2026-08-13) is the BATCH shape: N bot-book closes in ONE
- * workflow run. Born from the stalled strip's real use — nine closes as nine
- * serial runs is ~half an hour behind the scan mutex; as one batch it is one
- * dispatch, one commit, one deploy, ~2 minutes for the lot. Batch is bot-book
- * only (the legacy swing/scalp journals have no batch path and never will).
+ * ONE SHAPE (REFINE200 #172, 2026-10-14). This is the BATCH shape (2026-08-13):
+ * N bot-book closes in ONE workflow run -- nine closes as nine serial runs was
+ * ~half an hour behind the scan mutex; as one batch it is one dispatch, one
+ * commit, one deploy, ~2 minutes for the lot. A single close is a one-entry
+ * batch. The old single-close shape ({symbol, price, market, journal_type}) is
+ * GONE: its only callers were the manual journal's close modal and the
+ * swing/scalp pages, removed 2026-09-21, and both remaining callers (the
+ * journal's close-all and the stalled strip) post this shape. It still routed
+ * to the legacy swing/scalp journals, i.e. an open write route nothing used.
+ * close_position.yml keeps its swing/scalp path for a manual workflow_dispatch.
  *
- * Access-logged (2026-08-20): every call's envelope goes to KV via
+ * EXIT PRICE SANITY (REFINE200 #53). Every entry's price must sit within
+ * PRICE_BAND of that position's last_mark in the PUBLISHED book (the number
+ * both callers send). Any positive price used to be booked, so one stray digit
+ * wrote a fantasy exit into the only track record. When the published book
+ * cannot be read the close is allowed and the gap logged: refusing a real close
+ * because a static asset hiccuped would be the worse failure.
+ *
+ * Access-logged (2026-08-20): every dispatch's envelope goes to KV via
  * _access_log.js — best-effort, never blocks the close. See that file.
  */
 import { withAccessLog } from "./_access_log.js";
 import { dispatchWorkflow } from "./_dispatch.js";
+import { crossSiteRefusal } from "./_same_origin.js";
+import { cleanSecret } from "./_secrets.js";
+
+// An exit more than 50% away from the row's last mark is refused. Both callers
+// send the mark itself, so a real close sits at 0%; the band only has to
+// tolerate the book moving on between page load and click.
+const PRICE_BAND = 0.5;
+// CLOSES (not requests) per UTC day, REFINE200 #53. One full-book close-all is
+// 60 (the book cap); a batch used to cost one unit whatever its size, so the
+// cap protected Actions runs but put no ceiling on what could be closed.
+const CLOSE_DAILY_CAP = 60;
+const BOOK = "/data/vivek_bot_book.json";
+
+const json = (status, body) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
 export const onRequestPost = withAccessLog("/api/close", async ({ request, env }) => {
-  const token = env.GH_DISPATCH_TOKEN;
-  const repo  = env.GH_REPO     || "FakeCurrency/googy-boys-scanner";
-  const ref   = env.GH_REF      || "main";
+  const refused = crossSiteRefusal(request);
+  if (refused) return json(refused.status, { ok: false, message: refused.message });
 
-  const json = (status, body) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { "Content-Type": "application/json" },
-    });
-
-  if (!token) {
+  if (!cleanSecret(env.GH_DISPATCH_TOKEN)) {
     return json(503, {
       ok: false,
       message: "GH_DISPATCH_TOKEN not configured — add it to Cloudflare Pages env vars.",
@@ -46,127 +70,149 @@ export const onRequestPost = withAccessLog("/api/close", async ({ request, env }
     return json(400, { ok: false, message: "Invalid JSON body." });
   }
 
-  // ---- BATCH shape -----------------------------------------------------------
-  // Validated entry-by-entry with the SAME rules as a single close, and then
-  // RE-SERIALISED from the validated fields only — the raw client JSON never
-  // reaches the workflow input, so nothing unvalidated can ride along in it.
-  if (Array.isArray(body?.closes)) {
-    if (body.journal_type !== "bot") {
-      return json(400, { ok: false, message: "Batch close is bot-book only." });
+  // Validated entry-by-entry and then RE-SERIALISED from the validated fields
+  // only — the raw client JSON never reaches the workflow input, so nothing
+  // unvalidated can ride along in it.
+  if (!Array.isArray(body?.closes)) {
+    return json(400, { ok: false, message: 'Send {"journal_type": "bot", "closes": [...]}; a single close is a one-entry batch.' });
+  }
+  if (body.journal_type !== "bot") {
+    return json(400, { ok: false, message: "Batch close is bot-book only." });
+  }
+  // Ceiling = the book cap (config VIVEK_BOT_MAX_OPEN_TOTAL, 60 since the
+  // owner's 2026-09-27 resize; was 30), so a FULL book closes in ONE run.
+  // Mirrored by journal.js CLOSE_ALL_MAX and vivek_run CLOSE_BATCH_MAX;
+  // tests/test_close_ceiling_parity.py pins all three to config, because a
+  // split ceiling accepts a close here that the workflow then refuses.
+  if (body.closes.length < 1 || body.closes.length > 60) {
+    return json(400, { ok: false, message: "Batch must contain 1-60 closes." });
+  }
+  const entries = [];
+  const seen = new Set();
+  for (const c of body.closes) {
+    const sym = String(c?.symbol || "").trim().toUpperCase();
+    const mkt = String(c?.market || "").trim().toLowerCase();
+    const px  = parseFloat(c?.price);
+    if (!/^[A-Z0-9.\-]{1,15}$/.test(sym) || !isFinite(px) || px <= 0) {
+      return json(400, { ok: false, message: `Batch entry ${sym || "?"}: symbol and a positive price are required.` });
     }
-    // Ceiling = the book cap (config VIVEK_BOT_MAX_OPEN_TOTAL, 60 since the
-    // owner's 2026-09-27 resize; was 30), so a FULL book closes in ONE run.
-    // Mirrored by journal.js CLOSE_ALL_MAX and vivek_run CLOSE_BATCH_MAX;
-    // tests/test_close_ceiling_parity.py pins all three to config, because a
-    // split ceiling accepts a close here that the workflow then refuses.
-    if (body.closes.length < 1 || body.closes.length > 60) {
-      return json(400, { ok: false, message: "Batch must contain 1-60 closes." });
+    if (!["asx", "nasdaq", "crypto"].includes(mkt)) {
+      return json(400, { ok: false, message: `Batch entry ${sym}: market must be asx|nasdaq|crypto.` });
     }
-    const entries = [];
-    const seen = new Set();
-    for (const c of body.closes) {
-      const sym = String(c?.symbol || "").trim().toUpperCase();
-      const mkt = String(c?.market || "").trim().toLowerCase();
-      const px  = parseFloat(c?.price);
-      if (!/^[A-Z0-9.\-]{1,15}$/.test(sym) || !isFinite(px) || px <= 0) {
-        return json(400, { ok: false, message: `Batch entry ${sym || "?"}: symbol and a positive price are required.` });
-      }
-      if (!["asx", "nasdaq", "crypto"].includes(mkt)) {
-        return json(400, { ok: false, message: `Batch entry ${sym}: market must be asx|nasdaq|crypto.` });
-      }
-      const key = mkt + ":" + sym;
-      if (seen.has(key)) {
-        return json(400, { ok: false, message: `Batch lists ${sym} twice.` });
-      }
-      seen.add(key);
-      entries.push({
-        symbol: sym,
-        market: mkt,
-        direction: c?.direction === "short" ? "short" : "long",
-        price: String(px),
-      });
+    const key = mkt + ":" + sym;
+    if (seen.has(key)) {
+      return json(400, { ok: false, message: `Batch lists ${sym} twice.` });
     }
-    return dispatchClose(env, json, {
-      // The single-close inputs are required by the workflow and display-only
-      // here: the roster makes the Actions list legible at a glance.
-      symbol: entries[0].symbol + (entries.length > 1 ? `+${entries.length - 1}` : ""),
-      direction: "long",
-      market: entries[0].market,
-      price: entries[0].price,
-      exit_date: "",
-      journal_type: "bot",
-      batch: JSON.stringify(entries),
-    }, `ratelimit:close:batch`, entries.length);
+    seen.add(key);
+    entries.push({
+      symbol: sym,
+      market: mkt,
+      direction: c?.direction === "short" ? "short" : "long",
+      price: String(px),
+    });
   }
 
-  // ---- single-close shape (unchanged) ---------------------------------------
-  // Strict validation: these inputs reach a GitHub Actions workflow, so only
-  // known-shape values may pass (defence in depth with the env-var quoting in
-  // close_position.yml).
-  const symbol = String(body?.symbol || "").trim().toUpperCase();
-  const market = String(body?.market || "").trim().toLowerCase();
-  const price  = parseFloat(body?.price);
-  if (!/^[A-Z0-9.\-]{1,15}$/.test(symbol) || !isFinite(price) || price <= 0) {
-    return json(400, { ok: false, message: "symbol and a positive price are required." });
-  }
-  if (!["asx", "nasdaq", "crypto", "scalp", ""].includes(market)) {
-    return json(400, { ok: false, message: "Invalid market." });
-  }
+  const offBand = await priceBandRefusal(env, request, entries);
+  if (offBand) return json(400, { ok: false, message: offBand });
 
-  // journal_type "bot" (2026-07-20, review C4) routes to the REAL bot-book
-  // close in the workflow; a bot close requires a concrete market.
-  const journalType = body.journal_type === "scalp" ? "scalp"
-    : body.journal_type === "bot" ? "bot" : "swing";
-  if (journalType === "bot" && !["asx", "nasdaq", "crypto"].includes(market)) {
-    return json(400, { ok: false, message: "A bot close needs market asx|nasdaq|crypto." });
-  }
-
-  const inputs = {
-    symbol,
-    direction:    body.direction === "short" ? "short" : "long",
-    market,
-    price:        String(price),
-    exit_date:    /^\d{4}-\d{2}-\d{2}$/.test(body.exit_date) ? body.exit_date : "",
-    journal_type: journalType,
-  };
-
-  return dispatchClose(env, json, inputs, `ratelimit:close:${inputs.symbol}`, 1);
+  return dispatchClose(env, {
+    // The single-close inputs are required by the workflow and display-only
+    // here: the roster makes the Actions list legible at a glance.
+    symbol: entries[0].symbol + (entries.length > 1 ? `+${entries.length - 1}` : ""),
+    direction: "long",
+    market: entries[0].market,
+    price: entries[0].price,
+    exit_date: "",
+    journal_type: "bot",
+    batch: JSON.stringify(entries),
+  }, entries.length);
 });
 
-// One dispatch path for both shapes (the single/batch split above is pure
-// validation). Guard rules unchanged from the 2026-07-09/07-29 design:
-// cooldown written BEFORE the dispatch (closes the double-click race),
-// refunded if the dispatch fails, kept on a timeout (the dispatch MAY have
-// landed, and a duplicate close-run costs more than a one-minute wait).
-// A batch counts ONCE against the daily cap — the cap protects Actions runs,
-// and a batch is one run regardless of how many closes ride in it.
-async function dispatchClose(env, json, inputs, cdKey, nCloses) {
-  const token = env.GH_DISPATCH_TOKEN;
+/* REFINE200 #53: the first entry whose price is outside PRICE_BAND of its
+ * published last_mark, as a message; null when every checkable entry is in
+ * band. An entry the published book cannot vouch for (not open there, or no
+ * usable mark) is passed and logged -- the workflow's own --close refuses a
+ * position that is not open, and blocking on a stale deploy would refuse a
+ * real close. The whole check is skipped, and logged, if the book is
+ * unreadable. */
+async function priceBandRefusal(env, request, entries) {
+  let book;
+  try {
+    if (!env.ASSETS) throw new Error("no ASSETS binding");
+    const res = await env.ASSETS.fetch(new Request(new URL(BOOK, request.url)));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    book = await res.json();
+  } catch (e) {
+    console.log(`[close] exit-price band NOT checked: ${BOOK} unreadable (${(e && e.message) || e})`);
+    return null;
+  }
+  const marks = new Map();
+  for (const p of Array.isArray(book && book.open) ? book.open : []) {
+    const v = p && p.last_mark;
+    if (typeof v === "number" && isFinite(v) && v > 0) {
+      marks.set(String(p.market || "").toLowerCase() + ":" + String(p.symbol || "").toUpperCase(), v);
+    }
+  }
+  for (const e of entries) {
+    const mark = marks.get(e.market + ":" + e.symbol);
+    if (mark == null) {
+      console.log(`[close] exit-price band NOT checked for ${e.market}:${e.symbol}: no open row with a usable last_mark in the published book`);
+      continue;
+    }
+    const px = Number(e.price);
+    if (px < mark * (1 - PRICE_BAND) || px > mark * (1 + PRICE_BAND)) {
+      return `${e.symbol}: exit price ${px} is more than ${Math.round(PRICE_BAND * 100)}% away from its last mark ${mark}, so nothing was closed. ` +
+        "Reload the page and close again, or use close_position.yml for a deliberate off-mark price.";
+    }
+  }
+  return null;
+}
+
+// Guard rules unchanged from the 2026-07-09/07-29 design: cooldown written
+// BEFORE the dispatch (closes the double-click race), refunded if the dispatch
+// fails, kept on a timeout (the dispatch MAY have landed, and a duplicate
+// close-run costs more than a one-minute wait). The daily cap counts CLOSES
+// (#53), and like /api/scan the limiter FAILS CLOSED on a KV error (#158): a
+// spent write quota used to switch both guards off for the rest of the day.
+async function dispatchClose(env, inputs, nCloses) {
+  const token = cleanSecret(env.GH_DISPATCH_TOKEN);
   const repo  = env.GH_REPO || "FakeCurrency/googy-boys-scanner";
   const ref   = env.GH_REF  || "main";
 
   let refundGuard = null;
   if (env.JOURNAL_KV) {
+    const cdKey = "ratelimit:close:batch";
+    const dayKey = `ratelimit:close:day:${new Date().toISOString().slice(0, 10)}`;
+    let used = 0;
+    let wroteCooldown = false;
     try {
       if (await env.JOURNAL_KV.get(cdKey)) {
-        return json(429, { ok: false, message: nCloses > 1
-          ? "A batch close was just requested — give it a minute to process."
-          : "A close for this symbol was just requested — give it a minute to process." });
+        return json(429, { ok: false,
+          message: "A close was just requested — give it a minute to process." });
       }
-      const dayKey = `ratelimit:close:day:${new Date().toISOString().slice(0, 10)}`;
-      const used = parseInt((await env.JOURNAL_KV.get(dayKey)) || "0", 10);
-      if (used >= 60) {
-        return json(429, { ok: false, message: "Daily close-request limit reached." });
+      used = parseInt((await env.JOURNAL_KV.get(dayKey)) || "0", 10);
+      if (used + nCloses > CLOSE_DAILY_CAP) {
+        return json(429, { ok: false,
+          message: `Daily close limit: ${used} of ${CLOSE_DAILY_CAP} closes already requested today (UTC), ` +
+            `so these ${nCloses} would pass it. close_position.yml still works by hand.` });
       }
       await env.JOURNAL_KV.put(cdKey, "1", { expirationTtl: 60 });
-      await env.JOURNAL_KV.put(dayKey, String(used + 1), { expirationTtl: 172800 });
-      refundGuard = async () => {
-        try {
-          await env.JOURNAL_KV.delete(cdKey);
-          await env.JOURNAL_KV.put(dayKey, String(used), { expirationTtl: 172800 });
-        } catch (_) { /* refund is best-effort */ }
-      };
-    } catch (_) { /* KV hiccup → let it through */ }
+      wroteCooldown = true;
+      await env.JOURNAL_KV.put(dayKey, String(used + nCloses), { expirationTtl: 172800 });
+    } catch (_) {
+      if (wroteCooldown) {
+        try { await env.JOURNAL_KV.delete(cdKey); } catch (_) { /* best-effort */ }
+      }
+      return json(503, { ok: false,
+        message: "The close rate limiter is unavailable (Cloudflare KV refused a read or write), so nothing was closed. " +
+          "Try again later, or close via close_position.yml (journal_type=bot)." });
+    }
+    refundGuard = async () => {
+      try {
+        await env.JOURNAL_KV.delete(cdKey);
+        await env.JOURNAL_KV.put(dayKey, String(used), { expirationTtl: 172800 });
+      } catch (_) { /* refund is best-effort */ }
+    };
   }
 
   // Transport + the cooldown refund rule live in _dispatch.js.
@@ -179,7 +225,7 @@ async function dispatchClose(env, json, inputs, cdKey, nCloses) {
       ok: true,
       message: nCloses > 1
         ? `${nCloses} closes queued as ONE run — the strip confirms each against the book.`
-        : `${inputs.symbol} ${inputs.direction} close queued — journal updates in ~1 minute.`,
+        : `${inputs.symbol} close queued — the book updates when that run lands (~2 minutes).`,
     });
   }
 

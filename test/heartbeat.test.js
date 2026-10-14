@@ -32,20 +32,23 @@ const vm = require("vm");
 
 // ---- load the real handler --------------------------------------------------
 const SRC = path.join(__dirname, "..", "functions", "api", "heartbeat.js");
-// The REAL shared dispatch transport is prepended (exports stripped) rather than
-// stubbed — see api_guards.test.js for why.
-const DISPATCH_HELPER = fs
-  .readFileSync(path.join(__dirname, "..", "functions", "api", "_dispatch.js"), "utf8")
+// The REAL shared helpers it imports (the dispatch transport, the access log,
+// the secret trim) are prepended with exports stripped rather than stubbed —
+// see api_guards.test.js for why.
+const helper = (f) => fs
+  .readFileSync(path.join(__dirname, "..", "functions", "api", f), "utf8")
   .replace(/export\s+async\s+function/g, "async function")
+  .replace(/export\s+function/g, "function")
   .replace(/export\s+const/g, "const");
-const source = DISPATCH_HELPER + "\n" + fs.readFileSync(SRC, "utf8")
-  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_dispatch\.js";\s*$/m, "")
+const HELPERS = ["_secrets.js", "_access_log.js", "_dispatch.js"].map(helper).join("\n");
+const source = HELPERS + "\n" + fs.readFileSync(SRC, "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm, "")
   .replace(/export\s+async\s+function\s+onRequestGet/, "async function onRequestGet")
   .replace(/export\s+const\s+onRequestHead/, "globalThis.onRequestHead");
 
 let currentFetch = async () => new Response("fetch mock not set for this test", { status: 500 });
 const sandbox = {
-  Response, Request, URL, Date, Number, Math, Array, JSON, String, Set,
+  Response, Request, URL, Date, Number, Math, Array, JSON, String, Set, Object,
   AbortController, setTimeout, clearTimeout, parseFloat, parseInt,
   fetch: (...args) => currentFetch(...args),
 };
@@ -151,11 +154,42 @@ const cases = [
       "the heal marks itself so funnel_history rows carry trigger=heartbeat");
   }],
 
-  ["an invalid market silently falls back to all (unlike health.js's 400)", async () => {
-    const { status, body } = await call("?market=bogus&stale_min=90", { assets: MIXED });
-    assert.equal(status, 200);
-    assert.equal(body.action, "none");
-    assert.equal(body.updated_at, MIXED["/data/vivek_bot_book.json"].updated_at, "read the combined book, not a bogus path");
+  // REFINE200 #170: it used to fall back to "all", whose combined book crypto
+  // keeps fresh, so a typo'd per-market cron-job.org job answered 200 "none"
+  // for ever and its market was never healed. Now a 400, as health.js does.
+  ["an unknown market is a 400 that names it, not a silent fall-back to all", async () => {
+    let hits = 0;
+    currentFetch = async () => { hits++; return new Response(null, { status: 204 }); };
+    for (const m of ["bogus", "asx2", "us"]) {
+      const { status, body } = await call(`?market=${m}&stale_min=90`, { assets: MIXED });
+      assert.equal(status, 400, m);
+      assert.equal(body.ok, false);
+      assert.ok(body.error.includes(`'${m}'`), body.error);
+    }
+    assert.equal(hits, 0, "a refused probe dispatches nothing");
+  }],
+
+  ["a market with stray spaces or capitals is still that market; an empty one is all", async () => {
+    const asx = await call("?market=%20ASX%20&stale_min=90", { assets: MIXED, token: "" });
+    assert.equal(asx.status, 503, "ASX (200 min stale, no token) must be read as ASX");
+    assert.equal(asx.body.action, "cannot_heal");
+    const empty = await call("?market=&stale_min=90", { assets: MIXED });
+    assert.equal(empty.status, 200);
+    assert.equal(empty.body.updated_at, MIXED["/data/vivek_bot_book.json"].updated_at);
+  }],
+
+  ["a dispatched heal leaves an access-log entry; an ordinary probe writes nothing", async () => {
+    const store = {};
+    const kv = fakeKV(store);
+    currentFetch = async () => new Response(null, { status: 204 });
+    await call("?market=crypto&stale_min=90", { assets: MIXED, kv });     // fresh: action none
+    assert.deepEqual(Object.keys(store).filter((k) => k.startsWith("alog:")), [],
+      "a probe is a poll and must never cost a KV write");
+    const { body } = await call("?market=asx&stale_min=90", { assets: MIXED, kv });
+    assert.equal(body.action, "dispatched");
+    const logs = Object.keys(store).filter((k) => k.startsWith("alog:/api/heartbeat:"));
+    assert.equal(logs.length, 1, "a forced heal must leave a trace");
+    assert.equal(JSON.parse(store[logs[0]]).s, 200);
   }],
 
   ["a missing per-market sidecar is not silently healthy", async () => {
