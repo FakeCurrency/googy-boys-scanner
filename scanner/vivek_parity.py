@@ -722,10 +722,10 @@ def run_market_parity(mk: str, limit: int | None, period: str,
     uni_before = len(uni_all)
     if excl:
         uni_all = [u for u in uni_all if str(u.get("symbol") or "").upper() not in excl]
-        log.info("[parity/%s] %s — excluded %d in-sample symbols (%d remain)",
+        log.info("[parity/%s] %s - excluded %d in-sample symbols (%d remain)",
                  rules.name, mk, uni_before - len(uni_all), len(uni_all))
     uni = _sample(uni_all, limit)
-    log.info("[parity/%s] %s — downloading %d of %d eligible (%s)",
+    log.info("[parity/%s] %s - downloading %d of %d eligible (%s)",
              rules.name, mk, len(uni), len(uni_all), period)
     frames = download([u["yf"] for u in uni], period=period)
     meta = {u["yf"]: u for u in uni}
@@ -743,7 +743,7 @@ def run_market_parity(mk: str, limit: int | None, period: str,
                 trades.append(slim)
         except Exception as e:
             log.warning("[parity/%s] %s %s replay error: %s", rules.name, mk, yf, e)
-    log.info("[parity/%s] %s — %d trades from %d symbols",
+    log.info("[parity/%s] %s - %d trades from %d symbols",
              rules.name, mk, len(trades), len(uni))
     return trades, {
         "symbols": len(uni), "universe": len(uni_all),
@@ -1045,6 +1045,6 @@ def print_parity(report: dict) -> None:
         flag = "PASS" if v.get("pass") else "fail"
         d = (v.get("checks") or {}).get("overall", {})
         print(f"  [{flag}] {name:<28} {vr.get('delta')}  "
-              f"R/sm {d.get('baseline')} → {d.get('variant')}  Δ={d.get('delta')}")
+              f"R/sm {d.get('baseline')} -> {d.get('variant')}  d={d.get('delta')}")
     bv = report.get("best_variant") or {}
     print("\nBEST:", bv)
