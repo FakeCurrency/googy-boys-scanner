@@ -49,12 +49,13 @@ the old number has to reconstruct it.
 """
 
 import datetime as _dt
+import math
 
 from .. import config
 
 
 def _unreal_r(pos: dict, price: float) -> float:
-    """WHOLE-LIFE unrealised R of an open position at `price` (0 on bad risk).
+    """WHOLE-LIFE unrealised R of an open position at `price` (0 on bad input).
 
     This is the number stamped on the book for display (`unreal_r`/`unreal_usd`)
     and read by the kill switch — "how is this position doing", measured from
@@ -65,29 +66,60 @@ def _unreal_r(pos: dict, price: float) -> float:
     remainder is still exposed — valuing the full original size overstated
     runners' unrealised P&L. The R already BANKED by those partial exits is
     counted separately, so nothing is dropped or double-counted.
+
+    NaN-SAFE (2026-10-14, REFINE200 #19). It tested `risk <= 0`, which a NaN
+    risk passes (every comparison against NaN is False), and read `entry` and
+    `price` raw, so one NaN produced a NaN unreal_r that was stamped on the book
+    and summed into the kill switch's P&L. A non-finite or non-positive risk,
+    entry or price now returns 0.0 -- the same answer bad risk always got.
     """
-    risk = pos.get("risk") or 0.0
-    if risk <= 0:
+    risk = _finite(pos.get("risk"))
+    entry = _finite(pos.get("entry"))
+    px = _finite(price)
+    if risk is None or not (risk > 0) or entry is None or not (entry > 0) or px is None:
         return 0.0
     remaining = _remaining(pos)
     if remaining <= 0.0:
         return 0.0
-    entry = pos["entry"]
-    per_unit = (price - entry) / risk if pos.get("direction") == "long" else (entry - price) / risk
+    per_unit = (px - entry) / risk if pos.get("direction") == "long" else (entry - px) / risk
     return per_unit * remaining
 
 
 def _remaining(pos: dict) -> float:
-    """Fraction of the original size still exposed (0.0 - 1.0)."""
-    return min(1.0, max(0.0, 1.0 - (pos.get("booked_pct") or 0.0)))
+    """Fraction of the original size still exposed (0.0 - 1.0).
+
+    An unreadable `booked_pct` counts as nothing booked (full size exposed):
+    `1 - NaN` used to clamp to 0.0, i.e. a corrupt field hid the whole
+    position from the guard.
+    """
+    return min(1.0, max(0.0, 1.0 - _num(pos.get("booked_pct"))))
 
 
-def _num(v, default: float = 0.0) -> float:
+def _finite(v) -> float | None:
+    """`v` as a finite float, or None (missing, unparseable, NaN or +/-inf)."""
     try:
         f = float(v)
     except (TypeError, ValueError):
-        return default
-    return f if f == f else default          # NaN -> default
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _num(v, default: float = 0.0) -> float:
+    f = _finite(v)
+    return default if f is None else f       # NaN / inf / junk -> default
+
+
+def _price(v) -> float | None:
+    """A usable price from `price_of`, or None (= UNPRICED, which fails closed).
+
+    A NaN price is the one value that slipped past every guard on the way in:
+    `price is not None` let it through, it made the window's unrealised leg
+    NaN, and a NaN session total compares False against the limit -- i.e. it
+    DISARMED the guard. Non-finite and non-positive prices are now treated
+    exactly like a missing one (REFINE200 #19).
+    """
+    f = _finite(v)
+    return f if f is not None and f > 0 else None
 
 
 def ref_price(pos: dict, since: str) -> float:
@@ -140,7 +172,7 @@ def _window_r(pos: dict, since: str, day: str, price: float | None) -> dict:
     out = {"banked": 0.0, "unrealised": 0.0, "cost": 0.0, "worst": 0.0,
            "priced": price is not None}
     risk = _num(pos.get("risk"))
-    if risk <= 0:
+    if not (risk > 0):
         return out
     ref = ref_price(pos, since)
     if ref <= 0:
@@ -219,7 +251,7 @@ def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict
         if p.get("market") != market:
             continue
         open_n += 1
-        price = price_of(p.get("symbol"))
+        price = _price(price_of(p.get("symbol")))
         w = _window_r(p, since, day, price)
         risk_usd = _num(p.get("risk_usd"))
         banked += (w["banked"] - w["cost"]) * risk_usd
@@ -279,7 +311,7 @@ def session_pnl(book: dict, market: str, day: str, price_of) -> dict:
     for p in book.get("open", []):
         if p.get("market") != market:
             continue
-        price = price_of(p.get("symbol"))
+        price = _price(price_of(p.get("symbol")))
         if price is None:
             continue
         risk_usd = _num(p.get("risk_usd"))
