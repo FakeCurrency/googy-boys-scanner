@@ -127,7 +127,9 @@ def tag_sources(vk: dict, market_key: str, src_report: dict) -> None:
 def bot_rules_payload() -> dict:
     """The executing bot's rules as published to public/data/bot_rules.json.
 
-    Pure: reads config and the clock, writes nothing. ONE builder, two writers
+    Reads config, the clock and two committed files (the canonical per-market
+    books for `open_total`, the long-only backtest for `entry_quality`); writes
+    nothing. ONE builder, two writers
     (2026-09-28). main() publishes it after every scan; resize_book.yml's
     resize loop republishes it in the SAME commit as the restated open book.
     Before that second writer existed, the restatement landed first and the
@@ -200,12 +202,79 @@ def bot_rules_payload() -> dict:
             "long": list(config.VIVEK_TP_SCALE_LONG),
             "short": list(config.VIVEK_TP_SCALE_SHORT),
         },
-        # Portfolio limits the browser-side risk engine re-declared as its own
-        # defaults (TOP100 #34) — published so it can stop guessing.
-        "consec_loss_pause": config.CONSEC_LOSS_PAUSE,
-        "portfolio_heat_limit_pct": round(config.PORTFOLIO_HEAT_LIMIT * 100, 4),
+        # Open positions across ALL markets right now (REFINE200), counted the
+        # way the global cap counts them (vivek_run._book_elsewhere over every
+        # canonical book + the unassigned file), so the nav badge reads
+        # "N / max_open_total" off this one small file instead of the book.
+        # closed_total feeds the SYSTEM page's "N closed trades so far".
+        # null = a book was unreadable; never a guessed 0. Fresh as of this
+        # publish: a manual close lands in the count at the next scan.
+        **_book_counts(),
+        # The three entry-trigger tints the deck paints on its Reclaim /
+        # Retest / Break chips (REFINE200 #69): copied here from the 1MB
+        # long-only backtest so the browser stops downloading the whole file
+        # to read three numbers. null when the file is missing or unreadable.
+        "entry_quality": _entry_quality(),
+        # REFINE200 #121: these two used to sit beside the real rules (TOP100
+        # #34 published them for the browser risk engine, removed 2026-09-17).
+        # Nothing in the trade path enforces either one, so they are no longer
+        # published AS rules; enforcing them would change which trades are
+        # taken, which is the owner's call.
+        "not_enforced": {
+            "consec_loss_pause": config.CONSEC_LOSS_PAUSE,
+            "portfolio_heat_limit_pct": round(config.PORTFOLIO_HEAT_LIMIT * 100, 4),
+            "why": "declared in scanner/config.py, read by no trade path",
+        },
     }
     return rules
+
+
+ENTRY_QUALITY_SOURCE = REPO_ROOT / "public" / "data" / "vivek_backtest_longonly.json"
+_ENTRY_QUALITY_FIELDS = ("n", "expectancy_r", "win_rate", "profit_factor")
+
+
+def _book_counts() -> dict:
+    """{open_total, closed_total} over every canonical book; None for a count
+    a book could not be read for (a display field, never fatal).
+
+    open_total is `_book_elsewhere(None)`: it excludes no market, so it is the
+    global cap's own count (and already logs an unreadable file)."""
+    out = {"open_total": None, "closed_total": None}
+    try:
+        from .broker import vivek_run
+        seen = vivek_run._book_elsewhere(None)
+        if seen is not None:
+            out["open_total"] = int(seen["count"])
+        closed = 0
+        for m in config.MARKETS:
+            f = vivek_run._market_book_file(m)
+            if f.exists():
+                closed += len(json.loads(f.read_text(encoding="utf-8")).get("closed") or [])
+        out["closed_total"] = closed
+    except Exception as e:          # noqa: BLE001 - a display field, never fatal
+        print(f"  WARNING book counts skipped ({type(e).__name__}: {e})", flush=True)
+    return out
+
+
+def _entry_quality(path: pathlib.Path = ENTRY_QUALITY_SOURCE):
+    """{generated_at, by_entry_type: {code: {n, expectancy_r, win_rate,
+    profit_factor}}} read from the long-only backtest, the same
+    results.by_entry_type the deck used to fetch whole. None when the file is
+    missing, unreadable or carries no usable cohort."""
+    try:
+        bt = json.loads(path.read_text(encoding="utf-8"))
+        by = (bt.get("results") or {}).get("by_entry_type") or {}
+    except (OSError, ValueError, AttributeError):
+        return None
+    out = {}
+    for code in ("reclaim", "retest", "break"):
+        s = by.get(code)
+        if isinstance(s, dict) and isinstance(s.get("expectancy_r"), (int, float)):
+            out[code] = {k: s.get(k) for k in _ENTRY_QUALITY_FIELDS}
+    if not out:
+        return None
+    return {"source": path.name, "generated_at": bt.get("generated_at"),
+            "by_entry_type": out}
 
 
 def main() -> None:
