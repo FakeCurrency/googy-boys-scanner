@@ -311,7 +311,8 @@
     cache: {},
     cacheAt: {},        // "<market>:<mode>" -> ms the payload was FETCHED (#78)
     cur: "$",
-    caps: {},           // "<market>:<symbol>" -> raw market cap (float)
+    caps: {},           // "<market>:<symbol>" -> raw market cap (float) — sidecar fallback
+    capTs: {},          // "<market>:<symbol>" -> the sidecar cap's ts (age tooltip)
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
     vkHighConv: false,  // VIVEK "high conviction" filter (A/A+ in a backtest-edge cell — see convictionCells)
@@ -560,7 +561,24 @@
     if (v >= 1e6)  return Math.round(v / 1e6) + "M";
     return Math.round(v / 1e3) + "K";
   }
-  const mcapOf = (sym) => state.caps[`${state.market}:${sym}`] || 0;
+  // REFINE200 #73/#157: the scan stamps `mcap` / `mcap_asof` (and the display
+  // `sector`) onto each row, so the row wins; the market_caps.json /
+  // sector_map.json sidecars are only fetched for a payload published before
+  // that (ensureSidecars). A cap older than CAP_STALE_DAYS says so in its
+  // tooltip and wears a dotted underline: a small-cap that raised since is in
+  // the wrong size bucket, and nothing else on the row would tell you.
+  const capKey = (sym) => `${state.market}:${sym}`;
+  const rowCap = (r) => (r && +r.mcap > 0 ? +r.mcap : 0);
+  const mcapOf = (r) => rowCap(r) || (r && state.caps[capKey(r.symbol)]) || 0;
+  const capAsOf = (r) => (rowCap(r) ? r.mcap_asof : r && state.capTs[capKey(r.symbol)]) || "";
+  const CAP_STALE_DAYS = 30;
+  function capAge(r, now) {
+    const at = String(capAsOf(r));
+    const t = Date.parse(at);
+    if (!at || !isFinite(t)) return null;
+    const days = Math.floor(((now == null ? Date.now() : now) - t) / 86400000);
+    return days > CAP_STALE_DAYS ? { days, date: at.slice(0, 10) } : null;
+  }
 
   // tz_label is only a KEY to the market's zone, never the text shown: the
   // abbreviation is read off the zone AT THE INSTANT, so Sydney says AEDT in
@@ -723,7 +741,8 @@
       pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.tab === "a") +
       ignPillHTML +
       pill(`data-pill="confl"`, "o", "⨂ Multi-lens", nConf ?? "…",
-        "Names with 2+ lenses aligned right now — click to filter the list to them", state.vkConfl) +
+        "Names with 2+ lenses aligned right now — click to filter the list to them. " +
+        ((window.PM && PM.CONFLUENCE_UNPROVEN) || ""), state.vkConfl) +
       pill(`data-pill="atlevel"`, "t", "◎ At level", nAt,
         "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
       (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
@@ -910,6 +929,12 @@
   // matters. Returns an ARRAY; rowChips caps the row at 3 chips + a "+N"
   // overflow chip (UI Wave 1). The expanded VIVEK panel lists the scanner's
   // own r.chips, not these client-side badges.
+  function smaProxyChip(r) {
+    if (!r || r.sma_proxy !== true) return "";
+    const w = +r.sma_window;
+    const bars = w > 0 ? ` · ${Math.round(w)} bars` : "";
+    return `<span class="rbadge proxywarn" title="Not enough history for a true 200-bar SMA: the level was measured on ${w > 0 ? Math.round(w) : "fewer than 200"} bars">SMA proxy${bars}</span>`;
+  }
   function vkBadges(r) {
     if (state.mode !== "vivek") return [];
     const out = [];
@@ -926,6 +951,11 @@
       out.push(`<span class="rbadge fresh" title="Trigger fired on/near the latest bar">⚡ Triggered recently</span>`);
     const trig = r.entry_trigger || (r.armed && (r.entry_types || [])[0]) || null;
     if (trig) out.push(`<span class="rbadge trig" title="Entry trigger">${esc(TRIG_LABEL[trig] || trig)}</span>`);
+    // REFINE200 #51 (TOP100 #72's display half): the headline "200-SMA" was
+    // measured on fewer bars than 200 because the name lacks the history.
+    // Display-only; the scan publishes the flag, nothing here filters on it.
+    const proxy = smaProxyChip(r);
+    if (proxy) out.push(proxy);
     if (r.level_tf === "weekly")
       out.push(`<span class="rbadge wk" title="Reaction at the Weekly 200 SMA (higher timeframe)">Weekly 200</span>`);
     else if ((r.chips || []).includes("STRONG STRUCTURE"))
@@ -953,7 +983,7 @@
 
   function rowChips(r, extras) {
     const all = [...vkBadges(r), ...extras].filter(Boolean);
-    const isWarn = (h) => /fundwarn|chip warn/.test(h);
+    const isWarn = (h) => /fundwarn|proxywarn|chip warn/.test(h);
     const ordered = [...all.filter(isWarn), ...all.filter((h) => !isWarn(h))];
     const shown = ordered.slice(0, CHIP_CAP);
     const hidden = ordered.length - shown.length;
@@ -1220,14 +1250,15 @@
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
     const assetBadge = "";
-    const rawMcap = mcapOf(r.symbol);
+    const rawMcap = mcapOf(r);
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
       : rawMcap < SMALLCAP ? "mcap-small" : "mcap";
+    const capOld = mcapTxt ? capAge(r) : null;
     // Show the market-cap pill for EVERY ticker that has cap data (not just the
     // hot/small-cap buckets) — it rides on the same line as the ticker + name.
     const mcapBadge = mcapTxt
-      ? `<span class="badge ${mcapCls || "mcap"}" title="Market cap">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
+      ? `<span class="badge ${mcapCls || "mcap"}${capOld ? " mcap-old" : ""}" title="Market cap${capOld ? ` · cap as of ${esc(capOld.date)} (${capOld.days} days old)` : ""}">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
       : "";
     const rrStar = r.target_2r ? "*" : "";
     const rrCls = r.low_rr ? "low" : "";
@@ -1446,9 +1477,10 @@
   function metaBar(r) {
     const parts = [];
     if (r.sector) parts.push(`<span class="meta-item">${esc(r.sector)}</span>`);
-    const rawMcap = mcapOf(r.symbol);
+    const rawMcap = mcapOf(r);
     const mcapTxt = fmtMcap(rawMcap);
-    if (mcapTxt) parts.push(`<span class="meta-item">${mcapTxt} mkt cap</span>`);
+    const capOld = mcapTxt ? capAge(r) : null;
+    if (mcapTxt) parts.push(`<span class="meta-item">${mcapTxt} mkt cap${capOld ? ` <span class="meta-dim">(as of ${esc(capOld.date)})</span>` : ""}</span>`);
     if (r.sector_count > 1) parts.push(`<span class="meta-item accent-orange">${r.sector_count} setups in sector</span>`);
     return parts.length ? `<div class="detail-meta">${parts.join("")}</div>` : "";
   }
@@ -1907,7 +1939,7 @@
     // (the #sort-dir arrow) just reverses the result.
     if (s === "price") list.sort((a, b) => n(b.price) - n(a.price));
     else if (s === "rr") list.sort((a, b) => n(b.rr) - n(a.rr));
-    else if (s === "mcap") list.sort((a, b) => mcapOf(b.symbol) - mcapOf(a.symbol));   // largest cap first
+    else if (s === "mcap") list.sort((a, b) => mcapOf(b) - mcapOf(a));   // largest cap first
     else if (s === "az") list.sort((a, b) => String(a.symbol || "").localeCompare(String(b.symbol || "")));
     // UX-20 #18: sector view — group the tape by sector (best grade/score first
     // inside each), so rotation reads at a glance; renderRows adds the headers.
@@ -1956,36 +1988,52 @@
   // hardcoded here: until the fetch lands (or if it fails) chips read "no
   // backtest data" with no tint. Tint = expectancy_r: >= +0.10R green,
   // 0–0.10R amber, <0 red (the bar moved from 0.3 on 2026-08-15, see below).
+  // REFINE200 #69: the three cohorts now arrive inside bot_rules.json
+  // (`entry_quality`, copied from the backtest at publish), so the deck no
+  // longer downloads a 1MB file to tint three chips. An older rules file
+  // without the block falls back to the backtest itself, fetched plainly:
+  // NEVER through sessFetch, which stashed the whole 1MB body in
+  // sessionStorage (most of the tab's ~5MB quota) for three numbers.
   const VK_ENTRY_Q = {
     reclaim: { tier: null, note: "no backtest data" },
     retest:  { tier: null, note: "no backtest data" },
     break:   { tier: null, note: "no backtest data" },
   };
+  // by = {reclaim: {n, expectancy_r, win_rate, profit_factor}, ...}; returns
+  // true when at least one chip got real numbers.
+  function applyEntryQuality(by) {
+    let touched = false;
+    for (const code in VK_ENTRY_Q) {
+      const s = (by || {})[code];
+      if (!s || typeof s.expectancy_r !== "number") continue;
+      const e = s.expectancy_r;
+      // Thresholds rescaled 2026-08-15: the old green bar was e > 0.3
+      // against a file whose best-ever value is 0.178 — a three-state
+      // colour code with one unreachable state, so every chip rendered
+      // amber and the tint said nothing. Green now starts at +0.10R
+      // (the pre-registered w3-1 mid-band, a number this program already
+      // treats as "good"), amber is breakeven-to-good, red is negative.
+      VK_ENTRY_Q[code] = {
+        tier: e >= 0.10 ? "green" : e >= 0 ? "amber" : "red",
+        note: `Backtest (long-only): ${e >= 0 ? "+" : ""}${e.toFixed(2)}R avg over ${s.n} trades` +
+              (s.win_rate != null ? ` · ${s.win_rate}% win` : "") +
+              (s.profit_factor != null ? ` · PF ${s.profit_factor}` : ""),
+      };
+      touched = true;
+    }
+    return touched;
+  }
+  const getJSON = (url) => fetchT(url, { cache: "no-cache" })
+    .then((r) => (r.ok ? r.json() : null)).catch(() => null);
   async function loadEntryQuality() {
     try {
-      const bt = await sessFetch("data/vivek_backtest_longonly.json");   // #67
-      if (!bt) return;
-      const by = ((bt.results) || {}).by_entry_type || {};
-      let touched = false;
-      for (const code in VK_ENTRY_Q) {
-        const s = by[code];
-        if (!s || typeof s.expectancy_r !== "number") continue;
-        const e = s.expectancy_r;
-        // Thresholds rescaled 2026-08-15: the old green bar was e > 0.3
-        // against a file whose best-ever value is 0.178 — a three-state
-        // colour code with one unreachable state, so every chip rendered
-        // amber and the tint said nothing. Green now starts at +0.10R
-        // (the pre-registered w3-1 mid-band, a number this program already
-        // treats as "good"), amber is breakeven-to-good, red is negative.
-        VK_ENTRY_Q[code] = {
-          tier: e >= 0.10 ? "green" : e >= 0 ? "amber" : "red",
-          note: `Backtest (long-only): ${e >= 0 ? "+" : ""}${e.toFixed(2)}R avg over ${s.n} trades` +
-                (s.win_rate != null ? ` · ${s.win_rate}% win` : "") +
-                (s.profit_factor != null ? ` · PF ${s.profit_factor}` : ""),
-        };
-        touched = true;
+      const rules = await getJSON("data/bot_rules.json");
+      let by = rules && rules.entry_quality && rules.entry_quality.by_entry_type;
+      if (!by) {
+        const bt = await getJSON("data/vivek_backtest_longonly.json");
+        by = bt && bt.results && bt.results.by_entry_type;
       }
-      if (touched && state.data) renderEntryFilters(state.data);   // repaint chips with real numbers
+      if (applyEntryQuality(by) && state.data) renderEntryFilters(state.data);   // repaint chips with real numbers
     } catch (_) { /* fetch failed — neutral wording stands, never stale claims */ }
   }
   // Data freshness + version badge. Surfaces scan age, coverage and schema so a
@@ -2495,6 +2543,7 @@
     state.dataKey = `${state.market}:${state.mode}`;
     state.staleView = stale;
     updateVisitDiff(d);   // UX-20 #1: fix this visit's change-baseline
+    ensureSidecars(d);    // #73: cap/sector sidecars only for an unstamped payload
     applySectorMap(d);    // Fix-10 #10: backfill sectors from the sidecar
     state.cur = d.currency_symbol || "$";
     updateScanTitle(d);
@@ -2847,16 +2896,33 @@
     try {
       const raw = await sessFetch("data/market_caps.json");
       if (!raw) return;
-      // Cache stores {"asx:BHP": {"mcap": 1.2e9, "ts": "..."}}; flatten to floats.
-      const flat = {};
+      // Cache stores {"asx:BHP": {"mcap": 1.2e9, "ts": "..."}}; flatten to
+      // floats, keeping each ts for the age tooltip (#157).
+      const flat = {}, ts = {};
       for (const k in raw) {
         const v = raw[k];
         const mc = v && typeof v === "object" ? v.mcap : v;
         if (mc) flat[k] = +mc;
+        if (mc && v && typeof v === "object" && v.ts) ts[k] = String(v.ts);
       }
       state.caps = flat;
+      state.capTs = ts;
       if (state.data) renderRows();   // re-render if rows are already on screen
     } catch (_) { /* caps are optional */ }
+  }
+  // A payload the scan stamped carries the `mcap` / `mcap_asof` key on its rows
+  // (null where no cap is known: the sidecar has nothing more for those).
+  // Only an unstamped payload — published before the stamp, or a cached copy
+  // of one — pays for the two sidecars, and then only once per page.
+  const rowsStamped = (d) => ((d && d.results) || []).some((r) =>
+    r && typeof r === "object" && ("mcap" in r || "mcap_asof" in r));
+  let _sidecarsAsked = false;
+  function ensureSidecars(d) {
+    if (_sidecarsAsked || !d || rowsStamped(d)) return false;
+    _sidecarsAsked = true;
+    loadCaps();
+    loadSectors();   // Fix-10 #10
+    return true;
   }
 
   async function load(silent = false) {
@@ -3093,14 +3159,30 @@
     // poller, so a superseded or navigated-away poll can still WARM the cache
     // — the fetch was worth keeping — but it cannot paint or speak.
     let _pollToken = 0;
+    // REFINE200 #169: a dispatched scan is SERVED ~10–20 min after the tap
+    // (the run, its commit, then the Pages deploy — heartbeat.js measured
+    // 13–18 min). The old 10 x 30 s window gave up at 5 min, before almost
+    // any scan landed, so "Scan complete" never showed. Now: wait 5 min, then
+    // probe every minute up to 25 min. Each probe reads the slim
+    // <market>_prices.json (the same run writes the same generated_at at ~1/8
+    // the bytes); the full payload is fetched only once the stamp has moved.
+    const SCAN_POLL = { firstMs: 5 * 60000, everyMs: 60000, maxMs: 25 * 60000 };
+    const scanPollDelays = (p = SCAN_POLL) => {
+      const out = [p.firstMs];
+      for (let t = p.firstMs; t + p.everyMs <= p.maxMs; t += p.everyMs) out.push(p.everyMs);
+      return out;
+    };
     async function pollForFreshScan(oldGenAt) {
       const token = ++_pollToken;
       const market = state.market, mode = state.mode;
       const key = `${market}:${mode}`;
-      for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 30000));
+      for (const wait of scanPollDelays()) {
+        await new Promise(r => setTimeout(r, wait));
         if (token !== _pollToken) return;            // a newer poll took over
         try {
+          const probe = await fetchT(`data/${market}_prices.json`, { cache: "no-cache" })
+            .then((x) => (x.ok ? x.json() : null)).catch(() => null);
+          if (probe && probe.generated_at && probe.generated_at === oldGenAt) continue;
           const r = await fetchT(dataFile(market, mode), { cache: "no-cache" });
           if (!r.ok) continue;
           const d = await r.json();
@@ -3117,6 +3199,8 @@
           return;
         } catch (_) {}
       }
+      if (token === _pollToken && state.market === market)
+        flashScan("No new scan after 25 min — the status lamp shows the pipeline's state.", "info");
     }
 
     $("#reload-btn").addEventListener("click", async () => {
@@ -3140,7 +3224,7 @@
         });
         const data = await res.json().catch(() => ({}));
         const kind = res.ok ? "ok" : (res.status === 503 || data.configured === false) ? "info" : "warn";
-        flashScan(data.message || (res.ok ? "Scan started — results will update in ~3 min." : "Couldn't start a scan — reloaded latest data."), kind);
+        flashScan(data.message || (res.ok ? "Scan started — results will update in ~10–20 min." : "Couldn't start a scan — reloaded latest data."), kind);
         scanTriggered = res.ok;
       } catch (err) {
         flashScan(err && err.name === "AbortError"
@@ -3693,8 +3777,6 @@
 
   initKeyboard();
   bind();
-  loadCaps();
-  loadSectors();   // Fix-10 #10
   loadBotActivity();
   if (!MEASURE) setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);
   // Keep the relative "Last scanned" + freshness badge honest while the tab
