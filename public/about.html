@@ -18,9 +18,9 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=121" />
+  <link rel="stylesheet" href="css/styles.css?v=122" />
   <link rel="stylesheet" href="css/status.css?v=4" />
-  <link rel="stylesheet" href="css/about.css?v=4" />
+  <link rel="stylesheet" href="css/about.css?v=5" />
   <script src="js/nav.js?v=29"></script>
   <script src="js/status.js?v=11"></script>
   <script src="js/sw-register.js?v=4" defer></script>
@@ -52,7 +52,7 @@
       <h3>The three lenses</h3>
       <ul class="def-list">
         <li><strong>VIVEK</strong> — the core lens. Price <em>reacting</em> at its
-          <strong>200-period SMA</strong> (Weekly, 3-Day or Daily/H4) — the line that separates trend
+          <strong>200-period SMA</strong> (Weekly, 3-Day or Daily) — the line that separates trend
           from no-trend. Graded A+/A/B+ with a ready-made plan. Everything below this section is the
           VIVEK rulebook.</li>
         <li><strong>PHASEMAP</strong> — the trap lens. Finds where a move likely <em>started</em>:
@@ -62,10 +62,19 @@
           3× volume spike breaking out of a base. A shortlist generator, not an entry system — the
           backtest says demand structure before touching anything on it.</li>
       </ul>
+      <p>Two more lenses are <strong>report-only</strong>: they publish a list and feed nothing else.</p>
+      <ul class="def-list">
+        <li><strong>IGNITION</strong> — months of compression, then a close out of the base on a multiple
+          of volume (crypto, ASX, NASDAQ). The ⚡ Ignition pill on the deck opens it.</li>
+        <li><strong>MOMENTUM</strong> — a 20/50/200-EMA and RSI-divergence screen, published per market
+          after its close, on the <a href="momentum.html">MOMENTUM</a> page.</li>
+      </ul>
       <p>
-        <strong>Multi-lens alignment</strong> — when 2+ lenses agree on one name, direction-aligned, a
-        ⨂ banner appears on every page (🎯 for the rare full 3-lens house), the ALERTS page logs it, and the
-        <a href="alerts.html">ALERTS</a> page keeps the permanent log. Every lens's honest, replayed
+        <strong>Multi-lens alignment</strong> — when 2+ of the three lenses agree on one name,
+        direction-aligned, the row wears a ⨂ chip (🎯 for the rare full 3-lens house), the deck's
+        ⨂ Multi-lens pill filters to them, and the <a href="alerts.html">ALERTS</a> page logs the recent
+        ones. Unproven so far: alignment has not beaten plain A+ in the study or the forward
+        ledger. Every lens's honest, replayed
         numbers — hit rates, expectancy, where the edge does and doesn't live — are on the
         <a href="phasemap-insights.html">INSIGHTS</a> page, refreshed by a weekly backtest so they can't
         silently rot.
@@ -77,8 +86,8 @@
       <p>
         Price trends away from the 200 SMA, then returns to test it. The level either
         <strong>holds</strong> (a long, trend resumes) or <strong>fails</strong> (a short, trend flips).
-        It's read on two timeframes — <strong>Weekly</strong> (primary; slower, highest-conviction) and
-        <strong>Daily / H4</strong> (timing) — and only becomes <span class="chip">ARMED</span> once a
+        It's read on three timeframes — <strong>Weekly</strong> (primary; slower, highest-conviction),
+        <strong>3-Day</strong> and <strong>Daily</strong> (timing) — and only becomes <span class="chip">ARMED</span> once a
         trigger actually fires. Until then it's <span class="chip">WATCHING</span>: near the level,
         nothing yet.
       </p>
@@ -101,8 +110,9 @@
         <li><strong>Daily, 3-Day &amp; Weekly</strong> each carry their own plan — level, entry, stop
           and targets — so Entry / SL / TP1–TP3 update when you switch timeframe on the chart. The
           3-Day 200 SMA was added after it caught moves (XMR) the other two missed.</li>
-        <li><strong>4H</strong> shows real intraday candles but borrows the Daily plan's levels (no
-          separate plan) — flagged with a notice on the chart.</li>
+        <li><strong>4H</strong> carries its own plan, built from 4-hour candles (display only; the bot
+          never trades a 4H plan). A row without one shows the Daily plan's levels, flagged with a
+          notice on the chart.</li>
       </ul>
     </section>
 
@@ -127,7 +137,7 @@
         <li><strong>TP1 / TP2 / TP3</strong> — prior structure first, measured R-multiples in clean
           air; headline R:R is to TP2.</li>
         <li><strong>Scale &amp; trail</strong> — book partials at each TP (e.g. 25 / 50 / 15%); SL to
-          break-even at TP1, then below new support at TP2, never against the trade.</li>
+          break-even at TP1, then to TP1 at TP2, never against the trade.</li>
       </ul>
     </section>
 
@@ -145,11 +155,14 @@
     <section class="doc-section">
       <h3>Data</h3>
       <p>
-        Covers <strong>ASX</strong>, <strong>NASDAQ</strong> and <strong>Crypto</strong> (24/7), refreshing
-        through the session — weekends run crypto-only, since that's the only market open. Prices are
-        from Yahoo Finance — dividend-adjusted, ~15&nbsp;min delayed — which suits the daily and weekly
-        bars this system trades. Every timestamp on the site is <strong>Melbourne time</strong>;
-        market-local time lives in the tooltip.
+        Covers <strong>ASX</strong>, <strong>NASDAQ</strong> and <strong>Crypto</strong> (24/7), scanned
+        hourly while each market trades — crypto around the clock, so weekends run crypto-only. Stock
+        prices are from Yahoo Finance — dividend-adjusted, ~15&nbsp;min delayed — which suits the daily
+        and weekly bars this system trades. Crypto bars come from the exchanges themselves (Binance's
+        market-data mirror first, then Coinbase; Yahoo only for a coin no exchange lists), each coin
+        checked against CoinGecko's price so a ticker that names a different token is left out.
+        Every timestamp on the site is
+        <strong>Melbourne time</strong>; market-local time lives in the tooltip.
       </p>
     </section>
 
