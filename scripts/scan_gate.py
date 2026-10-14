@@ -53,6 +53,7 @@ from zoneinfo import ZoneInfo
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scanner import config  # noqa: E402  (stdlib-only module)
+from scripts import _marketclock as clock  # noqa: E402  (stdlib-only, REFINE200 #128)
 
 STOCK = tuple(config.MARKET_SCAN_WINDOWS)            # ("asx", "nasdaq")
 ALL = STOCK + ("crypto",)
@@ -67,8 +68,7 @@ def _local(market: str, now: dt.datetime) -> dt.datetime:
 def close_of(market: str, now: dt.datetime) -> dt.datetime:
     """Today's close in the market's own calendar: the digest's gate time."""
     g = next(g for g in config.MORNING_PLAYS_SLOT_GATE.values() if g["market"] == market)
-    n = now.astimezone(ZoneInfo(g["tz"]))
-    return n.replace(hour=g["hour"], minute=g["minute"], second=0, microsecond=0)
+    return clock.at_local(now, g["tz"], g["hour"], g["minute"])
 
 
 def in_session(market: str, now: dt.datetime) -> bool:

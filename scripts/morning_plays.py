@@ -68,6 +68,7 @@ if str(ROOT) not in sys.path:                # runnable as `python scripts/morni
     sys.path.insert(0, str(ROOT))
 
 from scanner import config, conviction       # noqa: E402
+from scripts import _marketclock as clock     # noqa: E402  (REFINE200 #128)
 
 DATA_DIR = ROOT / "public" / "data"
 CONTENT_LIMIT = 1900                          # Discord caps `content` at 2000; leave slack
@@ -368,8 +369,7 @@ def slot_due(slot_name: str, now_local: dt.datetime, slots_sent: dict[str, str])
 
 def _close_on(local: dt.datetime, gate: dict) -> dt.datetime:
     """The gate's close time on `local`'s own date, in the gate's zone."""
-    return local.replace(hour=int(gate["hour"]), minute=int(gate.get("minute", 0)),
-                         second=0, microsecond=0)
+    return clock.at_local(local, gate["tz"], gate["hour"], gate.get("minute", 0))
 
 
 def latest_close(gate: dict, now_utc: dt.datetime) -> dt.datetime:
@@ -382,13 +382,8 @@ def latest_close(gate: dict, now_utc: dt.datetime) -> dt.datetime:
     "the close this slot owes" once that session is over -- scan_is_post_close
     refuses first while the owed session is still running (session_in_progress).
     """
-    local = now_utc.astimezone(ZoneInfo(gate["tz"]))
-    close = _close_on(local, gate)
-    if local < close:
-        close -= dt.timedelta(days=1)
-    while close.weekday() > 4:                     # 5 = Sat, 6 = Sun
-        close -= dt.timedelta(days=1)
-    return close
+    return clock.latest_weekday_at(now_utc, gate["tz"], gate["hour"],
+                                   gate.get("minute", 0))
 
 
 def session_in_progress(slot_name: str, now_utc: dt.datetime) -> bool:
