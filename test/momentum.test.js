@@ -809,8 +809,12 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
     // P5 LABEL DIET: text only inside the opening window, one per bar; older
     // crosses keep their dot. A five-year tape wore a pile-up of labels that
     // hid the bars under them.
-    const mk = CHART.slice(CHART.indexOf("const base = ((tfs[key] || {}).markers"),
-                           CHART.indexOf("candle.setMarkers(base)"));
+    // REFINE200 #112 moved the build into momPriceMarks, which REPLAY reuses
+    // with a cut; bounded at its own return so the slice cannot run on.
+    const mkAt = CHART.indexOf("function momPriceMarks(");
+    ok(mkAt > 0, "momPriceMarks builds the price-pane marks");
+    const mk = CHART.slice(mkAt, CHART.indexOf("return base;", mkAt));
+    ok(mk.length > 500 && mk.length < 4000, "the momPriceMarks slice is bounded");
     ok(/momentumViewStart\(cs\)/.test(mk), "the diet uses the same window as first paint");
     ok(/titled\.has\(b\.time\)/.test(mk), "one text per bar — no stacked \"BeaBear\"");
     ok(/x\.score !== 0/.test(mk), "a zero score gets no text");

@@ -1727,6 +1727,7 @@
           tf.crosses = momentumCrosses(bars, mp);
           tf.divs = momentumDivs(bars, rsiPine(bars.map((b) => b.close), TV_PLAN.rsiLen), mp);
           tf.ath = bars.reduce((m, b) => (b.high > m ? b.high : m), -Infinity);
+          tf.mp = mp;                      // REPLAY recomputes the plan with the same params
           return tf;
         };
         d.timeframes["1D"] = build(daily);
@@ -2220,13 +2221,14 @@
   // 3.00 R:R, the timeframe, and how old the signal is. `age` is the honest half -- the box is
   // drawn from a cross that may be 50 bars back, and a reader who cannot see
   // that will read a stale plan as a live one.
-  function renderMomentumFooter(d, tfKey) {
+  // `plan` (optional): the box as of a REPLAY scrub point; null = none then.
+  function renderMomentumFooter(d, tfKey, plan) {
     const cur = d.currency_symbol || "";
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span>` +
       `<span class="cfm-val ${cls || ""}">${val}</span></div>`;
     const tf = (d.timeframes || {})[tfKey] || {};
-    const pl = tf.plan;
+    const pl = plan !== undefined ? plan : tf.plan;
     const el = $("#cf-metrics");
     if (!el) return;
     if (!pl) {
@@ -3095,10 +3097,8 @@
       if (x0 >= xN && cs.length > 1) x0 = cs[cs.length - 2].time;
       return [x0, xN];
     }
-    function paintMomentumZones(key) {
+    function paintMomentumZones(pl, cs) {
       if (!momRiskBand) return;
-      const pl = (tfs[key] || {}).plan;
-      const cs = (tfs[key] || {}).candles || [];
       if (!pl || !cs.length) { momRiskBand.setData([]); momRewardBand.setData([]); return; }
       const [t0, tN] = momBoxSpan(pl, cs);
       const span = (base, top) => {
@@ -3113,26 +3113,113 @@
       momRewardBand.setData(rew.rows);
     }
     // ATH — the horizontal the template pins at the highest high it can see.
-    function paintMomentumAth(key) {
+    function paintMomentumAth(ath, pl) {
       if (!d._momentum) return;
       if (momAthLine) { try { candle.removePriceLine(momAthLine); } catch (_) {} momAthLine = null; }
-      const ath = (tfs[key] || {}).ath;
       if (!isFinite(ath)) return;
       // Q29: on a name near its highs the ATH and SL axis labels land on the
       // same strip and overlap. The SL is the actionable one, so ATH keeps its
       // LINE and gives up its axis label when the two are within 1.5%.
-      const pl = (tfs[key] || {}).plan;
       const clash = pl && isFinite(pl.stop) && ath > 0 &&
         Math.abs(ath - pl.stop) / ath < 0.015;
       momAthLine = candle.createPriceLine({ price: ath, color: "#2fd07f", lineWidth: 1,
         lineStyle: LC.LineStyle.Solid, axisLabelVisible: !clash, title: "ATH" });
     }
-    function applyMomentumPlan(key) {
+    // Markers for a Momentum timeframe, for the price pane and the RSI pane.
+    // `tCut` (REPLAY, REFINE200 #112) keeps only what was KNOWABLE at that
+    // bar: a scored cross at its own bar; a divergence, and the scan's Rule A
+    // pair, only once the right-hand pivot that confirms it has closed. Replay
+    // used to clip the candles and leave these drawn from the whole series.
+    function momRsiMarks(key, tCut) {
+      // The Bear/Bull labels the owner's RSI+ pane carries, placed on the
+      // RSI line at the divergence PIVOT -- the same bar the price pane
+      // marks, so the two panes agree about when it happened. EVERY
+      // divergence in the series, not just the newest one: the scan row
+      // carries only the current hit; the pane is history, and a reader
+      // judging whether this signal is worth anything needs to see how the
+      // previous ones resolved. On the PIVOT bar (Pine's offset = -lbR), so
+      // the tag sits where the divergence is drawn rather than confirmed.
+      const cs = (tfs[key] || {}).candles || [];
+      // P13: one tag per bar. Two divergences confirming on the same candle
+      // rendered their labels on top of each other and read as "BeaBear" --
+      // the same collision the cross labels have (P5).
+      const taken = new Set();
+      const mk = ((tfs[key] || {}).divs || []).map((dv) => {
+        const b = cs[dv.pivot];
+        if (!b || taken.has(b.time)) return null;
+        if (tCut != null && !(cs[dv.confirm] && cs[dv.confirm].time <= tCut)) return null;
+        taken.add(b.time);
+        return {
+          time: b.time,
+          position: dv.bull ? "belowBar" : "aboveBar",
+          color: dv.bull ? "#3b82f6" : "#ef4444",
+          shape: dv.bull ? "arrowUp" : "arrowDown",
+          text: dv.bull ? "Bull" : "Bear",
+        };
+      }).filter(Boolean);
+      mk.sort((a, b) => a.time - b.time);
+      return mk;
+    }
+    function momPriceMarks(key, tCut) {
+      // Rule A marks for THIS timeframe (only 1D carries any) PLUS the scored
+      // cross labels the template writes on price: "+3 Bullish" / "-2 Bearish",
+      // signed so the direction reads without the word. Set before
+      // applyPmZones. Caveat, recorded in reviews/2026-09-23-sweep.md: when
+      // ?pm=1 brings a PhaseMap record with a sweep/displacement,
+      // applyPmZones re-seeds from tfs[key].markers (Rule A marks only) and
+      // so drops these cross labels on that timeframe.
+      // NARROW CHARTS (< 560px): "BULL DIV" -> "DIV", "confirmed" -> a tick,
+      // and a cross reads as its signed score alone ("+2"), because on a
+      // phone the words piled into each other and under the TP tags.
+      const narrow = el.clientWidth > 0 && el.clientWidth < NARROW_CHART_PX;
+      const SHORT_TXT = { "BULL DIV": "DIV", "BEAR DIV": "DIV", confirmed: "\u2713" };
+      // The Rule A pair is shown only once its confirmation bar has closed.
+      const ruleA = (tfs[key] || {}).markers || [];
+      const confT = ruleA.reduce((m, x) => Math.max(m, x.time), -Infinity);
+      const base = ((tCut == null || confT <= tCut) ? ruleA : []).map((m) =>
+        (narrow && SHORT_TXT[m.text] ? Object.assign({}, m, { text: SHORT_TXT[m.text] }) : m));
+      const cs = (tfs[key] || {}).candles || [];
+      // P5 LABEL DIET. Every cross in five years carried a text label, so the
+      // flat 2021-2024 tape wore a pile-up of them that no one will ever read
+      // and that hid the bars underneath. Text is now written only inside the
+      // opening window; older crosses keep their DOT, so the history is still
+      // visible without the essay. One text per bar, so two crosses on one
+      // candle cannot stack into "BeaBear".
+      const from = cs.length >= MOM_VIEW_MIN_BARS ? momentumViewStart(cs) : 0;
+      const tMin = cs[from] ? cs[from].time : -Infinity;
+      const titled = new Set();
+      for (const x of ((tfs[key] || {}).crosses || [])) {
+        const b = cs[x.i];
+        if (!b || (tCut != null && b.time > tCut)) continue;
+        const inWindow = b.time >= tMin && x.score !== 0 && !titled.has(b.time);
+        if (inWindow) titled.add(b.time);
+        const signed = `${x.bull ? "+" : "-"}${x.score}`;
+        base.push({
+          time: b.time, position: x.bull ? "belowBar" : "aboveBar",
+          color: x.bull ? "rgba(59,130,246,0.85)" : "rgba(239,68,68,0.85)",
+          shape: "circle",
+          text: inWindow ? (narrow ? signed : `${signed} ${x.bull ? "Bullish" : "Bearish"}`) : "",
+        });
+      }
+      // setMarkers requires ascending unique times; a cross and a Rule A mark
+      // can land on one bar, so sort and let the later one sit beside it.
+      base.sort((a, b) => a.time - b.time);
+      return base;
+    }
+    // `upto` (REPLAY, REFINE200 #112): draw the box and the ATH as they stood
+    // at bar `upto` -- the Auto plan recomputed on the bars up to the scrub
+    // point, the highest high those bars reached -- instead of today's, which
+    // were drawn from bars the replay has not reached yet.
+    function applyMomentumPlan(key, upto) {
       momHandles.forEach((h) => { try { chart.removeSeries(h); } catch (_) {} });
       momHandles = [];
-      paintMomentumZones(key);
-      paintMomentumAth(key);
-      const pl = (tfs[key] || {}).plan;
+      const tfNow = tfs[key] || {};
+      const cs = upto ? (tfNow.candles || []).slice(0, upto) : (tfNow.candles || []);
+      const pl = upto ? momentumPlan(cs, tfNow.mp) : tfNow.plan;
+      d._replayPlan = upto ? (pl || null) : undefined;
+      const ath = upto ? cs.reduce((m, b) => (b.high > m ? b.high : m), -Infinity) : tfNow.ath;
+      paintMomentumZones(pl, cs);
+      paintMomentumAth(ath, pl);
       // The size line and ⧉ Plan read these two, so BOTH are set on every
       // timeframe (REFINE200 #110): a TF with no Auto box used to leave
       // _activeTf on the previous TF while ⧉ Plan fell back to the 1D plan,
@@ -3152,7 +3239,6 @@
       // did not exist then, on bars it was never measured against. Each rung is
       // now a two-point line SERIES from the signal bar to the last bar, and
       // the axis tag rides the series' own last-value label.
-      const cs = (tfs[key] || {}).candles || [];
       const [x0, xN] = momBoxSpan(pl, cs);
       const line = (price, color, label, weight) => {
         if (price == null || !isFinite(price) || x0 == null || xN == null) return;
@@ -3446,36 +3532,7 @@
         if (rsiSigS) rsiSigS.setData(pn ? pn.rsiSignal : []);
         if (rsiS) {
           rsiS.setData(pn ? pn.rsi : []);
-          // The Bear/Bull labels the owner's RSI+ pane carries, placed on the
-          // RSI line at the divergence PIVOT -- the same bar the price pane
-          // marks, so the two panes agree about when it happened.
-          if (typeof rsiS.setMarkers === "function") {
-            // EVERY divergence in the series, not just the newest one. The
-            // scan row carries only the current hit; the pane is history, and
-            // a reader judging whether this signal is worth anything needs to
-            // see how the previous ones resolved. Placed on the PIVOT bar
-            // (Pine's offset = -lbR), so the tag sits where the divergence is
-            // drawn rather than where it was confirmed.
-            const cs = (tfs[key] || {}).candles || [];
-            // P13: one tag per bar. Two divergences confirming on the same
-            // candle rendered their labels on top of each other and read as
-            // "BeaBear" -- the same collision the cross labels have (P5).
-            const taken = new Set();
-            const mk = ((tfs[key] || {}).divs || []).map((dv) => {
-              const b = cs[dv.pivot];
-              if (!b || taken.has(b.time)) return null;
-              taken.add(b.time);
-              return b ? {
-                time: b.time,
-                position: dv.bull ? "belowBar" : "aboveBar",
-                color: dv.bull ? "#3b82f6" : "#ef4444",
-                shape: dv.bull ? "arrowUp" : "arrowDown",
-                text: dv.bull ? "Bull" : "Bear",
-              } : null;
-            }).filter(Boolean);
-            mk.sort((a, b) => a.time - b.time);
-            rsiS.setMarkers(mk);
-          }
+          if (typeof rsiS.setMarkers === "function") rsiS.setMarkers(momRsiMarks(key));
         }
         applyMomentumPlan(key);
         renderMomentumFooter(d, key);       // the box changes per timeframe
@@ -3492,49 +3549,7 @@
         }
         alignPaneScales();
       }
-      if (d._momentum && typeof candle.setMarkers === "function") {
-        // Rule A marks for THIS timeframe (only 1D carries any) PLUS the scored
-        // cross labels the template writes on price: "+3 Bullish" / "-2 Bearish",
-        // signed so the direction reads without the word. Runs before
-        // applyPmZones. Caveat, recorded in reviews/2026-09-23-sweep.md: when
-        // ?pm=1 brings a PhaseMap record with a sweep/displacement,
-        // applyPmZones re-seeds from tfs[key].markers (Rule A marks only) and
-        // so drops these cross labels on that timeframe.
-        // NARROW CHARTS (< 560px): "BULL DIV" -> "DIV", "confirmed" -> a tick,
-        // and a cross reads as its signed score alone ("+2"), because on a
-        // phone the words piled into each other and under the TP tags.
-        const narrow = el.clientWidth > 0 && el.clientWidth < NARROW_CHART_PX;
-        const SHORT_TXT = { "BULL DIV": "DIV", "BEAR DIV": "DIV", confirmed: "\u2713" };
-        const base = ((tfs[key] || {}).markers || []).map((m) =>
-          (narrow && SHORT_TXT[m.text] ? Object.assign({}, m, { text: SHORT_TXT[m.text] }) : m));
-        const cs = (tfs[key] || {}).candles || [];
-        // P5 LABEL DIET. Every cross in five years carried a text label, so the
-        // flat 2021-2024 tape wore a pile-up of them that no one will ever read
-        // and that hid the bars underneath. Text is now written only inside the
-        // opening window; older crosses keep their DOT, so the history is still
-        // visible without the essay. One text per bar, so two crosses on one
-        // candle cannot stack into "BeaBear".
-        const from = cs.length >= MOM_VIEW_MIN_BARS ? momentumViewStart(cs) : 0;
-        const tMin = cs[from] ? cs[from].time : -Infinity;
-        const titled = new Set();
-        for (const x of ((tfs[key] || {}).crosses || [])) {
-          const b = cs[x.i];
-          if (!b) continue;
-          const inWindow = b.time >= tMin && x.score !== 0 && !titled.has(b.time);
-          if (inWindow) titled.add(b.time);
-          const signed = `${x.bull ? "+" : "-"}${x.score}`;
-          base.push({
-            time: b.time, position: x.bull ? "belowBar" : "aboveBar",
-            color: x.bull ? "rgba(59,130,246,0.85)" : "rgba(239,68,68,0.85)",
-            shape: "circle",
-            text: inWindow ? (narrow ? signed : `${signed} ${x.bull ? "Bullish" : "Bearish"}`) : "",
-          });
-        }
-        // setMarkers requires ascending unique times; a cross and a Rule A mark
-        // can land on one bar, so sort and let the later one sit beside it.
-        base.sort((a, b) => a.time - b.time);
-        candle.setMarkers(base);
-      }
+      if (d._momentum && typeof candle.setMarkers === "function") candle.setMarkers(momPriceMarks(key));
       applyPmZones(key);                     // PhaseMap bands ride every timeframe
       applyShade(key);                       // #9: session / weekend banding
       rsApply(key);                          // #8: re-map the RS overlay to this TF
@@ -4165,6 +4180,25 @@
         rsTrim(tCut);
         pmBands.forEach((b) => b.series.setData(
           [{ time: c[0].time, value: b.z.high }, { time: tCut, value: b.z.high }]));
+        // MOMENTUM (REFINE200 #112): the MACD / RSI panes, the divergence tags,
+        // the cross labels, the Auto box and the ATH all stop at the scrub
+        // point too. They were drawn from the WHOLE series, so a replay showed
+        // the divergences, box and high that bars after the cut produced.
+        if (d._momentum) {
+          const pn = tf.panes || null;
+          const upTo = (arr) => (arr || []).filter((p) => p.time <= tCut);
+          if (macdHistS) macdHistS.setData(pn ? upTo(pn.macdHist) : []);
+          if (macdLineS) macdLineS.setData(pn ? upTo(pn.macd) : []);
+          if (macdSigS) macdSigS.setData(pn ? upTo(pn.macdSignal) : []);
+          if (rsiSigS) rsiSigS.setData(pn ? upTo(pn.rsiSignal) : []);
+          if (rsiS) {
+            rsiS.setData(pn ? upTo(pn.rsi) : []);
+            if (typeof rsiS.setMarkers === "function") rsiS.setMarkers(momRsiMarks(curTF, tCut));
+          }
+          if (typeof candle.setMarkers === "function") candle.setMarkers(momPriceMarks(curTF, tCut));
+          applyMomentumPlan(curTF, idx);
+          renderMomentumFooter(d, curTF, d._replayPlan);
+        }
         chart.timeScale().fitContent();
         drawRedraw();
         slider.value = String(idx);
