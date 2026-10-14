@@ -1642,7 +1642,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             lines = [f"OPEN  {p['symbol']} {p.get('direction','?')} @ {p.get('entry')} "
                      f"({p.get('timeframe','?')} {p.get('entry_type','?')})"
                      for p in opened_events]
-            lines += [f"CLOSE {p['symbol']} {p.get('exit_reason','?')} @ {p.get('exit')} "
+            # `exit_price`, the field every close path writes (REFINE200 #23:
+            # this read `exit`, the backtest's name, and printed "@ None").
+            lines += [f"CLOSE {p['symbol']} {p.get('exit_reason','?')} @ {p.get('exit_price')} "
                       f"→ {(p.get('realized_r') or 0):+.2f}R"     # .get default won't catch a stored None
                       for p in closed_events]
             _alert("order_placed",

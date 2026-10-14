@@ -1201,3 +1201,23 @@ def test_a_suspect_price_never_reaches_mae(tmp_path, monkeypatch, stub_alerts):
     bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1)}, uni,
                        now=_aest(2024, 1, 3, 11, 0))
     assert bk["open"][0]["mae"] == 101.0
+
+
+# ── REFINE200 #23: the trade digest names the exit price ─────────────────────
+
+def test_the_trade_digest_prints_the_exit_price_not_none(tmp_path, monkeypatch):
+    import scanner.broker.alert_dispatch as ad
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_NOTIFY_TRADES", True)
+    sent = []
+    monkeypatch.setattr(ad, "send", lambda *a, **k: sent.append(a), raising=False)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                  now=_aest(2024, 1, 2, 11, 0))
+    sent.clear()
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(95.5)}, uni,     # through the 96 stop
+                       now=_aest(2024, 1, 3, 11, 0))
+    assert bk["closed"] and bk["closed"][0]["exit_price"] == 95.5
+    (digest,) = [a for a in sent if a[0] == "order_placed"]
+    body = digest[2]
+    assert "CLOSE BHP stop @ 95.5" in body and "None" not in body
