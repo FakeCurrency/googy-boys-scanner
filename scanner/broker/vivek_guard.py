@@ -240,7 +240,8 @@ def _window_r(pos: dict, since: str, day: str, price: float | None) -> dict:
 def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict:
     """Aggregate `_window_r` across a market's open + closed positions.
 
-    `since` == `day` gives the session; `since` == day-7 gives the week.
+    `since` == `day` gives the session; `since` == day-6 gives the week (seven
+    calendar days, today included). Both bounds are inclusive.
     """
     banked = unrealised = worst = 0.0
     realised = 0.0
@@ -323,12 +324,19 @@ def session_pnl(book: dict, market: str, day: str, price_of) -> dict:
 def week_pnl(book: dict, market: str, day: str, price_of) -> dict:
     """Trailing-7-calendar-day P&L for `market`, same maths over a wider window.
 
-    Returns the same shape as `session_pnl` (minus `open_total_usd`), or None
-    when `day` is not a parseable date — an unknown window must not be reported
-    as a zero one.
+    SEVEN days, today included: [day-6 .. day]. The cutoff was day-7 until
+    2026-10-14 (REFINE200 #18), and with both bounds inclusive that window was
+    EIGHT calendar days -- a loss from the same weekday last week was still
+    being counted against this week's limit.
+
+    Returns the same shape as `session_pnl` (minus `open_total_usd`), or an
+    EMPTY dict when `day` is not a parseable date — an unknown window must not
+    be reported as a zero one, and `check` fails closed on it (#17).
     """
+    days = int(getattr(config, "VIVEK_BOT_WEEKLY_WINDOW_DAYS", 7) or 7)
     try:
-        cutoff = (_dt.date.fromisoformat(day) - _dt.timedelta(days=7)).isoformat()
+        cutoff = (_dt.date.fromisoformat(day)
+                  - _dt.timedelta(days=days - 1)).isoformat()
     except (ValueError, TypeError):
         return {}
     return _window_pnl(book, market, cutoff, day, price_of)
@@ -355,6 +363,13 @@ def check(book: dict, market: str, day: str, equity: float, price_of) -> dict:
     unbounded worst case would halt the book permanently the first time a name
     became unpriceable (MDB did exactly that for weeks — see CLAUDE.md), and a
     guard that never lifts is a guard nobody leaves switched on.
+
+    AN UNKNOWN WEEK FAILS CLOSED TOO (2026-10-14, REFINE200 #17). `week_pnl`
+    returns an empty dict when `day` will not parse, and this function read it
+    with `.get("session_usd", 0.0)` -- the unknown week became a $0 week and
+    passed. With a weekly limit armed it is now an `unmeasured` breach
+    (`week_measured` False); the published `week_usd` stays 0.0 only so every
+    reader that formats it as a number keeps working.
     """
     pnl = session_pnl(book, market, day, price_of)
     pct = getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.0) or 0.0
@@ -364,14 +379,17 @@ def check(book: dict, market: str, day: str, equity: float, price_of) -> dict:
     wpct = getattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 0.0) or 0.0
     wlimit = round(equity * (wpct / 100.0), 2)
     week = week_pnl(book, market, day, price_of)
-    wusd = week.get("session_usd", 0.0)
-    weekly_breach = wlimit > 0 and wusd <= -wlimit
+    week_measured = bool(week)
+    wusd = week.get("session_usd", 0.0) if week_measured else 0.0
+    weekly_breach = week_measured and wlimit > 0 and wusd <= -wlimit
 
     # Fail closed: could the part we could not measure carry either window over?
     worst_day = round(pnl["session_usd"] + pnl["unpriced_worst_usd"], 2)
     worst_week = round(wusd + week.get("unpriced_worst_usd", 0.0), 2)
-    unmeasured_breach = bool(pnl["unpriced"]) and not (daily_breach or weekly_breach) and (
-        (limit > 0 and worst_day <= -limit) or (wlimit > 0 and worst_week <= -wlimit)
+    unmeasured_breach = not (daily_breach or weekly_breach) and (
+        (wlimit > 0 and not week_measured)
+        or (bool(pnl["unpriced"]) and (
+            (limit > 0 and worst_day <= -limit) or (wlimit > 0 and worst_week <= -wlimit)))
     )
 
     return {
@@ -382,6 +400,7 @@ def check(book: dict, market: str, day: str, equity: float, price_of) -> dict:
                         "unmeasured" if unmeasured_breach else None),
         "limit_usd": limit, "limit_pct": pct,
         "week_usd": wusd, "week_limit_usd": wlimit, "week_limit_pct": wpct,
+        "week_measured": week_measured,
         "week_unpriced_worst_usd": week.get("unpriced_worst_usd", 0.0),
         "worst_session_usd": worst_day, "worst_week_usd": worst_week,
         **pnl,

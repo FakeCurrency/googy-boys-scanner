@@ -30,21 +30,27 @@ def test_session_pnl_sums_today_realised_and_open_unrealised():
     assert pnl["open"] == 1
 
 
+# A real date, not a placeholder: since REFINE200 #17 an unparseable day is an
+# UNKNOWN week, which fails closed whenever the weekly limit is armed.
+D = "2024-01-02"
+
+
 def test_check_breaches_at_the_equity_limit(monkeypatch):
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)
     # equity 10,000 → limit $300. A -$400 realised loss breaches it.
-    over = {"open": [], "closed": [{"market": "asx", "exit_date": "d", "realized_r": -1.0, "risk_usd": 400.0}]}
-    g = vg.check(over, "asx", "d", 10_000, lambda s: None)
+    over = {"open": [], "closed": [{"market": "asx", "exit_date": D, "realized_r": -1.0, "risk_usd": 400.0}]}
+    g = vg.check(over, "asx", D, 10_000, lambda s: None)
     assert g["breached"] is True and g["limit_usd"] == pytest.approx(300.0)
 
-    under = {"open": [], "closed": [{"market": "asx", "exit_date": "d", "realized_r": -1.0, "risk_usd": 200.0}]}
-    assert vg.check(under, "asx", "d", 10_000, lambda s: None)["breached"] is False
+    under = {"open": [], "closed": [{"market": "asx", "exit_date": D, "realized_r": -1.0, "risk_usd": 200.0}]}
+    assert vg.check(under, "asx", D, 10_000, lambda s: None)["breached"] is False
 
 
 def test_zero_limit_never_breaches(monkeypatch):
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.0)
-    book = {"open": [], "closed": [{"market": "asx", "exit_date": "d", "realized_r": -10.0, "risk_usd": 999.0}]}
-    assert vg.check(book, "asx", "d", 10_000, lambda s: None)["breached"] is False
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 0.0)
+    book = {"open": [], "closed": [{"market": "asx", "exit_date": D, "realized_r": -10.0, "risk_usd": 999.0}]}
+    assert vg.check(book, "asx", D, 10_000, lambda s: None)["breached"] is False
 
 
 # ── partially-scaled runners (2026-07-20, review C6) ────────────────────────────
@@ -433,3 +439,79 @@ def test_an_infinite_risk_usd_cannot_poison_the_total():
     pnl = vg.session_pnl({"open": [p], "closed": []}, "asx", "2026-07-28",
                          lambda s: 96.0)
     assert pnl["session_usd"] == pytest.approx(0.0)      # junk size -> $0, not inf/NaN
+
+
+# ── REFINE200 #17: an unknown week fails closed ───────────────────────────────
+
+def test_an_unparseable_day_halts_rather_than_reading_the_week_as_zero(monkeypatch):
+    """`week.get("session_usd", 0.0)` turned an unknown week into a $0 week."""
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 6.0)
+    g = vg.check({"open": [], "closed": []}, "asx", "not-a-date", 10_000,
+                 lambda s: 100.0)
+    assert g["week_measured"] is False
+    assert g["breached"] is True and g["breach_kind"] == "unmeasured"
+    assert g["week_usd"] == 0.0                     # still a number for its readers
+
+
+def test_an_unknown_week_with_the_weekly_guard_off_does_not_halt(monkeypatch):
+    """Nothing to rule out when there is no weekly limit to breach."""
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 0.0)
+    g = vg.check({"open": [], "closed": []}, "asx", "not-a-date", 10_000,
+                 lambda s: 100.0)
+    assert g["breached"] is False and g["week_measured"] is False
+
+
+def test_a_measured_week_reports_itself_measured(monkeypatch):
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 6.0)
+    g = vg.check({"open": [], "closed": []}, "asx", "2026-07-28", 10_000,
+                 lambda s: 100.0)
+    assert g["week_measured"] is True and g["breached"] is False
+
+
+def test_a_real_daily_breach_on_an_unknown_week_still_reads_daily(monkeypatch):
+    """The unmeasured kind is for 'cannot rule out', never a mask on a breach
+    that was actually measured."""
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 6.0)
+    book = {"open": [], "closed": [{"market": "asx", "exit_date": "not-a-date",
+                                    "realized_r": -1.0, "risk_usd": 400.0}]}
+    g = vg.check(book, "asx", "not-a-date", 10_000, lambda s: None)
+    assert g["breached"] is True and g["breach_kind"] == "daily"
+
+
+# ── REFINE200 #18: "trailing 7 calendar days" is seven, today included ────────
+
+def _stopped(exit_date, r=-1.0, risk_usd=100.0):
+    return {"market": "asx", "exit_date": exit_date, "realized_r": r,
+            "risk_usd": risk_usd}
+
+
+def test_the_weekly_window_is_seven_calendar_days_including_today():
+    day = "2026-07-28"                               # a Tuesday
+    inside = vg.week_pnl({"open": [], "closed": [_stopped("2026-07-22")]},
+                         "asx", day, lambda s: None)   # day-6: last Wednesday
+    outside = vg.week_pnl({"open": [], "closed": [_stopped("2026-07-21")]},
+                          "asx", day, lambda s: None)  # day-7: same weekday last week
+    assert inside["realised_usd"] == pytest.approx(-100.0)
+    assert outside["realised_usd"] == pytest.approx(0.0)
+    assert vg.week_pnl({"open": [], "closed": [_stopped(day)]}, "asx", day,
+                       lambda s: None)["realised_usd"] == pytest.approx(-100.0)
+
+
+def test_the_weekly_window_reads_its_length_from_config():
+    assert config.VIVEK_BOT_WEEKLY_WINDOW_DAYS == 7
+    from scanner.broker import vivek_run as vr
+    # The day references the window measures from must outlive it.
+    assert vr._DAY_MARK_KEEP >= config.VIVEK_BOT_WEEKLY_WINDOW_DAYS
+
+
+def test_the_week_measures_open_positions_from_the_mark_carried_into_day_minus_6():
+    p = _dated(entry_date="2026-07-01", risk_usd=40.0,
+               day_marks={"2026-07-21": 90.0, "2026-07-22": 95.0,
+                          "2026-07-28": 99.0})
+    w = vg.week_pnl({"open": [p], "closed": []}, "asx", "2026-07-28",
+                    lambda s: 100.0)
+    # from 95 (carried into 07-22) to 100 = +5 / risk 4 = +1.25R x $40
+    assert w["unrealised_usd"] == pytest.approx(50.0)
