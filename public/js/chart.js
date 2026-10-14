@@ -231,6 +231,52 @@
     // zones used to require anyway.
     if (isMomentum && params.get("pm") !== "1") return Promise.resolve(null);
     const want = decodeURIComponent(symbol || "").toUpperCase();
+    // ONE RECORD, ONE SMALL FILE (REFINE200 #71). This used to download the
+    // market's whole latest.json (~1 MB) plus narrations.json (~234 KB) to
+    // read one record. The nightly now also writes each ticker's record(s)
+    // and narration into its per-ticker chart file -- the file pmChartBars
+    // reads for candles, so with fetchJsonOnce it is a single request. That
+    // file exists exactly when the ticker has a record (phasemap/run.py
+    // writes it for every ticker with results and prunes the rest), so a 404
+    // means "no PhaseMap setup" and costs nothing more. A file from before
+    // the record keys existed falls through to the old two-file read.
+    return fetchJsonOnce(pmTickerUrl(want))
+      .then((tj) => {
+        if (!tj) return null;
+        const rec = pmRecFromTickerFile(tj, want, pmDirWanted);
+        return rec !== undefined ? rec : pmRecFromLatest(want);
+      })
+      .catch(() => null);
+  }
+  const pmTickerUrl = (sym) => `data/phasemap/charts/${market}/${encodeURIComponent(sym)}.json`;
+  // The record (with its narration) out of a per-ticker file, null when the
+  // file says this ticker has none, or UNDEFINED when the file predates the
+  // record keys (the caller then reads latest.json). Tolerant of both shapes
+  // the writer may use: `record` (one, or a list) or `records`, with the
+  // narration on the record, as `narration` (a string for the one record, or
+  // an object keyed by direction / "TICKER|direction"), or as `narrations`.
+  function pmRecFromTickerFile(tj, want, dirWanted) {
+    if (!tj || typeof tj !== "object") return undefined;
+    const has = (k) => Object.prototype.hasOwnProperty.call(tj, k);
+    if (!has("record") && !has("records")) return undefined;
+    const raw = has("records") ? tj.records : tj.record;
+    const recs = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+      .filter((r) => r && typeof r === "object")
+      .filter((r) => !r.ticker || String(r.ticker).toUpperCase() === want);
+    if (!recs.length) return null;
+    const pick = recs.find((r) => r.direction === dirWanted) || recs[0];
+    const rec = Object.assign({}, pick);
+    if (rec.narration == null) {
+      const n = has("narrations") ? tj.narrations : tj.narration;
+      rec.narration = typeof n === "string" ? (recs.length === 1 ? n : "")
+        : (n && typeof n === "object")
+          ? (n[`${rec.ticker || want}|${rec.direction}`] ?? n[rec.direction] ?? "")
+          : "";
+    }
+    return rec;
+  }
+  // The pre-#71 path: the whole market file plus the narrations sidecar.
+  function pmRecFromLatest(want) {
     // narrations live in a sidecar file since 2026-07-05 (slimmer latest.json)
     return Promise.all([
       fetch(`data/phasemap/${market}/latest.json`, { cache: "no-cache" })
@@ -263,6 +309,25 @@
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // ONE request per data file per page load (REFINE200 #116). Opening one
+  // VIVEK chart fetched <market>_vivek.json THREE times -- the result meta,
+  // the prev/next list and the bot banner each asked for it and parsed it on
+  // their own (NASDAQ: 554 KB, x3) -- and a PhaseMap name read its per-ticker
+  // file twice (zones record + candles). Every reader now shares the first
+  // request's parsed JSON. Resolves null on any failure, never rejects, so a
+  // shared failure cannot turn into an unhandled rejection in a second
+  // reader. Readers must treat the object as READ-ONLY apart from the
+  // harmless display stamp fetchResultMeta adds to its own row.
+  const _jsonOnce = new Map();
+  function fetchJsonOnce(url) {
+    if (!_jsonOnce.has(url)) {
+      _jsonOnce.set(url, fetch(url, { cache: "no-cache" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null));
+    }
+    return _jsonOnce.get(url);
+  }
 
   // ── live crypto data (Binance public API — keyless, CORS-ok, 24/7) ──────────
   // Every crypto-scalp coin trades as <SYMBOL>USDT on Binance, so we derive the
@@ -1395,9 +1460,7 @@
   // Candles prefer the scan's saved daily file (deterministic, works offline),
   // falling back to live history.
   function pmChartBars(SYM) {
-    return fetch(`data/phasemap/charts/${market}/${encodeURIComponent(SYM)}.json`,
-      { cache: "no-cache" })
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    return fetchJsonOnce(pmTickerUrl(String(SYM).toUpperCase()))
       .then((j) => ((j && j.candles) || []).map((c) => ({
         time: Math.floor(Date.parse(c.t + "T00:00:00Z") / 1000),
         open: c.o, high: c.h, low: c.l, close: c.c, volume: c.v || 0,
@@ -1507,8 +1570,7 @@
   // says whose plan it is on every chart.
   function momentumRow(SYM) {
     const want = String(SYM || "").toUpperCase();
-    return fetch(`data/momentum/${market}.json`, { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null))
+    return fetchJsonOnce(`data/momentum/${market}.json`)
       .then((j) => {
         if (!j) return null;
         const row = ((j.results) || []).find(
@@ -1821,9 +1883,9 @@
       list.replaceChildren();
       hint.textContent = "";
       try {
-        const r = await fetch(`data/${mktSel.value}_vivek.json`, { cache: "no-cache" });
-        if (!r.ok) return;
-        const rows = (await r.json()).results || [];
+        const j = await fetchJsonOnce(`data/${mktSel.value}_vivek.json`);
+        if (!j) return;
+        const rows = j.results || [];
         for (const row of rows.slice(0, 400)) {
           const o = document.createElement("option");
           o.value = String(row.symbol || "").toUpperCase();
@@ -3439,7 +3501,12 @@
     // (pmOnlyFallback / heldPlanFallback) specifically so it could be shown —
     // forcing the 15M/30M/1H live stream here discarded all of it and was the
     // reason a crypto position's chart never opened on Daily (2026-08-20).
-    const pair = (!d._vivek && !d._heldPlan && !d._pm && (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
+    // `_momentum` too (REFINE200 #104, found on the way): a crypto Momentum
+    // chart built its own D / 3D / W / 4H Auto plans and panes, and this line
+    // then threw them away for the 15M / 30M / 1H scalp stream -- the panes
+    // sat empty and the Momentum box never drew.
+    const pair = (!d._vivek && !d._heldPlan && !d._pm && !d._momentum &&
+                  (d.asset_type === "crypto" || market === "crypto")) ? cryptoPair(SYM) : null;
     const liveCtx = { chart, candle, vol, lineSeries, momSeries, posDir, entryEpoch, shadeSeries };
     wirePng(chart, d, () => curTF);   // #76: PNG export needs the live chart handle
 
@@ -4455,12 +4522,11 @@
     const host = document.querySelector(".chart-main");
     if (!host) return;
     try {
-      const [bookR, scanR] = await Promise.all([
-        fetch("data/vivek_bot_book.json", { cache: "no-cache" }),
-        fetch(`data/${market}_vivek.json`, { cache: "no-cache" }),
-      ]);
-      if (!bookR.ok) return;
-      const book = await bookR.json();
+      // The book first: only a HELD name needs the scan file (to say whether
+      // the read flipped), so a chart of anything else never downloads it
+      // here (REFINE200 #116 -- a VIVEK chart shares the request anyway).
+      const book = await fetchJsonOnce("data/vivek_bot_book.json");
+      if (!book) return;
       const want = decodeURIComponent(symbol || "").toUpperCase();
       const pos = (book.open || []).find((p) =>
         String(p.symbol).toUpperCase() === want &&
@@ -4468,9 +4534,9 @@
       if (!pos) return;
       const dirUp = String(pos.direction || "long").toUpperCase();
       let flip = "";
-      if (scanR.ok) {
-        const j = await scanR.json();
-        const row = (j.results || []).find((r) => String(r.symbol).toUpperCase() === want);
+      const scan = await fetchJsonOnce(`data/${market}_vivek.json`);
+      if (scan) {
+        const row = (scan.results || []).find((r) => String(r.symbol).toUpperCase() === want);
         const nowDir = row ? String(row.dir || "").toUpperCase() : null;
         if (nowDir && nowDir !== dirUp) {
           flip = `<div class="bpb-flip">⚠ THE CHART NOW READS ${esc(nowDir)} — this setup flipped AFTER entry. ` +
@@ -4492,6 +4558,20 @@
 
 
 
+  // The scan file behind this chart's mode, and how its rows name a symbol.
+  // ONE answer for the result meta and the prev/next list (REFINE200 #104).
+  // A Momentum chart used to fall through both lookups to data/<market>.json,
+  // a file that does not exist: a 404 on every Momentum open, and no arrows.
+  // The _reversal / _short suffixes named lenses removed months ago (a mode
+  // only m=scalp could ever reach, where the scalp file wins anyway).
+  function scanSource() {
+    if (market === "scalp") {
+      return { file: "data/scalp.json", sOf: (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}` };
+    }
+    if (isMomentum) return { file: `data/momentum/${market}.json`, sOf: (r) => r.symbol };
+    return { file: `data/${market}${mode === "spec" ? "_spec" : "_vivek"}.json`, sOf: (r) => r.symbol };
+  }
+
   // ── prev / next through the scanner result list ──────────────────────────────
   // Lets you step down the same scan (e.g. all ASX VIVEK setups) without bouncing
   // back to the dashboard. Reads the scan-results JSON that backs this chart,
@@ -4505,15 +4585,12 @@
     // PhaseMap/Specs results meant a round-trip to the tab per ticker.
     const navSrc = (params.get("src") || "").toLowerCase();
     const isScalp = market === "scalp";
-    const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
-                  : mode === "short"    ? "_short"    : mode === "vivek" ? "_vivek" : "";
-    let file = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
-    let sOf = isScalp
-      ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
-      : (r) => r.symbol;
+    let { file, sOf } = scanSource();
     let hrefFor = (s) => isScalp
       ? `chart.html?m=scalp&s=${encodeURIComponent(s)}`
-      : `chart.html?m=${market}&s=${encodeURIComponent(s)}${mode !== "pullback" ? `&mode=${mode}` : ""}`;
+      // A Momentum chart steps the Momentum list and stays a Momentum chart.
+      : isMomentum ? `chart.html?m=${market}&s=${encodeURIComponent(s)}&src=momentum`
+      : `chart.html?m=${market}&s=${encodeURIComponent(s)}&mode=${mode}`;
 
     // flt=… carries the source page's filters + sort, so the arrows step
     // through exactly the list the user was looking at (2026-07-03).
@@ -4581,8 +4658,7 @@
       };
     }
 
-    fetch(file, { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null))
+    fetchJsonOnce(file)
       .then((j) => {
         const list = listFilter((j && j.results) || []).map(sOf);
         const cur = navSrc === "phasemap"
@@ -4635,22 +4711,17 @@
   // missing. Resolves to null if the results file or row isn't found.
   function fetchResultMeta() {
     const isScalp = market === "scalp";
-    const suffix  = mode === "reversal" ? "_reversal" : mode === "spec" ? "_spec"
-                  : mode === "short"    ? "_short"    : mode === "vivek" ? "_vivek" : "";
-    const file    = isScalp ? "data/scalp.json" : `data/${market}${suffix}.json`;
-    const sOf     = isScalp
-      ? (r) => `${r.symbol}_${String(r.dir || "").toLowerCase()}`
-      : (r) => r.symbol;
+    const { file, sOf } = scanSource();
     const want = decodeURIComponent(symbol).toUpperCase();
-    return fetch(file, { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null))
+    return fetchJsonOnce(file)
       .then((j) => {
         const rows = (j && j.results) || [];
-        const row  = rows.find((r) => String(sOf(r)).toUpperCase() === want);
-        if (row && j) {
-          // Carry the per-scan currency onto the row so the fallback labels match.
-          row.currency_symbol = row.currency_symbol || j.currency_symbol || "$";
-        }
+        const found = rows.find((r) => String(sOf(r)).toUpperCase() === want);
+        // Carry the per-scan currency onto a COPY of the row so the fallback
+        // labels match (the parsed file is shared with the other readers).
+        const row = found && j
+          ? Object.assign({}, found, { currency_symbol: found.currency_symbol || j.currency_symbol || "$" })
+          : found;
         // v5 payload split (2026-07-31): a split summary carries LITE plans
         // only, and the ladder below draws full per-TF plans + markers. Join
         // the detail sidecar for THIS symbol before handing the row on. A
