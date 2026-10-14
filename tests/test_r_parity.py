@@ -27,7 +27,7 @@ from scanner import vivek_journal
 from scanner.momentum import backtest as mbt
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-HIST = ROOT / "data" / "history" / "asx"
+HIST = ROOT / "tests" / "fixtures" / "history" / "asx"   # frozen real bars (2026-10-14)
 _spec = importlib.util.spec_from_file_location("r_parity", ROOT / "scripts" / "r_parity.py")
 rp = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(rp)
@@ -39,8 +39,7 @@ NAMES = ("CBA", "ELS", "AEV")          # AEV is a sub-$0.50 name, so Specs fires
 def doc():
     rows = [{"symbol": s, "yf": f"{s}.AX", "name": f"{s} Limited", "sector": ""} for s in NAMES]
     frames = rp._load_frames(HIST, rows)
-    if len(frames) < len(NAMES):
-        pytest.skip("committed history missing a test name")
+    assert len(frames) == len(NAMES), f"a frozen fixture is missing: {sorted(frames)}"
     return rp.replay_frames("asx", frames, {u["yf"]: u for u in rows})
 
 
