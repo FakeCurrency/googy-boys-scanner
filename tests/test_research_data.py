@@ -5,7 +5,8 @@ sensitivity and the confluence study were committed under public/data/, so
 Cloudflare shipped ~5 MB that no page reads. They moved to data/research/
 (still committed, still recomputable), and the parity writer's defaults moved
 with them. Four Discord-era files (a webhook preview, an email preview and two
-TradingView watchlists) had no writer and no reader and were deleted.
+TradingView watchlists), a 2026-08-20 write probe and the retired AI BOT's
+event calendar had no writer and no reader and were deleted.
 
 The one trap in the move is the FX rate: `set_fx_path` reads fx.json from the
 DIRECTORY of the report, and data/research/ has none, so a default parity run
@@ -43,6 +44,9 @@ DELETED_ORPHANS = (
     "watchlist_asx.txt",
     "watchlist_nasdaq.txt",
     ".grok-write-probe.txt",
+    # The AI BOT's economic calendar: nothing has read or written it since
+    # that page went (2026-09-17); backups dropped it the same day as this.
+    "events.json",
 )
 
 
