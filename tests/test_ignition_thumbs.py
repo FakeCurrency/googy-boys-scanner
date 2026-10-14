@@ -565,6 +565,7 @@ def test_a_clean_chart_build_still_prints_its_line_and_publishes_a_zero(cli, cap
     assert (charts["chart_errors"], charts["chart_error_sample"]) == (0, [])
 
 
+@pytest.mark.slow
 def test_a_dry_run_and_a_backtest_never_publish_a_sidecar(cli):
     assert RUN.main(["--market", "crypto", "--dry-run"]) == 0
     assert cli["published"] == []

@@ -43,27 +43,32 @@ def doc():
     return rp.replay_frames("asx", frames, {u["yf"]: u for u in rows})
 
 
+@pytest.mark.slow
 def test_every_lens_trades_on_the_same_bars(doc):
     lenses = {t["lens"] for t in doc["trades"]}
     assert lenses == set(rp.LENSES), lenses
     assert doc["errors"] == {} and doc["replayed"] == len(NAMES)
 
 
+@pytest.mark.slow
 def test_the_5_0_worst_print_re_score_is_the_evidence_engine(doc):
     assert doc["vivek_check"].get("compared", 0) > 0
     assert doc["vivek_check"].get("mismatch", 0) == 0
 
 
+@pytest.mark.slow
 def test_one_trade_set_and_the_worst_print_is_never_better(doc):
     for t in doc["trades"]:
         assert t["w"] <= t["r"] + 1e-9, t
 
 
+@pytest.mark.slow
 def test_the_one_percent_minimum_stop_binds_every_lens(doc):
     for t in doc["trades"]:
         assert t["k"] / t["e"] * 100.0 >= config.VIVEK_BOT_MIN_STOP_PCT - 1e-9, t
 
 
+@pytest.mark.slow
 def test_the_5_0_headline_replay_is_long_only_and_carries_the_splits(doc):
     v = [t for t in doc["trades"] if t["lens"] == "vivek"]
     assert {t["tf"] for t in v} <= {"1D", "3D", "1W"}
@@ -217,6 +222,7 @@ def test_the_script_writes_only_the_paths_it_is_handed():
                                     for w in writes), [ast.unparse(w) for w in writes]
 
 
+@pytest.mark.slow
 def test_a_name_the_first_download_pass_missed_gets_one_more_try(monkeypatch, tmp_path):
     """29 shards hit Yahoo at once and a throttled batch comes back empty; one
     more pass after a pause recovers what it can, and the shard's coverage

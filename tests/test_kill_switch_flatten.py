@@ -10,7 +10,7 @@ from scanner import config
 from scanner.broker import kill_switch as ks
 from scanner.journal_common import session_day
 
-pytestmark = pytest.mark.pretrade
+pytestmark = pytest.mark.risk
 
 
 def test_kill_switch_quiet_inside_limit():
