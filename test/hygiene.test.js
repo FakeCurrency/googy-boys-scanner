@@ -96,6 +96,16 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
      "js/chart.js: the bot_rules.json fetch fed only the deleted cost model");
 }
 
+// REFINE200 WP16: .view-tab(s) / .watch-count styled the dashboard's old view
+// tabs and the specs stars count; the stars path went 2026-09-21 and no page
+// or script creates either class since.
+{
+  const css = code("css/styles.css");
+  ok(css.includes(".toolbar {"), "css/styles.css moved -- pin would be vacuous");
+  ok(!/\.view-tabs?\b|\.watch-count\b/.test(css.replace(/\/\*[\s\S]*?\*\//g, "")),
+     "css/styles.css: .view-tab(s) / .watch-count rules were proven dead and deleted 2026-10-14");
+}
+
 // SWEEP (2026-09-23) -- journal.css rules for the manual "Me" journal, which
 // was removed 2026-09-21: its modal, form, tabs, Claude-vs-Me scoreboard,
 // row action buttons, close preview, sync pill and the retired header
