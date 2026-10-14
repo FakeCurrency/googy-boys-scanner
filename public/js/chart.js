@@ -711,15 +711,44 @@
     return out;
   }
   // Daily bars -> one bar per `n` TRADING SESSIONS (no weekend padding),
-  // counted from the first loaded session and stamped at the group's first.
-  function sessionGroups(bars, n) {
+  // stamped at the group's first session.
+  //
+  // COUNTED FROM A FIXED ANCHOR (REFINE200 #114), not from the first loaded
+  // bar. The daily pull is a sliding 25-year window, so for any name listed
+  // longer than that the first bar moves forward one session every session,
+  // and counting from it regrouped EVERY 3D candle -- and the 3D Auto plan
+  // built on them -- every day with no new information (measured: the last
+  // three 3D bars started 1/6/9 Oct on one load, 2/7/12 Oct the next).
+  // Groups are now multiples of `n` sessions either side of the first bar
+  // on/after `anchorDay`, which every 25y window contains; a series that
+  // starts after the anchor (a younger listing) counts from its own first
+  // bar, a listing date that does not move. No anchor = the old count.
+  // Daily bars carry their exchange date at 00:00Z (toExchangeDates), so the
+  // UTC date below is the session's date.
+  const MOM_3D_ANCHOR = "2020-01-06";      // a Monday
+  function sessionGroups(bars, n, anchorDay) {
     const out = [];
-    for (let i = 0; i < bars.length; i += n) {
-      const g = bars.slice(i, i + n);
-      let hi = -Infinity, lo = Infinity, vol = 0;
-      for (const b of g) { hi = Math.max(hi, b.high); lo = Math.min(lo, b.low); vol += b.volume || 0; }
-      out.push({ time: g[0].time, open: g[0].open, high: hi, low: lo, close: g[g.length - 1].close, volume: vol });
+    let a = 0;
+    if (anchorDay) {
+      const i = bars.findIndex((b) => new Date(b.time * 1000).toISOString().slice(0, 10) >= anchorDay);
+      a = i < 0 ? bars.length : i;
     }
+    let cur = null, curKey = null;
+    for (let i = 0; i < bars.length; i++) {
+      const b = bars[i];
+      const key = Math.floor((i - a) / n);
+      if (key !== curKey) {
+        if (cur) out.push(cur);
+        cur = { time: b.time, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+        curKey = key;
+      } else {
+        cur.high = Math.max(cur.high, b.high);
+        cur.low = Math.min(cur.low, b.low);
+        cur.close = b.close;
+        cur.volume += b.volume || 0;
+      }
+    }
+    if (cur) out.push(cur);
     return out;
   }
   // Daily bars -> Monday-start weeks on the EXCHANGE's calendar date, stamped at
@@ -1592,7 +1621,15 @@
   function momentumMarkers(row, bars) {
     if (!row || !row.rule_a || !bars || !bars.length) return [];
     const bull = String(row.rule_a_direction || row.direction || "bull") === "bull";
-    const last = bars.length - 1;
+    // "N bars ago" is counted back from the SCAN's last bar (row.last_bar), not
+    // the chart's. The pivot below already preferred its date for exactly this
+    // reason, but the confirmation still counted from the chart's newest bar,
+    // so with a live feed one session ahead of the committed scan "confirmed"
+    // sat on a session the scan never evaluated (REFINE200 #111: EOS, scan
+    // through 13 Oct, mark on 14 Oct). No last_bar -> the chart's last bar.
+    const lastDate = String(row.last_bar || "").slice(0, 10);
+    const anchor = lastDate ? barAtDate(bars, lastDate) : null;
+    const last = anchor ? bars.indexOf(anchor) : bars.length - 1;
     const byAgo = (n) => (Number.isFinite(+n) && +n >= 0 && last - +n >= 0 ? bars[last - +n] : null);
     // Prefer the explicit pivot DATE -- it survives a chart whose last bar is
     // not the scan's last bar (a live feed one session ahead of the committed
@@ -1707,7 +1744,7 @@
         // Exchange-session bars for a listed market (see MOM_SESSION); crypto
         // trades 24/7 and keeps the UTC buckets. Daily is never regrouped.
         const sess = MOM_SESSION[market] || null;
-        const d3 = sess ? sessionGroups(daily, 3) : bucketBars(daily, 3 * 86400);
+        const d3 = sess ? sessionGroups(daily, 3, MOM_3D_ANCHOR) : bucketBars(daily, 3 * 86400);
         if (d3.length >= 6) d.timeframes["3D"] = build(d3);
         const wk = sess ? sessionWeeks(daily, sess) : resampleWeekly(daily);
         if (wk.length >= 6) d.timeframes["1W"] = build(wk);
@@ -2305,6 +2342,12 @@
       acct = +($("#ms-acct").value || 0);
       risk = +($("#ms-risk").value || 0);
       try { localStorage.setItem(LS_ACCT, String(acct)); localStorage.setItem(LS_RISK, String(risk)); } catch (_) {}
+      // A timeframe with no plan of its own (a Momentum TF with no Auto box)
+      // sizes NOTHING rather than quietly sizing the Daily plan under its name.
+      if (d._activeTf && d._activeLevels === null) {
+        out.textContent = `No plan on ${d._activeTf} — nothing to size.`;
+        return;
+      }
       const plan = planNow();
       const dist = Math.abs(plan.entry - plan.stop);
       if (!(acct > 0) || !(risk > 0) || !(dist > 0)) { out.textContent = ""; return; }
@@ -2646,6 +2689,21 @@
         timeScale: { borderColor: "rgba(110,125,150,0.22)", rightOffset: 6, visible: true },
       }));
       subCharts = [macdChart, rsiChart];
+      // THE PANES RESIZE WITH THE PAGE (REFINE200 #102). They were sized once,
+      // at creation, and the only ResizeObserver resized the PRICE chart: after
+      // a window resize or a phone rotation both panes kept their old width
+      // (measured: price 868px, panes 1468px at a 900px window), so bar i no
+      // longer sat under candle i -- the logical-range sync and the equal
+      // axis-width rule below both assume three equally wide plots.
+      const paneRo = new ResizeObserver(() => {
+        [[macdChart, macdBox], [rsiChart, rsiBox]].forEach(([c, b]) => {
+          try { c.applyOptions({ width: b.clientWidth, height: b.clientHeight }); } catch (_) {}
+        });
+        alignPaneScales();
+      });
+      paneRo.observe(macdBox);
+      paneRo.observe(rsiBox);
+      onRenderTeardown(() => paneRo.disconnect());
 
       macdHistS = macdChart.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false });
       macdLineS = macdChart.addLineSeries({ color: "#2196f3", lineWidth: 2, priceLineVisible: false, lastValueVisible: false });
@@ -3023,14 +3081,26 @@
       momRiskBand = mkBand("rgba(239,68,68,0.16)");
       momRewardBand = mkBand("rgba(59,130,246,0.14)");
     }
+    // The box spans the signal bar to the right edge, as the Pine box does.
+    // When the signal IS the last bar (age 0, the day it fires) that is a
+    // one-point series, which Lightweight Charts silently draws as NOTHING:
+    // every rung and both bands vanished on exactly the day the signal was
+    // newest, while the footer said "Signal 0b ago" (REFINE200 #103). The box
+    // then starts one bar earlier, so it shows from day one with the signal
+    // bar inside it.
+    function momBoxSpan(pl, cs) {
+      if (!cs.length) return [null, null];
+      let x0 = pl && pl.bar && pl.bar.time ? pl.bar.time : cs[0].time;
+      const xN = cs[cs.length - 1].time;
+      if (x0 >= xN && cs.length > 1) x0 = cs[cs.length - 2].time;
+      return [x0, xN];
+    }
     function paintMomentumZones(key) {
       if (!momRiskBand) return;
       const pl = (tfs[key] || {}).plan;
       const cs = (tfs[key] || {}).candles || [];
       if (!pl || !cs.length) { momRiskBand.setData([]); momRewardBand.setData([]); return; }
-      // The box spans the signal bar to the right edge, as the Pine box does.
-      const t0 = pl.bar && pl.bar.time ? pl.bar.time : cs[0].time;
-      const tN = cs[cs.length - 1].time;
+      const [t0, tN] = momBoxSpan(pl, cs);
       const span = (base, top) => {
         const lo = Math.min(base, top), hi = Math.max(base, top);
         return { lo, hi, rows: [{ time: t0, value: hi }, { time: tN, value: hi }] };
@@ -3063,7 +3133,16 @@
       paintMomentumZones(key);
       paintMomentumAth(key);
       const pl = (tfs[key] || {}).plan;
-      if (!pl) { d._activeLevels = null; return; }
+      // The size line and ⧉ Plan read these two, so BOTH are set on every
+      // timeframe (REFINE200 #110): a TF with no Auto box used to leave
+      // _activeTf on the previous TF while ⧉ Plan fell back to the 1D plan,
+      // and "My size" was never recomputed on a switch at all.
+      d._activeTf = key;
+      if (!pl) {
+        d._activeLevels = null;
+        if (typeof d._recalcMySize === "function") d._recalcMySize();
+        return;
+      }
       // TV tags the box with the NAME only and lets the axis label carry the
       // price -- "SL | 6.762". The 5.0 habit of appending "+15.00% · 1.0R"
       // turns five clean tags into five sentences, and the R ladder is already
@@ -3074,8 +3153,7 @@
       // now a two-point line SERIES from the signal bar to the last bar, and
       // the axis tag rides the series' own last-value label.
       const cs = (tfs[key] || {}).candles || [];
-      const x0 = pl.bar && pl.bar.time ? pl.bar.time : (cs.length ? cs[0].time : null);
-      const xN = cs.length ? cs[cs.length - 1].time : null;
+      const [x0, xN] = momBoxSpan(pl, cs);
       const line = (price, color, label, weight) => {
         if (price == null || !isFinite(price) || x0 == null || xN == null) return;
         const ser = chart.addLineSeries({
@@ -3091,8 +3169,11 @@
       line(pl.tp1, "#22c55e", "TP1", 2);
       line(pl.tp2, "#22c55e", "TP2", 1);
       line(pl.tp3, "#22c55e", "TP3", 1);
-      d._activeLevels = { entry: pl.entry, stop: pl.stop, tp1: pl.tp1, tp2: pl.tp2, tp3: pl.tp3, rr: 3 };
-      d._activeTf = key;
+      // `dir` travels with the box: a TF's Auto plan can face the other way
+      // from the Daily one that set the header (MPL: 1D LONG, 1W SHORT).
+      d._activeLevels = { entry: pl.entry, stop: pl.stop, tp1: pl.tp1, tp2: pl.tp2, tp3: pl.tp3, rr: 3,
+                          dir: pl.dir === 1 ? "LONG" : "SHORT" };
+      if (typeof d._recalcMySize === "function") d._recalcMySize();
     }
 
     // VIVEK: per-timeframe trade levels (200 SMA · SL · Entry · TP1/2/3),
@@ -3551,13 +3632,21 @@
     // Fix-10 #4: ⧉ Plan — copy the ACTIVE timeframe's plan as pasteable text.
     const planBtn = $("#cf-plan");
     if (planBtn) planBtn.onclick = async () => {
+      const noPlanHere = !!d._activeTf && d._activeLevels === null;
       const lv = d._activeLevels || { entry: d.entry, stop: d.stop, tp1: d.tp1, tp2: d.tp2, tp3: d.tp3, rr: d.rr };
-      if (lv.entry == null) { planBtn.textContent = "— no plan"; setTimeout(() => { planBtn.textContent = "⧉ Plan"; }, 1400); return; }
+      if (noPlanHere || lv.entry == null) {
+        planBtn.textContent = noPlanHere ? `— no plan on ${d._activeTf}` : "— no plan";
+        setTimeout(() => { planBtn.textContent = "⧉ Plan"; }, 1400);
+        return;
+      }
       const c = d.currency_symbol || "";
       const f = (v) => (v == null || !isFinite(v)) ? "—" : fmt(v, c);
-      const txt = `${SYM} ${(d.dir || "LONG").toUpperCase()} — entry ${f(lv.entry)} · SL ${f(lv.stop)} · ` +
-        `TP1 ${f(lv.tp1)} / TP2 ${f(lv.tp2)} / TP3 ${f(lv.tp3)} · R:R ${(+lv.rr || 0).toFixed(1)} ` +
-        `(${d._activeTf || curTF} plan · ${d.grade || ""} · Vivek 5.0 — not advice)`;
+      // Named for what it is, no disclaimer (owner ruling 2026-09-28), and no
+      // empty "· ·" slot when the chart has no grade.
+      const tag = [`${d._activeTf || curTF} ${d._momentum ? "Auto plan" : "plan"}`, d.grade, "Vivek 5.0"]
+        .filter(Boolean).join(" · ");
+      const txt = `${SYM} ${(lv.dir || d.dir || "LONG").toUpperCase()} — entry ${f(lv.entry)} · SL ${f(lv.stop)} · ` +
+        `TP1 ${f(lv.tp1)} / TP2 ${f(lv.tp2)} / TP3 ${f(lv.tp3)} · R:R ${(+lv.rr || 0).toFixed(1)} (${tag})`;
       try { await navigator.clipboard.writeText(txt); planBtn.textContent = "✓ Copied"; }
       catch (_) { planBtn.textContent = "✗ Blocked"; }
       setTimeout(() => { planBtn.textContent = "⧉ Plan"; }, 1600);
@@ -3577,6 +3666,7 @@
       drawRedraw();
     });
     ro.observe(el);
+    onRenderTeardown(() => ro.disconnect());   // render() is re-entrant (#80)
 
     function initDrawing() {
       const cur = d.currency_symbol || "";
@@ -3925,6 +4015,7 @@
       // keep the backing store in sync with chart resizes
       const cro = new ResizeObserver(() => { sizeCanvas(); redraw(); });
       cro.observe(el);
+      onRenderTeardown(() => cro.disconnect());
     }
 
     // Small in-chart toast (alerts / replay / compare feedback).
