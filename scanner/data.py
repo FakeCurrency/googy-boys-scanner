@@ -9,7 +9,6 @@ import random
 import time
 from zoneinfo import ZoneInfo
 
-import numpy as np
 import pandas as pd
 import yfinance as yf
 
@@ -198,54 +197,6 @@ def merge_with_cache(market_key: str, fresh: dict[str, pd.DataFrame],
 # The full ASX universe has many thin/suspended names; silence yfinance's noisy
 # per-ticker "possibly delisted" warnings — we skip those tickers anyway.
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
-
-
-class DataQualityError(Exception):
-    """Raised when downloaded OHLCV data fails quality checks."""
-
-
-def validate_bars(df: pd.DataFrame, symbol: str = "", interval: str = "1h",
-                  min_bars: int | None = None, staleness_hours: float | None = None) -> None:
-    """Check downloaded OHLCV for common quality problems.
-
-    Raises DataQualityError with a human-readable reason.
-    Callers can catch this to skip the ticker or log a warning.
-    """
-    min_bars = min_bars or config.SCALP_DATA_MIN_BARS
-    staleness_hours = staleness_hours or config.DATA_STALENESS_HOURS
-
-    if df is None or len(df) == 0:
-        raise DataQualityError(f"{symbol}: empty dataframe")
-
-    if len(df) < min_bars:
-        raise DataQualityError(
-            f"{symbol}: only {len(df)} bars (need {min_bars})"
-        )
-
-    close = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
-    nan_frac = close.isna().mean()
-    if nan_frac > 0.1:
-        raise DataQualityError(
-            f"{symbol}: {nan_frac:.0%} of Close values are NaN"
-        )
-
-    last_val = close.dropna().iloc[-1] if not close.dropna().empty else None
-    if last_val is None or not np.isfinite(last_val) or last_val <= 0:
-        raise DataQualityError(f"{symbol}: last close is invalid ({last_val!r})")
-
-    # Staleness check — only meaningful for intraday data
-    if interval in ("1m", "5m", "15m", "30m", "1h"):
-        idx = df.index
-        if hasattr(idx, "tz") and idx.tz is None:
-            last_ts = pd.Timestamp(idx[-1], tz="UTC")
-        else:
-            last_ts = pd.Timestamp(idx[-1]).tz_convert("UTC") if idx.tz else pd.Timestamp(idx[-1], tz="UTC")
-        now_utc = pd.Timestamp.now("UTC")
-        age_hours = (now_utc - last_ts).total_seconds() / 3600
-        if age_hours > staleness_hours:
-            raise DataQualityError(
-                f"{symbol}: last bar is {age_hours:.1f}h old (stale, limit={staleness_hours}h)"
-            )
 
 
 def _fetch_batch(batch: list[str], period: str, interval: str,

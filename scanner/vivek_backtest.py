@@ -901,21 +901,6 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
     }
 
 
-def run_backtest(markets: list[str], limit: int | None, period: str,
-                 exclude_funds: bool = True, long_only: bool = False) -> dict:
-    """Backtest several markets in one process (no streaming)."""
-    trades, coverage = [], {}
-    for mk in markets:
-        tr, cov = run_market_trades(mk, limit, period, exclude_funds, long_only)
-        trades += tr
-        coverage[mk] = cov
-    params = {"markets": markets, "limit": limit, "period": period,
-              "exclude_funds": exclude_funds, "long_only": long_only,
-              **_sizing_basis(),
-              "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
-    return build_report(trades, coverage, params, "complete")
-
-
 def _print(report: dict) -> None:
     r = report["results"]
     def line(label, m):
