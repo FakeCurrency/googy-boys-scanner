@@ -45,11 +45,27 @@
 
   const GRADE_VAR = { "A+": "var(--grade-aplus)", "A": "var(--grade-a)", "B+": "var(--grade-b)", "B": "var(--grade-b)", "WATCH": "var(--grade-c)", "C": "var(--grade-c)" };
   const TF_LABEL = { "1H": "1H", "4H": "4H", "1D": "D", "3D": "3D", "1W": "W", "1M": "M", "3M": "3M" };
-  // Per-timeframe tooltips — used to flag the 4H view's honest limitations.
+  // Per-timeframe tooltips — the honest limits of a view. "Trade levels are
+  // the Daily plan" is added only where it is TRUE, i.e. on a timeframe that
+  // borrowed the Daily plan (`approx`): since 2026-09-19 nearly every row
+  // carries a real 4H and 3-Day plan, and the old fixed text told the reader
+  // the opposite of what the chart was drawing (REFINE200 #101).
   const TF_TITLE = {
-    "4H": "≈2y max history (yfinance hourly) · trade levels are the Daily plan",
-    "3D": "3-day candles (3 sessions per bar) · trade levels are the Daily plan",
+    "4H": "≈2y max history (yfinance hourly)",
+    "3D": "3-day candles",
   };
+  function tfTitle(key, tf, momentum) {
+    const base = key === "3D" && momentum ? "3-session candles (TradingView's count)" : TF_TITLE[key];
+    const ref = tf && tf.approx ? "trade levels are the Daily plan" : "";
+    return [base, ref].filter(Boolean).join(" · ");
+  }
+  // The 200-SMA tag for a timeframe: ONE rule for the on-chart line and the
+  // footer metric. A timeframe with its own plan names itself (W / 3D / 4H /
+  // D); one that borrowed the Daily plan says so ("D·ref"). The line used to
+  // read "D" on a real 3-Day plan and "D (ref)" on a real 4H plan, beside a
+  // footer that named the right timeframe.
+  const SMA_TF_CODE = { "1W": "W", "3D": "3D", "4H": "4H", "1D": "D" };
+  const smaTfCode = (key, isRef) => (isRef ? "D·ref" : (SMA_TF_CODE[key] || "D"));
   const TF_ORDER = ["1H", "4H", "1D", "3D", "1W", "1M", "3M"];
 
   // ── per-render teardown (TOP100 #80/#81) ──────────────────────────────────
@@ -2061,8 +2077,7 @@
     // the TF block's `approx`, set when the chart built it.
     const isRef = !!((d.timeframes && d.timeframes[tfKey]) || {}).approx;
     const tfName = tfKey === "1W" ? "Weekly" : tfKey === "4H" ? "4H" : tfKey === "3D" ? "3-Day" : "Daily";
-    const tfCode = tfKey === "1W" ? "W" : tfKey === "4H" ? "4H" : tfKey === "3D" ? "3D" : "D";
-    const tfTxt = `200 SMA (${isRef ? "D·ref" : tfCode})`;
+    const tfTxt = `200 SMA (${smaTfCode(tfKey, isRef)})`;
     const rr = lv.rr || 0;
     // Trigger state — ARMED (a trigger fired) vs WATCHING (near the level only).
     const trig = lv.entry_trigger ? lv.entry_trigger.toUpperCase() : null;
@@ -3046,7 +3061,7 @@
       // Visual hierarchy: the trade ladder (SL/Entry/TP1) is loudest; the 200 SMA
       // and the further targets are secondary. Swing lines were dropped — the
       // structure markers already show them, so the chart stays clean.
-      const lvlLabel = key === "1W" ? "200 SMA·W" : key === "4H" ? "200 SMA·D (ref)" : "200 SMA·D";
+      const lvlLabel = "200 SMA·" + smaTfCode(key, !!(tfs[key] || {}).approx);
       line(lv.level, "#ffb020", lvlLabel, 1, true);
       line(lv.stop,  "#ff5b5b", "SL",    2);
       line(lv.entry, "#e5e9f0", "ENTRY", 2);
@@ -3434,7 +3449,8 @@
       // Everything else → the multi-timeframe bars the fallback already loaded
       // (live history; plans from the scan row).
       toggle.innerHTML = available.map((k) =>
-        `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"${TF_TITLE[k] ? ` title="${TF_TITLE[k]}"` : ""}>${TF_LABEL[k]}</button>`).join("");
+        `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"` +
+        `${tfTitle(k, tfs[k], d._momentum) ? ` title="${esc(tfTitle(k, tfs[k], d._momentum))}"` : ""}>${TF_LABEL[k]}</button>`).join("");
       // Switch timeframe from a button OR a setup-strip chip, keeping both in sync.
       const selectTF = (key) => {
         if (!tfs[key]) return;
