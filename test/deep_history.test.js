@@ -50,7 +50,7 @@ function load({ fetchImpl, now = 1_780_000_000_000 } = {}) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(src + "\n;globalThis.__api = { deepYears, fetchYahooDeep, fetchYahooWindow, targetBars, trimCandles, yahooCandles, fetchBinanceCandles, fetchBinancePrice };", sandbox);
+  vm.runInContext(src + "\n;globalThis.__api = { deepYears, fetchYahooDeep, fetchYahooWindow, targetBars, trimCandles, yahooCandles, fetchBinanceCandles, fetchBinancePrice, history, fetchEodhdCandles };", sandbox);
   return sandbox.__api;
 }
 
@@ -165,6 +165,60 @@ test("a window that fails is SKIPPED, not fatal — young tickers 400 on old win
   assert.ok(out.candles.length > 0, "half a chart beats none");
 });
 
+// REFINE200 #160: `.filter(Boolean)` ran BEFORE `results[0]` was read as "the
+// newest window", so a Yahoo 429 on the newest window alone served the four
+// older windows as a 25y chart ending in 2021 -- ok:true, edge-cached, with the
+// dividend chip and the basis read off a five-year-old window.
+const NOW_S = 1_780_000_000;
+function windowed({ failNewest = false, failOldest = false, single = null } = {}) {
+  const calls = [];
+  const impl = (u) => {
+    calls.push(u);
+    const m = /period1=(\d+)&period2=(\d+)/.exec(u);
+    if (!m) {                                    // the single-range fallback
+      return single ? okRes(single) : Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    }
+    const p1 = +m[1], p2 = +m[2];
+    if (failNewest && p2 > NOW_S - 365 * 86400) return Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({}) });
+    if (failOldest && p1 < NOW_S - 21 * 365 * 86400) return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({}) });
+    const r = result(p2 - 86400, Math.floor((p2 - p1) / 86400) - 1);
+    r.meta = { regularMarketPrice: p2 > NOW_S - 365 * 86400 ? 99.5 : 1.0 };
+    r.events = { dividends: p2 > NOW_S - 365 * 86400
+      ? { a: { date: NOW_S - 10 * 86400, amount: 0.5 } } : { b: { date: p1 + 86400, amount: 9 } } };
+    return okRes(r);
+  };
+  return { impl, calls };
+}
+
+test("the NEWEST window failing is fatal to the stitch, not silently skipped", async () => {
+  const w = windowed({ failNewest: true });
+  const out = await load({ fetchImpl: w.impl }).fetchYahooDeep("BHP.AX", { years: 25, chunkYears: 5 });
+  assert.equal(out.candles.length, 0, "four old windows must not pose as a 25-year chart");
+});
+
+test("...and history() then serves the newest 5 years instead of a chart that ends in 2021", async () => {
+  const fresh = result(NOW_S - 86400, 1200);
+  fresh.meta = { regularMarketPrice: 42 };
+  const w = windowed({ failNewest: true, single: fresh });
+  const h = await load({ fetchImpl: w.impl }).history("BHP.AX", "asx", { range: "25y", interval: "1d" });
+  assert.equal(h.source, "yahoo");
+  assert.equal(h.candles[h.candles.length - 1].time, NOW_S - 86400, "the chart must reach today");
+  const single = w.calls.filter((u) => !/period1=/.test(u));
+  assert.ok(single.length >= 1 && single.every((u) => /[?&]range=5y&/.test(u)),
+    "Yahoo has no range=25y; the fallback must ask for a range it serves daily: " + single.join(" "));
+  assert.equal(h.price, 42, "the live price rides the fallback's own answer");
+});
+
+test("an OLDER window failing is still skipped (a young ticker), and the newest one describes the tape", async () => {
+  const w = windowed({ failOldest: true });
+  const h = await load({ fetchImpl: w.impl }).history("GLBE", null, { range: "25y", interval: "1d" });
+  assert.equal(h.source, "yahoo-deep");
+  assert.ok(h.candles.length > 1000);
+  assert.equal(h.price, 99.5, "price comes from the NEWEST window's meta");
+  assert.equal(h.recent_div && h.recent_div.amount, 0.5, "the dividend chip reads the newest window, not an old one");
+  assert.ok(!w.calls.some((u) => /[?&]range=/.test(u)), "no single-range call when the stitch worked");
+});
+
 test("when every window fails it returns empty rather than throwing", async () => {
   const a = load({ fetchImpl: () => Promise.reject(new Error("network")) });
   const out = await a.fetchYahooDeep("NOPE", { years: 25, chunkYears: 5 });
@@ -181,6 +235,21 @@ test("the window request asks by DATE, not by range — that is the whole point"
   assert.match(url, /period2=2000/);
   assert.ok(!/[?&]range=/.test(url), "a range= param would re-introduce the coarsening");
   assert.match(url, /interval=1d/);
+});
+
+// REFINE200 #161: 15y/20y/25y were missing from the EODHD range map and fell
+// to ONE year -- and EODHD is tried before Yahoo, so installing the key would
+// have cut every stock chart (25y daily) to twelve months.
+test("EODHD is asked for the whole deep span, not one year", async () => {
+  const NOW_MS = 1_780_000_000_000;
+  for (const [range, years] of [["5y", 5], ["10y", 10], ["15y", 15], ["20y", 20], ["25y", 25]]) {
+    let url = "";
+    const a = load({ now: NOW_MS, fetchImpl: (u) => { url = u; return Promise.resolve({ ok: true, json: () => Promise.resolve([]) }); } });
+    await a.fetchEodhdCandles("BHP.AX", { range, interval: "1d", key: "k" });
+    const from = Date.parse(/[?&]from=(\d{4}-\d{2}-\d{2})/.exec(url)[1]);
+    const got = (NOW_MS - from) / (365.25 * 86400e3);
+    assert.ok(Math.abs(got - years) < 0.01, `${range}: EODHD asked for ${got.toFixed(2)} years`);
+  }
 });
 
 // ═══════════════════════════ the reverse switch ══════════════════════════════
@@ -232,7 +301,8 @@ function binance(n, endMs, { failHosts = [] } = {}) {
   const all = [];
   for (let i = n - 1; i >= 0; i--) {
     const t = endMs - i * DAY;
-    all.push([t, "1", "2", "0.5", String(t / DAY), "10"]);
+    // k[5] = base volume (coins), k[7] = quote volume (USDT): deliberately different
+    all.push([t, "1", "2", "0.5", String(t / DAY), "10", t + DAY - 1, "12345.678"]);
   }
   const calls = [];
   const impl = (url) => {
@@ -259,6 +329,12 @@ test("5 years of daily bars arrive in order, unique, newest last", async () => {
   assert.ok(b.calls.every((u) => u.startsWith("https://data-api.binance.vision/")), "the mirror is asked first");
   assert.ok(/[?&]symbol=QNTUSDT/.test(b.calls[0]) && !/endTime/.test(b.calls[0]));
   assert.ok(/endTime=/.test(b.calls[1]), "the second page walks back with endTime");
+});
+
+test("volume is the QUOTE (USDT) volume, k[7], unrounded -- the unit the scan reads (#168)", async () => {
+  const b = binance(30, 1_790_000_000_000);
+  const c = await load({ fetchImpl: b.impl }).fetchBinanceCandles("BTC-USD", { limit: 30 });
+  assert.ok(c.every((x) => x.volume === 12345.678), "volume must be k[7], not the base volume k[5]");
 });
 
 test("a young coin stops at its listing date after one request", async () => {

@@ -53,6 +53,7 @@ def test_the_deep_path_lives_only_in_the_three_chart_files():
     allowed = {
         "functions/api/_prices.js", "functions/api/price.js", "public/js/chart.js",
         "test/deep_history.test.js", "scripts/data_depth.py",
+        "test/price_api.test.js",            # runs price.js's CHART_MAX_YEARS clamp (2026-10-14)
         "tests/test_scanner_untouched_by_chart_depth.py",
         ".github/workflows/test.yml", ".github/workflows/data_depth.yml",
     }
