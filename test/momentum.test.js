@@ -673,7 +673,11 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
 {
   const ladder = CHART.slice(CHART.indexOf("function applyMomentumPlan"),
                              CHART.indexOf("// VIVEK: per-timeframe trade levels"));
-  ok(/const x0 = pl\.bar/.test(ladder), "the ladder starts at the signal bar");
+  // REFINE200 #103: the span comes from momBoxSpan, which starts at the signal
+  // bar and only steps back one bar when the signal IS the last bar (a
+  // one-point series draws nothing).
+  ok(/const \[x0, xN\] = momBoxSpan\(pl, cs\);/.test(ladder), "the ladder spans signal bar -> last bar");
+  ok(/let x0 = pl && pl\.bar && pl\.bar\.time \? pl\.bar\.time/.test(CHART), "momBoxSpan starts at the signal bar");
   // Scoped to the RUNG HELPER: the slice also holds paintMomentumAth, which
   // legitimately keeps createPriceLine (a single all-time high really does
   // apply across the whole axis).

@@ -302,6 +302,105 @@ test("no per-ticker file = no PhaseMap record, and nothing else is downloaded", 
     "phasemap/run.py writes the file for every ticker with a record and prunes the rest");
 });
 
+/* ═══════════════ #103 the Auto box shows on the day its signal fires ═══════════ */
+suite("#103 a signal on the newest bar still draws its box");
+
+test("momBoxSpan never returns a one-point span", () => {
+  const span = new Function(`${fnSrc("momBoxSpan")} return momBoxSpan;`)();
+  const cs = [10, 20, 30, 40].map((time) => ({ time }));
+  assert.deepEqual(span({ bar: { time: 20 } }, cs), [20, 40], "an older signal: signal bar -> last bar");
+  assert.deepEqual(span({ bar: { time: 40 } }, cs), [30, 40],
+    "age 0: x0 === xN drew NOTHING (LWC renders a one-point series as no line)");
+  assert.deepEqual(span({}, cs), [10, 40]);
+  assert.deepEqual(span({ bar: { time: 10 } }, []), [null, null]);
+  for (const fn of ["applyMomentumPlan", "paintMomentumZones"]) {
+    assert.match(fnSrc(fn), /= momBoxSpan\(pl, cs\);/, `${fn} must use the same span`);
+  }
+});
+
+/* ═══════════════ #102 the MACD / RSI panes follow the window ═══════════ */
+suite("#102 the Momentum panes resize with the page");
+
+test("a ResizeObserver resizes both panes and is torn down with the render", () => {
+  const at = CHART.indexOf("let macdHistS = null");   // bound FORWARD: the heading also names shadeRows earlier
+  const pane = CHART.slice(at, CHART.indexOf("// ── Session / weekend shading", at));
+  assert.ok(pane.length > 1000, "the pane slice is non-empty");
+  assert.match(pane, /const paneRo = new ResizeObserver\(/);
+  assert.match(pane, /\[\[macdChart, macdBox\], \[rsiChart, rsiBox\]\]\.forEach\(\(\[c, b\]\) => \{\s*try \{ c\.applyOptions\(\{ width: b\.clientWidth, height: b\.clientHeight \}\);/);
+  assert.match(pane, /paneRo\.observe\(macdBox\);\s*paneRo\.observe\(rsiBox\);/);
+  assert.match(pane, /onRenderTeardown\(\(\) => paneRo\.disconnect\(\)\);/);
+  assert.match(CODE, /onRenderTeardown\(\(\) => ro\.disconnect\(\)\);/, "the price chart's observer too");
+  assert.match(CODE, /onRenderTeardown\(\(\) => cro\.disconnect\(\)\);/, "and the drawing layer's");
+});
+
+/* ═══════════════ #110 My size and ⧉ Plan follow the Momentum timeframe ═══════════ */
+suite("#110 Momentum: the size and the plan copy belong to the timeframe on screen");
+
+test("applyMomentumPlan names the TF and recomputes the size on EVERY timeframe", () => {
+  const f = fnSrc("applyMomentumPlan");
+  const tf = f.indexOf("d._activeTf = key;"), noPlan = f.indexOf("if (!pl) {");
+  assert.ok(tf > 0 && tf < noPlan, "the TF must be set before the no-plan branch returns");
+  assert.equal((f.match(/d\._recalcMySize\(\)/g) || []).length, 2, "both branches recompute My size");
+  assert.match(f, /dir: pl\.dir === 1 \? "LONG" : "SHORT"/, "a TF's box can face the other way from the 1D header");
+});
+
+test("no plan on this TF sizes nothing and copies nothing; no disclaimer, no '· ·'", () => {
+  assert.match(fnSrc("wireSizeCalc"), /if \(d\._activeTf && d\._activeLevels === null\) \{\s*out\.textContent = `No plan on \$\{d\._activeTf\}/);
+  const click = CHART.slice(CHART.indexOf("if (planBtn) planBtn.onclick"), CHART.indexOf("// ── Drawing tools + measure"));
+  assert.match(click, /const noPlanHere = !!d\._activeTf && d\._activeLevels === null;/);
+  assert.match(click, /`— no plan on \$\{d\._activeTf\}`/);
+  assert.ok(!/not advice/.test(CHART), "the owner ruled disclaimers out (2026-09-28)");
+  assert.match(click, /\.filter\(Boolean\)\s*\.join\(" · "\)/, "an empty grade leaves no empty slot");
+  assert.match(click, /\(lv\.dir \|\| d\.dir \|\| "LONG"\)/);
+});
+
+/* ═══════════════ #111 "confirmed" counts back from the SCAN's last bar ═══════════ */
+suite("#111 the Rule A confirmation mark sits on a session the scan evaluated");
+
+test("a live feed one session ahead does not move the confirmation", () => {
+  const barAtDate = new Function(`return (${fnSrc("barAtDate")});`)();
+  const mm = new Function("barAtDate", `${fnSrc("momentumMarkers")} return momentumMarkers;`)(barAtDate);
+  const DAY = 86400, t0 = Date.UTC(2026, 9, 1) / 1000;
+  const bars = Array.from({ length: 14 }, (_, i) => ({ time: t0 + i * DAY, close: 1 }));   // 1..14 Oct
+  const iso = (t) => new Date(t * 1000).toISOString().slice(0, 10);
+  // EOS on the committed scan: last bar 13 Oct, confirmed 0 bars ago, pivot 5 back.
+  const row = { rule_a: true, rule_a_direction: "bear", rule_a_bars_ago: 0, rule_a_pivot_bars_ago: 5,
+                rule_a_pivot_bar: "2026-10-08 00:00:00", last_bar: "2026-10-13 00:00:00" };
+  const m = mm(row, bars);
+  assert.deepEqual(m.map((x) => [x.text, iso(x.time)]), [["BEAR DIV", "2026-10-08"], ["confirmed", "2026-10-13"]],
+    "was 'confirmed' on 14 Oct, a session the scan never saw");
+  const noDate = Object.assign({}, row, { rule_a_pivot_bar: "" });
+  assert.equal(iso(mm(noDate, bars)[0].time), "2026-10-08", "the pivot COUNT anchors on last_bar too");
+  const old = Object.assign({}, row, { last_bar: undefined });
+  assert.equal(iso(mm(old, bars)[1].time), "2026-10-14", "no last_bar: the chart's last bar, as before");
+  const behind = mm(row, bars.slice(0, 12));                                        // chart ends 12 Oct
+  assert.equal(iso(behind[1].time), "2026-10-12", "a chart BEHIND the scan snaps to its newest bar");
+});
+
+/* ═══════════════ #114 3D groups do not move when the window slides ═══════════ */
+suite("#114 Momentum 3D candles are anchored, so a new day regroups nothing");
+
+test("two loads one session apart build the SAME 3D candles", () => {
+  const sg = new Function(`${constSrc("MOM_3D_ANCHOR")} ${fnSrc("sessionGroups")} return { sessionGroups, MOM_3D_ANCHOR };`)();
+  const days = [];
+  for (let t = Date.UTC(2001, 9, 15); t <= Date.UTC(2026, 9, 13); t += 86400000) {
+    const d = new Date(t).getUTCDay();
+    if (d && d !== 6) days.push({ time: t / 1000, open: t, high: t, low: t, close: t, volume: 1 });
+  }
+  const iso = (b) => new Date(b.time * 1000).toISOString().slice(0, 10);
+  const a = sg.sessionGroups(days.slice(0, -1), 3, sg.MOM_3D_ANCHOR);   // the load on 12 Oct
+  const b = sg.sessionGroups(days.slice(1), 3, sg.MOM_3D_ANCHOR);       // 13 Oct: start slid one session
+  const recent = (g) => g.filter((x) => iso(x) >= "2025-01-01" && iso(x) <= "2026-10-01").map(iso);
+  assert.deepEqual(recent(a), recent(b), "every shared 3D candle starts on the same session");
+  const old = (w) => sg.sessionGroups(w, 3).slice(-3).map(iso);
+  assert.notDeepEqual(old(days.slice(0, -1)), old(days.slice(1)), "the un-anchored count did regroup (the bug)");
+  assert.ok(b.every((x) => x.volume <= 3), "still at most three sessions a candle");
+  const young = days.filter((x) => iso(x) >= "2023-03-01");
+  assert.deepEqual(sg.sessionGroups(young, 3, sg.MOM_3D_ANCHOR).map(iso), sg.sessionGroups(young, 3).map(iso),
+    "a series that starts after the anchor counts from its own (fixed) first bar");
+  assert.match(fnSrc("momentumFallback"), /sessionGroups\(daily, 3, MOM_3D_ANCHOR\)/);
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
