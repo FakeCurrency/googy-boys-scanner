@@ -1166,3 +1166,38 @@ class TestCloseBatchCLI:
         assert "batch: 2 closed, 58 skipped" in out
         book = json.loads(_mfile(tmp_path, "asx").read_text())
         assert book["open"] == []
+
+
+# ── REFINE200 #144: a mark accepted OUTSIDE the session is in MAE/MFE ─────────
+
+def test_a_closed_session_accepted_mark_reaches_mae_and_mfe(tmp_path, monkeypatch):
+    """The closing scan runs after the session window, so `_mark` never sees
+    the close it accepts as last_mark -- the day_marks below the recorded MAE
+    on the live book (CBO 2.72 vs 2.725). Every accepted mark is folded."""
+    _enable(monkeypatch, tmp_path)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                       now=_aest(2024, 1, 2, 11, 0))            # in session: fill
+    pos = bk["open"][0]
+    assert pos["mae"] == pos["mfe"] == 101.0
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(99.0)}, uni,
+                       now=_aest(2024, 1, 2, 16, 41))           # closing scan
+    pos = bk["open"][0]
+    assert pos["last_mark"] == 99.0
+    assert pos["mae"] == 99.0 and pos["mae_r"] == pytest.approx(-0.4)   # (99-101)/5
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(103.5)}, uni,
+                       now=_aest(2024, 1, 2, 20, 0))            # evening re-scan
+    pos = bk["open"][0]
+    assert pos["mfe"] == 103.5 and pos["mfe_r"] == pytest.approx(0.5)
+
+
+def test_a_suspect_price_never_reaches_mae(tmp_path, monkeypatch, stub_alerts):
+    """Only ACCEPTED marks are folded: a frozen split print is not a price the
+    book used."""
+    _enable(monkeypatch, tmp_path)
+    uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
+    vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
+                  now=_aest(2024, 1, 2, 11, 0))
+    bk = vr.run_market("asx", [], {"BHP.AX": _frame(10.1)}, uni,
+                       now=_aest(2024, 1, 3, 11, 0))
+    assert bk["open"][0]["mae"] == 101.0

@@ -28,8 +28,8 @@ pytestmark = pytest.mark.risk
 
 # Fields a later REFINE200 item adds to (ADDED) or removes from (DROPPED) a
 # closed row on purpose. Everything else must be byte-identical.
-ADDED: set = set()
-DROPPED: set = set()
+ADDED = {"stop_slip_r"}                            # #26: stop fills only
+DROPPED = {"unreal_r", "unreal_usd", "day_marks"}  # #24: open-only mark fields
 
 
 # ── the pre-#92 implementations, frozen ──────────────────────────────────────
@@ -121,7 +121,9 @@ def _long(**kw):
          "booked_pct": 0.0, "realized_r": -0.0031, "gross_r": 0.0, "cost_r": 0.0031,
          "exits": [], "mae": 90.0, "mfe": 125.0,
          "mae_r": _r3(90.0, 100.0, 4.0, True), "mfe_r": _r3(125.0, 100.0, 4.0, True),
-         "units": 25.0, "notional": 2500.0, "risk_usd": 100.0, "last_mark": 98.0}
+         "units": 25.0, "notional": 2500.0, "risk_usd": 100.0, "last_mark": 98.0,
+         "unreal_r": -0.5, "unreal_usd": -50.0,
+         "day_marks": {"2026-09-18": 98.5, "2026-09-19": 98.0}}
     t.update(kw)
     return t
 
@@ -242,3 +244,109 @@ def test_there_is_one_close_writer():
 def test_the_config_costs_are_on_so_the_cost_cells_mean_something():
     assert config.VIVEK_COSTS_ENABLED is True
     assert COSTS["asx"] is not None and COSTS["crypto"] is not None
+
+
+# ── #24: a closed row drops the open-only mark fields ────────────────────────
+
+@pytest.mark.parametrize("path", ["stop", "time", "manual"])
+def test_a_close_drops_the_live_mark_fields(path):
+    t = _long()
+    if path == "stop":
+        vj._mark(t, 95.0, DAY, COSTS["asx"])
+    elif path == "time":
+        vr._close_time_stop(t, 101.0, DAY, COSTS["asx"])
+    else:
+        vj._close_remaining(t, 101.0, DAY, "manual", COSTS["asx"])
+    assert t["status"] == "closed"
+    for k in ("unreal_r", "unreal_usd", "day_marks"):
+        assert k not in t, k
+    # realized_r is the closed row's ONE P&L; last_mark stays as provenance
+    assert "realized_r" in t and t["last_mark"] == 98.0
+
+
+def test_an_open_mark_keeps_them():
+    t = _long()
+    vj._mark(t, 101.0, DAY, COSTS["asx"])
+    assert t["status"] == "open"
+    assert t["unreal_r"] == -0.5 and "day_marks" in t
+
+
+def test_the_guard_reads_nothing_from_them_on_a_closed_row():
+    """The one decision-path reader of CLOSED rows is the loss guard's realised
+    leg (realized_r x risk_usd, less pre-window partials). Its verdict must not
+    move when a closed row loses the open-only fields. (Every display reader --
+    journal.js, app.js, recs.js, stalled.js, book_stress, reco_note,
+    evidence_brief -- walks the open list.)"""
+    from scanner.broker import vivek_guard
+    with_fields = _long(status="closed", exit_date=DAY, exit_price=95.0,
+                        realized_r=-1.25, exit_reason="stop")
+    without = {k: v for k, v in with_fields.items() if k not in DROPPED}
+    held = _short(entry_date="2026-09-10")
+    verdicts = []
+    for closed in (with_fields, without):
+        book = {"open": [copy.deepcopy(held)], "closed": [closed]}
+        verdicts.append(vivek_guard.check(book, "asx", DAY, 150_000.0, lambda s: 101.0))
+    assert verdicts[0] == verdicts[1]
+    assert verdicts[0]["realised_usd"] == pytest.approx(-125.0)
+
+
+# ── #26: stop slippage in R ─────────────────────────────────────────────────
+
+@pytest.mark.parametrize("make,price,want", [
+    (_long, 96.0, 0.0),            # filled exactly at the stop
+    (_long, 94.5, 0.375),          # gapped 1.5 through a 4.0 risk
+    (_short, 104.0, 0.0),
+    (_short, 106.0, 0.5),          # short gaps UP through its stop
+])
+def test_a_stop_exit_records_its_slippage_in_r(make, price, want):
+    t = make()
+    vj._mark(t, price, DAY, None)
+    assert t["status"] == "closed" and t["exit_reason"] == "stop"
+    assert t["stop_slip_r"] == pytest.approx(want)
+
+
+def test_a_trailed_stop_measures_against_the_stop_it_hit():
+    t = _scaled()                     # stop trailed to 100 (break-even)
+    vj._mark(t, 99.0, DAY, None)
+    assert t["exit_reason"] == "trail"
+    assert t["stop_slip_r"] == pytest.approx(0.25)          # (100 - 99) / 4
+
+
+@pytest.mark.parametrize("path", ["time", "manual"])
+def test_only_stop_fills_carry_it(path):
+    t = _long()
+    if path == "time":
+        vr._close_time_stop(t, 95.0, DAY, None)
+    else:
+        vj._close_remaining(t, 95.0, DAY, "manual", None)
+    assert "stop_slip_r" not in t
+
+
+# ── #144: MAE/MFE take every accepted mark and the exit fill ─────────────────
+
+def test_a_hand_close_fill_beyond_the_mfe_extends_it():
+    t = _long(mae=99.0, mfe=101.0, mae_r=-0.25, mfe_r=0.25)
+    vj._close_remaining(t, 103.123456789, DAY, "manual", None)
+    assert t["mfe"] == 103.12345679                      # 8 dp, like every price
+    assert t["mfe_r"] == pytest.approx(0.781, abs=1e-3)
+    assert t["mae"] == 99.0 and t["mae_r"] == -0.25
+
+
+def test_a_hand_close_fill_below_the_mae_extends_it():
+    t = _long(mae=99.0, mfe=101.0, mae_r=-0.25, mfe_r=0.25)
+    vj._close_remaining(t, 97.0, DAY, "manual", None)
+    assert t["mae"] == 97.0 and t["mae_r"] == -0.75
+
+
+def test_the_short_side_is_mirrored():
+    t = _short(mae=101.0, mfe=99.0, mae_r=-0.25, mfe_r=0.25)
+    vj._close_remaining(t, 102.0, DAY, "manual", None)
+    assert t["mae"] == 102.0 and t["mae_r"] == -0.5
+    vj._excursion(t, 95.0)
+    assert t["mfe"] == 95.0 and t["mfe_r"] == 1.25
+
+
+def test_mark_stores_float32_prices_rounded():
+    t = _long(mae=99.0, mfe=101.0)
+    vj._mark(t, 101.53000068664551, DAY, None)
+    assert t["mfe"] == 101.53000069
