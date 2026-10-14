@@ -447,6 +447,14 @@ CRYPTO_UNIVERSE_SIZE   = 200
 # every scanner). Add symbols here to guarantee coverage; Yahoo-less coins
 # drop out at scan time harmlessly.
 CRYPTO_EXTRA_SYMBOLS   = ["XMR", "FLASH"]
+# BEHAVIOURAL peg check (REFINE200 #136), the net under universe._is_stable's
+# ticker/name rules: a coin whose last CRYPTO_PEG_BARS completed daily closes
+# all sat within CRYPTO_PEG_BAND of $1.00 is a dollar peg whatever it is
+# called, and the VIVEK scan skips it (counted as no_setup). Only ever
+# REMOVES a name -- the owner's peg rule; no free-floating coin holds +-2% of
+# a dollar for 90 days.
+CRYPTO_PEG_BARS        = 90
+CRYPTO_PEG_BAND        = 0.02
 
 VIVEK_INCLUDE_3D_LEVEL = True      # 2026-07-02: also treat the 3-Day 200 SMA as an in-play
                                    # level (W > 3D > D). Found via XMR: price sat AT the 3D-200

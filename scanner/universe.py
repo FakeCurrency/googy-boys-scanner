@@ -86,6 +86,14 @@ CRYPTO_SKIP = {
     # identity check, not by any name rule: Figure's YLDS, Tether's USAT, the
     # yen stablecoin JPYC.
     "YLDS", "USAT", "JPYC",
+    # REFINE200 #136 (2026-10-14): seven more, all in the cached universe,
+    # each with a CoinGecko price that is a peg's or a NAV's -- USX (0.9991),
+    # CASH (0.9990), SoFi's SOFID (0.9993), Spiko's dollar money-market fund
+    # SAFO (1.024), the tokenised rent-financing note PC0000031 (1.00), the
+    # yen coin JPYSC (0.0063) and STRCX, a tokenised preferred share built to
+    # hold its $100 par (it was being scanned). Tokenised COMMON stocks
+    # (CRCLB, xStocks) are not here: they trend with the share.
+    "USX", "CASH", "SOFID", "SAFO", "PC0000031", "JPYSC", "STRCX",
 }
 
 # Name words that mark a peg or a tokenised cash/bond fund whatever its
@@ -96,8 +104,8 @@ CRYPTO_SKIP = {
 # chain token, which floats) would catch coins that do trend -- so only
 # words that cannot describe a free-floating coin are here.
 _PEG_NAME = re.compile(
-    r"\b(stablecoins?|stables|usd|dollar|eur|euro|treasury|treasuries|"
-    r"t-?bills?|money market|government (securities|bonds?)|CLO)\b",
+    r"\b(stablecoins?|stables|[a-z]*usd|dollar|eur|euro|treasury|treasuries|"
+    r"t-?bills?|money market|swap fund|government (securities|bonds?)|CLO)\b",
     re.IGNORECASE)
 
 
@@ -107,14 +115,16 @@ def _is_stable(sym: str, name: str = "") -> bool:
     Beyond the explicit set, any ``<X>USD`` ticker is treated as a USD peg
     (RLUSD, FDUSD, crvUSD, …) so a newly-listed dollar stablecoin is skipped
     automatically rather than waiting to be hand-added after it's traded once.
-    ``USD<X>`` (USDF, USDM, ...) and ``EUR<X>`` (EURCV, EURR, EURQ, ...)
-    tickers are pegs by the same reasoning (2026-09-28), and when the coin's
-    NAME is known a stablecoin / T-bill / treasury / CLO phrase marks one too.
+    ``USD<X>`` (USDF, USDM, ...), ``EUR<X>`` (EURCV, EURR, EURQ, ...) and
+    ``JPY<X>`` (JPYC, JPYSC) tickers are pegs by the same reasoning
+    (2026-09-28; JPY 2026-10-14), and when the coin's NAME is known a
+    stablecoin / T-bill / treasury / CLO / swap-fund phrase, or a word ending
+    in USD ("SoFiUSD", "frxUSD"), marks one too.
     Gold and silver tokens (PAXG, XAUT, KAU, KAG) are NOT pegs here: the metal
     trends, and they have been scanned on purpose since the start.
     """
     s = (sym or "").upper()
-    if s in CRYPTO_SKIP or s.endswith("USD") or s.startswith(("USD", "EUR")):
+    if s in CRYPTO_SKIP or s.endswith("USD") or s.startswith(("USD", "EUR", "JPY")):
         return True
     return bool(name) and bool(_PEG_NAME.search(name))
 
