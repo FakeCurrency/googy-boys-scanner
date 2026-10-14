@@ -1692,9 +1692,12 @@ def test_bar_freshness_says_when_the_data_is_a_day_behind():
     assert b["completed_last"] == "2026-09-27" and b["lagging"] == 2
     assert b["raw_last"] == "2026-09-28"
     assert b["completed_dist"] == {"2026-09-27": 1, "2026-09-26": 2}
-    # a stock market's calendar is not this function's business
-    assert RUN.bar_freshness(frames, {}, "asx", now)["expected_completed"] is None
-    assert RUN.bar_freshness(frames, {}, "nasdaq", now)["expected_completed"] is None
+    # a stock market expects the newest completed bar any screened frame
+    # has (REFINE200 #134), so a tape a session behind is counted there too
+    for mk in ("asx", "nasdaq"):
+        sb = RUN.bar_freshness(frames, {}, mk, now)
+        assert sb["expected_completed"] == "2026-09-27" and sb["lagging"] == 2, mk
+        assert sb["screened"] == 3, mk
     # A frame too old to be screened at all is the screen's "stale frame"
     # skip, not a coin "a day behind": it stays in the distribution only.
     frames["D-USD"] = f("2022-01-17")
@@ -1707,7 +1710,7 @@ def test_the_screen_payload_carries_the_freshness_block():
     pl = RUN.screen_market(MARKET, frames=frames, rows=rows, now=dt.datetime.now(dt.timezone.utc))
     b = pl["summary"]["bars"]
     assert set(b) == {"completed_last", "raw_last", "expected_completed", "lagging",
-                      "completed_dist", "raw_dist"}
+                      "screened", "rows_lagging", "completed_dist", "raw_dist"}
 
 
 def test_btc_regime_is_context_from_the_last_completed_bar():

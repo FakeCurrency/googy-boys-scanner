@@ -99,7 +99,7 @@ function fnSrc(name, src) {
 }
 
 const CONSTS = ["IGNITION_MARKETS", "esc", "own", "lookup", "DASH", "LIVE_TTL_MS", "STALE_GEN_H", "STALE_BAR_GRACE_H",
-  "BAR_24_7", "STALE_SESSION_H", "WF_NAME", "STATE_ORDER", "STATE_LABEL", "SMA9", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK",
+  "BAR_24_7", "STALE_SESSION_H", "LAG_STALE_SHARE", "NO_EDGE_P", "WF_NAME", "STATE_ORDER", "STATE_LABEL", "SMA9", "SOURCE_LABEL", "SOURCE_TIP", "CAVEAT_FALLBACK",
   "MONTHS", "CAP_CCY", "CAP_SRC", "CAP_UNITS", "LONG_PX_CHARS", "AT_LEVEL_PCT", "COIL_COLS",
   "CH", "CHART_COL", "CHART_RETRY_MS"];
 const FNS = ["isMarket", "liveUrl", "btUrl", "chartsUrl", "num", "obj", "fmtPx", "fmtPxPair", "signed", "fmtPct", "fmtR", "fmtX",
@@ -110,7 +110,7 @@ const FNS = ["isMarket", "liveUrl", "btUrl", "chartsUrl", "num", "obj", "fmtPx",
   "entryTip", "outcomeOf", "fig", "breakoutLine", "sinceLine", "exitLine", "heldLine", "storyHTML",
   "level", "levelsHTML", "footHTML", "tagsHTML", "triggerCardHTML",
   "coilGap", "isFlatBase", "flatTag", "coilTip", "coiledRowHTML", "coiledTableHTML", "coilNote",
-  "entryStatus", "fmtP", "fmtCI", "evidenceHTML",
+  "entryStatus", "fmtP", "fmtCI", "edgeVerdict", "evidenceHTML",
   "sourcesText", "regimeHTML", "lagHTML", "headHTML", "cardsHTML", "sectionHTML", "ignitingHTML", "panelHTML"];
 const build = (win) => new Function("window",
   CONSTS.map(sliceConst).join("\n") + "\n" + FNS.map((n) => fnSrc(n)).join("\n") +
@@ -580,6 +580,33 @@ test("lagging > 0 says 'N coins behind yesterday's close', with the detail in th
   p.summary.bars.lagging = 0;
   assert.ok(!/ig-lag/.test(I.headHTML(p, null)), "no lag, no line");
   assert.ok(!/ig-lag/.test(I.headHTML(payload([trig()]), null)), "a payload without summary.bars has no line");
+});
+
+test("a STOCK market's lag reads in names and the close it lags, with the listed rows counted (REFINE200 #134)", () => {
+  const p = staleP({ market: "nasdaq" });
+  p.summary.bars = { completed_last: "2026-10-13", expected_completed: "2026-10-13", lagging: 1302,
+                     screened: 1427, rows_lagging: 17, completed_dist: { "2026-10-13": 125, "2026-10-12": 1302 } };
+  const h = I.headHTML(p, null);
+  assert.match(h, />1,302 names behind the 13 Oct close</);
+  assert.match(h, /title="1302 screened name\(s\) had no completed 2026-10-13 bar[^"]*free feed[^"]*17 of the rows listed below are among them[^"]*2026-10-12 ×1302"/);
+  assert.ok(!/coin/.test(/class="ig-lag"[^>]*>[^<]*</.exec(h)[0]), "a stock market's lag never says coins");
+});
+
+test("a stale TAPE is STALE however recently the screen ran: over half the names a bar behind", () => {
+  const fresh = staleP({ market: "nasdaq", generated_at: "2026-10-14T00:30:46Z", last_closed_bar: "2026-10-12" });
+  const now = Date.parse("2026-10-14T01:00:00Z");
+  fresh.summary.bars = { completed_last: "2026-10-13", expected_completed: "2026-10-13",
+                         lagging: 1302, screened: 1427 };
+  const s = I.staleOf(fresh, "nasdaq", now);
+  assert.ok(s, "91% of names a bar behind must read STALE");
+  assert.match(s.reasons.join(" "), /1,302 of 1,427 screened names were on bars older than 2026-10-13/);
+  fresh.summary.bars.lagging = 713;              // exactly half: context, not STALE
+  assert.equal(I.staleOf(fresh, "nasdaq", now), null);
+  fresh.summary.bars.lagging = 714;
+  assert.ok(I.staleOf(fresh, "nasdaq", now));
+  delete fresh.summary.bars.screened;            // an older file: no share, no claim
+  assert.equal(I.staleOf(fresh, "nasdaq", now), null);
+  assert.equal(I.LAG_STALE_SHARE, 0.5);
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1121,6 +1148,38 @@ test("NEVER computes a statistic: no diff_r published means a dash, not exp - ra
   const noOpen = JSON.parse(JSON.stringify(BT2));
   noOpen.primary.open = 0;
   assert.ok(!/not counted/.test(I.evidenceHTML("ok", noOpen, null)), "open 0: nothing to say");
+});
+
+test("the evidence line says what the decision numbers show, off the file's own numbers (REFINE200 #46)", () => {
+  const v = (vs) => I.edgeVerdict(vs);
+  // NASDAQ, 2026-10-08: diff +0.058R, CI -0.067..+0.188, P(no edge) 0.236
+  const nq = v({ diff_r: 0.058, diff_ci90: [-0.067, 0.188], p_diff_le_0: 0.236 });
+  assert.equal(nq.text, "no edge shown");
+  assert.match(nq.tip, /P\(no edge\) is 0\.236, over 0\.2/);
+  // crypto: P 0.062, band from -0.06R -> suggested, not established
+  assert.equal(v({ diff_r: 1.148, diff_ci90: [-0.055, 2.585], p_diff_le_0: 0.062 }).text, "not proven");
+  // ASX: band above zero -> nothing extra said
+  assert.equal(v({ diff_r: 0.419, diff_ci90: [0.119, 0.73], p_diff_le_0: 0.009 }), null);
+  // a difference at or under zero is no edge whatever its P
+  assert.equal(v({ diff_r: -0.025, diff_ci90: [-0.222, 0.173], p_diff_le_0: 0.05 }).text, "no edge shown");
+  assert.equal(v({ n_primary: 3, n_baseline: 4 }), null, "too few to compare: no verdict invented");
+  assert.equal(v({}), null);
+  // the line renders it beside the decision number, and only when there is one
+  const bt = JSON.parse(JSON.stringify(BT2));
+  bt.versus.random_timing = { n_primary: 390, n_baseline: 1954, diff_r: 0.058,
+                              diff_ci90: [-0.067, 0.188], p_diff_le_0: 0.236 };
+  const h = I.evidenceHTML("ok", bt, null);
+  assert.match(h, /<span class="ig-ev-verdict is-none" title="[^"]*">no edge shown<\/span>/);
+  assert.match(I.evidenceHTML("ok", BT2, null), /class="ig-ev-verdict is-weak"[^>]*>not proven</);
+  assert.ok(!/ig-ev-verdict/.test(I.evidenceHTML("ok", BT, null)), "schema 1 has no decision numbers");
+  assert.match(CSS, /\.ig-ev-verdict\.is-none\s*\{/);
+  assert.equal(I.NO_EDGE_P, 0.2);
+  const real = readReal("nasdaq_backtest.json");
+  if (real) {
+    const rv = I.edgeVerdict(real.versus.random_timing);
+    const p = real.versus.random_timing.p_diff_le_0;
+    if (p > 0.2 || real.versus.random_timing.diff_r <= 0) assert.equal(rv.text, "no edge shown");
+  }
 });
 
 test("the REAL committed backtest renders value-for-value off the file", () => {

@@ -1774,6 +1774,24 @@ DAILY_BAR_FINAL = BAR_FINAL
 # moving the ASX to its 16:40 moves pinned ASX tests and its 06:24 UTC primary
 # (16:24 AEST precedes that close) -- a separate change.
 IGNITION_FORMING_UNTIL_BAR_FINAL = ("nasdaq",)
+# A STALE TAPE (REFINE200 #134): a stock market's screen stamped after the
+# close is still not "done" for scripts/ignition_due.py when more than this
+# share of its screened names sit a bar behind the newest one any name has
+# (`summary.bars.lagging` / `screened`), so its backstop crons re-screen. The
+# page flags the same file STALE at the same share (ignition.js
+# LAG_STALE_SHARE, pinned to this). Measured: a 20:30 New York NASDAQ screen
+# had 1,302 of 1,427 names (91%) on the previous session's bar and read as
+# done. Below the share, lagging names are context (Yahoo serves thin names
+# late), not a re-run.
+IGNITION_LAG_RERUN_SHARE = 0.5
+# THE EVIDENCE VERDICT the panel prints beside the decision number (REFINE200
+# #46), read off the replay's own versus.random_timing: P(no edge) over this,
+# or a difference at or under zero, reads "no edge shown"; a 90% band that
+# still reaches zero reads "not proven". DISPLAY ONLY -- nothing filters on it;
+# ignition.js NO_EDGE_P mirrors it (pinned by tests/test_ignition_frontend.py).
+# At the 2026-10 replays: NASDAQ P 0.236 -> no edge shown; crypto P 0.062 with
+# a band from -0.06R -> not proven; the ASX P 0.009, band above zero -> neither.
+IGNITION_NO_EDGE_P = 0.2
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.
 MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}

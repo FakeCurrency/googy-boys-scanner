@@ -81,6 +81,10 @@
 .ig-ev-i[title] { cursor: help; }
 .ig-ev-cav { color: var(--orange); cursor: help; }
 .ig-ev-warn { color: var(--red-ink); font-weight: 700; }
+/* The verdict the replay's own decision numbers give (REFINE200 #46). */
+.ig-ev-verdict { font-weight: 800; cursor: help; }
+.ig-ev-verdict.is-none { color: var(--red-ink); }
+.ig-ev-verdict.is-weak { color: var(--orange); }
 .ig-ev.is-pending { color: var(--muted-2); font-style: italic; }
 /* The decision number (edge over random timing) is set apart from the rest. */
 .ig-ev-dec {

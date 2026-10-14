@@ -186,9 +186,17 @@ def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFra
     27 Sep row. A lens whose value is catching a break the morning after it
     closes has to say when its data is a day behind, so the payload records
     the distribution of last COMPLETED and last RAW bar dates, the date that
-    should be complete by now (crypto: yesterday UTC; a stock market: None,
-    its calendar is not this function's business), and how many frames lag
-    it. The page reads `lagging` to say so in words.
+    should be complete by now, how many screened frames lag it (`lagging` of
+    `screened`), and the page reads them to say so in words.
+
+    THE EXPECTED BAR. Crypto: yesterday UTC (a 24/7 calendar). A stock
+    market: the newest completed bar any SCREENED frame has (REFINE200 #134).
+    It used to be None, so `lagging` was hard 0 on the ASX and NASDAQ while a
+    20:30 New York NASDAQ screen had 1,302 of 1,427 names on the previous
+    day's bar. The newest-held date needs no holiday calendar: on a holiday
+    every frame stops at the same bar and nothing lags. (Every frame lagging
+    alike -- the source behind for all of them -- is caught by
+    scripts/ignition_due.py, which compares `completed_last` with the close.)
     """
     def day(df):
         try:
@@ -205,16 +213,18 @@ def bar_freshness(frames: Dict[str, pd.DataFrame], forming: Dict[str, pd.DataFra
                 and (_age_days(f, market, now) or 0) <= max_age_days(market)]
     raw = [day(forming[yf]) if yf in forming else day(E.clean(f))
            for yf, f in frames.items() if len(f)]
-    expected = None
     if not config.VIVEK_JOURNAL_SESSION.get(market):     # 24/7: yesterday is complete
         tz = ZoneInfo(getattr(config.MARKETS.get(market), "timezone", "UTC") or "UTC")
         expected = (now.astimezone(tz).date() - dt.timedelta(days=1)).isoformat()
+    else:                                                # a session market: the newest held
+        expected = max((c for c in screened if c), default=None)
     dist = lambda xs: dict(sorted(Counter(x for x in xs if x).items(), reverse=True)[:5])
     return {
         "completed_last": max((c for c in completed if c), default=None),
         "raw_last": max((r for r in raw if r), default=None),
         "expected_completed": expected,
         "lagging": (sum(1 for c in screened if c and c < expected) if expected else 0),
+        "screened": len(screened),
         "completed_dist": dist(completed),
         "raw_dist": dist(raw),
     }
@@ -337,6 +347,11 @@ def screen_market(market: str, *, frames: Optional[Dict[str, pd.DataFrame]] = No
               f"keeping the existing file", flush=True)
         return None
     results.sort(key=E.state_rank)
+    # How many PUBLISHED rows sit on a bar older than the expected one: the
+    # page says it, because a lagging row is a signal a session old.
+    exp = bars.get("expected_completed")
+    bars["rows_lagging"] = (sum(1 for r in results if (r.get("last_bar") or "") < exp)
+                            if exp else 0)
     counts = {s: sum(1 for r in results if r["state"] == s)
               for s in ("IGNITING", "RUNNING", "CLOSED", "COILED")}
     counts["provisional"] = sum(1 for r in results if r.get("provisional"))

@@ -20,6 +20,7 @@ here are synthetic).
 from __future__ import annotations
 
 import datetime as dt
+import json
 import importlib.util
 import os
 import pathlib
@@ -202,12 +203,35 @@ def test_the_asx_bar_still_completes_at_its_session_close():
     assert not RUN.bar_is_forming("asx", day, dt.datetime(2026, 10, 8, 16, 0, tzinfo=syd))
 
 
-def test_nasdaq_freshness_has_no_expected_bar():
+def test_nasdaq_freshness_counts_a_stale_tape():
+    """REFINE200 #134: `expected_completed` used to be None for every stock
+    market, so `lagging` was hard 0 while a 20:30 New York screen had 1,302 of
+    1,427 names on the previous session's bar. The expected bar is now the
+    newest completed bar any screened frame has."""
     df = nasdaq_frame().iloc[:T + 3]
     now = dt.datetime.combine(df.index[-1].date() + dt.timedelta(days=1), dt.time(15, 0),
                               tzinfo=dt.timezone.utc)
     b = RUN.bar_freshness({"ZZZ": df}, {}, M, now)
-    assert b["expected_completed"] is None and b["lagging"] == 0
+    assert b["expected_completed"] == df.index[-1].strftime("%Y-%m-%d") and b["lagging"] == 0
+    behind = nasdaq_frame(seed=3).iloc[:T + 2]
+    b = RUN.bar_freshness({"ZZZ": df, "LAG1": behind, "LAG2": behind.copy()}, {}, M, now)
+    assert b["expected_completed"] == df.index[-1].strftime("%Y-%m-%d")
+    assert (b["lagging"], b["screened"]) == (2, 3)
+    # a holiday: every frame stops at the same bar, so nothing lags
+    b = RUN.bar_freshness({"A": behind, "B": behind.copy()}, {}, M, now)
+    assert b["lagging"] == 0 and b["expected_completed"] == behind.index[-1].strftime("%Y-%m-%d")
+
+
+def test_the_screen_counts_published_rows_on_a_stale_bar():
+    df = nasdaq_frame().iloc[:T + 3]
+    lag = nasdaq_frame(seed=3).iloc[:T + 2]
+    now = dt.datetime.combine(df.index[-1].date() + dt.timedelta(days=1), dt.time(15, 0),
+                              tzinfo=dt.timezone.utc)
+    rows = [{"yf": "ZZZ", "symbol": "ZZZ", "name": "Z"}, {"yf": "LAG", "symbol": "LAG", "name": "L"}]
+    pl = RUN.screen_market(M, frames={"ZZZ": df, "LAG": lag}, rows=rows, now=now)
+    b = pl["summary"]["bars"]
+    lagging_rows = [r for r in pl["results"] if r["last_bar"] < b["expected_completed"]]
+    assert b["rows_lagging"] == len(lagging_rows) and b["lagging"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -474,10 +498,74 @@ def test_the_kick_is_not_dispatched_by_the_scan():
 GATE = ROOT / "scripts" / "ignition_due.py"
 
 
-def _due(market, stamp, now):
-    p = subprocess.run([sys.executable, str(GATE), market, stamp, "--now", now],
+def _due(market, stamp, now, bars=None):
+    extra = ["--bars", bars if isinstance(bars, str) else json.dumps(bars)] if bars is not None else []
+    p = subprocess.run([sys.executable, str(GATE), market, stamp, *extra, "--now", now],
                        capture_output=True, text=True, check=True)
     return p.stdout.strip()
+
+
+# REFINE200 #134: the committed nasdaq.json stamped 00:30Z 14 Oct (20:30 New
+# York, after the 13 Oct bar-final) with 1,302 of 1,427 names on 12 Oct bars.
+_LATE, _NOW = "2026-10-14T00:30:46+00:00", "2026-10-14T00:34:00+00:00"
+
+
+@pytest.mark.parametrize("bars,want", [
+    (None, "run=false"),                                     # an older file: the stamp alone
+    ({"completed_last": "2026-10-13", "lagging": 1302, "screened": 1427,
+      "expected_completed": "2026-10-13"}, "run=true"),      # 91% a bar behind
+    ({"completed_last": "2026-10-12", "lagging": 0, "screened": 1427,
+      "expected_completed": "2026-10-12"}, "run=true"),      # nothing has the 13th yet
+    ({"completed_last": "2026-10-13", "lagging": 700, "screened": 1427,
+      "expected_completed": "2026-10-13"}, "run=false"),     # under half: context, not a re-run
+    ({"completed_last": "2026-10-13", "lagging": 0}, "run=false"),   # no `screened`: skip the share rule
+    ("{not json", "run=true"),                               # unreadable FAILS OPEN
+    ("", "run=false"),                                       # an empty extraction: no evidence
+])
+def test_a_file_stamped_after_the_close_is_not_done_while_its_tape_is_behind(bars, want):
+    assert _due("nasdaq", _LATE, _NOW, bars) == want
+
+
+def test_the_lag_share_is_config_and_the_asx_reads_its_own_close_day():
+    assert 0 < config.IGNITION_LAG_RERUN_SHARE < 1
+    # ASX: the 13 Oct close (16:40 AEDT = 05:40Z); a file after it with only
+    # 12 Oct bars re-runs, one with the 13th does not
+    stamp, now = "2026-10-13T06:00:00+00:00", "2026-10-13T07:24:00+00:00"
+    assert _due("asx", stamp, now, {"completed_last": "2026-10-12"}) == "run=true"
+    assert _due("asx", stamp, now, {"completed_last": "2026-10-13", "lagging": 3,
+                                    "screened": 1700}) == "run=false"
+
+
+@_needs_shell
+@pytest.mark.parametrize("bars,want", [
+    ({"completed_last": "2026-10-13", "lagging": 1302, "screened": 1427,
+      "expected_completed": "2026-10-13"}, "run=true"),
+    ({"completed_last": "2026-10-13", "lagging": 10, "screened": 1427,
+      "expected_completed": "2026-10-13"}, "run=false"),
+])
+def test_the_shipped_backstop_gate_hands_the_files_tape_to_the_script(tmp_path, bars, want):
+    """EXECUTED: the NASDAQ due step at the 22:34 backstop, with `git show`
+    serving a committed file -- the gate must pass its summary.bars through."""
+    doc = tmp_path / "nasdaq.json"
+    doc.write_text(json.dumps({"generated_at": _LATE, "summary": {"bars": bars}}))
+    epoch = int(dt.datetime.fromisoformat(_NOW).timestamp())
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "date").write_text(f'#!/usr/bin/env bash\nexec "{_REAL_DATE}" -d "@{epoch}" "$@"\n')
+    (bin_ / "git").write_text(f'#!/usr/bin/env bash\nif [ "$1" = show ]; then cat "{doc}"; fi\nexit 0\n')
+    (bin_ / "python3").write_text(
+        f'#!/usr/bin/env bash\nif [ "$1" = scripts/ignition_due.py ]; then shift; '
+        f'exec "{sys.executable}" "{GATE}" "$@" --now "{_NOW}"; fi\nexec "{sys.executable}" "$@"\n')
+    for f in ("date", "git", "python3"):
+        (bin_ / f).chmod(0o755)
+    out = tmp_path / "out"
+    out.write_text("")
+    env = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}", "LC_ALL": "C",
+           "GITHUB_OUTPUT": str(out), "GITHUB_EVENT_NAME": "schedule", "SCHEDULE": CRONS[1],
+           "GITHUB_REF_NAME": "main"}
+    p = subprocess.run([_BASH, "-e", "-c", _GATE_RUN], env=env, cwd=tmp_path,
+                       capture_output=True, text=True, timeout=60)
+    assert (p.returncode, out.read_text().strip()) == (0, want), p.stdout + p.stderr
 
 
 def test_the_nasdaq_bar_final_is_derived_not_retyped():

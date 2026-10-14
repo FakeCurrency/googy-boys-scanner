@@ -98,3 +98,21 @@ def test_the_deck_pill_says_it_is_report_only():
     assert "report-only, not traded by the bot" in src
     assert re.search(r"Report-only \S+ not traded by the bot", src), \
         "the panel sub-line must say report-only / not traded"
+
+
+def _js_number(name):
+    src = JS.read_text(encoding="utf-8")
+    m = re.search(r"const\s+%s\s*=\s*([0-9.]+)\s*;" % name, src)
+    assert m, "public/js/ignition.js no longer declares `const %s = <number>`" % name
+    return float(m.group(1))
+
+
+def test_the_stale_tape_share_is_the_backstops_rerun_share():
+    """REFINE200 #134: the page flags a screen STALE at the same lag share at
+    which scripts/ignition_due.py re-runs its backstop."""
+    assert _js_number("LAG_STALE_SHARE") == config.IGNITION_LAG_RERUN_SHARE
+
+
+def test_the_evidence_verdict_threshold_is_config():
+    """REFINE200 #46: "no edge shown" past this P(no edge); one number."""
+    assert _js_number("NO_EDGE_P") == config.IGNITION_NO_EDGE_P
