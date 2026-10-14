@@ -77,9 +77,9 @@ def test_no_market_keeps_the_old_close_times_volume():
         float((tail["Close"] * tail["Volume"]).mean()), abs=0.01)
 
 
-def test_run_market_hands_its_market_to_the_stamp():
+def test_run_market_hands_its_market_and_clock_to_the_stamp():
     src = inspect.getsource(vivek_run.run_market)
-    assert "_enrich_adv(results, frames, yf_map, market)" in src
+    assert "_enrich_adv(results, frames, yf_map, market, now=now)" in src
 
 
 def test_a_cheap_liquid_coin_is_no_longer_refused_by_size_vs_adv():
@@ -103,3 +103,55 @@ def test_a_cheap_liquid_coin_is_no_longer_refused_by_size_vs_adv():
     assert out["plan"] is not None, out
     row["adv_usd"] = round(float((tail["Close"] * tail["Volume"]).mean()), 2)
     assert vb.plan_trade(row, equity=150_000, market="crypto")["code"] == "size_vs_adv"
+
+
+# ── REFINE200 #9: the still-forming bar is not averaged in ────────────────────
+
+def _today_frame(tz, today, close=10.0, volume=1_000_000, partial=50_000, n=30):
+    """n completed daily bars ending yesterday, plus TODAY's bar with a
+    part-day volume -- the shape the scan download hands over mid-session."""
+    import datetime as dt
+    idx = pd.DatetimeIndex([pd.Timestamp(today - dt.timedelta(days=n - i), tz=tz)
+                            for i in range(n)] + [pd.Timestamp(today, tz=tz)])
+    v = [float(volume)] * n + [float(partial)]
+    c = [close] * (n + 1)
+    return pd.DataFrame({"Open": c, "High": c, "Low": c, "Close": c, "Volume": v},
+                        index=idx)
+
+
+@pytest.mark.parametrize("market,tz,now_hm,forming", [
+    ("asx", "Australia/Sydney", (11, 30), True),      # in session: today forms
+    ("asx", "Australia/Sydney", (17, 0), False),      # after the close: complete
+    ("nasdaq", "America/New_York", (12, 0), True),
+    ("crypto", "UTC", (18, 0), True),                 # crypto forms until UTC midnight
+])
+def test_a_forming_bar_is_dropped_like_the_scan_drops_it(market, tz, now_hm, forming):
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    from scanner import scan
+    today = dt.date(2026, 10, 14)
+    now = dt.datetime(2026, 10, 14, *now_hm, tzinfo=ZoneInfo(tz))
+    df = _today_frame(tz, today)
+    rows = [{"symbol": "ABC"}]
+    vivek_run._enrich_adv(rows, {"T": df}, {"ABC": "T"}, market, now=now)
+    full = 10.0 * 1_000_000 if not config.MARKETS[market].volume_is_usd else 1_000_000
+    if forming:
+        assert rows[0]["adv_usd"] == pytest.approx(full)           # 20 complete days
+        assert scan._bar_is_forming(market, df.index[-1].date(), now)
+        assert rows[0]["adv_usd"] == pytest.approx(
+            round(scan._liquidity(df.iloc[:-1], config.MARKETS[market]), 2))
+    else:
+        assert rows[0]["adv_usd"] < full                           # today counts
+        assert rows[0]["adv_usd"] == pytest.approx(
+            round(scan._liquidity(df, config.MARKETS[market]), 2))
+
+
+def test_the_drop_obeys_the_scans_switch(monkeypatch):
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    monkeypatch.setattr(config, "VIVEK_DROP_FORMING_BAR", False)
+    now = dt.datetime(2026, 10, 14, 11, 30, tzinfo=ZoneInfo("Australia/Sydney"))
+    df = _today_frame("Australia/Sydney", dt.date(2026, 10, 14))
+    rows = [{"symbol": "ABC"}]
+    vivek_run._enrich_adv(rows, {"T": df}, {"ABC": "T"}, "asx", now=now)
+    assert rows[0]["adv_usd"] < 10.0 * 1_000_000
