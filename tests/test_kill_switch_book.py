@@ -12,7 +12,7 @@ import pytest
 
 from scanner import config
 from scanner.broker import kill_switch as ks
-from scanner.scalp_journal import _session_day
+from scanner.journal_common import session_day as _session_day
 
 pytestmark = pytest.mark.risk
 
