@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-13T02:42:27+00:00",
+  "generated_at": "2026-10-14T00:30:46+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-12",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 27245.9,
-    "sma200": 24856.15,
+    "close": 27204.38,
+    "sma200": 24874.11,
     "above_200": true,
-    "vs_200_pct": 9.6,
-    "as_of": "2026-10-12"
+    "vs_200_pct": 9.4,
+    "as_of": "2026-10-13"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,9 +50,9 @@
     }
   },
   "summary": {
-    "universe": 1429,
-    "downloaded": 1429,
-    "screened": 1325,
+    "universe": 1428,
+    "downloaded": 1428,
+    "screened": 1324,
     "skipped": {
       "short history": 103,
       "stale frame": 1
@@ -66,25 +66,25 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-12",
-      "raw_last": "2026-10-12",
+      "completed_last": "2026-10-13",
+      "raw_last": "2026-10-13",
       "expected_completed": null,
       "lagging": 0,
       "completed_dist": {
-        "2026-10-12": 1426,
-        "2026-10-09": 2,
+        "2026-10-13": 125,
+        "2026-10-12": 1302,
         "2026-10-06": 1
       },
       "raw_dist": {
-        "2026-10-12": 1426,
-        "2026-10-09": 2,
+        "2026-10-13": 125,
+        "2026-10-12": 1302,
         "2026-10-06": 1
       }
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1429
+        "yahoo": 1428
       },
       "dead": {},
       "errors": {},
@@ -98,10 +98,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1429,
+      "fresh": 1428,
       "reused": 0,
-      "merged": 1429,
-      "universe": 1429,
+      "merged": 1428,
+      "universe": 1428,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -109,7 +109,7 @@
       "rows": 17,
       "have": 17
     },
-    "elapsed_s": 204.8
+    "elapsed_s": 178.7
   },
   "results": [
     {
@@ -157,7 +157,7 @@
       "trail": 64.88388824,
       "mcap": 11036785664.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CTKB",
@@ -207,9 +207,9 @@
       "change_pct": -7.3,
       "r_now": -0.66,
       "trail": 5.61666669,
-      "mcap": 696710272.0,
-      "mcap_asof": "2026-10-09",
-      "mcap_src": "previous"
+      "mcap": 695410432.0,
+      "mcap_asof": "2026-10-14",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "INMD",
@@ -235,8 +235,8 @@
       "provisional": false,
       "last_bar": "2026-10-12",
       "price": 14.30000019,
-      "mcap": 817702656.0,
-      "mcap_asof": "2026-10-09",
+      "mcap": 823169408.0,
+      "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
     },
     {
@@ -293,7 +293,7 @@
       "price": 1.75,
       "mcap": 131698672.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "XBIT",
@@ -321,7 +321,7 @@
       "price": 2.28999996,
       "mcap": 69816904.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ASPS",
@@ -349,7 +349,7 @@
       "price": 6.13000011,
       "mcap": 70005864.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CRNT",
@@ -377,7 +377,7 @@
       "price": 2.07999992,
       "mcap": 189863456.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "GPRE",
@@ -403,9 +403,9 @@
       "provisional": false,
       "last_bar": "2026-10-12",
       "price": 14.60000038,
-      "mcap": 1005167040.0,
-      "mcap_asof": "2026-10-10",
-      "mcap_src": "previous"
+      "mcap": 1092085248.0,
+      "mcap_asof": "2026-10-13",
+      "mcap_src": "cache"
     },
     {
       "symbol": "VFS",
@@ -431,9 +431,9 @@
       "provisional": false,
       "last_bar": "2026-10-12",
       "price": 3.04999995,
-      "mcap": 7907632128.0,
-      "mcap_asof": "2026-09-21",
-      "mcap_src": "cache"
+      "mcap": 7088794624.0,
+      "mcap_asof": "2026-10-14",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "KLTR",
@@ -461,7 +461,7 @@
       "price": 1.39999998,
       "mcap": 213571696.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "MOLN",
@@ -489,7 +489,7 @@
       "price": 3.78999996,
       "mcap": 145176848.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "LINE",
@@ -517,7 +517,7 @@
       "price": 34.40999985,
       "mcap": 8559130112.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PRTA",
@@ -545,7 +545,7 @@
       "price": 8.43000031,
       "mcap": 432770720.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "GLXY",
@@ -573,7 +573,7 @@
       "price": 19.87000084,
       "mcap": 11709338624.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "SPWH",
@@ -601,7 +601,7 @@
       "price": 1.12,
       "mcap": 43838440.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PLRX",
@@ -629,7 +629,7 @@
       "price": 0.986,
       "mcap": 61054988.0,
       "mcap_asof": "2026-10-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
