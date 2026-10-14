@@ -1342,6 +1342,7 @@ def bt_payload():
     return RUN.backtest_market(MARKET, frames=frames, rows=rows, now=BT_NOW)
 
 
+@pytest.mark.slow
 def test_backtest_market_replays_completed_bars_only(bt_payload):
     frames, _ = _bt_inputs()
     q = frames["QNT-USD"]
@@ -1375,6 +1376,7 @@ def test_backtest_market_replays_completed_bars_only(bt_payload):
     assert bt_payload["caveats"] and "SURVIVORSHIP" in bt_payload["caveats"][0]
 
 
+@pytest.mark.slow
 def test_backtest_payload_is_publishable_json_with_no_nan(bt_payload):
     text = output.dumps(bt_payload)
     assert "NaN" not in text and "Infinity" not in text
@@ -1384,6 +1386,7 @@ def test_backtest_payload_is_publishable_json_with_no_nan(bt_payload):
     assert lines and all(line.isascii() for line in lines)
 
 
+@pytest.mark.slow
 def test_the_backtest_is_deterministic(bt_payload):
     frames, rows = _bt_inputs()
     again = RUN.backtest_market(MARKET, frames=frames, rows=rows, now=BT_NOW)
@@ -1573,6 +1576,7 @@ def test_main_publishes_exactly_one_screen_file_and_its_chart_sidecar(sandbox, m
     assert json.loads(charts)["generated_at"] == json.loads(text)["generated_at"]
 
 
+@pytest.mark.slow
 def test_main_backtest_publishes_only_the_backtest_file(sandbox, monkeypatch, bt_payload, capsys):
     monkeypatch.setattr(RUN, "backtest_market", lambda *a, **k: bt_payload)
     assert RUN.main(["--market", MARKET, "--backtest", "--dry-run"]) == 0
@@ -1653,6 +1657,7 @@ def test_the_data_caveat_names_the_real_source():
     assert RUN.data_note({}).startswith("Yahoo daily")
 
 
+@pytest.mark.slow
 def test_backtest_market_threads_the_data_note_into_the_caveats(monkeypatch):
     frames, rows = _bt_inputs()
     monkeypatch.setattr(RUN, "data_note", lambda sources, market="crypto": "NOTE-X")

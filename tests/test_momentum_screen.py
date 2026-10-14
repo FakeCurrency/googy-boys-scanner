@@ -315,6 +315,7 @@ def test_the_engine_is_deterministic_on_repeated_calls():
                                     and np.isnan(b[k])), k
 
 
+@pytest.mark.slow
 def test_no_look_ahead_on_the_real_corpus():
     """Truncate at every bar, re-derive, require bar i's value to be unchanged
     by bars that had not happened yet. Ported from the reference's own proof and
@@ -547,7 +548,12 @@ def test_all_twenty_eight_reference_assertions_are_collected():
     assert len(BORROWED) == 28, f"the reference now has {len(BORROWED)} tests, not 28"
 
 
-@pytest.mark.parametrize("name", BORROWED or ["_none"])
+# The reference's own no-look-ahead proof truncates at every bar (seconds).
+SLOW_BORROWED = {"test_f_no_look_ahead_anywhere"}
+
+
+@pytest.mark.parametrize("name", [pytest.param(n, marks=pytest.mark.slow) if n in SLOW_BORROWED else n
+                                  for n in (BORROWED or ["_none"])])
 def test_borrowed(name, capsys):
     """LAYER 3. The reference's own assertion, executed verbatim against this
     package. These are not copies -- they are the originals, so they cannot

@@ -984,6 +984,7 @@ def cli(monkeypatch):
     return state
 
 
+@pytest.mark.slow
 def test_running_the_cli_writes_exactly_the_ignition_paths_and_nothing_else(cli):
     """Screen, then backtest, through `main()` exactly as ignition.yml calls
     it. The screen publishes its file and then its chart sidecar; the replay
@@ -1017,6 +1018,7 @@ def test_running_the_cli_writes_exactly_the_ignition_paths_and_nothing_else(cli)
     assert not (ROOT / "public" / "data" / "ignition" / "_never").exists()
 
 
+@pytest.mark.slow
 def test_a_dry_run_writes_nothing_at_all(cli):
     run = cli["run"]
     assert run.main(["--market", "crypto", "--dry-run"]) == 0
@@ -1047,6 +1049,7 @@ def test_a_crash_is_exit_1_and_writes_nothing(cli):
     assert cli["published"] == [] and cli["raw_writes"] == []
 
 
+@pytest.mark.slow
 def test_the_lens_frame_cache_can_never_overwrite_the_scan_cache(cli):
     """`scanner.data.merge_with_cache(key, ...)` LOADS and then SAVES
     `.cache/frames/<key>.pkl.gz`. Were the lens to pass the plain market key

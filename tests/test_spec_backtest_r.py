@@ -15,6 +15,7 @@ import pathlib
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from scanner import config
 from scanner import spec_backtest as sb
@@ -77,6 +78,7 @@ def test_untradeable_plans_are_counted_not_scored():
     assert out["net_usd"] == 100.0
 
 
+@pytest.mark.slow
 def test_the_r_model_and_the_race_agree_on_who_won():
     agree = collections.Counter()
     for p in sorted(HIST.glob("*.json")):
