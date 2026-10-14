@@ -168,15 +168,21 @@ holidays; on a holiday it fails open and runs a spare re-screen.
    FILE needs its own step in `.github/workflows/test.yml`, and a test
    enforces that. Prefer extending `test/ignition.test.js`.
 
-## Part 7: `CLAUDE.md`
+## Part 7: `CLAUDE.md` (compact since 2026-10-14) and the history file
 
-- The lens summary near the top and the repository layout line.
-- The workflow table: an `ignition_<m>.yml` row (crons, gate, cutoff,
-  group, cache, timeout, files, pins).
-- The `assert_staged` caller list.
-- The IGNITION section: the MINI CHARTS line that lists the workflows, plus
-  a new "THE <M> PORT (date)" paragraph giving each value with its reason,
-  the universe scope and the first replay's verdict.
+CLAUDE.md is a compact operating manual; keep each edit to a line or a cell.
+
+- "What this project is": the IGNITION line names the market.
+- The workflow table: add the twin to the `ignition.yml` row (its primary
+  cron and kick file).
+- The `assert_staged` caller list ("the ignition twins") needs no edit.
+- The IGNITION section's per-market table: a new column with every value
+  (bars/yr, floors, cost, data-age ceiling, regime line, design case,
+  forward-bucket date, the first replay's verdict), and the universe scope
+  in the column heading if it is narrower than the exchange.
+- The long "THE <M> PORT (date)" write-up -- each value WITH its reason, the
+  universe scope, the replay read -- goes in the PR body and is appended to
+  `docs/claude-history.md` under its IGNITION section, not in CLAUDE.md.
 
 ## Verify locally
 
@@ -209,6 +215,6 @@ For a new market, also run the suites `new-market.md` names.
    - crypto: +1.15R, CI −0.06..+2.59, P 0.062 (borderline, fat-tailed);
    - ASX: +0.42R, CI +0.12..+0.73, P 0.009;
    - NASDAQ: +0.06R, CI −0.07..+0.19, P 0.24 (no edge shown).
-5. Write the verdict into CLAUDE.md's port paragraph, the PR and the owner
+5. Write the verdict into CLAUDE.md's per-market table, the PR and the owner
    summary. The lens ships either way. Trading it needs the forward bucket
    to beat random timing, and the owner's ruling.
