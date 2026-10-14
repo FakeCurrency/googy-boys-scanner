@@ -80,6 +80,12 @@ SPARK_BARS = 30
 # Yahoo serves float32-derived closes (23.55999947); 5 figures is far finer
 # than a 30-point thumbnail can draw and keeps a sub-cent coin's shape.
 SPARK_SIG_FIGS = 5
+# Most market caps scanner/marketcaps.py refreshes per run (REFINE200 #157):
+# every published ASX/NASDAQ row whose cached cap is missing or older than
+# marketcaps.MAX_AGE_DAYS, best grades first. 300 = three 100-symbol bulk
+# quote requests in one batched fetch -- the deck's ~600 rows refresh within
+# a day of scans without widening Yahoo's per-run call budget much.
+MARKETCAP_REFRESH_MAX = 300
 
 # ---------------------------------------------------------------------------
 # Position sizing
