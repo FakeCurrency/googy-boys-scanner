@@ -635,3 +635,24 @@ def test_closing_costs_still_land_on_the_closed_leg():
     c = vg.session_pnl({"open": [], "closed": [t]}, "asx", "2026-07-28",
                        lambda s: None)
     assert c["realised_usd"] == pytest.approx(-101.0)
+
+
+def test_a_stop_through_the_real_close_writer_still_charges_its_closing_day():
+    """Integration of REFINE200 #14 (guard closed leg is a window) with #24/#92
+    (one close writer that drops the open-only mark fields). The closed leg
+    reads the day reference from `day_marks`; if the close writer dropped it,
+    the reference would fall back to last_mark -- the exit itself on a stop --
+    and the stop-out day's loss would read as $0. Driven through the shipped
+    `_close_remaining`, not a hand-built closed row."""
+    from scanner import vivek_journal as vj
+    pos = _pos(entry=100.0, risk=4.0, risk_usd=40.0)
+    pos.update(entry_date="2026-10-01", status="open", booked_pct=0.0,
+               realized_r=0.0, exits=[], last_mark=98.0,
+               day_marks={"2026-10-14": 98.0}, stop=96.0)
+    vj._close_remaining(pos, 96.0, "2026-10-14", "stop", None)
+    assert "day_marks" in pos, "the close writer must keep the guard's day reference"
+    book = {"open": [], "closed": [pos]}
+    out = vg.session_pnl(book, "asx", "2026-10-14", lambda s: None)
+    # 98 -> 96 on a 4.0 risk is -0.5R of a $40 risk = -$20 charged to TODAY,
+    # not the whole-life -$40 (double count) and not $0 (lost reference).
+    assert out["realised_usd"] == pytest.approx(-20.0, abs=0.5)
