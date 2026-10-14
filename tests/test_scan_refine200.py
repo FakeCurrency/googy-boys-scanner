@@ -70,3 +70,26 @@ def test_stock_arriving_turnover_is_still_close_times_volume():
     f = _frame(close=2.0, vol=1_000.0)
     assert scan._turnover_today(f, stock) == 2_000.0
     assert scan._turnover_today(f, config.MARKETS["crypto"]) == 1_000.0
+
+
+# -- #66 sparkline closes ship at significant figures, not float noise --------
+
+@pytest.mark.parametrize("raw,want", [
+    (23.559999465942383, 23.56),          # a float32 close as Yahoo serves it
+    (64.62999725341797, 64.63),
+    (1234.5678, 1234.6),
+    (3.6771499e-07, 3.6771e-07),          # a sub-millionth coin keeps its shape
+    (0.0, 0.0),
+])
+def test_spark_is_rounded_to_significant_figures(raw, want):
+    f = _frame(close=raw, n=3)
+    assert scan._spark(f) == [want] * 3
+    assert config.SPARK_SIG_FIGS == 5
+
+
+def test_spark_keeps_the_last_spark_bars_in_order():
+    f = _frame(n=40)
+    f["Close"] = [100.0 + i / 3 for i in range(40)]
+    sp = scan._spark(f)
+    assert len(sp) == config.SPARK_BARS and sp == sorted(sp)
+    assert sp[-1] == 113.0 and sp[0] == 103.33
