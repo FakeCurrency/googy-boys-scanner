@@ -165,11 +165,17 @@ def test_the_closing_scan_is_the_digests_close_not_the_bell(market, before, afte
 
 
 def test_the_gate_script_imports_only_the_standard_library_and_config():
-    """It runs on the runner's own python3, before any pip install."""
+    """It runs on the runner's own python3, before any pip install. Its one
+    repo import besides config is the shared clock helper (REFINE200 #128),
+    which must itself be stdlib-only."""
     src = GATE_PATH.read_text(encoding="utf-8")
     mods = set(re.findall(r"^\s*(?:from|import)\s+([\w.]+)", src, re.M))
     assert mods <= {"__future__", "argparse", "datetime", "json", "pathlib", "sys",
-                    "zoneinfo", "scanner"}, mods
+                    "zoneinfo", "scanner", "scripts"}, mods
+    assert re.findall(r"^from scripts import (\w+)", src, re.M) == ["_marketclock"]
+    clock = (ROOT / "scripts" / "_marketclock.py").read_text(encoding="utf-8")
+    assert set(re.findall(r"^\s*(?:from|import)\s+([\w.]+)", clock, re.M)) <= \
+        {"__future__", "datetime", "zoneinfo"}
     cfg = (ROOT / "scanner" / "config.py").read_text(encoding="utf-8")
     assert set(re.findall(r"^(?:from|import)\s+([\w.]+)", cfg, re.M)) <= {"dataclasses"}
 
@@ -186,7 +192,8 @@ def test_the_gate_checkout_carries_every_file_the_script_reads_and_cannot_hang()
     assert co["timeout-minutes"] < _gate_job()["timeout-minutes"]
     for rel in paths:
         assert (ROOT / rel).is_file(), f"the gate checks out {rel}, which does not exist"
-    for rel in ("scripts/scan_gate.py", "scanner/config.py"):
+    for rel in ("scripts/scan_gate.py", "scanner/config.py",
+                "scripts/__init__.py", "scripts/_marketclock.py"):
         assert rel in paths
     for m in GATE.STOCK:
         assert f"public/data/{m}_prices.json" in paths, \

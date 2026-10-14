@@ -124,12 +124,13 @@ jobs:
       run: ${{ steps.check.outputs.run }}
       markets: ${{ steps.check.outputs.markets }}
     steps:
-      # Five small files, not the ~60 MB tree: the script, the stdlib-only
-      # config it reads, and the two stamps of when each stock market was last
-      # scanned. The branch TIP when the job starts (a branch `ref`, the
-      # 2026-09-27 rule), not the commit the run was triggered on. Its own
-      # timeout: git has none, and a stalled fetch that ran into the job's
-      # would skip the scan instead of reaching the fail-open below.
+      # Seven small files, not the ~60 MB tree: the script, the stdlib-only
+      # clock helper and config it reads, and the two stamps of when each
+      # stock market was last scanned. The branch TIP when the job starts (a
+      # branch `ref`, the 2026-09-27 rule), not the commit the run was
+      # triggered on. Its own timeout: git has none, and a stalled fetch that
+      # ran into the job's would skip the scan instead of reaching the
+      # fail-open below.
       - uses: actions/checkout@v4
         continue-on-error: true
         timeout-minutes: 2
@@ -139,6 +140,8 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             scripts/scan_gate.py
+            scripts/__init__.py
+            scripts/_marketclock.py
             scanner/__init__.py
             scanner/config.py
             public/data/asx_prices.json

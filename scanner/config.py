@@ -361,8 +361,8 @@ IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29", "nasdaq": "2026-10
 IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200"),
                          "nasdaq": ("^IXIC", "NASDAQ Composite")}
 # The time a session market's daily bar is FINAL for the backstop gate
-# (scripts/ignition_due.py) is IGNITION_BAR_FINAL, defined after
-# MORNING_PLAYS_SLOT_GATE because it derives from it.
+# (scripts/ignition_due.py) is IGNITION_BAR_FINAL (= BAR_FINAL), defined
+# beside MORNING_PLAYS_SLOT_GATE.
 IGNITION_BT_RANDOM_WINDOW = 182  # random-timing draws: within +/- this many bars of the
                                  # real trigger -- same coin, same SEASON, random day.
                                  # Crypto regime is the biggest driver of a long's R;
@@ -1187,7 +1187,25 @@ ALERT_RETURNS_CAP = 20000
 # DST on either side needs no handling. A market with no entry trades 24/7
 # (crypto, UTC daily bars): its today's bar is NEVER final. Later is always
 # safe; the only cost is a stamp waiting for the next daily run.
-ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": (16, 30)}
+#
+# BAR_FINAL (REFINE200 #128, 2026-10-14) is THE "today's daily bar is final in
+# the free feed" table, {market: (timezone, hour, minute)}, read in the
+# market's own calendar. ASX 16:40 Sydney is MEASURED (a 2026-10-05 scan whose
+# download began 16:28:52 still held pre-auction prices on 19% of names; see
+# MORNING_PLAYS_SLOT_GATE's asx note); NASDAQ 16:30 New York is the closing
+# cross plus the delayed feed. IGNITION_BAR_FINAL and the digest's ASX close
+# gate are DERIVED from it. Two deliberate exceptions, each beside its own
+# table: the ledger's ASX 16:45 just below, and the NASDAQ digest's 16:05.
+# tests/test_bar_final.py pins every derivation and both exceptions.
+BAR_FINAL = {"asx": ("Australia/Sydney", 16, 40),
+             "nasdaq": ("America/New_York", 16, 30)}
+# The ledger's ASX 16:45 is five minutes PAST BAR_FINAL on purpose, not a stale
+# copy: a ledger return is FROZEN at its first stamp (no later run corrects a
+# pre-auction read), and stamp() compares the clock when its fetch STARTS,
+# where BAR_FINAL is compared with a scan's generated_at, stamped after a ~4-5
+# min download. The runs land hours after the close, so the margin costs
+# nothing in practice. Never EARLIER than BAR_FINAL (pinned).
+ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": BAR_FINAL["nasdaq"][1:]}
 # Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
 # single-lens BASELINE cohort, stamped with the same forward returns on the
 # same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
@@ -1582,24 +1600,21 @@ MORNING_PLAYS_SLOTS = {
 # as "session running" and the next rung retries -- harmless.
 # crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
 # gate reads (`<market>_vivek.json`'s generated_at) and the session it waits on.
+# The ASX gate IS BAR_FINAL["asx"] (derived, REFINE200 #128); the US gate's
+# 16:05 is the one deliberate exception to BAR_FINAL (reason above).
 MORNING_PLAYS_SLOT_GATE = {
-    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 40},
+    "asx": {"market": "asx", "tz": BAR_FINAL["asx"][0],
+            "hour": BAR_FINAL["asx"][1], "minute": BAR_FINAL["asx"][2]},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
 # IGNITION's backstop gate (scripts/ignition_due.py, stdlib only): {market:
 # (timezone, hour, minute)} at which that market's daily bar is FINAL in the
 # free feed, read in the market's own calendar so DST cannot move it. A
 # backstop cron is skipped once the file on the branch was generated at/after
-# the latest weekday instance of it. DERIVED, never retyped: the ASX is the
-# digest's 16:40 Sydney close (Yahoo shows the auction ~20 min late);
-# NASDAQ is ALERT_RETURNS_BAR_FINAL's 16:30 New York (closing cross + the
-# delayed feed). Crypto has no entry: its bar is final at 00:00 UTC and
-# ignition.yml gates on the UTC date instead.
-IGNITION_BAR_FINAL = {
-    "asx": (MORNING_PLAYS_SLOT_GATE["asx"]["tz"], MORNING_PLAYS_SLOT_GATE["asx"]["hour"],
-            MORNING_PLAYS_SLOT_GATE["asx"]["minute"]),
-    "nasdaq": (MARKETS["nasdaq"].timezone,) + tuple(ALERT_RETURNS_BAR_FINAL["nasdaq"]),
-}
+# the latest weekday instance of it. DERIVED, never retyped: it IS BAR_FINAL
+# (ASX 16:40 Sydney, NASDAQ 16:30 New York). Crypto has no entry: its bar is
+# final at 00:00 UTC and ignition.yml gates on the UTC date instead.
+IGNITION_BAR_FINAL = dict(BAR_FINAL)
 # The IGNITION markets whose screen calls today's stock bar FORMING until its
 # IGNITION_BAR_FINAL above, not until the VIVEK_JOURNAL_SESSION close: the
 # closing cross and the delayed feed's volume land after the bell, so a run
