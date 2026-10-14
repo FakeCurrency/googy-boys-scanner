@@ -327,6 +327,7 @@ jobs:
       # both the scan date and the bars it read, and Insights compares the
       # pooled long+short signals with a random baseline of the same mix.
       - name: PhaseMap page (market-switch race, FLASHED on the bar date, Insights baseline)
+        if: success() || failure()
         run: node test/phasemap_page.test.js
       # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
       # reference, comments stripped) and deleted stay deleted: each pin fails
