@@ -313,8 +313,10 @@ def test_a_partial_run_writes_to_a_scratch_dir_unless_told_to_publish(root, monk
         return run.PUBLISHED
     monkeypatch.setattr(run, "run_market", fake)
     monkeypatch.setattr(run, "REPO_ROOT", str(root))
+    scratch = root.parent / "scratch"
+    monkeypatch.setattr(run.tempfile, "mkdtemp", lambda prefix="": str(scratch))
     assert run.main(["--market", "asx", "--limit", "25"], now=SAT) == 0
-    assert not seen["asx"].startswith(str(root))
+    assert seen["asx"] == str(scratch)
     assert run.main(["--market", "asx", "--limit", "25", "--publish"], now=SAT) == 0
     assert seen["asx"].startswith(str(root))
 
