@@ -41,13 +41,14 @@ def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     in ``out`` they are indistinguishable, which is precisely how one fill came
     to cover all three.
 
-    **No live behaviour changes** (verified, not assumed): the two consumers —
-    ``spec.py`` and ``reversal.py`` — both do ``rsi > rsi_ma``, ``rsi >
-    rsi[-3]`` and ``lo <= rsi <= hi``, and every one of those is False against
-    NaN just as it was against the old 100 (100 > 100 is False, and 100 is
-    outside both bands). A halted name failed the RSI chip before and fails it
-    now. What changes is that a NaN can no longer be mistaken for a reading by
-    something new that consumes this series later.
+    **No live behaviour changes** (verified, not assumed): the live consumer —
+    ``spec.py`` (``reversal.py``, its twin, was deleted as dead code
+    2026-10-14) — does ``rsi > rsi_ma``, ``rsi > rsi[-3]`` and
+    ``lo <= rsi <= hi``, and every one of those is False against NaN just as it
+    was against the old 100 (100 > 100 is False, and 100 is outside the band).
+    A halted name failed the RSI chip before and fails it now. What changes is
+    that a NaN can no longer be mistaken for a reading by something new that
+    consumes this series later.
     """
     delta = series.diff()
     gain = delta.clip(lower=0)

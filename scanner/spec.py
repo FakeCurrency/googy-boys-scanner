@@ -2,24 +2,22 @@
 
 The setup Vivek circled on JGH / EOS / PGO / BET: a beaten-down or sideways
 small-cap that suddenly trades on a big VOLUME SPIKE and breaks out of its base
-while the short SMAs (9/26/43) turn up. It's a tighter, volume-led cousin of the
-Reversals scan, aimed at catching the move *as it ignites* rather than after.
+while the short SMAs (9/26/43) turn up, aimed at catching the move *as it
+ignites* rather than after.
 
 Volume spike + base + breakout are mandatory; the grade reflects how strong the
-spike/breakout are. Reuses the user's own indicators (SMA 9/26/43/200, RSI 14,
-Vol 20) and the Reversals level/detail/narrative helpers for consistency.
+spike/breakout are. Uses the user's own indicators (SMA 9/26/43/200, RSI 14,
+Vol 20). The trade-level and detail builders were inherited from the retired
+Reversals scanner; they moved in here when that module was deleted as dead code
+(2026-10-14, REFINE200 #119), byte-for-byte in behaviour.
 """
 
 import numpy as np
 import pandas as pd
 
-from . import config, reversal
+from . import config
 from .grading import grade_from_points
-from .indicators import rsi, sma
-
-# reuse the Reversals trade-level, detail and narrative builders verbatim
-compute_levels = reversal.compute_levels
-narrative = reversal.narrative
+from .indicators import pivot_highs, pivot_lows, rsi, sma, supertrend
 
 CHIP_ORDER = ["volume", "breakout", "reclaim", "base", "rsi"]
 
@@ -62,7 +60,7 @@ def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
     # ---- price action: breakout out of the base -------------------------
     a, b = config.SPEC_BREAKOUT_BASE
     base_high = float(high.iloc[-a:-b].max())
-    breakout = bool(c >= base_high * config.REV_BREAKOUT_TOL)
+    breakout = bool(c >= base_high * config.SPEC_BREAKOUT_TOL)
     if not breakout:                                  # MANDATORY
         return None
     # momentum must be turning up, and price has reclaimed the mid SMA
@@ -73,7 +71,7 @@ def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
     if c > s9l * (1 + config.SPEC_MAX_EXT):           # MANDATORY (skip the latecomers)
         return None
 
-    new_high_long = bool(c >= float(high.iloc[-config.SPEC_NEWHIGH_LONG:-b].max()) * config.REV_BREAKOUT_TOL)
+    new_high_long = bool(c >= float(high.iloc[-config.SPEC_NEWHIGH_LONG:-b].max()) * config.SPEC_BREAKOUT_TOL)
 
     # ---- fresh 9-over-26 reclaim (bonus) ---------------------------------
     above = (s9 > s26).to_numpy()
@@ -84,8 +82,8 @@ def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
     reclaim = bool(above[-1] and (recent_cross or s9l > s26l))
 
     # ---- RSI turning up, not exhausted ----------------------------------
-    rsi_ = rsi(close, config.REV_RSI_PERIOD)
-    rsi_ma = sma(rsi_, config.REV_RSI_MA)
+    rsi_ = rsi(close, config.SPEC_RSI_PERIOD)
+    rsi_ma = sma(rsi_, config.SPEC_RSI_MA)
     rsil, rsimal = float(rsi_.iloc[-1]), float(rsi_ma.iloc[-1])
     lo, hi = config.SPEC_RSI_BAND
     rsi_up = rsil > float(rsi_.iloc[-3])
@@ -99,7 +97,7 @@ def evaluate(df: pd.DataFrame, max_price: float | None = None) -> dict | None:
         "spike_ratio": spike_ratio,
         "off_high": off_high, "base_high": base_high, "below200": below200,
         "new_high_long": new_high_long,
-        # keys the reversal helpers expect:
+        # keys the shared detail/chip helpers read:
         "reclaim": reclaim, "base": True, "volume": True,
         "breakout": breakout, "rsi_sig": rsi_sig,
         "cross_up": s9l > s26l,
@@ -154,12 +152,73 @@ def build_chips(fired: list[str], sig: dict) -> list[str]:
     return chips
 
 
+def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
+    close = sig["close"]
+    entry = close                         # enter on the reclaim / breakout
+    swing_low = float(df["Low"].iloc[-config.SPEC_STOP_LOOKBACK:].min())
+    stop = swing_low * (1 - config.STOP_BUFFER)
+    if stop >= entry:
+        stop = min(sig["sma"][26], entry * config.SPEC_STOP_FALLBACK_PCT)
+    risk = entry - stop
+
+    # target: nearest meaningful resistance (>=10% up), else a 3R measured move.
+    piv = pivot_highs(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
+    above = piv[piv > close * 1.10]
+    if len(above) > 0:
+        target, basis = float(above.min()), "resistance"
+    else:
+        target = entry + 3 * risk if risk > 0 else close * 1.3
+        basis = "measured"
+
+    rr = (target - entry) / risk if risk > 0 else 0.0
+    trail = float(supertrend(df, config.ATR_PERIOD, config.SUPERTREND_MULT).iloc[-1])
+    return {"entry": round(entry, 8), "stop": round(stop, 8), "target": round(target, 8),
+            "rr": round(rr, 2), "trail": round(trail, 8), "target_basis": basis}
+
+
+def _pct(level: float, close: float) -> float:
+    """How far `level` sits from price (negative = below price)."""
+    return round((level - close) / close * 100, 1) if close else 0.0
+
+
+def _structure(df: pd.DataFrame) -> dict:
+    highs = pivot_highs(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
+    lows = pivot_lows(df.iloc[-config.RESIST_LOOKBACK:], config.PIVOT_WINDOW)
+    sh = [round(float(v), 8) for v in highs.iloc[-3:].tolist()]
+    sl = [round(float(v), 8) for v in lows.iloc[-3:].tolist()]
+
+    up = len(sh) >= 2 and sh[-1] > sh[0] and len(sl) >= 2 and sl[-1] > sl[0]
+    down = len(sh) >= 2 and sh[-1] < sh[0] and len(sl) >= 2 and sl[-1] < sl[0]
+    trend = "HH/HL — Uptrend" if up else "LH/LL — Downtrend" if down else "Mixed / consolidating"
+    return {"trend": trend, "swing_highs": sh, "swing_lows": sl}
+
+
 def build_detail(df: pd.DataFrame, sig: dict, lv: dict) -> dict:
-    detail = reversal.build_detail(df, sig, lv)
-    detail["setup_type"] = "spec"
-    detail["spike_ratio"] = round(sig["spike_ratio"], 1)
-    detail["new_high_long"] = sig["new_high_long"]
-    return detail
+    close = sig["close"]
+    s = sig["sma"]
+    ratio = sig["vol5"] / sig["vol20"] if sig["vol20"] else 0.0
+    swing_low = float(df["Low"].iloc[-config.SPEC_STOP_LOOKBACK:].min())
+    return {
+        "setup_type": "spec",
+        "sma9": round(s[9], 8), "sma9_pct": _pct(s[9], close),
+        "sma26": round(s[26], 8), "sma26_pct": _pct(s[26], close),
+        "sma43": round(s[43], 8), "sma43_pct": _pct(s[43], close),
+        "sma200": round(s[200], 8), "sma200_pct": _pct(s[200], close),
+        "cross_up": sig["cross_up"],
+        "rsi": round(sig["rsi"], 1), "rsi_ma": round(sig["rsi_ma"], 1), "rsi_up": sig["rsi_up"],
+        "volume_ratio": round(ratio, 1), "volume_today": int(sig["vol"]),
+        "volume_avg": int(sig["vol20"]), "volume_surge": sig["volume"],
+        "off_high_pct": round(sig["off_high"] * 100, 1),
+        "base_high": round(sig["base_high"], 8), "base_high_pct": _pct(sig["base_high"], close),
+        "broken": sig["breakout"],
+        "swing_low": round(swing_low, 8), "swing_low_pct": _pct(swing_low, close),
+        "trailing_stop": lv["trail"], "trailing_label": "SuperTrend 3× ATR",
+        "trailing_pct": _pct(lv["trail"], close),
+        "structure": _structure(df),
+        "risk_pct": round((lv["entry"] - lv["stop"]) / lv["entry"] * 100, 1) if lv["entry"] else 0.0,
+        "spike_ratio": round(sig["spike_ratio"], 1),
+        "new_high_long": sig["new_high_long"],
+    }
 
 
 def spec_narrative(symbol: str, sig: dict, lv: dict, detail: dict, cur: str = "$") -> str:

@@ -125,12 +125,6 @@ def write_json(path: str | pathlib.Path, payload, *, indent: int | None = 2,
     return path
 
 
-def write(payload: dict, out_dir: str | pathlib.Path, name: str | None = None) -> pathlib.Path:
-    out = pathlib.Path(out_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    return write_json(out / f"{name or payload['market']}.json", payload)
-
-
 # ── v5 payload split (owner-ruled payload diet, 2026-07-31) ──────────────────
 
 def split_vivek(vk: dict) -> tuple[dict, dict]:
