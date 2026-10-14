@@ -11,7 +11,10 @@ structure at TP2) and the same fees + slippage R-drag the live bot/journal use.
 
 Fills are pessimistic intrabar: within a bar the adverse extreme (the stop
 side) is checked BEFORE the favourable extreme, so when a bar's range spans
-both a stop and a target the stop is assumed to fill first.
+both a stop and a target the stop is assumed to fill first -- and it fills AT
+that extreme (the worst print), not at the stop. Every trade also carries
+``realized_r_house``: the same exits with the stop filled the house way (at
+the stop, or at the open of a bar that gapped through it). REFINE200 #146.
 
 Backtestable timeframes: Daily (1D), 3-Day (3D) and Weekly (1W). 4H is not
 backtestable server-side (no deep intraday history). Trades also carry the
@@ -34,7 +37,7 @@ import pandas as pd
 
 from . import config, conviction, output, vivek
 from .broker.vivek_bot import size_position, _is_fund_or_reit
-from .vivek_journal import _snapshot, _mark, _apply_costs, _r_of, costs_for
+from .vivek_journal import _snapshot, _mark, _apply_costs, _cost_r, _r_of, costs_for
 
 log = logging.getLogger("vivek_backtest")
 
@@ -78,25 +81,95 @@ def _sizing_basis() -> dict:
             "sizing_mode": "fixed_notional" if notional > 0 else "risk_pct"}
 
 
+def replay_params() -> dict:
+    """How the replay fills and re-enters -- stamped on every report's params
+    so a reader never has to infer the convention from the numbers."""
+    return {"intrabar": "pessimistic (stop-first)",
+            "stop_fill": STOP_FILL_NOTE,
+            "reentry_cooldown_days": cooldown_days(),
+            "crypto_data_source": str(getattr(config, "CRYPTO_DATA_SOURCE", "yahoo"))}
+
+
+def data_source_caveat() -> str:
+    """Where the bars came from (REFINE200 #154), in words."""
+    if str(getattr(config, "CRYPTO_DATA_SOURCE", "yahoo")) == "exchange":
+        crypto = ("crypto from exchange daily klines (data.fetch) with the live identity "
+                  "check against CoinGecko's price -- a coin no source confirms is left out, "
+                  "Yahoo only for coins no exchange lists")
+    else:
+        crypto = "crypto from Yahoo's aggregated <SYM>-USD series (no identity check)"
+    return ("Data: stocks are yfinance daily bars (dividend-adjusted, occasional gaps); "
+            + crypto + ". coverage[market].data_sources names the venues.")
+
+
 # ── per-symbol replay ─────────────────────────────────────────────────────────
 
+def _htf_sma_each_bar(close: pd.Series, rule: str, window: int, min_bars: int,
+                      **resample_kw) -> np.ndarray:
+    """The higher-timeframe SMA the ENGINE reads at every daily bar, causally.
+
+    REFINE200 #147. ``vivek.evaluate(df.iloc[:j + 1])`` resamples ITS OWN
+    slice, so at bar j its last higher-timeframe bar is the PARTIAL bucket
+    that closes at ``close[j]``, and the SMA is the mean of the last
+    ``min(window, n)`` bucket closes (``n`` = buckets up to and including that
+    partial one; ``min_bars`` is the engine's minimum). That is computed here
+    for every bar at once: completed buckets' closes come from strictly
+    EARLIER bars, the partial one is the bar's own close, so no value reads a
+    close after its bar. The mask this feeds used to resample the WHOLE
+    series instead -- the 3D leg labelled each 72h bucket by its START and
+    forward-filled it, so the first day of a bucket read the close two bars
+    AHEAD, and the weekly leg needed a full 200 weeks where the engine
+    proxies from ``VIVEK_MIN_WEEKLY_BARS`` (60). Bucket boundaries come from
+    the same ``resample`` call the engine makes, so they cannot drift.
+    """
+    vals = close.to_numpy(dtype=float)
+    n = len(vals)
+    out = np.full(n, np.nan)
+    if n == 0:
+        return out
+    rs = pd.Series(np.arange(n), index=close.index).resample(rule, **resample_kw)
+    lo, hi = rs.min(), rs.max()
+    last = close.resample(rule, **resample_kw).last()
+    keep = (lo.notna() & last.notna()).to_numpy()          # the engine's .dropna()
+    lo_k = lo.to_numpy()[keep].astype(int)
+    hi_k = hi.to_numpy()[keep].astype(int)
+    cum = np.concatenate([[0.0], np.cumsum(last.to_numpy(dtype=float)[keep])])
+    for p in range(len(lo_k)):
+        if p + 1 < min_bars:
+            continue
+        w = min(window, p + 1)
+        prior = cum[p] - cum[p - (w - 1)]                 # the w-1 completed buckets before it
+        out[lo_k[p]:hi_k[p] + 1] = (prior + vals[lo_k[p]:hi_k[p] + 1]) / w
+    return out
+
+
 def _candidate_mask(df: pd.DataFrame) -> np.ndarray:
-    """Bars where price is near a 200 SMA (daily or weekly) — the only place a
-    reaction can exist. A superset of the engine's in-play test (the engine
-    re-checks precisely), so it only saves work, never invents trades."""
-    close = df["Close"]
+    """Bars where price is near a 200 SMA (daily, weekly or 3-day) — the only
+    place a reaction can exist. A superset of the engine's in-play test (the
+    engine re-checks precisely), so it only saves work, never invents trades.
+
+    Each level is the value the engine itself reads at that bar
+    (``_htf_sma_each_bar``), including the weekly PROXY under 200 weeks
+    (#72): REFINE200 #147 measured 18% of the ASX archive's near-weekly bars
+    (and 32% of synthetic weekly-level signals) masked out by a mask that
+    demanded a full 200 weeks, plus a 3D leg that peeked two bars ahead.
+    The tolerance is still widened by 1.3x, purely as margin."""
+    c = df["Close"].to_numpy(dtype=float)
     tol = config.VIVEK_NEAR_TOL * 1.3                      # widen so we never miss one
-    dsma = close.rolling(config.VIVEK_SMA).mean()
-    wk = close.resample("W-FRI").last()
-    wsma = wk.rolling(config.VIVEK_SMA).mean().reindex(df.index, method="ffill")
+    with np.errstate(invalid="ignore", divide="ignore"):
+        near = [np.abs(c - s) / c <= tol for s in _candidate_levels(df)]   # NaN -> False
+    return near[0] | near[1] | near[2]
+
+
+def _candidate_levels(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(daily, weekly, 3-day) 200-SMA at every bar, as the engine reads them."""
+    close = df["Close"]
+    dsma = close.rolling(config.VIVEK_SMA).mean().to_numpy()
+    wsma = _htf_sma_each_bar(close, "W-FRI", config.VIVEK_SMA, config.VIVEK_MIN_WEEKLY_BARS)
     # 3-Day 200 SMA — epoch-anchored 72h buckets, identical to the engine's
-    # _resample_3day_ohlc, so slice anchoring can't drift from this mask.
-    d3 = close.resample("72h", origin="epoch").last().dropna()
-    sma3 = d3.rolling(config.VIVEK_SMA).mean().reindex(df.index, method="ffill")
-    near_d = (close - dsma).abs() / close <= tol
-    near_w = (close - wsma).abs() / close <= tol
-    near_3 = (close - sma3).abs() / close <= tol
-    return (near_d.fillna(False) | near_w.fillna(False) | near_3.fillna(False)).to_numpy()
+    # _resample_3day_ohlc (which needs a full 200 of them).
+    sma3 = _htf_sma_each_bar(close, "72h", config.VIVEK_SMA, config.VIVEK_SMA, origin="epoch")
+    return dsma, wsma, sma3
 
 
 def _turnover_series(df: pd.DataFrame, market: str) -> np.ndarray:
@@ -198,19 +271,90 @@ def _force_close(tr: dict, price: float, day: str, costs) -> None:
     _apply_costs(tr, costs)
 
 
-def _manage_bar(tr: dict, high: float, low: float, close: float, day: str, costs, is_last: bool) -> None:
+STOP_FILL_NOTE = ("worst print: a stop fills at the bar's adverse extreme (a long's LOW), "
+                  "not at the stop; realized_r_house / *_house re-price the same exits at "
+                  "the stop, or at the open when the bar gapped through it")
+
+
+def _house_stop_fill(tr: dict, stop_at: float, gross_at: float, open_, costs) -> None:
+    """The SAME stop exit priced the house way (REFINE200 #146).
+
+    ``_mark`` closes a hit stop at the price it was handed, and the replay
+    hands it the bar's adverse EXTREME, so every stop -- including a
+    break-even trail after TP1 -- fills at the worst print of the bar. A
+    resting stop fills AT the stop, or at the open when the bar gapped
+    through it (``rmodel.HOUSE_STOP_FILL``, the owner's 2026-09-24 house
+    rule). Exit TIMING is identical under both (the stop is hit on the same
+    bar either way), so only this one exit's price differs, and the R is
+    rebuilt exactly as ``_mark`` / ``_apply_costs`` built the worst-print one:
+    same 4-dp accumulation from the gross R the trade carried into the bar,
+    same cost table. ``tests/test_backtest_fills.py`` pins it equal to
+    ``rmodel.simulate_both``'s house leg."""
+    is_long = tr["direction"] == "long"
+    o = float(open_) if open_ is not None else float("nan")
+    gapped = np.isfinite(o) and (o <= stop_at if is_long else o >= stop_at)
+    fill = o if gapped else float(stop_at)
+    last = tr["exits"][-1]
+    gross = round(gross_at + last["pct"] * _r_of(fill, tr["entry"], tr["risk"], is_long), 4)
+    exits = tr["exits"][:-1] + [{**last, "price": round(fill, 8)}]
+    cost = (round(_cost_r({"entry": tr["entry"], "risk": tr["risk"], "exits": exits}, *costs), 4)
+            if costs else 0.0)
+    tr["exit_price_house"] = round(fill, 8)
+    tr["realized_r_house"] = round(gross - cost, 4)
+
+
+def _mark_bar(tr: dict, open_, high: float, low: float, day: str, costs) -> None:
+    """One bar, stop side first (pessimistic), then any targets; a stop exit
+    also records its house-fill twin."""
     is_long = tr["direction"] == "long"
     adverse, favourable = (low, high) if is_long else (high, low)
+    stop_at, gross_at = tr["stop"], tr.get("gross_r", 0.0)
     _mark(tr, adverse, day, costs)                         # stop side first (pessimistic)
     if tr["status"] == "open":
         _mark(tr, favourable, day, costs)                 # then any targets
+    elif tr.get("exits") and tr["exits"][-1].get("reason") == "stop":
+        _house_stop_fill(tr, stop_at, gross_at, open_, costs)
+
+
+def _manage_bar(tr: dict, high: float, low: float, close: float, day: str, costs, is_last: bool,
+                open_: float | None = None) -> None:
+    """``open_`` is the bar's open, read ONLY by the house-fill twin (a stop
+    the bar gapped through fills there). Absent, a stop is taken as not
+    gapped -- the worst-print path never reads it."""
+    _mark_bar(tr, open_, high, low, day, costs)
     if tr["status"] == "open" and is_last:
         _force_close(tr, close, day, costs)
+    if tr["status"] == "closed":                           # no stop involved: one fill
+        tr.setdefault("realized_r_house", tr.get("realized_r"))
+
+
+def _add_days(day: str, n: int) -> str:
+    return (dt.date.fromisoformat(day) + dt.timedelta(days=n)).isoformat()
+
+
+def cooldown_days() -> int:
+    """The live bot's re-entry cooldown after a full stop-out (0 = off)."""
+    return int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
 
 
 def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector: str,
-                  long_only: bool = False) -> list[dict]:
-    """Walk one symbol's daily history and return its closed backtest trades."""
+                  long_only: bool = False, cooldown: int | None = None,
+                  stats: dict | None = None) -> list[dict]:
+    """Walk one symbol's daily history and return its closed backtest trades.
+
+    REFINE200 #156 -- the live bot's stop cooldown applies HERE, in the replay
+    every headline is aggregated from, not only in ``portfolio_sim``: after a
+    full stop-out (``exit_reason == "stop"``) no new entry on the symbol is
+    queued on a bar dated within ``cooldown`` days of that exit -- the live
+    ``vivek_run._cooldown_symbols`` window (``exit_date >= day - N``), per
+    SYMBOL like the live rule, not per timeframe. The replay used to free the
+    slot and re-detect on the very bar it stopped out on, so a still-armed
+    trigger re-entered at the next open: 102 of 1,457 published trades
+    (mean -0.197R against -0.13R overall) were re-entries the bot forbids.
+    ``cooldown=None`` reads the live config; ``0`` reproduces the old replay.
+    The refused re-entries are counted in ``stats["cooldown_blocked"]`` (one
+    per timeframe plan that would otherwise have been queued)."""
+    cool = cooldown_days() if cooldown is None else int(cooldown or 0)
     if df is None or len(df) < config.VIVEK_MIN_HISTORY + 5:
         return []
     df = df[~df.index.duplicated(keep="last")].sort_index()
@@ -233,6 +377,7 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
     closed: list[dict] = []
     open_slots = {tf: None for tf in TIMEFRAMES}
     pending: list[tuple] = []                              # (tf, plan, row) → open at next bar's open
+    cool_until = ""                                        # ISO day: no new entry through it
 
     for j in range(config.VIVEK_MIN_HISTORY, n):
         day = idx[j].date().isoformat()
@@ -243,6 +388,10 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
                 if tr is not None:
                     tr["market"] = market
                     tr["level_tf"] = row.get("level_tf")
+                    # REFINE200 #138: `stop` trails from here on; the plan's
+                    # stop is what `risk` was measured against and is what
+                    # the published record calls `stop`.
+                    tr["initial_stop"] = tr["stop"]
                     # Carried so the HIGH CONVICTION cohort can be measured
                     # (2026-09-20). It lives on the plan and stopped there, so
                     # the one rule the deck actually promotes had no backtest
@@ -258,10 +407,13 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
             tr = open_slots[tf]
             if tr is None:
                 continue
-            _manage_bar(tr, float(h[j]), float(l[j]), float(c[j]), day, costs, is_last=(j == n - 1))
+            _manage_bar(tr, float(h[j]), float(l[j]), float(c[j]), day, costs,
+                        is_last=(j == n - 1), open_=float(o[j]))
             if tr["status"] == "closed":
                 closed.append(tr)
                 open_slots[tf] = None
+                if cool and tr.get("exit_reason") == "stop":
+                    cool_until = max(cool_until, _add_days(tr["exit_date"], cool))
 
         # 3) detect a new signal at this bar (uses its close), queue for next bar
         #    TOP100 #59 — the liquidity gate the live scan applies (scan.py:171).
@@ -284,9 +436,14 @@ def replay_symbol(df: pd.DataFrame, market: str, symbol: str, name: str, sector:
             if sig is not None:
                 row, plans, grade = _build_row(sig, df.iloc[:j + 1], symbol, name, sector)
                 if row and grade in ("A+", "A") and not (long_only and row["dir"] == "SHORT"):
+                    cooling = bool(cool_until) and day <= cool_until
                     for tf in TIMEFRAMES:
                         p = plans.get(tf)
                         if p and p.get("armed") and open_slots[tf] is None:
+                            if cooling:
+                                if stats is not None:
+                                    stats["cooldown_blocked"] = stats.get("cooldown_blocked", 0) + 1
+                                continue
                             pending.append((tf, p, row))
     return closed
 
@@ -445,12 +602,31 @@ def _exit_order(trades: list[dict]) -> list[int]:
                                  trades[i].get("exit_date") or ""))
 
 
+def _house_metrics(trades: list[dict]) -> dict:
+    """The house-fill column beside the worst-print headline (REFINE200 #146).
+
+    None when ANY trade lacks ``realized_r_house`` (a record written before
+    the column existed): a total over part of the population would read as
+    the whole, and mixing in the worst-print R would understate the gap the
+    column exists to show."""
+    hs = [t.get("realized_r_house") for t in trades]
+    n = len(hs)
+    if not n:
+        return {"win_rate_house": 0.0, "expectancy_r_house": 0.0, "total_r_house": 0.0}
+    if any(h is None for h in hs):
+        return {"win_rate_house": None, "expectancy_r_house": None, "total_r_house": None}
+    return {"win_rate_house": round(100 * sum(1 for h in hs if h > 0) / n, 1),
+            "expectancy_r_house": round(sum(hs) / n, 3),
+            "total_r_house": round(sum(hs), 2)}
+
+
 def _metrics(trades: list[dict]) -> dict:
     n = len(trades)
     if not n:
         return {"n": 0, "win_rate": 0.0, "avg_r": 0.0, "expectancy_r": 0.0,
                 "profit_factor": None, "total_r": 0.0, "total_usd": 0.0,
-                "max_dd_usd": 0.0, "max_dd_open_usd": 0.0, "mfe_zero_rate": 0.0}
+                "max_dd_usd": 0.0, "max_dd_open_usd": 0.0, "mfe_zero_rate": 0.0,
+                **_house_metrics([])}
     rs = [t.get("realized_r") or 0.0 for t in trades]
     ds = [_dollars(t) for t in trades]
     wins = [r for r in rs if r > 0]
@@ -505,6 +681,7 @@ def _metrics(trades: list[dict]) -> dict:
         "max_dd_usd": round(dd, 2),
         "max_dd_open_usd": round(dd_open, 2),
         "mfe_zero_rate": round(mfe_zero / n, 3),
+        **_house_metrics(trades),
     }
 
 
@@ -524,6 +701,20 @@ def is_high_conviction(tr: dict) -> bool:
     ROW fires on. Same population, reached from the other end.
     """
     return conviction.trade_is_high_conviction(tr)
+
+
+def level_allow() -> tuple[str, ...]:
+    """The live bot's level gate, normalised exactly as
+    ``vivek_run._apply_level_gate`` reads it. Empty = gate off."""
+    return tuple(str(a).strip().lower()
+                 for a in (getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()))
+
+
+def level_ok(tr: dict, allow: tuple[str, ...] | None = None) -> bool:
+    """Would the live level gate keep this trade's row? FAIL-CLOSED like the
+    live gate: a missing or blank ``level_tf`` is dropped while it is on."""
+    allow = level_allow() if allow is None else allow
+    return (not allow) or str(tr.get("level_tf") or "").strip().lower() in allow
 
 
 def aggregate(trades: list[dict]) -> dict:
@@ -572,6 +763,20 @@ def aggregate(trades: list[dict]) -> dict:
             cell: _metrics([t for t in longs if conviction.trade_cell(t) == cell])
             for cell in conviction.cell_names()
         },
+        # REFINE200 #149: the same cells split by the bot's LEVEL gate
+        # (VIVEK_BOT_LEVEL_TF_ALLOW). The cell rows above pool trades the bot
+        # can take (a weekly/3d level) with ones it never can (the h4 proxy):
+        # the published '1D break' mixed h4-level n=15 at +0.576R with
+        # bot-takeable n=70 at -0.102R. `bot_level` is what the bot trades.
+        "by_conviction_cell_long_level": {
+            "allow": list(level_allow()),
+            "bot_level": {cell: _metrics([t for t in longs if conviction.trade_cell(t) == cell
+                                          and level_ok(t)])
+                          for cell in conviction.cell_names()},
+            "other_level": {cell: _metrics([t for t in longs if conviction.trade_cell(t) == cell
+                                            and not level_ok(t)])
+                            for cell in conviction.cell_names()},
+        },
     }
 
 
@@ -586,14 +791,26 @@ def aggregate(trades: list[dict]) -> dict:
 # `_risk_usd` had to size off the trailed stop and zeroed every breakeven-
 # trailed winner; `mae_r` is the only trace of what happened BETWEEN entry and
 # exit, without which a drawdown curve can only step at exits.
+#
+# REFINE200 #31: `mfe_r` joins them -- `_metrics`' mfe_zero_rate reads it, and
+# without it every bucket of the published file read 1.0 ("never right from
+# entry"), a number that looked like a finding. #138: `exit` is the EXIT PRICE
+# (`_mark` writes `exit_price`; only the end-of-data close wrote `exit`, so 87%
+# of published exits were null), `stop` is the INITIAL stop the trade was
+# sized against (`entry -/+ risk`), and the trailed one is `stop_final`.
+# #146: `realized_r_house` is the house-fill twin of `realized_r`.
 _SLIM_KEYS = ("symbol", "market", "timeframe", "level_tf", "entry_type", "grade",
-              "direction", "entry", "stop", "risk", "exit", "entry_date", "exit_date",
-              "exit_reason", "realized_r", "gross_r", "cost_r", "mae_r", "sector",
-              "structural_tps")
+              "direction", "entry", "stop", "stop_final", "risk", "exit", "entry_date",
+              "exit_date", "exit_reason", "realized_r", "realized_r_house", "gross_r",
+              "cost_r", "mae_r", "mfe_r", "sector", "structural_tps")
+# Published key -> the trade fields it is read from, first present wins.
+_SLIM_FROM = {"stop": ("initial_stop", "stop"), "stop_final": ("stop",),
+              "exit": ("exit_price", "exit")}
 
 
 def _slim(tr: dict) -> dict:
-    return {k: tr.get(k) for k in _SLIM_KEYS}
+    return {k: next((tr[s] for s in _SLIM_FROM.get(k, (k,)) if tr.get(s) is not None), None)
+            for k in _SLIM_KEYS}
 
 
 def _sample(items: list[dict], limit: int | None) -> list[dict]:
@@ -622,11 +839,36 @@ def _sample(items: list[dict], limit: int | None) -> list[dict]:
     return [items[int(i * step)] for i in range(limit)]
 
 
+def fetch_market_frames(mk: str, uni: list[dict], period: str) -> tuple[dict, dict]:
+    """({yf: frame}, data_sources) for a replay, through the ONE entry point
+    the live scan prices through (REFINE200 #154).
+
+    ``data.fetch`` is ``download()`` exactly for stocks; for crypto (with
+    ``CRYPTO_DATA_SOURCE = "exchange"``) it is the exchange klines plus the
+    identity check against CoinGecko's price, so the replay measures the
+    instrument the live scan trades, and its liquidity gate reads the same
+    single-venue quote volume the live $3M floor does. Both replays used to
+    call Yahoo-only ``download`` for crypto: aggregate volume, and for
+    colliding tickers (AERO/JUP/ARB...) a different token. A coin no source
+    confirms is left out, as it is live. ``data_sources`` is the compact half
+    of fetch's report, published so a reader can see which venue priced what.
+    """
+    from . import data
+    tickers = [u["yf"] for u in uni]
+    frames, rep = data.fetch(mk, tickers, period=period, **data.identity_kwargs(mk, uni))
+    src = {"mode": rep.get("mode"), "by_source": rep.get("by_source") or {},
+           "yahoo_fallback": rep.get("yahoo_fallback", 0),
+           "refused": len(rep.get("refused") or []),
+           "identity_rejected": len(rep.get("identity_rejected") or {}),
+           "stale_rejected": len(rep.get("stale_rejected") or {}),
+           "unchecked": rep.get("unchecked", 0)}
+    return frames, src
+
+
 def run_market_trades(mk: str, limit: int | None, period: str,
                       exclude_funds: bool = True, long_only: bool = False) -> tuple[list[dict], dict]:
     """Backtest ONE market; return (slim trades, coverage entry)."""
     from .universe import load_universe
-    from .data import download
 
     # TOP100 #58 — was `full=False`, the BUNDLED CSV: 99 curated NASDAQ mega-caps
     # against the ~1,430 names the live scan actually walks, and the smaller
@@ -640,14 +882,15 @@ def run_market_trades(mk: str, limit: int | None, period: str,
                    if not _is_fund_or_reit({"name": u.get("name"), "sector": u.get("sector")})]
     uni = _sample(uni_all, limit)
     log.info("[%s] downloading %d of %d tickers (%s) ...", mk, len(uni), len(uni_all), period)
-    frames = download([u["yf"] for u in uni], period=period)
+    frames, sources = fetch_market_frames(mk, uni, period)
     meta = {u["yf"]: u for u in uni}
     trades: list[dict] = []
+    stats: dict = {}
     for yf, df in frames.items():
         u = meta.get(yf, {})
         try:
             trades.extend(replay_symbol(df, mk, u.get("symbol", yf), u.get("name", yf),
-                                        u.get("sector", ""), long_only=long_only))
+                                        u.get("sector", ""), long_only=long_only, stats=stats))
         except Exception as e:
             log.warning("[%s] %s replay error: %s", mk, yf, e)
     log.info("[%s] %d trades from %d symbols", mk, len(trades), len(uni))
@@ -659,6 +902,8 @@ def run_market_trades(mk: str, limit: int | None, period: str,
         "symbols": len(uni), "universe": len(uni_all),
         "sampled_pct": round(100 * len(uni) / max(len(uni_all), 1), 1),
         "trades": len(trades),
+        "priced": len(frames), "data_sources": sources,
+        "cooldown_blocked": int(stats.get("cooldown_blocked", 0)),
     }
 
 
@@ -770,12 +1015,22 @@ def portfolio_sim(trades: list[dict]) -> dict:
     # have been willing to take", and a 95%-stop plan was never one of those.
     gate_skips: Counter = Counter()
     ungated = 0
+    level_gated = 0
+    allow = level_allow()
     elig = []
     for t in trades:
         if (t.get("grade") not in grades
                 or t.get("entry_type") not in set(cells.get(t.get("timeframe")) or ())
                 or (long_only and t.get("direction") != "long")
                 or not t.get("entry_date") or not t.get("exit_date")):
+            continue
+        # REFINE200 #149 -- the live LEVEL gate (vivek_run._apply_level_gate,
+        # VIVEK_BOT_LEVEL_TF_ALLOW): only a row reacting at a weekly/3d level
+        # reaches decide(), and a blank level_tf is dropped (fail-closed). The
+        # sim claimed "the same rules as the live bot" while letting h4-level
+        # trades fill its slots.
+        if not level_ok(t, allow):
+            level_gated += 1
             continue
         code = _bot_gate(t)
         if code:
@@ -790,7 +1045,8 @@ def portfolio_sim(trades: list[dict]) -> dict:
     if not elig:
         return {"note": "no bot-eligible trades with entry dates (re-run the "
                         "backtest to regenerate trades with entry_date)",
-                "eligible": _metrics([]), "portfolio": _metrics([])}
+                "eligible": _metrics([]), "portfolio": _metrics([]),
+                "level_gated": level_gated}
 
     def add_days(day: str, n: int) -> str:
         return (dt.date.fromisoformat(day) + dt.timedelta(days=n)).isoformat()
@@ -843,11 +1099,12 @@ def portfolio_sim(trades: list[dict]) -> dict:
                    "cooldown_days": cooldown, "long_only": long_only,
                    "grades": list(grades),
                    "entry_cells": {tf: list(ets) for tf, ets in cells.items()},
+                   "level_tf_allow": list(allow),
                    # Say what IS replayed, not only what is not — a bare
                    # "not_simulated" list invites the reader to assume
                    # everything absent from it was modelled, which is the
                    # assumption #68 was about.
-                   "simulated_gates": ["min_price", "max_stop_pct", "min_stop_pct",
+                   "simulated_gates": ["level_gate", "min_price", "max_stop_pct", "min_stop_pct",
                                        "max_positions", "one_per_symbol",
                                        "max_per_sector", "reentry_cooldown"],
                    "not_simulated": ["time_stop", "daily_guard", "weekly_guard",
@@ -862,6 +1119,10 @@ def portfolio_sim(trades: list[dict]) -> dict:
         # have wanted, `skipped` are trades it wanted and had no room for, and
         # summing them would answer neither question.
         "gated": dict(gate_skips), "gated_unknown_stop": ungated,
+        # Rows the level gate drops before the bot ever sees them (counted
+        # apart from `gated`: they are not trades the bot refused, they are
+        # rows it is never shown).
+        "level_gated": level_gated,
     }
 
 
@@ -882,8 +1143,20 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
         "trades": trades,
         "caveats": [
             "Survivorship bias — today's universe excludes delisted names.",
-            "yfinance daily data (dividend-adjusted); occasional gaps.",
+            data_source_caveat(),
             "Intrabar fills assume the stop fills before the target within a bar.",
+            # REFINE200 #146 -- the FILL PRICE, not only the order: the
+            # headline books a stop at the bar's worst print, which no
+            # resting stop gets except on a gap.
+            "Stop fill: " + STOP_FILL_NOTE + ". The headline (realized_r, "
+            "expectancy_r, total_r) is the worst print; *_house is the owner's "
+            "house rule (rmodel.HOUSE_STOP_FILL). Exit timing is identical "
+            "under both, so the two columns describe one set of trades.",
+            # REFINE200 #156
+            "Re-entry cooldown: after a full stop-out no new entry on the "
+            "symbol for params.reentry_cooldown_days (the live bot's rule), "
+            "applied in the replay itself; coverage[market].cooldown_blocked "
+            "counts the refused re-entries.",
             "A+ setups are rare, so trade counts (N) can be small and noisy.",
             "4H is not backtested (no deep intraday history).",
             "Dollar columns (total_usd, max_dd_usd) are priced under "
@@ -891,8 +1164,9 @@ def build_report(trades: list[dict], coverage: dict, params: dict, status: str) 
             "changed it — a switch between risk-% and fixed-notional moves "
             "them by an order of magnitude on identical trades. Read total_r "
             "and expectancy_r, which are ratios and carry across.",
-            "Portfolio sim: the slot/symbol/sector/cooldown caps and the "
-            "price + stop-distance gates ARE replayed; the time stop, the "
+            "Portfolio sim: the weekly/3d LEVEL gate, the slot/symbol/sector/"
+            "cooldown caps and the price + stop-distance gates ARE replayed; "
+            "the time stop, the "
             "daily/weekly loss guards, the earnings buffer and the ADV gates "
             "are not (no intra-trade price paths, earnings calendar or "
             "historical volume in the slim records), and it runs one market at "
@@ -1039,7 +1313,7 @@ def main() -> None:
     params = {"markets": sorted(done), "limit": args.limit or None, "period": args.period,
               "exclude_funds": not args.include_funds, "long_only": args.long_only,
               **_sizing_basis(),
-              "intrabar": "pessimistic (stop-first)", "timeframes": list(TIMEFRAMES)}
+              **replay_params(), "timeframes": list(TIMEFRAMES)}
     report = build_report(trades, coverage, params, status)
     _print(report)
     out.parent.mkdir(parents=True, exist_ok=True)

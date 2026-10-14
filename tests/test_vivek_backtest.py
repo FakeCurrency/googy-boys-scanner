@@ -67,7 +67,7 @@ def test_replay_symbol_smoke_does_not_crash():
     trades = bt.replay_symbol(df, "asx", "RND", "Random", "Materials")
     assert isinstance(trades, list)
     for t in trades:                                       # any trades must be well-formed
-        assert t["status"] == "closed" and t["timeframe"] in ("1D", "1W")
+        assert t["status"] == "closed" and t["timeframe"] in bt.TIMEFRAMES
         assert t.get("realized_r") is not None
 
 
@@ -75,7 +75,7 @@ def test_replay_symbol_smoke_does_not_crash():
 
 def _sim_trade(sym, entry_date, exit_date, r=1.0, sector="secA", **kw):
     t = {"symbol": sym, "market": "asx", "grade": "A+", "entry_type": "reclaim",
-         "direction": "long", "timeframe": "1W", "sector": sector,
+         "direction": "long", "timeframe": "1W", "sector": sector, "level_tf": "weekly",
          "entry": 100, "stop": 96, "entry_date": entry_date, "exit_date": exit_date,
          "exit_reason": "target", "realized_r": r}
     t.update(kw)
