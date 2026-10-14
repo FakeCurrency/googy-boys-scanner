@@ -37,20 +37,49 @@
       "gross_r": 0.0,
       "cost_r": 0.0056,
       "exits": [],
-      "mae": 749.1500244140625,
-      "mfe": 772.4600219726562,
-      "mae_r": -0.022,
-      "mfe_r": 0.102,
+      "mae": 724.47,
+      "mfe": 803.4400024414062,
+      "mae_r": -0.153,
+      "mfe_r": 0.266,
       "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 6.77504982,
-      "notional": 5000.0,
-      "leverage": 0.03,
+      "units": 3.38752491,
+      "notional": 2500.0,
+      "leverage": 0.02,
       "leverage_target": 3.0,
-      "risk_pct": 0.783,
-      "risk_usd": 1174.55,
+      "risk_pct": 0.3915,
+      "risk_usd": 587.27,
       "sizing_mode": "fixed_notional",
       "cycle": "w3-1",
       "review": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 13.1,
+          "stop_pct": 23.5,
+          "risk_usd": 587.27,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $587 - 13% of the $4,500 daily loss guard, on a 23% stop"
+        }
+      ],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 738.00195312,
+      "fill_slip_bps": 206.6,
+      "last_mark": 743.69,
+      "day_marks": {
+        "2026-10-06": 788.44,
+        "2026-10-07": 779.61,
+        "2026-10-08": 772.84,
+        "2026-10-09": 738.55,
+        "2026-10-10": 742.92,
+        "2026-10-11": 751.32,
+        "2026-10-12": 754.18,
+        "2026-10-13": 737.3,
+        "2026-10-14": 742.63
+      },
+      "unreal_r": -0.051,
+      "unreal_usd": -29.77,
+      "review_before": [
         {
           "code": "heavy_risk",
           "share_pct": 26.1,
@@ -60,19 +89,16 @@
           "note": "a 1R loss here is $1,175 - 26% of the $4,500 daily loss guard, on a 23% stop"
         }
       ],
-      "source": "vivek_bot",
-      "lens": "vivek",
-      "level_tf": "3d",
-      "signal_entry": 738.00195312,
-      "fill_slip_bps": 206.6,
-      "last_mark": 762.84002686,
-      "day_marks": {
-        "2026-09-18": 753.25,
-        "2026-09-19": 763.0300293,
-        "2026-09-20": 762.30999756
-      },
-      "unreal_r": 0.051,
-      "unreal_usd": 59.72
+      "notional_before": 5000.0,
+      "units_before": 6.77504982,
+      "risk_usd_before": 1174.55,
+      "resized_at": "2026-09-28T04:03:28+00:00",
+      "data_source": "binance_vision",
+      "anchor": [
+        "2026-10-13",
+        741.72
+      ],
+      "stale_pinged": "2026-10-09"
     }
   ],
   "closed": [
@@ -634,17 +660,17 @@
   "guard": {
     "crypto": {
       "market": "crypto",
-      "day": "2026-09-20",
+      "day": "2026-10-14",
       "breached": false,
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 1601.29,
+      "week_usd": -111.84,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_unpriced_worst_usd": 0.0,
       "worst_session_usd": 3.3,
-      "worst_week_usd": 1601.29,
+      "worst_week_usd": -111.84,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
       "unrealised_usd": 3.3,
@@ -652,14 +678,14 @@
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 1,
-      "open_total_usd": 53.14,
+      "open_total_usd": -33.06,
       "notified": ""
     }
   },
   "summary": {
     "open": 1,
-    "unreal_usd": 59.72,
-    "updated_day": "2026-09-20"
+    "unreal_usd": -29.77,
+    "updated_day": "2026-10-14"
   },
-  "updated_at": "2026-09-20T01:20:22+00:00"
+  "updated_at": "2026-10-14T00:29:24+00:00"
 }
