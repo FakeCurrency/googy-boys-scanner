@@ -669,6 +669,70 @@ test("the refusal reaches the reader as its own message; the quote is checked to
     "PhaseMap's committed crypto candles are Yahoo's too");
 });
 
+/* ═══════════════ #105 ASX intraday bars on the exchange's calendar ═══════════ */
+suite("#105 intraday stock bars are tinted, banded and labelled on the exchange's clock");
+
+function tzHarness(market) {
+  const names = ["sessionClock", "bucketBars", "shadeRows", "barDateStr", "barTimeStr", "intradayFormatters"];
+  return new Function("market", `${constSrc("MOM_SESSION")} ${constSrc("_sessFmt")} ${constSrc("INTRADAY_TF")}
+    ${names.map((n) => fnSrc(n)).join("\n")} return { ${names.join(", ")}, MOM_SESSION };`)(market);
+}
+// ASX hourly bars as Yahoo stamps them: 10:00..15:00 Sydney, AEDT (UTC+11)
+// from Sun 4 Oct 2026. Mon 12 Oct's 10:00 is 2026-10-11T23:00Z.
+const asxHours = (days) => days.flatMap((d) => [10, 11, 12, 13, 14, 15].map((h) =>
+  ({ time: Date.parse(`${d}T00:00:00Z`) / 1000 + (h - 11) * 3600,     // local h:00 = (h-11):00Z
+     open: 1, high: 1, low: 1, close: 1, volume: 1 })));
+
+test("an AEDT Monday's opening 4H bar is a weekday, and a session is ONE band", () => {
+  const H = tzHarness("asx"), tz = H.MOM_SESSION.asx.tz;
+  const hours = asxHours(["2026-10-09", "2026-10-12", "2026-10-13"]);
+  assert.equal(H.sessionClock(hours[6].time, tz).day, "2026-10-12", "fixture: hour 6 is Monday's 10:00");
+  const h4 = H.bucketBars(hours, 4 * 3600);
+  const byDay = (rows) => {
+    const m = new Map(rows.map((r) => [r.time, r.color]));
+    const out = {};
+    for (const b of h4) (out[H.sessionClock(b.time, tz).day] = out[H.sessionClock(b.time, tz).day] || []).push(m.get(b.time) || "-");
+    return out;
+  };
+  const fixed = byDay(H.shadeRows(h4, "4H", tz));
+  for (const [day, cols] of Object.entries(fixed)) {
+    assert.ok(!cols.some((c) => /0\.10\)/.test(c)), `${day}: a trading session tinted as weekend`);
+    assert.equal(new Set(cols).size, 1, `${day}: one session, one band (got ${cols.join(", ")})`);
+  }
+  const utc = byDay(H.shadeRows(h4, "4H"));
+  assert.ok(utc["2026-10-12"].some((c) => /0\.10\)/.test(c)), "the UTC rule tinted Monday's open as Sunday (the bug)");
+  assert.deepEqual(H.shadeRows(h4, "1D", tz), H.shadeRows(h4, "1D"), "daily shading is untouched");
+});
+
+test("labels, axis and crosshair name the session's own day and time", () => {
+  const H = tzHarness("asx");
+  const mon10 = Date.parse("2026-10-11T23:00:00Z") / 1000;            // Mon 12 Oct 10:00 Sydney
+  const opt = { day: "numeric", month: "short", timeZone: "Australia/Sydney" };
+  assert.equal(H.barDateStr(mon10, "4H", { day: "numeric", month: "short" }),
+    new Date(mon10 * 1000).toLocaleDateString(undefined, opt));
+  assert.match(H.barTimeStr(mon10), /^10[:.]00/);
+  let tf = "4H";
+  const F = H.intradayFormatters(() => tf);
+  assert.equal(F.timeFormatter(mon10), "12 Oct '26 10:00", "the crosshair read Sun 11 Oct (UTC)");
+  assert.equal(F.tickMarkFormatter(mon10, 2), "12", "a day tick names the Sydney day");
+  assert.equal(F.tickMarkFormatter(mon10, 3), "10:00");
+  assert.equal(F.tickMarkFormatter(Date.parse("2026-09-14T00:00:00Z") / 1000, 1), "Sep", "LWC's month names");
+  assert.equal(F.tickMarkFormatter(mon10, 0), "2026");
+  tf = "1D";
+  const d = Date.parse("2026-10-12T00:00:00Z") / 1000;                 // daily bars sit at 00:00Z
+  assert.equal(F.tickMarkFormatter(d, 2), null, "daily keeps Lightweight Charts' own ticks");
+  assert.equal(F.timeFormatter(d), "12 Oct '26", "and its crosshair the bar's exchange date");
+  assert.equal(tzHarness("crypto").intradayFormatters(() => "4H"), null, "crypto is left exactly as it was");
+});
+
+test("render() installs the formatters on the price chart and the panes, and shades with the zone", () => {
+  assert.match(CODE, /const tzFmt = intradayFormatters\(\(\) => curTF\);/);
+  assert.match(CODE, /chart\.applyOptions\(\{ localization: \{ timeFormatter: tzFmt\.timeFormatter \},\s*timeScale: \{ tickMarkFormatter: tzFmt\.tickMarkFormatter \} \}\);/);
+  assert.match(CODE, /if \(tzFmt\) subCharts\.forEach\(/);
+  assert.match(CODE, /shadeRows\(\(tfs\[key\] \|\| \{\}\)\.candles, key, intradayTz\)/);
+  assert.match(fnSrc("rApply"), /shadeRows\(c\.slice\(0, idx\), curTF, intradayTz\)/, "replay shades the same way");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);

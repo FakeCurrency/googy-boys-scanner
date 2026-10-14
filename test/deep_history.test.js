@@ -631,9 +631,11 @@ test("a NASDAQ session at 2026-10-05T13:30Z labels as 5 Oct in a Melbourne brows
   // The pre-fix label: the raw 13:30Z stamp on the reader's clock is 00:30 on 6 Oct.
   assert.equal(new Date(Date.parse("2026-10-05T13:30:00Z")).toLocaleDateString(undefined, opt), nextDay,
     "the harness really is reading on Melbourne's clock");
-  // Intraday labels are untouched: still the reader's local clock.
+  // Intraday stock labels read the EXCHANGE's clock (REFINE200 #105): the
+  // 09:30 New York bar is 5 Oct, as its candle on the axis is -- not the
+  // reader's 6 Oct. (Until then they kept the reader's clock.)
   const raw = Date.parse("2026-10-05T13:30:00Z") / 1000;
-  assert.equal(h.api.barDateStr(raw, "4H", opt), nextDay, "4H keeps the local date, as before");
+  assert.equal(h.api.barDateStr(raw, "4H", opt), want, "4H labels on New York's clock");
 }));
 
 test("a daily label names the exchange date in a reader's timezone WEST of UTC too", () => inTZ("America/Los_Angeles", async () => {
@@ -647,9 +649,10 @@ test("a daily label names the exchange date in a reader's timezone WEST of UTC t
   assert.equal(h.api.barDateStr(mon.time, "1D", opt), want);
   assert.notEqual(new Date(mon.time * 1000).toLocaleDateString(undefined, opt), want,
     "the harness really is reading on Los Angeles' clock");
-  const t4 = Date.parse("2026-10-05T03:00:00Z") / 1000;   // an ASX 4H bar, 14:00 Sydney
-  assert.equal(h.api.barDateStr(t4, "4H", opt), new Date(t4 * 1000).toLocaleDateString(undefined, opt),
-    "intraday stays on the reader's clock");
+  const t4 = Date.parse("2026-10-04T23:00:00Z") / 1000;   // an ASX 4H bar, Mon 5 Oct 10:00 Sydney
+  assert.equal(h.api.barDateStr(t4, "4H", opt), want,
+    "intraday is labelled on Sydney's clock (REFINE200 #105), not the reader's (4 Oct) or UTC's (4 Oct)");
+  assert.notEqual(new Date(t4 * 1000).toLocaleDateString(undefined, opt), want, "the reader's clock really says 4 Oct");
 }));
 
 test("the replay, ruler and forecast labels all go through barDateStr", () => {
