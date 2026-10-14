@@ -1,6 +1,6 @@
 """THE IGNITION FENCES -- what makes the coil -> ignition lens non-breaking.
 
-Same governing principle as the momentum lens (HANDOFF_2026-09-22 Part 17.0):
+Same governing principle as the momentum lens (docs/archive/HANDOFF_2026-09-22.md Part 17.0):
 the lens must be deletable tomorrow in one commit, because removability and
 non-breakingness are the same property. TURTLE proved it; MOMENTUM pinned it;
 this file pins it for IGNITION from day one.

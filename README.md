@@ -41,7 +41,7 @@ It is marked to market server-side every scan.
 It is deliberately boring to change. Trade-rule edits need explicit owner sign-off,
 and while a pre-registered cycle is running the rules are frozen — every mid-cycle
 tweak resets the sample and throws away the only evidence the system produces.
-[`RESEARCH-LEDGER.md`](RESEARCH-LEDGER.md) is the permanent record of what has been
+[`docs/archive/RESEARCH-LEDGER.md`](docs/archive/RESEARCH-LEDGER.md) is the permanent record of what has been
 tested and what has been killed, so nothing gets re-litigated.
 
 ## Running it

@@ -3,7 +3,7 @@
 **Written:** 2026-09-22 · **Branch:** `vivek-momentum-v1` · **Status:** read-only inventory, no engine code yet
 
 Everything in this note was **verified by running or reading it on this tree**. Where the build
-brief, `HANDOFF_2026-09-22.md` Part 17, and the scanner spec disagree, the disagreement is
+brief, `HANDOFF_2026-09-22.md` (now `docs/archive/`) Part 17, and the scanner spec disagree, the disagreement is
 recorded with a ruling rather than silently resolved — that is the whole point of the phase.
 
 ---

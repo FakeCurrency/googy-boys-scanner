@@ -353,7 +353,7 @@ def review_report(closed, opn):
 
 
 def p12_readout(closed):
-    """P12 (PROPOSALS_2026-09-04): trail/target questions on rules closes."""
+    """P12 (docs/archive/PROPOSALS_2026-09-04.md): trail/target questions on rules closes."""
     rules = [r for r in closed if is_rules(r)]
     tp1 = [r for r in rules if r.get("tp1_hit")]
     big = [r for r in rules if (r.get("mfe_r") or 0) >= 1.0]
