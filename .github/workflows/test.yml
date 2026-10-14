@@ -266,6 +266,11 @@ jobs:
       # carry a known-live symbol so a moved file cannot pass vacuously.
       - name: Hygiene (proven-dead symbols stay gone)
         run: node test/hygiene.test.js
+      # REFINE200 WP7 (2026-10-14): deck entry-quality from bot_rules, slim
+      # PhaseMap confluence, row caps + age, SMA-proxy chip, SCAN poll window,
+      # service-worker cache bounds, RECS/ALERTS/NEWS honesty, CSS focus rings.
+      - name: Deck + small pages (REFINE200 WP7)
+        run: node test/refine_deck.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
