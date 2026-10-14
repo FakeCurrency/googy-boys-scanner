@@ -326,10 +326,26 @@
     try { localStorage.setItem(HIST2_KEY, JSON.stringify(next)); } catch (_) {}
     return out;
   }
+  // REFINE200 #191: the three picks used to be "A+, sorted by score" over a
+  // list assembled in fetch-ARRIVAL order — with 31 rows tied at 10/10, which
+  // market answered first decided the names (and they were all shorts, with
+  // nothing saying so). Ranking is now total: score, then R:R, then market
+  // order, then symbol — the same three names on every load of the same
+  // data. Scoring is untouched; the arrow on each pick names its direction.
+  const MKT_ORDER = { asx: 0, nasdaq: 1, crypto: 2 };
+  const num0 = (v) => (typeof v === "number" && isFinite(v) ? v : 0);
+  function worthALook(all, isFund, n = 3) {
+    return all.filter((r) => r.grade === "A+" && !isFund(r))
+      .sort((a, b) => (num0(b.score) - num0(a.score)) || (num0(b.rr) - num0(a.rr)) ||
+        ((MKT_ORDER[a._mkt] ?? 9) - (MKT_ORDER[b._mkt] ?? 9)) ||
+        String(a.symbol || "").localeCompare(String(b.symbol || "")))
+      .slice(0, n);
+  }
   function renderMorningRead(collected) {
     const host = document.getElementById("rec-morning");
     if (!host) return;
-    const keys = Object.keys(collected);
+    // MARKETS order, never the order the fetches happened to resolve in.
+    const keys = MARKETS.map((m) => m.key).filter((k) => collected[k]);
     if (!keys.length) { host.hidden = true; return; }
     const all = [];
     let aplusTotal = 0, multiTotal = 0, atLevelTotal = 0;
@@ -343,8 +359,7 @@
       }
     }
     const isFund = (r) => (window.PM && PM.isFundReit) ? PM.isFundReit(r) : false;
-    const watch = all.filter((r) => r.grade === "A+" && !isFund(r))
-      .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3);
+    const watch = worthALook(all, isFund);
     const d = overnightDelta(aplusTotal, multiTotal);
     const dChip = (v, label) => v == null ? "" :
       `<span class="mr-delta ${v > 0 ? "up" : v < 0 ? "down" : "flat"}">${v > 0 ? "▲ +" : v < 0 ? "▼ " : "◆ ±"}${Math.abs(v)} ${label}</span>`;
@@ -360,7 +375,8 @@
       (watch.length ? `<div class="mr-watch"><span class="mr-watch-lbl">Worth a look:</span>` +
         watch.map((r) =>
           `<a class="mr-pick" href="chart.html?m=${r._mkt}&s=${encodeURIComponent(r.symbol)}&mode=vivek" ` +
-          `title="${esc(r.name || r.symbol)} — A+ score ${r.score ?? "?"}${r.at_level ? " · at level now" : ""}">` +
+          `title="${esc(r.name || r.symbol)} — A+ ${r.dir === "SHORT" ? "SHORT" : "LONG"} · score ${r.score ?? "?"}${r.at_level ? " · at level now" : ""}">` +
+          `<span class="mr-pick-dir ${r.dir === "SHORT" ? "down" : "up"}" aria-label="${r.dir === "SHORT" ? "short" : "long"}">${r.dir === "SHORT" ? "▼" : "▲"}</span> ` +
           `${esc(r.symbol)} <span class="mr-pick-mkt">${MKT[r._mkt]}</span>${r.at_level ? " ◎" : ""}${r.confluence ? " ⨂" : ""}</a>`
         ).join("") + `</div>` : "");
   }
