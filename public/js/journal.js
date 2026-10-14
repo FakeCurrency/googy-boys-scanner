@@ -981,11 +981,10 @@
     const d = dollarsOf(t);
     if (d != null) { x.font = `700 34px ${mono}`; x.fillText(`${d >= 0 ? "+" : "−"}US$${Math.abs(d).toFixed(2)}`, W - 54, 250); }
     x.textAlign = "left";
-    // footer rule + disclaimers
+    // footer rule + caption
     x.strokeStyle = "rgba(110,125,150,0.22)"; x.beginPath(); x.moveTo(48, H - 92); x.lineTo(W - 48, H - 92); x.stroke();
     x.fillStyle = "#5b6577"; x.font = `600 14px ${sans}`;
     x.fillText("Three-lens 200-SMA scanner · paper journal — every trade logged, wins and losses alike.", 48, H - 58);
-    x.fillText("General information only — not financial advice.", 48, H - 34);
     cv.toBlob(async (blob) => {
       if (!blob) return;
       const doDownload = () => {

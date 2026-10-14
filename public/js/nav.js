@@ -406,8 +406,7 @@
     const f = document.createElement("footer");
     f.className = "site-footer gbs-shared-foot";
     f.innerHTML =
-      '<p class="credit">Vivek 5.0 · three-lens scanner · data via Yahoo Finance (~15&nbsp;min delayed) · refreshed daily after each market close</p>' +
-      '<p class="disclaimer">General information only — not financial advice. Markets carry risk.</p>';
+      '<p class="credit">Vivek 5.0 · three-lens scanner · data via Yahoo Finance (~15&nbsp;min delayed) · refreshed daily after each market close</p>';
     document.body.appendChild(f);
   }
 

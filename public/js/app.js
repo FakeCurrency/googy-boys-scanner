@@ -1193,6 +1193,20 @@
   }
   const sectorCapped = (r) => sectorCapChip(r) !== "";
 
+  // Desktop plan column (UI refresh 2026-10-14): the row's own entry / stop /
+  // TP1 in the otherwise-empty middle of a wide card, so the plan reads
+  // without an expand. CSS shows it at >=1100px only. aria-hidden because the
+  // expanded ladder is the accessible copy of the same three numbers. A row
+  // without a plan renders nothing (the grid's extra track is auto).
+  function planCol(r) {
+    if (r.entry == null || r.stop == null) return "";
+    return `<div class="row-plan" aria-hidden="true">` +
+      `<span class="rp-k">IN</span><span class="rp-v rp-in">${fmtPrice(r.entry)}</span>` +
+      `<span class="rp-k">SL</span><span class="rp-v rp-sl">${fmtPrice(r.stop)}</span>` +
+      `<span class="rp-k">TP1</span><span class="rp-v rp-tp">${r.tp1 != null ? fmtPrice(r.tp1) : "\u2014"}</span>` +
+      `</div>`;
+  }
+
   function rowHtml(r, i) {
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
@@ -1248,6 +1262,7 @@
         </div>
         <div class="row-chips">${rowChips(r, [assetBadge, lowrr, widestop, t2r])}</div>
       </div>
+      ${planCol(r)}
       <div class="row-price">
         <span class="rprice">${fmtPrice(r.price)}</span>
         ${dayHTML}
