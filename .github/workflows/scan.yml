@@ -246,6 +246,26 @@ jobs:
           restore-keys: |
             vivek-frames-
 
+      # THE CRYPTO FRAMES HAVE THEIR OWN CHAIN (REFINE200 #87, 2026-10-14).
+      # crypto_bot.yml, the hourly writer, used to restore and re-save the
+      # WHOLE .cache/frames (the ASX + NASDAQ pickles with it) every run, two
+      # dozen full archives a day, churning the repo's 10 GB Actions cache and
+      # evicting the Ignition caches. It now caches only `.cache/frames/crypto*`
+      # under `vivek-frames-crypto-`. This step layers that chain's newest
+      # crypto files over the (older) ones in the chain above, so a heal scan
+      # of crypto here back-fills from crypto_bot's latest frames, and saves
+      # them back into that chain so crypto_bot reads this run's too. The two
+      # chains cannot cross: actions/cache only restores an entry saved with
+      # the same `path`, whatever its key prefix. Both writers are in the
+      # `scan` mutex, so each chain stays one linear history.
+      - name: Restore crypto frame cache (crypto_bot.yml's chain)
+        uses: actions/cache@v4
+        with:
+          path: .cache/frames/crypto*
+          key: vivek-frames-crypto-${{ github.run_id }}
+          restore-keys: |
+            vivek-frames-crypto-
+
       # Refresh the market-cap cache FIRST, on a fresh IP — Yahoo throttles its
       # fundamentals endpoint after the heavy scan download, so fetching caps
       # here (before the scan) is the reliable window. Reads the previous scan's

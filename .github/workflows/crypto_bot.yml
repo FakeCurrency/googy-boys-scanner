@@ -144,13 +144,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Crypto frames ONLY (REFINE200 #87, 2026-10-14): this job runs every
+      # hour and used to re-save the whole .cache/frames, the ASX + NASDAQ
+      # pickles included, each time. Its own chain now; scan.yml layers it in
+      # (see the "Restore crypto frame cache" step there for the why).
       - name: Restore frame cache
         uses: actions/cache@v4
         with:
-          path: .cache/frames
-          key: vivek-frames-${{ github.run_id }}
+          path: .cache/frames/crypto*
+          key: vivek-frames-crypto-${{ github.run_id }}
           restore-keys: |
-            vivek-frames-
+            vivek-frames-crypto-
 
       # Watchdog alert-state (dedup) — shared prefix with kill_switch.yml so
       # both hosts see the same first-alert/reminder/recovery history.
