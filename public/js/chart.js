@@ -524,7 +524,15 @@
       .then((j) => {
         if (capture && j && j.ok) {
           DATA_META = { bars: j.bars || 0, flat: j.flat || 0,
-                        basis: j.basis || null, degraded: !!j.degraded };
+                        basis: j.basis || null, degraded: !!j.degraded,
+                        // The daily response already carries the latest
+                        // ex-dividend (price.js sets recent_div on every daily
+                        // path), so the DIV-ADJ chip reads it here instead of
+                        // a second Yahoo pull per chart open (REFINE200 #117).
+                        // `undefined` = this response did not say; null = no
+                        // recent dividend.
+                        yf: yfTicker,
+                        recent_div: Object.prototype.hasOwnProperty.call(j, "recent_div") ? j.recent_div : undefined };
         }
         const bars = (j && j.ok && Array.isArray(j.candles)) ? j.candles : [];
         const sess = DAILY_UP_INTERVAL.test(interval) ? tickerSession(yfTicker) : null;
@@ -2112,8 +2120,11 @@
     const el = $("#ct-divadj");
     if (!el || d.asset_type === "crypto" || !d.symbol) return;
     const yf = yfTickerFor(String(d.symbol).toUpperCase(), d.asset_type);
-    fetch(`/api/price?symbol=${encodeURIComponent(yf)}&range=1mo&interval=1d`)
-      .then((r) => (r.ok ? r.json() : null))
+    // The chart's own daily pull already answered for this ticker: no request.
+    const known = DATA_META && DATA_META.yf === yf && DATA_META.recent_div !== undefined;
+    (known ? Promise.resolve({ recent_div: DATA_META.recent_div })
+           : fetch(`/api/price?symbol=${encodeURIComponent(yf)}&range=1mo&interval=1d`)
+               .then((r) => (r.ok ? r.json() : null)))
       .then((j) => {
         const div = j && j.recent_div;
         if (!div || !div.date) return;
