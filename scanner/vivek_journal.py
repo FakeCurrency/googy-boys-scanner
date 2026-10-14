@@ -226,9 +226,14 @@ def _excursion(trade: dict, price: float) -> None:
 #: dropped when a row closes (REFINE200 #24): left behind they froze at the
 #: last pre-close run on every closed row (all 111 at the time), a second,
 #: contradictory P&L beside realized_r. Nothing reads them off a closed row --
-#: every reader (journal.js, app.js, recs.js, stalled.js, the tide script, the
-#: guard's day reference, data.held_price_kwargs) walks the OPEN list.
-_OPEN_ONLY_FIELDS = ("unreal_r", "unreal_usd", "day_marks")
+#: every reader (journal.js, app.js, recs.js, stalled.js, the tide script,
+#: data.held_price_kwargs) walks the OPEN list.
+#: `day_marks` is deliberately NOT here: the loss guard's closed leg
+#: (vivek_guard.ref_price(..., closed=True), REFINE200 #14) measures the
+#: closing day from the mark the trade carried INTO it. Dropping it at close
+#: would fall back to last_mark -- the exit itself on a stop -- and the
+#: closing day's loss would vanish from the daily guard.
+_OPEN_ONLY_FIELDS = ("unreal_r", "unreal_usd")
 
 
 def _close_remaining(trade: dict, price: float, day: str, reason: str,

@@ -29,7 +29,7 @@ pytestmark = pytest.mark.risk
 # Fields a later REFINE200 item adds to (ADDED) or removes from (DROPPED) a
 # closed row on purpose. Everything else must be byte-identical.
 ADDED = {"stop_slip_r"}                            # #26: stop fills only
-DROPPED = {"unreal_r", "unreal_usd", "day_marks"}  # #24: open-only mark fields
+DROPPED = {"unreal_r", "unreal_usd"}  # #24: open-only mark fields (day_marks stays: the guard reads it)
 
 
 # ── the pre-#92 implementations, frozen ──────────────────────────────────────
@@ -258,8 +258,11 @@ def test_a_close_drops_the_live_mark_fields(path):
     else:
         vj._close_remaining(t, 101.0, DAY, "manual", COSTS["asx"])
     assert t["status"] == "closed"
-    for k in ("unreal_r", "unreal_usd", "day_marks"):
+    for k in ("unreal_r", "unreal_usd"):
         assert k not in t, k
+    # day_marks STAYS: the guard's closed leg measures the closing day from it
+    # (REFINE200 #14; see test_vivek_guard's close-writer integration test).
+    assert "day_marks" in t
     # realized_r is the closed row's ONE P&L; last_mark stays as provenance
     assert "realized_r" in t and t["last_mark"] == 98.0
 
