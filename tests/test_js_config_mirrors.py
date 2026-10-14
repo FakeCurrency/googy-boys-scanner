@@ -79,17 +79,9 @@ def test_journal_fallbacks_match_config(name, value):
         "prices every trade with this whenever bot_rules.json fails to load")
 
 
-# -- chart.js: the per-leg cost model -------------------------------------------
-
-@pytest.mark.parametrize("name, value", [
-    ("COMMISSION_BPS", lambda: config.VIVEK_COMMISSION_BPS),
-    ("SLIPPAGE_BPS", lambda: config.VIVEK_SLIPPAGE_BPS),
-])
-def test_chart_costs_match_config(name, value):
-    js = _decl(_src("chart.js"), name, "chart.js")
-    assert _num_eq(js, value()), (
-        f"chart.js {name} = {js} but scanner/config.py says {value()} -- the chart's "
-        "cost of a leg would disagree with the journal's and the backtest's")
+# chart.js's per-leg cost model (COMMISSION_BPS / SLIPPAGE_BPS / legCost) had
+# no caller and was deleted in REFINE200 #94 -- hygiene.test.js pins it gone,
+# so there is no chart mirror left to compare.
 
 
 # -- the default exit ladder a row reads when it carries no `scale` -------------
