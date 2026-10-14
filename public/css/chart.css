@@ -267,8 +267,6 @@
 }
 .draw-del-btn:hover { background: var(--red); }
 
-.cf-disclaimer { color: var(--muted-2); font-size: 11.5px; margin: 14px 0 0; }
-
 .chart-error { padding: 60px 22px; text-align: center; color: var(--muted); }
 /* no-symbol empty state (2026-08-20) — a search box, not an error */
 .chart-empty #ce-form { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 6px; }
@@ -582,7 +580,10 @@ body.is-replay #ct-fab { display: none; }
   border: 1px solid var(--border-2); background: rgba(0,0,0,.25); color: var(--text);
   font: 600 12px/1 var(--mono); text-transform: uppercase;
 }
-.rsm-in:focus { outline: none; border-color: var(--blue); }
+.rsm-in:focus { border-color: var(--blue); }
+/* A visible ring for keyboard focus (REFINE200 #94): `outline: none` left the
+   field with only a 1px border change to say it had focus. */
+.rsm-in:focus-visible { outline: 2px solid var(--blue-ink); outline-offset: 1px; }
 .rsm-go {
   flex: 0 0 auto; width: 34px; border: none; border-radius: 8px;
   background: var(--blue); color: #fff; font: 700 14px/1 var(--mono); cursor: pointer;

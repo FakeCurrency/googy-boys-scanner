@@ -43,7 +43,10 @@ const GONE = {
   },
   "js/chart.js": {
     live: "function momentumViewStart(",
-    dead: ["MOM_FIRST_PAINT_BARS", "entryRelTargets", "fetchStockQuote", "levTag", "SIM_CRYPTO_MARGIN", "SIM_CRYPTO_LEVERAGE", "SIM_STOCK_SIZE", "restURL"],
+    dead: ["MOM_FIRST_PAINT_BARS", "entryRelTargets", "fetchStockQuote", "levTag", "SIM_CRYPTO_MARGIN", "SIM_CRYPTO_LEVERAGE", "SIM_STOCK_SIZE", "restURL",
+           // REFINE200 #94 (2026-10-14): the uncalled live-box dragger, and the
+           // cost model (+ its bot_rules.json fetch) nothing on this page priced.
+           "makeLiveBoxDraggable", "legCost", "costsFor", "COMMISSION_BPS", "SLIPPAGE_BPS", "tfLabel"],
   },
 };
 
@@ -74,6 +77,16 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
   ok(css.includes("@keyframes ctLivePulse"), "css/chart.css moved -- pin would be vacuous");
   ok(!/\.live-pos-box\b|\.lpb-[\w-]/.test(css),
      "css/chart.css: .live-pos-box / .lpb-* rules were proven dead and deleted 2026-09-23");
+  // REFINE200 #94: nothing renders .cf-disclaimer (the owner ruled disclaimers
+  // out, 2026-09-28), and the compare box's ticker field had its focus ring
+  // removed with nothing visible in its place.
+  ok(!/\.cf-disclaimer\b/.test(css), "css/chart.css: .cf-disclaimer styles markup nothing creates");
+  ok(!/\.rsm-in:focus\s*\{[^}]*outline:\s*none/.test(css),
+     "css/chart.css: .rsm-in:focus must not strip the focus ring");
+  ok(/\.rsm-in:focus-visible\s*\{[^}]*outline:\s*2px/.test(css),
+     "css/chart.css: .rsm-in keeps a visible keyboard focus ring");
+  ok(!code("js/chart.js").includes("data/bot_rules.json"),
+     "js/chart.js: the bot_rules.json fetch fed only the deleted cost model");
 }
 
 // SWEEP (2026-09-23) -- journal.css rules for the manual "Me" journal, which

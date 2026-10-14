@@ -261,61 +261,9 @@
   const BINANCE_IV    = { "15M": "15m", "30M": "30m", "1H": "1h" };
   const LIVE_TF_ORDER = ["15M", "30M", "1H"];
 
-  // ── Trading costs — ONE model, the published one (TOP100 #28) ──────────────
-  //
-  // This page used to charge a FLAT round-trip brokerage: `2 * (isCrypto ? 5 :
-  // 10)` dollars, out of `stock_brokerage`/`crypto_brokerage` on the manual
-  // journal blob. Those two fields had no editor anywhere in the app — they were
-  // schema defaults written by the (since-removed) sync layer, never touched — so they were
-  // not a setting, they were a second hardcoded cost model sitting next to the
-  // real one. journal.js prices the SAME rows in basis points per market,
-  // adopted from `bot_rules.json`, which is itself published from
-  // `scanner/config.py` every scan and mirrors `vivek_journal._cost_r`.
-  //
-  // A flat fee is not merely a different number, it is a different SHAPE: it
-  // does not scale with position size, so it was roughly 3x too heavy on a
-  // $1,000 sim stock position and far too light on anything real. Every dollar
-  // figure this page showed therefore disagreed with the journal's figure for
-  // the identical trade, and there was no way to tell which one to believe.
-  //
-  // What remains different, deliberately, is the SIZE each page prices: this
-  // page costs the `shares` it actually booked, while the journal re-prices
-  // every manual row at the bot's fixed notional so the Me-vs-Claude comparison
-  // is like-for-like (see journal.js `sizeOf` and CLAUDE.md "Position sizing is
-  // FIXED NOTIONAL"). That is a sizing convention, not a second cost model.
-  const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
-  const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };  // fallback
-  const costsFor = (mkt) => [
-    (SLIPPAGE_BPS[mkt]   ?? SLIPPAGE_BPS.default)   / 1e4,
-    (COMMISSION_BPS[mkt] ?? COMMISSION_BPS.default) / 1e4,
-  ];
-  // Cost of ONE leg, in dollars, on `units` at `price`. `slipped` is false only
-  // for a resting take-profit limit, which is filled by the exchange at the
-  // price you named — the same carve-out journal.js `costR` makes.
-  const legCost = (mkt, units, price, slipped) => {
-    const [slip, comm] = costsFor(mkt);
-    return Math.abs(units || 0) * (price || 0) * (comm + (slipped ? slip : 0));
-  };
-  // The published constants win over the fallbacks above, exactly as in
-  // journal.js `loadBotRules`. Silent on failure: an offline page keeps the
-  // fallbacks rather than showing nothing.
-  (async () => {
-    try {
-      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
-      if (!r.ok) return;
-      const j = await r.json();
-      for (const [key, tgt] of [["commission_bps", COMMISSION_BPS], ["slippage_bps", SLIPPAGE_BPS]]) {
-        const src = j[key];
-        if (!src || typeof src !== "object") continue;
-        for (const m of Object.keys(tgt)) {
-          if (typeof src[m] === "number" && src[m] >= 0) tgt[m] = src[m];
-        }
-      }
-    } catch (_) { /* offline — fallbacks stand */ }
-  })();
   // The live price, shared with its subscribers (initAlerts' price-alert lines)
   // so they react on each tick. The Simulate buttons that also read it went
-  // 2026-09-21; makeLiveBoxDraggable is kept but nothing builds the box.
+  // 2026-09-21, and the floating live box (makeLiveBoxDraggable) with them.
   const liveState = { price: null, listeners: [] };
   // Every subscriber is registered from inside render() (today only
   // initAlerts; startStockLive publishes, it does not subscribe), so each one
@@ -1239,7 +1187,6 @@
     VIVEK_CRYPTO_SRC = cryptoSrcFor(m);
     const dir = m.dir || "LONG";
     const cur = m.currency_symbol || (market === "asx" || assetType === "asx" ? "A$" : "$");
-    const tfLabel = m.level_tf === "weekly" ? "200 SMA · Weekly" : m.level_tf === "3d" ? "200 SMA · 3D" : "200 SMA · H4";
     const d = {
       symbol: SYM, name: m.name || SYM, asset_type: assetType,
       price: m.price ?? null,
@@ -1254,14 +1201,8 @@
       analysis: m.analysis || "200 SMA reaction setup (5.0 style).",
       default_tf: "1D", level_lines: [], timeframes: {}, _fallback: true, _vivek: true,
     };
-    // Level lines, drawn from the 200 SMA outward: the level itself (amber), the
-    // stop (red), entry (white), then the three take-profits (green).
-    if (d.level != null) d.level_lines.push({ price: d.level, color: "#ffb020", title: tfLabel });
-    if (d.stop  != null) d.level_lines.push({ price: d.stop,  color: "#ff5b5b", title: "SL" });
-    if (d.entry != null) d.level_lines.push({ price: d.entry, color: "#e5e9f0", title: "ENTRY" });
-    if (d.tp1   != null) d.level_lines.push({ price: d.tp1,   color: "#2fd07f", title: "TP1" });
-    if (d.tp2   != null) d.level_lines.push({ price: d.tp2,   color: "#2fd07f", title: "TP2" });
-    if (d.tp3   != null) d.level_lines.push({ price: d.tp3,   color: "#2fd07f", title: "TP3" });
+    // No `level_lines` here: a VIVEK chart draws its ladder PER TIMEFRAME
+    // (applyVivekLevels), and render() skips the static lines for `_vivek`.
 
     // Build the Daily + Weekly + best-effort 4H views, then render once. The DEEP
     // daily pull drives the Daily candles and a resampled Weekly view; a ~2y
@@ -3137,8 +3078,8 @@
       if (typeof d._recalcMySize === "function") d._recalcMySize();
     }
 
-    // ── open-position context (the manual entry marker is gone; no live box
-    //    is built — makeLiveBoxDraggable is kept but uncalled) ──────────────────
+    // ── open-position context (the manual entry marker and the live box are
+    //    gone) ─────────────────────────────────────────────────────────────────
     const SYM    = (d.symbol || symbol).toUpperCase();
     const posDir = (d.dir || "LONG").toLowerCase() === "short" ? "short" : "long";
     // The ▶ ENTRY arrow marked YOUR open manual position's fill bar. The manual
@@ -4471,87 +4412,6 @@
     // at real page unload the browser drops the socket regardless.
     onRenderTeardown(() => { stopped = true; closeWs(); });
     return { start, switchTo };
-  }
-
-  // Let the user drag the floating LIVE box anywhere on the chart; its spot is
-  // remembered across reloads (and across symbols). Works with mouse and touch.
-  function makeLiveBoxDraggable(box, container) {
-    const KEY = "gbs:livebox_pos";
-    const clamp = (v, max) => Math.max(0, Math.min(v, Math.max(0, max)));
-
-    function place(left, top) {
-      const cr = container.getBoundingClientRect();
-      box.style.left  = clamp(left, cr.width  - box.offsetWidth)  + "px";
-      box.style.top   = clamp(top,  cr.height - box.offsetHeight) + "px";
-      box.style.right = "auto";
-    }
-    // Restore a saved position once the box has real dimensions (it starts hidden).
-    function restore() {
-      let p = null;
-      try { p = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) {}
-      if (p && box.offsetWidth) place(p.left, p.top);
-    }
-
-    let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
-    const pointOf = (e) => (e.touches && e.touches[0]) ? e.touches[0] : e;
-
-    function onDown(e) {
-      const pt = pointOf(e);
-      const r = box.getBoundingClientRect();
-      const cr = container.getBoundingClientRect();
-      ox = r.left - cr.left; oy = r.top - cr.top;
-      sx = pt.clientX; sy = pt.clientY;
-      dragging = true;
-      box.classList.add("dragging");
-      place(ox, oy);
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-      document.addEventListener("touchmove", onMove, { passive: false });
-      document.addEventListener("touchend", onUp);
-      e.preventDefault();
-    }
-    function onMove(e) {
-      if (!dragging) return;
-      const pt = pointOf(e);
-      place(ox + (pt.clientX - sx), oy + (pt.clientY - sy));
-      if (e.cancelable) e.preventDefault();
-    }
-    function onUp() {
-      if (!dragging) return;
-      dragging = false;
-      box.classList.remove("dragging");
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.removeEventListener("touchmove", onMove);
-      document.removeEventListener("touchend", onUp);
-      try {
-        localStorage.setItem(KEY, JSON.stringify({
-          left: parseFloat(box.style.left) || 0,
-          top:  parseFloat(box.style.top)  || 0,
-        }));
-      } catch (_) {}
-    }
-    box.addEventListener("mousedown", onDown);
-    box.addEventListener("touchstart", onDown, { passive: false });
-    // Re-apply the saved spot the first time the box is shown and on resize.
-    box.__restorePos = restore;
-    window.addEventListener("resize", restore);
-    // The `mousedown`/`touchstart` pair above cannot leak — they are on `box`,
-    // which the next render abandons wholesale. `resize` is on WINDOW, which
-    // outlives every box, and `restore` closes over this one: without the
-    // removal below, every timeframe click left another handler measuring and
-    // repositioning a detached node on every resize event. The document-level
-    // drag handlers are only attached mid-drag and `onUp` removes them, but a
-    // fetch can resolve into a re-render while the mouse is still down, so they
-    // are swept here too (removeEventListener on an unattached handler is a
-    // no-op, which is why this is safe to do unconditionally).
-    onRenderTeardown(() => {
-      window.removeEventListener("resize", restore);
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.removeEventListener("touchmove", onMove);
-      document.removeEventListener("touchend", onUp);
-    });
   }
 
   // 🤖 Claude's open positions get a DOG-BALLS banner pinned over the chart
