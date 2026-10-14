@@ -17,16 +17,32 @@ with the disclaimer line.
 | M2 narration engine (full state × direction template set) | ✅ built, coverage-tested |
 | M3 frontend (tab, cards, zone ladder, legend + SVG diagrams) | ✅ built as vanilla-JS pages (`public/phasemap.html`, `phasemap-legend.html`, `js/phasemap.js`, `css/phasemap.css`) — owner chose a separate tab in the existing app over the spec's React scaffold |
 | M4 backtest & proof harness (fills the `{stats}` slot) | ✅ built — `python -m phasemap.backtest --market asx --period 5y --write-stats`; reports in `backtest/reports/`, stats artefacts in `backtest/stats/` (run.py refuses them unless sample ≥ 30 AND ruleset matches). **All numbers are survivor-biased until the data moves off yfinance** — the report banner says so |
-| M5 SMT divergence module | 🔜 deferred (Phase 2) |
+| M5 SMT divergence module | 🔜 deferred (Phase 2) — `smt` publishes null; nothing grades on it |
 | M6 chop/liquidity heatmap | 🔜 deferred (Phase 3) |
 
 ## Running
 
-Nightly refresh is automated: `.github/workflows/phasemap.yml` runs all three
-markets daily at 08:30 UTC (≈18:30 Melbourne, post-ASX close), validates every
-snapshot against the writer's schema gate, and commits the data (Cloudflare
-redeploys). Manual trigger: Actions → "PhaseMap nightly scan" → Run workflow,
-or `gh workflow run phasemap.yml`.
+Nightly refresh is automated: `.github/workflows/phasemap.yml` is scheduled
+for 08:30 UTC, but GitHub runs it hours late — it usually lands between
+midnight and ~4am Melbourne, so `run_date` (the Melbourne date it ran) is
+normally the day AFTER the bars it read. `as_of` in each snapshot is the
+newest completed bar the results were computed on; the page shows both. It
+validates every snapshot against the writer's schema gate and commits the
+data (Cloudflare redeploys). Manual trigger: Actions → "PhaseMap nightly
+scan" → Run workflow, or `gh workflow run phasemap.yml`.
+
+- **No unfinished bar is ever scanned.** Crypto drops the forming UTC candle;
+  ASX and NASDAQ drop today's bar until its bar-final time
+  (`scanner.config.IGNITION_BAR_FINAL`: 16:40 Sydney / 16:30 New York) — a
+  late cron otherwise read a mid-session NASDAQ candle (`data/session.py`).
+- **No new bar, no rescan.** When a stock market has no newly completed bar
+  since the last snapshot (weekends, a pre-final run), the last scan's
+  records are re-published under today's `run_date` with `carried_from` set
+  and `as_of` unchanged; exit code 3. `--force` rescans anyway.
+- **An outage keeps the last good files.** Below `PUBLISH_MIN_COVERAGE` of the
+  universe fetched, nothing is written or pruned and the run exits 4.
+- **A quick test never touches the live data.** `--limit`/`--tickers` write to
+  a scratch dir unless `--publish` is given, and a partial run never prunes.
 
 ```bash
 python -m phasemap.run                    # all markets: asx + nasdaq + crypto
@@ -36,11 +52,15 @@ python -m phasemap.run --tickers BHP,CBA
 python -m pytest phasemap/tests -q       # acceptance + unit suite
 ```
 
-Output per market: `public/data/phasemap/<market>/YYYY-MM-DD.json` +
-`latest.json` (the frontend reads `latest.json` only), plus
-`public/data/phasemap/charts/<market>/<TICKER>.json` candle files for the
-chart page. Deterministic: same bars + same `config.RULESET_VERSION` →
-byte-identical JSON. Crypto turnover uses Volume directly (Yahoo quotes
+Output per market: `public/data/phasemap/<market>/latest.json` (slim,
+compact — the page reads it), `narrations.json` (the narration sidecar),
+`confluence.json` (ticker/direction/state only, for the multi-lens chips),
+and the two newest dated full-schema snapshots `YYYY-MM-DD.json`; plus
+`public/data/phasemap/charts/<market>/<TICKER>.json` (candles + that
+ticker's published record and narration) for the chart page, rewritten only
+when their bytes change. Deterministic: same bars + same
+`config.RULESET_VERSION` → byte-identical JSON (confluence.json carries a
+`generated_at` stamp). Crypto turnover uses Volume directly (Yahoo quotes
 crypto volume in USD already); tick sizes are market-aware (`engine/buffers.py`).
 
 ## Layout

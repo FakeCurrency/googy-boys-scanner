@@ -85,16 +85,39 @@ def validate_published(slim: dict, narrations: dict | None) -> None:
             raise ValueError(f"{r['ticker']}: narration missing/short in sidecar")
 
 
-def build_snapshot(run_date: str, universe_size: int, results: list) -> dict:
-    return {
+# Header keys beside the spec's four (REFINE200 #196/#197/#45), all optional
+# so an older snapshot still validates and still loads on the page:
+#   as_of         the newest COMPLETED market bar the results were computed on
+#                 (run_date is the Melbourne date the run published, a day
+#                 after the bar for every late-landing nightly)
+#   fetched       tickers that came back with bars (universe_size is what was
+#                 ASKED for — a throttled night fetches 60-70% of it)
+#   carried_from  present only when no new completed bar existed: the run_date
+#                 of the scan whose records are re-published unchanged
+HEADER_EXTRAS = ("as_of", "fetched", "carried_from")
+
+
+def build_snapshot(run_date: str, universe_size: int, results: list,
+                   as_of: str = None, fetched: int = None,
+                   carried_from: str = None) -> dict:
+    snap = {
         "run_date": run_date,
         "ruleset_version": RULESET_VERSION,
         "universe_size": universe_size,
-        "results": results,
     }
+    for k, v in (("as_of", as_of), ("fetched", fetched), ("carried_from", carried_from)):
+        if v is not None:
+            snap[k] = v
+    snap["results"] = results
+    return snap
 
 
-def serialise(snap: dict) -> str:
+def serialise(snap: dict, compact: bool = False) -> str:
+    """Pretty for the dated archival copy; COMPACT for what every page load
+    fetches (REFINE200 #65 — indentation was ~40% of latest.json; every
+    reader parses it, nothing diffs it by eye)."""
+    if compact:
+        return json.dumps(snap, ensure_ascii=False, separators=(",", ":")) + "\n"
     return json.dumps(snap, indent=2, ensure_ascii=False) + "\n"
 
 
@@ -118,6 +141,7 @@ def split_narrations(snap: dict) -> tuple[dict, dict]:
         "run_date": snap["run_date"],
         "ruleset_version": snap["ruleset_version"],
         "universe_size": snap["universe_size"],
+        **{k: snap[k] for k in HEADER_EXTRAS if k in snap},
         "narrations_file": "narrations.json",
         "results": [{k: v for k, v in r.items() if k != "narration"}
                     for r in snap["results"]],
@@ -150,6 +174,31 @@ def write_snapshot(snap: dict, out_dir: str = None) -> str:
     slim, narr = split_narrations(snap)
     validate_published(slim, narr)      # abort BEFORE touching published files
     _atomic_write(os.path.join(out_dir, f"{snap['run_date']}.json"), serialise(snap))
-    _atomic_write(os.path.join(out_dir, "narrations.json"), serialise(narr))
-    _atomic_write(os.path.join(out_dir, "latest.json"), serialise(slim))
+    _atomic_write(os.path.join(out_dir, "narrations.json"), serialise(narr, compact=True))
+    _atomic_write(os.path.join(out_dir, "latest.json"), serialise(slim, compact=True))
     return os.path.join(out_dir, f"{snap['run_date']}.json")
+
+
+CONFLUENCE_FILE = "confluence.json"
+
+
+def build_confluence(snap: dict, generated_at: str) -> dict:
+    """The three fields the multi-lens confluence machinery reads, one row per
+    record, values exactly as latest.json carries them (REFINE200 #70: the
+    deck's chips loaded a ~1 MB latest.json to read ticker/direction/state)."""
+    return {
+        "schema_version": 1,
+        "run_date": snap["run_date"],
+        "generated_at": generated_at,
+        "rows": [{"ticker": r["ticker"], "direction": r["direction"],
+                  "state": r["state"]} for r in snap["results"]],
+    }
+
+
+def write_confluence(snap: dict, out_dir: str, generated_at: str) -> str:
+    """Written AFTER latest.json: its run_date names the latest.json it was
+    cut from, so a reader can tell a pair that straddles a deploy."""
+    validate_snapshot(snap)
+    path = os.path.join(out_dir, CONFLUENCE_FILE)
+    _atomic_write(path, serialise(build_confluence(snap, generated_at), compact=True))
+    return path
