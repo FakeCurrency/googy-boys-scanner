@@ -129,3 +129,59 @@ def test_the_run_hook_is_fail_soft_and_storage_only():
     assert "history_archive" not in (REPO / "scanner" / "vivek.py").read_text(encoding="utf-8")
     assert "history_archive" not in (REPO / "scanner" / "broker" / "vivek_run.py").read_text(encoding="utf-8"), \
         "nothing in the grade/bot path may READ the archive"
+
+
+# ── REFINE200 #155 ────────────────────────────────────────────────────────────
+
+def test_a_suspect_splice_stays_flagged_after_a_clean_join(tmp_path, monkeypatch):
+    """Day 2 re-bases the frame 40% (suspect); day 3 joins cleanly onto day
+    2's basis. The 40%-rescaled tail is still in the file, so the flag that
+    warns about it must survive day 3 -- it used to clear itself."""
+    d = _days(8)
+    base = tmp_path / "asx"
+    clock = {"today": dt.date.fromisoformat(d[4])}
+    monkeypatch.setattr(history_archive, "_today", lambda m: clock["today"])
+
+    def run(rows):
+        history_archive.update("asx", [{"symbol": "KAR"}], {"KAR.AX": _df(rows)}, root=tmp_path)
+        return json.loads((base / "KAR.json").read_text())
+
+    j1 = run([(x, 1.0, 1.0, 1.0, 1.0, 10) for x in d[:4]])
+    assert j1["splice_suspect"] is False and "suspect_since" not in j1
+    clock["today"] = dt.date.fromisoformat(d[5])
+    j2 = run([(x, 1.4, 1.4, 1.4, 1.4, 10) for x in d[2:5]])      # re-based 40%
+    assert j2["splice_suspect"] is True and j2["suspect_since"] == d[5]
+    clock["today"] = dt.date.fromisoformat(d[6])
+    j3 = run([(x, 1.4, 1.4, 1.4, 1.4, 10) for x in d[3:6]])      # same basis, +1 bar
+    assert j3["splice_suspect"] is True, "the broken join is still in the series"
+    assert j3["suspect_since"] == d[5], "dated from the FIRST suspect join"
+    assert list(j3).index("suspect_since") < list(j3).index("bars")
+
+
+def test_the_new_name_cap_is_plainly_the_file_count(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "HISTORY_ARCHIVE_MAX_FILES", 2)
+    frames = {f"{s}.AX": _df([(x, 1, 1, 1, 1, 1) for x in _days(3)]) for s in "ABC"}
+    out = history_archive.update("asx", [{"symbol": s} for s in "ABC"], frames, root=tmp_path)
+    assert out["written"] == 2 and out["total_files"] == 2
+    assert sorted(p.stem for p in (tmp_path / "asx").glob("*.json")) == ["A", "B"]
+    src = (REPO / "scanner" / "history_archive.py").read_text(encoding="utf-8")
+    assert "(written and 0)" not in src, "the garbled always-0 term is gone"
+
+
+def test_root_is_anchored_to_the_repo_not_the_working_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    import importlib
+    mod = importlib.reload(history_archive)
+    assert mod.ROOT == REPO / "data" / "history"
+    assert mod.ROOT.is_absolute()
+
+
+def test_market_dates_come_from_config_timezones():
+    src = (REPO / "scanner" / "history_archive.py").read_text(encoding="utf-8")
+    assert "_MARKET_TZ" not in src and "Australia/Sydney" not in src
+    from zoneinfo import ZoneInfo
+    for m in ("asx", "nasdaq", "crypto"):
+        want = dt.datetime.now(ZoneInfo(config.MARKETS[m].timezone)).date()
+        assert history_archive._today(m) in (want, want + dt.timedelta(days=1))
+    utc = dt.datetime.now(dt.timezone.utc).date()
+    assert history_archive._today("nowhere") in (utc, utc + dt.timedelta(days=1))

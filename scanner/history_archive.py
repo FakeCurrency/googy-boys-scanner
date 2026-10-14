@@ -21,7 +21,9 @@ DESIGN DECISIONS (each deliberate):
   are kept by rescaling them with the overlap ratio at the join — the standard
   back-adjustment splice. A join ratio drifting past
   HISTORY_ARCHIVE_SPLICE_MAX_DRIFT marks the file "splice_suspect" rather than
-  silently publishing a broken series.
+  silently publishing a broken series. The flag is STICKY (REFINE200 #155):
+  the rescaled tail stays in the stored series, so the next session's clean
+  join must not clear the warning about it; "suspect_since" dates the first.
 - SURVIVORSHIP: a name that stops appearing keeps its file untouched (frozen
   last-known series, "last_seen" unchanged) — that frozen file IS the record a
   delisting would otherwise erase. Files are never deleted here.
@@ -34,6 +36,7 @@ DESIGN DECISIONS (each deliberate):
 Layout: data/history/<market>/<SYMBOL>.json
 Schema: {"symbol","market","basis":"adj","updated":"YYYY-MM-DD",
          "last_seen":"YYYY-MM-DD","splice_suspect":bool,
+         "suspect_since":"YYYY-MM-DD"  (only once splice_suspect),
          "bars":[["YYYY-MM-DD",open,high,low,close,volume], ...]}  # ascending
 """
 from __future__ import annotations
@@ -46,13 +49,16 @@ from zoneinfo import ZoneInfo
 from . import config
 from .journal_common import atomic_write
 
-ROOT = pathlib.Path("data/history")
-
-_MARKET_TZ = {"asx": "Australia/Sydney", "nasdaq": "America/New_York", "crypto": "UTC"}
+# Anchored to the repo root like every other module's paths (REFINE200 #155):
+# a bare Path("data/history") wrote wherever the process happened to start.
+ROOT = pathlib.Path(__file__).resolve().parents[1] / "data" / "history"
 
 
 def _today(market: str) -> _dt.date:
-    return _dt.datetime.now(ZoneInfo(_MARKET_TZ.get(market, "UTC"))).date()
+    """Today in the market's own calendar -- config.MARKETS' timezone, not a
+    second copy of it (#155); UTC for an unknown market."""
+    mkt = getattr(config, "MARKETS", {}).get(market)
+    return _dt.datetime.now(ZoneInfo(getattr(mkt, "timezone", None) or "UTC")).date()
 
 
 def _frame_bars(df, today: _dt.date) -> list[list]:
@@ -119,7 +125,7 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
             df = frames.get(sym)
         if df is None or not len(df):
             continue
-        if sym not in existing and len(existing) + (written and 0) >= max_files and len(existing) >= max_files:
+        if sym not in existing and len(existing) >= max_files:
             continue                       # cap new names; existing files still refresh
         bars = _frame_bars(df, today)
         if not bars:
@@ -139,9 +145,16 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
             merged, suspect = bars, False
         merged = merged[-max_bars:]
         prev = len(old["bars"]) if old and old.get("bars") else 0
+        # STICKY (#155): `suspect` describes THIS write's join only. A bad join
+        # rescaled the stored tail, and that tail is still in `merged`, so a
+        # clean join one session later must not clear the flag.
+        flagged = bool(suspect) or bool((old or {}).get("splice_suspect"))
         payload = {"symbol": sym, "market": market, "basis": "adj",
                    "updated": today.isoformat(), "last_seen": today.isoformat(),
-                   "splice_suspect": bool(suspect), "bars": merged}
+                   "splice_suspect": flagged}
+        if flagged:
+            payload["suspect_since"] = (old or {}).get("suspect_since") or today.isoformat()
+        payload["bars"] = merged
         atomic_write(path, json.dumps(payload, separators=(",", ":")), newline="\n")
         written += 1
         new_bars += max(0, len(merged) - prev)
