@@ -14,24 +14,49 @@
     if (el) el.innerHTML = `<span class="pm-lg-term">${term}</span>${html}`;
   };
 
-  // VIVEK walk-forward replay — fills independently of the PhaseMap stats
-  grab("data/vivek_backtest.json").then((vb) => {
-    const r = vb && vb.results;
-    if (!r || !r.overall || !r.overall.n) return;
-    const o = r.overall;
-    const lv = r.by_level_tf || {};
-    const cohort = (m, label) => (m && m.n
-      ? `${label}: ${m.n} trades, ${m.win_rate}% win, ${m.expectancy_r >= 0 ? "+" : ""}${m.expectancy_r}R exp` : null);
-    const parts = [cohort(lv.weekly, "Weekly-200"), cohort(lv["3d"], "3-Day-200"),
-                   cohort(lv.h4, "H4 proxy")].filter(Boolean).join(" · ");
-    const pf = o.profit_factor === null ? "∞" : o.profit_factor;
-    set("fi-vivek", "VIVEK, replayed with real management",
-      `${o.n} walk-forward trades (${(vb.params && vb.params.period) || ""}, real engine, ` +
-      `next-bar-open fills, stop-first, costs included): ${o.win_rate}% win rate, ` +
-      `${o.expectancy_r >= 0 ? "+" : ""}${o.expectancy_r}R expectancy, profit factor ${pf}, ` +
-      `${o.total_r >= 0 ? "+" : ""}${o.total_r}R total. By signal level — ${parts || "n/a"}. ` +
-      `Where a level's expectancy holds up is where its badge earns a place on the chart.`);
-  });
+  // VIVEK walk-forward replay — fills independently of the PhaseMap stats.
+  // REFINE200 #193: the LONG-ONLY report leads, because it is the population
+  // the bot trades (long-only since 2026-09-21); the both-directions report
+  // (shorts included) is only the fallback, and the card says which it read.
+  Promise.all([grab("data/vivek_backtest_longonly.json"), grab("data/vivek_backtest.json")])
+    .then(([lo, both]) => {
+      const pickVb = [[lo, "long-only, the trades the bot takes"], [both, "both directions, shorts included"]]
+        .find(([d]) => d && d.results && d.results.overall && d.results.overall.n);
+      if (!pickVb) return;
+      const [vb, which] = pickVb;
+      const r = vb.results;
+      const o = r.overall;
+      const lv = r.by_level_tf || {};
+      const cohort = (m, label) => (m && m.n
+        ? `${label}: ${m.n} trades, ${m.win_rate}% win, ${m.expectancy_r >= 0 ? "+" : ""}${m.expectancy_r}R exp` : null);
+      const parts = [cohort(lv.weekly, "Weekly-200"), cohort(lv["3d"], "3-Day-200"),
+                     cohort(lv.h4, "Daily-200 (H4 proxy)")].filter(Boolean).join(" · ");
+      const pf = o.profit_factor === null ? "∞" : o.profit_factor;
+      set("fi-vivek", "VIVEK, replayed with real management",
+        `${o.n} walk-forward trades (${which}; ${(vb.params && vb.params.period) || ""}, real engine, ` +
+        `next-bar-open fills, stop-first, costs included): ${o.win_rate}% win rate, ` +
+        `${o.expectancy_r >= 0 ? "+" : ""}${o.expectancy_r}R expectancy, profit factor ${pf}, ` +
+        `${o.total_r >= 0 ? "+" : ""}${o.total_r}R total. By signal level — ${parts || "n/a"}. ` +
+        `Where a level's expectancy holds up is where its badge earns a place on the chart.`);
+    });
+
+  // REFINE200 #193: the section heading's signal count is the sum of the
+  // stats files' all.n (it was a typed "17,180" while the files said 29,008).
+  const yearsOf = (p) => { const m = /^(\d+)y$/.exec(String(p || "")); return m ? `${m[1]}-YEAR` : ""; };
+  function signalHeading(stats) {
+    const live = stats.filter((d) => d && d.all && typeof d.all.n === "number");
+    if (!live.length) return null;
+    const total = live.reduce((a, d) => a + d.all.n, 0);
+    const yrs = yearsOf(live[0].period);
+    return `WHAT THE ${yrs ? yrs + " " : ""}REPLAY MEASURED (${total.toLocaleString("en-AU")} SIGNALS ` +
+      `ACROSS ${live.length} MARKET${live.length === 1 ? "" : "S"})`;
+  }
+  Promise.all(["asx", "nasdaq", "crypto"].map((m) => grab(`data/phasemap/stats/${m}.json`)))
+    .then((stats) => {
+      const h = document.getElementById("fi-heading");
+      const text = signalHeading(stats);
+      if (h && text) h.textContent = text;
+    });
 
   Promise.all([
     grab("data/phasemap/stats/asx.json"),
