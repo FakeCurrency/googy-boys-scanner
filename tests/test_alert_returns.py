@@ -25,7 +25,6 @@ import pathlib
 import re
 import shutil
 import subprocess
-import sys
 from zoneinfo import ZoneInfo
 
 import pandas as pd

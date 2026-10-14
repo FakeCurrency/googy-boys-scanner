@@ -3,7 +3,6 @@
 import importlib.util
 import pathlib
 
-import pytest
 
 _SPEC = importlib.util.spec_from_file_location(
     "backup_journal",

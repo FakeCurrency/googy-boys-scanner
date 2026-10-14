@@ -33,7 +33,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import pytest
