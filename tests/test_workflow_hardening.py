@@ -28,8 +28,6 @@ without them:
 
 import copy
 import functools
-import importlib.util
-import json
 import pathlib
 import re
 import subprocess

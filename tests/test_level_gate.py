@@ -23,7 +23,6 @@ from __future__ import annotations
 import inspect
 import pathlib
 
-import pytest
 
 from scanner import config
 from scanner.broker import vivek_run

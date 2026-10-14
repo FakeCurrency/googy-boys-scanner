@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from copy import deepcopy
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -182,7 +179,7 @@ def test_replay_symbol_parity_smoke_does_not_crash():
 
 def test_exclude_map_and_taken_flag_schema():
     """OOS plumbing: exclusion loader + taken stamp on published trades."""
-    from scanner.vivek_parity import load_exclude_map, build_parity_report, baseline_rules
+    from scanner.vivek_parity import load_exclude_map, build_parity_report
     import tempfile, json, pathlib
     with tempfile.TemporaryDirectory() as d:
         p = pathlib.Path(d) / "ex.json"

@@ -73,7 +73,7 @@ def test_a_cached_universe_saved_under_the_old_rule_is_refiltered(monkeypatch, t
     """CoinGecko down + a snapshot written before this rule must not bring
     the pegs back for the day."""
     import json
-    from scanner import config, universe
+    from scanner import universe
     items = [{"symbol": f"C{i}", "name": f"Coin {i}", "yf": f"C{i}-USD"} for i in range(45)]
     items += [{"symbol": "EURCV", "name": "EUR CoinVertible", "yf": "EURCV-USD"},
               {"symbol": "U", "name": "United Stables", "yf": "U-USD"}]
