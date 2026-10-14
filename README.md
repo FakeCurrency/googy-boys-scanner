@@ -47,7 +47,7 @@ tested and what has been killed, so nothing gets re-litigated.
 ## Running it
 
 ```bash
-pip install -r requirements.txt          # Python 3.11+
+pip install -r requirements.txt          # Python 3.12 (what CI runs)
 
 # scan (writes public/data/<market>_vivek.json and friends)
 python -m scanner.run                    # all markets
@@ -73,8 +73,9 @@ top 100 by market cap plus pinned extras.
 ## Tests
 
 ```bash
-python -m pytest -q                      # ~290 Python tests
-for f in test/*.test.js; do node "$f"; done   # 18 JS suites, no framework
+pip install -r requirements-dev.txt      # the test pins (pytest, pytest-xdist, pyyaml...)
+python -m pytest -n auto --dist loadfile # parallel; plain `python -m pytest -q` works too
+for f in test/*.test.js; do node "$f"; done   # the JS suites, no framework
 ```
 
 Both run on every push (`.github/workflows/test.yml`), plus a Playwright e2e pass, a
