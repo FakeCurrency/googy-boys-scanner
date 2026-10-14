@@ -7,8 +7,8 @@ env/
 *.egg-info/
 
 # Logs
-scan.log
-journal/bybit_run.log
+# (scan.log and journal/bybit_run.log went 2026-10-14, REFINE200 #57: their
+# only writers -- scan_scheduled.bat and the Bybit executor -- are deleted.)
 
 # OS / editor
 .DS_Store
@@ -16,16 +16,8 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Firebase
-.firebase/
-firebase-debug.log
-
 # Claude Code internal (agent worktrees, session state)
 .claude/worktrees/
-
-# Staging area for files awaiting manual deletion (cloud sessions can't rm on
-# the mounted device folder — they mv here; delete this folder when reviewed)
-_to_delete/
 
 # Last-good per-ticker frame cache (restored across CI runs via actions/cache)
 .cache/
@@ -36,8 +28,14 @@ _to_delete/
 # would let one run's outage silence the next run's gate.
 .scan-skipped
 
-# Claude cloud-session push credential (local only, never commit)
+# Claude cloud-session push credential and per-machine Claude Code settings
+# (local only, never commit). The patterns are broad on purpose (REFINE200
+# #57): a credential saved under a new name must not need a .gitignore edit
+# before it is safe.
 .claude/gh_token.txt
+.claude/settings.local.json
+.claude/*token*
+*.token
 test/e2e/__shots__/
 # #98 screenshot-diff: baselines are self-captured per environment (CI cache),
 # never committed — cross-env font rendering would otherwise false-fail.
