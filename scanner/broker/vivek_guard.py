@@ -371,7 +371,7 @@ def week_pnl(book: dict, market: str, day: str, price_of) -> dict:
     EMPTY dict when `day` is not a parseable date — an unknown window must not
     be reported as a zero one, and `check` fails closed on it (#17).
     """
-    days = int(getattr(config, "VIVEK_BOT_WEEKLY_WINDOW_DAYS", 7) or 7)
+    days = int(config.VIVEK_BOT_WEEKLY_WINDOW_DAYS or 7)
     try:
         cutoff = (_dt.date.fromisoformat(day)
                   - _dt.timedelta(days=days - 1)).isoformat()
@@ -410,11 +410,11 @@ def check(book: dict, market: str, day: str, equity: float, price_of) -> dict:
     reader that formats it as a number keeps working.
     """
     pnl = session_pnl(book, market, day, price_of)
-    pct = getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.0) or 0.0
+    pct = config.VIVEK_BOT_MAX_DAILY_LOSS_PCT or 0.0
     limit = round(equity * (pct / 100.0), 2)
     daily_breach = limit > 0 and pnl["session_usd"] <= -limit
 
-    wpct = getattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 0.0) or 0.0
+    wpct = config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT or 0.0
     wlimit = round(equity * (wpct / 100.0), 2)
     week = week_pnl(book, market, day, price_of)
     week_measured = bool(week)

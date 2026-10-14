@@ -91,7 +91,7 @@ _DAY_MARK_KEEP = 9
 # (0) the largest possible book is the per-market cap in every market. functions/api/close.js and
 # journal.js CLOSE_ALL_MAX carry the same number as literals (Workers/browser
 # code cannot import config); a parity test pins all three to config.
-CLOSE_BATCH_MAX = (int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0)
+CLOSE_BATCH_MAX = (int(config.VIVEK_BOT_MAX_OPEN_TOTAL or 0)
                    or int(config.VIVEK_BOT_MAX_POSITIONS) * len(config.MARKETS))
 
 
@@ -439,7 +439,7 @@ def _restamp(book: dict, market: str, day: str) -> None:
 
     prev = ((book.get("guard") or {}).get(market) or {})
     try:
-        equity = float(getattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 0) or 0)
+        equity = float(config.VIVEK_BOT_ACCOUNT_EQUITY or 0)
         marks  = {str(p.get("symbol") or "").upper(): _book_mark(p)
                   for p in book.get("open") or []}
         guard  = vivek_guard.check(book, market, day, equity,
@@ -568,7 +568,7 @@ def _mark_sanity(pos: dict, price: float, market: str,
     exactly as before. `day` only dates the audit entry.
     """
     bar_day = _last_bar_day(frame) or day
-    limit = (getattr(config, "VIVEK_MARK_SANITY_PCT", {}) or {}).get(market, 0.0)
+    limit = (config.VIVEK_MARK_SANITY_PCT or {}).get(market, 0.0)
     ref = pos.get("last_mark") or 0.0
     if limit <= 0 or ref <= 0:
         pos["last_mark"] = round(price, 8)               # seed; guard from next run
@@ -604,7 +604,7 @@ def _mark_sanity(pos: dict, price: float, market: str,
                        f"({move * 100:+.0f}%; limit {limit * 100:.0f}%). Likely a "
                        f"split/bad print. Marking is frozen and the position will "
                        f"start its next session with the full "
-                       f"{int(getattr(config, 'VIVEK_MARK_SANITY_ACCEPT_RUNS', 3) or 3)}"
+                       f"{int(config.VIVEK_MARK_SANITY_ACCEPT_RUNS or 3)}"
                        f"-run challenge budget - check the stop basis before then.")
             except Exception as e:
                 log.warning("could not send suspect-price alert: %s", e)
@@ -614,7 +614,7 @@ def _mark_sanity(pos: dict, price: float, market: str,
     n = int(pos.get("suspect_price_runs") or 0) + 1
     pos["suspect_price_runs"] = n
     pos["suspect_price"] = round(price, 8)
-    accept_n = int(getattr(config, "VIVEK_MARK_SANITY_ACCEPT_RUNS", 3) or 3)
+    accept_n = int(config.VIVEK_MARK_SANITY_ACCEPT_RUNS or 3)
     if n >= accept_n:
         ratio = _split_ratio(pos, price, ref, frame, limit)
         if ratio is not None:
@@ -794,7 +794,7 @@ def _apply_level_gate(results: list[dict]) -> tuple[list[dict], int]:
     over the rows list: it never reads or writes the book.
     """
     allow = tuple(str(a).strip().lower()
-                  for a in (getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()))
+                  for a in (config.VIVEK_BOT_LEVEL_TF_ALLOW or ()))
     if not allow:
         return results, 0
     kept = [r for r in (results or [])
@@ -842,7 +842,7 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # close can carry a stop wider than the cap (CVLT 26.6%, SMCI 26.3%,
     # BNB 25.04% were booked that way). Same cap, same `>`, measured where the
     # money goes in. ENTRY ONLY: held positions never pass through here.
-    cap = float(getattr(config, "VIVEK_BOT_MAX_STOP_PCT", 0) or 0)
+    cap = float(config.VIVEK_BOT_MAX_STOP_PCT or 0)
     fill = float(snap["entry"])
     if cap > 0 and fill > 0:
         fill_pct = abs(fill - float(plan["stop"])) / fill * 100.0
@@ -893,7 +893,7 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # precedent one line up: nothing reads it to make a decision, and a row
     # written while no cycle is active simply has no key (absent != empty,
     # same convention as the review flags below).
-    _cycle = str(getattr(config, "VIVEK_BOT_CYCLE_TAG", "") or "")
+    _cycle = str(config.VIVEK_BOT_CYCLE_TAG or "")
     if _cycle:
         snap["cycle"] = _cycle
     # REVIEW FLAGS ride down onto the book row (2026-07-28, owner: "Flag this in
@@ -977,7 +977,7 @@ def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
     flagged = [p for p in (opened or []) if p.get("review")]
     if not flagged:
         return []
-    if not getattr(config, "VIVEK_BOT_REVIEW_PUSH", True):
+    if not config.VIVEK_BOT_REVIEW_PUSH:
         return []
     if send is None:
         try:
@@ -1010,10 +1010,10 @@ def _notify_reviews(market: str, opened: list[dict], send=None) -> list[str]:
                      f"in one run.")
     lines.append("The bot has taken these under your rules and they stay taken. "
                  "Leave them and they are the bot's at $"
-                 f"{float(getattr(config, 'VIVEK_BOT_POSITION_NOTIONAL', 0) or 0):,.0f} "
+                 f"{float(config.VIVEK_BOT_POSITION_NOTIONAL or 0):,.0f} "
                  "each; close them in the book and take them yourself if you want "
                  "them sized your way.")
-    site = str(getattr(config, "SITE_URL", "") or "").rstrip("/")
+    site = str(config.SITE_URL or "").rstrip("/")
     if site:
         lines.append(f"{site}/journal.html")
 
@@ -1059,11 +1059,11 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
     that then fails re-pings next run — for a reminder, failing toward
     repetition beats failing toward silence.
     """
-    days_min = int(getattr(config, "VIVEK_BOT_STALE_PROBE_DAYS", 0) or 0)
-    if days_min <= 0 or not getattr(config, "VIVEK_BOT_STALE_PROBE_PUSH", True):
+    days_min = int(config.VIVEK_BOT_STALE_PROBE_DAYS or 0)
+    if days_min <= 0 or not config.VIVEK_BOT_STALE_PROBE_PUSH:
         return []
-    max_r = float(getattr(config, "VIVEK_BOT_STALE_PROBE_MAX_ABS_R", 0.5) or 0.5)
-    repeat = int(getattr(config, "VIVEK_BOT_STALE_PROBE_REPEAT_DAYS", 7) or 0)
+    max_r = float(config.VIVEK_BOT_STALE_PROBE_MAX_ABS_R or 0.5)
+    repeat = int(config.VIVEK_BOT_STALE_PROBE_REPEAT_DAYS or 0)
 
     def _days_between(a: str, b: str) -> int | None:
         try:
@@ -1104,7 +1104,7 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
     lines = []
     for pos, held, ur in stale:
         leg = "past TP1, runner" if pos.get("tp1_hit") else \
-            f"pre-TP1 (time stop at {int(getattr(config, 'VIVEK_BOT_MAX_HOLD_DAYS', 0) or 0)}d)"
+            f"pre-TP1 (time stop at {int(config.VIVEK_BOT_MAX_HOLD_DAYS or 0)}d)"
         lines.append(f"{str(pos.get('symbol', '?')).upper()} "
                      f"{str(pos.get('direction', '?')).upper()} - {held}d held, "
                      f"{ur:+.2f}R, {leg}")
@@ -1112,7 +1112,7 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
                  f"{len(stale)} of the book's slots. Close in the book to free "
                  "the slot, or leave them and this asks again in "
                  f"{repeat} day(s).")
-    site = str(getattr(config, "SITE_URL", "") or "").rstrip("/")
+    site = str(config.SITE_URL or "").rstrip("/")
     if site:
         lines.append(f"{site}/journal.html")
     n = len(stale)
@@ -1249,7 +1249,7 @@ def close_bot_batch(entries: list[dict]) -> tuple[list[dict], list[dict]]:
 
 def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
     """Symbols fully stopped out within VIVEK_BOT_REENTRY_COOLDOWN_DAYS of `day`."""
-    days = int(getattr(config, "VIVEK_BOT_REENTRY_COOLDOWN_DAYS", 0) or 0)
+    days = int(config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS or 0)
     if days <= 0:
         return set()
     try:
@@ -1427,7 +1427,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # VIVEK_BOT_MAX_MARK_AGE_H): past the limit it is not a mark, so the
     # position is unpriced this run -- for management AND for the loss guard,
     # which both read this one function. `stale_marks` names them for the log.
-    max_mark_h = float(getattr(config, "VIVEK_BOT_MAX_MARK_AGE_H", 0) or 0)
+    max_mark_h = float(config.VIVEK_BOT_MAX_MARK_AGE_H or 0)
     stale_marks: dict[str, float] = {}
 
     def price_of(sym):
@@ -1508,7 +1508,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     closed_now = 0
     closed_events: list[dict] = []          # for the end-of-run alert digest
     still_open = []
-    max_hold = int(getattr(config, "VIVEK_BOT_MAX_HOLD_DAYS", 0) or 0)
+    max_hold = int(config.VIVEK_BOT_MAX_HOLD_DAYS or 0)
     for pos in book["open"]:
         if pos.get("market") != market:
             still_open.append(pos)
@@ -1732,13 +1732,13 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # Reported, never enforced — closing the gap changes which trades get
         # taken (owner's call, REFINEMENTS #113).
         heavy = sectorcache.global_sector_load(
-            book["open"], int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0))
+            book["open"], int(config.VIVEK_BOT_MAX_PER_SECTOR or 0))
         if heavy:
             log.warning("vivek_run [%s]: %d sector(s) exceed the %d-per-sector cap "
                         "once ALL markets are counted together (the cap is enforced "
                         "per market): %s (REFINEMENTS #113)",
                         market, len(heavy),
-                        int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0),
+                        int(config.VIVEK_BOT_MAX_PER_SECTOR or 0),
                         ", ".join(heavy))
     except Exception as e:                                       # noqa: BLE001
         log.warning("vivek_run [%s]: sector merge skipped (%s) - the per-sector "
@@ -1764,8 +1764,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # cross-market count is supplied here; None = a sibling book is unreadable
     # and decide() will then take nothing.
     gate: dict = {}
-    max_total = int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or 0)
-    max_notional = float(getattr(config, "VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL", 0) or 0)
+    max_total = int(config.VIVEK_BOT_MAX_OPEN_TOTAL or 0)
+    max_notional = float(config.VIVEK_BOT_MAX_PORTFOLIO_NOTIONAL or 0)
     if max_total or max_notional:
         # ONE read of the sibling books feeds BOTH ceilings, so the count and
         # the notional can never disagree about what is open elsewhere.
@@ -1790,7 +1790,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     if level_gate_skipped:
         log.info("vivek_run [%s]: level gate (%s) dropped %d candidate row(s) "
                  "before decide()", market,
-                 "/".join(getattr(config, "VIVEK_BOT_LEVEL_TF_ALLOW", ()) or ()),
+                 "/".join(config.VIVEK_BOT_LEVEL_TF_ALLOW or ()),
                  level_gate_skipped)
     cooldown = _cooldown_symbols(book, market, day)
     decision = vivek_bot.decide(results, equity, market=market, open_book=open_book,
@@ -1798,8 +1798,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
 
     # 4) fill new entries at the current intraday price (session only, guard clear).
     added, chased, earnings_skipped = 0, 0, 0
-    earnings_gate = (market in (getattr(config, "VIVEK_BOT_EARNINGS_MARKETS", ()) or ()))
-    earnings_buffer = int(getattr(config, "VIVEK_BOT_EARNINGS_BUFFER_DAYS", 0) or 0)
+    earnings_gate = (market in (config.VIVEK_BOT_EARNINGS_MARKETS or ()))
+    earnings_buffer = int(config.VIVEK_BOT_EARNINGS_BUFFER_DAYS or 0)
     opened_events: list[dict] = []          # for the end-of-run alert digest
     # symbol → level_tf from this scan's rows (audit stamp on new tickets).
     level_tf_by_sym = {
@@ -1909,7 +1909,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # the scan workflow exports SMTP creds and alert_dispatch fires every
     # configured channel, so this would EMAIL each bot trade event. Flip
     # VIVEK_BOT_NOTIFY_TRADES in config when pushes are wanted.
-    if getattr(config, "VIVEK_BOT_NOTIFY_TRADES", False) and (opened_events or closed_events):
+    if config.VIVEK_BOT_NOTIFY_TRADES and (opened_events or closed_events):
         try:
             from .alert_dispatch import send as _alert
             lines = [f"OPEN  {p['symbol']} {p.get('direction','?')} @ {p.get('entry')} "

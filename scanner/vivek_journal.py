@@ -47,7 +47,7 @@ MAX_CLOSED = 4000
 
 def costs_for(market: str | None) -> tuple[float, float] | None:
     """(slippage_frac, commission_frac) for a market, or None when costs are off."""
-    if not getattr(config, "VIVEK_COSTS_ENABLED", False):
+    if not config.VIVEK_COSTS_ENABLED:
         return None
     slip = config.VIVEK_SLIPPAGE_BPS.get(market, config.VIVEK_SLIPPAGE_BPS["default"])
     comm = config.VIVEK_COMMISSION_BPS.get(market, config.VIVEK_COMMISSION_BPS["default"])
@@ -226,7 +226,7 @@ def _excursion(trade: dict, price: float) -> None:
 #: dropped when a row closes (REFINE200 #24): left behind they froze at the
 #: last pre-close run on every closed row (all 111 at the time), a second,
 #: contradictory P&L beside realized_r. Nothing reads them off a closed row --
-#: every reader (journal.js, app.js, recs.js, stalled.js, book_stress, the
+#: every reader (journal.js, app.js, recs.js, stalled.js, the tide script, the
 #: guard's day reference, data.held_price_kwargs) walks the OPEN list.
 _OPEN_ONLY_FIELDS = ("unreal_r", "unreal_usd", "day_marks")
 
@@ -452,7 +452,7 @@ def update(market: str, results: list[dict], frames: dict, universe: list[dict],
                 continue
             # Keep the forward-test to the same tradeable universe as the bot —
             # don't let REIT/ETF/fund reactions pad the signal's expectancy.
-            if getattr(config, "VIVEK_BOT_EXCLUDE_FUNDS", True) and _is_fund_or_reit(row):
+            if config.VIVEK_BOT_EXCLUDE_FUNDS and _is_fund_or_reit(row):
                 continue
             price = _current_price(frames, yf_map.get(row["symbol"]))
             if price is None:

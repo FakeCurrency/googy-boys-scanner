@@ -92,8 +92,8 @@ def _vivek_daily_limit() -> float:
     behaves identically; only a bare call stops measuring a dead journal's rule.
     """
     from scanner import config
-    equity = float(getattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 0) or 0)
-    pct = float(getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0) or 0)
+    equity = float(config.VIVEK_BOT_ACCOUNT_EQUITY or 0)
+    pct = float(config.VIVEK_BOT_MAX_DAILY_LOSS_PCT or 0)
     return equity * pct / 100.0
 
 
@@ -281,7 +281,7 @@ def _live_marks(book: dict) -> dict:
             # mark is dropped -> that position falls back to its stamped mark.
             pos = by_key.get(key)
             ref = (pos or {}).get("last_mark") or 0.0
-            limit = (getattr(config, "VIVEK_MARK_SANITY_PCT", {}) or {}).get(
+            limit = (config.VIVEK_MARK_SANITY_PCT or {}).get(
                 key[1], 0.0)
             if ref > 0 and limit > 0 and abs(px / ref - 1.0) > limit:
                 log.warning("kill-switch: dropping SUSPECT quote for %s [%s]: "
@@ -407,7 +407,7 @@ def run_standalone(dry_run: bool = False) -> dict:
                  "the rest use last-scan marks", len(quotes), len(book["open"]))
 
     limit = _vivek_daily_limit()
-    routing = getattr(config, "VIVEK_KILL_SWITCH_BROKERS", {}) or {}
+    routing = config.VIVEK_KILL_SWITCH_BROKERS or {}
     out = {"triggered": [], "checked": [], "flattened": []}
     done: set[str] = set()
     for market, mkt in config.MARKETS.items():
