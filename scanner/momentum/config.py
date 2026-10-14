@@ -26,7 +26,7 @@ from typing import Any, Dict, Tuple
 # pure-constants module, so this costs no import weight and removing the lens
 # leaves it untouched.
 from scanner.config import MARKETS as MARKETS_META  # noqa: F401
-from scanner.config import IGNITION_BAR_FINAL as _SCANNER_BAR_FINAL
+from scanner.config import DAILY_BAR_FINAL as _SCANNER_BAR_FINAL
 from scanner.config import PRODUCT_NAME_PATTERNS  # noqa: F401
 from scanner.config import (LENS_BACKTEST_NOTIONAL, VIVEK_BOT_MIN_STOP_PCT,  # noqa: F401
                             VIVEK_COMMISSION_BPS, VIVEK_SLIPPAGE_BPS,
@@ -371,7 +371,7 @@ CRYPTO_DUE_UTC: Tuple[int, int] = (0, 30)
 
 # {market: (timezone, hour, minute)} at which a stock market's daily bar is
 # FINAL in the free feed -- the repo's one table (scanner.config
-# IGNITION_BAR_FINAL: ASX 16:40 Sydney, the digest's close gate; NASDAQ 16:30
+# DAILY_BAR_FINAL: ASX 16:40 Sydney, the digest's close gate; NASDAQ 16:30
 # New York). Borrowed, not retyped. scripts/momentum_due.py makes a stock
 # market due from it, and run.completed_bars calls today's bar forming until
 # it. A market with no entry (crypto) is due at CRYPTO_DUE_UTC.

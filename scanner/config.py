@@ -1760,6 +1760,11 @@ MORNING_PLAYS_SLOT_GATE = {
 # (ASX 16:40 Sydney, NASDAQ 16:30 New York). Crypto has no entry: its bar is
 # final at 00:00 UTC and ignition.yml gates on the UTC date instead.
 IGNITION_BAR_FINAL = dict(BAR_FINAL)
+# The same table under a lens-neutral name, for readers that are fenced off
+# the Ignition lens's own tokens (tests/test_ignition_fences.py): the MOMENTUM
+# due gate and forming-bar drop and the Specs nightly's forming-bar drop
+# (REFINE200 #133/#173/#180). It is BAR_FINAL -- one table, never retyped.
+DAILY_BAR_FINAL = BAR_FINAL
 # The IGNITION markets whose screen calls today's stock bar FORMING until its
 # IGNITION_BAR_FINAL above, not until the VIVEK_JOURNAL_SESSION close: the
 # closing cross and the delayed feed's volume land after the bell, so a run

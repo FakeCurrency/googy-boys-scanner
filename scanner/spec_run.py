@@ -117,7 +117,7 @@ def bar_is_forming(market_key: str, last_idx, now: datetime.datetime) -> bool:
     """Is a frame's last daily bar still FORMING at `now`, in the market's own
     calendar? A bar dated after the local date is forming by definition; one
     dated today is forming until the market's bar is final in the free feed
-    (config.IGNITION_BAR_FINAL: ASX 16:40 Sydney, NASDAQ 16:30 New York), or
+    (config.DAILY_BAR_FINAL: ASX 16:40 Sydney, NASDAQ 16:30 New York), or
     until its session close for a market with no bar-final entry. The nightly
     is timed after every close, but a late or manual run used to screen a
     half-day NASDAQ bar as complete (REFINE200 #180)."""
@@ -129,7 +129,7 @@ def bar_is_forming(market_key: str, last_idx, now: datetime.datetime) -> bool:
     local = now.astimezone(tz)
     if last != local.date():
         return last > local.date()
-    final = config.IGNITION_BAR_FINAL.get(market_key)
+    final = config.DAILY_BAR_FINAL.get(market_key)
     if final is not None:
         return (local.hour * 60 + local.minute) < (final[1] * 60 + final[2])
     sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
