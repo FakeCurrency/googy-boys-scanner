@@ -22,6 +22,47 @@
 (() => {
   "use strict";
 
+  // ── ONE bot-book read per page (REFINE200 #68) ─────────────────────────────
+  // vivek_bot_book.json is the biggest file most pages load (~370 KB, growing
+  // with every close) and one page used to fetch it three or four times: this
+  // file's tab badge, the status lamp, journal.js and the stalled strip each
+  // asked for it on their own. nav.js runs first on every nav page, so the
+  // shared loader lives here. window.VivekBook.get() hands every caller on the
+  // page the SAME promise, and .rules() does the same for bot_rules.json.
+  //   {fresh: true}  a deliberate re-read (the journal's 3-minute refresh, the
+  //                  status sheet opening). It replaces the shared copy only
+  //                  when it succeeds, so a failed refresh never throws away a
+  //                  good book.
+  //   {bust: x}      adds ?t=x and no-store, for a poll that must get past every
+  //                  cache layer (the stalled strip waiting for a close to land).
+  // A failed FIRST read is not kept: the next caller tries again. A rejection
+  // carries the HTTP status as err.status (absent = the network failed).
+  // chart.html does not load nav.js and keeps its own fetch; app.js and
+  // recs.js keep theirs (their own refresh cadence).
+  const VivekBook = (() => {
+    const URLS = { book: "data/vivek_bot_book.json", rules: "data/bot_rules.json" };
+    const memo = { book: null, rules: null };
+    const read = (url, cache) => fetch(url, { cache }).then((r) => {
+      if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+      return r.json();
+    });
+    const load = (kind, opts) => {
+      const o = opts || {};
+      const bust = o.bust != null;
+      if (memo[kind] && !o.fresh && !bust) return memo[kind];
+      const p = read(URLS[kind] + (bust ? "?t=" + encodeURIComponent(String(o.bust)) : ""),
+        bust ? "no-store" : "no-cache");
+      if (!memo[kind]) memo[kind] = p;          // the first reader shares its request
+      p.then((j) => {
+        memo[kind] = p;
+        if (kind === "book") bookSeen(j);
+      }, () => { if (memo[kind] === p) memo[kind] = null; });
+      return p;
+    };
+    return { get: (o) => load("book", o), rules: (o) => load("rules", o) };
+  })();
+  window.VivekBook = VivekBook;
+
   const PRIMARY = [
     { href: "index.html",           label: "SCAN",       tab: "📡", key: "index" },
     { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
@@ -367,8 +408,15 @@
     if (n > 0) { el.textContent = n > 99 ? "99+" : String(n); el.hidden = false; }
     else { el.hidden = true; }
   }
+  // A book this page loaded anyway (journal, stalled strip, status sheet) is
+  // where the count actually lives, so it overrides the rules-file figure and
+  // keeps the badge live as closes land.
+  let badgeFromBook = false;
+  function bookSeen(d) {
+    badgeFromBook = true;
+    setBadge("journal", ((d && d.open) || []).length);
+  }
   function decorateTabBadges() {
-    const grab = (u) => fetch(u, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     // SCAN: RETIRED 2026-08-13, and the reason is worth keeping.
     //
     // This badge counted `r.grade === "A+"` straight out of <m>_prices.json and
@@ -389,10 +437,16 @@
     // The real fix is server-side — publish a tradeable count in the sidecar,
     // once the heuristic has ONE home instead of two. Until then this stays off
     // and the deck's own pills are the only place the number is stated.
-    // JOURNAL: bot open positions (the one track record).
-    grab("data/vivek_bot_book.json").then((d) => {
-      setBadge("journal", ((d && d.open) || []).length);
-    });
+    // JOURNAL: bot open positions (the one track record). Read from
+    // bot_rules.json's open_total (a few KB, published every scan) so a page
+    // with no other use for the book does not download ~370 KB for a badge
+    // (REFINE200 #68); the shared book read is the fallback for a rules file
+    // that predates the key.
+    VivekBook.rules()
+      .then((r) => (r && typeof r.open_total === "number" ? r.open_total
+        : VivekBook.get().then((d) => ((d && d.open) || []).length)))
+      .then((n) => { if (!badgeFromBook) setBadge("journal", n); })
+      .catch(() => {});
   }
 
   // #91: one shared footer include — a consistent credit (data source +
@@ -460,7 +514,7 @@
     const grab = (u) => fetch(u, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     cpIndexP = Promise.all([
       ...["asx", "nasdaq", "crypto"].map((m) => grab(`data/${m}_prices.json`)),
-      grab("data/vivek_bot_book.json"),
+      VivekBook.get().catch(() => null),
     ]).then(([pa, pn, pc, book]) => {
         const out = [];
         [pa, pn, pc].forEach((d, i) => {
