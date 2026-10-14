@@ -1235,7 +1235,7 @@ def main() -> None:
                     help="replay the LIVE bot lifecycle (hc4-1: A/A+ four cells, level "
                          "gate, time stop, ADV, one chronological book across markets) "
                          "and run the V1-V8 variant grid; writes "
-                         "public/data/vivek_backtest_parity.json by default")
+                         "data/research/vivek_backtest_parity.json by default")
     ap.add_argument("--workers", type=int, default=0,
                     help="with --parity: processes for the signal pass (0 = every CPU)")
     ap.add_argument("--summary-md", default=None,
@@ -1264,18 +1264,21 @@ def main() -> None:
         from . import vivek_parity as parity
         # Default out/period for parity differ from the Insights walk-forward.
         if args.out == str(OUT_FILE):
-            default_name = ("public/data/vivek_backtest_parity_oos.json"
-                            if args.exclude_from else
-                            getattr(config, "VIVEK_PARITY_OUT_FILE",
-                                    "public/data/vivek_backtest_parity.json"))
+            default_name = (config.VIVEK_PARITY_OOS_OUT_FILE if args.exclude_from
+                            else config.VIVEK_PARITY_OUT_FILE)
             out = ROOT / default_name
+            # The default report is research (data/research/, REFINE200 #63),
+            # which holds no fx.json: read the rate the scan publishes beside
+            # the Insights report, never the fallback.
+            fx_from = OUT_FILE
         else:
             out = pathlib.Path(args.out)
+            fx_from = out
         # An explicit --period is honoured as given (an explicit "10y" used to
         # be read as "not given" and silently replaced by the 5y default).
         period = args.period or getattr(config, "VIVEK_PARITY_DEFAULT_PERIOD", "5y")
         workers = args.workers if args.workers > 0 else parity.default_workers()
-        set_fx_path(out)
+        set_fx_path(fx_from)
         excl = parity.load_exclude_map(args.exclude_from) if args.exclude_from else None
         tag = args.tag or ("parity_oos" if args.exclude_from else "parity")
         report = parity.run_parity(markets, args.limit or None, period,

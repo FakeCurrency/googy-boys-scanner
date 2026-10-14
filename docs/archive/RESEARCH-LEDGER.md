@@ -34,7 +34,7 @@ the reason the numbers can be trusted.
 
 ## The evidence artifacts (all committed, all recomputable)
 
-| Artifact (public/data/) | What it is |
+| Artifact (data/research/; in public/data/ until 2026-10-14) | What it is |
 |---|---|
 | `vivek_backtest_parity.json` | IS parity run: 763 candidates, 613 taken, baseline live rules |
 | `vivek_backtest_parity_oos.json` | OOS confirmation: 1,125 / 587 taken, symbol-disjoint |
