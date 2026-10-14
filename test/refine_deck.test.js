@@ -307,8 +307,10 @@ test("#191 the three picks are the same whatever order the markets arrived in", 
 // ---------------------------------------------------------------------------
 test("#192 the sub-line says how far back the rolling log reaches", () => {
   const windowNote = new Function(constSrc(ALERTS, "melbShort") + fnSrc(ALERTS, "windowNote") + "return windowNote;")();
-  const entries = [{ date: "2026-10-14T05:47:18+00:00" }, { date: "2026-09-25T20:05:20+00:00" }, { date: "junk" }];
-  assert.ok(/^ · the log keeps the newest 3, back to 26 Sep/.test(windowNote(entries)), windowNote(entries));
+  // oldest in the MIDDLE: the window is the minimum, not whichever comes last
+  const entries = [{ date: "2026-10-14T05:47:18+00:00" }, { date: "2026-09-25T20:05:20+00:00" },
+                   { date: "junk" }, { date: "2026-10-01T00:00:00+00:00" }];
+  assert.ok(/^ · the log keeps the newest 4, back to 26 Sep/.test(windowNote(entries)), windowNote(entries));
   assert.equal(windowNote([]), "");
   const html = read("public/alerts.html");
   assert.ok(!/durable record|being rebuilt|queued for it|every multi-lens alignment/.test(html), "the old claims are back");
