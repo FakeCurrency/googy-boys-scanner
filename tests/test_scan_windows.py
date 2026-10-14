@@ -22,7 +22,9 @@ Two defects this file now pins, both found checking the schedule after the
 """
 from __future__ import annotations
 
+import copy
 import datetime as dt
+import functools
 import importlib.util
 import pathlib
 import re
@@ -46,12 +48,22 @@ UTC = dt.timezone.utc
 LAND = dt.timedelta(minutes=10)      # a scan's stamp, minutes after its cron
 
 
-def _load(name):
+@functools.lru_cache(maxsize=None)
+def _parsed(name):
+    """Each workflow is parsed ONCE per run (REFINE200, 2026-10-14). The sweeps
+    in this suite used to re-read and yaml.safe_load a workflow per call --
+    1,771 parses of scan.yml for one test, 55s of a 0.4s test. Callers get a
+    deep copy from `_load`, so a test that edits the doc cannot leak the edit
+    into the next one."""
     return yaml.safe_load((WF / name).read_text(encoding="utf-8"))
 
 
+def _load(name):
+    return copy.deepcopy(_parsed(name))
+
+
 def _crons(name) -> list[str]:
-    on = _load(name)[True]          # PyYAML reads the `on:` key as the bool True
+    on = _parsed(name)[True]        # PyYAML reads the `on:` key as the bool True
     return [c["cron"] for c in on["schedule"]]
 
 

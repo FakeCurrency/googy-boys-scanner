@@ -22,6 +22,8 @@ If a future edit moves any of these blocks back to workflow level, the failure
 is silent — a run that simply never appears. Hence the assertions.
 """
 
+import copy
+import functools
 import pathlib
 import re
 
@@ -51,8 +53,18 @@ WORKFLOW_SCOPED = {
 }
 
 
-def _load(name):
+@functools.lru_cache(maxsize=None)
+def _parsed(name):
+    """Each workflow is parsed ONCE per run (REFINE200, 2026-10-14). The sweeps
+    in this suite used to re-read and yaml.safe_load a workflow per call --
+    1,771 parses of scan.yml for one test, 55s of a 0.4s test. Callers get a
+    deep copy from `_load`, so a test that edits the doc cannot leak the edit
+    into the next one."""
     return yaml.safe_load((WF / name).read_text(encoding="utf-8"))
+
+
+def _load(name):
+    return copy.deepcopy(_parsed(name))
 
 
 def _group(block):
