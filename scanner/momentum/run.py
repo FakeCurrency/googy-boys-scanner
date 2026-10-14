@@ -28,6 +28,7 @@ import datetime as dt
 import pathlib
 import time
 from typing import Any, Dict, List, Mapping, Optional
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -79,6 +80,39 @@ def _frame_age_days(frame: pd.DataFrame, market: str) -> Optional[int]:
         return None
 
 
+def bar_is_forming(market: str, last_idx, now: dt.datetime) -> bool:
+    """Is a frame's last daily bar still FORMING at `now`? Spec 5.11: the screen
+    reads closed bars only, and `screen_symbol` says the CALLER drops the rest.
+
+    Read in the market's own calendar. A bar dated after the local date is
+    forming by definition; one dated today is forming until the market's bar is
+    final -- config.BAR_FINAL (ASX 16:40 Sydney, NASDAQ 16:30 New York: the
+    close plus the delayed feed). A market with no entry (crypto, whose daily
+    bar rolls at 00:00 UTC) is forming all day: the 00:30 UTC run used to
+    publish a 30-minute-old candle as its `last_closed_bar`.
+    """
+    meta = config.MARKETS_META.get(market)
+    try:
+        tz = ZoneInfo(getattr(meta, "timezone", "UTC") or "UTC")
+        last = pd.Timestamp(last_idx).date()
+    except Exception:
+        return False
+    local = now.astimezone(tz)
+    if last != local.date():
+        return last > local.date()
+    final = config.BAR_FINAL.get(market)
+    if final is None:
+        return True
+    return (local.hour * 60 + local.minute) < (final[1] * 60 + final[2])
+
+
+def completed_bars(frame: pd.DataFrame, market: str, now: dt.datetime) -> pd.DataFrame:
+    """The frame without its forming last bar, if it has one."""
+    if frame is not None and len(frame) and bar_is_forming(market, frame.index[-1], now):
+        return frame.iloc[:-1]
+    return frame
+
+
 def _last_bar(frame: pd.DataFrame) -> Optional[str]:
     try:
         return str(pd.Timestamp(frame.index[-1]).date())
@@ -88,12 +122,20 @@ def _last_bar(frame: pd.DataFrame) -> Optional[str]:
 
 def screen_market(market: str, *, cfg=None, limit: int = 0,
                   frames: Optional[Dict[str, pd.DataFrame]] = None,
-                  rows: Optional[List[dict]] = None) -> Optional[dict]:
+                  rows: Optional[List[dict]] = None,
+                  now: Optional[dt.datetime] = None) -> Optional[dict]:
     """Screen one market and return the payload, or None when there is no data.
 
-    `frames` and `rows` are injectable so the whole path is testable without a
-    network call -- the download is the only part that cannot be exercised in
-    CI, so it is the only part left out.
+    `frames`, `rows` and `now` are injectable so the whole path is testable
+    without a network call -- the download is the only part that cannot be
+    exercised in CI, so it is the only part left out.
+
+    A downloaded frame loses its FORMING last bar (`completed_bars`) before
+    anything reads it, and before the frame cache saves it: a cached mid-day
+    snapshot, reused the next day when the source drops the ticker, would
+    otherwise be screened as a finished bar. Injected frames are taken as
+    completed bars unless `now` is passed too, so a fixture ending "today"
+    does not screen differently depending on the hour the suite runs.
     """
     cfg = (cfg or config.DEFAULTS).validate().assert_screenable()
     started = time.time()
@@ -108,8 +150,16 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
     if frames is None:
         fresh = sdata.download([r["yf"] for r in rows], period=config.DATA_PERIOD,
                                interval=TIMEFRAME)
+        # The clock is read AFTER the download: "forming" is judged when the
+        # bars are in hand, not when a multi-minute download started.
+        now = now or dt.datetime.now(dt.timezone.utc)
+        fresh = {t: completed_bars(f, market, now) for t, f in fresh.items()}
         frames, cache_stats = sdata.merge_with_cache(
-            f"momentum-{market}", fresh, [r["yf"] for r in rows])
+            f"momentum-{market}", {t: f for t, f in fresh.items() if len(f)},
+            [r["yf"] for r in rows])
+    if now is not None:
+        frames = {t: f for t, f in ((t, completed_bars(f, market, now))
+                                    for t, f in frames.items()) if f is not None and len(f)}
 
     if not frames:
         # Nothing fresh AND nothing cached: the source is fully blocked. Keep
@@ -138,7 +188,8 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
                     reason = f"stale frame ({age} sessions old)"
                     stale += 1
             if reason is not None:
-                skipped[reason.split(" (")[0]] = skipped.get(reason.split(" (")[0], 0) + 1
+                key = gates.reason_key(reason)
+                skipped[key] = skipped.get(key, 0) + 1
                 continue
 
             row = screen_symbol(frame, cfg, symbol=symbol, market=market)

@@ -383,3 +383,107 @@ def test_the_params_block_records_every_tunable_that_produced_the_file(market_fi
     p = R.screen_market("asx", frames=frames, rows=rows)
     assert p["params"] == C.DEFAULTS.to_dict()
     assert p["params"]["ema_seed"] == "sma" and p["params"]["pivot_strict_left"] is True
+
+
+# ---------------------------------------------------------------------------
+# REFINE200 #141: the skip tally groups by GATE, not by each name's numbers
+# ---------------------------------------------------------------------------
+
+def test_two_names_below_one_floor_share_one_skip_key(market_fixture):
+    """Keyed on the full reason, every sub-floor price was its own bucket
+    (791 one-name keys, 69% of the ASX file). Two names under the same floor
+    at different prices must land in ONE key, with the numbers stripped."""
+    rows, frames = market_fixture
+    rows = rows + [{"symbol": "PENNY2", "name": "Penny Two", "sector": "Materials",
+                    "yf": "PENNY2.AX"}]
+    frames = dict(frames, **{"PENNY2.AX": frame(walk(15) * 0.0001)})
+    p = R.screen_market("asx", frames=frames, rows=rows)
+    by = p["summary"]["skipped_by_reason"]
+    assert by.get("price below the asx floor") == 2, by
+    assert not any(re.search(r"\d", k) for k in by), f"a key still carries a number: {by}"
+    assert G.reason_key("turnover 7872 below the crypto floor 5000000") == \
+        G.reason_key("turnover 12 below the crypto floor 5000000") == "turnover below the crypto floor"
+    assert G.reason_key("stale frame (3 sessions old)") == "stale frame"
+
+
+def test_the_backtest_tallies_its_gated_signals_on_the_same_key():
+    from scanner.momentum import backtest as B
+    assert not hasattr(B, "_reason_key"), "one grouping helper, in gates.py"
+    assert "gates.reason_key(reason)" in (ROOT / "scanner" / "momentum" / "backtest.py").read_text()
+
+
+# ---------------------------------------------------------------------------
+# REFINE200 #133: the forming bar is never screened as a closed one
+# ---------------------------------------------------------------------------
+
+def _crypto_frame(close, end):
+    c = np.asarray(close, dtype=float)
+    idx = pd.date_range(end=end, periods=c.size, freq="D")
+    prev = np.concatenate([[c[0]], c[:-1]])
+    return pd.DataFrame({"Open": prev, "High": np.maximum(c, prev) * 1.004,
+                         "Low": np.minimum(c, prev) * 0.996, "Close": c,
+                         "Volume": np.full(c.size, 1e9)}, index=idx)
+
+
+def test_a_crypto_run_just_after_midnight_UTC_publishes_YESTERDAY_as_its_last_closed_bar():
+    """The committed crypto.json (generated 00:38Z) named that day's
+    38-minute-old candle as `last_closed_bar`. The bar that opened at 00:00 UTC
+    is dropped; the screen reads through yesterday's completed bar."""
+    import datetime as dt
+    now = dt.datetime.now(dt.timezone.utc).replace(hour=0, minute=38, second=0, microsecond=0)
+    today = pd.Timestamp(now.date())
+    rows = [{"symbol": "AAA", "name": "Alpha", "sector": "", "yf": "AAA-USD"},
+            {"symbol": "BBB", "name": "Beta", "sector": "", "yf": "BBB-USD"}]
+    frames = {"AAA-USD": _crypto_frame(walk(1), today), "BBB-USD": _crypto_frame(walk(2), today)}
+    p = R.screen_market("crypto", frames=frames, rows=rows, now=now)
+    yesterday = (today - pd.Timedelta(days=1)).date().isoformat()
+    assert p["last_closed_bar"] == yesterday, p["last_closed_bar"]
+    assert p["summary"]["downloaded"] == 2
+    # without a clock the injected frames are taken as completed bars (a
+    # fixture ending "today" must not screen differently by the hour)
+    assert R.screen_market("crypto", frames=frames, rows=rows)["last_closed_bar"] == \
+        today.date().isoformat()
+
+
+@pytest.mark.parametrize("market,last,now,forming", [
+    # crypto: today's UTC candle is forming all day; yesterday's is complete
+    ("crypto", "2026-10-14", "2026-10-14T00:38:00+00:00", True),
+    ("crypto", "2026-10-14", "2026-10-14T23:59:00+00:00", True),
+    ("crypto", "2026-10-13", "2026-10-14T00:38:00+00:00", False),
+    # ASX: forming until the 16:40 Sydney bar-final (AEDT: 05:40Z)
+    ("asx", "2026-10-14", "2026-10-14T05:39:00+00:00", True),
+    ("asx", "2026-10-14", "2026-10-14T05:40:00+00:00", False),
+    ("asx", "2026-10-13", "2026-10-14T01:00:00+00:00", False),
+    # NASDAQ: forming until 16:30 New York (EDT: 20:30Z), not the 16:00 bell
+    ("nasdaq", "2026-10-13", "2026-10-13T20:10:00+00:00", True),
+    ("nasdaq", "2026-10-13", "2026-10-13T20:30:00+00:00", False),
+    # a bar dated after the local date (the day rolled during the download)
+    ("nasdaq", "2026-10-14", "2026-10-13T23:00:00+00:00", True),
+])
+def test_bar_is_forming_reads_the_markets_own_bar_final(market, last, now, forming):
+    import datetime as dt
+    assert R.bar_is_forming(market, pd.Timestamp(last),
+                            dt.datetime.fromisoformat(now)) is forming
+
+
+def test_the_forming_bar_is_dropped_before_the_frame_cache_saves_it(monkeypatch):
+    """A cached mid-day snapshot, reused the next day when the source drops
+    the ticker, would be screened as a finished bar -- so the merge (which
+    writes the cache) must only ever see completed bars."""
+    import datetime as dt
+    now = dt.datetime.now(dt.timezone.utc).replace(hour=0, minute=38, second=0, microsecond=0)
+    today = pd.Timestamp(now.date())
+    seen = {}
+
+    def fake_download(tickers, **kw):
+        return {"AAA-USD": _crypto_frame(walk(1), today)}
+
+    def fake_merge(key, fresh, universe, **kw):
+        seen.update(fresh)
+        return fresh, {}
+
+    monkeypatch.setattr(R.sdata, "download", fake_download)
+    monkeypatch.setattr(R.sdata, "merge_with_cache", fake_merge)
+    R.screen_market("crypto", rows=[{"symbol": "AAA", "name": "Alpha", "sector": "",
+                                     "yf": "AAA-USD"}], now=now)
+    assert pd.Timestamp(seen["AAA-USD"].index[-1]) == today - pd.Timedelta(days=1)

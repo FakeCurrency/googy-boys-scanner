@@ -13,12 +13,17 @@ each close). Whichever wake-up arrives first does the work; the rest find
 nothing due and stop in seconds. The morning_plays delay-proof gate
 (`slot_due` + `scan_is_post_close`) is the precedent.
 
-THE WINDOW, per equity market: from (local close + PUBLISH_AFTER_CLOSE_MIN) on
-a weekday until the NEXT session opens. Never inside a session -- spec 5.11:
-the screen does not drop a forming bar, so a run during trading would screen a
-bar that is still moving. If a whole window is missed the market waits for the
-next close; the page's own "generated" stamp says how old the file is.
-Crypto is due from 00:30 UTC daily and has no session to avoid.
+THE WINDOW, per equity market: from the market's BAR-FINAL instant on a
+weekday (config.BAR_FINAL, the repo's one table: ASX 16:40 Sydney -- Yahoo
+shows the closing auction ~20 min late, so a 16:30 download held pre-auction
+prices on ~19% of names -- and NASDAQ 16:30 New York) until the NEXT session
+opens. Never inside a session -- spec 5.11: a run during trading would read a
+bar that is still moving (run.completed_bars drops it, so a stray manual run
+screens yesterday's bars, but the published file would then owe today's close
+all over again). If a whole window is missed the market waits for the next
+close; the page's own "generated" stamp says how old the file is. Crypto is
+due from 00:30 UTC daily; the screen drops the candle that opened at 00:00, so
+it reads yesterday's completed bar.
 
 ONE market per run, the one whose due instant is NEWEST. Newest-first means a
 market that keeps failing (it stays due, because a failure leaves its
@@ -78,14 +83,13 @@ def due_point(market: str, now: dt.datetime) -> dt.datetime:
         p = dt.datetime.combine(now.astimezone(UTC).date(), dt.time(h, m), tzinfo=UTC)
         return p if p <= now else p - dt.timedelta(days=1)
     tz = _tz(market)
-    close_h, close_m = session[2], session[3]
+    _zone, final_h, final_m = mcfg.BAR_FINAL[market]
     today = now.astimezone(tz).date()
     for back in range(8):
         day = today - dt.timedelta(days=back)
         if day.weekday() not in WEEKDAYS:
             continue
-        p = (dt.datetime.combine(day, dt.time(close_h, close_m), tzinfo=tz)
-             + dt.timedelta(minutes=mcfg.PUBLISH_AFTER_CLOSE_MIN))
+        p = dt.datetime.combine(day, dt.time(final_h, final_m), tzinfo=tz)
         if p <= now:
             return p
     raise AssertionError("no weekday in the last eight days")  # unreachable

@@ -48,19 +48,21 @@ INCIDENT = {
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("now, market, expected", [
-    # AEST (winter): 16:30 Sydney = 06:30Z
-    ("2026-09-23T11:00:00Z", "asx", "2026-09-23T06:30:00Z"),
-    # AEDT (summer): 16:30 Sydney = 05:30Z
-    ("2026-01-14T07:00:00Z", "asx", "2026-01-14T05:30:00Z"),
+    # AEST (winter): the 16:40 Sydney bar-final = 06:40Z
+    ("2026-09-23T11:00:00Z", "asx", "2026-09-23T06:40:00Z"),
+    # AEDT (summer): 16:40 Sydney = 05:40Z
+    ("2026-01-14T07:00:00Z", "asx", "2026-01-14T05:40:00Z"),
+    # 16:30 AEST is no longer due: the auction is not in the free feed yet
+    ("2026-09-23T06:30:00Z", "asx", "2026-09-22T06:40:00Z"),
     # EDT: 16:30 New York = 20:30Z
     ("2026-09-23T22:00:00Z", "nasdaq", "2026-09-23T20:30:00Z"),
     # EST: 16:30 New York = 21:30Z
     ("2026-01-14T22:00:00Z", "nasdaq", "2026-01-14T21:30:00Z"),
     # before today's close it is still yesterday's
-    ("2026-09-23T03:00:00Z", "asx", "2026-09-22T06:30:00Z"),
+    ("2026-09-23T03:00:00Z", "asx", "2026-09-22T06:40:00Z"),
     # the weekend owes Friday
-    ("2026-09-26T12:00:00Z", "asx", "2026-09-25T06:30:00Z"),
-    ("2026-09-28T03:00:00Z", "asx", "2026-09-25T06:30:00Z"),
+    ("2026-09-26T12:00:00Z", "asx", "2026-09-25T06:40:00Z"),
+    ("2026-09-28T03:00:00Z", "asx", "2026-09-25T06:40:00Z"),
     ("2026-09-27T12:00:00Z", "nasdaq", "2026-09-25T20:30:00Z"),
     # crypto every day at 00:30Z, weekends included
     ("2026-09-26T00:29:00Z", "crypto", "2026-09-25T00:30:00Z"),
@@ -78,8 +80,23 @@ def test_the_sessions_are_read_from_scanner_config_not_restated():
         assert literal not in src, literal
     assert "scfg.VIVEK_JOURNAL_SESSION" in src
     assert "scfg.MARKETS[market].timezone" in src
-    assert mcfg.PUBLISH_AFTER_CLOSE_MIN == 30
+    assert "mcfg.BAR_FINAL[market]" in src
     assert mcfg.CRYPTO_DUE_UTC == (0, 30)
+
+
+def test_a_stock_market_is_due_at_its_bar_final_the_one_table_the_repo_keeps():
+    """REFINE200 #173: the due instant is config.IGNITION_BAR_FINAL (the scan
+    gate's, the digest's and the Ignition backstop's), never the bell plus a
+    lag of the lens's own. 16:30 Sydney was ten minutes before the ASX bar is
+    final in the free feed."""
+    assert mcfg.BAR_FINAL == scfg.IGNITION_BAR_FINAL
+    assert set(mcfg.BAR_FINAL) == {m for m in mcfg.MARKETS if m != "crypto"}
+    for market, (zone, h, m) in mcfg.BAR_FINAL.items():
+        assert zone == scfg.MARKETS[market].timezone, market
+        tz = zoneinfo.ZoneInfo(zone)
+        point = due.due_point(market, Z("2026-07-15T23:59:00Z"))
+        assert point.astimezone(tz).timetz().replace(tzinfo=None) == dt.time(h, m), market
+    assert not hasattr(mcfg, "PUBLISH_AFTER_CLOSE_MIN"), "retired: the bar-final table replaced it"
 
 
 # ---------------------------------------------------------------------------
@@ -90,11 +107,12 @@ def test_the_sessions_are_read_from_scanner_config_not_restated():
 @pytest.mark.parametrize("market", ["asx", "nasdaq"])
 def test_an_equity_market_is_NEVER_picked_inside_its_session(monday, market):
     """Swept, not sampled: every 10 minutes for a full week in each DST regime,
-    with a file so stale it is always owed something. The screen does not drop
-    a forming bar (spec 5.11), so the gate is the only thing standing between
-    a late wake-up and a signal computed off a bar that is still moving."""
+    with a file so stale it is always owed something. The screen drops a
+    forming bar (spec 5.11), but a run inside the session would then publish
+    yesterday's bars as the file that owes today's close, so the gate still
+    never picks a market between its open and its bar-final."""
     tz = zoneinfo.ZoneInfo(scfg.MARKETS[market].timezone)
-    oh, om, ch, cm = scfg.VIVEK_JOURNAL_SESSION[market]
+    oh, om, _ch, _cm = scfg.VIVEK_JOURNAL_SESSION[market]
     ancient = Z("2020-01-01T00:00:00Z")
     stamps = {"asx": None, "nasdaq": None, "crypto": Z("2099-01-01T00:00:00Z")}
     stamps[market] = ancient
@@ -108,8 +126,8 @@ def test_an_equity_market_is_NEVER_picked_inside_its_session(monday, market):
         chosen, _ = due.pick(stamps, now)
         local = now.astimezone(tz)
         opens = local.replace(hour=oh, minute=om, second=0, microsecond=0)
-        settles = local.replace(hour=ch, minute=cm, second=0, microsecond=0) \
-            + dt.timedelta(minutes=mcfg.PUBLISH_AFTER_CLOSE_MIN)
+        settles = local.replace(hour=mcfg.BAR_FINAL[market][1],
+                                minute=mcfg.BAR_FINAL[market][2], second=0, microsecond=0)
         in_blackout = local.weekday() < 5 and opens <= local < settles
         if in_blackout:
             assert chosen != market, f"{market} picked at {local:%a %H:%M %Z}"
@@ -122,10 +140,10 @@ def test_a_missed_window_waits_for_the_next_close_rather_than_screening_mid_sess
     # Tuesday's ASX run never happened; it is now Wednesday 12:00 Sydney.
     now = Z("2026-09-23T02:00:00Z")
     ok, point, why = due.status("asx", Z("2026-09-21T07:00:00Z"), now)
-    assert not ok and point == Z("2026-09-22T06:30:00Z") and "session" in why
-    # ...and at Wednesday's 16:30 it is due again, for Wednesday's close.
-    ok, point, _ = due.status("asx", Z("2026-09-21T07:00:00Z"), Z("2026-09-23T06:30:00Z"))
-    assert ok and point == Z("2026-09-23T06:30:00Z")
+    assert not ok and point == Z("2026-09-22T06:40:00Z") and "session" in why
+    # ...and at Wednesday's 16:40 it is due again, for Wednesday's close.
+    ok, point, _ = due.status("asx", Z("2026-09-21T07:00:00Z"), Z("2026-09-23T06:40:00Z"))
+    assert ok and point == Z("2026-09-23T06:40:00Z")
 
 
 # ---------------------------------------------------------------------------

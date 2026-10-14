@@ -6,7 +6,8 @@ name: Momentum scan
 # ONE MARKET PER RUN, AFTER THAT MARKET'S CLOSE. Spec 5.11 is explicit that a
 # daily screener must NOT run during market hours: a forming bar's RSI and EMA
 # move all session, so an intraday run produces a signal that may not exist at
-# the close, and the screen does not drop a forming bar itself.
+# the close. (Since 2026-10-14 the screen also drops a forming bar itself --
+# crypto's 00:30 UTC run used to publish a 30-minute-old candle as closed.)
 #
 # WHICH MARKET IS DECIDED BY THE DATA, NOT BY WHICH CRON FIRED (2026-09-23).
 # This used to map three crons to three markets. On 2026-09-23 GitHub's
@@ -14,8 +15,9 @@ name: Momentum scan
 # ~09:53 UTC, the 06:30 ASX event was never delivered, and a dropped cron
 # leaves no run and nothing to retry. So every wake-up now runs
 # scripts/momentum_due.py against the files AS COMMITTED ON MAIN: a market is
-# due when its generated_at predates the close it owes (local close + 30 min,
-# weekdays; crypto 00:30 UTC daily) AND its next session has not opened. The
+# due when its generated_at predates the close it owes (the bar-final instant,
+# weekdays: ASX 16:40 Sydney, NASDAQ 16:30 New York; crypto 00:30 UTC daily)
+# AND its next session has not opened. The
 # newest-due market is screened; if nothing is due the run stops before
 # `pip install`. The DST arithmetic lives in the gate, in each market's own
 # timezone -- never hard-code the offset you happen to be in.
@@ -35,7 +37,7 @@ name: Momentum scan
 
 on:
   schedule:
-    - cron: "30 6 * * 1-5"    # after the Sydney close (AEST and AEDT)
+    - cron: "30 6 * * 1-5"    # after the Sydney bar-final under AEDT; under AEST (16:30) the 06:41 backstop is first
     - cron: "30 21 * * 1-5"   # after the New York close (EST and EDT)
     - cron: "30 0 * * *"      # just past the UTC day boundary; 7 days
     - cron: "41 */3 * * *"    # backstop; odd minute, away from the :00 pile-up

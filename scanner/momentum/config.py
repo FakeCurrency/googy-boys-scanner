@@ -26,6 +26,7 @@ from typing import Any, Dict, Tuple
 # pure-constants module, so this costs no import weight and removing the lens
 # leaves it untouched.
 from scanner.config import MARKETS as MARKETS_META  # noqa: F401
+from scanner.config import IGNITION_BAR_FINAL as _SCANNER_BAR_FINAL
 from scanner.config import PRODUCT_NAME_PATTERNS  # noqa: F401
 from scanner.config import (LENS_BACKTEST_NOTIONAL, VIVEK_BOT_MIN_STOP_PCT,  # noqa: F401
                             VIVEK_COMMISSION_BPS, VIVEK_SLIPPAGE_BPS,
@@ -350,20 +351,31 @@ NON_OPERATING_SECTORS = frozenset({"not applicable", "not applic", "n/a"})
 # RULESET_VERSION does not move for them (it traces a published file to the
 # RULES that made it, not to the clock that started the job).
 #
-# An equity market is due from (local close + PUBLISH_AFTER_CLOSE_MIN) on each
-# weekday until its NEXT session opens, and only if the committed file was
-# generated before that instant. The session hours are NOT restated here: the
-# gate reads scanner.config.VIVEK_JOURNAL_SESSION and each market's timezone,
-# so there is one table of sessions in the repo, not two.
+# An equity market is due from its BAR_FINAL instant (below) on each weekday
+# until its NEXT session opens, and only if the committed file was generated
+# before that instant. The session hours are NOT restated here: the gate reads
+# scanner.config.VIVEK_JOURNAL_SESSION and each market's timezone, so there is
+# one table of sessions in the repo, not two.
 #
-# 30 minutes is the lag the original fixed crons (06:30 / 21:30 UTC) gave in
-# the winter half of the year; keeping it means the first due instant is never
-# earlier than it ever was. The ASX closing auction prints ~16:10-16:12.
-PUBLISH_AFTER_CLOSE_MIN: int = 30
+# Until 2026-10-14 the instant was the close + 30 minutes, i.e. 16:30 Sydney --
+# ten minutes before the ASX bar is final in the free feed (the auction prints
+# ~16:10-16:12 and Yahoo shows it ~20 min later). Under AEST the 06:30 UTC cron
+# landed exactly on it, downloaded pre-auction bars, and the file then counted
+# as fresh for the day. NASDAQ's 16:30 New York did not move.
 
 # Crypto has no close: its daily bar rolls at 00:00 UTC, and the original cron
-# fired at 00:30. That stays the due instant, seven days a week.
+# fired at 00:30. That stays the due instant, seven days a week. The screen
+# drops the bar that opened at 00:00 (run.completed_bars), so a 00:30 run
+# screens through YESTERDAY's completed candle.
 CRYPTO_DUE_UTC: Tuple[int, int] = (0, 30)
+
+# {market: (timezone, hour, minute)} at which a stock market's daily bar is
+# FINAL in the free feed -- the repo's one table (scanner.config
+# IGNITION_BAR_FINAL: ASX 16:40 Sydney, the digest's close gate; NASDAQ 16:30
+# New York). Borrowed, not retyped. scripts/momentum_due.py makes a stock
+# market due from it, and run.completed_bars calls today's bar forming until
+# it. A market with no entry (crypto) is due at CRYPTO_DUE_UTC.
+BAR_FINAL = dict(_SCANNER_BAR_FINAL)
 
 
 # ---------------------------------------------------------------------------
