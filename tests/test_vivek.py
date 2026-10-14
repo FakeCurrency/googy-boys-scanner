@@ -92,8 +92,9 @@ def test_vivek_reuses_caller_frames_no_second_download(monkeypatch):
 
 
 def test_vivek_payload_carries_freshness_and_schema_stamp():
-    """Output must stamp schema_version, code_sha, coverage and pulse so the UI
-    can show data age / coverage and detect an old-build dataset."""
+    """Output must stamp schema_version, code_sha and coverage so the UI can
+    show data age / coverage and detect an old-build dataset. The empty PULSE
+    key is gone (REFINE200 #72: nothing read it)."""
     from scanner import scan
     uni = [{"yf": "BHP.AX", "symbol": "BHP", "name": "BHP Group", "sector": "Materials"},
            {"yf": "CBA.AX", "symbol": "CBA", "name": "Commonwealth Bank", "sector": "Financials"}]
@@ -104,7 +105,7 @@ def test_vivek_payload_carries_freshness_and_schema_stamp():
     assert "code_sha" in out                          # may be "" off a git checkout
     assert out["downloaded"] == 1 and out["universe_size"] == 2
     assert out["coverage_pct"] == 50
-    assert "pulse" in out
+    assert "pulse" not in out and "sector_counts" not in out
 
 
 def test_grade_ladder_reaches_each_tier():

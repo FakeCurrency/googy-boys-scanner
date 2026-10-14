@@ -214,6 +214,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     `frames` (deep daily history) may be passed in by the caller to AVOID a second
     Yahoo download — the runner already pulls this market's 5y history for the
     daily scanners, so VIVEK reuses it instead of fetching the same data again.
+
+    `pulse_data` is accepted and ignored: PULSE was retired (UI 2026-07-03,
+    fetch 2026-07-20) and its empty payload key went in REFINE200 #72.
     """
     from . import vivek
     market = config.MARKETS[market_key]
@@ -425,7 +428,6 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "reaction": sig["reaction"],
                 "entry_types": entry_types,
                 "armed": armed,
-                "armed_tf": gate_tf,               # which plan fired the gate (1W/3D/1D)
                 "grade_held_runs": held_runs,      # hysteresis state, read back next scan
                 "entry_trigger": hp.get("entry_trigger"),
                 "trigger_bar": hp.get("trigger_bar"),
@@ -472,12 +474,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     _attach_h4_plans(results, market_key, frames)
 
     # Rank by VIVEK grade, then score, then R:R.
-    counts = _finalize_vivek(results)
-    if pulse_data is None:
-        # PULSE retired from the UI 2026-07-03; stopped fetching 2026-07-09 —
-        # it was still hitting Yahoo for macro quotes on every scheduled scan.
-        # Restore by swapping [] back to pulse.fetch().
-        pulse_data = []
+    _finalize_vivek(results)
     downloaded = len(frames)
 
     # The "liquidity arriving" report file (owner-ruled 2026-07-30) — its OWN
@@ -529,7 +526,6 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
         "coverage_pct": round(100 * downloaded / max(len(universe), 1)),
         "score_max": config.VIVEK_SCORE_MAX,
         "sma": config.VIVEK_SMA,
-        "sector_counts": dict(counts.most_common()),
         # Pipeline funnel (2026-07-29, additive like `errors` below — no schema
         # bump). Self-contained on purpose: a reader gets the whole story from
         # this one key without joining scanned/downloaded/errors themselves.
@@ -552,9 +548,12 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             # report file nothing in scanner/broker/ opens (owner-ruled).
             "arriving": len(arriving),
         },
-        "pulse": pulse_data,
         "results": results,
-        "prices": prices,                 # universe-wide last-close snapshot
+        # Universe-wide last-close snapshot, for the RUNNER: run.py copies it
+        # (and price_age) into the slim <market>_prices.json the journal reads,
+        # and `published()` leaves both out of <market>_vivek.json, where
+        # nothing reads them (REFINE200 #72).
+        "prices": prices,
         # Sparse {symbol: days} for the marks above that are NOT from today's
         # session (TOP100 #24). Absent symbol = fresh. Lets the journal say a
         # mark is stale instead of drawing a cache-reused close as a live price.
@@ -697,6 +696,59 @@ def _report_sma_proxies(results: list[dict]) -> None:
         shown = ", ".join(buyable[:12]) + (" ..." if len(buyable) > 12 else "")
         print(f"    WARNING {len(buyable)} tradeable-grade setup(s) priced off a "
               f"proxy level: {shown}")
+
+
+# Top-level keys the scan returns for the RUNNER and never publishes in
+# <market>_vivek.json: run.py copies both into the slim <market>_prices.json,
+# the one file the journal reads them from (REFINE200 #72). ~27KB a market.
+_RUNNER_ONLY_KEYS = ("prices", "price_age")
+
+
+def published(vk: dict, market_key: str, caps: dict | None = None,
+              sectors: dict | None = None) -> dict:
+    """The payload as PUBLISHED to <market>_vivek.json -- a copy, never `vk`.
+
+    run.py hands `vk`'s in-memory rows to the paper bot AFTER the publish, so
+    this NEVER mutates `vk` or any row in it: each row is copied before it is
+    stamped. Two DISPLAY-ONLY stamps (REFINE200 #73/#157), so the deck can stop
+    downloading the two cache sidecars to draw them:
+
+      * `mcap` (whole currency units) + `mcap_asof` (YYYY-MM-DD the cap was
+        fetched) from the market-cap cache (scanner/marketcaps.py), when it
+        holds one -- the date travels with the number, so an old cap can be
+        shown as old instead of passing for today's;
+      * `sector`, ONLY where the row's own is blank, from the sector cache
+        (scanner/sectorcache.py) -- the same fill app.js did in the browser.
+        The bot's per-sector cap reads its OWN copy of the rows, enriched by
+        vivek_run from the same cache; this copy never reaches it.
+
+    And it leaves out `_RUNNER_ONLY_KEYS`. `caps` / `sectors` default to the
+    committed caches; tests pass their own."""
+    from . import marketcaps, sectorcache
+    caps = marketcaps.load_cache() if caps is None else caps
+    smap = sectorcache.sector_map_for(market_key, sectors)
+    rows = []
+    for r in vk.get("results") or []:
+        if not isinstance(r, dict):
+            rows.append(r)
+            continue
+        row = dict(r)
+        sym = str(row.get("symbol") or "")
+        if not str(row.get("sector") or "").strip():
+            sec = smap.get(sym.upper())
+            if sec:
+                row["sector"] = sec
+        ent = caps.get(f"{market_key}:{sym}") if isinstance(caps, dict) else None
+        mc = marketcaps.mcap_for(caps, market_key, sym) if isinstance(ent, dict) else 0.0
+        if mc > 0:
+            row["mcap"] = int(round(mc))
+            asof = str(ent.get("ts") or "")[:10]
+            if asof:
+                row["mcap_asof"] = asof
+        rows.append(row)
+    out = {k: v for k, v in vk.items() if k not in _RUNNER_ONLY_KEYS}
+    out["results"] = rows
+    return out
 
 
 def _finalize_vivek(results: list[dict]) -> Counter:

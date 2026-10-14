@@ -387,8 +387,10 @@ def main() -> None:
             # sidecar in one publish step. ORDER IS THE FENCE: run_market
             # below receives `vk`'s in-memory rows, and split_vivek never
             # mutates its input — the bot sees full plans regardless of what
-            # the browser downloads first.
-            output.write_vivek_pair(vk, args.out, market_key)
+            # the browser downloads first. scan.published() is a stamped COPY
+            # (display mcap/sector, runner-only keys dropped; REFINE200 #72/#73)
+            # and never mutates `vk` either.
+            output.write_vivek_pair(scan.published(vk, market_key), args.out, market_key)
             _scan_health(market_key, published=True)
             # Funnel history (owner-ruled Task 2): append this publish's
             # counts to the report-only trend file. A report artefact must
