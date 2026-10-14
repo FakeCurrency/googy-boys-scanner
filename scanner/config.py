@@ -389,6 +389,18 @@ IGNITION_BT_DESIGN_CASES = {"QNT": "2026-09-01"}
 IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}, "nasdaq": {}}
 IGNITION_BT_REGISTERED_DATE = "2026-09-28"   # triggers from here are the FORWARD bucket
 IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29", "nasdaq": "2026-10-08"}
+# THE FORWARD EXIT COMPARISON, pre-registered 2026-10-14 (REFINE200 #49).
+# The replay's exit table had the 26-SMA trail ahead of the primary 9-SMA
+# trail on the ASX (+0.37R vs +0.24R) and NASDAQ (+0.15R vs -0.02R), and
+# behind on crypto (+1.12R vs +1.19R) -- an in-sample read, which is exactly
+# why it is NOT adopted. Registered instead: the backtest reports this exit
+# beside the primary over the FORWARD bucket only (entries from the later of
+# the market's registration date and IGNITION_FORWARD_COMPARE_FROM), on the
+# primary's own entries, as `forward_compare`. The primary exit does not move;
+# a switch, if the forward data ever supports one, is the owner's call. A
+# backtest.EXIT_SPECS name (pinned).
+IGNITION_FORWARD_COMPARE_EXIT = "trail26"
+IGNITION_FORWARD_COMPARE_FROM = "2026-10-14"
 # The regime line (CONTEXT, never a filter): the market's own benchmark vs its
 # 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200 and
 # NASDAQ's the NASDAQ Composite (every NASDAQ-listed common stock, history to

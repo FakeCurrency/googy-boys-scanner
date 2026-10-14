@@ -1397,6 +1397,53 @@ def test_random_timing_is_seeded_per_symbol_and_trigger_by_crc32():
     assert BT.random_timing([pr], [{**real[0], "symbol": "ZZZ"}], draws=3, seed=5) == []
 
 
+def test_a_random_draw_is_filed_in_its_PARENT_trades_period():
+    """REFINE200 #178: the out-of-sample baseline was filtered by each draw's
+    OWN entry date, so draws for late-2023 parents counted as out-of-sample
+    (the published OOS baselines exceeded 5 draws per OOS trade: crypto 312
+    against a ceiling of 270). Draws now carry `_parent_entry` and every
+    period split files them by it."""
+    pr = prepared("gap_up")
+    real = [t for t in BT.trades_for(pr, E.apply_rules(pr.bf, P())) if not t.get("skipped")]
+    draws = BT.random_timing([pr], real, draws=50, seed=9, p=P())
+    assert draws and {d["_parent_entry"] for d in draws} == {real[0]["entry_date"]}
+    split = config.IGNITION_BT_SPLIT_DATE
+    late_draw = {"entry_date": split, "_parent_entry": "2023-12-20", "symbol": "X"}
+    early_draw = {"entry_date": "2023-12-01", "_parent_entry": split, "symbol": "X"}
+    assert BT._split_key(late_draw) == "in_sample"
+    assert BT._split_key(early_draw) == "out_of_sample"
+    assert BT._split_key({"entry_date": split}) == "out_of_sample"      # a real trade: its own date
+    # the published OOS control count can never exceed draws x OOS parents
+    parents = [{"symbol": "X", "entry_date": d, "reason": "trail", "net_r": 1.0, "bars": 3}
+               for d in ("2023-12-10", "2024-03-01")]
+    rand = [{"symbol": "X", "entry_date": ed, "_parent_entry": pe, "reason": "trail",
+             "net_r": 0.0, "bars": 3, "exit_date": ed}
+            for pe, ed in (("2023-12-10", "2024-01-15"),) * 5 + (("2024-03-01", "2024-02-20"),) * 5]
+    oos = [t for t in rand if BT._split_key(t) == "out_of_sample"]
+    assert len(oos) == 5 and all(t["_parent_entry"] == "2024-03-01" for t in oos)
+    assert len(oos) <= 5 * sum(1 for t in parents if BT._split_key(t) == "out_of_sample")
+
+
+def test_the_forward_exit_comparison_is_pre_registered_and_forward_only():
+    """REFINE200 #49: trail-26 is registered as the forward comparison exit;
+    the backtest reports it beside the primary over the FORWARD bucket only,
+    on the same entries. The primary exit does not move."""
+    assert config.IGNITION_FORWARD_COMPARE_EXIT in BT.EXIT_SPECS
+    assert config.IGNITION_FORWARD_COMPARE_EXIT != "trail9"
+    assert BT.EXIT_DESCRIPTIONS["trail9"].startswith("PRIMARY")
+    mk = lambda d, r: {"symbol": "X", "_mkt": "nasdaq", "entry_date": d, "exit_date": d,
+                       "reason": "trail", "net_r": r, "bars": 5}
+    primary = [mk("2026-10-01", 5.0), mk("2026-10-20", 1.0), mk("2026-11-02", -1.0)]
+    compare = [mk("2026-10-01", 9.0), mk("2026-10-20", 2.0), mk("2026-11-02", -0.5)]
+    fc = BT.forward_compare(primary, compare, "nasdaq", boot=50, seed=1)
+    # NASDAQ registered 2026-10-08; the comparison from 2026-10-14: the later
+    assert fc["from"] == max(config.IGNITION_BT_REGISTERED_DATE_BY_MARKET["nasdaq"],
+                             config.IGNITION_FORWARD_COMPARE_FROM)
+    assert fc["primary"]["n"] == 2 and fc["compare"]["n"] == 2, "the 1 Oct trade predates it"
+    assert fc["primary"]["exp_r"] == 0.0 and fc["compare"]["exp_r"] == 0.75
+    assert fc["compare_exit"] == "trail26" and fc["primary_exit"] == "trail9"
+
+
 # ---------------------------------------------------------------------------
 # the whole replay, through run.backtest_market with injected frames
 # ---------------------------------------------------------------------------
@@ -1447,6 +1494,9 @@ def test_backtest_market_replays_completed_bars_only(bt_payload):
     assert set(bt_payload["versus"]) >= {"random_timing", "breakout_only", "no_rvol",
                                          "random_timing_any", "random_timing_out_of_sample"}
     assert set(bt_payload["exit_specs"]) == set(BT.EXIT_SPECS)
+    fc = bt_payload["forward_compare"]
+    assert fc["compare_exit"] == config.IGNITION_FORWARD_COMPARE_EXIT
+    assert fc["primary"]["n"] == 0, "a 2022 trigger is not forward data"
     assert all(t["design_case"] is False for t in trades)     # 2022 trigger: before the window
     case = bt_payload["cases"]["QNT"]
     assert case["trades"] == trades
