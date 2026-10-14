@@ -323,9 +323,10 @@ jobs:
       # PHASEMAP page (REFINE200, 2026-10-14). Runs the shipped phasemap.js
       # under a stub DOM: a superseded market's slow fetch never paints over
       # (or writes "since you last checked" memory for) the market on screen,
-      # FLASHED keys off the snapshot's as_of bar date, and the header names
-      # both the scan date and the bars it read.
-      - name: PhaseMap page (market-switch race, FLASHED on the bar date)
+      # FLASHED keys off the snapshot's as_of bar date, the header names
+      # both the scan date and the bars it read, and Insights compares the
+      # pooled long+short signals with a random baseline of the same mix.
+      - name: PhaseMap page (market-switch race, FLASHED on the bar date, Insights baseline)
         run: node test/phasemap_page.test.js
       # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
       # reference, comments stripped) and deleted stay deleted: each pin fails

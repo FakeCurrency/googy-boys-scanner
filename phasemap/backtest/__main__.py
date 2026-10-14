@@ -51,7 +51,8 @@ def main(argv=None) -> int:
                                   volume_is_usd=(args.market == "crypto")))
     signals.sort(key=lambda s: (s["signal_date"], s["ticker"], s["direction"]))
 
-    rnd = random_baseline(frames, len(signals), args.market)
+    rnd = random_baseline(frames, len(signals), args.market,
+                          n_short=sum(1 for s in signals if s["direction"] == "bearish"))
     bh = buy_hold_baseline(frames)
     report = write_report(args.market, signals, rnd, bh,
                           universe_size=len(symbols), period=args.period)

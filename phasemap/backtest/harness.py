@@ -8,7 +8,15 @@ were strictly in the signal's future.
 
 A signal = a displacement confirmation (the state machine entering
 DISPLACED). Its forward story is read off the engine's own zone objects as
-they update, so the harness can never disagree with the product's rules.
+they update, so a signal's OUTCOME is the product's rules.
+
+Its LABEL needs one caveat (REFINE200 #200). `tier` is the tier the card
+wears from its first RUNNING session: anchor context (the A+ condition) is
+first evaluated on the bar AFTER displacement, so the displacement-day card
+itself shows A (or Watch on a SLOW_FLIP) — in 21 live snapshots, 115
+DISPLACED records and not one A+. `card_tier` is what that day's card showed,
+computed by the scanner's own _tier on the same engine, so the two can be
+compared and never silently pooled.
 """
 
 import math
@@ -16,6 +24,7 @@ import random
 
 from phasemap.config import CONFIG
 from phasemap.engine.indicators import compute_indicators
+from phasemap.engine.scanner import _tier as card_tier_of
 from phasemap.engine.setup_engine import SetupEngine
 
 
@@ -81,6 +90,7 @@ class SignalRecorder:
             "signal_index": i,
             "signal_date": ind.dates[i].isoformat(),
             "tier": tier,
+            "card_tier": card_tier_of(eng),   # what the displacement-day card showed
             "anchor_context": bool(anchor_ctx),
             "flip": eng.flip_tag,
             # 12 dp — 6 dp rounds micro-priced coins (sub-cent crypto) to 0.0
@@ -117,17 +127,23 @@ def _finalize(sig: dict, ind) -> None:
     # overstating the published edge. A signal whose mid never trades fills
     # at the signal-bar close instead (what a taker would have paid).
     em0 = sig["entry_mid"]
-    filled_mid = False
-    if em0 > 0 and end > i + 1:
-        if bull:
-            filled_mid = float(min(ind.low[i + 1:end])) <= em0
-        else:
-            filled_mid = float(max(ind.high[i + 1:end])) >= em0
+    fill_at = i                 # the bar the position exists from
+    if em0 > 0:
+        for k in range(i + 1, end):
+            if (float(ind.low[k]) <= em0) if bull else (float(ind.high[k]) >= em0):
+                fill_at = k
+                break
+    filled_mid = fill_at > i
     em = em0 if filled_mid else float(ind.close[i])
     sig["fill"] = "entry_mid" if filled_mid else "close"
     sig["fill_price"] = round(em, 12)
+    sig["fill_bar"] = fill_at
+    # Horizons count from the FILL (REFINE200 #200). Measured from the signal
+    # bar, a mid that first traded at bar k > i+h was credited a return over
+    # sessions the position did not exist — and for a bull late fill every
+    # bar before k had low > mid, so that return was guaranteed positive.
     for h in CONFIG.fwd_return_bars:
-        j = i + h
+        j = fill_at + h
         sig[f"fwd_{h}"] = round(sign * (float(ind.close[j]) / em - 1), 4) \
             if (j < n and em > 0) else None
     if end > i + 1 and em > 0:
@@ -179,15 +195,26 @@ def run_ticker(ticker: str, df, market: str, volume_is_usd: bool = False) -> lis
     return out
 
 
-def random_baseline(frames: dict, n_signals: int, market: str) -> dict:
+def random_baseline(frames: dict, n_signals: int, market: str,
+                    n_short: int = 0) -> dict:
     """Deterministic random-entry baseline on the same tickers/window: sample
     the same NUMBER of entries across the same universe, enter at the close,
-    measure the same forward horizons (long side — the unconditioned drift)."""
+    measure the same forward horizons.
+
+    The top-level fwd_* are the LONG side — the unconditioned drift, the
+    like-for-like comparison for the LONG cohort only. `matched` (REFINE200
+    #200) signs the same draws to the signals' own long/short mix (n_short
+    of them shorted), which is what ALL SIGNALS — a pool of longs and
+    direction-signed shorts — must be compared with: on the 2026-10-11 ASX
+    replay (51% short) the pooled +0.86% at 20 sessions sat against a
+    long-only +1.89% and read as a loss to random, when the matched baseline
+    is ~0%."""
     rng = random.Random(CONFIG.backtest_seed)
     tickers = sorted(frames)
     rets = {h: [] for h in CONFIG.fwd_return_bars}
     if not tickers or n_signals <= 0:
-        return {f"fwd_{h}": None for h in CONFIG.fwd_return_bars} | {"n": 0}
+        empty = {f"fwd_{h}": None for h in CONFIG.fwd_return_bars}
+        return empty | {"n": 0, "matched": empty | {"n_long": 0, "n_short": 0}}
     for _ in range(n_signals):
         t = tickers[rng.randrange(len(tickers))]
         df = frames[t]
@@ -204,6 +231,14 @@ def random_baseline(frames: dict, n_signals: int, market: str) -> dict:
     for h in CONFIG.fwd_return_bars:
         vals = rets[h]
         out[f"fwd_{h}"] = round(sum(vals) / len(vals), 4) if vals else None
+    # Draws are iid, so shorting the FIRST n_short of them is a random
+    # assignment of the mix — and keeps the long numbers above byte-identical.
+    k = min(max(0, n_short), out["n"])
+    matched = {"n_long": out["n"] - k, "n_short": k}
+    for h in CONFIG.fwd_return_bars:
+        vals = [(-v if idx < k else v) for idx, v in enumerate(rets[h])]
+        matched[f"fwd_{h}"] = round(sum(vals) / len(vals), 4) if vals else None
+    out["matched"] = matched
     return out
 
 
