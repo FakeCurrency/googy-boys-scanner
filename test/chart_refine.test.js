@@ -447,6 +447,19 @@ test("rApply re-cuts every Momentum series and recomputes the box and ATH at the
   assert.match(fnSrc("momentumFallback"), /tf\.mp = mp;/, "the replay plan uses the scan's own params");
 });
 
+/* ═══════════════ #113 the phone sheet survives a rotation ═══════════════ */
+suite("#113 the tools FAB follows the sheet, not the viewport width");
+
+test("the sheet marks the body, and the FAB rule keys off that mark", () => {
+  assert.match(fnSrc("initMobileSheet"), /document\.body\.classList\.add\("ct-has-sheet"\);/);
+  const css = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /body\.ct-has-sheet:not\(\.is-replay\) #ct-fab \{ display: grid; place-items: center; \}/);
+  const phone = css.slice(css.indexOf("@media (max-width: 560px) {", css.indexOf("#ct-sheet .draw-btn.is-active::after")));
+  assert.ok(!/^\s*#ct-fab \{ display: grid/m.test(phone.slice(0, 400)),
+    "a width-only FAB rule hid it in landscape (844x390) with every tool moved into the sheet");
+  assert.match(css, /body\.is-replay #ct-fab \{ display: none; \}/, "replay still hides it");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
