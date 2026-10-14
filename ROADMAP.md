@@ -16,11 +16,11 @@ version, which was written before the bot book had any closes to read).
 | Area | Reality |
 |------|---------|
 | **Edge / profitability** | 🟡 **Read once, and the answer was "iterate, do not scale."** The firehose journal was retired 2026-07-09; the ONLY track record is the bot book (A/A+ four-cell longs since 2026-09-21; 60 open x $2,500 across all markets from the sizing-change merge, approved 2026-09-27 — was 30 x $5,000; one per symbol, 6 per sector per market; daily loss guards). It reached n=30 and was read on 2026-08-01 — see [`docs/archive/DECISION-PACK-N30.md`](docs/archive/DECISION-PACK-N30.md). The full live rule-set is **negative** (parity −0.033R/trade, n=613). One cohort survived three disjoint samples: **weekly + 3-day, +0.056R/trade**, and that cohort (the weekly/3-day level gate, still in force) was tested forward as cycle **w3-1** until 2026-09-21, when the bot moved to the four high-conviction cells; new rows carry cycle **hc4-1** (split any hc4-1 read at the 60 x $2,500 capacity change — the merge / resize commit; restated rows carry `resized_at`). |
-| Scanners | ✅ **Three lenses live.** VIVEK (200-SMA reaction, W/3D/D plans, A+/A/B+ grades), PhaseMap (sweep→displacement zones, nightly, spec doc is source of truth), Specs (3× volume-spike base breakouts, discovery-only per its own backtest). Multi-lens confluence banners + Discord pings + ALERTS log. |
-| Universes | ✅ ASX full (~2,000) · NASDAQ Global Select (~1,430, expanded from 99 on 2026-07-10) · crypto top-100 + pinned extras. |
+| Scanners | ✅ **Three lenses live.** VIVEK (200-SMA reaction, W/3D/D plans, A+/A/B+ grades), PhaseMap (sweep→displacement zones, nightly, spec doc is source of truth), Specs (3× volume-spike base breakouts, discovery-only per its own backtest). Multi-lens confluence banners + ALERTS log (labelled unproven — no edge found; the Discord alert channel was removed 2026-08-27). Report-only MOMENTUM and IGNITION sit outside every signal path. |
+| Universes | ✅ ASX full (~2,000) · NASDAQ Global Select (~1,430, expanded from 99 on 2026-07-10) · crypto top-200 (pegs out) + pinned extras, priced from exchange klines since 2026-09-28. |
 | Backtests | ✅ Weekly walk-forward (lens_backtest.yml, owns `vivek_backtest.json`, feeds Insights) + monthly long-only evidence file (vivek_backtest.yml). PhaseMap + Specs replays weekly. All still **survivor-biased on yfinance** — see priority 2. |
-| Execution bot | 🟡 Paper mode per market via crypto_bot.yml + scan.yml. Bybit client/bracket/reconcile/kill-switch **built and now covered by order-path tests** (submit→fill→reconcile→flatten, 19 tests). Live capital remains double-gated and **not enabled**. |
-| Tests / CI | ✅ ~290 tests (Python risk/breaker/journal/pretrade/order-path + PhaseMap + JS risk engine) run on **every push** (test.yml). Dependencies pinned exactly. |
+| Execution bot | 🟡 Paper mode per market via crypto_bot.yml + scan.yml. The Bybit execution path (bracket/reconcile) was **removed 2026-09-17** with the AI BOT page; only the kill switch's flatten clients remain. Live capital is **not enabled**. |
+| Tests / CI | ✅ pytest + the JS suites + e2e run on **every push** (test.yml); no test reaches the network. Dependencies pinned exactly (`requirements.txt` production, `requirements-dev.txt` tooling). |
 | Data | 🟡 yfinance only: ~15 min delayed, no delisted history. Fine for operating; not fine for *publishable* backtest numbers. |
 | Strategy identity | ✅ Resolved: this is a **swing/position system** (the old "scalp on a 30-min cron" incoherence is dead). |
 | Site | 🟡 Public. Manual scan/close endpoints now rate-limited, but anyone can read positions. Cloudflare Access pending (owner action). |
@@ -72,11 +72,14 @@ has proven itself end to end; it doubles the operational surface.
 
 ## 3. Standing owner actions
 
-- **GBS_SYNC_CODE** GitHub secret (your site sync code) → activates
-  watchlist-aware Discord pings (starred names ping at 2-lens). Built
-  2026-07-05, still dormant.
 - **Data provider** subscription (P2).
 - **Cloudflare Access** (P4).
+- **An alert channel** (an SMTP secret) — today the only alarms are GitHub's
+  red-run emails and run-page annotations.
+- **The decision pack** (`docs/DECISIONS_2026-10-14.md`): its pre-registered
+  checkpoints decide what changes at cycle hc4-2.
+- (`GBS_SYNC_CODE` is orphaned since the watchlist went, 2026-09-21; safe to
+  delete.)
 
 ---
 
