@@ -1,14 +1,17 @@
 """Shared pytest fixtures for the scanner test-suite.
 
 Keeps the repo root on sys.path (so `import scanner...` works when pytest is
-invoked from anywhere) and provides small factory fixtures for building the
-position / journal dicts the risk, breaker, journal and pre-trade tests need.
+invoked from anywhere), keeps every test OFF the network and off the repo's
+live caches (the autouse fixtures below), and provides small factory fixtures
+for the journal P&L and kill-switch tests.
 """
 
 import datetime as dt
 import pathlib
 import sys
 import types
+import urllib.parse
+import urllib.request
 
 import pytest
 
@@ -16,8 +19,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scanner import config as _config  # noqa: E402
 from scanner import data as _data  # noqa: E402
-from scanner.scalp_journal import _session_day  # noqa: E402
+from scanner import sectorcache as _sectorcache  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +57,81 @@ def _no_exchange_network(monkeypatch):
     monkeypatch.setattr(_ex, "_get_json", _refuse)
 
 
+class YahooRefused(ConnectionError):
+    """What every Yahoo call raises under test (see `_no_yahoo`)."""
+
+
+def _is_yahoo(url) -> bool:
+    url = getattr(url, "full_url", url)          # a urllib Request or a str
+    host = (urllib.parse.urlsplit(str(url)).hostname or "").lower()
+    return host == "yahoo.com" or host.endswith(".yahoo.com")
+
+
+@pytest.fixture(autouse=True)
+def _no_yahoo(monkeypatch):
+    """No test may reach Yahoo either (REFINE200, 2026-10-14) -- the twin of
+    `_no_exchange_network`. Eleven tests used to call Yahoo for real on every
+    run: scan_vivek_market always attaches the 4H plans (VIVEK_H4_PLANS), which
+    download 1h bars for every result row, and run_market refetches an
+    off-universe held name. With no network each one sat out data._fetch_batch's
+    full back-off (DATA_RETRIES x DATA_BACKOFF, ~19s) -- 3.7 minutes of sleep a
+    run -- and in CI, where the network is real, the pass rate and the runtime
+    hung on how hard Yahoo was throttling GitHub's IPs that day.
+
+    Every yfinance entry point refuses instead: `yf.download`, and the
+    YfData.get/post choke point that Ticker.history / .calendar / .get_info and
+    marketcaps' bulk quote all go through; plain urllib/requests calls to a
+    *.yahoo.com host refuse too. DATA_BACKOFF is zeroed so the "degrades, never
+    fails" path runs at once; the retry COUNT and the long cooldowns are left
+    alone (tests/test_data_download.py asserts on them, with its own fakes).
+    A test that exercises a download installs its own `data.yf.download` (or
+    YfData) fake, which replaces this one, exactly like the exchange refusal."""
+    import requests
+    import yfinance as yf
+    from yfinance.data import YfData
+
+    def _refuse(*a, **k):
+        raise YahooRefused("Yahoo disabled in tests")
+
+    monkeypatch.setattr(yf, "download", _refuse)
+    monkeypatch.setattr(YfData, "get", _refuse)
+    monkeypatch.setattr(YfData, "post", _refuse)
+    monkeypatch.setattr(_config, "DATA_BACKOFF", [0.0])
+
+    real_urlopen = urllib.request.urlopen
+
+    def _urlopen(url, *a, **k):
+        if _is_yahoo(url):
+            raise YahooRefused("Yahoo disabled in tests")
+        return real_urlopen(url, *a, **k)
+
+    monkeypatch.setattr(urllib.request, "urlopen", _urlopen)
+
+    real_request = requests.sessions.Session.request
+
+    def _request(self, method, url, *a, **k):
+        if _is_yahoo(url):
+            raise YahooRefused("Yahoo disabled in tests")
+        return real_request(self, method, url, *a, **k)
+
+    monkeypatch.setattr(requests.sessions.Session, "request", _request)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_sector_cache(tmp_path, monkeypatch):
+    """The sector cache is a SIGNAL PATH (data/sector_map.json feeds decide()'s
+    per-sector cap), rewritten by every scan. Tests used to read the live file:
+    39 of them merged whatever sectors the last scan had cached into their rows,
+    so a scan commit could move a unit test. Every test now starts from an
+    EMPTY cache in tmp_path (a missing file = an empty cache, sectorcache's own
+    rule) and its writes land there too. A test that needs entries writes them
+    via sectorcache.save / to sectorcache.CACHE_FILE, or patches the module
+    itself, as before."""
+    monkeypatch.setattr(_sectorcache, "CACHE_FILE", tmp_path / "sector_map.json")
+    monkeypatch.setattr(_sectorcache, "PUBLIC_FILE",
+                        tmp_path / "public_sector_map.json")
+
+
 @pytest.fixture
 def freeze_now(monkeypatch):
     """Pin ``<module>.dt.datetime.now(tz)`` to one aware instant, for ONE module.
@@ -75,38 +154,6 @@ def freeze_now(monkeypatch):
 
 
 @pytest.fixture
-def today():
-    """Current AEST session-day key (matches how positions are tagged)."""
-    return _session_day()
-
-
-@pytest.fixture
-def make_pos():
-    """Factory for a scalp/broker position dict with sensible defaults.
-
-    Override any field via kwargs, e.g. make_pos(risk_per_trade=250, sector="energy").
-    """
-    def _factory(**kw):
-        pos = {
-            "symbol": "BTCUSDT",
-            "name": "Bitcoin",
-            "asset_type": "crypto",
-            "sector": "crypto",
-            "direction": "long",
-            "entry": 50_000.0,
-            "stop": 49_000.0,
-            "target": 53_000.0,
-            "units": 0.01,
-            "risk_per_trade": 100.0,
-            "grade": "A",
-            "score": 7,
-        }
-        pos.update(kw)
-        return pos
-    return _factory
-
-
-@pytest.fixture
 def make_journal():
     """Factory for a {"open": [...], "closed": [...]} journal dict."""
     def _factory(open_=None, closed=None):
@@ -116,7 +163,9 @@ def make_journal():
 
 @pytest.fixture
 def closed_trade():
-    """Factory for a closed-trade record (the shape summarize()/breakers read)."""
+    """Factory for a closed-trade record (the shape summarize() reads)."""
+    from scanner.scalp_journal import _session_day
+
     def _factory(pnl=100.0, r=1.0, **kw):
         rec = {
             "symbol": "BTCUSDT",
@@ -134,7 +183,7 @@ def closed_trade():
 
 @pytest.fixture
 def stub_alerts(monkeypatch):
-    """Silence outbound alert side-effects so breaker/expectancy tests stay hermetic."""
+    """Silence outbound alert side-effects so the kill-switch tests stay hermetic."""
     import scanner.broker.alert_dispatch as ad
     monkeypatch.setattr(ad, "send", lambda *a, **k: None, raising=False)
     try:
