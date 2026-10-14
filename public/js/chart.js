@@ -1204,27 +1204,82 @@
   // Daily-and-above bars carry their exchange date (crypto: UTC date) at
   // 00:00Z -- toExchangeDates -- so they are formatted in UTC: the label then
   // names the same session as Lightweight Charts' UTC axis, in any reader's
-  // timezone. Intraday bars keep the reader's local clock, as before.
+  // timezone. INTRADAY stock bars are formatted on the EXCHANGE's clock
+  // (REFINE200 #105): an AEDT ASX session opens at 23:00Z the previous UTC
+  // day, so the reader's clock (or UTC) put a Monday's first 4H bar on
+  // Sunday. The axis and crosshair use the same zone (intradayFormatters).
+  // Crypto intraday keeps the reader's clock, as before.
   function barDateStr(sec, tfKey, opts) {
+    const tz = INTRADAY_TF[tfKey] ? (MOM_SESSION[market] || {}).tz : "UTC";
     return new Date(sec * 1000).toLocaleDateString(undefined,
-      INTRADAY_TF[tfKey] ? opts : Object.assign({ timeZone: "UTC" }, opts));
+      tz ? Object.assign({ timeZone: tz }, opts) : opts);
   }
-  function shadeRows(candles, key) {
+  // The intraday time-of-day beside it, on the same clock.
+  function barTimeStr(sec) {
+    const tz = (MOM_SESSION[market] || {}).tz;
+    return new Date(sec * 1000).toLocaleTimeString(undefined,
+      Object.assign({ hour: "2-digit", minute: "2-digit" }, tz ? { timeZone: tz } : {}));
+  }
+  // `tz` (stock intraday): tint and band by the EXCHANGE's calendar date
+  // (REFINE200 #105). By UTC day an AEDT ASX Monday's opening 4H bar (stamped
+  // Sunday 20:00Z) was tinted as weekend, and every session's first bar was
+  // banded with the previous day. Daily bars are already exchange-dated.
+  function shadeRows(candles, key, tz) {
     const out = [];
     const intraday = !!INTRADAY_TF[key];
     const daily = key === "1D" || key === "3D";
     if (!intraday && !daily) return out;
     for (const c of candles || []) {
-      const dow = new Date(c.time * 1000).getUTCDay();
+      let dow, dayNo;
+      if (intraday && tz) {
+        const day = Date.parse(sessionClock(c.time, tz).day + "T00:00:00Z") / 1000;
+        dow = new Date(day * 1000).getUTCDay();
+        dayNo = Math.floor(day / 86400);
+      } else {
+        dow = new Date(c.time * 1000).getUTCDay();
+        dayNo = Math.floor(c.time / 86400);
+      }
       const wk = dow === 0 || dow === 6;
       if (intraday) {
         if (wk) out.push({ time: c.time, value: 1, color: "rgba(120,140,190,0.10)" });
-        else if (Math.floor(c.time / 86400) % 2) out.push({ time: c.time, value: 1, color: "rgba(110,125,150,0.05)" });
+        else if (dayNo % 2) out.push({ time: c.time, value: 1, color: "rgba(110,125,150,0.05)" });
       } else if (wk) {
         out.push({ time: c.time, value: 1, color: "rgba(120,140,190,0.10)" });
       }
     }
     return out;
+  }
+  // Lightweight Charts' axis and crosshair default to UTC. For an INTRADAY
+  // stock timeframe they now read the exchange's clock, so the axis, the
+  // crosshair and the chart's own labels name the same day (REFINE200 #105);
+  // every other timeframe keeps the default (null tick = LWC's own; the
+  // crosshair prints the UTC date, which is the bar's exchange date).
+  function intradayFormatters(getTF) {
+    const tz = (MOM_SESSION[market] || {}).tz;
+    if (!tz) return null;                                   // crypto: unchanged
+    // Month names as Lightweight Charts prints them ("Sep", not Intl's "Sept").
+    const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fmtr = (zone) => new Intl.DateTimeFormat("en-GB", { timeZone: zone, year: "numeric",
+      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    const fx = fmtr(tz), fu = fmtr("UTC");
+    const parts = (f, t) => {
+      const p = {};
+      for (const x of f.formatToParts(new Date(t * 1000))) p[x.type] = x.value;
+      return { y: p.year, yy: String(p.year).slice(-2), mon: MON[+p.month - 1], d: p.day, hm: `${p.hour}:${p.minute}` };
+    };
+    const isIntra = () => !!INTRADAY_TF[getTF()];
+    return {
+      timeFormatter: (t) => {
+        if (typeof t !== "number") return "";
+        const p = parts(isIntra() ? fx : fu, t);
+        return `${p.d} ${p.mon} '${p.yy}` + (isIntra() ? ` ${p.hm}` : "");
+      },
+      tickMarkFormatter: (t, type) => {
+        if (!isIntra() || typeof t !== "number") return null;
+        const p = parts(fx, t);
+        return type === 0 ? p.y : type === 1 ? p.mon : type === 2 ? String(+p.d) : p.hm;
+      },
+    };
   }
 
   // Render a chart purely from live history when no static JSON exists. `meta`
@@ -2683,6 +2738,9 @@
 
     const el = $("#chart");
     const LC = window.LightweightCharts;
+    // Stock intraday reads the exchange's clock (#105); null for crypto.
+    const intradayTz = (MOM_SESSION[market] || {}).tz || null;
+    const tzFmt = intradayFormatters(() => curTF);
     // site is dark-only (terminal theme)
     const chart = LC.createChart(el, {
       width: el.clientWidth, height: el.clientHeight,
@@ -2694,6 +2752,10 @@
       timeScale: { borderColor: "rgba(110,125,150,0.22)", rightOffset: 6 },
       crosshair: { mode: LC.CrosshairMode.Normal },
     });
+    if (tzFmt) {
+      chart.applyOptions({ localization: { timeFormatter: tzFmt.timeFormatter },
+                           timeScale: { tickMarkFormatter: tzFmt.tickMarkFormatter } });
+    }
 
     const a = Math.abs(d.price || 1);
     const prec = a >= 100 ? 2 : a >= 1 ? 3 : a >= 0.1 ? 4 : a >= 0.01 ? 5 : a >= 0.001 ? 6 : 8;
@@ -2802,6 +2864,9 @@
         timeScale: { borderColor: "rgba(110,125,150,0.22)", rightOffset: 6, visible: true },
       }));
       subCharts = [macdChart, rsiChart];
+      if (tzFmt) subCharts.forEach((c) => c.applyOptions({   // the RSI pane carries the visible axis
+        localization: { timeFormatter: tzFmt.timeFormatter },
+        timeScale: { tickMarkFormatter: tzFmt.tickMarkFormatter } }));
       // THE PANES RESIZE WITH THE PAGE (REFINE200 #102). They were sized once,
       // at creation, and the only ResizeObserver resized the PRICE chart: after
       // a window resize or a phone rotation both panes kept their old width
@@ -2906,7 +2971,7 @@
     chart.priceScale("shade").applyOptions({
       scaleMargins: { top: 0, bottom: 0 }, visible: false,
     });
-    const applyShade = (key) => shadeSeries.setData(shadeRows((tfs[key] || {}).candles, key));
+    const applyShade = (key) => shadeSeries.setData(shadeRows((tfs[key] || {}).candles, key, intradayTz));
 
     // ── FLASH bands (2026-07-02, owner request) — a translucent full-height
     // column on every bar where a system spoke (VIVEK reaction/trigger,
@@ -3534,10 +3599,9 @@
     fc.className = "ct-forecast"; fc.hidden = true;
     el.appendChild(fc);
     const projFmt = (sec) => {
-      const dt = new Date(sec * 1000);
       const dstr = barDateStr(sec, curTF, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
       return curTF === "4H"
-        ? dstr + " · " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+        ? dstr + " · " + barTimeStr(sec)
         : dstr;
     };
     function updateForecast(param) {
@@ -3894,10 +3958,9 @@
       }
       const fmtDT = (sec) => {
         if (sec == null) return "—";
-        const dt = new Date(sec * 1000);
         const d = barDateStr(sec, curTF, { day: "numeric", month: "short", year: "2-digit" });
         return (curTF === "4H" || curTF === "1H")
-          ? d + " " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+          ? d + " " + barTimeStr(sec)
           : d;
       };
       // "Jun 12 '26 → 15 Aug '26" for the two endpoints, earliest first.
@@ -4309,7 +4372,7 @@
         if (typeof candle.setMarkers === "function")
           candle.setMarkers((tf.markers || []).filter((m) => m.time <= tCut));
         setFlashes([...vkFlashes, ...pmFlashes].filter((f) => f.time <= tCut));
-        shadeSeries.setData(shadeRows(c.slice(0, idx), curTF));
+        shadeSeries.setData(shadeRows(c.slice(0, idx), curTF, intradayTz));
         rsTrim(tCut);
         pmBands.forEach((b) => b.series.setData(
           [{ time: c[0].time, value: b.z.high }, { time: tCut, value: b.z.high }]));
