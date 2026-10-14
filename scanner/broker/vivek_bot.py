@@ -427,7 +427,7 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
     # only marks the ones worth the owner's eye before they are taken.
     ticket["review"] = review_flags(ticket)
     marks = "".join(f"  [{f['code']}]" for f in ticket["review"])
-    log.info("PLAN  %-8s %-2s %-5s %s · %s · entry %g SL %g · %g units  $%.0f notional  "
+    log.info("PLAN  %-8s %-2s %-5s %s | %s | entry %g SL %g | %g units  $%.0f notional  "
              "risk $%.2f (%.2f%%)  lev %.1fx%s%s",
              ticket["symbol"], ticket["grade"], direction, tf, ticket["entry_type"], entry, stop,
              ticket["units"], ticket["notional"], ticket["risk_usd"], ticket["risk_pct"],
@@ -466,7 +466,7 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
         if _favourable(be, pos["stop"], is_long):
             pos["stop"] = be
             actions.append({"action": "sl", "to": "breakeven", "price": be})
-        log.info("MANAGE %-8s TP1 @ %g → book %d%%, SL → break-even (%g)",
+        log.info("MANAGE %-8s TP1 @ %g -> book %d%%, SL -> break-even (%g)",
                  sym, price, round(scale[0] * 100), be)
 
     if not pos.get("tp2_hit") and pos.get("tp2") is not None and reached(pos["tp2"]):
@@ -476,13 +476,13 @@ def manage_position(pos: dict, price: float, support: float | None = None) -> li
         if new_sl is not None and _favourable(new_sl, pos["stop"], is_long):
             pos["stop"] = new_sl
             actions.append({"action": "sl", "to": "support", "price": new_sl})
-        log.info("MANAGE %-8s TP2 @ %g → book %d%%, SL → %g (locked structure)",
+        log.info("MANAGE %-8s TP2 @ %g -> book %d%%, SL -> %g (locked structure)",
                  sym, price, round(scale[1] * 100), pos["stop"])
 
     if not pos.get("tp3_hit") and pos.get("tp3") is not None and reached(pos["tp3"]):
         pos["tp3_hit"] = True
         actions.append({"action": "scale", "tp": "TP3", "book_pct": scale[2], "price": price})
-        log.info("MANAGE %-8s TP3 @ %g → book %d%% (runner trails)",
+        log.info("MANAGE %-8s TP3 @ %g -> book %d%% (runner trails)",
                  sym, price, round(scale[2] * 100))
 
     return actions
@@ -737,12 +737,12 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         "sector_coverage": sector_cov, "max_per_sector": max_sector,
         "skipped": len(skipped), "skip_reasons": dict(reasons),
     }
-    log.info("VIVEK bot [%s]: +%d new (book %d→%d%s) — %d long / %d short%s · skips: %s",
+    log.info("VIVEK bot [%s]: +%d new (book %d->%d%s) - %d long / %d short%s | skips: %s",
              market, summary["taken"], existing, summary["total_open"],
              ("" if not max_total else
               f", ?/{max_total} all markets" if elsewhere_unknown else
               f", {open_elsewhere + longs + shorts}/{max_total} all markets"),
              longs, shorts,
-             "" if short_bias_met else f"  ⚠ short bias unmet (<{min_shorts})",
+             "" if short_bias_met else f"  !! short bias unmet (<{min_shorts})",
              summary["skip_reasons"] or "none")
     return {"plans": plans, "skipped": skipped, "summary": summary}

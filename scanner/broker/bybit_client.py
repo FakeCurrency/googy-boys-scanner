@@ -89,7 +89,7 @@ def _retry(fn, *args, **kwargs):
                 raise
             wait = base ** attempt
             log.warning(
-                "Bybit API error (attempt %d/%d): %s — retrying in %.0fs",
+                "Bybit API error (attempt %d/%d): %s - retrying in %.0fs",
                 attempt, attempts, exc, wait,
             )
             time.sleep(wait)

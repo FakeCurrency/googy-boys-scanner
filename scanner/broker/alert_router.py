@@ -246,7 +246,7 @@ def smart_send(event_type: str, title: str, details: str = "") -> None:
         # attempt is immediate rather than suppressed.
         log.warning(
             "smart_send: NOBODY WAS TOLD  event=%s  severity=%s  wanted=%s  "
-            "(no channel accepted — check the workflow's env block for "
+            "(no channel accepted - check the workflow's env block for "
             "TELEGRAM_* / GBS_SMTP_*; no push channel is live since the "
             "2026-08-27 Discord removal)",
             event_type, severity, ",".join(channels),

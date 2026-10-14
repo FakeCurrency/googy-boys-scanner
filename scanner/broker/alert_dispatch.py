@@ -132,6 +132,6 @@ def send(event_type: str, title: str, details: str = "") -> None:
         # silent; it was invisible precisely because this line was DEBUG.
         log.warning(
             "alert NOT DELIVERED (no channel configured)  event=%s  title=%s  "
-            "— check this workflow step's env block",
+            "- check this workflow step's env block",
             event_type, title,
         )
