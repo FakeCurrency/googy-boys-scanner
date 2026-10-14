@@ -139,10 +139,10 @@ def _load() -> dict:
             bad = JOURNAL_FILE.with_suffix(".corrupt.json")
             try:
                 JOURNAL_FILE.replace(bad)
-                log.error("vivek journal CORRUPT — parked at %s, starting fresh "
+                log.error("vivek journal CORRUPT - parked at %s, starting fresh "
                           "from an EMPTY book (%s)", bad.name, e)
             except Exception as move_err:
-                log.error("vivek journal CORRUPT and could not be parked (%s) — "
+                log.error("vivek journal CORRUPT and could not be parked (%s) - "
                           "starting fresh from an EMPTY book (%s)", move_err, e)
             try:
                 from scanner.broker.alert_router import smart_send as _smart
@@ -421,7 +421,7 @@ def update(market: str, results: list[dict], frames: dict, universe: list[dict],
     j["open"] = still_open
 
     _save(j)
-    log.info("vivek journal [%s]: %s · +%d new, %d closed this run (%d open, %d closed total)",
+    log.info("vivek journal [%s]: %s | +%d new, %d closed this run (%d open, %d closed total)",
              market, "OPEN" if is_open else "closed-session",
              added, closed_now, len(j["open"]), len(j["closed"]))
     return j

@@ -172,7 +172,7 @@ def update_market(market_key: str, j: dict, progress: bool = True) -> dict:
     market = config.MARKETS[market_key]
     data_file = ROOT / "public" / "data" / f"{market_key}.json"
     if not data_file.exists():
-        print(f"  {market.label}: no scan file yet — run the scanner first.")
+        print(f"  {market.label}: no scan file yet - run the scanner first.")
         return j
     scan = json.loads(data_file.read_text(encoding="utf-8"))
     scan_date = scan["generated_at"][:10]
@@ -297,7 +297,7 @@ def main() -> None:
                 _sj._save(sj)
                 print(f"Scalp journal: closed {args.symbol} {args.direction} @ {args.price}")
             else:
-                print(f"Scalp journal: no open {args.symbol} {args.direction} found — nothing changed")
+                print(f"Scalp journal: no open {args.symbol} {args.direction} found - nothing changed")
         else:
             j = _load()
             mk = (args.market or [None])[0]
@@ -306,7 +306,7 @@ def main() -> None:
                 _save(j)
                 print(f"Swing journal: closed {args.symbol} {args.direction} @ {args.price}")
             else:
-                print(f"Swing journal: no open {args.symbol} {args.direction} found — nothing changed")
+                print(f"Swing journal: no open {args.symbol} {args.direction} found - nothing changed")
         return
 
     j = _load()
@@ -316,9 +316,9 @@ def main() -> None:
 
     s = summarize(j)
     sl, ss = s["longs"], s["shorts"]
-    print(f"\nJournal 1 — LONGS:  {sl['open']} open ({sl['open_unrealised_r']:+.1f}R unrealised) | "
+    print(f"\nJournal 1 - LONGS:  {sl['open']} open ({sl['open_unrealised_r']:+.1f}R unrealised) | "
           f"{sl['closed']} closed | win {sl['win_rate']}% | realised {sl['total_r']:+.1f}R")
-    print(f"Journal 2 — SHORTS: {ss['open']} open ({ss['open_unrealised_r']:+.1f}R unrealised) | "
+    print(f"Journal 2 - SHORTS: {ss['open']} open ({ss['open_unrealised_r']:+.1f}R unrealised) | "
           f"{ss['closed']} closed | win {ss['win_rate']}% | realised {ss['total_r']:+.1f}R")
     print(f"Saved -> {JOURNAL_FILE}\n")
 

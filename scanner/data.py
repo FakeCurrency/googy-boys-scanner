@@ -47,7 +47,7 @@ def load_frame_cache(market_key: str) -> dict[str, pd.DataFrame]:
             data = pickle.load(f)
         return data if isinstance(data, dict) else {}
     except Exception as e:
-        log.warning("frame cache: failed to load %s (%s) — ignoring", p, e)
+        log.warning("frame cache: failed to load %s (%s) - ignoring", p, e)
         return {}
 
 
@@ -222,7 +222,7 @@ def _fetch_batch(batch: list[str], period: str, interval: str,
             reason = f"{type(e).__name__}: {e}"
         if attempt < retries:
             wait = backoff[min(attempt, len(backoff) - 1)] * (0.8 + 0.4 * random.random())
-            log.warning("batch attempt %d/%d failed (%s) — backing off %.1fs",
+            log.warning("batch attempt %d/%d failed (%s) - backing off %.1fs",
                         attempt + 1, retries + 1, reason, wait)
             time.sleep(wait)
     return None
@@ -255,7 +255,7 @@ def _download_pass(tickers: list[str], period: str, interval: str, chunk: int,
                         label, bi + 1, n_batches, len(batch), retries + 1)
             if consecutive_fail >= config.DATA_HEAVY_AFTER and bi + 1 < n_batches:
                 cooldown = config.DATA_HEAVY_COOLDOWN * (0.8 + 0.4 * random.random())
-                log.warning("[%s] heavy throttling (%d batches failed in a row) — cooling %.0fs",
+                log.warning("[%s] heavy throttling (%d batches failed in a row) - cooling %.0fs",
                             label, consecutive_fail, cooldown)
                 time.sleep(cooldown)
             continue
@@ -299,7 +299,7 @@ def download(tickers: list[str], period: str | None = None,
     # partial throttling (we got *some* data) rather than a total outage.
     if failed and frames and len(failed) < total:
         cooldown = config.DATA_RECOVERY_COOLDOWN * (0.8 + 0.4 * random.random())
-        log.info("recovery sweep: %d/%d failed pass 1 — cooling %.0fs then retrying",
+        log.info("recovery sweep: %d/%d failed pass 1 - cooling %.0fs then retrying",
                  len(failed), total, cooldown)
         time.sleep(cooldown)
         more, still_failed = _download_pass(failed, period, interval, chunk, retries, backoff, pause, "recovery")
@@ -310,7 +310,7 @@ def download(tickers: list[str], period: str | None = None,
     cov = 100.0 * got / total if total else 0.0
     log.info("download: %d/%d tickers (%.0f%% coverage)", got, total, cov)
     if total and got == 0:
-        log.error("download: ZERO tickers returned for %d requested — upstream data source likely down", total)
+        log.error("download: ZERO tickers returned for %d requested - upstream data source likely down", total)
 
     return frames
 

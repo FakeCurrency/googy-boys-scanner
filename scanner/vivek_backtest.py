@@ -933,7 +933,7 @@ def _print(report: dict) -> None:
         print("\nPORTFOLIO (bot book rules applied chronologically)")
         line("eligible", port["eligible"])
         line("portfolio", port["portfolio"])
-        print(f"  taken {port['taken']} · peak open {port['peak_open']} · "
+        print(f"  taken {port['taken']} | peak open {port['peak_open']} | "
               f"skips {port['skipped'] or 'none'}")
     elif port.get("note"):
         print(f"\nPORTFOLIO: {port['note']}")
@@ -1024,7 +1024,7 @@ def main() -> None:
             prior_trades = [t for t in prev.get("trades", []) if t.get("market") not in markets]
             coverage = {k: v for k, v in prev.get("coverage", {}).items() if k not in markets}
         except Exception as e:
-            log.warning("could not read prior results (%s) — starting fresh", e)
+            log.warning("could not read prior results (%s) - starting fresh", e)
 
     new_trades = []
     for mk in markets:
