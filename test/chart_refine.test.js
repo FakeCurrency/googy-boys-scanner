@@ -460,6 +460,60 @@ test("the sheet marks the body, and the FAB rule keys off that mark", () => {
   assert.match(css, /body\.is-replay #ct-fab \{ display: none; \}/, "replay still hides it");
 });
 
+/* ═══════════════ #117 the DIV-ADJ chip reads the daily response ═══════════ */
+suite("#117 no second Yahoo pull for the dividend chip");
+
+function divHarness(recentDiv, withKey = true) {
+  const calls = [];
+  const fetch = (url) => {
+    calls.push(url);
+    const j = { ok: true, bars: 2, candles: [{ time: 1790000000, open: 1, high: 1, low: 1, close: 1 }] };
+    if (withKey) j.recent_div = recentDiv;
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(url.includes("1mo")
+      ? { ok: true, candles: [], recent_div: { date: 1790000000, amount: 0.5 } } : j) });
+  };
+  const el = { textContent: "", title: "", hidden: true };
+  const fns = ["sessionClock", "exchangeDay", "tickerSession", "toExchangeDates", "yahooBars", "yfTickerFor", "checkRecentDividend"];
+  const api = new Function("fetch", "market", "$", `let DATA_META = null;
+    ${["MOM_SESSION", "_sessFmt", "DAILY_UP_INTERVAL", "YF_TICKER"].map((n) => constSrc(n)).join("\n")}
+    ${fns.map((n) => fnSrc(n)).join("\n")}
+    return { yahooBars, checkRecentDividend, meta: () => DATA_META };`)(fetch, "asx", (sel) => (sel === "#ct-divadj" ? el : null));
+  return { api, calls, el };
+}
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+test("the 25y daily response's recent_div drives the chip -- one request, not two", async () => {
+  const h = divHarness({ date: Date.parse("2026-10-04T23:00:00Z") / 1000, amount: 0.26 });
+  await h.api.yahooBars("BHP.AX", "25y", "1d", true);
+  h.api.checkRecentDividend({ symbol: "BHP", asset_type: null });
+  await tick(); await tick();
+  assert.deepEqual(h.calls, ["/api/price?symbol=BHP.AX&range=25y&interval=1d"], "the 1mo pull is gone");
+  assert.equal(h.el.textContent, "Ⓓ DIV-ADJ 5 Oct", "still named on the exchange's calendar");
+  assert.equal(h.el.hidden, false);
+});
+
+test("an explicit null means no recent dividend: no chip and no second request", async () => {
+  const h = divHarness(null);
+  await h.api.yahooBars("BHP.AX", "25y", "1d", true);
+  h.api.checkRecentDividend({ symbol: "BHP", asset_type: null });
+  await tick(); await tick();
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.el.hidden, true);
+});
+
+test("a response that did not say (old payload), or another ticker's capture, still asks", async () => {
+  let h = divHarness(null, false);
+  await h.api.yahooBars("BHP.AX", "25y", "1d", true);
+  h.api.checkRecentDividend({ symbol: "BHP", asset_type: null });
+  await tick(); await tick();
+  assert.deepEqual(h.calls.slice(1), ["/api/price?symbol=BHP.AX&range=1mo&interval=1d"]);
+  h = divHarness(null);
+  await h.api.yahooBars("RIO.AX", "25y", "1d", true);
+  h.api.checkRecentDividend({ symbol: "BHP", asset_type: null });
+  await tick(); await tick();
+  assert.equal(h.calls.length, 2, "a capture of a different ticker is not this ticker's answer");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
