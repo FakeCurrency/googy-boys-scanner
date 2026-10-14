@@ -185,3 +185,29 @@ def test_market_dates_come_from_config_timezones():
         assert history_archive._today(m) in (want, want + dt.timedelta(days=1))
     utc = dt.datetime.now(dt.timezone.utc).date()
     assert history_archive._today("nowhere") in (utc, utc + dt.timedelta(days=1))
+
+
+# ── REFINE200 WP16: a cache-reused frame is not today's download ──────────────
+
+def test_a_cache_reused_frame_is_not_archived(tmp_path):
+    """merge_with_cache hands back an EARLIER run's frame for a ticker the
+    source skipped. Its last bar was forming when it was downloaded, so once
+    the market date rolls it would pass the `< today` test as a completed bar
+    (14 Oct 2026: 41 ASX files took the 16:45 13-Oct snapshot as the close)."""
+    from scanner import data
+    d = _days(3)
+    good = _df([(x, 1.0, 2.0, 0.5, 1.5, 100) for x in d])
+    history_archive.update("asx", [{"symbol": "RIO"}], {"RIO.AX": good}, root=tmp_path)
+    path = tmp_path / "asx" / "RIO.json"
+    before = path.read_bytes()
+    stale = data._as_reused(_df([(x, 9.0, 9.0, 9.0, 9.0, 1) for x in _days(4)]))
+    assert stale.attrs.get(data.CACHE_REUSED)
+    out = history_archive.update("asx", [{"symbol": "RIO"}, {"symbol": "NEW"}],
+                                 {"RIO.AX": stale, "NEW.AX": stale}, root=tmp_path)
+    assert out["written"] == 0 and out["skipped_reused"] == 2
+    assert path.read_bytes() == before, "the stored file must not take the reused bars"
+    assert not (tmp_path / "asx" / "NEW.json").exists()
+    # the same frame, fresh (untagged), is archived as before
+    out = history_archive.update("asx", [{"symbol": "NEW"}],
+                                 {"NEW.AX": _df([(x, 1, 1, 1, 1, 1) for x in d])}, root=tmp_path)
+    assert out["written"] == 1 and out["skipped_reused"] == 0

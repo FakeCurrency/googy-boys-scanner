@@ -14,6 +14,14 @@ DESIGN DECISIONS (each deliberate):
 - COMPLETED BARS ONLY: the frame's forming bar (today, market-local) is dropped,
   so each file gains at most one FINAL bar per session and quiet days produce
   byte-identical files (no commit churn from intraday marks).
+- FRESH FRAMES ONLY (REFINE200 WP16): a frame merge_with_cache BACK-FILLED
+  from the frame cache (attrs cache_reused) is skipped, file left as it was.
+  "Forming" is judged against today, but a reused frame was downloaded on an
+  EARLIER day, so its in-session last bar passed as completed once the date
+  rolled: the 09:42 AEDT 14-Oct-2026 scan reused 392 cached frames and
+  archived 41 names' 13-Oct bar as the 16:45 13-Oct snapshot (pre-auction,
+  partial volume), while the forward-return ledger and the next scans read the
+  real close. The same-session no-op below then kept the bad bar all day.
 - ADJUSTED BASIS, SPLICE-EXTENDED: yfinance auto_adjust re-bases the WHOLE
   series on every dividend/split, so yesterday's stored bars and today's frame
   can sit on different bases. On every write the file is REBUILT from today's
@@ -47,6 +55,7 @@ import pathlib
 from zoneinfo import ZoneInfo
 
 from . import config
+from .data import CACHE_REUSED
 from .journal_common import atomic_write
 
 # Anchored to the repo root like every other module's paths (REFINE200 #155):
@@ -113,7 +122,7 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
     drift = getattr(config, "HISTORY_ARCHIVE_SPLICE_MAX_DRIFT", 0.25)
     today = _today(market)
     existing = {p.stem for p in base.glob("*.json")}
-    written = new_bars = 0
+    written = new_bars = reused = 0
     suffix = config.MARKETS[market].suffix if market in getattr(config, "MARKETS", {}) else ""
 
     for r in rows:
@@ -124,6 +133,9 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
         if df is None:                     # `or` would ask a DataFrame for truth
             df = frames.get(sym)
         if df is None or not len(df):
+            continue
+        if (getattr(df, "attrs", None) or {}).get(CACHE_REUSED):
+            reused += 1                    # an older download: see FRESH FRAMES ONLY
             continue
         if sym not in existing and len(existing) >= max_files:
             continue                       # cap new names; existing files still refresh
@@ -159,4 +171,5 @@ def update(market: str, rows: list[dict], frames: dict, root: pathlib.Path | Non
         written += 1
         new_bars += max(0, len(merged) - prev)
         existing.add(sym)
-    return {"written": written, "new_bars": new_bars, "total_files": len(existing)}
+    return {"written": written, "new_bars": new_bars, "total_files": len(existing),
+            "skipped_reused": reused}
