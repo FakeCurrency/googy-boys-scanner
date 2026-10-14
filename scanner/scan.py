@@ -156,8 +156,13 @@ def _turnover_today(df, market) -> float:
 
 
 def _spark(df) -> list[float]:
+    """The last SPARK_BARS closes for the row's thumbnail, at SPARK_SIG_FIGS
+    significant figures (REFINE200 #66): rounding to 8 DECIMALS shipped the
+    float noise of a float32 close (23.55999947) on every point of every row,
+    and is too coarse for a sub-millionth coin. A thumbnail only."""
     closes = df["Close"].iloc[-config.SPARK_BARS:].tolist()
-    return [round(float(c), 8) for c in closes]
+    figs = int(getattr(config, "SPARK_SIG_FIGS", 5))
+    return [float(f"{float(c):.{figs}g}") for c in closes]
 
 
 def _load_prev_grades(out_root: str | None, market_key: str) -> dict:

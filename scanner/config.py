@@ -76,6 +76,10 @@ SUPERTREND_MULT = 3.0         # ATR multiplier for the Phase-2 trailing stop
 
 # Per-row sparkline: how many recent daily closes to send to the UI
 SPARK_BARS = 30
+# Significant figures each sparkline close is published at (REFINE200 #66).
+# Yahoo serves float32-derived closes (23.55999947); 5 figures is far finer
+# than a 30-point thumbnail can draw and keeps a sub-cent coin's shape.
+SPARK_SIG_FIGS = 5
 
 # ---------------------------------------------------------------------------
 # Position sizing
