@@ -515,3 +515,123 @@ def test_the_week_measures_open_positions_from_the_mark_carried_into_day_minus_6
                     lambda s: 100.0)
     # from 95 (carried into 07-22) to 100 = +5 / risk 4 = +1.25R x $40
     assert w["unrealised_usd"] == pytest.approx(50.0)
+
+
+# ── REFINE200 #14: the closing day is a window like any other ─────────────────
+# The closed leg charged a trade that closed in the window its whole-life R
+# FROM ENTRY. The move from entry to the window's reference had already been
+# charged while it was open, so the closing day charged it a second time.
+
+def _long(**kw):
+    p = {"symbol": "X", "market": "asx", "direction": "long", "entry": 100.0,
+         "risk": 4.0, "risk_usd": 100.0, "entry_date": "2026-07-27"}
+    p.update(kw)
+    return p
+
+
+def test_a_stop_at_the_price_it_already_sat_at_costs_nothing_more():
+    """THE REPRO. Down -1R at the close of day N (charged on day N). On day N+1
+    an OPEN position flat at that price costs $0 -- and the same position
+    STOPPED at that same price, with no move at all, used to cost -$100."""
+    marks = {"2026-07-28": 96.0}                 # carried into N+1 at -1R
+    still_open = _long(status="open", day_marks=marks, last_mark=96.0)
+    stopped = _long(status="closed", day_marks=marks, last_mark=96.0,
+                    exit_date="2026-07-28", exit_price=96.0, booked_pct=1.0,
+                    realized_r=-1.0,
+                    exits=[{"reason": "stop", "price": 96.0, "pct": 1.0,
+                            "date": "2026-07-28"}])
+    day = "2026-07-28"
+    o = vg.session_pnl({"open": [still_open], "closed": []}, "asx", day, lambda s: 96.0)
+    c = vg.session_pnl({"open": [], "closed": [stopped]}, "asx", day, lambda s: None)
+    assert o["session_usd"] == pytest.approx(0.0)
+    assert c["realised_usd"] == pytest.approx(0.0)       # was -100.0
+    assert c["session_usd"] == pytest.approx(o["session_usd"])
+
+
+def test_a_closed_trade_telescopes_to_its_whole_life_pnl():
+    """Sum every daily window over a trade's life -- open days AND the closing
+    day -- and you get its whole-life P&L. Entry 100, risk 4, $40 a R:
+      07-27 opens, marks 104                   -> +1.0R
+      07-28 TP1 25% at 108, marks 106          -> +0.25 + 0.375 = +0.625R
+      07-29 stopped at 98 on the remaining 75% -> -1.5R
+    Whole life: 0.25 x 2R + 0.75 x -0.5R = +0.125R = +$5."""
+    tp1 = {"reason": "tp1", "price": 108.0, "pct": 0.25, "date": "2026-07-28"}
+    stop = {"reason": "stop", "price": 98.0, "pct": 0.75, "date": "2026-07-29"}
+    base = dict(risk_usd=40.0)
+    day1 = _long(status="open", last_mark=104.0, **base)
+    day2 = _long(status="open", day_marks={"2026-07-28": 104.0}, last_mark=106.0,
+                 exits=[tp1], booked_pct=0.25, realized_r=0.5, **base)
+    day3 = _long(status="closed", last_mark=98.0, exit_date="2026-07-29",
+                 day_marks={"2026-07-28": 104.0, "2026-07-29": 106.0},
+                 exits=[tp1, stop], booked_pct=1.0, realized_r=0.125, **base)
+    windows = [
+        vg.session_pnl({"open": [day1], "closed": []}, "asx", "2026-07-27",
+                       lambda s: 104.0)["session_usd"],
+        vg.session_pnl({"open": [day2], "closed": []}, "asx", "2026-07-28",
+                       lambda s: 106.0)["session_usd"],
+        vg.session_pnl({"open": [], "closed": [day3]}, "asx", "2026-07-29",
+                       lambda s: None)["session_usd"],
+    ]
+    assert windows == pytest.approx([40.0, 25.0, -60.0])
+    assert sum(windows) == pytest.approx(0.125 * 40.0)   # was +$50: 100->106 twice
+
+
+def test_a_hand_close_before_the_days_first_scan_measures_from_last_mark():
+    """No run stamped the closing day (every run stamps before it can close
+    anything), so this was closed by hand -- and a hand close never touches
+    last_mark, the mark the trade carried into the day. The oldest stamp
+    would re-charge days already charged while it was open."""
+    t = _long(status="closed", risk_usd=40.0, last_mark=106.0,
+              day_marks={"2026-07-20": 90.0, "2026-07-28": 104.0},
+              exit_date="2026-07-29", booked_pct=1.0, realized_r=-0.5,
+              exits=[{"reason": "manual", "price": 98.0, "pct": 1.0,
+                      "date": "2026-07-29"}])
+    c = vg.session_pnl({"open": [], "closed": [t]}, "asx", "2026-07-29",
+                       lambda s: None)
+    assert c["realised_usd"] == pytest.approx((98.0 - 106.0) / 4.0 * 40.0)   # -$80
+
+
+def test_a_trade_opened_and_closed_inside_the_window_counts_its_whole_life():
+    t = _long(status="closed", entry_date="2026-07-29", last_mark=96.0,
+              day_marks={"2026-07-29": 100.0}, exit_date="2026-07-29",
+              booked_pct=1.0, realized_r=-1.0,
+              exits=[{"reason": "stop", "price": 96.0, "pct": 1.0,
+                      "date": "2026-07-29"}])
+    c = vg.session_pnl({"open": [], "closed": [t]}, "asx", "2026-07-29",
+                       lambda s: None)
+    assert c["realised_usd"] == pytest.approx(-100.0)
+
+
+def test_the_week_charges_a_closed_trade_from_the_mark_carried_into_the_week():
+    t = _long(status="closed", entry_date="2026-07-01", risk_usd=40.0,
+              last_mark=95.0, exit_date="2026-07-27", booked_pct=1.0,
+              realized_r=-1.25,
+              day_marks={"2026-07-20": 90.0, "2026-07-22": 102.0,
+                         "2026-07-27": 97.0},
+              exits=[{"reason": "stop", "price": 95.0, "pct": 1.0,
+                      "date": "2026-07-27"}])
+    w = vg.week_pnl({"open": [], "closed": [t]}, "asx", "2026-07-28",
+                    lambda s: None)
+    # week = [07-22 .. 07-28]: from 102 (carried into 07-22) to 95 = -1.75R
+    assert w["realised_usd"] == pytest.approx(-1.75 * 40.0)
+
+
+def test_a_closed_row_with_no_exit_ledger_keeps_its_whole_life_r():
+    """Nothing to date it against: the pre-#14 number (over-counts, which is
+    the conservative side for a loss guard)."""
+    t = _long(status="closed", entry_date="2026-07-01", exit_date="2026-07-28",
+              day_marks={"2026-07-28": 96.0}, realized_r=-2.0)
+    c = vg.session_pnl({"open": [], "closed": [t]}, "asx", "2026-07-28",
+                       lambda s: None)
+    assert c["realised_usd"] == pytest.approx(-200.0)
+
+
+def test_closing_costs_still_land_on_the_closed_leg():
+    """A trade living inside one window pays its whole round trip there."""
+    t = _long(status="closed", entry_date="2026-07-28", exit_date="2026-07-28",
+              booked_pct=1.0, gross_r=-1.0, cost_r=0.01, realized_r=-1.01,
+              exits=[{"reason": "stop", "price": 96.0, "pct": 1.0,
+                      "date": "2026-07-28"}])
+    c = vg.session_pnl({"open": [], "closed": [t]}, "asx", "2026-07-28",
+                       lambda s: None)
+    assert c["realised_usd"] == pytest.approx(-101.0)
