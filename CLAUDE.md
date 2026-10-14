@@ -49,7 +49,8 @@ breakout on crypto, ASX and NASDAQ.
   (2026-09-21, "Yeah lets not do shorts").
 - **Wide stops already taken keep full size** (2026-07-28). Never run
   `resize_book_notional.py --max-stop-pct`; never re-raise the trim. The rows
-  booked over 25% at the fill (CVLT, SMCI, BNB) stay open as managed.
+  booked over 25% at the fill (CVLT, SMCI, BNB) are managed as taken — never
+  closed to "fix" the gate (it binds new entries only).
 - **Crypto liquidity floor stays $3M** on single-venue volume ("Keep",
   2026-09-28).
 - **Sizing: $2,500 × 60 open, 6 per sector PER MARKET** (2026-09-27), in each
@@ -168,7 +169,7 @@ them.
 | `kill_switch.yml` | `15,45 * * * *` | job `check`: per-market session-loss check + watchdog; job `watchdog-alarm`: one red run per CRITICAL episode |
 | `close_position.yml` | manual | `journal_type=bot` closes (batch ≤ 60); re-dispatches itself (max 3) if the mutex evicts it |
 | `resize_book.yml` | push touching `.github/resize-kick`; manual (dry by default) | one-shot open-book restatement + `bot_rules.json`, one commit |
-| `confluence.yml` | `workflow_run` after PhaseMap + `45 8` backstop | post-nightly confluence ping |
+| `confluence.yml` | `workflow_run` after PhaseMap + `45 8` backstop | post-nightly confluence pass (alert log + signed state) |
 | `phasemap.yml` | `30 8` UTC (lands hours late) | PhaseMap + Specs + schema gate; healthy markets always land |
 | `ignition.yml` · `_asx` · `_nasdaq` | crypto `14 0`, ASX `24 6`, NASDAQ `34 21` + backstops, intraday, a Sunday replay; push `.github/ignition[-asx\|-nasdaq]-kick` | IGNITION screen + chart sidecar (+ replay); structural twins |
 | `momentum.yml` | `30 6`, `30 21` Mon–Fri, `30 0`, `41 */3`, after each morning_plays run | MOMENTUM, the newest market due |
@@ -231,8 +232,8 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   `| tee`); every `run:` block passes `bash -n`. No CI skip token on a merge
   that must fire a push workflow.
 - **Ops: read the log, not the colour.** A failed `ops.yml` action is a GREEN
-  run; read `OPS RESULT: OK|FAILED (exit N)`. Actions: `cronjob-list/get/
-  history/create/update/delete` (update merges into the live schedule),
+  run; read `OPS RESULT: OK|FAILED (exit N)`. Actions:
+  `cronjob-list/get/history/create/update/delete` (update merges into the live schedule),
   `cf-list-vars/set-var/delete-var/redeploy`, read-only `cf-deployments` and
   `site-probe` (`paths` = up to 10 site GETs). Confirm mutations with a
   read-back; "merged" is not "live". Output is redacted. Pass a credential
@@ -348,8 +349,9 @@ controls or calls-to-action).
 
 ## Data and engine truths
 
-- **One fetch entry point:** `scanner/data.py::fetch(market, tickers, period,
-  interval, ref_prices)` for every caller. Stocks → `download()`; crypto with
+- **One fetch entry point:**
+  `scanner/data.py::fetch(market, tickers, period, interval, ref_prices)` for
+  every caller. Stocks → `download()`; crypto with
   `CRYPTO_DATA_SOURCE = "exchange"` → `exchange_data.py` (keyless; revert = one
   line). Venues from a US runner: `data-api.binance.vision` answers,
   `api.binance.com` 451 / `api.bybit.com` 403, Coinbase answers (no 4h). Probed
@@ -551,8 +553,8 @@ counted exclusions).
 
 ## Frontend rules
 
-- Tokens in `styles.css :root`. **Text uses the `-ink` tokens** (`--blue-ink
-  #4da3ff`, `--red-ink #ff6961`, `--purple-ink #da8fff`) — the base colours fail
+- Tokens in `styles.css :root`. **Text uses the `-ink` tokens**
+  (`--blue-ink #4da3ff`, `--red-ink #ff6961`, `--purple-ink #da8fff`) — the base colours fail
   WCAG AA as text; fills/borders/white-on-colour stay on the base tokens
   (`test/contrast.test.js`).
 - **Melbourne on screen**, market-local/UTC in tooltips (`PM.fmtMelb`); zone
@@ -576,8 +578,8 @@ counted exclusions).
 
 ## Tests & CI
 
-- `pip install -r requirements-dev.txt`; CI runs `pytest -n auto --dist
-  loadfile -rs --durations=15` (no extra `-q`), pyflakes over tests, `bash -n`
+- `pip install -r requirements-dev.txt`; CI runs
+  `pytest -n auto --dist loadfile -rs --durations=15` (no extra `-q`), pyflakes over tests, `bash -n`
   over workflow `run:` blocks, every JS suite and the e2e job.
   `pytest -m "not slow"` skips replay-heavy tests locally.
 - **No test may reach Yahoo or an exchange** (`tests/conftest.py`;
@@ -597,10 +599,10 @@ counted exclusions).
   `restore-keys`; > 2% drift on a deliberate change → bump the key, record it.
 - **Lighthouse gate** serves a STAGED root on the fixtures: 1.7 MB transfer,
   CLS 0.5; the live payload is reported, never gated.
-- **Reproduce a red e2e job** instead of inferring: `git worktree add -f
-  /tmp/ci-repro <sha>`; `PW_CHROMIUM=/opt/pw-browsers/chromium node
-  test/e2e/smoke.e2e.js` (never `npx playwright install`). `cmd | tail; echo
-  $?` reports `tail`'s status.
+- **Reproduce a red e2e job** instead of inferring:
+  `git worktree add -f /tmp/ci-repro <sha>`, then
+  `PW_CHROMIUM=/opt/pw-browsers/chromium node test/e2e/smoke.e2e.js` (never
+  `npx playwright install`). `cmd | tail; echo $?` reports `tail`'s status.
 
 ## Secrets
 
