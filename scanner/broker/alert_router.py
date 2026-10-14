@@ -31,64 +31,11 @@ log = logging.getLogger(__name__)
 ROOT       = pathlib.Path(__file__).resolve().parents[2]
 STATE_FILE = ROOT / "journal" / "alert_state.json"
 
-# Fallback tables (overridden by scanner/config.py values when present)
-_SEV_MAP = {
-    "kill_switch":     "CRITICAL",
-    "daily_loss":      "CRITICAL",
-    "order_failed":    "CRITICAL",
-    "scan_error":      "CRITICAL",
-    "order_placed":    "INFO",
-    "order_rejected":  "WARNING",
-    "anomaly":         "WARNING",
-    "circuit_breaker": "WARNING",
-    "daily_report":    "INFO",
-    "health":          "WARNING",
-    "info":            "INFO",
-    "trade_review":    "NOTICE",
-    "scan_dry":        "NOTICE",
-    "stale_position":  "NOTICE",
-    # KEEP THESE TWO TABLES IN STEP WITH scanner/config.py (2026-07-28).
-    # `get_severity` falls back to "WARNING" for anything it does not know, so a
-    # missing key here is not an error — it is a silent DOWNGRADE. Both of the
-    # events below are CRITICAL in config, and CRITICAL is the only tier that
-    # reaches email; landing on the WARNING default would drop them to
-    # telegram-only without a word in any log. That is the whole failure
-    # mode: these tables are only consulted when config is unavailable, which is
-    # exactly the moment nobody is watching closely.
-    "vivek_guard":     "CRITICAL",
-    "orphan_position": "CRITICAL",
-}
-
-# Discord removed 2026-08-27 (owner ruling) — see config.ALERT_CHANNELS,
-# which this table only mirrors for the config-unavailable fallback case.
-_CHAN_MAP = {
-    "CRITICAL": ["telegram", "email"],
-    "WARNING":  ["telegram"],
-    "INFO":     [],
-    "NOTICE":   [],
-}
-
-_RATE_MAP = {
-    "kill_switch":     0,
-    "daily_loss":      0,
-    "order_failed":    0,
-    "scan_error":      0,
-    "order_placed":    300,
-    "order_rejected":  300,
-    "anomaly":         1800,
-    "circuit_breaker": 1800,
-    "daily_report":    82800,
-    "health":          3600,
-    "trade_review":    0,
-    "scan_dry":        0,
-    "stale_position":  0,
-    # Both own their dedupe elsewhere (vivek_run's per-market book stamp; the
-    # orphan symbol set on the journal), so a limit here could only ever drop a
-    # message that the real dedupe had already decided was worth sending.
-    "vivek_guard":     0,
-    "orphan_position": 0,
-    "DEFAULT":         300,
-}
+# The routing tables live in scanner/config.py ONLY (ALERT_SEVERITY,
+# ALERT_CHANNELS, ALERT_RATE_LIMITS). This module used to carry hand-mirrored
+# "fallback" copies for a config that failed to import, but config is imported
+# unconditionally at the top of this file, so the copies were never consulted
+# and only drifted (REFINE200 #90, 2026-10-14).
 
 
 # ── state file helpers ────────────────────────────────────────────────────────
@@ -114,17 +61,15 @@ def update_state(mutate) -> dict:
     """Re-read the state file, apply `mutate(state)`, write it back atomically.
 
     THE ONLY SUPPORTED WAY TO WRITE journal/alert_state.json (2026-07-28).
-    Two modules own disjoint subtrees of this one file — this one writes
-    `last_sent` and `acknowledged`, `circuit_breaker` writes `cb_state` — and
-    both used to load the whole document, mutate their own corner and write the
-    whole document back. Sequentially that is fine; interleaved, the second
-    writer's copy predates the first writer's change and silently reverts it.
+    It was written for two writers (`circuit_breaker` owned a `cb_state` key
+    until the scalp risk stack was removed, 2026-09-17), each of which loaded
+    the whole document, mutated its corner and wrote it all back, so an
+    interleaving silently reverted the other's change. The one writer left
+    keeps the discipline: this module writes `last_sent` and `acknowledged`.
 
     Re-reading *inside* this function shrinks the window to the mutate-plus-
-    write, and because every caller now touches only its own key, an
-    interleaving costs at most one repeated alert rather than a lost
-    acknowledgment or a reset breaker. `mutate` must be cheap and must not
-    perform IO.
+    write, so an interleaving costs at most one repeated alert rather than a
+    lost acknowledgment. `mutate` must be cheap and must not perform IO.
 
     Returns the written state so callers can log what landed.
     """
@@ -147,7 +92,9 @@ def get_channels(event_type: str, severity: str = "") -> list[str]:
     if not severity:
         severity = get_severity(event_type)
     chan_map = _cfg.ALERT_CHANNELS
-    return list(chan_map.get(severity, _CHAN_MAP.get("WARNING", [])))
+    # An unknown severity routes like WARNING, the same default get_severity
+    # gives an unknown event.
+    return list(chan_map.get(severity, chan_map.get("WARNING", [])))
 
 
 def should_send(event_type: str, commit: bool = True) -> bool:
@@ -202,7 +149,7 @@ def mark_sent(event_type: str, when: dt.datetime | None = None) -> None:
 
     Split out of `should_send` so delivery can decide when the window opens.
     Re-reads state rather than reusing the caller's copy: the send it follows
-    can take seconds, and `circuit_breaker` writes the same file.
+    can take seconds, and another run may have written the file meanwhile.
     """
     when = when or dt.datetime.now(dt.timezone.utc)
     update_state(
@@ -217,8 +164,8 @@ def mark_sent(event_type: str, when: dt.datetime | None = None) -> None:
 def acknowledge(event_type: str, duration_h: float = 24.0) -> None:
     """Suppress an alert type for duration_h hours (user acknowledgment).
 
-    Example: acknowledge("circuit_breaker", 4.0) stops circuit-breaker
-    alerts for 4 hours after the user has reviewed the issue.
+    Example: acknowledge("anomaly", 4.0) stops suspect-price alerts for 4
+    hours after the user has reviewed the issue.
 
     The acknowledgment is stored in journal/alert_state.json under the
     "acknowledged" key so it persists across GitHub Actions runs.

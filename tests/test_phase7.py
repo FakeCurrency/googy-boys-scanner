@@ -92,6 +92,6 @@ class TestAlertRouterRateLimit:
     def test_different_event_types_are_independent(self, tmp_path, monkeypatch):
         from scanner.broker import alert_router
         monkeypatch.setattr(alert_router, "STATE_FILE", tmp_path / "state.json")
-        assert alert_router.should_send("anomaly")        is True
-        assert alert_router.should_send("order_rejected") is True   # different key
-        assert alert_router.should_send("anomaly")        is False  # rate-limited
+        assert alert_router.should_send("anomaly")      is True
+        assert alert_router.should_send("order_placed") is True   # different key
+        assert alert_router.should_send("anomaly")      is False  # rate-limited

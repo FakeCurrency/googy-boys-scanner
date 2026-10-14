@@ -46,21 +46,21 @@ def state(tmp_path, monkeypatch):
 class TestRateLimitWindowIsSpentOnDelivery:
     def test_dry_check_does_not_stamp(self, state):
         from scanner.broker import alert_router as ar
-        assert ar.should_send("health", commit=False) is True
-        assert not state.exists() or "health" not in json.loads(
+        assert ar.should_send("anomaly", commit=False) is True
+        assert not state.exists() or "anomaly" not in json.loads(
             state.read_text()).get("last_sent", {})
         # ...and asking again still says yes, because nothing was spent.
-        assert ar.should_send("health", commit=False) is True
+        assert ar.should_send("anomaly", commit=False) is True
 
     def test_committing_check_stamps_and_then_blocks(self, state):
         from scanner.broker import alert_router as ar
-        assert ar.should_send("health") is True
-        assert ar.should_send("health") is False
+        assert ar.should_send("anomaly") is True
+        assert ar.should_send("anomaly") is False
 
     def test_mark_sent_alone_opens_the_window(self, state):
         from scanner.broker import alert_router as ar
-        ar.mark_sent("health")
-        assert ar.should_send("health", commit=False) is False
+        ar.mark_sent("anomaly")
+        assert ar.should_send("anomaly", commit=False) is False
 
     def test_a_send_that_reaches_nobody_does_not_suppress_the_next_one(
             self, state, monkeypatch):
@@ -71,23 +71,23 @@ class TestRateLimitWindowIsSpentOnDelivery:
         minute later — carrying the same unheard news — was silently dropped.
         """
         from scanner.broker import alert_router as ar
-        monkeypatch.setattr(ar._cfg, "ALERT_RATE_LIMITS", {"health": 3600})
+        monkeypatch.setattr(ar._cfg, "ALERT_RATE_LIMITS", {"anomaly": 3600})
         monkeypatch.setattr("scanner.broker.alert_dispatch._telegram",
                             lambda *_: False)
         monkeypatch.setattr("scanner.broker.alert_dispatch._email",
                             lambda *_: False)
-        ar.smart_send("health", "nobody is listening")
-        assert ar.should_send("health", commit=False) is True
+        ar.smart_send("anomaly", "nobody is listening")
+        assert ar.should_send("anomaly", commit=False) is True
 
     def test_a_send_that_lands_does_spend_the_window(self, state, monkeypatch):
         from scanner.broker import alert_router as ar
-        monkeypatch.setattr(ar._cfg, "ALERT_RATE_LIMITS", {"health": 3600})
+        monkeypatch.setattr(ar._cfg, "ALERT_RATE_LIMITS", {"anomaly": 3600})
         monkeypatch.setattr("scanner.broker.alert_dispatch._telegram",
                             lambda *_: True)
         monkeypatch.setattr("scanner.broker.alert_dispatch._email",
                             lambda *_: False)
-        ar.smart_send("health", "somebody is listening")
-        assert ar.should_send("health", commit=False) is False
+        ar.smart_send("anomaly", "somebody is listening")
+        assert ar.should_send("anomaly", commit=False) is False
 
 
 # ── #5: silence is reported at a level somebody reads ─────────────────────────
@@ -112,34 +112,70 @@ class TestSilenceIsLoud:
         assert any(r.levelname == "WARNING" for r in caplog.records)
 
 
-# ── severity tables: config and the fallback must agree ───────────────────────
+# ── severity tables: config is the one table, and every key is live ──────────
 
-class TestFallbackTablesTrackConfig:
-    """`get_severity` falls back to WARNING for unknown events, so a key missing
-    from the module-level table is not an error — it is a silent DOWNGRADE, and
-    CRITICAL is the only tier that reaches email."""
+_EMITTER_CALLS = {"send", "smart_send", "_alert", "_smart"}
 
-    def test_every_critical_event_in_config_is_critical_in_the_fallback(self):
+
+def _emitted_event_types() -> set[str]:
+    """Every string literal passed as the event type to an alert sender
+    anywhere under scanner/ or scripts/ (AST, so comments and docstrings
+    cannot count as an emitter)."""
+    import ast
+    seen: set[str] = set()
+    for base in ("scanner", "scripts"):
+        for f in (ROOT / base).rglob("*.py"):
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Call) and node.args):
+                    continue
+                fn = node.func
+                name = fn.attr if isinstance(fn, ast.Attribute) else getattr(fn, "id", "")
+                arg = node.args[0]
+                if name in _EMITTER_CALLS and isinstance(arg, ast.Constant) \
+                        and isinstance(arg.value, str):
+                    seen.add(arg.value)
+    return seen
+
+
+class TestRoutingTablesAreLive:
+    """REFINE200 #90 (2026-10-14). The router used to keep hand-mirrored
+    "fallback" copies of these tables for a config that failed to import; config
+    is imported unconditionally, so the copies were never read and only drifted.
+    And nine scalp-era event types (daily_loss, order_failed, circuit_breaker,
+    orphan_position, ...) sat in the tables with nothing left to emit them."""
+
+    def test_the_router_reads_config_and_keeps_no_copy(self):
+        from scanner.broker import alert_router as ar
+        for name in ("_SEV_MAP", "_RATE_MAP", "_CHAN_MAP"):
+            assert not hasattr(ar, name), f"alert_router.{name} is back"
+
+    def test_every_routed_event_type_has_an_emitter(self):
+        from scanner import config
+        from scanner.broker.alert_dispatch import _EMOJI
+        emitted = _emitted_event_types()
+        assert {"kill_switch", "scan_error", "vivek_guard"} <= emitted  # the scan works
+        tables = {"ALERT_SEVERITY": set(config.ALERT_SEVERITY),
+                  "ALERT_RATE_LIMITS": set(config.ALERT_RATE_LIMITS) - {"DEFAULT"},
+                  "alert_dispatch._EMOJI": set(_EMOJI)}
+        for table, keys in tables.items():
+            orphans = sorted(keys - emitted)
+            assert not orphans, f"{table} routes event types nothing emits: {orphans}"
+
+    def test_an_unknown_severity_routes_like_warning(self):
         from scanner import config
         from scanner.broker import alert_router as ar
-        for event, sev in config.ALERT_SEVERITY.items():
-            if sev == "CRITICAL":
-                assert ar._SEV_MAP.get(event) == "CRITICAL", (
-                    f"{event} is CRITICAL in config.py but "
-                    f"{ar._SEV_MAP.get(event)!r} in alert_router._SEV_MAP — "
-                    f"it would be downgraded off email whenever the fallback "
-                    f"table is the one consulted")
+        assert ar.get_channels("anomaly", severity="NO_SUCH_TIER") == \
+            config.ALERT_CHANNELS["WARNING"]
 
-    def test_the_guard_and_orphan_events_are_registered_everywhere(self):
+    def test_the_guard_event_is_registered_everywhere(self):
         from scanner import config
         from scanner.broker import alert_router as ar
         from scanner.broker.alert_dispatch import _EMOJI
-        for event in ("vivek_guard", "orphan_position"):
-            assert config.ALERT_SEVERITY[event] == "CRITICAL"
-            assert ar._SEV_MAP[event] == "CRITICAL"
-            assert config.ALERT_RATE_LIMITS[event] == 0
-            assert ar._RATE_MAP[event] == 0
-            assert event in _EMOJI
+        assert config.ALERT_SEVERITY["vivek_guard"] == "CRITICAL"
+        assert ar.get_severity("vivek_guard") == "CRITICAL"
+        assert config.ALERT_RATE_LIMITS["vivek_guard"] == 0
+        assert "vivek_guard" in _EMOJI
 
 
 # ── #12: one file, one writer ─────────────────────────────────────────────────

@@ -42,21 +42,16 @@ def _cred(name: str) -> str:
     except Exception:                                     # noqa: BLE001
         return os.environ.get(name, "").strip()
 
+# Only event types something emits (REFINE200 #90); anything else gets "ℹ️".
 _EMOJI = {
     "kill_switch":    "🛑",
-    "daily_loss":     "📉",
     "order_placed":   "✅",
-    "order_rejected": "⚠️",
-    "order_failed":   "❌",
     "scan_error":     "🔴",
     "anomaly":        "⚠️",
-    "info":           "ℹ️",
     # "your call" — the bot took it; do you want it, or does it?
     "trade_review":   "🖐",
     # The book's own loss guard tripped — new entries halted for the session.
     "vivek_guard":    "⛔",
-    # Real exposure at the broker that the journal has never heard of.
-    "orphan_position": "👻",
 }
 
 
