@@ -1,23 +1,56 @@
-# Cloudflare Pages response headers.
+# Cloudflare Pages response headers (static assets only -- a Pages Function
+# sets its own headers and these rules never reach it).
 #
 # The problem this fixes: without explicit caching rules, an HTML page (e.g.
 # chart.html) could be served stale from the browser/edge cache — so a freshly
 # deployed page that references a new ?v= asset is never fetched, and chart
-# updates appear "not to ship". HTML + scan data are therefore always
-# revalidated, while the versioned JS/CSS (busted by the ?v= query on every
-# change) may be cached hard. More-specific paths below win on Cloudflare Pages.
+# updates appear "not to ship". HTML, scan data and sw.js are therefore always
+# revalidated, while versioned assets are cached hard.
+#
+# HOW PAGES COMBINES RULES (REFINE200 #75, 2026-10-14). Every rule whose path
+# matches applies, in file order, and a header two rules both set is JOINED
+# with a comma -- a more specific path does NOT win. The /js/* rule below used
+# to read "public, max-age=0, must-revalidate, public, max-age=86400" on the
+# wire, and caches take the first max-age, so the scripts were never cached at
+# all. A rule that replaces a header first DETACHES the inherited one with
+# "! Cache-Control" (Pages applies a rule's detaches before its own values).
+# Pinned by test/site_headers.test.js.
 
 # Everything: revalidate by default so the latest deploy is always served.
+# The three security headers (REFINE200 #56) apply to every page: only this
+# site may frame it (frame-ancestors, plus X-Frame-Options for old browsers),
+# and a link out sends the origin, never the full URL with its query string.
 /*
   Cache-Control: public, max-age=0, must-revalidate
   X-Content-Type-Options: nosniff
+  Content-Security-Policy: frame-ancestors 'self'
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
 
-# Versioned static assets — safe to cache (the ?v= query changes on every edit).
+# Versioned assets: cached for a year and never revalidated. Safe ONLY because
+# every page asks for /js/ and /css/ with a ?v= that changes on every edit
+# (CLAUDE.md rule 2; test/cache.test.js pins one version per asset across
+# pages, test/site_headers.test.js pins that every reference carries one), the
+# vendor bundle carries its version in its file name, and a font is never
+# edited in place (a new font is a new file name). The service worker already
+# treats ?v= assets as cache-first, so this extends the same rule to the HTTP
+# cache. Forget a ?v= bump and a returning visitor keeps the old file.
 /js/*
-  Cache-Control: public, max-age=86400
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
 /css/*
-  Cache-Control: public, max-age=86400
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+/vendor/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
 
-# Scan output JSON is rewritten every scan — must always be fresh.
+# Scan output JSON is rewritten every scan — must always be fresh. /* already
+# says so; this keeps the intent explicit (detached first, so it is not joined
+# into a doubled value).
 /data/*
+  ! Cache-Control
   Cache-Control: public, max-age=0, must-revalidate
