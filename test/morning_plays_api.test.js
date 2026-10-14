@@ -28,15 +28,17 @@ function test(name, fn) {
 
 // ---- load the real handler --------------------------------------------------
 const SRC = path.join(__dirname, "..", "functions", "api", "morning_plays.js");
-// The REAL shared dispatch transport is prepended (exports stripped) rather than
-// stubbed, so the headers, the 10s abort and the cooldown refund rule these
-// tests assert on are the shipped ones. Same pattern as api_guards.test.js.
-const DISPATCH_HELPER = fs
-  .readFileSync(path.join(__dirname, "..", "functions", "api", "_dispatch.js"), "utf8")
+// The REAL shared helpers (the dispatch transport, the secret trim) are
+// prepended (exports stripped) rather than stubbed, so the headers, the 10s
+// abort and the cooldown refund rule these tests assert on are the shipped
+// ones. Same pattern as api_guards.test.js.
+const helper = (f) => fs
+  .readFileSync(path.join(__dirname, "..", "functions", "api", f), "utf8")
   .replace(/export\s+async\s+function/g, "async function")
+  .replace(/export\s+function/g, "function")
   .replace(/export\s+const/g, "const");
-const source = DISPATCH_HELPER + "\n" + fs.readFileSync(SRC, "utf8")
-  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_dispatch\.js";\s*$/m, "")
+const source = ["_secrets.js", "_dispatch.js"].map(helper).join("\n") + "\n" + fs.readFileSync(SRC, "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm, "")
   .replace(/export\s+const\s+onRequest/, "globalThis.onRequest");
 
 function load(fetchImpl) {
@@ -115,6 +117,20 @@ function ghFetch(status = 204) {
     assert.equal(r1.status, 202);
     assert.equal(r2.status, 202);
     assert.equal(f.seen.length, 2);
+  });
+
+  await test("a secret pasted with a trailing newline / BOM still authorises (REFINE200 #164)", async () => {
+    // It used to fail the === compare, so every rung of the cron-job.org
+    // ladder answered 401 and the digest never went out.
+    const f = ghFetch(204); const h = load(f);
+    for (const stored of [SECRET + "\n", "\ufeff" + SECRET, " " + SECRET + "\r\n"]) {
+      const r = await h({ request: req("?slot=asx&key=" + SECRET),
+        env: envOf({ MORNING_PLAYS_TRIGGER_SECRET: stored, GH_DISPATCH_TOKEN: "\ufeff" + TOKEN + "\n" }) });
+      assert.equal(r.status, 202, JSON.stringify(stored));
+    }
+    assert.equal(f.seen[0].init.headers.Authorization, "Bearer " + TOKEN, "the token is sent clean too");
+    const blank = await h({ request: req("?slot=asx&key="), env: envOf({ MORNING_PLAYS_TRIGGER_SECRET: " \n" }) });
+    assert.equal(blank.status, 503, "a whitespace-only secret is unset: fail closed, never open");
   });
 
   await test("a missing or unknown slot -> 400 (good key), nothing dispatched", async () => {

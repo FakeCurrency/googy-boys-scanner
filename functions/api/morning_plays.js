@@ -57,6 +57,7 @@
  */
 
 import { dispatchWorkflow } from "./_dispatch.js";
+import { cleanSecret } from "./_secrets.js";
 
 const VALID_SLOTS = ["asx", "us"];
 
@@ -66,13 +67,14 @@ const json = (status, body) =>
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 
-function authorised(request, env) {
+// The stored secret is read through cleanSecret (REFINE200 #164): pasted with a
+// trailing newline it used to fail the === below for every rung of the ladder.
+function authorised(request, secret) {
   const url = new URL(request.url);
   const fromQuery = url.searchParams.get("key");
   const header = request.headers.get("Authorization") || "";
   const fromHeader = header.startsWith("Bearer ") ? header.slice(7) : "";
-  return fromQuery === env.MORNING_PLAYS_TRIGGER_SECRET
-    || fromHeader === env.MORNING_PLAYS_TRIGGER_SECRET;
+  return fromQuery === secret || fromHeader === secret;
 }
 
 async function slotOf(request) {
@@ -92,21 +94,22 @@ export const onRequest = async ({ request, env }) => {
     return json(405, { ok: false, message: "Use GET or POST." });
   }
   // Fail closed: an unset secret disables the trigger instead of opening it.
-  if (!env.MORNING_PLAYS_TRIGGER_SECRET) {
+  const secret = cleanSecret(env.MORNING_PLAYS_TRIGGER_SECRET);
+  if (!secret) {
     return json(503, {
       ok: false, configured: false,
       message: "MORNING_PLAYS_TRIGGER_SECRET not configured — trigger disabled. "
         + "Set it in Cloudflare Pages env vars (see functions/api/morning_plays.js).",
     });
   }
-  if (!authorised(request, env)) return json(401, { ok: false, message: "Unauthorized." });
+  if (!authorised(request, secret)) return json(401, { ok: false, message: "Unauthorized." });
 
   const slot = await slotOf(request);
   if (!VALID_SLOTS.includes(slot)) {
     return json(400, { ok: false, message: `slot must be one of ${VALID_SLOTS.join("|")}.` });
   }
 
-  const token = env.GH_DISPATCH_TOKEN;
+  const token = cleanSecret(env.GH_DISPATCH_TOKEN);
   if (!token) {
     return json(503, {
       ok: false, configured: false,

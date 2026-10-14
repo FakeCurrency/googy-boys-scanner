@@ -5,11 +5,14 @@
  *
  * WHY THIS FILE EXISTS: after the 2026-08-20 bad-commit incident there was
  * nothing to read to answer "what else hit these endpoints in the last 24
- * hours". The log is the diagnosis trail; these tests pin the two properties
+ * hours". The log is the diagnosis trail; these tests pin the properties
  * it must never lose:
  *   1. A call gets logged — method/path/outcome/IP/country/UA reach KV.
  *   2. Logging is BEST-EFFORT — a KV failure must never block or change the
  *      underlying close/scan response.
+ *   3. (REFINE200 #158) A REFUSED call costs at most one write per caller IP
+ *      per hour — the caps limit dispatches, not calls, so a per-call write let
+ *      junk POSTs spend the whole KV write quota.
  *
  * Pattern follows test/api_guards.test.js: the REAL sources are read, the ESM
  * surface stripped, and the real helper prepended — no re-typed mirror.
@@ -20,6 +23,8 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
+// The suite MUST be able to fail CI (REFINE200 #165): it used to count its
+// failures and exit 0, so a broken contract printed a cross on a green run.
 let passed = 0, failed = 0;
 function test(name, fn) {
   return Promise.resolve()
@@ -36,14 +41,16 @@ const STRIP_EXPORTS = (src) => src
   .replace(/export\s+function/g, "function")
   .replace(/export\s+const/g, "const");
 const HELPER = STRIP_EXPORTS(SRC("_access_log.js"));
-// The shared dispatch transport, prepended real (see api_guards.test.js).
+// The shared dispatch transport and the request guards, prepended real (see
+// api_guards.test.js).
 const DISPATCH_HELPER = STRIP_EXPORTS(SRC("_dispatch.js"));
+const GUARD_HELPERS = STRIP_EXPORTS(SRC("_secrets.js")) + "\n" + STRIP_EXPORTS(SRC("_same_origin.js"));
+const LOCAL_IMPORTS = /^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm;
 
 function loadModule(file, { strip = [], sandboxExtra = {} } = {}) {
   let source = SRC(file);
-  source = source.replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_access_log\.js";\s*$/m, "");
-  source = source.replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_dispatch\.js";\s*$/m, "");
-  source = HELPER + "\n" + DISPATCH_HELPER + "\n" + source;
+  source = source.replace(LOCAL_IMPORTS, "");
+  source = GUARD_HELPERS + "\n" + HELPER + "\n" + DISPATCH_HELPER + "\n" + source;
   for (const [re, sub] of strip) source = source.replace(re, sub);
   const sandbox = {
     Response, Request, URL, TextEncoder, JSON, Math, Date, String, Number,
@@ -72,6 +79,7 @@ function fakeKV(initial = {}) {
 const alogEntries = (kv) =>
   [...kv.store.entries()].filter(([k]) => k.startsWith("alog:"))
     .map(([k, v]) => [k, JSON.parse(v)]);
+const alogWrites = (kv) => kv.ops.filter(([op, k]) => op === "put" && k.startsWith("alog:")).length;
 
 // Standalone helper sandbox (for outcomeOf / logAccess unit cases).
 const A = (() => {
@@ -85,12 +93,16 @@ const A = (() => {
   return { outcomeOf: sandbox.__o, logAccess: sandbox.__l, withAccessLog: sandbox.__w };
 })();
 
+// The envelope Cloudflare adds, plus what the site's own pages send (a
+// same-origin JSON POST; close.js and scan.js refuse anything else).
 const req = (url, init, headers = {}) => new Request(url, {
   ...init,
   headers: {
     "CF-Connecting-IP": "9.8.7.6",
     "CF-IPCountry": "AU",
     "User-Agent": "test-agent/1.0",
+    "Content-Type": "application/json",
+    Origin: new URL(url).origin,
     ...headers,
   },
 });
@@ -138,21 +150,43 @@ const req = (url, init, headers = {}) => new Request(url, {
     assert.equal(e.ua.length, 120);
   });
 
-  await test("there is no coalescing branch left to opt into", async () => {
-    // It existed for /api/journal's 60-second GET poll, whose write volume would
-    // have eaten the KV quota the sync itself needed. That endpoint went with the
-    // manual journal on 2026-09-21, and both remaining callers are daily-capped
-    // dispatch endpoints — so every call is logged individually. If a polled
-    // endpoint is ever added, coalescing comes back with it rather than sitting
-    // here uncalled (the header carries the argument).
+  await test("every DISPATCHED call gets its own entry (bounded by the endpoints' daily caps)", async () => {
     const src = SRC("_access_log.js");
-    assert.ok(!/coalesceOk/.test(src), "coalesceOk is back with no polled caller");
+    assert.ok(!/coalesceOk/.test(src), "the /api/journal-era coalescing flag is back");
     const kv = fakeKV();
-    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 200);
-    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 200);
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 202);
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 202);
     const entries = alogEntries(kv);
     assert.equal(entries.length, 2, "each dispatch call gets its own entry");
-    assert.ok(!entries.some(([k]) => k.startsWith("alog:seen:")), "no seen markers");
+    assert.ok(entries.every(([k]) => !k.startsWith("alog:refused:")));
+  });
+
+  await test("REFUSED calls cost one write per IP per path per hour, not one per call (#158)", async () => {
+    // Measured before: 100 POSTs, 1 dispatch, 99 refusals, 100 log writes --
+    // ~1,000 junk calls spent the day's whole KV write quota.
+    const kv = fakeKV();
+    for (const status of [429, 429, 400, 403, 503, 429]) {
+      await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", status);
+    }
+    assert.equal(alogWrites(kv), 1, "six refusals from one IP in one hour must cost ONE write");
+    const [[key, e]] = alogEntries(kv);
+    assert.match(key, /^alog:refused:\/api\/scan:\d{4}-\d{2}-\d{2}T\d{2}:9\.8\.7\.6$/);
+    assert.equal(e.s, 429, "the marker records the hour's FIRST refusal");
+    assert.equal(e.ip, "9.8.7.6");
+    // A second IP, or a second path, is its own record.
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }, { "CF-Connecting-IP": "1.2.3.4" }), "/api/scan", 429);
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/close", { method: "POST" }), "/api/close", 400);
+    assert.equal(alogWrites(kv), 3);
+  });
+
+  await test("a refusal stream does not block the log of a real dispatch", async () => {
+    const kv = fakeKV();
+    for (let i = 0; i < 20; i++) {
+      await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 429);
+    }
+    await A.logAccess({ JOURNAL_KV: kv }, req("https://x/api/scan", { method: "POST" }), "/api/scan", 202);
+    assert.equal(alogWrites(kv), 2);
+    assert.equal(alogEntries(kv).filter(([, e]) => e.o === "ok").length, 1);
   });
 
   suite("withAccessLog — the wrapper contract");
@@ -185,17 +219,20 @@ const req = (url, init, headers = {}) => new Request(url, {
 
   const loadClose = (fetchImpl) => loadModule("close.js", {
     strip: [[/export const onRequestPost = withAccessLog\(/, "globalThis.onRequestPost = withAccessLog("]],
-    sandboxExtra: { fetch: fetchImpl },
+    // close.js logs a close its price band could not check (no ASSETS here);
+    // api_guards.test.js asserts on that line, this suite only silences it.
+    sandboxExtra: { fetch: fetchImpl, console: { ...console, log: () => {} } },
   }).onRequestPost;
 
   const closeCall = (env, body) => loadClose(async () => new Response(null, { status: 204 }))({
     env,
     request: req("https://x/api/close", { method: "POST", body: JSON.stringify(body) }),
   });
+  const batchOf = (symbol) => ({ journal_type: "bot", closes: [{ symbol, price: 42, market: "asx" }] });
 
   await test("an unconfigured close (503) is logged with its status", async () => {
     const kv = fakeKV();
-    const res = await closeCall({ JOURNAL_KV: kv }, { symbol: "BHP", price: 42, market: "asx" });
+    const res = await closeCall({ JOURNAL_KV: kv }, batchOf("BHP"));
     assert.equal(res.status, 503);
     const [, e] = alogEntries(kv)[0];
     assert.equal(e.p, "/api/close");
@@ -204,8 +241,7 @@ const req = (url, init, headers = {}) => new Request(url, {
 
   await test("a dispatched close (202) is logged ok — and the body is NOT in the log", async () => {
     const kv = fakeKV();
-    const res = await closeCall({ JOURNAL_KV: kv, GH_DISPATCH_TOKEN: "tok" },
-      { symbol: "SECRETSYM", price: 42, market: "asx", journal_type: "bot" });
+    const res = await closeCall({ JOURNAL_KV: kv, GH_DISPATCH_TOKEN: "tok" }, batchOf("SECRETSYM"));
     assert.equal(res.status, 202);
     const entries = alogEntries(kv);
     assert.equal(entries.length, 1);
@@ -225,8 +261,7 @@ const req = (url, init, headers = {}) => new Request(url, {
       put: async (k) => { if (k.startsWith("alog:")) throw new Error("kv write down"); store.set(k, "1"); },
       delete: async () => {},
     };
-    const res = await closeCall({ JOURNAL_KV: kv, GH_DISPATCH_TOKEN: "tok" },
-      { symbol: "BHP", price: 42, market: "asx", journal_type: "bot" });
+    const res = await closeCall({ JOURNAL_KV: kv, GH_DISPATCH_TOKEN: "tok" }, batchOf("BHP"));
     assert.equal(res.status, 202, "the close dispatch must not be blocked by a log failure");
   });
 
@@ -249,7 +284,26 @@ const req = (url, init, headers = {}) => new Request(url, {
     assert.equal(events[0][1].o, "rate-limited");
   });
 
+  await test("a refused cross-site scan is logged once, and dispatches nothing", async () => {
+    const kv = fakeKV();
+    let hits = 0;
+    const scan = loadScan(async () => { hits++; return new Response(null, { status: 204 }); });
+    for (let i = 0; i < 5; i++) {
+      const res = await scan({
+        env: { JOURNAL_KV: kv, GH_DISPATCH_TOKEN: "tok" },
+        request: req("https://x/api/scan", { method: "POST", body: JSON.stringify({ market: "asx" }) },
+          { Origin: "https://evil.example", "Sec-Fetch-Site": "cross-site" }),
+      });
+      assert.equal(res.status, 403);
+    }
+    assert.equal(hits, 0);
+    assert.equal(alogWrites(kv), 1, "five refused calls, one log write");
+    assert.equal(alogEntries(kv)[0][1].s, 403);
+  });
+
   // (The journal.js access-log suite went with the KV journal store on
   //  2026-09-21 — the manual journal it served was removed.)
 
+  console.log(`\naccess_log.test.js: ${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
 })();

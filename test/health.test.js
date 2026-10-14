@@ -5,7 +5,9 @@
  * :47 ASX backstop asked that default question ("did a scan land this hour?"),
  * always got "yes" from crypto's commit, and skipped itself every single time —
  * so the ghosted :07 ASX runs it exists to rescue were never rescued. The
- * per-market mode is the fix, and these tests pin it.
+ * per-market mode is the fix, and these tests pin it. (That backstop was
+ * replaced by scripts/scan_gate.py on 2026-10-05; the per-market mode is now a
+ * manual / diagnostic probe, and its answers are still pinned here.)
  *
  * Runs under plain node with no dependencies. health.js is an ES module and
  * this suite is CommonJS (the repo has no package.json "type"), so the source
@@ -94,14 +96,14 @@ const tests = [
     assert.equal(asx.body.ok, false, "...while ASX has not scanned in 9h");
   }),
 
-  test("a stale market answers 503 so the caller runs the missed scan", async () => {
+  test("a stale market answers 503 (a manual probe sees the gap; scan_gate.py owns the catch-up now)", async () => {
     const { status, body } = await call("?market=asx&max_h=1", MIXED);
     assert.equal(status, 503);
     assert.equal(body.market, "asx");
     assert.ok(body.age_h >= 8.9 && body.age_h <= 9.1, `age_h was ${body.age_h}`);
   }),
 
-  test("a market that did scan this hour answers ok, so the backstop skips", async () => {
+  test("a market that did scan this hour answers ok", async () => {
     const { status, body } = await call("?market=crypto&max_h=1", MIXED);
     assert.equal(status, 200);
     assert.equal(body.ok, true);
