@@ -240,7 +240,9 @@ def write_stats(market: str, signals: list, out_dir: str = None) -> str:
         "survivorship_bias": True,   # yfinance prototype — no delisted history
     }
     path = os.path.join(out_dir, f"{market}.json")
-    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+    tmp = path + ".tmp"         # atomic: the nightly reads this mid-replay
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(stats, fh, indent=2)
         fh.write("\n")
+    os.replace(tmp, path)
     return path
