@@ -1288,21 +1288,17 @@
   }
 
 
-  // ── Edge tracker: forward expectancy per setup cell (timeframe × trigger) ──
-  // This is the table that eventually says which setups ACTUALLY make money
-  // forward — the backtest's answer (weekly reclaim best) checked against real
-  // closed trades. Cells need ~20 trades before the numbers mean anything.
-  // Bot book only (the ✏️ manual section went 2026-09-21). NOTE: the
-  // #edge-tracker host left journal.html on 2026-09-21 with the comparison
-  // overview, so renderEdgeTracker() returns before drawing.
+  // ── Setup cells: forward expectancy per (timeframe × trigger) ────────────
+  // The edge card below reads the bot book's closed trades grouped by setup
+  // cell. The full edge/lens tracker TABLES left journal.html on 2026-09-21
+  // with the comparison overview, and their never-drawing renderers were
+  // deleted 2026-10-14 (REFINE200 WP16; pinned in test/hygiene.test.js).
   const TRACKER_SIDES = () => [["🤖 Claude", state.bot.closed]];
 
   // ── Edge headline card (UX top-10 #8, 2026-07-26) ─────────────────────────
-  // The edge tracker's single most important row: the best-performing setup
-  // cell in the bot book (min 4 closed trades so one lucky fill can't crown
-  // itself), plus a caution line when a cell with 4+ trades is bleeding. Same
-  // aggregation as renderEdgeTracker — one number, zero new data. Lives in the
-  // Performance fold.
+  // The best-performing setup cell in the bot book (min 4 closed trades so
+  // one lucky fill can't crown itself), plus a caution line when a cell with 4+ trades is bleeding. One
+  // number, zero new data. Lives in the Performance fold.
   function renderEdgeCard() {
     const box = $("#jr-edge-card");
     if (!box) return;
@@ -1329,93 +1325,6 @@
       `<span class="jr-ec-sub">${win}% win · ${best.n} closed</span>` +
       (worst !== best && worst.sumR / worst.n < -0.2
         ? `<span class="jr-ec-warn">⚠ leaking: ${esc(worst.key)} ${rfmt(worst.sumR / worst.n)} over ${worst.n}</span>` : "");
-  }
-  const sideRow = (label, cols) =>
-    `<tr><td colspan="${cols}" style="text-align:left;font-weight:700;padding:12px 8px 6px;color:var(--muted)">${label}</td></tr>`;
-  const sideEmptyRow = (cols) =>
-    `<tr><td colspan="${cols}" style="text-align:left;color:var(--muted)">No closed trades yet.</td></tr>`;
-  const thinMark = (n) => n < 20 ? ` <span class="num-sub" title="Fewer than 20 trades — read directionally only">⚠</span>` : "";
-
-  function renderEdgeTracker() {
-    const host = $("#edge-tracker");
-    if (!host) return;
-    const sides = TRACKER_SIDES();
-    if (!sides.some(([, list]) => list.some((t) => t.realized_r != null))) {
-      host.innerHTML = `<div class="jr-empty">No closed trades yet — as positions close, this breaks down
-        win rate and average R by setup (e.g. Weekly reclaim vs Daily reclaim), so you can see which
-        cells carry the edge forward, not just in the backtest.</div>`;
-      return;
-    }
-    const section = (label, list) => {
-      const closed = list.filter((t) => t.realized_r != null);
-      if (!closed.length) return sideRow(label, 5) + sideEmptyRow(5);
-      const cells = new Map();
-      for (const t of closed) {
-        const tf = TF_NAME[t.timeframe] || t.timeframe || "?";
-        const et = String(entryTypeOf(t) || "—").toLowerCase();
-        const key = `${tf} ${et}`;
-        let c = cells.get(key);
-        if (!c) { c = { key, et, n: 0, wins: 0, sumR: 0 }; cells.set(key, c); }
-        c.n += 1; c.sumR += t.realized_r;
-        if (t.realized_r > 0) c.wins += 1;
-      }
-      return sideRow(label, 5) + [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
-        const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
-        return `<tr>
-          <td><span class="jr-setup ${SETUP_CLS[c.et] || ""}">${esc(c.key)}</span></td>
-          <td class="num">${c.n}${thinMark(c.n)}</td>
-          <td class="num">${win.toFixed(0)}%</td>
-          <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
-          <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td></tr>`;
-      }).join("");
-    };
-    host.innerHTML = `<table class="jr-table"><thead><tr>
-      <th>Setup</th><th class="num">Trades</th><th class="num">Win %</th>
-      <th class="num">Avg R</th><th class="num">Total R</th></tr></thead>
-      <tbody>${sides.map(([l, list]) => section(l, list)).join("")}</tbody></table>`;
-  }
-
-  // ── Lens tracker: same idea as the edge tracker, but split by which LENS
-  // produced the trade (vivek_run stamps bot trades since 2026-07-20; older
-  // trades group under "untagged"). Bot book only. NOTE: its #lens-tracker
-  // host also left journal.html on 2026-09-21, so this returns before drawing.
-  function renderLensTracker() {
-    const host = $("#lens-tracker");
-    if (!host) return;
-    const sides = TRACKER_SIDES();
-    if (!sides.some(([, list]) => list.some((t) => t.realized_r != null))) {
-      host.innerHTML = `<div class="jr-empty">No closed trades yet — as positions close, this shows
-        win rate and expectancy per LENS (VIVEK vs PhaseMap vs Specs), so the three-lens system gets
-        judged by results, not vibes.</div>`;
-      return;
-    }
-    const section = (label, list) => {
-      const closed = list.filter((t) => t.realized_r != null);
-      if (!closed.length) return sideRow(label, 6) + sideEmptyRow(6);
-      const cells = new Map();
-      for (const t of closed) {
-        const key = String(t.lens || "untagged").toLowerCase();
-        let c = cells.get(key);
-        if (!c) { c = { key, n: 0, wins: 0, sumR: 0, sumD: 0 }; cells.set(key, c); }
-        c.n += 1; c.sumR += t.realized_r;
-        c.sumD += (dollarsOf(t) || 0);
-        if (t.realized_r > 0) c.wins += 1;
-      }
-      return sideRow(label, 6) + [...cells.values()].sort((a, b) => (b.sumR / b.n) - (a.sumR / a.n)).map((c) => {
-        const avg = c.sumR / c.n, win = 100 * c.wins / c.n;
-        return `<tr>
-          <td><span class="jr-setup">${esc(c.key.toUpperCase())}</span></td>
-          <td class="num">${c.n}${thinMark(c.n)}</td>
-          <td class="num">${win.toFixed(0)}%</td>
-          <td class="num ${rcls(avg)}">${rfmt(avg)}</td>
-          <td class="num ${rcls(c.sumR)}">${rfmt(c.sumR)}</td>
-          <td class="num ${pcls(c.sumD)}">${dfmt(c.sumD)}</td></tr>`;
-      }).join("");
-    };
-    host.innerHTML = `<table class="jr-table"><thead><tr>
-      <th>Lens</th><th class="num">Trades</th><th class="num">Win %</th>
-      <th class="num">Avg R</th><th class="num">Total R</th><th class="num">Total $</th></tr></thead>
-      <tbody>${sides.map(([l, list]) => section(l, list)).join("")}</tbody></table>`;
   }
 
   // ── NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05): one small box for the
@@ -1755,8 +1664,6 @@
     renderExitQuality();         // Fix-10 #1
     renderEdgeCard();
     renderNewPositions();
-    renderEdgeTracker();
-    renderLensTracker();
     const note = $("#bot-note");
     if (note) {
       if (botLoadErr) {
