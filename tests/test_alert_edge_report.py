@@ -108,3 +108,109 @@ def test_the_script_is_read_only_research():
     for p in (ROOT / "scanner").rglob("*.py"):
         assert "alert_edge_report" not in p.read_text(encoding="utf-8"), \
             f"the engine must not import the research script: {p}"
+
+
+# ── REFINE200 (2026-10-14): exclusions, excess, sectors, the hc rule ─────────
+
+def _r(day, market="asx", ticker="NGI", side="long", **kw):
+    return {"market": market, "base_day": day, "ticker": ticker, "side": side,
+            "fwd": {"5": 0.01}, **kw}
+
+
+def test_weekend_copies_of_one_base_bar_are_excluded_and_counted():
+    """#140: Sat/Sun stock rows were measured from Monday's close - the same
+    bar as Monday's own row. One observation, counted once."""
+    sat, sun, mon = _r("2026-10-10"), _r("2026-10-11"), _r("2026-10-12")
+    kept, n = aer.clean([sat, sun, mon], prices={})
+    assert kept == [mon] and n["weekend_duplicates"] == 2
+    kept, n = aer.clean([sat, sun], prices={})
+    assert kept == [sat] and n["weekend_duplicates"] == 1, "a weekend-only name keeps its first copy"
+    other = _r("2026-10-11", ticker="XYZ")
+    assert aer.clean([other, mon], prices={})[0] == [other, mon], "different names are never collapsed"
+    crypto = [_r("2026-10-10", market="crypto"), _r("2026-10-11", market="crypto")]
+    assert aer.clean(crypto, prices={})[0] == crypto, "crypto trades at the weekend"
+
+
+def test_a_legacy_wrong_token_crypto_row_is_excluded_and_counted():
+    jup = _r("2026-09-29", market="crypto", ticker="JUP", base_close=0.000327)
+    ok = _r("2026-09-29", market="crypto", ticker="ETH", base_close=2400.0)
+    new = _r("2026-10-13", market="crypto", ticker="JUP", base_close=0.000327, price_source="binance_vision")
+    kept, n = aer.clean([jup, ok, new], prices={"JUP": 0.3354, "ETH": 2505.5})
+    assert kept == [ok, new] and n["crypto_wrong_token"] == 1
+    from scanner import config
+    f = config.EDGE_CRYPTO_WRONG_TOKEN_FACTOR
+    near = _r("2026-09-29", market="crypto", ticker="QNT", base_close=70.0)
+    assert aer.clean([near], prices={"QNT": 70.0 * (f - 1)})[0] == [near], "a big real move is not a stranger"
+
+
+def test_excess_is_the_move_beyond_the_market_in_the_called_direction():
+    long_ = {"side": "long", "fwd": {"5": 0.05}, "bench": {"5": 0.02}}
+    short = {"side": "short", "fwd": {"5": -0.05}, "bench": {"5": -0.01}}
+    assert abs(aer.excess(long_, "5") - 0.03) < 1e-12
+    assert abs(aer.excess(short, "5") - 0.04) < 1e-12, "a short that fell 4pp more than the index"
+    assert aer.excess({"side": "long", "fwd": {"5": 0.05}}, "5") is None, "no benchmark -> no excess"
+
+
+def test_sector_labels_fold_to_gics_for_analysis_only():
+    assert aer.norm_sector("Financial Services") == "Financials"
+    assert aer.norm_sector("Banks") == aer.norm_sector("Insurance") == "Financials"
+    assert aer.norm_sector("Healthcare") == "Health Care"
+    assert aer.norm_sector("Equity Real Estate Investment Trusts (REITs)") == "Real Estate"
+    assert aer.norm_sector("Energy") == "Energy" and aer.norm_sector("") == "(no sector)"
+    assert aer.sector_of({"market": "nasdaq", "ticker": "X", "sector": "Technology"}, {}) == \
+        "Information Technology", "the row's own frozen sector wins"
+
+
+def test_the_alias_table_never_reaches_the_bot():
+    """#40 is analysis-only: the bot's per-sector cap keeps its own labels
+    (overwriting a sector there is a trade change - REFINEMENTS #112)."""
+    for p in (ROOT / "scanner").rglob("*.py"):
+        if p.name == "config.py":
+            continue
+        text = p.read_text(encoding="utf-8")
+        assert "EDGE_SECTOR_ALIASES" not in text and "EDGE_CRYPTO_WRONG_TOKEN_FACTOR" not in text, p
+
+
+def test_legacy_roster_rows_are_split_by_the_rule_in_force_when_filed():
+    assert aer.hc_rule_of({"base_day": "2026-09-10"}) == aer.HC_RULE_RETIRED
+    assert aer.hc_rule_of({"base_day": "2026-09-19"}) == aer.HC_RULE_UNKNOWN
+    assert aer.hc_rule_of({"base_day": "2026-10-01"}) == aer.HC_RULE_FOUR_CELL
+    assert aer.hc_rule_of({"base_day": "2026-09-10", "hc_rule": "x"}) == "x", "a stamp always wins"
+
+
+def test_the_legacy_four_cell_label_is_what_the_roster_stamps_today():
+    spec2 = importlib.util.spec_from_file_location("edge_rosters", ROOT / "scripts" / "edge_rosters.py")
+    er = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(er)
+    assert er.hc_rule() == aer.HC_RULE_FOUR_CELL, \
+        "HC_CELLS moved: keep HC_RULE_FOUR_CELL as the 2026-09-21..10-14 rule, do not edit it"
+
+
+def test_the_roster_reader_sees_shards_and_the_unmigrated_file_alike(tmp_path):
+    import json
+    spec2 = importlib.util.spec_from_file_location("edge_rosters", ROOT / "scripts" / "edge_rosters.py")
+    er = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(er)
+    path = tmp_path / "edge_rosters.json"
+    rows = [dict(_r("2026-08-20"), key="a"), dict(_r("2026-09-02"), key="b")]
+    path.write_text(json.dumps({"entries": rows}), encoding="utf-8")
+    assert aer.load_rosters(str(path)) == rows
+    led = er.load_ledger(str(path))
+    er.write_ledger(led, str(path))
+    assert aer.load_rosters(str(path)) == rows == er.load_ledger(str(path))["entries"]
+
+
+def test_the_report_prints_its_exclusions_and_excess(tmp_path, monkeypatch, capsys):
+    import json
+    led = tmp_path / "ledger.json"
+    led.write_text(json.dumps({"entries": [
+        dict(_r("2026-10-12"), count=2, lenses=["PHASEMAP", "VIVEK"], fwd={"5": 0.05}, bench={"5": 0.01}),
+        dict(_r("2026-10-11"), count=2, lenses=["PHASEMAP", "VIVEK"])]}), encoding="utf-8")
+    monkeypatch.setattr(aer, "LEDGER", str(led))
+    monkeypatch.setattr(aer, "ROSTERS", str(tmp_path / "none.json"))
+    monkeypatch.setattr(aer, "load_sectors", lambda: {})
+    assert aer.main([]) == 0
+    out = capsys.readouterr().out
+    assert "'weekend_duplicates': 1" in out
+    line = next(l for l in out.splitlines() if "EXCESS vs index" in l)
+    assert "n=   1" in line and "+4.00%" in line

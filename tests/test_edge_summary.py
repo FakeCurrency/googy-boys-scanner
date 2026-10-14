@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import math
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -172,3 +171,75 @@ def test_the_digest_leg_is_gone_and_the_report_still_lands_in_the_summary():
     wf = (ROOT / ".github" / "workflows" / "alert_returns.yml").read_text(encoding="utf-8")
     assert "DISCORD_WEBHOOK_URL" not in wf, "the removed channel crept back in"
     assert "GITHUB_STEP_SUMMARY" in wf, "the report must still land somewhere readable"
+
+
+# ---------------------------------------------------------------- REFINE200
+
+def _write(tmp_path, monkeypatch, aligned, rosters, prices=None):
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(json.dumps({"entries": aligned}), encoding="utf-8")
+    roster = tmp_path / "rosters.json"
+    roster.write_text(json.dumps({"entries": rosters}), encoding="utf-8")
+    cp = tmp_path / "crypto_prices.json"
+    cp.write_text(json.dumps({"prices": prices or {}}), encoding="utf-8")
+    monkeypatch.setattr(es.aer, "LEDGER", str(ledger))
+    monkeypatch.setattr(es.aer, "ROSTERS", str(roster))
+    monkeypatch.setattr(es.aer, "CRYPTO_PRICES", str(cp))
+    monkeypatch.setattr(es.aer, "load_sectors", lambda: {})
+
+
+def test_every_market_gets_its_own_block_with_its_n(tmp_path, monkeypatch):
+    """#29/#38: the pooled number hid that crypto is <2% of the rows; each
+    market now publishes its own blocks, n beside every mean."""
+    _write(tmp_path, monkeypatch,
+           [_entry(market="asx", ticker="BHP"), _entry(market="crypto", ticker="ETH")],
+           [_entry(market="nasdaq", ticker="AAPL")])
+    out = es.build()
+    assert set(out["by_market"]) == {"asx", "nasdaq", "crypto"}
+    assert out["by_market"]["crypto"]["aligned"]["5"]["dedup"]["n"] == 1
+    assert out["by_market"]["nasdaq"]["baseline_aplus"]["5"]["dedup"]["n"] == 1
+    assert out["by_market"]["asx"]["baseline_aplus"]["5"]["dedup"]["n"] == 0
+    assert out["aligned"]["5"]["dedup"]["n"] == 2, "the pooled block is still there"
+
+
+def test_excess_is_published_beside_raw_with_how_many_rows_carry_a_benchmark(tmp_path, monkeypatch):
+    benched = dict(_entry(ticker="BHP", fwd={"5": 0.05}), bench={"5": 0.02})
+    plain = _entry(ticker="CBA", fwd={"5": 0.01})
+    _write(tmp_path, monkeypatch, [benched, plain], [])
+    blk = es.build()["aligned"]["5"]
+    assert blk["dedup"]["n"] == 2 and blk["bench_n"] == 1
+    assert abs(blk["excess"]["dedup"]["mean"] - 0.03) < 1e-9
+    assert blk["excess"]["long"]["n"] == 1 and blk["excess"]["short"]["n"] == 0
+
+
+def test_exclusions_are_applied_and_published(tmp_path, monkeypatch):
+    sat = _entry(ticker="MSEX", day="2026-10-03")
+    mon = _entry(ticker="MSEX", day="2026-10-05")
+    jup = dict(_entry(market="crypto", ticker="JUP"), base_close=0.000327)
+    _write(tmp_path, monkeypatch, [], [sat, mon, jup], prices={"JUP": 0.3354})
+    out = es.build()
+    assert out["exclusions"]["baseline_aplus"] == {"weekend_duplicates": 1, "crypto_wrong_token": 1}
+    assert out["baseline_aplus"]["5"]["dedup"]["n"] == 1
+
+
+def test_sector_splits_are_folded_to_gics(tmp_path, monkeypatch):
+    _write(tmp_path, monkeypatch,
+           [dict(_entry(ticker="A"), sector="Financial Services"), dict(_entry(ticker="B"), sector="Banks")],
+           [])
+    sec = es.build()["sectors"]["aligned"]
+    assert list(sec) == ["Financials"] and sec["Financials"]["n"] == 2
+
+
+def test_the_new_math_is_imported_too():
+    src = (ROOT / "scripts" / "edge_summary.py").read_text(encoding="utf-8")
+    for fn in ("aer.excess", "aer.clean", "aer.load_rosters", "aer.sector_of"):
+        assert fn in src, f"summary must call the report's own {fn}"
+
+
+def test_schema_1_keys_survive(tmp_path, monkeypatch):
+    _write(tmp_path, monkeypatch, [_entry()], [_entry(ticker="CBA")])
+    out = es.build()
+    for k in ("schema_version", "generated_at", "note", "aligned", "baseline_aplus"):
+        assert k in out
+    assert set(out["aligned"]["5"]) >= {"dedup", "long", "short"}
+    json.dumps(out, allow_nan=False)

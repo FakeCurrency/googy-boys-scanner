@@ -9,6 +9,17 @@ dedup headline per horizon for the aligned cohort and the roster baseline,
 split by side. A future surface can render it; today it makes the edge
 numbers diffable day over day in git.
 
+REFINE200 (2026-10-14), schema 2 - every key schema 1 had is still there:
+  * `by_market` (#29, #38): the aligned and baseline blocks per market beside
+    the pooled ones, each stat with its n (crypto's ~50 rows read as thin);
+  * `excess` + `bench_n` per horizon (#28): signed (move - market benchmark)
+    over the rows that carry a benchmark (stamped since 2026-10-14), and how
+    many do;
+  * `exclusions`: rows clean() kept out of every statistic (weekend
+    duplicates of one base bar, legacy wrong-token crypto rows), counted;
+  * `sectors` (#40): the 5-session dedup cohorts by GICS sector, labels
+    folded for analysis only (config.EDGE_SECTOR_ALIASES).
+
 Prints EDGE_SUMMARY_UNCHANGED when the content (minus generated_at) matches
 the committed file. ASCII prints; atomic write via scanner.output.write_json.
 """
@@ -47,36 +58,59 @@ def cohort_block(entries, horizons) -> dict:
         rows = [e for e in entries if (e.get("fwd") or {}).get(h) is not None]
         first = aer.dedup_first(rows)
         sg = [aer.signed(e["fwd"][h], e["side"]) for e in first]
+        ex = {s: [aer.excess(e, h) for e in first if s in ("dedup", e["side"])]
+              for s in ("dedup", "long", "short")}
         block[h] = {
             "dedup": _clean(aer.cohort_stats(sg)),
             "long": _clean(aer.cohort_stats(
                 [aer.signed(e["fwd"][h], e["side"]) for e in first if e["side"] == "long"])),
             "short": _clean(aer.cohort_stats(
                 [aer.signed(e["fwd"][h], e["side"]) for e in first if e["side"] == "short"])),
+            "bench_n": sum(1 for v in ex["dedup"] if v is not None),
+            "excess": {s: _clean(aer.cohort_stats(v)) for s, v in ex.items()},
         }
     return block
+
+
+def sector_block(entries, h="5") -> dict:
+    """{GICS sector: dedup stats} at one horizon (labels folded, analysis only)."""
+    sectors = aer.load_sectors()
+    first = aer.dedup_first([e for e in entries if (e.get("fwd") or {}).get(h) is not None])
+    by: dict = {}
+    for e in first:
+        by.setdefault(aer.sector_of(e, sectors), []).append(aer.signed(e["fwd"][h], e["side"]))
+    return {k: _clean(aer.cohort_stats(v)) for k, v in sorted(by.items())}
 
 
 def build() -> dict:
     with open(aer.LEDGER, encoding="utf-8") as fh:
         aligned = json.load(fh)["entries"]
-    try:
-        with open(aer.ROSTERS, encoding="utf-8") as fh:
-            rosters = json.load(fh)["entries"]
-    except (OSError, ValueError, KeyError):
-        rosters = []
+    rosters = aer.load_rosters()
+    prices = aer.crypto_prices()
+    aligned, ex_aligned = aer.clean(aligned, prices)
+    rosters, ex_rosters = aer.clean(rosters, prices)
     aligned_days = {(e["market"], e["base_day"], e["ticker"]) for e in aligned}
     baseline = [e for e in rosters
                 if (e["market"], e["base_day"], e["ticker"]) not in aligned_days]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "note": ("Signed 5/10/20-session forward returns, deduped to first "
                  "alignment per name+side. aligned = multi-lens ledger; "
                  "baseline = plain grade_raw A+ rosters minus that day's "
-                 "aligned names. Same Yahoo plumbing both sides."),
+                 "aligned names. Same plumbing both sides. excess = signed "
+                 "(move - market benchmark) over the bench_n rows that carry "
+                 "one (stamped since 2026-10-14). exclusions = rows kept out "
+                 "of every statistic, counted."),
+        "exclusions": {"aligned": ex_aligned, "baseline_aplus": ex_rosters},
         "aligned": cohort_block(aligned, aer.HORIZONS),
         "baseline_aplus": cohort_block(baseline, aer.HORIZONS),
+        "by_market": {m: {"aligned": cohort_block([e for e in aligned if e["market"] == m], aer.HORIZONS),
+                          "baseline_aplus": cohort_block([e for e in baseline if e["market"] == m],
+                                                         aer.HORIZONS)}
+                      for m in aer.MARKETS},
+        "sectors": {"horizon": "5", "aligned": sector_block(aligned),
+                    "baseline_aplus": sector_block(baseline)},
     }
 
 
@@ -85,7 +119,7 @@ def main(argv=None) -> int:
     payload = build()
     n5 = ((payload["aligned"].get("5") or {}).get("dedup") or {}).get("n", 0)
     b5 = ((payload["baseline_aplus"].get("5") or {}).get("dedup") or {}).get("n", 0)
-    print(f"edge summary: aligned 5s dedup n={n5}, baseline n={b5}")
+    print(f"edge summary: aligned 5s dedup n={n5}, baseline n={b5}; excluded {payload['exclusions']}")
     try:
         with open(OUT, encoding="utf-8") as fh:
             prev = json.load(fh)
