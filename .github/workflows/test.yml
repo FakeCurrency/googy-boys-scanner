@@ -320,6 +320,13 @@ jobs:
       - name: Ignition lens (deck pill count rule, panel states, escaping, hide-when-absent)
         if: success() || failure()
         run: node test/ignition.test.js
+      # PHASEMAP page (REFINE200, 2026-10-14). Runs the shipped phasemap.js
+      # under a stub DOM: a superseded market's slow fetch never paints over
+      # (or writes "since you last checked" memory for) the market on screen,
+      # FLASHED keys off the snapshot's as_of bar date, and the header names
+      # both the scan date and the bars it read.
+      - name: PhaseMap page (market-switch race, FLASHED on the bar date)
+        run: node test/phasemap_page.test.js
       # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
       # reference, comments stripped) and deleted stay deleted: each pin fails
       # on the name coming back even as a string, and each file must still
