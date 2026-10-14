@@ -88,6 +88,23 @@ const tests = [
     assert.ok(!("market" in body), "no market key on the pipeline answer");
   }),
 
+  test("the pipeline answer names the breached loss guards (REFINE200 #68)", async () => {
+    // status.js lights the lamp off this field, so a page that has no other use
+    // for the ~370 KB book does not download it just to learn about a breach.
+    const book = {
+      updated_at: hoursAgo(0.2), open: [],
+      guard: { asx: { breached: false }, nasdaq: { breached: true, breach_kind: "weekly" },
+               crypto: { breached: true } },
+    };
+    const { body } = await call("", { "/data/vivek_bot_book.json": book });
+    assert.deepEqual(body.breached, [
+      { market: "nasdaq", kind: "weekly" }, { market: "crypto", kind: "loss limit" }]);
+    const clean = await call("", MIXED);
+    assert.deepEqual(clean.body.breached, [], "no guard block = nothing breached, not undefined");
+    const asx = await call("?market=asx&max_h=24", MIXED);
+    assert.ok(!("breached" in asx.body), "the per-market answer reads a sidecar with no book");
+  }),
+
   test("the combined book hides a stale ASX behind crypto's hourly commit", async () => {
     // This is the bug, pinned: same data, same hour, two different answers.
     const pipeline = await call("?max_h=1", MIXED);
