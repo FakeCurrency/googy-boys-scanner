@@ -78,6 +78,23 @@ def stall_summary(signals: list) -> dict:
     }
 
 
+def _fwd_line(b: dict) -> str:
+    return " · ".join(f"fwd {h}: " + ("—" if b.get(f"fwd_{h}") is None
+                      else f"{b[f'fwd_{h}'] * 100:+.1f}%") for h in CONFIG.fwd_return_bars)
+
+
+def tier_note(signals: list) -> str:
+    """REFINE200 #200: `tier` is the tier the card wears from its first
+    RUNNING session; the displacement-day card shows `card_tier`, because the
+    engine first evaluates anchor context on the bar after displacement."""
+    aplus = [s for s in signals if s.get("tier") == "A+"]
+    shown = sum(1 for s in aplus if s.get("card_tier") == "A+")
+    return (f"Tier = the tier a card wears from its first RUNNING session. "
+            f"Anchor context (the A+ condition) is evaluated from the bar after "
+            f"displacement, so the displacement-day card shows A or Watch: "
+            f"{shown} of {len(aplus)} A+ signals showed A+ on that day's card.")
+
+
 def _fmt_row(name, s):
     f = lambda v, suf="": ("—" if v is None else f"{v * 100:+.1f}%" if suf == "r"
                            else f"{v}{suf}")
@@ -144,9 +161,14 @@ def write_report(market: str, signals: list, rnd: dict, bh: dict,
         SURVIVORSHIP_BANNER,
         "",
         "A **signal** is a displacement confirmation (state DISPLACED). Forward "
-        "returns are measured from the entry-zone midpoint; \"T1 hit\" means the "
-        f"first target zone was CONSUMED within {CONFIG.stats_window_bars} sessions "
+        "returns are measured from the FILL, counted from the session it filled: "
+        "the entry-zone midpoint when price traded back through it within "
+        f"{CONFIG.stats_window_bars} sessions, otherwise the signal-bar close "
+        "(a gapper nobody could buy at the mid). \"T1 hit\" means the first "
+        f"target zone was CONSUMED within {CONFIG.stats_window_bars} sessions "
         "before any hard invalidation.",
+        "",
+        tier_note(signals),
         "",
         "| cohort | n | fwd 5 | fwd 10 | fwd 20 | T1 hit | bars→T1 | MAE |",
         "|---|---|---|---|---|---|---|---|",
@@ -160,9 +182,14 @@ def write_report(market: str, signals: list, rnd: dict, bh: dict,
     lines += r_section(signals)
     lines += [
         "## Baselines (same tickers, same window)",
-        f"- Random entry ({rnd['n']} samples, seeded): "
-        + " · ".join(f"fwd {h}: " + ("—" if rnd.get(f'fwd_{h}') is None
-                     else f"{rnd[f'fwd_{h}'] * 100:+.1f}%") for h in CONFIG.fwd_return_bars),
+        f"- Random entry, LONG only ({rnd['n']} samples, seeded) — compare with "
+        "the **long** cohort: "
+        + _fwd_line(rnd),
+        f"- Random entry, signed to the signals' own mix "
+        f"({(rnd.get('matched') or {}).get('n_long', 0)} long / "
+        f"{(rnd.get('matched') or {}).get('n_short', 0)} short) — compare with "
+        "**ALL SIGNALS**, which pools longs with direction-signed shorts: "
+        + _fwd_line(rnd.get("matched") or {}),
         f"- Buy & hold ({bh['n']} tickers): "
         + ("—" if bh.get("total_return") is None else f"{bh['total_return'] * 100:+.1f}%")
         + " mean total return over the replay window",

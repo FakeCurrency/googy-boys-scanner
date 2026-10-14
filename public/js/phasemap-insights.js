@@ -85,10 +85,15 @@
         `${hit(c["tier A"])}. Same rules — watch whether each market's badge ` +
         `earns its keep in the latest replay.`);
 
-    const rb = (asx.baselines && asx.baselines.random) || {};
-    const nrb = (nas && nas.baselines && nas.baselines.random) || {};
+    // ALL SIGNALS pools longs with direction-signed shorts, so its
+    // comparator is the random draws signed to the SAME mix (`matched`); the
+    // long-only drift is the long cohort's. Pooled-vs-long read a +0.9%
+    // edge as a loss to random (REFINE200 #200). Older stats lack `matched`.
+    const mix = (b) => (b && b.random && (b.random.matched || b.random)) || {};
+    const rb = mix(asx.baselines);
+    const nrb = mix(nas && nas.baselines);
     set("fi-frontload", "The edge vs random, horizon by horizon",
-      `ASX signals vs random entry — 5 sessions: ${spct(asx.all.fwd_5)} vs ` +
+      `ASX signals vs random entry with the same long/short mix — 5 sessions: ${spct(asx.all.fwd_5)} vs ` +
       `${spct(rb.fwd_5)} · 10: ${spct(asx.all.fwd_10)} vs ${spct(rb.fwd_10)} · ` +
       `20: ${spct(asx.all.fwd_20)} vs ${spct(rb.fwd_20)}. NASDAQ at 20: ` +
       `${spct(nas && nas.all && nas.all.fwd_20)} vs ${spct(nrb.fwd_20)}. ` +

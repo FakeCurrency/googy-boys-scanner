@@ -160,5 +160,32 @@ async function deliver(app, market, body) {
       "a carried-forward snapshot names the scan it carries");
   }
 
+  // 4. Insights (REFINE200 #200): ALL SIGNALS pools longs with signed
+  //    shorts, so its random comparator is the draws signed to the same mix,
+  //    not the long-only drift (+0.9% read as a loss to +1.9%).
+  {
+    const INS = fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap-insights.js"), "utf8");
+    const stats = (all20, rnd20, matched20) => ({
+      generated: "2026-10-11", ruleset_version: "1.3.1", cohorts: {},
+      all: { fwd_5: 0.001, fwd_10: 0.002, fwd_20: all20 },
+      baselines: { random: { fwd_5: 0.004, fwd_10: 0.009, fwd_20: rnd20,
+        ...(matched20 == null ? {} : { matched: { fwd_5: 0, fwd_10: 0, fwd_20: matched20 } }) } },
+    });
+    const run = async (asx, nas) => {
+      const els = {};
+      const document = { getElementById: (id) => (els[id] = els[id] || { innerHTML: "", textContent: "" }) };
+      const files = { "data/phasemap/stats/asx.json": asx, "data/phasemap/stats/nasdaq.json": nas };
+      const fetch = (url) => Promise.resolve({ ok: url in files, json: async () => files[url] });
+      new Function("fetch", "document", INS)(fetch, document);
+      await settle(); await settle(); await settle();
+      return els["fi-frontload"].innerHTML;
+    };
+    const line = await run(stats(0.0086, 0.0189, 0.0003), stats(0.01, 0.02, 0.001));
+    ok(line.includes("20: +0.9% vs +0.0%"), `ASX compares with the matched mix: ${line}`);
+    ok(line.includes("NASDAQ at 20: +1.0% vs +0.1%"), "NASDAQ too");
+    const old = await run(stats(0.0086, 0.0189, null), null);
+    ok(old.includes("20: +0.9% vs +1.9%"), "an older stats file without `matched` keeps working");
+  }
+
   console.log(`phasemap_page.test.js: ${checks} checks passed`);
 })().catch((e) => { console.error(e); process.exit(1); });
