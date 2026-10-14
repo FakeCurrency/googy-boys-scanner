@@ -367,7 +367,7 @@ def test_every_run_block_but_the_gate_is_the_crypto_block_for_the_twin(market):
 def test_the_asx_triggers_gate_group_cache_and_timeout():
     on = _on(ASX)
     crons = [c["cron"] for c in on["schedule"]]
-    assert crons == ["24 6 * * 1-5", "24 7,9 * * 1-5", "54 0,2,4 * * 1-5"]
+    assert crons == ["24 6 * * 1-5", "24 7,9 * * 1-5", "54 0,2,4 * * 1-5", "17 2 * * 0"]
     assert on["push"]["paths"] == [".github/ignition-asx-kick"]
     assert set(on["workflow_dispatch"]["inputs"]) == {"backtest", "dry_run"}
     assert ASX["concurrency"]["group"] == "ignition-asx-${{ github.ref_name }}"

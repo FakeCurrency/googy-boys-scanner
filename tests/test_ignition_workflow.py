@@ -65,6 +65,10 @@ KICK = ".github/ignition-kick"
 TWINS = ("ignition_asx.yml", "ignition_nasdaq.yml")
 PRIMARY_CRON = "14 0 * * *"
 BACKSTOP_CRON = "14 1,2 * * *"   # the scheduler-drop backstop the gate recognises
+WEEKLY_CRON = "37 3 * * 0"       # the weekly replay (REFINE200 #48)
+# Each workflow's weekly replay cron, staggered so no two replays share a slot.
+WEEKLY = {"ignition.yml": WEEKLY_CRON, "ignition_asx.yml": "17 2 * * 0",
+          "ignition_nasdaq.yml": "47 4 * * 0"}
 GATE_OK = "steps.due.outputs.run == 'true'"
 
 BASH = shutil.which("bash")
@@ -336,17 +340,37 @@ def test_every_step_after_the_gate_is_skipped_when_the_gate_says_no():
     assert {"scan", "bt"} <= gated
 
 
-def test_the_backtest_runs_only_on_a_kick_or_when_a_human_asks():
-    """The replay answers a question; it is not a feed. So no cron can run it
-    -- only a push (which can only be the kick file, pinned above) or a
-    manual dispatch with `backtest: true`."""
+def test_the_backtest_runs_on_a_kick_a_human_ask_or_the_weekly_replay_cron():
+    """The replay answers a question, but its FORWARD bucket only fills if it
+    re-runs (REFINE200 #48), so ONE cron runs it weekly: the gate flags that
+    cron (`backtest=true`), and only that one. Otherwise a push (which can only
+    be the kick file, pinned above) or a manual dispatch with `backtest: true`."""
     conj = _conjuncts(BT)
     assert GATE_OK in conj
     rest = [c for c in conj if c != GATE_OK]
     assert len(rest) == 1, conj
     assert set(_split_top(rest[0], "||")) == {"github.event_name == 'push'",
-                                              "inputs.backtest == true"}, rest
+                                              "inputs.backtest == true",
+                                              "steps.due.outputs.backtest == 'true'"}, rest
     assert "--backtest" in BT["run"] and "--backtest" not in "\n".join(_code(SCAN["run"]))
+
+
+def test_each_workflow_replays_weekly_on_its_own_staggered_sunday_slot():
+    for name, cron in WEEKLY.items():
+        doc = yaml.safe_load((WFDIR / name).read_text(encoding="utf-8"))
+        on = doc.get("on") or doc[True]
+        crons = [c["cron"] for c in on["schedule"]]
+        assert crons.count(cron) == 1, (name, crons)
+        minute, hour, dom, month, dow = cron.split()
+        assert (dom, month, dow) == ("*", "*", "0"), "Sunday: no session for any market"
+        assert minute not in ("0", "00"), "minute 0 is where GitHub's scheduler queues deepest"
+        gate = next(s for s in doc["jobs"]["ignition"]["steps"] if s.get("id") == "due")["run"]
+        assert '[ "${SCHEDULE:-}" = "%s" ]' % cron in gate, name
+        assert 'echo "backtest=true" >> "$GITHUB_OUTPUT"' in gate, name
+    slots = [tuple(int(x) for x in c.split()[:2]) for c in WEEKLY.values()]
+    assert len(set(slots)) == len(slots), "two replays share a slot"
+    gaps = sorted(h * 60 + m for m, h in slots)
+    assert all(b - a >= 60 for a, b in zip(gaps, gaps[1:])), "replays under an hour apart"
 
 
 def test_the_commit_step_runs_only_on_a_real_publish_and_never_on_a_dry_run():
@@ -629,7 +653,8 @@ def test_every_trigger_but_the_backstop_is_due_without_touching_git(sh, event, s
     _, work = _gate_repo(sh, _crypto(STAMP_TODAY))
     sh["git_log"].write_text("", encoding="utf-8")
     rc, out, log = _run_block(sh, GATE["run"], work, _gate_env(event, schedule))
-    assert (rc, out) == (0, {"run": "true"}), log
+    want = {"run": "true", **({"backtest": "true"} if schedule == WEEKLY_CRON else {})}
+    assert (rc, out) == (0, want), log
     assert sh["git_log"].read_text(encoding="utf-8") == "", "a non-backstop trigger ran git"
 
 

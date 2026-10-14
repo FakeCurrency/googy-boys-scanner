@@ -24,9 +24,11 @@ name: Ignition scan (NASDAQ)
 # a manual dispatch or a kick in the 16:00-16:30 gap still screens it as
 # provisional. Weekdays only: there is no NASDAQ bar on a weekend.
 #
-# THE BACKTEST is not scheduled. A manual dispatch with `backtest: true`, or a
-# push touching .github/ignition-nasdaq-kick, runs the screen AND the replay
-# and commits both files back to the PUSHED branch. ~1,430 listings (a name
+# THE BACKTEST runs WEEKLY (Sunday 04:47 UTC, staggered from its twins;
+# REFINE200 #48: the forward bucket only fills if the replay re-runs). That
+# run, a manual dispatch with `backtest: true`, or a push touching
+# .github/ignition-nasdaq-kick, runs the screen AND the replay
+# and commits both files back to the branch that ran. ~1,430 listings (a name
 # that never clears the turnover floors is dropped before the replay), full
 # Yahoo history: bounded at 300 minutes rather than the crypto job's 60.
 #
@@ -39,6 +41,7 @@ on:
     - cron: "34 21 * * 1-5"       # just past the 16:30 New York bar-final in both DST regimes
     - cron: "34 22,23 * * 1-5"    # scheduler-drop backstops for the run above
     - cron: "54 14,16,18 * * 1-5" # intraday: provisional breaks + RUNNING marks
+    - cron: "47 4 * * 0"         # WEEKLY REPLAY (Sunday 04:47 UTC): the forward bucket only fills if the replay re-runs
   push:
     paths:
       - ".github/ignition-nasdaq-kick"
@@ -107,6 +110,10 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "gate: intraday run landed at/after 15:30 New York - the 21:34 primary and its gated backstops own the close"
             exit 0
+          fi
+          # The WEEKLY REPLAY cron also runs the backtest step (REFINE200 #48).
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "${SCHEDULE:-}" = "47 4 * * 0" ]; then
+            echo "backtest=true" >> "$GITHUB_OUTPUT"
           fi
           if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "34 22,23 * * 1-5" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
@@ -178,7 +185,7 @@ jobs:
 
       - name: Backtest NASDAQ
         id: bt
-        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true)
+        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true || steps.due.outputs.backtest == 'true')
         run: |
           set -u
           set -o pipefail
