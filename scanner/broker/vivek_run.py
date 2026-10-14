@@ -514,7 +514,8 @@ def _stamp_day_ref(pos: dict, day: str, price: float | None) -> None:
 
 
 def _mark_sanity(pos: dict, price: float, market: str,
-                 session_open: bool = True) -> float | None:
+                 session_open: bool = True, frame=None,
+                 day: str | None = None) -> float | None:
     """Gate an observed price before it may manage `pos`. Returns the price to
     use, or None to SKIP managing this run (freeze, like an unpriced run).
 
@@ -555,15 +556,28 @@ def _mark_sanity(pos: dict, price: float, market: str,
     before the open is worth knowing about before the open. It just does not
     advance the counter, so the position enters its next session with the full
     budget it was promised.
+
+    SPLITS ARE RESTATED, NOT ACCEPTED AS MOVES (REFINE200 #8). Accepting used to
+    rebase only `last_mark`: entry/stop/risk/TPs/units stayed in the old basis,
+    so the same run's `_mark` read a 2-for-1 split as a -50% gap through the
+    stop. On the accepting run `_split_ratio` checks whether the vendor rewrote
+    history by a clean ratio (needs `frame`, which run_market passes, and the
+    session of the last accepted mark, `last_mark_day`, stamped on every
+    accept); if so `_apply_split` restates the position into the new basis
+    first. Anything that does not match cleanly is accepted as a real move,
+    exactly as before. `day` only dates the audit entry.
     """
+    bar_day = _last_bar_day(frame) or day
     limit = (getattr(config, "VIVEK_MARK_SANITY_PCT", {}) or {}).get(market, 0.0)
     ref = pos.get("last_mark") or 0.0
     if limit <= 0 or ref <= 0:
         pos["last_mark"] = round(price, 8)               # seed; guard from next run
+        _stamp_mark_day(pos, bar_day)
         return price
     move = abs(price / ref - 1.0)
     if move <= limit:
         pos["last_mark"] = round(price, 8)
+        _stamp_mark_day(pos, bar_day)
         pos.pop("suspect_price_runs", None)
         pos.pop("suspect_price", None)
         pos.pop("suspect_closed", None)
@@ -602,10 +616,15 @@ def _mark_sanity(pos: dict, price: float, market: str,
     pos["suspect_price"] = round(price, 8)
     accept_n = int(getattr(config, "VIVEK_MARK_SANITY_ACCEPT_RUNS", 3) or 3)
     if n >= accept_n:
-        log.warning("vivek_run: %s [%s] price %.6g is %+.0f%% vs last mark %.6g "
-                    "for the %dth consecutive run - ACCEPTING as real",
-                    pos.get("symbol"), market, price, move * 100, ref, n)
+        ratio = _split_ratio(pos, price, ref, frame, limit)
+        if ratio is not None:
+            _apply_split(pos, ratio, day, ref, price, market)
+        else:
+            log.warning("vivek_run: %s [%s] price %.6g is %+.0f%% vs last mark %.6g "
+                        "for the %dth consecutive run - ACCEPTING as real",
+                        pos.get("symbol"), market, price, move * 100, ref, n)
         pos["last_mark"] = round(price, 8)
+        _stamp_mark_day(pos, bar_day)
         pos.pop("suspect_price_runs", None)
         pos.pop("suspect_price", None)
         return price
@@ -626,6 +645,142 @@ def _mark_sanity(pos: dict, price: float, market: str,
         except Exception as e:
             log.warning("could not send suspect-price alert: %s", e)
     return None
+
+
+def _stamp_mark_day(pos: dict, day: str | None) -> None:
+    """Record the session an ACCEPTED mark belongs to (`last_mark_day`): the
+    date of the frame bar the price was read from -- the session whose close
+    `_split_ratio` later looks up in the vendor's history. A pre-market run
+    reads yesterday's bar, so its mark is dated yesterday, not today."""
+    if day:
+        pos["last_mark_day"] = str(day)
+
+
+def _last_bar_day(frame) -> str | None:
+    """ISO date of the frame's last bar (the session its last Close belongs to)."""
+    try:
+        return frame.index[-1].date().isoformat() if frame is not None and len(frame) else None
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _close_on_or_before(frame, last_day: str):
+    """The frame's last Close dated on/before `last_day` (ISO), or None."""
+    try:
+        closes = frame["Close"].tolist()
+        for ts, c in zip(reversed(list(frame.index)), reversed(closes)):
+            if ts.date().isoformat() <= last_day:
+                c = float(c)
+                return c if c == c and c > 0 else None
+    except Exception:                                       # noqa: BLE001
+        return None
+    return None
+
+
+def _split_ratio(pos: dict, price: float, ref: float, frame,
+                 limit: float) -> float | None:
+    """The clean split ratio (old price / new price) behind a suspect move, or
+    None when the move should be accepted as a real one.
+
+    The test is the vendor's own HISTORY, not the size of the move. With
+    auto_adjust a split rewrites every past bar, so the frame's close for the
+    session of the last accepted mark sits a clean ratio away from that mark
+    (the same close, in two bases); a crash leaves history alone, so the two
+    agree. Three conditions, all required:
+      1. the last accepted mark belongs to an EARLIER session than the price
+         being judged (`last_mark_day` < the frame's last bar; splits happen
+         between sessions);
+      2. mark / that session's close is within VIVEK_SPLIT_RATIO_TOL of a ratio
+         in VIVEK_SPLIT_RATIOS;
+      3. the new price is an ordinary move from the restated mark (inside the
+         same sanity band), i.e. the position is consistent in the new basis.
+
+    RESIDUAL AMBIGUITY, stated rather than hidden: (a) a vendor that does NOT
+    back-adjust (or adjusts later than it quotes) makes a split look like a
+    crash -- it is then accepted as a move, the pre-#8 behaviour; (b) a history
+    adjustment that is not a split but lands on a clean ratio (a very large
+    spin-off or special-dividend factor near 1/2) is restated as one, which is
+    still the right basis to hold the row in; (c) a split whose move stays
+    inside the sanity band (3-for-2 is -33%) is never challenged at all, so it
+    never reaches this; (d) a row whose last accepted mark came from the SAME
+    session's bar (or that predates `last_mark_day`) cannot be checked and is
+    accepted as a move. A crash can only be misread if the vendor's history
+    also moved by a clean ratio for the session before it, which a crash never
+    does.
+    """
+    last_day = str(pos.get("last_mark_day") or "")
+    cur_day = _last_bar_day(frame)
+    if not cur_day or not last_day or last_day >= cur_day or ref <= 0:
+        return None
+    hist = _close_on_or_before(frame, last_day)
+    if not hist:
+        return None
+    seen = ref / hist
+    tol = float(config.VIVEK_SPLIT_RATIO_TOL)
+    for r in config.VIVEK_SPLIT_RATIOS:
+        r = float(r)
+        if abs(seen / r - 1.0) <= tol and abs(price * r / ref - 1.0) <= limit:
+            return r
+    return None
+
+
+#: The fields of an open row that are PRICES (or a price distance) and so move
+#: with the share basis. Everything denominated in R or dollars -- realized_r,
+#: gross_r, cost_r, mae_r/mfe_r, risk_usd, notional, review -- is basis-free and
+#: must not move; units moves the other way.
+_SPLIT_PRICE_FIELDS = ("entry", "stop", "risk", "tp1", "tp2", "tp3",
+                       "mae", "mfe", "signal_entry")
+
+
+def _apply_split(pos: dict, ratio: float, day: str | None, ref: float,
+                 price: float, market: str) -> None:
+    """Restate an open position into the post-split basis (REFINE200 #8).
+
+    Prices / ratio, units x ratio, so R, notional and risk_usd are unchanged.
+    The booked exits and the guard's day references are restated too: the
+    cost model re-derives cost_r from entry + exit prices + risk on every mark,
+    and the loss guard measures windows from day_marks, so leaving either in
+    the old basis would move realised R or fake a day's loss. Audited in
+    `splits` [{date, ratio, mark_before, mark_after}]. `units_before` (the
+    2026-09-27 resize's audit) is history in the old basis and is left alone.
+    """
+    k = 1.0 / ratio
+    num = (int, float)
+    for f in _SPLIT_PRICE_FIELDS:
+        v = pos.get(f)
+        if isinstance(v, num) and not isinstance(v, bool):
+            pos[f] = round(float(v) * k, 8)
+    if isinstance(pos.get("units"), num):
+        pos["units"] = round(float(pos["units"]) * ratio, 8)
+    marks = pos.get("day_marks")
+    if isinstance(marks, dict):
+        pos["day_marks"] = {d: (round(float(v) * k, 8) if isinstance(v, num) else v)
+                            for d, v in marks.items()}
+    a = pos.get("anchor")
+    if isinstance(a, list) and len(a) == 2 and isinstance(a[1], num):
+        pos["anchor"] = [a[0], round(float(a[1]) * k, 10)]
+    for e in pos.get("exits") or []:
+        if isinstance(e, dict) and isinstance(e.get("price"), num):
+            e["price"] = round(float(e["price"]) * k, 8)
+    pos.setdefault("splits", []).append(
+        {"date": day, "ratio": round(ratio, 6),
+         "mark_before": round(ref, 8), "mark_after": round(price, 8)})
+    log.warning("vivek_run: %s [%s] SPLIT %g:1 detected (last mark %.6g, vendor "
+                "history rewritten; now %.6g) - position restated into the new "
+                "basis: entry %.6g stop %.6g units %.6g",
+                pos.get("symbol"), market, ratio, ref, price,
+                pos.get("entry") or 0.0, pos.get("stop") or 0.0, pos.get("units") or 0.0)
+    try:
+        from .alert_dispatch import send as _alert
+        _alert("anomaly",
+               f"SPLIT restated on {pos.get('symbol')} [{market}]",
+               f"Last mark {ref:.6g} -> {price:.6g}, and the vendor's history moved "
+               f"by the same clean ratio ({ratio:g}:1), so this was read as a split, "
+               f"not a crash. Prices / {ratio:g}, units x {ratio:g}; R, notional "
+               f"and risk_usd unchanged. Check the new stop "
+               f"({pos.get('stop')}) against the chart.")
+    except Exception as e:                                  # noqa: BLE001
+        log.warning("could not send split alert: %s", e)
 
 
 def _apply_level_gate(results: list[dict]) -> tuple[list[dict], int]:
@@ -780,6 +935,7 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # very first re-mark — the fill price is the first accepted mark. (Legacy
     # positions without last_mark get seeded on their first guarded run.)
     snap["last_mark"] = round(float(snap["entry"]), 8)
+    snap["last_mark_day"] = day
     return snap
 
 
@@ -1389,7 +1545,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # `session_open` is what stops a closed-market scan burning the 3-run
         # challenge budget on a run that could never have managed anything.
         if price is not None:
-            price = _mark_sanity(pos, price, market, session_open=is_open)
+            price = _mark_sanity(pos, price, market, session_open=is_open,
+                                 frame=frames.get(yf_map.get(pos["symbol"])), day=day)
         if price is not None:
             # An ACCEPTED mark is a price the book used -- it becomes last_mark,
             # unreal_r and tomorrow's guard reference -- so it belongs in
