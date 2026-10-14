@@ -210,6 +210,8 @@ jobs:
       - name: Deep chart history tests (stitched windows, reverse switch)
         if: success() || failure()
         run: node test/deep_history.test.js
+      - name: Chart refinements (REFINE200 #101-#118)
+        run: node test/chart_refine.test.js
       - name: System page live backtest panel
         if: success() || failure()
         run: node test/system_backtest.test.js
