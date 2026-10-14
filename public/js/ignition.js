@@ -58,6 +58,17 @@
   // A session market's run-age limit in WEEKDAY hours: a Friday screen read
   // Monday is ~18h old, a Monday holiday ~43h; two dead trading days flag.
   const STALE_SESSION_H = 50;
+  // A STALE TAPE: past this share of screened names a bar behind the newest
+  // one any name has (summary.bars.lagging / screened), the screen is flagged
+  // STALE however recently it ran. Mirrors config.IGNITION_LAG_RERUN_SHARE,
+  // the share at which the backstop re-runs (pinned by
+  // tests/test_ignition_frontend.py).
+  const LAG_STALE_SHARE = 0.5;
+  // THE EVIDENCE VERDICT, read off the backtest's own decision numbers
+  // (versus.random_timing): over this P(no edge), or a difference at or under
+  // zero, the line says "no edge shown"; a 90% band reaching zero says "not
+  // proven". Mirrors config.IGNITION_NO_EDGE_P (pinned likewise).
+  const NO_EDGE_P = 0.2;
   // The GitHub workflow that refreshes each market's file, as its runs page
   // names it: a STALE badge says which one to check.
   const WF_NAME = { crypto: "Ignition scan", asx: "Ignition scan (ASX)", nasdaq: "Ignition scan (NASDAQ)" };
@@ -219,6 +230,13 @@
         reasons.push("its newest completed daily bar is " + lastBar + ", but " + want +
           " closed at 00:00 UTC and the screen should have had it by " + STALE_BAR_GRACE_H + ":00 UTC");
       }
+    }
+    const lag = num(bars.lagging), scr = num(bars.screened);
+    if (lag != null && scr != null && scr > 0 && lag / scr > LAG_STALE_SHARE) {
+      reasons.push(lag.toLocaleString("en-US") + " of " + scr.toLocaleString("en-US") +
+        " screened names were on bars older than " +
+        (isDay(bars.expected_completed) ? bars.expected_completed : "the newest") +
+        " (the free feed had not served that close for them yet)");
     }
     const gen = Date.parse(payload.generated_at);
     if (!isFinite(gen)) {
@@ -804,6 +822,31 @@
       ? signed(v[0], 2) + ".." + signed(v[1], 2) : DASH;
   }
 
+  // What the decision numbers say, in words (REFINE200 #46: NASDAQ's replay
+  // is -0.015R a trade with P(no edge) 0.236 against random timing, and the
+  // line used to print that beside the other markets' numbers with nothing
+  // saying it shows no edge). THRESHOLDS ON PUBLISHED NUMBERS ONLY: no CI, P
+  // or difference is computed here. null when the file lacks them.
+  function edgeVerdict(vs) {
+    const p = num(vs.p_diff_le_0), d = num(vs.diff_r);
+    const lo = Array.isArray(vs.diff_ci90) ? num(vs.diff_ci90[0]) : null;
+    if (p == null && d == null) return null;
+    if ((p != null && p > NO_EDGE_P) || (d != null && d <= 0)) {
+      return { text: "no edge shown", cls: "is-none",
+        tip: "The replay's own decision numbers: " +
+          (d != null ? "the primary beat random timing on the same names by " + fmtR(d) : "") +
+          (p != null ? (d != null ? ", and " : "") + "P(no edge) is " + fmtP(p) +
+            (p > NO_EDGE_P ? ", over " + NO_EDGE_P : "") : "") +
+          ". This rule has not shown it beats random entries here. Report only." };
+    }
+    if (lo != null && lo <= 0) {
+      return { text: "not proven", cls: "is-weak",
+        tip: "The 90% band of the difference over random timing (" + fmtCI(vs.diff_ci90) +
+          "R) still reaches zero: an edge is suggested, not established." };
+    }
+    return null;
+  }
+
   // Every number is read off the backtest file; a field it lacks is a dash.
   // Nothing here computes a statistic (not the CI, the P or a difference).
   function evidenceHTML(status, bt, live) {
@@ -845,6 +888,7 @@
         ". Primary n " + fmtN(vs.n_primary) + " vs baseline n " + fmtN(vs.n_baseline) +
         ". Beating random timing, not beating zero, is the bar on a survivor-biased list.",
       "ig-ev-dec"]);
+    const verdict = edgeVerdict(vs);
     items.push(
       ["random-timing exp", fmtR(rnd.exp_r), nPar(num(rnd.n) != null ? rnd.n : vs.n_baseline)],
       ["top-5 share", fmtPct(p.top5_share_pct), "",
@@ -872,6 +916,7 @@
       items.map(([k, v, note, t, cls]) =>
         `<span class="ig-ev-i${cls ? " " + cls : ""}"${t ? ` title="${esc(t)}"` : ""}>${esc(k)} <b>${esc(v)}</b>` +
         (note ? " " + esc(note) : "") + `</span>`).join("") +
+      (verdict ? `<span class="ig-ev-verdict ${verdict.cls}" title="${esc(verdict.tip)}">${esc(verdict.text)}</span>` : "") +
       `<span class="ig-ev-cav" title="${esc(caveats + (dNames.length ? "\n\n" + tip : ""))}">${esc("⚠ survivor-biased universe")}</span>` +
       drift + `</div>`;
   }
@@ -918,31 +963,40 @@
     return `<span class="ig-regime ${up ? "is-up" : "is-down"}" title="${esc(tip)}">${esc(text)}</span>`;
   }
 
-  // "N coins behind yesterday's close": screened coins whose source had not
-  // served that bar yet. Context, not an alarm (Yahoo coins often land late).
-  function lagHTML(bars) {
+  // "N coins behind yesterday's close" (crypto) / "N names behind the 13 Oct
+  // close" (a stock market): screened names whose source had not served the
+  // newest bar yet. Context, not an alarm, until it is most of the market
+  // (staleOf's LAG_STALE_SHARE). Since 2026-10-14 a stock market measures it
+  // too (REFINE200 #134); `rows_lagging` says how many LISTED rows are among them.
+  function lagHTML(bars, market) {
     const n = num(bars.lagging);
     if (n == null || n <= 0) return "";
     const dist = obj(bars.completed_dist);
-    const tip = n + " screened coin(s) had no completed " +
-      (isDay(bars.expected_completed) ? bars.expected_completed + " " : "") +
-      "bar from their source when the screen ran (Yahoo-sourced coins often land late), " +
-      "so they are screened through their last final bar." +
-      (Object.keys(dist).length ? " Newest completed bar per coin: " +
+    const coin = BAR_24_7.indexOf(String(market == null ? "crypto" : market).toLowerCase()) >= 0;
+    const unit = coin ? "coin" : "name";
+    const exp = isDay(bars.expected_completed) ? bars.expected_completed : null;
+    const rows = num(bars.rows_lagging);
+    const tip = n + " screened " + unit + "(s) had no completed " + (exp ? exp + " " : "") +
+      "bar from their source when the screen ran " +
+      (coin ? "(Yahoo-sourced coins often land late)" : "(the free feed had not served that close for them yet)") +
+      ", so they are screened through their last final bar." +
+      (rows != null && rows > 0 ? " " + rows + " of the rows listed below are among them." : "") +
+      (Object.keys(dist).length ? " Newest completed bar per " + unit + ": " +
         Object.keys(dist).map((d) => d + " ×" + dist[d]).join(" · ") : "");
-    return `<span class="ig-lag" title="${esc(tip)}">${esc(n + " coin" + (n === 1 ? "" : "s") +
-      " behind yesterday's close")}</span>`;
+    const where = coin ? "yesterday's close" : (exp ? "the " + shortDay(exp) + " close" : "the latest close");
+    return `<span class="ig-lag" title="${esc(tip)}">${esc(n.toLocaleString("en-US") + " " + unit +
+      (n === 1 ? "" : "s") + " behind " + where)}</span>`;
   }
 
   function headHTML(payload, stale) {
     const p = obj(payload);
     const gen = p.generated_at;
     const s = obj(p.summary);
+    const mk = p.market == null ? "crypto" : p.market;
     const tip = "Market-local/UTC: " + (utcText(gen) || DASH) +
       (p.last_closed_bar ? " · last completed daily bar " + p.last_closed_bar : "") +
       (p.ruleset_version ? " · ruleset " + p.ruleset_version : "") +
       sourcesText(obj(s.sources));
-    const mk = p.market == null ? "crypto" : p.market;
     const badge = stale
       ? ` <span class="ig-stale" title="${esc("This screen is behind: " + stale.reasons.join("; ") +
           (BAR_24_7.indexOf(mk) >= 0
@@ -951,7 +1005,7 @@
           "; check the " + lookup(WF_NAME, mk, "Ignition scan") + " workflow runs.")}">` +
         `${esc("⚠ STALE · as of " + (stale.asOf || DASH))}</span>`
       : "";
-    const meta = [regimeHTML(p.regime), lagHTML(obj(s.bars))].filter(Boolean);
+    const meta = [regimeHTML(p.regime), lagHTML(obj(s.bars), mk)].filter(Boolean);
     return `<div class="ig-head">` +
       `<div class="ig-title">${esc("⚡ IGNITION · coil → ignition")}${badge}</div>` +
       `<div class="ig-sub" title="${esc(tip)}">${esc("Report-only · not traded by the bot · daily bars · updated " +

@@ -462,6 +462,6 @@ def test_the_asx_bar_final_is_the_digest_close_gate():
 def test_the_gate_script_imports_only_the_standard_library_and_config():
     src = GATE.read_text(encoding="utf-8")
     mods = set(re.findall(r"^\s*(?:from|import)\s+([\w.]+)", src, re.M))
-    assert mods <= {"__future__", "datetime", "pathlib", "sys", "zoneinfo", "scanner"}
+    assert mods <= {"__future__", "datetime", "json", "pathlib", "sys", "zoneinfo", "scanner"}
     cfg = (ROOT / "scanner" / "config.py").read_text(encoding="utf-8")
     assert set(re.findall(r"^(?:from|import)\s+([\w.]+)", cfg, re.M)) <= {"dataclasses"}
