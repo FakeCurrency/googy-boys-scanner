@@ -375,3 +375,61 @@ def test_undated_banked_r_is_still_counted_when_something_was_actually_booked():
     pnl = vg.session_pnl({"open": [p], "closed": []}, "asx", "2026-07-28",
                          lambda s: 100.0)
     assert pnl["open_realised_usd"] == pytest.approx(-80.0)
+
+
+# ── REFINE200 #19: NaN never reaches a guard sum ──────────────────────────────
+# `risk <= 0` is False for NaN, so a NaN risk sailed through `_unreal_r` and a
+# NaN session total compares False against every limit: one bad field
+# disarmed the guard for the whole market.
+
+@pytest.mark.parametrize("field,value", [
+    ("risk", float("nan")), ("risk", float("inf")), ("risk", None), ("risk", "junk"),
+    ("entry", float("nan")), ("entry", None), ("entry", 0.0),
+])
+def test_unreal_r_is_zero_not_nan_on_a_bad_risk_or_entry(field, value):
+    p = _pos()
+    p[field] = value
+    assert vg._unreal_r(p, 96.0) == 0.0
+
+
+def test_unreal_r_is_zero_on_a_nan_or_infinite_price():
+    assert vg._unreal_r(_pos(), float("nan")) == 0.0
+    assert vg._unreal_r(_pos(), float("inf")) == 0.0
+    assert vg._unreal_r(_pos(), 96.0) == pytest.approx(-1.0)     # control
+
+
+def test_a_missing_entry_no_longer_raises():
+    """`pos["entry"]` used to KeyError, which crashed whatever was summing."""
+    p = _pos()
+    del p["entry"]
+    assert vg._unreal_r(p, 96.0) == 0.0
+
+
+def test_a_nan_booked_pct_counts_the_full_size_not_none_of_it():
+    p = _pos()
+    p["booked_pct"] = float("nan")
+    assert vg._unreal_r(p, 96.0) == pytest.approx(-1.0)
+
+
+def test_a_nan_price_is_unpriced_and_fails_closed(monkeypatch):
+    """A NaN from price_of is treated exactly like None: reported unpriced and
+    valued at its stop, so the guard halts instead of reading NaN as 'fine'."""
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)   # $300
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_WEEKLY_LOSS_PCT", 0.0)
+    p = _dated(entry_date="2026-07-01", risk_usd=400.0,
+               day_marks={"2026-07-28": 100.0})
+    p["stop"] = 96.0
+    g = vg.check({"open": [p], "closed": []}, "asx", "2026-07-28", 10_000,
+                 lambda s: float("nan"))
+    assert g["session_usd"] == pytest.approx(0.0)        # finite, not NaN
+    assert g["open_total_usd"] == pytest.approx(0.0)
+    assert g["unpriced"] == ["X"]
+    assert g["breached"] is True and g["breach_kind"] == "unmeasured"
+
+
+def test_an_infinite_risk_usd_cannot_poison_the_total():
+    p = _dated(entry_date="2026-07-01", risk_usd=float("inf"),
+               day_marks={"2026-07-28": 100.0})
+    pnl = vg.session_pnl({"open": [p], "closed": []}, "asx", "2026-07-28",
+                         lambda s: 96.0)
+    assert pnl["session_usd"] == pytest.approx(0.0)      # junk size -> $0, not inf/NaN
