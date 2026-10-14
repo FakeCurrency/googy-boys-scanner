@@ -329,7 +329,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             if market_key == "crypto" and _dollar_peg(df):
                 funnel["no_setup"] += 1      # a peg has no setup (#136)
                 continue
-            sig = vivek.evaluate(df)
+            # evaluate() leaves its 3-Day frame here for build_plans (#97).
+            resampled: dict = {}
+            sig = vivek.evaluate(df, resampled=resampled)
             if sig is None:
                 funnel["no_setup"] += 1
                 continue
@@ -404,7 +406,7 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 cur_dir="LONG" if sig["direction"] == "long" else "SHORT",
                 held_runs=prev.get("held", 0))
             # Per-timeframe plans (Daily + 3-Day + Weekly) from the ONE engine.
-            plans = vivek.build_plans(df, sig)
+            plans = vivek.build_plans(df, sig, resampled=resampled)
             if plans and all(_degenerate(p, sig["direction"]) for p in plans.values()):
                 # Not one sane plan (#135): zero risk or a stop at/below zero on
                 # every timeframe -- prices finer than the data's decimals. The
