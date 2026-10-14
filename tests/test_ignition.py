@@ -996,6 +996,85 @@ def test_a_forming_bar_never_overrides_a_live_trigger():
     assert r["last_bar"] == _date(df.index[T + 5])
 
 
+def test_a_trigger_on_the_last_completed_bar_is_priced_off_the_FORMING_open():
+    """REFINE200 #176: the forming bar's open is the replay's fill and it is
+    in hand on every intraday run. The row now prices from it, and reads the
+    same as the row the next completed run publishes."""
+    df = fx("base")
+    r = E.screen_frame(df.iloc[:T + 1], MARKET, forming=df.iloc[T + 1:T + 2])
+    nxt = E.screen_frame(df.iloc[:T + 2], MARKET)
+    assert r["state"] == "IGNITING" and r["provisional"] is False and r["bars_since"] == 0
+    assert r["entry_basis"] == "next_open" == nxt["entry_basis"]
+    assert r["entry"] == pytest.approx(df["Open"].iloc[T + 1], abs=1e-8) == nxt["entry"]
+    assert r["entry_date"] == _date(df.index[T + 1]) == nxt["entry_date"]
+    assert r["risk_pct"] == nxt["risk_pct"]
+    assert r["r_now"] == pytest.approx((df["Close"].iloc[T + 1] - r["entry"]) / (r["entry"] - r["stop"]), abs=0.01)
+    # no forming bar: the trigger close stays the only reference, and says so
+    assert screen("base", T)["entry_basis"] == "trigger_close"
+
+
+def test_a_forming_open_under_the_stop_is_no_trade_as_the_replay_books_it():
+    """The forming bar opened 15% under the trigger close, under the stop: the
+    replay skips it as gap_below_stop, and so does the page -- no live trade
+    priced off the trigger close at -1.99R."""
+    df = fx("gap_below")
+    r = E.screen_frame(df.iloc[:T + 1], MARKET, forming=df.iloc[T + 1:T + 2])
+    assert r["state"] == "CLOSED" and r["exit_reason"] == "gap_below_stop"
+    assert r["entry"] == pytest.approx(df["Open"].iloc[T + 1], abs=1e-8)
+    assert r["entry"] <= r["stop"]
+    assert r["exit_r"] is None and r["exit_date"] == _date(df.index[T + 1])
+    confirmed = E.screen_frame(df.iloc[:T + 2], MARKET)
+    for key in ("state", "exit_reason", "entry", "entry_basis", "entry_date", "exit_date"):
+        assert r[key] == confirmed[key], key
+    pr = BT.prepare({"QNT-USD": df}, MARKET)[0]
+    assert BT.trades_for(pr, E.apply_rules(pr.bf, P()))[0]["skipped"] == "gap_below_stop"
+
+
+def _count_compute(monkeypatch):
+    calls = []
+    real = E.compute
+
+    def counted(*a, **k):
+        calls.append(1)
+        return real(*a, **k)
+    monkeypatch.setattr(E, "compute", counted)
+    return calls
+
+
+def test_the_forming_bar_is_recomputed_only_when_it_could_be_a_trigger(monkeypatch):
+    """REFINE200 #177: no row (nothing coiling) and a live RUNNING row cannot
+    become a provisional trigger, so the dear whole-frame recompute is skipped
+    -- and the published row is unchanged by skipping it."""
+    calls = _count_compute(monkeypatch)
+    chop = fx("chop")
+    assert E.screen_frame(chop.iloc[:T], MARKET, forming=chop.iloc[T:T + 1]) is None
+    assert len(calls) == 1, "a symbol with no row was recomputed on its forming bar"
+    calls.clear()
+    df = fx("base")
+    r = E.screen_frame(df.iloc[:T + 6], MARKET, forming=df.iloc[T + 6:T + 7])
+    assert r["state"] == "RUNNING" and len(calls) == 1
+    calls.clear()
+    short = fx("short")                        # COILED at 399: the next bar CAN fire
+    r = E.screen_frame(short.iloc[:400], MARKET, forming=short.iloc[400:401])
+    assert r["state"] == "IGNITING" and r["provisional"] is True and len(calls) == 2
+
+
+def test_a_closed_row_inside_its_rearm_window_cannot_fire_and_is_not_recomputed(monkeypatch):
+    assert int(config.IGNITION_KEEP_BARS) <= int(config.IGNITION_REARM_BARS), (
+        "KEEP > REARM makes a CLOSED row re-armable: _forming_can_fire's CLOSED arm then matters")
+    df = fx("stop_fast")
+    k = T + 2
+    calls = _count_compute(monkeypatch)
+    r = E.screen_frame(df.iloc[:k + 1], MARKET, forming=df.iloc[k + 1:k + 2])
+    assert r["state"] == "CLOSED" and len(calls) == 1
+    assert r["price"] == pytest.approx(df["Close"].iloc[k + 1], abs=1e-8), "the price still moves"
+    # the arm itself: re-armed only once t0 is outside T+1's rearm window
+    p = P()
+    assert E._forming_can_fire({"state": "CLOSED"}, p, 100, 100 - p.rearm_bars) is True
+    assert E._forming_can_fire({"state": "CLOSED"}, p, 100, 100 - p.rearm_bars + 1) is False
+    assert E._forming_can_fire(None, p.replace(require_coil=False), 100, None) is True
+
+
 def test_nothing_coiling_and_nothing_firing_is_no_row():
     assert E.screen_frame(fx("chop").iloc[:T], MARKET) is None
     assert E.screen_frame(fx("chop").iloc[:T], MARKET, forming=fx("base").iloc[T - 1:T]) is None
