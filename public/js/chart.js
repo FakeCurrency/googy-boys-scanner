@@ -1777,54 +1777,93 @@
       .catch(() => fail(`No chart data for ${String(SYM).toUpperCase()} yet, and live history is unavailable right now.`));
   }
 
-  // ── Held-plan chart: a REAL journal position, not a live scan guess ────────
+  // ── Held-plan chart: a REAL book position, not a live scan guess ──────────
   // Reached when the link carries he=/hs= (see `heldPlan` above, set by
   // journal.js's chart links). Same real D/3D/W/4H history build as
   // pmOnlyFallback, but the levels are the TRADE's own entry/stop/targets —
   // never the live scan's current read on the ticker, which can be a
   // different setup entirely (different entry, different direction, weeks
-  // apart) from the position actually sitting in the journal.
-  function heldPlanFallback(SYM, plan) {
+  // apart) from the position actually sitting in the book.
+  //
+  // CLAUDE'S POSITION, AS TAKEN (REFINE200 #108). journal.html is the bot
+  // book only since 2026-09-21, so these links are Claude's positions -- yet
+  // the chart called each one "your position, as taken" and drew `hs=`, the
+  // book row's CURRENT stop, as the stop. A trailed stop is not the stop the
+  // trade was taken with: EVT drew STOP = ENTRY and "R:R 0.00", INTR drew a
+  // long's stop ABOVE its entry and an R ladder measured off it. The book
+  // row's `risk` is the per-unit risk at the fill, so entry -/+ risk is the
+  // stop AS TAKEN: the R ladder and R:R are measured from it, and the current
+  // stop is drawn as its own TRAIL SL line when it has moved.
+  function bookRowFor(book, sym, plan) {
+    if (!book || !plan) return null;
+    const want = String(sym || "").toUpperCase();
+    const dir = plan.dir === "SHORT" ? "short" : "long";
+    const same = (x, y) => isFinite(+x) && isFinite(+y) && Math.abs(+x - +y) <= 1e-6 * Math.max(1, Math.abs(+y));
+    const rows = [].concat(book.open || [], book.closed || []);
+    return rows.find((p) => p && String(p.symbol || "").toUpperCase() === want &&
+      (p.market || market) === market &&
+      String(p.direction || "long").toLowerCase() === dir &&
+      same(p.entry, plan.entry)) || null;
+  }
+  function heldPlanChart(SYM, plan, row) {
     const assetType = market === "crypto" ? "crypto" : null;
     const isLong = plan.dir !== "SHORT";
+    const r1 = row && +row.risk > 0 ? +row.risk : null;
+    const asTaken = r1 != null ? (isLong ? plan.entry - r1 : plan.entry + r1) : plan.stop;
+    const trailed = r1 != null && plan.stop != null &&
+      Math.abs(plan.stop - asTaken) > 1e-9 * Math.max(1, Math.abs(asTaken));
     // Headline single target for the footer's "Target" metric — TP2 when a
     // ladder exists (same convention the live VIVEK chart uses), else
     // whichever TP is actually on the trade.
     const target = plan.tp1 != null || plan.tp2 != null || plan.tp3 != null
       ? (plan.tp2 ?? plan.tp1 ?? plan.tp3) : null;
-    const risk = Math.abs(plan.entry - plan.stop);
+    const risk = Math.abs(plan.entry - asTaken);
     const rr = (risk > 0 && target != null)
       ? Math.round((Math.abs(target - plan.entry) / risk) * 100) / 100 : 0;
+    const hit = new Set(((row && row.exits) || []).map((x) => String((x && x.reason) || "").toLowerCase()));
     const d = {
       symbol: String(SYM).toUpperCase(), name: SYM, asset_type: assetType,
-      price: null, grade: "", score: 0, score_max: 0, chips: [], sector: "",
+      price: null, grade: (row && row.grade) || "", score: 0, score_max: 0, chips: [], sector: "",
       currency_symbol: market === "asx" ? "A$" : "$",
       dir: isLong ? "LONG" : "SHORT",
-      entry: plan.entry, stop: plan.stop, target,
+      entry: plan.entry, stop: asTaken, trail_stop: trailed ? plan.stop : null, target,
+      stop_label: r1 != null ? "SL (as taken)" : "Stop",
       tp1: plan.tp1, tp2: plan.tp2, tp3: plan.tp3,
       rr, low_rr: rr > 0 && rr < 1.5,
-      analysis: "Your position, as taken — entry/stop/target(s) from the journal, not a live scan read.",
+      analysis: row
+        ? "Claude's position (bot book): entry, the stop as taken (entry " + (isLong ? "−" : "+") +
+          " 1R at the fill) and the targets, from the journal — not a live scan read." +
+          (trailed ? " The stop has since moved; it is drawn as TRAIL SL." : "")
+        : "Claude's position (bot book), as linked from the journal: entry/stop/target(s), not a live scan read." +
+          " Its row was not found in the published book, so the stop shown may already have been trailed.",
       default_tf: "1D", level_lines: [], timeframes: {},
       _fallback: true, _vivek: false, _pm: false, _heldPlan: true,
     };
     // Level lines: SL red, ENTRY white, TPs green — same palette as the live
     // VIVEK ladder. A single-target trade (no tp2/tp3) labels its one TP line
     // "TARGET" rather than "TP1" so it doesn't imply a ladder that isn't there.
-    if (d.stop  != null) d.level_lines.push({ price: d.stop,  color: "#ff5b5b", title: "STOP" });
+    // A target the position has already banked says so.
+    const tpTag = (k, name) => name + (hit.has(k) ? " ✓" : "");
+    if (d.stop  != null) d.level_lines.push({ price: d.stop, color: "#ff5b5b", title: r1 != null ? "SL (as taken)" : "STOP" });
+    if (d.trail_stop != null) d.level_lines.push({ price: d.trail_stop, color: "#ff9f43", title: "TRAIL SL" });
     if (d.entry != null) d.level_lines.push({ price: d.entry, color: "#e5e9f0", title: "ENTRY" });
-    if (d.tp1   != null) d.level_lines.push({ price: d.tp1, color: "#2fd07f", title: (d.tp2 != null || d.tp3 != null) ? "TP1" : "TARGET" });
-    if (d.tp2   != null) d.level_lines.push({ price: d.tp2, color: "#2fd07f", title: "TP2" });
-    if (d.tp3   != null) d.level_lines.push({ price: d.tp3, color: "#2fd07f", title: "TP3" });
-
+    if (d.tp1   != null) d.level_lines.push({ price: d.tp1, color: "#2fd07f", title: tpTag("tp1", (d.tp2 != null || d.tp3 != null) ? "TP1" : "TARGET") });
+    if (d.tp2   != null) d.level_lines.push({ price: d.tp2, color: "#2fd07f", title: tpTag("tp2", "TP2") });
+    if (d.tp3   != null) d.level_lines.push({ price: d.tp3, color: "#2fd07f", title: tpTag("tp3", "TP3") });
+    return d;
+  }
+  function heldPlanFallback(SYM, plan) {
+    const assetType = market === "crypto" ? "crypto" : null;
     const liveDaily = () => (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "5y", "1d", true)
       : yahooBars(yfTickerFor(SYM, assetType), DAILY_RANGE, "1d", true));
     const intradayP = (isCryptoMarket(assetType)
       ? vivekCryptoBars(SYM, "2y", "1h")
       : yahooBars(yfTickerFor(SYM, assetType), "2y", "1h")).catch(() => []);
-    liveDaily()
-      .then((daily) => {
+    Promise.all([liveDaily(), fetchJsonOnce("data/vivek_bot_book.json")])
+      .then(([daily, book]) => {
         if (!daily || daily.length < 6) throw new Error("thin");
+        const d = heldPlanChart(SYM, plan, bookRowFor(book, SYM, plan));
         d.timeframes["1D"] = barsToVivekTF(daily);
         const d3 = bucketBars(daily, 3 * 86400);
         if (d3.length >= 6) d.timeframes["3D"] = barsToVivekTF(d3);
@@ -2299,13 +2338,18 @@
       return;
     }
 
+    // Only the fields this chart HAS (REFINE200 #108): a held position or a
+    // PhaseMap plan carries no 5.0 score and no risk %, and "Score 0/0 ·
+    // Risk —" read as a broken page rather than as fields that do not apply.
     $("#cf-metrics").innerHTML = [
       metric("Entry", fmt(d.entry, cur)),
-      metric("Stop", fmt(d.stop, cur), "red"),
+      metric(d.stop_label || "Stop", fmt(d.stop, cur), "red"),
+      d._heldPlan
+        ? metric("Trail SL", d.trail_stop != null ? fmt(d.trail_stop, cur) : "not moved", "amber")
+        : metric("Trail", "after entry", "amber"),
       metric("Target", fmt(d.target, cur), "green"),
-      metric("Trail", "after entry", "amber"),
-      metric("Score", `${d.score}/${d.score_max}`),
-      metric("Risk", d.risk_pct != null ? `${d.risk_pct}%` : "—", "red"),
+      d.score_max ? metric("Score", `${d.score}/${d.score_max}`) : "",
+      d.risk_pct != null ? metric("Risk", `${d.risk_pct}%`, "red") : "",
       metric("R:R", (d.rr || 0).toFixed(2), d.low_rr ? "red" : "green"),
     ].join("");
     $("#cf-analysis").textContent = d.analysis || "";
@@ -2570,8 +2614,9 @@
     if (d._heldPlan) {
       const note = document.createElement("span");
       note.className = "ct-fallback-note";
-      note.textContent = "your position";
-      note.title = "Entry/stop/target(s) shown are this trade's own numbers from the journal, not a live scan read.";
+      note.textContent = "Claude's position";
+      note.title = "Entry, the stop as taken and the target(s) are this trade's own numbers from Claude's " +
+        "paper book (the journal), not a live scan read.";
       const priceEl = $("#ct-price");
       if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
     }
@@ -3063,7 +3108,9 @@
       const ref = live ? liveState.price : d.price;
       if (!(ref > 0) || price === ref) return "";
       const g = (price - ref) / ref * 100;
-      return ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs ${live ? "live" : "scan"}`;
+      // Before a quote: the scan row's price, or (a held position) the
+      // chart's own last close -- named as what it is.
+      return ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs ${live ? "live" : d._heldPlan ? "close" : "scan"}`;
     };
     onLiveTick(() => entryTags.forEach((t) => {
       try { t.handle.applyOptions({ title: t.base + vsLive(t.price) }); } catch (_) { /* line gone */ }
@@ -3083,8 +3130,10 @@
           const rMult = Math.abs(L.price - ep) / riskDist;
           title += ` · ${rMult.toFixed(1)}R`;
         }
+      } else if (ep && L.price === ep && L.title !== "ENTRY") {
+        title += " · at entry";            // e.g. a stop trailed to breakeven
       }
-      const isEntry = !!(ep && L.price === ep);
+      const isEntry = !!(ep && L.price === ep && L.title === "ENTRY");
       // #74: ENTRY line shows its gap from the current price (trigger distance).
       const handle = candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
         lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: isEntry ? title + vsLive(L.price) : title });
@@ -4703,11 +4752,17 @@
       const isLong = dirUp !== "SHORT";
       const fp = (x) => x == null || !isFinite(x) ? "—"
         : x < 0.1 ? (+x).toFixed(4) : x < 2 ? (+x).toFixed(3) : (+x).toFixed(2);
+      // The stop as TAKEN is entry -/+ the fill's 1R; a stop that has moved
+      // since is the trail, and is named as one (REFINE200 #108).
+      const r1 = +pos.risk > 0 ? +pos.risk : null;
+      const taken = r1 != null ? (isLong ? pos.entry - r1 : pos.entry + r1) : null;
+      const slTxt = taken != null && pos.stop != null && Math.abs(pos.stop - taken) > 1e-9 * Math.max(1, Math.abs(taken))
+        ? `trail SL ${fp(pos.stop)} (${fp(taken)} as taken)` : `SL ${fp(pos.stop)}`;
       const div = document.createElement("div");
       div.className = "bot-pos-banner " + (isLong ? "long" : "short");
       div.innerHTML =
         `<div class="bpb-head">🤖 CLAUDE IS <b class="bpb-dir">${isLong ? "▲ LONG" : "▼ SHORT"}</b> ${esc(want)}` +
-        `<span class="bpb-sub">taken ${esc(pos.entry_date || "")} @ ${fp(pos.entry)} · SL ${fp(pos.stop)} · TP1 ${fp(pos.tp1)}</span></div>` +
+        `<span class="bpb-sub">taken ${esc(pos.entry_date || "")} @ ${fp(pos.entry)} · ${slTxt} · TP1 ${fp(pos.tp1)}</span></div>` +
         flip;
       host.parentNode.insertBefore(div, host);
     } catch (_) { /* banner is best-effort */ }

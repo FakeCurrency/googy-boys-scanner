@@ -544,6 +544,65 @@ test("binanceDirectBars takes k[7] (USD volume), as the proxy and the scan do", 
   assert.ok(!/volume: \+k\[5\]/.test(f), "k[5] is the coin count, not dollars");
 });
 
+/* ═══════════════ #108 a journal link draws Claude's position AS TAKEN ═══════════ */
+suite("#108 the held-position chart: the stop as taken, the trail named as a trail");
+
+const held = (market) => new Function("market", `${fnSrc("bookRowFor")} ${fnSrc("heldPlanChart")}
+  return { bookRowFor, heldPlanChart };`)(market);
+// The live book's EVT and INTR rows (2026-10-14), as journal.js links them.
+const EVT = { symbol: "EVT", market: "asx", direction: "long", entry: 13.67000008, stop: 13.67000008,
+  risk: 1.3630476, tp1: 14.54730805, tp2: 15.88599822, tp3: 17.16973447, grade: "A+",
+  exits: [{ reason: "tp1", price: 14.54730805, pct: 0.25 }] };
+const INTR = { symbol: "INTR", market: "nasdaq", direction: "long", entry: 5.45499992, stop: 6.59550714,
+  risk: 1.00154523, tp1: 6.59550714, tp2: 7.62179885, tp3: 10.09225067,
+  exits: [{ reason: "tp1" }, { reason: "tp2" }] };
+const linkPlan = (r) => ({ entry: r.entry, stop: r.stop, tp1: r.tp1, tp2: r.tp2, tp3: r.tp3,
+  dir: r.direction === "short" ? "SHORT" : "LONG" });
+
+test("EVT (stop trailed to entry): SL as taken = entry - 1R, a real R:R, TRAIL SL at entry", () => {
+  const H = held("asx");
+  const row = H.bookRowFor({ open: [EVT], closed: [] }, "evt", linkPlan(EVT));
+  assert.equal(row, EVT, "found by symbol, market, direction and entry");
+  const d = H.heldPlanChart("EVT", linkPlan(EVT), row);
+  assert.ok(Math.abs(d.stop - (13.67000008 - 1.3630476)) < 1e-9, "the stop the trade was TAKEN with");
+  assert.equal(d.trail_stop, 13.67000008);
+  assert.ok(d.rr > 1.5, `R:R off the as-taken stop, not 0.00 (got ${d.rr})`);
+  const titles = d.level_lines.map((l) => l.title);
+  assert.deepEqual(titles, ["SL (as taken)", "TRAIL SL", "ENTRY", "TP1 ✓", "TP2", "TP3"]);
+  assert.match(d.analysis, /^Claude's position \(bot book\)/);
+  assert.ok(!/your position/i.test(d.analysis), "the book is Claude's, not the reader's");
+});
+
+test("INTR (a long whose stop is ABOVE entry): the trail is a trail, the R ladder is the fill's", () => {
+  const H = held("nasdaq");
+  const d = H.heldPlanChart("INTR", linkPlan(INTR), H.bookRowFor({ open: [INTR] }, "INTR", linkPlan(INTR)));
+  assert.ok(d.stop < d.entry, "a long's SL (as taken) sits below its entry");
+  assert.ok(d.trail_stop > d.entry, "the trailed stop is drawn separately");
+  assert.deepEqual(d.level_lines.map((l) => l.title).slice(3), ["TP1 ✓", "TP2 ✓", "TP3"]);
+});
+
+test("no book row (another market, another fill): today's behaviour, said honestly", () => {
+  const H = held("nasdaq");
+  assert.equal(H.bookRowFor({ open: [EVT] }, "EVT", linkPlan(EVT)), null, "EVT is an ASX row");
+  assert.equal(held("asx").bookRowFor({ open: [EVT] }, "EVT", Object.assign(linkPlan(EVT), { entry: 13.5 })), null);
+  assert.equal(held("asx").bookRowFor({ open: [EVT] }, "EVT", Object.assign(linkPlan(EVT), { dir: "SHORT" })), null);
+  const d = H.heldPlanChart("EVT", linkPlan(EVT), null);
+  assert.equal(d.stop, EVT.stop);
+  assert.equal(d.trail_stop, null);
+  assert.equal(d.level_lines[0].title, "STOP");
+  assert.match(d.analysis, /may already have been trailed/);
+});
+
+test("the generic footer prints only the fields a chart has; the banner names a trail", () => {
+  const f = fnSrc("footer");
+  assert.match(f, /d\.score_max \? metric\("Score"/, "no 'Score 0/0' on a held or PhaseMap chart");
+  assert.match(f, /d\.risk_pct != null \? metric\("Risk"/, "no 'Risk —'");
+  assert.match(f, /metric\("Trail SL", d\.trail_stop != null/);
+  assert.match(fnSrc("wireBotPosBanner"), /trail SL \$\{fp\(pos\.stop\)\} \(\$\{fp\(taken\)\} as taken\)/);
+  assert.match(CODE, /note\.textContent = "Claude's position";/);
+  assert.match(fnSrc("heldPlanFallback"), /fetchJsonOnce\("data\/vivek_bot_book\.json"\)/, "shares the banner's request");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
