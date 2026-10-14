@@ -680,6 +680,5 @@ the decision pack `docs/DECISIONS_2026-10-14.md`. No trade rule moved.
   `data/research/`; orphans and `.bat` launchers deleted; OPERATIONS "Who
   triggers what"; `docs/REPO_SIZE.md`.
 - **Owner actions outstanding:** Cloudflare Access (#55), an alert channel
-  (#78), the checkpoints, yfinance 1.7.0 (#84), deleting
-  `journal/vivek_journal.json` + `data/notified_signals.json` (an agent's
-  delete was blocked).
+  (#78), the checkpoints, yfinance 1.7.0 (#84). (The two dead state files
+  were deleted with the owner's OK, 2026-10-14.)
