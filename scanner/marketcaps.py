@@ -8,13 +8,22 @@ do NOT fetch caps inline at alert time. Instead:
      "<market>:<symbol>" -> {"mcap": float, "ts": iso8601}.
   2. It is refreshed from a FRESH IP (before the scan's ~2,000-ticker download
      barrage) via Yahoo's bulk quote endpoint, with retries and pacing.
-  3. notify.py reads caps from this cache — no live fetch when alerting.
+  3. Readers: scan.published() stamps each published row's `mcap` + the date
+     it was fetched (`mcap_asof`), the deck reads the public mirror, and the
+     IGNITION lens reads load_cache(). (notify.py, once named here, was
+     deleted 2026-07-20.)
 
 Market cap is a slow-moving fundamental, so a cache that's a few days old is
 fine for a "<750M" bucket. Partial failures never wipe prior values.
 
-    python -m scanner.marketcaps          # refresh stale/missing caps for A+/A signals
-    python -m scanner.marketcaps --all     # refresh every A+/A signal regardless of age
+REFINE200 #157: the refresh used to cover only the previous scan's A+/A, so a
+B+ or WATCH row on the deck could show a cap 100+ days old. It now covers
+EVERY published row whose cap is missing or older than MAX_AGE_DAYS, best
+grades first, then missing, then oldest -- at most MARKETCAP_REFRESH_MAX
+symbols a run, both markets in ONE batched fetch.
+
+    python -m scanner.marketcaps          # refresh missing/stale caps for published rows
+    python -m scanner.marketcaps --all     # refresh published rows regardless of age (still capped)
 """
 
 import argparse
@@ -22,6 +31,8 @@ import datetime as dt
 import json
 import pathlib
 import time
+
+from . import config
 
 ROOT       = pathlib.Path(__file__).resolve().parents[1]
 CACHE_FILE = ROOT / "data" / "market_caps.json"
@@ -41,8 +52,9 @@ _SCAN_FILES = [
     ("nasdaq", "public/data/nasdaq_vivek.json"),
 ]
 
-# Only cache caps for tradeable grades — that's all the alerts ever show.
-_CACHE_GRADES = {"A+", "A"}
+# Refresh order: tradeable grades first (the bot's and the digest's names),
+# then the rest of the deck; an unknown grade last.
+_GRADE_RANK   = {"A+": 0, "A": 1, "B+": 2, "B": 2, "WATCH": 3, "C": 3}
 MAX_AGE_DAYS  = 4          # refresh entries older than this
 _CHUNK        = 100        # symbols per bulk quote request
 _RETRIES      = 3
@@ -94,20 +106,25 @@ def mcap_for(cache: dict, market: str, symbol: str) -> float:
 
 # ── Signal universe ───────────────────────────────────────────────────────────
 
-def _signal_symbols() -> dict[str, set]:
-    """Return {market: {symbol, ...}} of A+/A symbols across the latest scans."""
-    out: dict[str, set] = {"asx": set(), "nasdaq": set()}
+def _published_rows() -> dict[str, dict[str, int]]:
+    """{market: {symbol: best grade rank}} for EVERY row in the latest scans
+    (REFINE200 #157 -- this was A+/A only, so the rest of the deck's caps
+    were never refreshed)."""
+    out: dict[str, dict[str, int]] = {"asx": {}, "nasdaq": {}}
     for market, rel in _SCAN_FILES:
         path = ROOT / rel
         if not path.exists():
             continue
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             continue
         for sig in data.get("results", []):
-            if sig.get("grade") in _CACHE_GRADES and sig.get("symbol"):
-                out[market].add(sig["symbol"])
+            sym = sig.get("symbol")
+            if not sym:
+                continue
+            rank = _GRADE_RANK.get(sig.get("grade"), 9)
+            out[market][sym] = min(rank, out[market].get(sym, 9))
     return out
 
 
@@ -152,54 +169,69 @@ def fetch_caps(yf_syms: list[str]) -> dict[str, float]:
 
 # ── Refresh ───────────────────────────────────────────────────────────────────
 
-def _stale(entry: dict, now: dt.datetime) -> bool:
-    ts = entry.get("ts")
+def _age_days(entry: dict | None, now: dt.datetime) -> float:
+    """Days since the entry was fetched; inf when missing or unreadable."""
+    ts = (entry or {}).get("ts")
     if not ts:
-        return True
+        return float("inf")
     try:
-        age = now - dt.datetime.fromisoformat(ts)
-        return age > dt.timedelta(days=MAX_AGE_DAYS)
+        return (now - dt.datetime.fromisoformat(ts)).total_seconds() / 86400.0
     except Exception:
-        return True
+        return float("inf")
+
+
+def _stale(entry: dict, now: dt.datetime) -> bool:
+    return _age_days(entry, now) > MAX_AGE_DAYS
+
+
+def refresh_targets(rows: dict[str, dict[str, int]], cache: dict, now: dt.datetime,
+                    only_stale: bool = True, limit: int | None = None) -> list[tuple[str, str]]:
+    """[(market, symbol)] to fetch this run, in priority order and capped:
+    best grade first, then missing before stale, then oldest first. Pure."""
+    cap = int(config.MARKETCAP_REFRESH_MAX if limit is None else limit)
+    ranked = []
+    for market, syms in rows.items():
+        for sym, rank in syms.items():
+            age = _age_days(cache.get(_key(market, sym)), now)
+            if only_stale and age <= MAX_AGE_DAYS:
+                continue
+            ranked.append((rank, -age, market, sym))
+    ranked.sort()
+    return [(m, s) for _, _, m, s in ranked[:max(0, cap)]]
 
 
 def refresh(only_stale: bool = True) -> dict:
     now      = dt.datetime.now(dt.timezone.utc)
     cache    = load_cache()
-    universe = _signal_symbols()
-    total_new = 0
+    rows     = _published_rows()
+    targets  = refresh_targets(rows, cache, now, only_stale=only_stale)
+    total    = sum(len(v) for v in rows.values())
+    if not targets:
+        print(f"  marketcaps: {total} published rows, all cached & fresh")
+        return cache
 
-    for market, symbols in universe.items():
-        # Which symbols need a fetch?
-        targets = [
-            s for s in symbols
-            if not only_stale or _stale(cache.get(_key(market, s), {}), now)
-        ]
-        if not targets:
-            print(f"  marketcaps: {market.upper()} — {len(symbols)} signals, all cached & fresh")
-            continue
-
-        yf_map = {_yf_sym(market, s): s for s in targets}
-        print(f"  marketcaps: {market.upper()} — fetching {len(yf_map)} caps "
-              f"({len(symbols)} signals total) ...")
-        got = fetch_caps(list(yf_map))
-        for ysym, mc in got.items():
-            plain = yf_map.get(ysym)
-            if plain:
-                cache[_key(market, plain)] = {"mcap": mc, "ts": now.isoformat(timespec="seconds")}
-        total_new += len(got)
-        miss = len(yf_map) - len(got)
-        print(f"  marketcaps: {market.upper()} — got {len(got)}, missed {miss}")
+    # ONE batched fetch for both markets: fetch_caps chunks it 100 symbols a
+    # bulk request, so the Yahoo budget is bounded by MARKETCAP_REFRESH_MAX.
+    yf_map = {_yf_sym(m, s): (m, s) for m, s in targets}
+    print(f"  marketcaps: fetching {len(yf_map)} caps ({total} published rows, "
+          f"cap {config.MARKETCAP_REFRESH_MAX} a run) ...")
+    got = fetch_caps(list(yf_map))
+    stamp = now.isoformat(timespec="seconds")
+    for ysym, mc in got.items():
+        hit = yf_map.get(ysym)
+        if hit:
+            cache[_key(*hit)] = {"mcap": mc, "ts": stamp}
+    print(f"  marketcaps: got {len(got)}, missed {len(yf_map) - len(got)}")
 
     save_cache(cache)
-    print(f"  marketcaps: cache now holds {len(cache)} symbols ({total_new} refreshed)")
+    print(f"  marketcaps: cache now holds {len(cache)} symbols ({len(got)} refreshed)")
     return cache
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Refresh the market-cap cache")
     ap.add_argument("--all", action="store_true",
-                    help="refresh every A+/A signal regardless of cache age")
+                    help="refresh published rows regardless of age (still capped)")
     args = ap.parse_args()
     refresh(only_stale=not args.all)
 
