@@ -99,6 +99,10 @@ on:
       # run the gate.
       - ".claude/skills/**"
       - "CLAUDE.md"
+      # docs/DECISIONS_*.md (2026-10-14), same rule: tests/test_decision_pack.py
+      # pins the owner's pre-registered checkpoint lines in the decision pack to
+      # scripts/decision_pack.py, so an edit to the doc alone must run the gate.
+      - "docs/DECISIONS_*.md"
   pull_request:
   workflow_dispatch:
 
