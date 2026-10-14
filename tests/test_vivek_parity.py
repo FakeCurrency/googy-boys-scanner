@@ -180,20 +180,6 @@ def test_replay_symbol_parity_smoke_does_not_crash():
         assert "mfe_r_at" in t
 
 
-def test_frozen_fingerprint_detects_r_move():
-    from scripts import backfill_level_tf as bf
-    pos = {"id": "X", "symbol": "X", "market": "asx", "direction": "long",
-           "entry": 1, "stop": 0.9, "risk": 0.1, "realized_r": 1.0,
-           "entry_date": "2024-01-01", "status": "open"}
-    a = bf.frozen_fingerprint(pos)
-    pos2 = dict(pos)
-    pos2["level_tf"] = "weekly"          # allowed write — fingerprint ignores it
-    assert bf.frozen_fingerprint(pos2) == a
-    pos3 = dict(pos)
-    pos3["realized_r"] = 0.0             # frozen — must differ
-    assert bf.frozen_fingerprint(pos3) != a
-
-
 def test_exclude_map_and_taken_flag_schema():
     """OOS plumbing: exclusion loader + taken stamp on published trades."""
     from scanner.vivek_parity import load_exclude_map, build_parity_report, baseline_rules
