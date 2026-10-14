@@ -420,15 +420,17 @@ def test_under_risk_pct_the_equity_DOES_price_the_dollars(monkeypatch):
     assert big == pytest.approx(small * 15), "risk-%% dollars must scale with equity"
 
 
-def test_the_two_params_call_sites_cannot_drift():
-    """`run_backtest` and the CLI both build `params`; only one used to be edited.
+def test_every_params_call_site_splats_the_sizing_basis():
+    """The CLI builds the report's `params`; it must go through the helper.
 
-    They are near-duplicates fifty lines apart, which is exactly the shape that
-    ships a labelled report from one entry point and an unlabelled one from the
-    other. Both must splat the single helper.
+    There used to be two near-duplicate sites fifty lines apart (`run_backtest`
+    and the CLI) -- exactly the shape that ships a labelled report from one
+    entry point and an unlabelled one from the other. `run_backtest` had no
+    caller and was deleted (REFINE200 #120); any site added later is held to
+    the same rule.
     """
     sites = _params_call_sites()
-    assert len(sites) >= 2, "params call sites moved -- re-point this test"
+    assert sites, "params call site moved -- re-point this test"
     for body in sites:
         assert "_sizing_basis()" in body, (
             "a `params` dict is built without the sizing basis:\n" + body)

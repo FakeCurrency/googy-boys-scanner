@@ -1226,8 +1226,8 @@ SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links 
 # ---------------------------------------------------------------------------
 DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
 DATA_DAILY_BARS = 252         # bars the daily scanners see (tail-slice of VIVEK's deep download = 1y, unchanged behaviour)
-DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
-SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
+SCALP_DATA_MIN_BARS  = 65     # INERT (kept by the SCALP_* ruling): its one reader, data.validate_bars,
+                              # went 2026-10-14 with DATA_STALENESS_HOURS (REFINE200 #120)
 # HOW OLD A CACHED FRAME MAY BE AND STILL COUNT AS DATA (2026-07-28, TOP100 #24).
 # `data.merge_with_cache` back-fills tickers Yahoo dropped this run from the
 # last-good cache, which is exactly right for the ordinary case: a name misses
