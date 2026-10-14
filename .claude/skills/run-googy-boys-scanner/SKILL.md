@@ -32,10 +32,12 @@ there and are what the driver uses:
 ## Setup
 
 ```bash
-python3 -m pip install -q -r requirements.txt
+python3 -m pip install -q -r requirements-dev.txt
 ```
 
 Only needed for Python tests and scanner code. The site itself needs no build.
+`requirements-dev.txt` is `requirements.txt` (what the scheduled workflows
+install) plus pytest, PyYAML, pytest-xdist and pyflakes.
 
 ## Run (agent path): drive the site
 
@@ -299,14 +301,18 @@ and `rc=0` (it still saves the Actions frame cache). `ignition_asx.yml` and
 ## Test
 
 ```bash
-python3 -m pytest -x
+python3 -m pytest -n auto --dist loadfile      # what CI runs
+python3 -m pytest -m "not slow" -n auto        # quick pre-push: skips ~18 replay-heavy tests
 for f in test/*.test.js; do node "$f" > /dev/null 2>&1 || echo "FAIL $f"; done
 NODE_PATH=/opt/node22/lib/node_modules PW_CHROMIUM=/opt/pw-browsers/chromium node test/e2e/smoke.e2e.js
 ```
 
-The full pytest run takes about 6 minutes (2,400+ tests): give the Bash call
-`timeout: 600000` or run it in the background. The e2e smoke test serves
-`public/` itself on port 8943 and ends with `ALL E2E CHECKS PASSED`.
+The full pytest run takes about 4 minutes with xdist on 4 cores (2,400+
+tests, ~7 serially): give the Bash call `timeout: 600000` or run it in the
+background. No test reaches Yahoo or an exchange (tests/conftest.py refuses
+both), so a test that is slow is slow on CPU. The e2e smoke test serves
+`public/` itself on port 8943 (`E2E_PORT=` to move it), routes `/data/` to
+`test/e2e/fixtures/data`, and ends with `ALL E2E CHECKS PASSED`.
 
 ## Gotchas
 
