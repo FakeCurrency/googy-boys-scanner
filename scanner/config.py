@@ -189,6 +189,11 @@ EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit
 EXCHANGE_DEAD_AFTER_ERRORS = 8   # a venue erroring this often is dropped for the run
+# The pair every fetch probes first, serially, to learn which venues are dead
+# before fanning out: listed on every venue, so an error on it is the venue,
+# never the coin (REFINE200 #21 -- the probe used to be whichever coin was
+# asked for first, i.e. the first HELD coin in the kill switch).
+EXCHANGE_PROBE_SYMBOL = "BTC"
 EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
 
 # ---------------------------------------------------------------------------
