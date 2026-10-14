@@ -222,7 +222,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* 5.0 trade checklist — mechanical criteria, pass/fail at a glance */
 .vk-checklist-wrap { margin-bottom: 18px; }
 .vk-section-lbl { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-.vk-plan-note { margin-top: 10px; font: 500 12px/1.5 var(--sans); color: var(--text-2); padding: 11px 13px; background: var(--fill); border-radius: var(--radius-sm); }@media (max-width: 560px) {
+.vk-plan-note { margin-top: 10px; font: 500 12px/1.5 var(--sans); color: var(--text-2); padding: 11px 13px; background: var(--fill); border-radius: var(--radius-sm); }
+@media (max-width: 560px) {
   .vk-detail { padding: 4px 14px 32px; }
   .vk-hero { grid-template-columns: 88px 1fr; }
 }
@@ -418,7 +419,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .vkf-recent.is-active { background: var(--green); border-color: var(--green); }
 .vkf-highconv { border-color: rgba(255,196,77,.6); color: #ffc44d; }
 .vkf-highconv.is-active { background: #ffb020; border-color: #ffb020; color: #1a1205; }
-.vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }@media (max-width: 560px) { .vkf-legend { display: none; } }@media (max-width: 560px) {
+.vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }
+@media (max-width: 560px) { .vkf-legend { display: none; } }
+@media (max-width: 560px) {
   .vkf-label { display: none; }
   .vkf-sep { display: none; }
 }
@@ -521,6 +524,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .badge.mcap       { color: var(--text-2); background: var(--fill); font-weight: 700; }
 .badge.mcap-small { color: var(--orange); background: var(--orange-soft); font-weight: 700; }
 .badge.mcap-hot   { color: var(--red-ink);    background: var(--red-soft);    font-weight: 700; }
+/* REFINE200 #157: a cap older than ~30 days — the quietest mark there is; the
+   tooltip carries the date. */
+.badge.mcap-old   { text-decoration: underline dotted; text-underline-offset: 2px; }
 .cname { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 .rprice { font: 600 17px/1 var(--mono); letter-spacing: -0.01em; color: var(--text); flex-shrink: 0; }
 
@@ -538,6 +544,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-color: color-mix(in srgb, #ffb020 60%, transparent); }
 .rbadge.fundwarn { color: var(--red-ink); background: var(--red-soft); font-weight: 800;
   border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+/* REFINE200 #51: the "200-SMA" was measured on fewer than 200 bars */
+.rbadge.proxywarn { color: var(--orange); background: var(--orange-soft);
+  border-color: color-mix(in srgb, var(--orange) 40%, transparent); }
 /* Longs / Shorts direction filter chips */
 .vkf-long  { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
 .vkf-short { color: var(--red-ink);   border-color: color-mix(in srgb, var(--red) 40%, transparent); }
@@ -755,6 +764,7 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   border-radius: 3px;
 }
 .meta-item.accent-orange { color: var(--orange); background: var(--orange-soft); }
+.meta-item .meta-dim { opacity: 0.7; }
 
 /* analysis — clean, readable callout with a grade-coloured edge */
 .rd-analysis {
@@ -987,7 +997,8 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
   font: 800 13px/1 var(--sans); color: var(--text); background: var(--fill-2);
   border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; }
 .sr-recent-chip:hover { border-color: var(--blue); }
-.sr-recent-mkt { font: 700 9px/1 var(--mono); color: var(--muted-2); letter-spacing: 0.05em; }@media (max-width: 680px) {
+.sr-recent-mkt { font: 700 9px/1 var(--mono); color: var(--muted-2); letter-spacing: 0.05em; }
+@media (max-width: 680px) {
   /* Full-screen search sheet — no dim-behind, the input + results own the
      viewport, and a big Cancel sits beside the field. */
   .search-overlay { padding-top: 0; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -1095,14 +1106,16 @@ body.debug-mode .debug-panel {
   .stats { grid-template-columns: repeat(2,1fr); }
   .stat-card:nth-child(2) { border-right: 0; }
   .stat-card:nth-child(1), .stat-card:nth-child(2) { border-bottom: 0.5px solid var(--separator); }
-}@media (max-width: 880px) {
+}
+@media (max-width: 880px) {
   .topbar { flex-wrap: wrap; gap: 10px; padding: 11px 16px; }
   /* Market switch is the primary control — keep it FIRST in the nav so ASX /
      NASDAQ / CRYPTO stay visible (order:3 buried it off-screen right once the
      nav became a horizontal scroll strip on phones). */
   .market-switch { order: -1; flex-shrink: 0; }
   .cname { max-width: 130px; }
-}@media (max-width: 768px) {
+}
+@media (max-width: 768px) {
   .topbar { padding: 10px 14px; gap: 8px; } /* legacy single-row pages */
   .brand h1 { font-size: 14px; }
   .refresh-timer { display: none; }
@@ -1117,7 +1130,8 @@ body.debug-mode .debug-panel {
   /* roomier tap targets on the filter segments */
   .seg-btn { padding: 9px 13px; }
   .view-tab { padding: 6px 0 13px; }
-}@media (max-width: 600px) {
+}
+@media (max-width: 600px) {
   .wrap { padding: 14px 12px 56px; }
   .row { grid-template-columns: 52px 1fr auto; min-height: 80px; }
   .row-main { padding: 15px 15px 13px; gap: 8px; }
@@ -1157,7 +1171,8 @@ body.debug-mode .debug-panel {
   .rd-vol { font-size: 14px; }
   .rd-analysis { padding: 14px 16px; }
   .detail-meta { margin: -2px 0 16px; }
-}@media (max-width: 480px) {
+}
+@media (max-width: 480px) {
   .topbar { flex-wrap: wrap; } /* legacy single-row pages */
   .reload-btn .reload-label { display: none; }
   .reload-btn { padding: 0 10px; }
@@ -1397,7 +1412,8 @@ body { letter-spacing: -0.012em; }
 .more-sheet-version { text-align: center; padding: 12px 0 4px; }
 
 /* Bottom tab bar — the one-thumb mobile nav. Hidden on desktop. */
-.site-tabs { display: none; }@media (max-width: 680px) {
+.site-tabs { display: none; }
+@media (max-width: 680px) {
   .site-tabs {
     display: grid; grid-template-columns: repeat(6, 1fr);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
@@ -1516,14 +1532,16 @@ body { letter-spacing: -0.012em; }
   font: 700 12px/1 var(--mono); color: var(--text-2); white-space: nowrap;
 }
 .jr-topsum .pos { color: var(--green); } .jr-topsum .neg { color: var(--red-ink); }
-.jr-topsum .ts-who { font: 700 10px/1 var(--sans); color: var(--muted); letter-spacing: .04em; }@media (max-width: 720px) { .jr-topsum { gap: 8px; font-size: 11px; } }
+.jr-topsum .ts-who { font: 700 10px/1 var(--sans); color: var(--muted); letter-spacing: .04em; }
+@media (max-width: 720px) { .jr-topsum { gap: 8px; font-size: 11px; } }
 
 /* ═══════════════════ UI WAVE 1 (2026-07-22) — speed + readability ═════════
    Appended overrides, same pattern as the iOS pass above. */
 
 /* Skeleton placeholders sized like real row cards (min-height 90 / 80 mobile)
    so the swap to live rows doesn't jump the layout; shimmer keyframe reused. */
-.skeleton { height: 90px; }@media (max-width: 600px) { .skeleton { height: 80px; } }
+.skeleton { height: 90px; }
+@media (max-width: 600px) { .skeleton { height: 80px; } }
 
 /* Tabular figures on every numeric cell. The `font:` shorthand in the base
    rules resets the body-level tabular-nums, so re-assert it where numbers
@@ -1668,7 +1686,9 @@ body { letter-spacing: -0.012em; }
    wraps to two lines — so the loaded height climbs as the viewport narrows.
    Reservations are tiered from MEASURED loaded heights (always a few px UNDER
    actual, so an over-reserve can never leave a permanent gap). */
-@media (max-width: 1150px) { .deck:has(> .deck-bot) { min-height: 170px; } .deck { align-items: flex-start; } }@media (max-width: 1024px) { .deck:has(> .deck-bot) { min-height: 188px; } }@media (max-width: 860px) { .deck:has(> .deck-bot) { min-height: 198px; } .deck:has(> .deck-bot) .deck-status { min-height: 74px; } }
+@media (max-width: 1150px) { .deck:has(> .deck-bot) { min-height: 170px; } .deck { align-items: flex-start; } }
+@media (max-width: 1024px) { .deck:has(> .deck-bot) { min-height: 188px; } }
+@media (max-width: 860px) { .deck:has(> .deck-bot) { min-height: 198px; } .deck:has(> .deck-bot) .deck-status { min-height: 74px; } }
 /* In the reserved band the deck is top-aligned (above) so the empty state
    paints children at their loaded positions — centering redistributed them
    when the content arrived, which was itself a shift. */
@@ -1768,7 +1788,8 @@ body { letter-spacing: -0.012em; }
 .rec-mv-r { font: 800 12px/1 var(--mono); }
 .rec-mv-r.pos { color: var(--green); } .rec-mv-r.neg { color: var(--red-ink); }
 .rec-link { margin-left: auto; font: 700 12px/1 var(--sans); color: var(--blue-ink); text-decoration: none; }
-.rec-disclaimer { font: 500 11.5px/1.6 var(--sans); color: var(--muted-2); max-width: 760px; margin: 18px 0 0; }@media (max-width: 880px) { .rec-grid { grid-template-columns: 1fr; } }
+.rec-disclaimer { font: 500 11.5px/1.6 var(--sans); color: var(--muted-2); max-width: 760px; margin: 18px 0 0; }
+@media (max-width: 880px) { .rec-grid { grid-template-columns: 1fr; } }
 
 /* ── Wave R #18: degraded / stale states ────────────────────────────────── */
 .rec-degraded { opacity: 0.92; border-style: dashed; }
@@ -1862,7 +1883,8 @@ body { letter-spacing: -0.012em; }
   .deck-top { flex-wrap: wrap; }
   .deck-top .market-switch { order: 0; }
   .microclock { display: none; }
-}@media (max-width: 680px) {
+}
+@media (max-width: 680px) {
   .deck { padding: 12px 14px; gap: 10px; }
   .deck-title { font-size: 16.5px; }
   .deck-pills { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
@@ -1920,7 +1942,8 @@ body { letter-spacing: -0.012em; }
    scrolling with a thumb over them. Floor them; the slim look keeps the
    smaller type, the hit area does not shrink with it. */
 .toolbar.is-slim .seg-btn, .toolbar.is-slim .vkf-chip,
-.toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { min-height: 40px; }@media (max-width: 680px), (max-height: 500px) {
+.toolbar.is-slim .tb-sort-label, .toolbar.is-slim .tb-sort-dir { min-height: 40px; }
+@media (max-width: 680px), (max-height: 500px) {
   /* Mobile keeps the ONE-LINE horizontally-scrolling strip (thumb design):
      nowrap + natural width so the strip scrolls instead of squashing.
      Landscape phones too (max-height, tablet-3): an 844x390 screen used to
@@ -1960,12 +1983,14 @@ body { letter-spacing: -0.012em; }
 .rday.up { color: var(--green); }
 .rday.down { color: var(--red-ink); }
 .rday.est { opacity: 0.9; }   /* the leading ~ already marks it (contrast, 2026-10-13) */
-.skeleton { height: 76px; }@media (max-width: 680px) {
+.skeleton { height: 76px; }
+@media (max-width: 680px) {
   .row-price { min-width: 68px; padding: 0 2px; }
   .rday { font-size: 10.5px; }
 }
 /* v2 height trim: 76px standard card on desktop too (was ~87 from padding). */
-.row-main { padding: 10px 14px 10px 16px; gap: 6px; }@media (min-width: 681px) { .row-main { padding: 10px 15px 10px 16px; } }
+.row-main { padding: 10px 14px 10px 16px; gap: 6px; }
+@media (min-width: 681px) { .row-main { padding: 10px 15px 10px 16px; } }
 
 /* ── Wave 3R (#5+#6+#31): expanded panel v2 ─────────────────────────────────
    Horizontal trade ladder (SL → IN → TP1 → TP2 → TP3 reading in trade order,
@@ -1990,7 +2015,8 @@ body { letter-spacing: -0.012em; }
 .vk-entry .vk-cell-key, .vk-entry .vk-cell-price { color: var(--blue-ink); }
 .vk-entry { box-shadow: inset 0 2px 0 var(--blue); }
 .vk-tp .vk-cell-key, .vk-tp .vk-cell-price { color: var(--green); }
-.vk-tp { box-shadow: inset 0 2px 0 var(--green); }@media (max-width: 680px) {
+.vk-tp { box-shadow: inset 0 2px 0 var(--green); }
+@media (max-width: 680px) {
   /* #31: 2-row reflow — SL + IN across the top, the three TPs beneath. */
   .vk-ladder-h { grid-template-columns: repeat(6, 1fr); }
   .vk-cell { padding: 10px 10px 9px; }
@@ -2049,7 +2075,8 @@ body { letter-spacing: -0.012em; }
   .tb-sort-label::after, .tb-sort-dir::after {
     content: ""; position: absolute; inset: -5px;
   }
-}@media (max-width: 480px) {
+}
+@media (max-width: 480px) {
   .row-spark { display: none; }   /* #28: spark goes, day-%% stays */
 }
 
@@ -2267,6 +2294,8 @@ body { letter-spacing: -0.012em; }
 }
 .mr-pick:hover { border-color: var(--green); color: var(--green); }
 .mr-pick-mkt { font: 700 9px/1 var(--sans); letter-spacing: .07em; color: var(--muted-2); }
+.mr-pick-dir.up { color: var(--green); }
+.mr-pick-dir.down { color: var(--red-ink); }
 
 /* ── UX top-10 #4: proportional plan axis + R:R meter (row detail) ───────── */
 .vk-axis { margin: 2px 0 12px; }
@@ -2307,7 +2336,8 @@ body { letter-spacing: -0.012em; }
 }
 
 /* ── UX top-10 #10: cross-document view transitions (progressive) ────────── */
-@view-transition { navigation: auto; }@media (prefers-reduced-motion: reduce) {
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
 
@@ -2357,7 +2387,7 @@ body { letter-spacing: -0.012em; }
   width: 76px; padding: 4px 7px; border-radius: 8px; border: 1px solid var(--border-2);
   background: rgba(0,0,0,.25); color: var(--text); font: 600 12px/1 var(--mono);
 }
-.vk-size input:focus { outline: none; border-color: var(--blue); }
+.vk-size input:focus { border-color: var(--blue); }   /* the ring is input:focus-visible's (#94) */
 .vk-size input[data-k="risk"] { width: 52px; }
 
 /* ── UX-20 #14: recs week-in-review strip ────────────────────────────────── */
