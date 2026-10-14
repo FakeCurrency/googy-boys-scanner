@@ -9,8 +9,12 @@ Rules:
 - author "auto". A hand-written note (author "Claude") from TODAY is never
   overwritten - interactive sessions outrank the template. In that case the
   script prints RECO_NOTE_UNCHANGED and the workflow skips its commit.
-- Never invents data: a market whose prices file is missing or >48h stale is
-  reported as exactly that instead of being summarised.
+- Never invents data: a market whose prices file is missing or stale is
+  reported as exactly that instead of being summarised. STALE is
+  session-aware for the stock markets (REFINE200, 2026-10-14): a file is stale
+  only if no scan landed inside or after the latest session that has closed.
+  A flat 48h limit called Friday's closing scan stale every Sunday (ASX) and
+  Monday (NASDAQ), though it WAS the latest close. Crypto (24/7) keeps 48h.
 - Atomic write (temp + os.replace); ASCII-only output (CLAUDE.md rules 7+9).
 """
 import datetime as dt
@@ -20,6 +24,12 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:                     # runnable as `python3 scripts/reco_note.py`
+    sys.path.insert(0, ROOT)
+from scanner import config                   # noqa: E402  (stdlib-only module)
+from scripts import _marketclock as clock    # noqa: E402  (REFINE200 #128)
+
+CRYPTO_STALE_H = 48                          # 24/7 market: plain wall-clock hours
 OUT = os.path.join(ROOT, "public", "data", "reco_note.json")
 MARKETS = [("asx", "ASX"), ("nasdaq", "NASDAQ"), ("crypto", "Crypto")]
 
@@ -32,24 +42,49 @@ def load(path):
         return None
 
 
-def hours_old(iso):
+def _stamp(iso):
     try:
         t = dt.datetime.fromisoformat(str(iso))
-        if t.tzinfo is None:
-            t = t.replace(tzinfo=dt.timezone.utc)
-        return (dt.datetime.now(dt.timezone.utc) - t).total_seconds() / 3600.0
     except Exception:
         return None
+    return t if t.tzinfo else t.replace(tzinfo=dt.timezone.utc)
 
 
-def market_line(label, prices, positions):
+def stale_reason(key, iso, now):
+    """None when the scan is a fresh read, else the ASCII reason it is not.
+
+    A stock market's scan is fresh while it was generated at/after the OPEN of
+    the latest session that has closed (config.VIVEK_JOURNAL_SESSION, in the
+    market's own zone): the weekend is not staleness, a missed session is.
+    Crypto, and any market with no session, keeps the 48h wall-clock limit.
+    An unreadable stamp is not called stale (the old rule's behaviour)."""
+    t = _stamp(iso)
+    if t is None:
+        return None
+    session = config.VIVEK_JOURNAL_SESSION.get(key)
+    market = config.MARKETS.get(key)
+    if not session or market is None:
+        age = (now - t).total_seconds() / 3600.0
+        if age > CRYPTO_STALE_H:
+            return "scan data is %d days old" % int(age // 24)
+        return None
+    opened, _close = clock.latest_session(now, market.timezone, session)
+    if t >= opened:
+        return None
+    return "last scan %s, before the %s session" % (
+        t.astimezone(opened.tzinfo).strftime("%a %d %b %H:%M"),
+        opened.strftime("%a %d %b"))
+
+
+def market_line(label, prices, positions, key=None, now=None):
     """One sentence per market, mirroring the page's own breadth maths
     (recs.js: all qualifying rows by dir; 62/38 lean thresholds; thin < 8)."""
     if not prices or not isinstance(prices.get("rows"), dict):
         return "%s: no scan data available today." % label
-    age = hours_old(prices.get("generated_at"))
-    if age is not None and age > 48:
-        return "%s: scan data is %d days old - no fresh read." % (label, int(age // 24))
+    now = now or dt.datetime.now(dt.timezone.utc)
+    why = stale_reason(key or label.lower(), prices.get("generated_at"), now)
+    if why:
+        return "%s: %s - no fresh read." % (label, why)
     rows = list(prices["rows"].values())
     longs = sum(1 for r in rows if r.get("dir") == "LONG")
     shorts = sum(1 for r in rows if r.get("dir") == "SHORT")
@@ -91,7 +126,7 @@ def main():
     for key, label in MARKETS:
         prices = load(os.path.join(ROOT, "public", "data", "%s_prices.json" % key))
         pos = [p for p in open_pos if str(p.get("market") or "").lower() == key]
-        lines.append(market_line(label, prices, pos))
+        lines.append(market_line(label, prices, pos, key=key, now=now))
     total_r = sum(p.get("unreal_r") or 0 for p in open_pos)
     lines.append("Overall the open paper book is %s at %+.2fR across %d positions." % (
         "ahead" if total_r >= 0 else "behind", total_r, len(open_pos)))
