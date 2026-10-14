@@ -2705,8 +2705,10 @@
       try { zHide = JSON.parse(localStorage.getItem("pm-zone-hidden") || "{}") || {}; } catch (_) {}
       const alphaScale = (rgba, mult) =>
         rgba.replace(/([\d.]+)\)$/, (_m, a) => Math.min(0.8, +a * mult).toFixed(3) + ")");
-      const pf = (x) => x == null ? "—" : x >= 1000 ? x.toLocaleString("en-AU", { maximumFractionDigits: 0 })
-        : x < 0.001 ? x.toFixed(8).replace(/0+$/, "") : x < 0.1 ? x.toFixed(4) : x < 2 ? x.toFixed(3) : x.toFixed(2);
+      // The zone labels use the ONE PhaseMap price formatter (phasemap-shared.js
+      // loads first, pinned in chart_refine) — this was a copy of its old
+      // 8-dp-and-strip rule that printed BONK/FLOKI bands as "0." (REFINE200 WP16).
+      const pf = (x) => (window.PM && window.PM.fmtPrice ? window.PM.fmtPrice(x) : (x == null ? "—" : String(x)));
       const SRC_LABEL = { box_high: "box high", box_low: "box low", equal_highs: "equal highs",
         equal_lows: "equal lows", prior_high: "prior high", prior_low: "prior low",
         yearly_open: "yearly open", quarterly_open: "quarterly open", monthly_open: "monthly open",
