@@ -730,6 +730,49 @@ test("PM.isFundReit: NETFLIX is clean — ETF does not match inside a word", () 
   assert.strictEqual(SHARED_PM.isFundReit({ name: "Fortescue Ltd", sector: "Materials" }), false);
 });
 
+// REFINE200 WP16: PM.fmtPrice below 0.001. PhaseMap publishes 6 significant
+// figures (#132) so BONK/FLOKI bands are real numbers; the old 8-dp-and-strip
+// rule printed 0 as "0." and a sub-1e-8 price as "0.".
+test("PM.fmtPrice: sub-0.001 prices keep 4 significant figures, never '0.'", () => {
+  const f = SHARED_PM.fmtPrice;
+  assert.strictEqual(f(0), "0");
+  assert.strictEqual(f(2.05331e-5), "0.00002053", "BONK-class: 4 sig figs, not 2");
+  assert.strictEqual(f(3e-6), "0.000003000");
+  assert.strictEqual(f(1.23456e-9), "0.000000001235", "below 1e-8 was '0.'");
+  assert.strictEqual(f(-0.00002), "-0.00002000", "a negative reads its magnitude's tier");
+  assert.strictEqual(f(0.00099999), "0.0010", "rounds up into the next tier, not 5 sig figs");
+  assert.strictEqual(f(1e-300), "1.000e-300", "past 20 decimals it goes exponential");
+  for (const v of [0, 5e-10, 1e-8, 7.5e-7, 0.0005, 0.0009999, 0.001])
+    assert.ok(!/\.$/.test(f(v)) && f(v) !== "0." && !/^-?0\.0*$/.test(f(v)), `${v} -> ${f(v)}`);
+});
+
+test("PM.fmtPrice: the tiers at and above 0.001 did not move", () => {
+  const f = SHARED_PM.fmtPrice;
+  assert.strictEqual(f(null), "—");
+  assert.strictEqual(f(NaN), "—");
+  assert.strictEqual(f(0.0523), "0.0523");
+  assert.strictEqual(f(0.0012), "0.0012");
+  assert.strictEqual(f(1.5), "1.500");
+  assert.strictEqual(f(12.5), "12.50");
+  assert.strictEqual(f(1234), (1234).toLocaleString("en-AU", { maximumFractionDigits: 0 }));
+});
+
+// REFINE200 WP16: the PhaseMap copy says what the engine does. STALLED never
+// returns to RUNNING (setup_engine._module4_run: it is reset after
+// stalled_expiry_bars or killed by a close through inv_hard), and a TRAP_SET
+// record carries no zones — demand/inv_hard/targets are built at the sweep.
+test("PM copy: STALLED does not 'resume' and TRAP SET maps no zones", () => {
+  const why = (state) => SHARED_PM.whyHTML({ state, metrics: {}, zones: [], tags: [] });
+  assert.ok(!/can resume/i.test(why("STALLED")), "STALLED cannot resume in the engine");
+  assert.ok(/cannot resume/i.test(why("STALLED")));
+  assert.ok(!/zones are (identified|mapped)/i.test(why("TRAP_SET")), "no zones exist at TRAP_SET");
+  const gloss = SHARED_PM.glossaryHTML();
+  assert.ok(!/its zones are mapped/i.test(gloss), "glossary: trap set maps no zones");
+  assert.ok(/never resumes/i.test(gloss), "glossary: stalled never resumes");
+  const legend = fs.readFileSync(path.join(__dirname, "..", "public", "phasemap-legend.html"), "utf8");
+  assert.ok(!/Fib scanner|rotation watchlist/i.test(legend), "no Fib scanner / rotation watchlist exists");
+});
+
 test("deckCounts: renderDeckPills actually USES it, and reports the products", () => {
   // A pure function nothing calls is a pure function that fixes nothing.
   assert.ok(/const c = deckCounts\(res, isFundReit\);/.test(APP),

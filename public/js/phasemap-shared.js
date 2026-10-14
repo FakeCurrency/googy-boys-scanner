@@ -4,12 +4,24 @@
 window.PM = (() => {
   "use strict";
 
+  // Tiers read the MAGNITUDE (a negative is formatted like its positive).
+  // Below 0.001 it prints 4 SIGNIFICANT figures in plain decimals: PhaseMap
+  // publishes 6 (REFINE200 #132 — BONK/FLOKI zones sit at 1e-5..1e-6), and the
+  // old 8-dp-and-strip rule kept one or two of them, printed a sub-1e-8 band
+  // as "0." and 0 itself as "0." too (REFINE200 WP16). A value that ROUNDS up
+  // to 0.001 drops to the next tier; past 20 decimals it goes exponential.
   const fmtPrice = (x) => {
     if (x == null || !isFinite(x)) return "—";
-    if (x >= 1000) return x.toLocaleString("en-AU", { maximumFractionDigits: 0 });
-    if (x < 0.001) return x.toFixed(8).replace(/0+$/, "");
-    if (x < 0.1) return x.toFixed(4);
-    if (x < 2) return x.toFixed(3);
+    if (x === 0) return "0";
+    const a = Math.abs(x);
+    if (a >= 1000) return x.toLocaleString("en-AU", { maximumFractionDigits: 0 });
+    const r = Math.abs(Number(x.toPrecision(4)));
+    if (r < 0.001) {
+      const dp = 3 - Math.floor(Math.log10(r));
+      return dp > 20 ? x.toPrecision(4) : x.toFixed(dp);
+    }
+    if (a < 0.1) return x.toFixed(4);
+    if (a < 2) return x.toFixed(3);
     return x.toFixed(2);
   };
   const fmtPct = (x) => (x == null ? "—" : (x * 100).toFixed(1) + "%");
@@ -100,10 +112,10 @@ window.PM = (() => {
 
   const TIER_CLASS = { "A+": "pm-tier-aplus", A: "pm-tier-a", Watch: "pm-tier-watch" };
 
-  /* REIT / ETF / LIC / managed fund — the same keyword LIST as chart.js
-     isFundReit, but matched on word boundaries and overridden by the published
-     is_product flag (chart.js still matches substrings and ignores the flag,
-     so the two can disagree on a name like NETFLIX). */
+  /* REIT / ETF / LIC / managed fund — the ONE shared keyword list, matched on
+     word boundaries and overridden by the published is_product flag. chart.js
+     keeps no list of its own: its isFundReit delegates here (pinned in
+     test/chart_refine.test.js), and app.js mirrors the same rule. */
   const FUND_NAME_KW = ["REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
     "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
   const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
@@ -214,11 +226,11 @@ window.PM = (() => {
      state semantics mirror the KEY & LEGEND page; every bullet is tied to a
      datum in the record. Nothing here computes or predicts anything. */
   const STATE_WHY = {
-    TRAP_SET: "The map is drawn: a liquidity pool and its zones are identified, but price has not swept it yet. Nothing is confirmed at this stage.",
+    TRAP_SET: "Price is compressed in a tight box with a liquidity pool (equal lows or highs) resting at its edge, not swept yet. No zones are drawn until the sweep prints; nothing is confirmed at this stage.",
     SWEPT: "Price ran through the mapped liquidity pool — the sweep printed. Now waiting for displacement to confirm intent.",
     DISPLACED: "After the sweep, price displaced away with conviction — the confirmation evidence this lens waits for has printed.",
     RUNNING: "Displacement confirmed and price is travelling toward its target zones — the setup is live.",
-    STALLED: "The move lost momentum before completing — rotation, not trend. It can resume or die from here.",
+    STALLED: "The move touched its 50% zone before completing — rotation, not trend. It cannot resume: it dies on a daily close through the hard invalidation, or drops off the list after a set number of sessions.",
     COMPLETE: "The final target zone was reached — this setup has fully played out.",
     DEAD: "Price violated the hard invalidation zone — the idea is invalidated and the setup is finished.",
   };
@@ -247,7 +259,7 @@ window.PM = (() => {
   /* ── Glossary (plain-language, mirrors the KEY & LEGEND page) ───────────── */
   const GLOSSARY = [
     ["zone", "Zone", "A price BAND with an upper and lower bound — never a single price. Every level PhaseMap draws is a zone."],
-    ["trap_set", "Trap set", "The starting state: a liquidity pool and its zones are mapped, but price hasn't swept them yet."],
+    ["trap_set", "Trap set", "The starting state: price is compressed in a tight box with a liquidity pool resting at its edge, not swept yet. The zones are drawn when the sweep prints."],
     ["swept", "Sweep", "Price runs through a mapped liquidity pool (e.g. equal lows), taking out the resting orders there. The trap springs — but a sweep alone confirms nothing."],
     ["displaced", "Displacement", "A decisive move away after the sweep. This is the confirmation evidence the lens waits for before a setup counts."],
     ["box", "Box", "The consolidation range price built before the event — its high and low are the liquidity zones most likely to be swept."],
@@ -258,7 +270,7 @@ window.PM = (() => {
     ["momentum_invalidation", "50% invalidation", "The softer warning level — losing it means momentum has failed even if the hard line survives."],
     ["confluence", "Confluence (×N)", "N independent sources land on the same band (e.g. box low + fib extension) — the band is merged and marked ×N."],
     ["flashed", "⚡ FLASHED", "The sweep or displacement printed on the latest scan day — fresh evidence worth reviewing now."],
-    ["stalled", "Stalled", "The move lost momentum before completing — rotation, not trend."],
+    ["stalled", "Stalled", "The move touched its 50% zone before completing — rotation, not trend. It never resumes: it dies on a close through the hard invalidation or drops off after a set number of sessions."],
     ["dead", "Dead", "The hard invalidation was violated — the setup is finished."],
     ["complete", "Complete", "The final target zone was reached — the setup fully played out."],
     ["running", "Running", "Displacement confirmed and price is travelling toward its targets — the setup is live."],

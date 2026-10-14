@@ -142,6 +142,16 @@ test("the chart keeps no keyword list of its own, and every fallback carries the
     "PM must load before chart.js for the shared rule to be there");
 });
 
+suite("WP16 the PhaseMap zone labels share PM.fmtPrice");
+
+test("PhaseMap zone labels use PM.fmtPrice, not a stale copy of it (REFINE200 WP16)", () => {
+  // The chart carried the old 8-dp-and-strip rule that printed BONK-class
+  // bands as "0." — one formatter now, the shared one.
+  assert.ok(!/toFixed\(8\)\.replace\(\/0\+\$\//.test(CODE), "a private copy of the old sub-0.001 rule is back");
+  assert.match(CODE, /const pf = \(x\) => \(window\.PM && window\.PM\.fmtPrice \? window\.PM\.fmtPrice\(x\)/);
+  assert.equal(PM.fmtPrice(2.05331e-5), "0.00002053");
+});
+
 /* ═══════════════ #109 one TradingView link for every mode ═══════════════ */
 suite("#109 'Open in TradingView' is set on every chart, exchange-prefixed");
 
