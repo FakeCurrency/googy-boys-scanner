@@ -55,6 +55,18 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
        `${rel}: ${sym} was proven dead and deleted 2026-09-23; re-adding it needs a caller`);
 }
 
+// REFINE200 #94 (2026-10-14): journal.js helpers kept alive only by their own
+// test slices — the JS sizer, the JS cost model, the live-cell stale badge and
+// the VIVEK-row predicate had no caller on the page since the manual journal
+// went (2026-09-21). Bot rows arrive sized, netted and marked by the server.
+{
+  const src = code("js/journal.js");
+  ok(src.includes("function splitBot("), "js/journal.js moved -- pins would be vacuous");
+  for (const sym of ["sizeOf", "costR", "costsFor", "markStale", "isVivek", "RISK_MIN", "RISK_MAX"])
+    ok(!new RegExp(`\\b${sym}\\b`).test(src),
+       `js/journal.js: ${sym} was proven dead and deleted 2026-10-14 (REFINE200 #94); re-adding it needs a caller`);
+}
+
 // CSS: the floating live-P&L box went with the manual journal (2026-09-21);
 // its .live-pos-box / .lpb-* rules styled markup nothing creates.
 {

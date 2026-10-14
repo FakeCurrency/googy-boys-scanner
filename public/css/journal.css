@@ -159,6 +159,34 @@
 .jr-w3-hd { cursor: help; }
 .jr-w3 b { color: var(--bot); font-weight: 700; }
 .jr-w3-band { color: var(--muted-2); font-weight: 500; padding-top: 2px; }
+/* The cycle ENDED 2026-09-21 (REFINE200 #194): said once, quietly, on the
+   headline, and the 30-close readout printed as one plain sentence. */
+.jr-w3-ended { color: var(--muted-2); font-weight: 500; }
+.jr-w3-readout { margin: 4px 0 2px; font: 500 11.5px/1.5 var(--sans); color: var(--muted); }
+.jr-w3-readout b { color: var(--text); font-family: var(--mono); }
+
+/* ── current-cycle scoreboard, per entry cell (REFINE200 #37) ──────────────
+   Same restraint family as .jr-w3: counts and R only, colour where it states
+   a fact (the R sign), no control. One small table, four rows. */
+.jr-hc { font: 600 11.5px/1.5 var(--sans); color: var(--muted); padding: 0 0 10px; }
+.jr-hc-hd { cursor: help; }
+.jr-hc-hd b { color: var(--bot); font-weight: 700; }
+.jr-hc-tbl { width: 100%; max-width: 560px; border-collapse: collapse; margin-top: 4px; font: 500 11.5px/1.35 var(--sans); }
+.jr-hc-tbl th {
+  text-align: left; font: 700 10px/1 var(--sans); letter-spacing: .05em; text-transform: uppercase;
+  color: var(--muted-2); padding: 4px 6px 4px 0; border-bottom: 1px solid var(--border-soft);
+}
+.jr-hc-tbl td { padding: 4px 6px 4px 0; border-bottom: 0.5px solid var(--border-soft); color: var(--text-2); }
+.jr-hc-tbl .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.jr-hc-tbl td:first-child { white-space: nowrap; }
+/* The page body must never scroll sideways (the 320px smoke gate): on the
+   narrowest phones the table scrolls inside its own box instead. */
+.jr-hc-scroll { overflow-x: auto; max-width: 100%; }
+@media (max-width: 420px) {
+  .jr-hc-tbl { font-size: 10.5px; }
+  .jr-hc-tbl th { font-size: 9px; letter-spacing: .02em; }
+  .jr-hc-tbl th, .jr-hc-tbl td { padding-right: 3px; }
+}
 
 /* The zero-rules-side callout. Amber TEXT on a hairline, not a filled alarm
    panel: nothing is broken and nothing needs doing — a fact about what the
@@ -690,6 +718,20 @@ details.jr-fold.jr-fold-quiet > summary {
      reason — but this one is destructive, so a fumbled tap matters more. */
   .jr-close-all { padding: 9px 12px; font-size: 11px; min-height: 36px; }
 }
+
+/* EMERGENCY CLOSE (2026-10-14, owner: "I'm no longer going to close anything
+   by hand" — REFINE200 #89). The close-all button left the "Open positions"
+   header line for this fold under the open table, shut by default and muted
+   until opened: the rules manage the book, and the write path is kept for a
+   genuine emergency only. */
+.jr-emergency { margin: 6px 0 14px; }
+.jr-emergency > summary {
+  cursor: pointer; font: 700 11px/1.4 var(--sans); letter-spacing: .04em;
+  color: var(--muted-2); padding: 6px 0; min-height: 30px;
+}
+.jr-emergency > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 3px; }
+.jr-emergency-note { margin: 4px 0 8px; font: 500 12px/1.45 var(--sans); color: var(--muted); max-width: 620px; }
+.jr-emergency .jr-close-all { margin-left: 0; }
 
 /* ── CLOSED-TRADE PREVIEW (UI pass 2026-08-18) ────────────────────────────
    The closed table was 1,884px of a 5,183px page and grows with every trade.

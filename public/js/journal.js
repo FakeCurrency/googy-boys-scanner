@@ -54,9 +54,8 @@
   };
   const round = (v, n) => +(+v).toFixed(n);
 
-  // SYMBOL → { grade, entry_type, dir } from the live scans: the grade/setup
-  // fallback for rows that lack them, plus the direction flipChip compares
-  // against.
+  // SYMBOL → { grade, dir } from the live scans: the grade fallback for rows
+  // that lack one, plus the direction flipChip compares against.
   const scanMeta = new Map();
   // "market:SYMBOL" → last scan price. Read only by openMetric's non-bot
   // branch, which served the manual book (removed 2026-09-21); bot rows carry
@@ -76,18 +75,6 @@
   const scanAge = new Map();
   const ageOf = (key) => scanAge.get(key) || 0;
   const staleWord = (d) => `${d} session${d === 1 ? "" : "s"}`;
-  // For a rendered "Now" cell. No caller on the page since the live-quote
-  // chain went (2026-09-21) — the bot branch builds the class inline — but it
-  // is the helper journal_stale.test pins. Both branches always run: a cell
-  // that has gone FRESH again must lose the badge, or it decays into decoration.
-  function markStale(cell, days) {
-    if (!cell) return;
-    cell.classList.toggle("jr-stale", days > 0);
-    cell.title = days > 0
-      ? `Priced off a ${staleWord(days)}-old close — this name was missing from the`
-        + ` latest scan and is being filled from the last-good cache.`
-      : "";
-  }
 
   // ── VIVEK sizing + cost model (live source: data/bot_rules.json) ───────────
   // ONE book of 60 slots across all three markets, $2,500 a position, $150,000
@@ -98,14 +85,13 @@
   // Everything below is an OFFLINE FALLBACK only — loadBotRules() overrides
   // from bot_rules.json (published from scanner/config.py every scan), so this
   // file can never drift from the executing bot silently again.
-  const RISK_MIN = 0.25, RISK_MAX = 0.5;
   let EQUITY = 150000;                     // fallback — bot_rules.account_equity wins
   let POSITION_NOTIONAL = 2500;            // fallback — 0 would mean risk-% mode
   // True only once bot_rules.json has PUBLISHED position_notional. The
   // off-scale $ marker (legacySized) keys on it: a marker about SCALE must
   // never be driven by the hand-typed fallback above.
   let NOTIONAL_LIVE = false;
-  let RISK_PCT = 0.35;                     // only consulted when POSITION_NOTIONAL is 0
+  let RISK_PCT = 0.35;                     // adopted + drift-checked only (the JS sizer went, REFINE200 #94)
   const money0 = (v) => "$" + Math.round(v).toLocaleString();
   // Starting capital shown to the user. Derived, never hardcoded, so it tracks
   // whatever the bot publishes.
@@ -119,12 +105,25 @@
   const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
   const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };  // fallback
 
+  // The page's ONE read of the book and the rules (nav.js window.VivekBook,
+  // REFINE200 #68): stalled.js and the status sheet read the same promise, so
+  // the ~370 KB book crosses the network once per page load instead of three
+  // or four times. `fresh` is the 3-minute refresh. The direct fetch is the
+  // fallback for a page without the shared loader.
+  const sharedRead = (kind, fresh) => {
+    const VB = typeof window !== "undefined" ? window.VivekBook : null;
+    if (VB) return kind === "book" ? VB.get({ fresh }) : VB.rules({ fresh });
+    return fetch(kind === "book" ? "data/vivek_bot_book.json" : "data/bot_rules.json", { cache: "no-cache" })
+      .then((r) => {
+        if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+        return r.json();
+      });
+  };
+
   // Adopt the EXECUTING bot's numbers; warn when the JS fallbacks have drifted.
-  async function loadBotRules() {
+  async function loadBotRules(fresh) {
     try {
-      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
-      if (!r.ok) return;
-      const j = await r.json();
+      const j = await sharedRead("rules", fresh);
       const drift = {};
       // account_equity + position_notional joined the published set on
       // 2026-07-28 with the fixed-notional switch. A bot_rules.json older than
@@ -143,6 +142,11 @@
       // Outside the drift loop on purpose: that loop only fires when live and
       // fallback DIFFER, and since 2026-09-27 they agree (2500 === 2500).
       if (typeof j.position_notional === "number") NOTIONAL_LIVE = true;
+      // The current cycle and the cells it trades (REFINE200 #37/#125): read,
+      // never hard-coded, so the next cycle's scoreboard needs no edit here.
+      if (typeof j.cycle_tag === "string" && j.cycle_tag.trim()) LIVE_CYCLE = j.cycle_tag.trim();
+      const cells = cellsOf(j.entry_cells);
+      if (cells) ENTRY_CELLS = cells;
       // The exit ladder (TOP100 #33). These three fractions decide how much of
       // a position each TP books. The page used them for the manual book's R;
       // since that went (2026-09-21) nothing here reads SCALE — every R shown is
@@ -199,71 +203,12 @@
     return "nasdaq";
   }
 
-  // Position size — the exact mirror of vivek_bot.size_position, two modes:
-  //
-  //   FIXED NOTIONAL (default since 2026-07-28): buy POSITION_NOTIONAL dollars
-  //     of the thing. risk_usd falls out of the stop distance instead of being
-  //     set by it, so 1R is NOT constant across trades — a tight 2% stop risks
-  //     $50 on a $2,500 position, a wide 12% stop risks $300. R-multiples are
-  //     unaffected (they were always stop-relative); the $ column is what now
-  //     varies. That is the accepted trade-off of fixed sizing.
-  //   RISK % (POSITION_NOTIONAL === 0): the original path, unchanged — risk a
-  //     clamped slice of equity and derive the size from the stop.
-  //
-  // Both are capped at the market's leverage ceiling. 1R in dollars ===
-  // risk_usd either way, so $ P&L for any VIVEK trade stays R × risk_usd.
-  function sizeOf(market, entry, stop) {
-    const dist = Math.abs(entry - stop);
-    if (!(dist > 0) || !(entry > 0)) return { units: 0, risk_usd: 0, notional: 0, leverage: 0 };
-    const fixed = +POSITION_NOTIONAL || 0;
-    let units, notional, risk_usd;
-    if (fixed > 0) {
-      notional = fixed; units = notional / entry; risk_usd = units * dist;
-    } else {
-      const riskPct = Math.min(Math.max(RISK_PCT, RISK_MIN), RISK_MAX) / 100;
-      risk_usd = EQUITY * riskPct; units = risk_usd / dist; notional = units * entry;
-    }
-    const maxN = EQUITY * (LEVERAGE[market] || LEVERAGE.asx);
-    if (notional > maxN) { units = maxN / entry; notional = units * entry; risk_usd = units * dist; }
-    return { units, risk_usd, notional, leverage: EQUITY ? notional / EQUITY : 0 };
-  }
-
-  const costsFor = (market) => [
-    (SLIPPAGE_BPS[market]   ?? SLIPPAGE_BPS.default)   / 1e4,
-    (COMMISSION_BPS[market] ?? COMMISSION_BPS.default) / 1e4,
-  ];
-  // Round-trip cost in R: entry is a market fill; anything that is NOT a
-  // resting TP limit pays slippage. Mirrors vivek_journal._cost_r.
-  //
-  // INVERTED 2026-08-07 to match the Python, which was inverted by TOP100 #74
-  // and left this copy behind under a comment claiming they agreed. The old
-  // test was an ALLOW-list — `/^(stop|manual)/` — so it charged slippage only
-  // on the two reasons it had heard of. Two others exist in the tree and it
-  // charged neither: `time` (vivek_run.py) and `eod` (vivek_backtest.py).
-  //
-  // The direction of the error is the reason this matters. An allow-list fails
-  // toward the CHEAP side: an unrecognised reason silently pays no slippage,
-  // which under-reports cost and therefore OVER-reports realized R, win rate
-  // and expectancy — on the Me side of a Me-vs-Claude comparison. A deny-list
-  // fails toward the expensive side, which is visible and arguable rather than
-  // flattering and invisible. vivek_journal.py:83-88 makes the same argument.
-  //
-  // Nothing on this page calls it since the manual journal (and its KV sync)
-  // was removed 2026-09-21 — bot rows arrive with the server's net numbers
-  // (splitBot). It stays as the tested JS mirror of vivek_journal._cost_r.
-  function costR(t, slip, comm) {
-    const entry = t.entry, risk = t.risk;
-    if (!(risk > 0) || !entry) return 0;
-    let cp = entry * (slip + comm);
-    for (const ex of t.exits || []) {
-      const market = !/^tp[123]/.test(ex.reason || "");
-      cp += (ex.pct || 0) * (ex.price || entry) * (comm + (market ? slip : 0));
-    }
-    return cp / risk;
-  }
+  // (sizeOf and costR — JS mirrors of vivek_bot.size_position and
+  // vivek_journal._cost_r — had no caller on the page since the manual journal
+  // went, 2026-09-21: every bot row arrives sized and netted by the server.
+  // Deleted with their test slices, REFINE200 #94.)
 
   const rOf = (price, entry, risk, isLong) => (isLong ? (price - entry) : (entry - price)) / risk;
-  const isVivek = (t) => t && t.stop != null && t.tp1 != null;
 
   // ── rules generation stamp ──
   //
@@ -298,9 +243,40 @@
     const ms = Date.parse(t.opened_at || `${t.entry_date || ""}T${t.entry_time || "10:00"}`);
     return isNaN(ms) ? null : ms;
   }
+  // A close carries a DATE, not a time: no closed row in the book records
+  // when in the day it closed (exits[] is dates too). This used to parse
+  // `${exit_date}T16:00` and every closed trade read "04:00 PM" — a time that
+  // never happened, for crypto and NASDAQ closes alike — and hold durations
+  // were measured to it (REFINE200 #187). A row WITH a real `closed_at` is
+  // honoured; otherwise the close is the local midnight of its date, which is
+  // only ever used to ORDER rows, never printed as a time.
   function exitMs(t) {
-    const ms = Date.parse(t.closed_at || `${t.exit_date || ""}T${t.exit_time || "16:00"}`);
-    return isNaN(ms) ? null : ms;
+    const at = Date.parse(t.closed_at || "");
+    if (!isNaN(at)) return at;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t.exit_date || ""));
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null;
+  }
+  // The local calendar day a close belongs to, "YYYY-MM-DD" — the week review
+  // buckets on this rather than on millisecond arithmetic, which a DST change
+  // inside the week shifts by an hour.
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  function exitDay(t) {
+    const at = Date.parse(t.closed_at || "");
+    if (!isNaN(at)) return ymd(new Date(at));
+    const m = /^\d{4}-\d{2}-\d{2}/.exec(String(t.exit_date || ""));
+    return m ? m[0] : null;
+  }
+  // Held, in whole days, from the DATES (the engine's own hold_days when the
+  // row carries it — (exit day - entry_date).days — else the same subtraction
+  // here). "—" when either date is missing.
+  function holdText(t) {
+    let d = typeof t.hold_days === "number" ? t.hold_days : null;
+    if (d == null) {
+      const a = Date.parse(String(t.entry_date || "").slice(0, 10));
+      const b = Date.parse(String(t.exit_date || "").slice(0, 10));
+      if (isFinite(a) && isFinite(b) && b >= a) d = Math.round((b - a) / 864e5);
+    }
+    return d == null ? "—" : `${d}d`;
   }
   function durText(fromMs, toMs) {
     if (fromMs == null || toMs == null || toMs < fromMs) return "—";
@@ -438,14 +414,13 @@
     if (String(now).toUpperCase() === trade) return "";
     return `<span class="jr-flip" title="The scanner's read on this chart flipped AFTER entry — the position was taken as ${trade}">⚠ CHART NOW READS ${esc(String(now).toUpperCase())}</span>`;
   };
-  // Grade + setup type: the bot logs these; manual trades now do too. For trades
-  // taken before that, fall back to the live scan's grade/trigger for the symbol
-  // so older rows aren't blank. (scanMeta is filled from the slim
-  // <mkt>_prices.json, which carries grade + dir only; the entry trigger is
-  // only there on the full *_vivek.json fallback path.)
+  // Grade + setup type: the bot logs both on every row. For a row that lacks a
+  // grade, fall back to the live scan's grade for the symbol so it isn't blank
+  // (scanMeta comes from the slim <mkt>_prices.json, which carries grade + dir
+  // only — no entry trigger, so a missing entry_type stays missing).
   const symKey = (t) => String((t && t.symbol) || "").toUpperCase();
   const gradeOf = (t) => t.grade || (scanMeta.get(symKey(t)) || {}).grade || null;
-  const entryTypeOf = (t) => t.entry_type || (scanMeta.get(symKey(t)) || {}).entry_type || null;
+  const entryTypeOf = (t) => t.entry_type || null;
 
   // Setup chip: the timeframe + entry trigger of the trade — e.g. "Weekly
   // reclaim" — coloured by trigger (reclaim green / retest red / break amber).
@@ -490,11 +465,18 @@
   const symCell = (t) =>
     `<td class="jr-sym" data-label="Position"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal${heldPlanQS(t)}" title="Open ${up(t.symbol)} chart">` +
     `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${reviewChip(t)}${flipChip(t)}</td>`;
-  // Date + time stamp from a parsed epoch (opened / closed).
+  // Date + time stamp from a parsed epoch (opened_at is a real UTC instant).
   function stamp(ms) {
     if (ms == null) return "—";
     const d = new Date(ms); if (isNaN(d)) return "—";
     return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  // The Closed cell: a real closed_at gets date + time, a date-only close gets
+  // the DATE alone — never an invented time (REFINE200 #187).
+  function closeStamp(t) {
+    if (!isNaN(Date.parse(t.closed_at || ""))) return stamp(Date.parse(t.closed_at));
+    const ms = exitMs(t);
+    return ms == null ? "—" : new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   }
 
   // Now / Unreal-R / Unreal-$ cells (returned as parts; liveCells joins them).
@@ -511,7 +493,7 @@
       // The bot side is marked SERVER-SIDE, but off the same merged frames the
       // price map comes from — so it inherits the same fossil risk and earns the
       // same badge (TOP100 #24). The class and title are set inline here
-      // (markStale acts on a live cell; this branch returns HTML).
+      // (this branch returns HTML).
       const d = ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase());
       const cls = "num jr-now" + (d > 0 ? " jr-stale" : "");
       // batch-100 item 24: distance to the REAL stop rides the Now cell —
@@ -664,6 +646,11 @@
         ? `<button type="button" class="jr-close-all" disabled>Sending…</button>`
         : closeAllControl(side, state[side].open);
     }
+    // The control lives inside the folded "Emergency close" section (owner,
+    // 2026-10-14: "I'm no longer going to close anything by hand" —
+    // REFINE200 #89). The fold is hidden while there is nothing to close.
+    const fold = $("#" + side + "-emergency");
+    if (fold) fold.hidden = !state[side].open.length;
   }
 
   // The book's open-positions table: the essentials per row (the comparison
@@ -908,7 +895,7 @@
         <td class="num" data-label="R"${excursionTip(t)}>${t.realized_r == null ? "—" : rChip(t.realized_r)}</td>
         <td class="num ${d == null ? "" : pcls(d)}${lg.cls}" data-label="$"${lg.tip}>${d == null ? "—" : d2(d)}</td>
         <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}</td>
-        <td class="num jr-stamp" data-label="Closed">${stamp(exitMs(t))}<span class="num-sub"> · ${durText(openedMs(t), exitMs(t))}</span></td>
+        <td class="num jr-stamp" data-label="Closed">${closeStamp(t)}<span class="num-sub"> · ${holdText(t)}</span></td>
         <td data-label="Reason">${t.entry_type ? `<span class="jr-pat" title="Entry pattern">${esc(t.entry_type)}</span> ` : ""}<span class="jr-reason jr-reason-${esc(t.exit_reason || "manual")}" title="${esc(reasonTip(t.exit_reason))}">${esc(t.exit_reason || "manual")}</span>${wfeMark(t)}${t.note ? ` <span class="jr-note-tag" title="${esc(t.note)}">📝</span>` : ""}${side && t.realized_r != null ? ` <button class="jr-card-btn" type="button" data-card="${side}:${i}" title="Download this trade as a shareable card image" aria-label="Download trade card">📤</button>` : ""}</td></tr>`;
     }).join("");
     const hidden = Math.max(0, sorted.length - CLOSED_PREVIEW);
@@ -973,7 +960,7 @@
     x.fillText("entry → exit", 48, 288);
     // dates + duration + reason
     x.fillStyle = "#8b96a9"; x.font = `600 16px ${mono}`;
-    x.fillText(`${stamp(openedMs(t))} → ${stamp(exitMs(t))}  ·  ${durText(openedMs(t), exitMs(t))}  ·  ${t.exit_reason || "manual"}`, 48, 344);
+    x.fillText(`${stamp(openedMs(t))} → ${closeStamp(t)}  ·  ${holdText(t)}  ·  ${t.exit_reason || "manual"}`, 48, 344);
     // the hero number: realised R (+ $ underneath when known)
     x.textAlign = "right";
     x.fillStyle = col; x.font = `800 96px ${mono}`;
@@ -1056,8 +1043,43 @@
   // the confound it exists to report. Renders nothing when no row carries a
   // w3-1 stamp (pre-cycle books, and rows opened after w3-1 ended, which
   // carry hc4-1).
+  //
+  // THE CYCLE ENDED 2026-09-21 AND ITS READOUT IS IN (REFINE200 #194). New
+  // rows have carried hc4-1 since then; w3-1's still-open rows keep their tag
+  // and keep closing. Past 30 closes the strip stopped counting toward a
+  // target it had passed and never printed the result, so it now says the
+  // cycle ended, names the current one, and prints the pre-registered readout
+  // — the FIRST 30 gated closes in exit order — against the band fixed at
+  // sign-off (pess +0.056 / mid +0.10 R/trade; kill at or below -0.05,
+  // scripts/evidence_brief.py's frozen protocol). It states where the number
+  // landed; what to do about it stays the owner's call.
   const W3_TAG = "w3-1";
   const W3_TARGET = 30;
+  const W3_ENDED = "2026-09-21";
+  const W3_BAND = { pess: 0.056, mid: 0.10, kill: -0.05 };
+
+  // The readout, or null before the 30th gated close. Ties on the 30th exit
+  // date keep book order (a stable sort), the order the engine closed them in.
+  function w3Readout(d) {
+    const rows = ((d && d.closed) || []).filter((r) => r && String(r.cycle || "") === W3_TAG)
+      .slice().sort((a, b) => String(a.exit_date || "").localeCompare(String(b.exit_date || "")));
+    if (rows.length < W3_TARGET) return null;
+    const R = (r) => (typeof r.realized_r === "number" ? r.realized_r : 0);
+    const avg = (a) => (a.length ? a.reduce((n, r) => n + R(r), 0) / a.length : null);
+    const rules = rows.filter((r) => MECHANICAL_EXITS.includes(String(r.exit_reason || "").toLowerCase()));
+    const first = rows.slice(0, W3_TARGET);
+    return {
+      at: String(first[first.length - 1].exit_date || ""),
+      readout: avg(first), all: avg(rows), n: rows.length,
+      rules: avg(rules), rulesN: rules.length,
+    };
+  }
+  // Where a per-trade figure sits against the pre-registered band, in words.
+  const w3Verdict = (x) => (x <= W3_BAND.kill
+    ? `below the band (pess +${W3_BAND.pess}) and at or past the ${W3_BAND.kill} kill line`
+    : x < W3_BAND.pess ? `below the band (pess +${W3_BAND.pess})`
+    : x < W3_BAND.mid ? `inside the band (pess +${W3_BAND.pess} to mid +${W3_BAND.mid.toFixed(2)})`
+    : `at or above the band's mid (+${W3_BAND.mid.toFixed(2)})`);
 
   // Who took the exit. MECHANICAL_EXITS is the same list deciderSplit uses
   // (defined above), so the strip and the closed-table caption can never disagree
@@ -1158,11 +1180,91 @@
         `</ul></details>`
       : "";
 
+    // Past the target the counter becomes the readout (REFINE200 #194).
+    const ro = w3Readout(d);
+    const count = ro ? `<b>${closedN}</b> closes` : `<b>${closedN}/${W3_TARGET}</b> closes`;
+    const readout = ro
+      ? `<p class="jr-w3-readout">Readout at ${W3_TARGET} closes (${esc(ro.at)}): <b>${fmt(ro.readout)}</b> a trade — ` +
+        `${w3Verdict(ro.readout)}. All ${ro.n} closes to date: ${fmt(ro.all)}` +
+        `${ro.rulesN ? `; the rules' own ${ro.rulesN} exit${ro.rulesN === 1 ? "" : "s"}: ${fmt(ro.rules)}` : ""}.</p>`
+      : "";
+
     return `<div class="jr-w3" id="bot-w3">` +
-      `<div class="jr-w3-hd" title="Pre-registered live cycle w3-1 (owner-signed 2026-08-02): rules frozen, readout at ${W3_TARGET} gated closes against the pre-registered band. Every stat on this page still pools pre-cycle history — this strip tracks the experiment only.">` +
-        `🔬 w3-1 · <b>${openN}</b> gated open · <b>${closedN}/${W3_TARGET}</b> closes${split}</div>` +
-      flag + list +
-      `<div class="jr-w3-band">band pess +0.056 / mid +0.10 R</div></div>`;
+      `<div class="jr-w3-hd" title="Pre-registered live cycle w3-1 (owner-signed 2026-08-02): rules frozen, readout at ${W3_TARGET} gated closes against the pre-registered band. It ended ${W3_ENDED} when the bot moved to the four-cell rules; its still-open rows keep the tag and keep closing. Every stat on this page still pools pre-cycle history — this strip tracks the experiment only.">` +
+        `🔬 w3-1 · <span class="jr-w3-ended">ended ${W3_ENDED} · ${esc(LIVE_CYCLE)} is current</span> · ` +
+        `<b>${openN}</b> ${ro ? "still open" : "gated open"} · ${count}${split}</div>` +
+      readout + flag + list +
+      `<div class="jr-w3-band">band pess +0.056 / mid +0.10 R · kill ≤ −0.05</div></div>`;
+  }
+
+  // ── CURRENT-CYCLE SCOREBOARD, PER ENTRY CELL (REFINE200 #37) ──────────────
+  // The bot trades four cells (1W reclaim, 1W break, 3D reclaim, 1D break),
+  // and whatever is eventually decided about the cycle will be decided per
+  // cell, so this strip counts each cell straight off the book: rows open,
+  // rows closed, what the RULES' exits made (total and average R), and any
+  // hand closes kept apart — a hand close measures timing, not the cell. The
+  // cycle tag and the cells are read from bot_rules.json (cycle_tag,
+  // entry_cells); the constants are the offline fallback. Same restraint as
+  // the w3-1 strip: INERT — no control, no link, no call to act. Silent until
+  // a row carries the tag.
+  const CYCLE_TAG = "hc4-1";   // = config VIVEK_BOT_CYCLE_TAG — offline fallback only
+  let LIVE_CYCLE = CYCLE_TAG;
+  // = config VIVEK_BOT_ENTRY_CELLS, in the order the bot walks them.
+  let ENTRY_CELLS = [["1W", "reclaim"], ["1W", "break"], ["3D", "reclaim"], ["1D", "break"]];
+  // bot_rules.json's {tf: [entry types]} as an ordered list of [tf, type]
+  // pairs, or null when the key is missing or malformed (the fallback stands).
+  const cellsOf = (ec) => {
+    if (!ec || typeof ec !== "object" || Array.isArray(ec)) return null;
+    const out = [];
+    for (const tf of Object.keys(ec)) {
+      if (!Array.isArray(ec[tf])) return null;
+      for (const et of ec[tf]) out.push([String(tf).toUpperCase(), String(et).toLowerCase()]);
+    }
+    return out.length ? out : null;
+  };
+
+  // Per-cell counts for the rows stamped `tag`. A stamped row outside every
+  // cell (none exist today) lands in an "other" bucket rather than vanishing.
+  function cycleCells(d, tag, cells) {
+    const blank = (tf, et) => ({ tf, et, open: 0, closed: 0, rules: 0, rulesR: 0, hand: 0, handR: 0 });
+    const out = cells.map(([tf, et]) => blank(tf, et));
+    const other = blank("", "other");
+    const find = (r) => out.find((c) => c.tf === String(r.timeframe || "").toUpperCase()
+      && c.et === String(r.entry_type || "").toLowerCase()) || other;
+    for (const r of (d && d.open) || []) if (r && r.cycle === tag) find(r).open += 1;
+    for (const r of (d && d.closed) || []) {
+      if (!r || r.cycle !== tag) continue;
+      const c = find(r);
+      const R = typeof r.realized_r === "number" ? r.realized_r : 0;
+      c.closed += 1;
+      // Same classifier as deciderSplit: an absent exit_reason is a human act.
+      if (MECHANICAL_EXITS.includes(String(r.exit_reason || "").toLowerCase())) { c.rules += 1; c.rulesR += R; }
+      else { c.hand += 1; c.handR += R; }
+    }
+    return other.open || other.closed ? out.concat([other]) : out;
+  }
+
+  function cycleLine(d) {
+    const tag = LIVE_CYCLE;
+    const cells = cycleCells(d, tag, ENTRY_CELLS);
+    const sum = (k) => cells.reduce((n, c) => n + c[k], 0);
+    const openN = sum("open"), closedN = sum("closed"), rulesN = sum("rules"), handN = sum("hand");
+    if (!openN && !closedN) return "";
+    const fmt = (x) => `${x >= 0 ? "+" : ""}${x.toFixed(2)}R`;
+    const label = (c) => (c.tf ? `${TF_NAME[c.tf] || c.tf} ${c.et}` : "outside the cells");
+    const rowsHTML = cells.map((c) =>
+      `<tr><td>${esc(label(c))}</td>` +
+      `<td class="num">${c.open}</td><td class="num">${c.closed}</td>` +
+      `<td class="num">${c.rules ? `<span class="${rcls(c.rulesR)}">${fmt(c.rulesR)}</span>` : "—"}</td>` +
+      `<td class="num">${c.rules ? `<span class="${rcls(c.rulesR / c.rules)}">${fmt(c.rulesR / c.rules)}</span>` : "—"}</td>` +
+      `<td class="num">${c.hand ? `${c.hand} · ${fmt(c.handR)}` : "0"}</td></tr>`).join("");
+    return `<div class="jr-hc" id="bot-hc">` +
+      `<div class="jr-hc-hd" title="The cycle the bot is in now (bot_rules.json cycle_tag), counted per entry cell. Rules exits are stops, time-stops, trails and targets; a hand close is counted apart because it measures timing, not the cell.">` +
+        `🧪 ${esc(tag)} · current cycle · <b>${openN}</b> open · <b>${closedN}</b> closed` +
+        `${closedN ? ` · <b>${rulesN}</b> by the rules${handN ? ` · <b>${handN}</b> by hand` : ""}` : ""}</div>` +
+      `<div class="jr-hc-scroll"><table class="jr-hc-tbl"><thead><tr><th>Cell</th><th class="num">Open</th><th class="num">Closed</th>` +
+        `<th class="num">Rules R</th><th class="num">Avg R</th><th class="num">By hand</th></tr></thead>` +
+        `<tbody>${rowsHTML}</tbody></table></div></div>`;
   }
 
   function renderSide(side) {
@@ -1171,7 +1273,9 @@
     statCards($("#" + pre + "-stats"), s);
     if (side === "bot") {
       const host = $("#bot-stats");
-      document.querySelectorAll("#bot-w3").forEach((el) => el.remove());
+      document.querySelectorAll("#bot-w3, #bot-hc").forEach((el) => el.remove());
+      // The current cycle first, then the ended one (REFINE200 #37/#194).
+      if (host) host.insertAdjacentHTML("beforebegin", cycleLine(d));
       if (host) host.insertAdjacentHTML("beforebegin", w3Line(d));
       renderTide();
     }
@@ -1403,7 +1507,11 @@
     const dow = (now.getDay() + 6) % 7;              // Mon=0 … Sun=6
     const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow - off * 7);
     const start = mon.getTime();
-    return { start, end: start + 7 * 86400e3, mon };
+    // The week's seven local dates, Mon first — what a close's exitDay() is
+    // matched against (REFINE200 #187: a close has a date, not a time).
+    const days = Array.from({ length: 7 }, (_, i) =>
+      ymd(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i)));
+    return { start, end: start + 7 * 86400e3, mon, days };
   }
   function renderWeeklyDigest() {
     const box = $("#jr-digest");
@@ -1411,8 +1519,8 @@
     const anyEver = (state.bot.closed || []).some((t) => t.realized_r != null);
     if (!anyEver) { box.hidden = true; return; }
     box.hidden = false;
-    const { start, end, mon } = weekBounds(wkOffset);
-    const inWeek = (t) => { const ms = exitMs(t); return ms != null && ms >= start && ms < end && t.realized_r != null; };
+    const { start, mon, days: weekDays } = weekBounds(wkOffset);
+    const inWeek = (t) => t.realized_r != null && weekDays.includes(exitDay(t));
     const bot = (state.bot.closed || []).filter(inWeek);
     const closes = bot;
     const fmtD = (d) => d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -1446,8 +1554,8 @@
     if (days) {
       const byDay = Array.from({ length: 7 }, () => []);
       closes.forEach((t) => {
-        const i = Math.floor((exitMs(t) - start) / 86400e3);
-        if (i >= 0 && i < 7) byDay[i].push(t);
+        const i = weekDays.indexOf(exitDay(t));
+        if (i >= 0) byDay[i].push(t);
       });
       const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       days.innerHTML = byDay.map((list, i) =>
@@ -1500,25 +1608,46 @@
     // so the panel can never contradict itself.
     if (losers.length) {
       const lR = avg(losers, (t) => t.realized_r);
-      const slip = -1 - lR;                        // how far past -1R the average loss lands
+      // SLIPPAGE IS MEASURED ON STOP EXITS ONLY (REFINE200 #186). It used to be
+      // -1 minus the average of EVERY loser, and most losers are not stops —
+      // hand closes, time-stops and trails close well inside -1R — so the cell
+      // read "≈none" beside a count of 15 stop breaches. A stop exit's
+      // distance past -1R is the only thing slippage means.
+      const isStop = (t) => String(t.exit_reason || "").toLowerCase() === "stop";
+      const stops = losers.filter(isStop);
+      const sR = stops.length ? avg(stops, (t) => t.realized_r) : null;
+      const slip = sR == null ? null : -1 - sR;    // how far past -1R the average STOP lands
+      const byHand = losers.filter((t) => !MECHANICAL_EXITS.includes(String(t.exit_reason || "").toLowerCase())).length;
       const worst = losers.reduce((w, t) => (t.realized_r < w.realized_r ? t : w), losers[0]);
       const breached = losers.filter((t) => t.realized_r < -1 - SLIP_EPS);
       const saveable = losers.filter((t) => t.mfe_r >= 0.5);
-      cells += cell("Losers", `${losers.length} · avg ${rfmt(lR)}`, rcls(lR));
-      cells += cell("Stop slippage", `${slip <= SLIP_EPS ? "≈none" : rfmt(-slip) + " avg past plan"}`, slip > SLIP_EPS ? "neg" : "",
-        "Average loser vs the -1R plan — gaps/slippage make losses land beyond the stop");
+      cells += cell("Losers", `${losers.length} · avg ${rfmt(lR)}`, rcls(lR),
+        byHand ? `${byHand} of the ${losers.length} were closed by hand, not by a rule` : "");
+      cells += cell("Stop slippage",
+        slip == null ? "no stop exits yet" : slip <= SLIP_EPS ? "≈none" : `${rfmt(-slip)} avg past plan`,
+        slip != null && slip > SLIP_EPS ? "neg" : "",
+        sR == null ? "No loser has closed at its stop yet"
+          : `Stop exits only (${stops.length}, average ${rfmt(sR)}) against the -1R plan — gaps/slippage land a stop beyond it. Hand closes, time-stops and trails are not stops.`);
       cells += cell("Worst loss", `${up(worst.symbol)} ${rfmt(worst.realized_r)}`, rcls(worst.realized_r),
         "The single deepest close — the tail the average hides");
       cells += cell("Past the stop", `${breached.length}/${losers.length}`, breached.length ? "neg" : "",
         "Losers that closed beyond -1R rather than at it");
       cells += cell("Were green first", `${saveable.length}/${losers.length} ≥ +0.5R`, "",
         "Losers whose best excursion reached +0.5R before stopping out");
+      const handNote = byHand ? `, ${byHand} of ${losers.length} closed by hand` : "";
       if (breached.length) {
+        // Driven off the same stop-exit average as the cell, so the two can
+        // never disagree about whether stops are slipping.
+        const stopClause = sR == null ? ""
+          : slip > SLIP_EPS
+            ? ` Stop exits average ${rfmt(sR)} over ${stops.length} — about ${slip.toFixed(2)}R past plan, gap/slippage rather than a rule problem.`
+            : ` Stop exits average ${rfmt(sR)} over ${stops.length} — at the plan.`;
         verdicts.push(`${breached.length} of ${losers.length} losers closed past the −1R stop` +
-          ` (worst ${up(worst.symbol)} at ${rfmt(worst.realized_r)}, avg ${rfmt(lR)}) — gap/slippage rather than a rule` +
-          ` problem, but real risk per losing trade is running about ${(1 + slip).toFixed(2)}× the planned 1R.`);
+          ` (worst ${up(worst.symbol)} at ${rfmt(worst.realized_r)}).${stopClause}` +
+          ` The average loser is ${rfmt(lR)}${handNote}.`);
       } else {
-        verdicts.push("Losses are landing where the plan says they should — every loser closed at or inside −1R.");
+        verdicts.push(`Losses are landing where the plan says they should — every loser closed at or inside −1R` +
+          ` (average ${rfmt(lR)}${handNote}).`);
       }
       if (saveable.length >= 2) verdicts.push(`${saveable.length} losers were up ≥ +0.5R before stopping — evidence for an earlier break-even move.`);
     }
@@ -1559,7 +1688,11 @@
     // right tail past +2R") and read as a description of the bars beneath it —
     // so a book with no right tail at all still claimed to have one.
     const note = $("#jr-rdist-note");
-    if (note) note.textContent = rdistNote(counts, closed.length);
+    // Hand closes between -1R and 0 are named: they are most of that bucket,
+    // and they are not stops (REFINE200 #186).
+    const handInside = closed.filter((t) => t.realized_r > -1 && t.realized_r <= 0
+      && !MECHANICAL_EXITS.includes(String(t.exit_reason || "").toLowerCase())).length;
+    if (note) note.textContent = rdistNote(counts, closed.length, { avg, handInside });
     box.hidden = false;
   }
 
@@ -1568,15 +1701,26 @@
   // (it spans just past -2R up to and including -1R), NOT "inside the stop", or
   // this caption would contradict the exit-quality panel's past-the-stop count
   // directly below it.
-  function rdistNote(counts, n) {
+  //
+  // The approving sentence ("the shape the rules are built to produce") is
+  // only ever printed for a book whose average close is POSITIVE: it used to
+  // fire on any book with one >+1R winner and a thin left tail, and a book
+  // averaging -0.13R a trade was told it had the intended shape. Losses are
+  // described by bucket, literally, and hand closes inside -1R are named
+  // rather than counted as stops (REFINE200 #186).
+  function rdistNote(counts, n, extra) {
+    const ex = extra || {};
     const deepLoss = counts[0], nearStop = counts[1], insideStop = counts[2];
     const losses = deepLoss + nearStop + insideStop;
     const wins = counts[3] + counts[4] + counts[5] + counts[6];
     const rightTail = counts[4] + counts[5] + counts[6];   // better than +1R
     const want = " A healthy curve clusters losses at −1R and earns a right tail past +2R.";
+    const fmtAvg = (x) => `${x >= 0 ? "+" : ""}${(+x).toFixed(2)}R`;
+    const inside = `${insideStop} between −1R and 0` +
+      (ex.handInside ? ` (${ex.handInside} of them closed by hand)` : "");
     if (!wins) {
       const parts = [];
-      if (insideStop) parts.push(`${insideStop} stopped inside −1R`);
+      if (insideStop) parts.push(`${insideStop} closed inside −1R`);
       if (nearStop) parts.push(`${nearStop} at or just past it`);
       if (deepLoss) parts.push(`${deepLoss} beyond −2R`);
       return `All ${n} closes sit left of zero — ${parts.join(", ")}.` +
@@ -1592,7 +1736,14 @@
       return `${deepLoss} of ${losses} losses landed past −2R — a fat left tail means stops are being` +
         ` overrun or overridden, and each one costs two-plus winners to repair.` + want;
     }
-    return `${losses} losses at the stop against ${rightTail} winners past +1R` +
+    const avgOk = typeof ex.avg === "number" && isFinite(ex.avg);
+    if (!avgOk || ex.avg <= 0) {
+      return `${deepLoss + nearStop} closed at or past −1R and ${inside}, against ${rightTail}` +
+        ` winner${rightTail === 1 ? "" : "s"} past +1R` +
+        (avgOk ? ` — ${fmtAvg(ex.avg)} a trade on average: the right tail is not yet paying for the losses.` : ".");
+    }
+    return `${deepLoss + nearStop} closed at or past −1R and ${inside}, against ${rightTail}` +
+      ` winner${rightTail === 1 ? "" : "s"} past +1R, ${fmtAvg(ex.avg)} a trade on average` +
       ` — that is the shape the rules are built to produce.`;
   }
 
@@ -1688,81 +1839,48 @@
   // through in silence.
   let botLoadErr = null;
   let botTried = false;        // a load has completed (either way) — see renderPnlHeadline
-  async function loadBot() {
+  async function loadBot(fresh) {
     try {
-      const r = await fetch("data/vivek_bot_book.json", { cache: "no-cache" });
-      if (!r.ok) { botLoadErr = `HTTP ${r.status}`; return; }
-      state.bot = splitBot(await r.json());
+      state.bot = splitBot(await sharedRead("book", fresh));
       botLoadErr = null;   // cleared only by a load that actually succeeded
     } catch (e) {
-      botLoadErr = "unreachable";
+      botLoadErr = e && e.status ? `HTTP ${e.status}` : "unreachable";
     } finally {
       botTried = true;
     }
   }
 
   // Pull per-symbol grade/dir (the grade-column fallback and flipChip's
-  // direction) and the stale-age map scanAge from the live scans. scanPrice is
-  // still filled but only openMetric's unreachable non-bot branch reads it.
-  // Re-runnable: prices overwrite.
+  // direction) and the stale-age map scanAge from the slim per-market
+  // <m>_prices.json (~5% the size of the full scan files). scanPrice is still
+  // filled but only openMetric's unreachable non-bot branch reads it.
+  // Re-runnable: prices overwrite. (The pre-deploy fallback that read `prices`
+  // out of the full <m>_vivek.json went with that field, REFINE200 #72: the
+  // slim file has been the only source every real run reads since 2026-07-20.)
   async function loadScanMeta() {
-    // Prefer the SLIM per-market companion (2026-07-20, perf): ~5% the size of
-    // the full scan files this page used to download (~3MB across markets)
-    // just to build a price/grade map. Falls back to the full file per market
-    // until the first post-deploy scan publishes the slim ones.
     const markets = ["asx", "nasdaq", "crypto"];
     await Promise.all(markets.map(async (mkt) => {
       try {
         const r = await fetch(`data/${mkt}_prices.json`, { cache: "no-cache" });
-        if (r.ok) {
-          const j = await r.json();
-          const rows = j.rows || {};
-          for (const sym in rows) {
-            const s = String(sym).toUpperCase(), row = rows[sym] || {};
-            if (!scanMeta.has(s)) scanMeta.set(s, { grade: row.grade || null, entry_type: null, dir: row.dir || null });
-          }
-          const pm = j.prices || {}, ages = j.price_age || {};
-          for (const sym in pm) {
-            if (pm[sym] == null) continue;
-            const k = mkt + ":" + String(sym).toUpperCase();
-            scanPrice.set(k, +pm[sym]);
-            // `price_age` is SPARSE — present only for marks older than today.
-            // The delete is the load-bearing half: this loader re-runs every
-            // three minutes, and a name that has just come back into the scan
-            // must LOSE its badge. A stale badge that never clears is worse
-            // than none, because it teaches you to read past the ones that
-            // are real.
-            const a = +ages[sym] || 0;
-            if (a > 0) scanAge.set(k, a); else scanAge.delete(k);
-          }
-          return;
-        }
-      } catch (_) { /* fall through to the full file */ }
-      try {
-        const r = await fetch(`data/${mkt}_vivek.json`, { cache: "no-cache" });
         if (!r.ok) return;
         const j = await r.json();
-        for (const row of (j.results || [])) {
-          const sym = String(row.symbol || "").toUpperCase();
-          if (!sym) continue;
-          if (!scanMeta.has(sym)) scanMeta.set(sym, { grade: row.grade || null, entry_type: row.entry_trigger || null, dir: row.dir || null });
-          if (row.price != null) scanPrice.set(mkt + ":" + sym, +row.price);
+        const rows = j.rows || {};
+        for (const sym in rows) {
+          const s = String(sym).toUpperCase(), row = rows[sym] || {};
+          if (!scanMeta.has(s)) scanMeta.set(s, { grade: row.grade || null, dir: row.dir || null });
         }
-        // Universe-wide last-close snapshot — covers held names that are no longer
-        // a current setup. The full file DOES carry a top-level `price_age` (the
-        // slim file copies it), but this fallback reads the SETUP rows'
-        // `data_age_days` instead, so the badge works for those and the
-        // universe-wide extras fall back to unknown, which renders as fresh.
-        // This is the pre-deploy fallback path only — the slim file above is
-        // what every real run reads.
-        const pm = j.prices || {};
-        const rowAge = new Map((j.results || []).map(
-          (r) => [String(r.symbol || "").toUpperCase(), +r.data_age_days || 0]));
+        const pm = j.prices || {}, ages = j.price_age || {};
         for (const sym in pm) {
           if (pm[sym] == null) continue;
-          const s = String(sym).toUpperCase(), k = mkt + ":" + s;
+          const k = mkt + ":" + String(sym).toUpperCase();
           scanPrice.set(k, +pm[sym]);
-          const a = rowAge.get(s) || 0;
+          // `price_age` is SPARSE — present only for marks older than today.
+          // The delete is the load-bearing half: this loader re-runs every
+          // three minutes, and a name that has just come back into the scan
+          // must LOSE its badge. A stale badge that never clears is worse
+          // than none, because it teaches you to read past the ones that
+          // are real.
+          const a = +ages[sym] || 0;
           if (a > 0) scanAge.set(k, a); else scanAge.delete(k);
         }
       } catch (_) { /* skip a missing/blocked file */ }
@@ -1901,7 +2019,7 @@
     // an unchanged file is a no-op.
     setInterval(async () => {
       if (document.hidden) return;
-      await Promise.all([loadBot(), loadScanMeta(), loadBotRules()]);
+      await Promise.all([loadBot(true), loadScanMeta(), loadBotRules(true)]);
       renderAll();
     }, 180000);
   }

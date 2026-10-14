@@ -231,6 +231,26 @@ test("the host exists in journal.html, and the removed one does not", () => {
     "the manual close-all host came back — the Me side was removed 2026-09-21");
 });
 
+test("the button sits in a folded 'Emergency close' section, not the section title (REFINE200 #89)", () => {
+  // Owner, 2026-10-14: "I'm no longer going to close anything by hand." The
+  // write path stays for a genuine emergency; the control moves one deliberate
+  // tap away, under the open table, shut by default.
+  const html = fs.readFileSync(path.resolve(__dirname, "../public/journal.html"), "utf8");
+  const title = html.slice(html.indexOf('<div class="jr-section-title">Open positions'),
+                           html.indexOf("</div>", html.indexOf('<div class="jr-section-title">Open positions')));
+  assert.ok(!/bot-close-all/.test(title), "close-all is back on the Open positions header line");
+  const m = /<details class="jr-emergency" id="bot-emergency" hidden>\s*<summary>Emergency close<\/summary>([\s\S]*?)<\/details>/.exec(html);
+  assert.ok(m, "the Emergency close fold is missing, open by default, or no longer says what it is");
+  assert.ok(/id="bot-close-all"/.test(m[1]), "the close-all host is not inside the fold");
+  assert.ok(!/<details[^>]*id="bot-emergency"[^>]*\bopen\b/.test(html), "the fold must ship shut");
+});
+
+test("paintOpen hides the fold when there is nothing to close", () => {
+  const paint = between("function paintOpen(side) {", "\n  function openRows(");
+  assert.match(paint, /const fold = \$\("#" \+ side \+ "-emergency"\)/);
+  assert.match(paint, /fold\.hidden = !state\[side\]\.open\.length/);
+});
+
 test("the delegated click handler routes the one surviving button", () => {
   assert.match(SRC, /data-closeall/, "no delegated hook for the button");
   assert.match(SRC, /closeAllBot\(\)/);

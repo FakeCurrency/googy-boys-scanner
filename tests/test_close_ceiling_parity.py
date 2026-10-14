@@ -136,6 +136,20 @@ def test_status_fallback_cap_is_the_book_cap():
         f"status.js would read 'Open N / {n}' offline on a {config.VIVEK_BOT_MAX_OPEN_TOTAL}-slot book")
 
 
+def test_cycle_tag_fallbacks_are_the_config_tag():
+    """REFINE200 #125: status.js and journal.js read the LIVE tag from
+    bot_rules.json's cycle_tag; their literal is the offline fallback only.
+    A fallback still naming the previous cycle would count the dead cohort
+    under the old heading whenever the rules file is unreachable."""
+    for path in (STATUS_JS, JOURNAL_JS):
+        src = path.read_text(encoding="utf-8")
+        found = re.findall(r'const CYCLE_TAG = "([^"]+)";', src)
+        assert len(found) == 1, f"{path.name}: expected one CYCLE_TAG fallback, got {found}"
+        assert found[0] == config.VIVEK_BOT_CYCLE_TAG, (
+            f"{path.name} falls back to cycle {found[0]!r}; config trades {config.VIVEK_BOT_CYCLE_TAG!r}")
+        assert "cycle_tag" in src, f"{path.name} no longer reads bot_rules.json's cycle_tag"
+
+
 def test_journal_fallback_notional_is_the_config_notional():
     src = JOURNAL_JS.read_text(encoding="utf-8")
     n = _one(r"let POSITION_NOTIONAL = (\d+);", src, "journal.js")
