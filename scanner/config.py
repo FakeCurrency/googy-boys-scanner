@@ -1010,10 +1010,13 @@ SCALP_CORRELATION_GROUPS = {
 # Phase 5: Risk Management — portfolio-level limits
 # ---------------------------------------------------------------------------
 
+# NOT ENFORCED (REFINE200 #121): no trade path reads either of these two; the
+# browser risk engine that mirrored them went 2026-09-17. bot_rules.json
+# publishes them under "not_enforced", never as rules. Enforcing = owner call.
 PORTFOLIO_HEAT_LIMIT      = 0.07    # max 7% of account at risk at any time across all open positions
 
 # Phase 5: Circuit Breakers
-CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades (matches JS engine)
+CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades
 
 
 # ---------------------------------------------------------------------------
