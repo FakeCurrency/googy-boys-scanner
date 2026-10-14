@@ -733,6 +733,26 @@ test("render() installs the formatters on the price chart and the panes, and sha
   assert.match(fnSrc("rApply"), /shadeRows\(c\.slice\(0, idx\), curTF, intradayTz\)/, "replay shades the same way");
 });
 
+/* ═══════════════ #106 a 4H marker lands on ITS 4H bar ═══════════════ */
+suite("#106 intraday markers match the exact bar, not the first bar of the day");
+
+test("a marker with ts lands on that bar; a date-only one keeps the old snap", () => {
+  const A = new Function(`${fnSrc("barAtDate")} ${fnSrc("barAtTime")} ${fnSrc("adaptMarkers")} return adaptMarkers;`)();
+  // Three 4H buckets of one AEDT ASX session (Mon 12 Oct): 20:00Z (Sun UTC), 00:00Z, 04:00Z.
+  const t = (iso) => Date.parse(iso) / 1000;
+  const bars = ["2026-10-11T20:00:00Z", "2026-10-12T00:00:00Z", "2026-10-12T04:00:00Z", "2026-10-12T20:00:00Z"]
+    .map((iso) => ({ time: t(iso) }));
+  const m = A([{ date: "2026-10-12", ts: t("2026-10-12T04:00:00Z"), kind: "trigger", label: "break" },
+               { date: "2026-10-12", ts: t("2026-10-12T00:00:00Z"), kind: "reaction" }], bars, "long");
+  assert.deepEqual(m.map((x) => [x.text, x.time]),
+    [["200 SMA", t("2026-10-12T00:00:00Z")], ["break", t("2026-10-12T04:00:00Z")]],
+    "each mark on its own 4H bar (both used to land on 00:00Z, the day's first UTC bar)");
+  const old = A([{ date: "2026-10-12", kind: "reaction" }], bars, "long");
+  assert.equal(old[0].time, t("2026-10-12T00:00:00Z"), "an old payload (date only) behaves as before");
+  const between = A([{ date: "2026-10-12", ts: t("2026-10-12T02:00:00Z"), kind: "reaction" }], bars, "long");
+  assert.equal(between[0].time, t("2026-10-12T00:00:00Z"), "a ts inside a bar snaps to the bar that holds it");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);

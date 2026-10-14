@@ -814,13 +814,26 @@
     return best;
   }
 
+  // An intraday marker carries the engine bar's start (`ts`, epoch seconds):
+  // the bar that starts there, else the last bar at or before it. A date
+  // alone snapped every 4H reaction/trigger -- its flash band and REPLAY's
+  // start with it -- to the FIRST 4H bar of that day (REFINE200 #106).
+  function barAtTime(bars, ts) {
+    let best = null;
+    for (const b of bars) {
+      if (b.time === ts) return b;
+      if (b.time < ts) best = b; else break;
+    }
+    return best;
+  }
+
   // Turn the Python marker list into chart markers (≤2: the 200 SMA reaction and
   // the entry trigger). Deliberately minimal — no swing-pivot thicket.
   function adaptMarkers(pyMarkers, bars, direction) {
     const isLong = direction !== "short";
     const out = [];
     for (const mk of (pyMarkers || [])) {
-      const b = barAtDate(bars, mk.date);
+      const b = Number.isFinite(mk.ts) ? barAtTime(bars, mk.ts) : barAtDate(bars, mk.date);
       if (!b) continue;
       if (mk.kind === "reaction") {
         out.push({ time: b.time, position: isLong ? "belowBar" : "aboveBar",

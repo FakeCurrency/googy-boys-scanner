@@ -412,8 +412,19 @@ def _resample_4h_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
     00:00/04:00/08:00/... UTC exactly as the chart's `t - t % (4*3600)` does.
     Anchoring to each market's open would produce prettier candles and would
     NOT match the chart, and two 4H series that disagree about where a bar
-    starts is the one outcome worth avoiding here."""
+    starts is the one outcome worth avoiding here.
+
+    THE INDEX IS CONVERTED TO UTC FIRST (REFINE200 #106). yfinance hands
+    intraday bars back in the EXCHANGE's zone, and pandas anchors "4h" bins
+    on local midnight of the first day: ASX bins fell on 21/01/05Z (AEDT) or
+    22/02/06Z (AEST) while the chart's fell on 20/00/04Z, so the 4H plan was
+    built from different bars than the 4H candles drawn under it (NASDAQ
+    matched only under EDT). In UTC the bins are the chart's, in every DST
+    regime. Display only: nothing but the chart's 4H toggle reads this."""
     try:
+        idx = getattr(df, "index", None)
+        if getattr(idx, "tz", None) is not None:
+            df = df.tz_convert("UTC")
         h4 = df.resample("4h").agg(_OHLCV_AGG).dropna()
         return h4 if len(h4) else None
     except Exception:
@@ -435,7 +446,7 @@ def build_h4_plan(df_1h: pd.DataFrame, direction: str) -> dict | None:
     h4 = _resample_4h_ohlc(df_1h)
     if h4 is None or len(h4) < config.VIVEK_MIN_TF_BARS:
         return None
-    return build_tf_plan(h4, direction)
+    return build_tf_plan(h4, direction, stamp_time=True)
 
 
 def _resample_3day_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
@@ -535,7 +546,7 @@ def _recent_reaction_bar(frame: pd.DataFrame, direction: str, level: float) -> i
     return None
 
 
-def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
+def build_tf_plan(frame: pd.DataFrame, direction: str, stamp_time: bool = False) -> dict | None:
     """A full timeframe plan for `frame`: the 200 SMA level, structural SL/TPs,
     and the trigger state — all from ONE place (Python), so the row, chart and
     bot read identical numbers. Returns None when the frame is too short.
@@ -586,7 +597,23 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
         except Exception:
             return None
 
+    def _ts(i):
+        # Epoch seconds of the bar's start (REFINE200 #106). An intraday plan
+        # has several bars a day, so the date alone put the chart's 4H
+        # reaction/trigger marker -- and REPLAY's start -- on the FIRST bar of
+        # that date. Only intraday plans carry it (stamp_time).
+        try:
+            t = pd.Timestamp(frame.index[i])
+            t = t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
+            return int(t.timestamp())
+        except Exception:
+            return None
+
     react_i = _recent_reaction_bar(frame, direction, level)
+    stamps = {}
+    if stamp_time:
+        stamps = {"trigger_ts": _ts(trigger["bar"]) if trigger else None,
+                  "reaction_ts": _ts(react_i) if react_i is not None else None}
     return {
         **lv,
         "level": round(level, 8),
@@ -598,6 +625,7 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
         "entry_trigger": trigger["type"] if trigger else None,
         "trigger_bar": _date(trigger["bar"]) if trigger else None,
         "reaction_bar": _date(react_i) if react_i is not None else None,
+        **stamps,
         "bars": n,
     }
 
@@ -639,8 +667,12 @@ def build_markers(plans: dict) -> dict:
         ms = []
         if p.get("reaction_bar"):
             ms.append({"date": p["reaction_bar"], "kind": "reaction"})
+            if p.get("reaction_ts") is not None:
+                ms[-1]["ts"] = p["reaction_ts"]       # intraday: the exact bar (#106)
         if p.get("trigger_bar"):
             ms.append({"date": p["trigger_bar"], "kind": "trigger", "label": p.get("entry_trigger")})
+            if p.get("trigger_ts") is not None:
+                ms[-1]["ts"] = p["trigger_ts"]
         out[tf] = ms
     return out
 
