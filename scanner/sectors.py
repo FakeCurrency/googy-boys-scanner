@@ -110,9 +110,32 @@ def _read(label, sectors, indices):
     leaders = ", ".join(f"{s['symbol']} ({s['chg_pct']:+.1f}%)" for s in ranked[:3])
     laggards = ", ".join(f"{s['symbol']} ({s['chg_pct']:+.1f}%)" for s in ranked[-3:][::-1])
     rotation = (f"Money rotated INTO {leaders} and OUT OF {laggards}. "
-                + ("Cyclicals/growth leading — appetite for risk."
-                   if risk_on else "Defensives & gold leading — a cautious, risk-off lean."))
+                + _lean(ranked, risk_on, cyc_avg, dfn_avg))
     return summary, rotation
+
+
+def _lean(ranked, risk_on, cyc_avg, dfn_avg):
+    """The rotation read's closing clause, built from the sectors that actually
+    led (REFINE200 #142). It used to be a fixed sentence per branch, so the
+    risk-off day read "Defensives & gold leading" with gold the second-worst
+    sector, and the US column (which has no gold series) said it too. Names
+    only the top-3 leaders that are UP and on the winning side; with none, it
+    says which side was merely less bad, with the two averages."""
+    side = CYCLICAL if risk_on else DEFENSIVE
+    led = [s for s in ranked[:3] if s["chg_pct"] > 0 and s["symbol"] in side]
+    names = ", ".join(f"{s['name']} {s['chg_pct']:+.1f}%" for s in led)
+    if risk_on:
+        if led:
+            return f"Cyclicals leading ({names}) — appetite for risk."
+        return (f"Cyclicals held up better than defensives ({cyc_avg:+.1f}% vs "
+                f"{dfn_avg:+.1f}%) — a mild risk-on lean.")
+    if led:
+        gold = any(s["symbol"] == "XGD" for s in led)
+        label = ("Gold leading" if gold and len(led) == 1
+                 else "Defensives & gold leading" if gold else "Defensives leading")
+        return f"{label} ({names}) — a cautious, risk-off lean."
+    return (f"Defensives held up better than cyclicals ({dfn_avg:+.1f}% vs "
+            f"{cyc_avg:+.1f}%) — a cautious, risk-off lean.")
 
 
 def _split_movers(rows, market_key):
