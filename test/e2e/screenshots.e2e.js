@@ -8,6 +8,11 @@
  *
  * Local: node test/e2e/screenshots.e2e.js  (writes to test/e2e/__shots__/)
  *   PW_CHROMIUM=/path/to/chromium to point at a prebuilt browser.
+ *
+ * FIXTURE DATA (REFINE200, 2026-10-14): every /data/ request is served from
+ * test/e2e/fixtures/data (a missing fixture is a 404), the set screenshot-diff
+ * pins. The overflow gate used to draw 11 pages from the LIVE scan and book, so
+ * a long name or a wide number in that day's tape could fail the next code push.
  */
 const { spawn } = require("child_process");
 const net = require("net");
@@ -19,8 +24,9 @@ try { ({ chromium } = require("playwright")); }
 catch (_) { ({ chromium } = require("/home/claude/.npm-global/lib/node_modules/playwright")); }
 
 const ROOT = path.join(__dirname, "..", "..", "public");
+const FIXTURES = path.join(__dirname, "fixtures");
 const OUT = path.join(__dirname, "__shots__");
-const PORT = 8944;
+const PORT = Number(process.env.E2E_PORT) || 8944;
 const BASE = `http://localhost:${PORT}`;
 const WIDTHS = [360, 390, 430];
 // Every nav page that draws only our own content. system.html joined on
@@ -49,6 +55,15 @@ let failures = 0;
     const browser = await chromium.launch(opts);
     for (const w of WIDTHS) {
       const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, isMobile: true, hasTouch: true, serviceWorkers: "block" });
+      await ctx.route("**/data/**", (route) => {
+        const rel = new URL(route.request().url()).pathname.replace(/^\/+/, "");
+        const fix = path.join(FIXTURES, rel);
+        if (fs.existsSync(fix)) {
+          route.fulfill({ status: 200, contentType: "application/json", body: fs.readFileSync(fix) });
+        } else {
+          route.fulfill({ status: 404, contentType: "text/plain", body: "no fixture" });
+        }
+      });
       const page = await ctx.newPage();
       await page.addInitScript(() => { try { localStorage.setItem("gbs:onboarded", "1"); } catch (_) {} });
       for (const pg of PAGES) {

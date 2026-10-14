@@ -191,9 +191,14 @@ const CHROME = process.env.PW_CHROMIUM || process.env.CHROME_PATH || undefined;
     lighthouse = (await import("lighthouse")).default;
     ({ launch } = await import("chrome-launcher"));
   } catch (_) {
-    try { lighthouse = (await import("/tmp/node_modules/lighthouse/core/index.js")).default;
-      ({ launch } = await import("/tmp/node_modules/chrome-launcher/dist/index.js")); }
-    catch (e) { console.error("lighthouse not installed:", e.message); process.exit(1); }
+    // import() ignores NODE_PATH but require.resolve honours it, so a local run
+    // with the tools installed elsewhere (NODE_PATH=<dir>/node_modules) still
+    // finds them. (This used to try a hard-coded /tmp/node_modules.)
+    try {
+      const { pathToFileURL } = require("url");
+      lighthouse = (await import(pathToFileURL(require.resolve("lighthouse")).href)).default;
+      ({ launch } = await import(pathToFileURL(require.resolve("chrome-launcher")).href));
+    } catch (e) { console.error("lighthouse not installed:", e.message); process.exit(1); }
   }
   let root = null, srv = null, failures = 0;
   try {
