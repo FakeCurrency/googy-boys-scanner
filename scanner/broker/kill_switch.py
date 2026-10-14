@@ -177,7 +177,7 @@ def check_and_kill(j: dict, dry_run: bool = False,
     wanted  = _LEGACY_BROKERS if legacy else tuple(brokers)
     armed   = _armed_brokers(wanted, legacy)
 
-    log.warning("KILL SWITCH TRIGGERED — %s P&L = $%.2f (limit -$%.2f)",
+    log.warning("KILL SWITCH TRIGGERED - %s P&L = $%.2f (limit -$%.2f)",
                 label, total_session, limit)
 
     if dry_run:
@@ -204,7 +204,7 @@ def check_and_kill(j: dict, dry_run: bool = False,
         log.warning("could not send kill-switch alert: %s", e)
 
     if dry_run:
-        log.info("kill-switch: dry_run=True — not flattening")
+        log.info("kill-switch: dry_run=True - not flattening")
         return True
 
     for name in armed:
@@ -422,7 +422,7 @@ def run_standalone(dry_run: bool = False) -> dict:
             # than silently leaving it unguarded, and say so loudly enough that
             # whoever added the market fixes the map.
             log.warning("kill-switch: market %r is not in VIVEK_KILL_SWITCH_BROKERS "
-                        "— falling back to the account-wide flatten", market)
+                        "- falling back to the account-wide flatten", market)
             brokers = None
 
         if check_and_kill(j, dry_run=dry_run, limit_usd=limit,
