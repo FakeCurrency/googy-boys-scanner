@@ -1001,23 +1001,21 @@ CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades (m
 # Phase 7: Advanced Monitoring & Alerting
 # ---------------------------------------------------------------------------
 
-# Map event_type → severity level (CRITICAL / WARNING / INFO)
+# Map event_type → severity level (CRITICAL / WARNING / NOTICE / INFO).
+# EVERY key here has an emitter (tests/test_alert_blackout.py fails on an
+# orphan): the scalp-era types with none -- daily_loss, order_failed,
+# order_rejected, circuit_breaker, daily_report, weekly_report, health,
+# orphan_position, info -- were dropped 2026-10-14 (REFINE200 #90). An unknown
+# type still routes as WARNING (alert_router.get_severity).
 ALERT_SEVERITY = {
     "kill_switch":     "CRITICAL",
-    "daily_loss":      "CRITICAL",
-    "order_failed":    "CRITICAL",
     "scan_error":      "CRITICAL",
     "order_placed":    "INFO",
-    "order_rejected":  "WARNING",
     "anomaly":         "WARNING",
-    "circuit_breaker": "WARNING",
-    "daily_report":    "INFO",
-    "health":          "WARNING",
-    "info":            "INFO",
     # A position was opened carrying a review flag (2026-07-28, owner: "Flag
     # this in the future so i can verify whether claude or I should take the
-    # position or not"). Same tier and the same reason: the trade passed every
-    # rule and was taken correctly, so nothing is broken -- but it is heavy
+    # position or not"). NOTICE, because the trade passed every rule and was
+    # taken correctly, so nothing is broken -- but it is heavy
     # enough that the owner may want it as HIS position rather than the bot's,
     # and that decision has a shelf life measured in hours.
     "trade_review":    "NOTICE",
@@ -1036,19 +1034,10 @@ ALERT_SEVERITY = {
     "scan_dry":        "NOTICE",
     # The paper book's daily/weekly loss guard tripped and new entries are
     # halted for the session (2026-07-28, scanner/broker/vivek_run). CRITICAL
-    # alongside `daily_loss` because it is the same event seen from the book
-    # rather than from the broker: a real risk limit was hit and the system has
-    # changed what it will do. It used to fire through alert_dispatch.send
-    # directly, which meant no severity at all.
+    # beside `kill_switch` because it is the same kind of event: a real risk
+    # limit was hit and the system has changed what it will do. It used to
+    # fire through alert_dispatch.send directly, which meant no severity at all.
     "vivek_guard":     "CRITICAL",
-    # Bybit holds a position the journal has never heard of (2026-07-28,
-    # broker/bybit_reconcile._sweep_orphans). CRITICAL and not negotiable: it is
-    # REAL exposure that no stop-watcher, no loss guard and no kill-switch is
-    # counting, because every one of those reads the journal and the journal
-    # does not know the position exists. The severity is the point -- it used to
-    # go out through alert_dispatch.send, which has no tier at all, so this
-    # could not be routed, deduped or acknowledged like anything else.
-    "orphan_position": "CRITICAL",
 }
 
 # Set False to silence all Telegram sends without touching secrets.
@@ -1076,16 +1065,9 @@ ALERT_CHANNELS = {
 # Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
 ALERT_RATE_LIMITS = {
     "kill_switch":     0,        # always send — life-safety critical
-    "daily_loss":      0,        # always send
-    "order_failed":    0,        # always send
     "scan_error":      0,        # always send
     "order_placed":    300,      # max 1 per 5 min
-    "order_rejected":  300,
     "anomaly":         1800,     # max 1 per 30 min (prevents storm on recurring anomaly)
-    "circuit_breaker": 1800,
-    "daily_report":    82800,    # max 1 per 23h
-    "weekly_report":   518400,   # max 1 per 6 days
-    "health":          3600,     # max 1 per hour
     # 0 = the router never suppresses this one (per-EVENT-TYPE limits would let
     # the first market to fire silence the second — scan.yml runs the markets
     # sequentially inside a single job). Plus a sharper reason: this fires only
@@ -1113,13 +1095,6 @@ ALERT_RATE_LIMITS = {
     # differs, and it cannot disagree with itself about what day it is because
     # the same commit writes both.
     "vivek_guard":     0,
-    # 0, and the dedupe is on the SET OF ORPHAN SYMBOLS rather than on a clock
-    # (bybit_reconcile._sweep_orphans). A time window is the wrong tool here:
-    # an orphan persists until a human adopts or closes it, so a window long
-    # enough to stop the alert becoming wallpaper is also long enough to
-    # swallow a genuinely NEW orphan appearing inside it -- and the new one is
-    # the entire reason the probe runs.
-    "orphan_position": 0,
     "DEFAULT":         300,
 }
 
@@ -1236,16 +1211,6 @@ WATCHDOG_RUNS = {
 # so there was nothing left for them to watch. The bot book has never used them
 # — it is marked and stop-checked by the scan and by kill_switch.yml.
 
-
-# ---------------------------------------------------------------------------
-# Phase 8: Enhanced Monitoring & Alerting
-# ---------------------------------------------------------------------------
-
-
-# Weekly report rate-limit bucket (separate from daily_report so each has its own cadence)
-ALERT_RATE_LIMITS_EXTRA: dict = {
-    "weekly_report": 518_400,  # max 1 per 6 days (604800 = 7d; 518400 = 6d allows a little slack)
-}
 
 # ---------------------------------------------------------------------------
 # Alert credentials — the boundary every pasted secret crosses

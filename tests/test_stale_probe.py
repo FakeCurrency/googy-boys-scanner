@@ -145,5 +145,3 @@ def test_the_event_is_registered_everywhere_it_needs_to_be():
     assert ar.get_severity("stale_position") == "NOTICE"
     assert ar.get_channels("stale_position") == []  # no push channel since the 2026-08-27 Discord removal
     assert config.ALERT_RATE_LIMITS["stale_position"] == 0
-    assert ar._SEV_MAP["stale_position"] == "NOTICE"
-    assert ar._RATE_MAP["stale_position"] == 0
