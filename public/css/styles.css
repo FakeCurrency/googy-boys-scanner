@@ -355,19 +355,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .stat-value { font: 700 26px/1.15 var(--mono); letter-spacing: -0.02em; margin-top: 11px; color: var(--text); }
 .accent-orange { color: var(--orange); }
 
-/* ================================================================= view tabs */
-.view-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
-.view-tab {
-  appearance: none; border: 0; background: transparent; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px; color: var(--muted);
-  font: 600 12px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 4px 0 12px; margin-bottom: -1px;
-  border-bottom: 2px solid transparent; transition: color .15s;
-}
-.view-tab:hover { color: var(--text-2); }
-.view-tab.is-active { color: var(--green); border-bottom-color: var(--green); }
-.watch-count { font: 600 10px/1 var(--mono); background: var(--fill); border: 1px solid var(--border); color: var(--muted); padding: 2px 6px; border-radius: 3px; }
-
 /* ================================================================== controls */
 .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .control-group { display: inline-flex; align-items: center; }
@@ -1043,11 +1030,11 @@ body.debug-mode .debug-panel {
 
 /* ===================================================== micro-interactions */
 /* tactile press feedback — controls dip slightly when tapped */
-.seg-btn, .scan-btn, .market-btn, .view-tab {
+.seg-btn, .scan-btn, .market-btn {
   transition: all .18s, transform .08s ease;
 }
 .seg-btn:active, .scan-btn:active, .market-btn:active,
-.view-tab:active, .reload-btn:active, .search-trigger:active, .row-expand:active { transform: scale(0.94); }
+.reload-btn:active, .search-trigger:active, .row-expand:active { transform: scale(0.94); }
 .reload-btn { transition: filter .15s, opacity .15s, transform .08s ease; }
 .search-trigger { transition: color .15s, background .15s, transform .08s ease; }
 
@@ -1098,7 +1085,7 @@ body.debug-mode .debug-panel {
   .detail-anim { transition: grid-template-rows .01ms; }
   .detail-inner > .row-detail, .detail-inner > .debug-panel { transition: none; transform: none; }
   .row:active, .seg-btn:active, .scan-btn:active, .market-btn:active,
-  .view-tab:active, .reload-btn:active { transform: none; }
+  .reload-btn:active { transform: none; }
 }
 
 /* ============================================================== responsive */
@@ -1129,7 +1116,6 @@ body.debug-mode .debug-panel {
   .row-spark { width: 52px; }
   /* roomier tap targets on the filter segments */
   .seg-btn { padding: 9px 13px; }
-  .view-tab { padding: 6px 0 13px; }
 }
 @media (max-width: 600px) {
   .wrap { padding: 14px 12px 56px; }
@@ -1226,7 +1212,6 @@ body.debug-mode .debug-panel {
 .howto-link:hover { color: var(--green); }
 .brand-text h1 { font-size: 19px; }
 .brand-sub { font-size: 11px; font-weight: 700; }
-.view-tab { font: 700 13.5px/1 var(--mono); }
 .seg-btn { font-weight: 700; font-size: 13px; }
 .stat-label { font: 700 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
 .chip { font: 600 11px/1 var(--mono); letter-spacing: 0.05em; padding: 4px 8px; }
@@ -1288,7 +1273,6 @@ body.debug-mode .debug-panel {
   box-shadow: 0 2px 8px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.08);
 }
 .seg-count { border-radius: 999px; font-family: var(--sans); }
-.watch-count { border-radius: 999px; }
 
 /* ---- nav pills: rounded-full, bold SF-style ---- */
 .nav-pills .howto-link {
@@ -1329,20 +1313,6 @@ body.debug-mode .debug-panel {
 .stat-label { font-family: var(--sans); font-weight: 700; letter-spacing: 0.07em; font-size: 11px; }
 .stat-value { font-family: var(--sans); font-weight: 800; font-size: 30px; letter-spacing: -0.03em; }
 .scan-fresh { border-radius: 999px; font-family: var(--sans); font-weight: 700; }
-
-/* ---- view tabs -> iOS segmented control (was underline tabs) ---- */
-.view-tabs {
-  display: inline-flex; gap: 3px; border-bottom: 0; margin-bottom: 16px;
-  background: rgba(255,255,255,0.07); border-radius: 13px; padding: 3px;
-}
-.view-tab {
-  font-family: var(--sans); font-weight: 700; font-size: 13.5px; letter-spacing: 0.02em;
-  padding: 9px 18px; margin-bottom: 0; border-bottom: 0; border-radius: 10px;
-}
-.view-tab.is-active {
-  color: var(--text); border-bottom: 0; background: var(--panel-3);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.08);
-}
 
 /* ---- filter chips: rounded-full, SF-style ---- */
 .vkf-chip { border-radius: 999px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; }
@@ -1897,8 +1867,9 @@ body { letter-spacing: -0.012em; }
 /* ── Wave 3R (#1-3): ONE sticky filter toolbar ──────────────────────────────
    Views menu + grades + VIVEK chips + cycling sort in a single line that pins
    under the topbar (height measured into --topbar-h by app.js) and slims
-   once the deck scrolls away. Replaces .view-tabs + .controls on the
-   dashboard (both classes remain for specs.html). */
+   once the deck scrolls away. Replaces .controls on the dashboard (the
+   class remains for specs.html; the .view-tabs rules went 2026-10-14 with
+   their last producer, the specs stars path — REFINE200 WP16). */
 .toolbar {
   position: sticky; top: var(--topbar-h, 53px); z-index: 20;
   background: var(--nav);
