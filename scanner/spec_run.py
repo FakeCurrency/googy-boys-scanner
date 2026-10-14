@@ -53,9 +53,7 @@ def build_row(sym: str, info: dict, df, cur: str) -> dict | None:
     lv = spec.compute_levels(df, sig)
     if not lv or lv.get("rr", 0) <= 0:
         return None
-    if config.DEMOTE_LOW_RR and grade in ("A+", "A") \
-            and lv["rr"] < config.MIN_TRADEABLE_RR:
-        grade = "B"
+    grade = spec.published_grade(grade, lv["rr"])
     detail = spec.build_detail(df, sig, lv)
     chips = spec.build_chips(fired, sig)
     return {

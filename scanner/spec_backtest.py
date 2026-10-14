@@ -22,7 +22,7 @@ import sys
 
 import pandas as pd
 
-from . import config, data, output, rmodel, spec, universe
+from . import config, data, output, rmodel, scanerrors, spec, universe
 
 HORIZONS = (5, 10, 20)
 DEDUPE_BARS = 5          # one signal per fire-streak
@@ -73,7 +73,11 @@ def replay_ticker(sym: str, df: pd.DataFrame, market: str = "asx") -> list[dict]
         lv = spec.compute_levels(df.iloc[:i + 1], sig)
         if not lv or lv.get("rr", 0) <= 0:
             continue
-        s = {"symbol": sym, "date": str(df["Date"].iloc[i])[:10], "grade": grade,
+        # The PAGE's grade (low-R:R A+/A demoted to B), so a cohort here is
+        # the cohort a reader sees labelled that way; the points grade rides
+        # along as grade_raw.
+        s = {"symbol": sym, "date": str(df["Date"].iloc[i])[:10],
+             "grade": spec.published_grade(grade, lv["rr"]), "grade_raw": grade,
              "entry": c, "stop": lv["stop"], "target": lv["target"], "rr": lv["rr"]}
         for h in HORIZONS:
             s[f"fwd_{h}"] = round(float(close[i + h]) / c - 1, 4) if i + h < n else None
@@ -284,15 +288,20 @@ def main(argv=None) -> int:
     frames = data.download(list(yf_map), period=args.period, interval="1d")
 
     signals = []
+    # Every other replay and screen records its per-ticker failures (TOP100
+    # #60/#66/#67); this one used to `continue` in silence, so a regression
+    # that threw on every frame would publish n=0 as evidence (REFINE200 #181).
+    errs = scanerrors.ErrorLog(f"specs-backtest [{args.market}]")
     for yf_sym, df in frames.items():
         info = yf_map.get(yf_sym)
         if info is None or df is None or df.empty:
             continue
         try:
             signals.extend(replay_ticker(info.get("symbol", yf_sym), df, args.market))
-        except Exception:
-            continue
+        except Exception as exc:                      # noqa: BLE001
+            errs.record(info.get("symbol", yf_sym), exc)
     signals.sort(key=lambda s: (s["date"], s["symbol"]))
+    errs.report(len(frames))
 
     rnd = random_baseline(frames, max(len(signals), 200))
     path = write_report(args.market, signals, rnd, len(items), args.period)
@@ -310,6 +319,10 @@ def main(argv=None) -> int:
         "grades": {g: summarise([s for s in signals if s["grade"] == g])
                    for g in ("A+", "A", "B") if any(s["grade"] == g for s in signals)},
         "baseline_random": rnd,
+        # the grade each cohort is filed under (REFINE200 #181)
+        "grade_rule": "published: an A+/A plan under MIN_TRADEABLE_RR %.1f is filed as B, "
+                      "as the SPECS page shows it" % config.MIN_TRADEABLE_RR,
+        **errs.payload(),
         # additive (2026-09-23): the R model, see r_trade()
         "r_model": {
             "fill": "house",

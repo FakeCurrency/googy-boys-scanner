@@ -238,7 +238,7 @@ def screen_market(market: str, *, cfg=None, limit: int = 0,
         # A first-class part of the payload, not a log line.
         "errors": errs.sample(),
     }
-    print(errs.report(screened), flush=True)
+    errs.report(screened)        # prints its own line
     return payload
 
 
@@ -330,7 +330,7 @@ def backtest_market(market: str, *, rows: Optional[List[dict]] = None,
         "errors": errs.sample(),
         "elapsed_s": round(time.time() - started, 1),
     }
-    print(errs.report(replayed), flush=True)
+    errs.report(replayed)        # prints its own line
     return payload
 
 
