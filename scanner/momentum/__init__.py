@@ -12,8 +12,8 @@ either becomes false.  The lens owns exactly one output directory,
 
 Built to be deleted in one commit -- `git rm -r scanner/momentum
 public/data/momentum` plus the page, the suite and the nav entry -- because
-removability and non-breakingness are the same property (HANDOFF_2026-09-22
-Part 17.0).
+removability and non-breakingness are the same property
+(docs/archive/HANDOFF_2026-09-22.md Part 17.0).
 
 The maths is a port of the owner's specification pack at
 `tradingview/scanner-spec/`, whose reference implementation passes 28

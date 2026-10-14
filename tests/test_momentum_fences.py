@@ -1,6 +1,6 @@
 """THE MOMENTUM FENCES -- what makes a fourth lens non-breaking.
 
-The governing principle (HANDOFF_2026-09-22 Part 17.0) is that the lens must
+The governing principle (docs/archive/HANDOFF_2026-09-22.md Part 17.0) is that the lens must
 be deletable tomorrow in one commit, because removability and
 non-breakingness are the same property.  TURTLE proved it: a whole lens came
 out in one commit and nothing in `broker/`, the bot book or the confluence

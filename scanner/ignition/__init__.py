@@ -15,7 +15,7 @@ push if either becomes false. The lens owns one directory,
 Built to be deleted in one commit -- `git rm -r scanner/ignition
 public/data/ignition` plus the workflow, the deck pill, the two suites and the
 config block -- because removability and non-breakingness are the same
-property (HANDOFF_2026-09-22 Part 17.0).
+property (docs/archive/HANDOFF_2026-09-22.md Part 17.0).
 
     engine.py    pure feature/state maths, shared by the screen AND the replay
     run.py       CLI: screen a market, or replay it (--backtest)

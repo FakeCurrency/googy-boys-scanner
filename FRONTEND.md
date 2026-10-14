@@ -5,7 +5,7 @@ the breakpoint scale, the cache layers, the recs data flow, and the
 conventions every page follows. Read this before touching the UI — it is the
 map that keeps the pages consistent. (Added 2026-07-24 as UI backlog #100.)
 
-Companion docs: `CLAUDE.md` (project-wide rules), `UI_BACKLOG.md` (the 100-item
+Companion docs: `CLAUDE.md` (project-wide rules), `docs/archive/UI_BACKLOG.md` (the 100-item
 UI programme this file closes out).
 
 ---

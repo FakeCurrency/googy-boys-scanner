@@ -13,7 +13,7 @@ Covers exactly the ruled set: pipeline health (real issues only), funnel
 snapshot + direction, arriving names (or zero), graduation events (or zero),
 paper book delta vs the newest backup (closes, new stalls, R change), the
 cycle w3-1 clock (added at enablement, owner-signed 2026-08-02 - see
-RESEARCH-LEDGER.md) and, once it reached n=30, its frozen-protocol VERDICT,
+docs/archive/RESEARCH-LEDGER.md) and, once it reached n=30, its frozen-protocol VERDICT,
 the LIVE cycle's own line (its tag read from bot_rules.json), and one "what
 needs human eyes" line whose default answer is nothing.
 
@@ -36,7 +36,7 @@ DATA = os.path.join(ROOT, "public", "data")
 NOW = datetime.datetime.now(datetime.timezone.utc)
 
 # Cycle w3-1 - the pre-registered 30-close live read (owner-signed 2026-08-02;
-# protocol + evidence in RESEARCH-LEDGER.md). These are FROZEN protocol
+# protocol + evidence in docs/archive/RESEARCH-LEDGER.md). These are FROZEN protocol
 # numbers, deliberately hardcoded: the brief may not import scanner.config
 # (read-only pins), and retuning any of them mid-cycle is what the protocol
 # forbids. The band is the w3 cohort's thrice-replicated sim expectancy
