@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-14T08:25:52Z",
+  "generated_at": "2026-10-14T09:25:46Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -82,6 +82,35 @@
       0.15
     ]
   },
-  "consec_loss_pause": 3,
-  "portfolio_heat_limit_pct": 7.0
+  "open_total": 60,
+  "closed_total": 112,
+  "entry_quality": {
+    "source": "vivek_backtest_longonly.json",
+    "generated_at": "2026-10-01T15:15:04Z",
+    "by_entry_type": {
+      "reclaim": {
+        "n": 1031,
+        "expectancy_r": -0.027,
+        "win_rate": 47.5,
+        "profit_factor": 0.95
+      },
+      "retest": {
+        "n": 648,
+        "expectancy_r": -0.035,
+        "win_rate": 45.7,
+        "profit_factor": 0.93
+      },
+      "break": {
+        "n": 217,
+        "expectancy_r": 0.057,
+        "win_rate": 53.0,
+        "profit_factor": 1.16
+      }
+    }
+  },
+  "not_enforced": {
+    "consec_loss_pause": 3,
+    "portfolio_heat_limit_pct": 7.0,
+    "why": "declared in scanner/config.py, read by no trade path"
+  }
 }
