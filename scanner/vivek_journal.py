@@ -196,6 +196,44 @@ def _r_of(price, entry, risk, is_long):
     return (price - entry) / risk if is_long else (entry - price) / risk
 
 
+def _close_remaining(trade: dict, price: float, day: str, reason: str,
+                     costs: tuple[float, float] | None,
+                     exit_reason: str | None = None) -> None:
+    """Close `trade` at `price`: book the un-booked remainder, stamp exit_*, net costs.
+
+    ONE WRITER (REFINE200 #92). The same accounting -- remaining -> exits ->
+    gross_r -> booked_pct -> status/exit_* -> costs -> hold_days -- was typed
+    out three times: the stop branch of `_mark` below, vivek_run's time stop
+    and vivek_run's hand close. Three copies of a close are three chances for
+    one path to book a trade differently from the others, and the track record
+    cannot tell which path closed a row by reading its numbers.
+
+    `reason` names the exit RECORD, i.e. what filled the remainder (a market
+    fill: "stop" / "time" / "manual"); `exit_reason` is the trade-level verdict
+    when it differs ("trail" / "target" on a stop fill, or a caller's label on a
+    hand close). Both default to the same string.
+    """
+    is_long = trade.get("direction") == "long"
+    remaining = round(1.0 - (trade.get("booked_pct") or 0.0), 6)
+    trade.setdefault("gross_r", trade.get("realized_r", 0.0))
+    if remaining > 1e-9:
+        trade.setdefault("exits", []).append(
+            {"reason": reason, "price": round(price, 8), "pct": remaining, "date": day})
+        trade["gross_r"] = round(
+            trade["gross_r"] + remaining * _r_of(price, trade["entry"], trade["risk"], is_long), 4)
+        trade["booked_pct"] = 1.0
+    trade["status"] = "closed"
+    trade["exit_price"] = round(price, 8)
+    trade["exit_date"] = day
+    trade["exit_reason"] = exit_reason or reason
+    _apply_costs(trade, costs)
+    try:
+        trade["hold_days"] = (dt.date.fromisoformat(day)
+                              - dt.date.fromisoformat(trade["entry_date"])).days
+    except Exception:
+        trade["hold_days"] = None
+
+
 def _snapshot(row: dict, tf: str, plan: dict, market: str,
               entry_price: float, day: str) -> dict | None:
     """Open a paper trade at the current delayed intraday price.
@@ -265,16 +303,9 @@ def _mark(trade: dict, price: float, day: str, costs: tuple[float, float] | None
 
     stop_hit = price <= pos["stop"] if is_long else price >= pos["stop"]
     if stop_hit:
-        remaining = round(1.0 - trade["booked_pct"], 6)
-        if remaining > 1e-9:
-            trade["exits"].append({"reason": "stop", "price": round(price, 8), "pct": remaining, "date": day})
-            trade["gross_r"] = round(trade["gross_r"] + remaining * _r_of(price, entry, risk, is_long), 4)
-            trade["booked_pct"] = 1.0
-        trade["status"] = "closed"
-        trade["exit_price"] = round(price, 8)
-        trade["exit_date"] = day
-        trade["exit_reason"] = ("target" if pos["tp3_hit"]
-                                else "trail" if pos["tp1_hit"] else "stop")
+        _close_remaining(trade, price, day, "stop", costs,
+                         exit_reason=("target" if pos["tp3_hit"]
+                                      else "trail" if pos["tp1_hit"] else "stop"))
     else:
         for a in manage_position(pos, price):          # books TPs reached + moves SL
             if a["action"] == "scale":
@@ -285,18 +316,12 @@ def _mark(trade: dict, price: float, day: str, costs: tuple[float, float] | None
                 trade["booked_pct"] = round(trade["booked_pct"] + pct, 6)
         trade["tp1_hit"], trade["tp2_hit"], trade["tp3_hit"] = pos["tp1_hit"], pos["tp2_hit"], pos["tp3_hit"]
         trade["stop"] = pos["stop"]
+        # Derive the NET realized_r from accumulated gross R minus execution
+        # costs (the stop branch's _close_remaining does the same itself).
+        _apply_costs(trade, costs)
 
-    # Derive the NET realized_r from accumulated gross R minus execution costs.
-    _apply_costs(trade, costs)
     trade["mae_r"] = round(_r_of(trade["mae"], entry, risk, is_long), 3)
     trade["mfe_r"] = round(_r_of(trade["mfe"], entry, risk, is_long), 3)
-    if trade["status"] == "closed":
-        try:
-            d0 = dt.date.fromisoformat(trade["entry_date"])
-            d1 = dt.date.fromisoformat(trade["exit_date"])
-            trade["hold_days"] = (d1 - d0).days
-        except Exception:
-            trade["hold_days"] = None
 
 
 def _stats(trades: list[dict]) -> dict:

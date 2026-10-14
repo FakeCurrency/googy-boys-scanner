@@ -47,7 +47,7 @@ from zoneinfo import ZoneInfo
 
 from .. import config
 from . import vivek_bot, vivek_guard
-from ..vivek_journal import (_apply_costs, _current_price, _mark, _r_of,
+from ..vivek_journal import (_close_remaining, _current_price, _mark,
                              _snapshot, costs_for, market_open)
 from ..journal_common import atomic_write
 
@@ -957,26 +957,8 @@ def _stale_probe(market: str, book: dict, day: str, send=None) -> list[str]:
 def _close_time_stop(pos: dict, price: float, day: str,
                      costs: tuple[float, float] | None) -> None:
     """Close a stalled position at the observed price (exit_reason 'time') —
-    same accounting as the journal's stop-close path."""
-    is_long = pos.get("direction") == "long"
-    remaining = round(1.0 - (pos.get("booked_pct") or 0.0), 6)
-    pos.setdefault("gross_r", pos.get("realized_r", 0.0))
-    if remaining > 1e-9:
-        pos.setdefault("exits", []).append(
-            {"reason": "time", "price": round(price, 8), "pct": remaining, "date": day})
-        pos["gross_r"] = round(
-            pos["gross_r"] + remaining * _r_of(price, pos["entry"], pos["risk"], is_long), 4)
-        pos["booked_pct"] = 1.0
-    pos["status"] = "closed"
-    pos["exit_price"] = round(price, 8)
-    pos["exit_date"] = day
-    pos["exit_reason"] = "time"
-    _apply_costs(pos, costs)
-    try:
-        pos["hold_days"] = (dt.date.fromisoformat(day)
-                            - dt.date.fromisoformat(pos["entry_date"])).days
-    except Exception:
-        pos["hold_days"] = None
+    the journal's one close writer (vivek_journal._close_remaining, #92)."""
+    _close_remaining(pos, price, day, "time", costs)
 
 
 def _held_days(pos: dict, day: str) -> int | None:
@@ -1021,25 +1003,9 @@ def close_bot_position(symbol: str, market: str, price: float,
                     direction or "any-direction", sym, market)
         return None
 
-    is_long = match.get("direction") == "long"
-    remaining = round(1.0 - (match.get("booked_pct") or 0.0), 6)
-    match.setdefault("gross_r", match.get("realized_r", 0.0))
-    if remaining > 1e-9:
-        match.setdefault("exits", []).append(
-            {"reason": "manual", "price": round(price, 8), "pct": remaining, "date": day})
-        match["gross_r"] = round(
-            match["gross_r"] + remaining * _r_of(price, match["entry"], match["risk"], is_long), 4)
-        match["booked_pct"] = 1.0
-    match["status"] = "closed"
-    match["exit_price"] = round(price, 8)
-    match["exit_date"] = day
-    match["exit_reason"] = reason
-    _apply_costs(match, costs_for(market))
-    try:
-        match["hold_days"] = (dt.date.fromisoformat(day)
-                              - dt.date.fromisoformat(match["entry_date"])).days
-    except Exception:
-        match["hold_days"] = None
+    # The exit RECORD is always "manual" (a market fill at the caller's price);
+    # `reason` is only the trade-level label -- as it always was.
+    _close_remaining(match, price, day, "manual", costs_for(market), exit_reason=reason)
 
     book["open"] = [p for p in book["open"] if p is not match]
     book["closed"].append(match)
