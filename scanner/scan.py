@@ -155,6 +155,18 @@ def _turnover_today(df, market) -> float:
     return float(df["Close"].iloc[-1]) * vol
 
 
+def _degenerate(plan: dict, direction: str) -> bool:
+    """A plan no price can trade (REFINE200 #135): risk, entry or a long's
+    stop not above zero as published. HTX's sub-millionth Yahoo series gave
+    entry = stop = 2e-06 (risk 0.0 under "3.0:1"); BTT's a negative stop."""
+    def pos(k):
+        try:
+            return float(plan.get(k)) > 0
+        except (TypeError, ValueError):
+            return False
+    return not (pos("risk") and pos("entry") and (direction != "long" or pos("stop")))
+
+
 def _dollar_peg(df) -> bool:
     """True when the last CRYPTO_PEG_BARS closes all sit within CRYPTO_PEG_BAND
     of $1.00 -- a dollar peg the universe's ticker/name rules missed
@@ -393,6 +405,12 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 held_runs=prev.get("held", 0))
             # Per-timeframe plans (Daily + 3-Day + Weekly) from the ONE engine.
             plans = vivek.build_plans(df, sig)
+            if plans and all(_degenerate(p, sig["direction"]) for p in plans.values()):
+                # Not one sane plan (#135): zero risk or a stop at/below zero on
+                # every timeframe -- prices finer than the data's decimals. The
+                # bot could take none of them either; the row is not published.
+                funnel["no_plan"] += 1
+                continue
             lv = plans.get("1D")
             gate_tf = next((tf for tf in ("1W", "3D", "1D")
                             if (plans.get(tf) or {}).get("armed")), None)

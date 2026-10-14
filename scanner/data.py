@@ -370,6 +370,7 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
     The report: `source_of` {ticker: venue}, `by_source` counts, `dead`
     venues (refused the runner), `yahoo_fallback` count, `identity_rejected`,
     `stale_rejected` (a venue whose newest bar is too old: a delisted pair),
+    `precision_rejected` (a Yahoo series too coarse to plan on: `quantised`),
     `refused`, and `unchecked` (tickers priced with no reference at all).
     """
     tickers = list(tickers)
@@ -394,6 +395,7 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
                 groups.setdefault(_PIN_SOURCES.get(v, ()), []).append(t)
         rejected: dict[str, list] = {}
         stale: dict[str, list] = {}
+        precision: dict[str, list] = {}
         frames: dict[str, pd.DataFrame] = {}
         source_of: dict[str, str] = {}
         dead: dict = {}
@@ -435,6 +437,12 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
                     rejected.setdefault(base[t], []).append("yahoo")
                     del fb[t]
                     continue
+                if quantised(f):
+                    # Prices too fine for Yahoo's decimals (#135): refused like
+                    # a stranger, and the cache must not refill it either.
+                    precision.setdefault(base[t], []).append("yahoo")
+                    del fb[t]
+                    continue
                 f.attrs["source"] = "yahoo"
                 f.attrs["identity"] = how
                 frames[t] = f
@@ -442,16 +450,18 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
         # Refused = no source is THIS coin (identity) or only a delisted pair
         # listed it (age gate). Either way the cache must not refill it: its
         # last frame is the stranger's, or the same frozen klines, 10 days on.
-        no_live = {str(k).upper() for k in rejected} | {str(k).upper() for k in stale}
+        no_live = ({str(k).upper() for k in rejected} | {str(k).upper() for k in stale}
+                   | {str(k).upper() for k in precision})
         refused = sorted(t for t in tickers if t not in frames and base[t].upper() in no_live)
         bad_by = {str(k).upper(): set(v) for k, v in rejected.items()}
-        for k, v in stale.items():
+        for k, v in list(stale.items()) + list(precision.items()):
             bad_by.setdefault(str(k).upper(), set()).update(v)
         report = {"mode": "exchange", "dead": dead, "errors": errors,
                   "no_exchange": sorted(no_exchange),
                   "yahoo_fallback": len(fb), "source_of": source_of,
                   "identity_rejected": dict(sorted(rejected.items())),
                   "stale_rejected": dict(sorted(stale.items())),
+                  "precision_rejected": dict(sorted(precision.items())),
                   "refused": refused,
                   "rejected_venues": {t: sorted(bad_by.get(base[t].upper(), ())) for t in refused},
                   "pinned_missing": sorted(t for t in tickers if pins[t] and t not in frames),
@@ -459,10 +469,16 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
                                    if f.attrs.get("identity") == "none")}
     else:
         frames = download(tickers, period=period, **ykw)
+        coarse = (sorted(t for t, f in frames.items() if quantised(f))
+                  if market_key == "crypto" else [])
+        for t in coarse:                      # #135, the same refusal on the Yahoo path
+            del frames[t]
         report = {"mode": "yahoo", "dead": {}, "errors": {}, "no_exchange": [],
                   "yahoo_fallback": 0, "source_of": {t: "yahoo" for t in frames},
-                  "identity_rejected": {}, "stale_rejected": {}, "refused": [],
-                  "rejected_venues": {}, "pinned_missing": [], "unchecked": 0}
+                  "identity_rejected": {}, "stale_rejected": {},
+                  "precision_rejected": {t: ["yahoo"] for t in coarse}, "refused": coarse,
+                  "rejected_venues": {t: ["yahoo"] for t in coarse},
+                  "pinned_missing": [], "unchecked": 0}
     by: dict[str, int] = {}
     for v in report["source_of"].values():
         by[v] = by.get(v, 0) + 1
@@ -475,6 +491,30 @@ def fetch(market_key: str, tickers: list[str], period: str | None = None,
                         "price (no CoinGecko price in the universe)", market_key,
                         report["unchecked"])
     return frames, report
+
+
+def quantised(df) -> bool:
+    """True when a frame's prices are too fine for the feed's decimals to carry
+    (REFINE200 #135): its last CRYPTO_QUANTISED_BARS closes before the newest
+    take CRYPTO_QUANTISED_MAX_DISTINCT or fewer values.
+
+    Yahoo stores crypto at 6 decimals, so a coin under a millionth of a dollar
+    (BTT 3.7e-7, HTX 1.65e-6) has a history of one or two repeated ticks while
+    its NEWEST close -- the one the identity check reads -- carries full
+    precision. Every plan built on that history is nonsense: HTX published
+    entry = stop = 2e-06 with zero risk under a "3.0:1"; BTT a price 2.7x too
+    high and a negative stop. The newest bar is left out because it is the one
+    that still looks right. A frame too short to tell is not refused. Only
+    ever removes a coin; no tradeable series repeats one price for 30 days."""
+    bars = int(getattr(config, "CRYPTO_QUANTISED_BARS", 0) or 0)
+    most = int(getattr(config, "CRYPTO_QUANTISED_MAX_DISTINCT", 0) or 0)
+    if df is None or bars <= 0 or most <= 0:
+        return False
+    try:
+        closes = df["Close"].astype(float).dropna().iloc[-(bars + 1):-1]
+    except (KeyError, TypeError, ValueError):
+        return False
+    return len(closes) >= bars and int(closes.nunique()) <= most
 
 
 def identity_kwargs(market_key: str, items: list, cache_key: str | None = None) -> dict:
@@ -661,6 +701,7 @@ def source_summary(report: dict) -> dict:
             "yahoo_fallback": report.get("yahoo_fallback", 0),
             "identity_rejected": report.get("identity_rejected") or {},
             "stale_rejected": report.get("stale_rejected") or {},
+            "precision_rejected": report.get("precision_rejected") or {},
             "refused": list(report.get("refused") or []),
             "pinned_missing": list(report.get("pinned_missing") or []),
             "unchecked": report.get("unchecked", 0)}
