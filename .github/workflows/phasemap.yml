@@ -1,12 +1,16 @@
 name: PhaseMap nightly scan
 
 # Zone-based AMD scanner (phasemap/). EOD daily bars, one snapshot per market:
-#   public/data/phasemap/<market>/latest.json  (+ dated copy)
-#   public/data/phasemap/charts/<market>/<TICKER>.json  (chart-page candles)
-# Runs nightly after the ASX close (~18:30 Melbourne = 08:30 UTC in AEST;
-# fires an hour later in Melbourne during AEDT Oct-Apr, which is fine — all
-# three markets' sessions are complete either way). Crypto trades 24/7, so
-# the job runs every day, not just weekdays.
+#   public/data/phasemap/<market>/latest.json  (+ narrations.json, confluence.json,
+#                                               the two newest dated copies)
+#   public/data/phasemap/charts/<market>/<TICKER>.json  (candles + the record)
+# Scheduled 08:30 UTC, but GitHub lands it hours late (15:00-18:00 UTC most
+# nights — inside the NASDAQ session), so phasemap.run itself refuses any bar
+# that is not final yet (crypto: the forming UTC candle; ASX/NASDAQ: today's
+# bar before 16:40 Sydney / 16:30 New York — REFINE200 #131). Crypto trades
+# 24/7, so the job runs every day; a stock market with no newly completed bar
+# since its last snapshot (weekends) is carried forward, not re-downloaded
+# (exit 3 — REFINE200 #45).
 on:
   # SCHEDULE RE-REGISTRATION (2026-07-30): the scheduler stopped creating runs
   # for EVERY cron in this repo after ~01:15 UTC — the same window in which
@@ -23,7 +27,7 @@ on:
         type: choice
         options: ["all", "asx", "nasdaq", "crypto"]
       args:
-        description: "Extra args for phasemap.run (e.g. --limit 25 for a quick test)"
+        description: "Extra args for phasemap.run (--force rescans with no new bar; --limit/--tickers run in a scratch dir and commit nothing)"
         default: ""
         required: false
 
@@ -57,7 +61,19 @@ jobs:
       # Same Yahoo etiquette as the main scan: the two small markets (~100
       # names each) run together and finish in minutes, then the full ASX
       # directory (~2,000 names) gets Yahoo to itself for best coverage.
+      # EVERY MARKET'S OUTCOME TRAVELS AS DATA; THIS STEP NEVER FAILS
+      # (REFINE200 #198). It used to end `[ "$RC_ASX" -eq 0 ] && ...`, so one
+      # market's crash made the step red and the Specs, schema-gate and
+      # commit steps never ran: the healthy markets' fresh snapshots were
+      # discarded and Specs (a confluence lens with no freshness check)
+      # skipped the night. The run-#63 "gate collects, commit always lands"
+      # fix only covered the commit step. phasemap.run's exit codes:
+      #   0 published   3 carried (no new completed bar; the last scan
+      #   re-published under today's run_date)   4 refused (coverage below
+      #   the floor; the last good files kept)   anything else = failed.
+      # The commit step turns them into the must-change gate and the verdict.
       - name: Run PhaseMap scans
+        id: scan
         env:
           # Free-text input passes through env, never ${{ }} inside run:
           # (2026-07-20 security pass) — the runner does not shell-interpolate
@@ -71,7 +87,10 @@ jobs:
           if [ "$MARKET" != "all" ]; then
             echo "Single-market PhaseMap scan: $MARKET"
             python -m phasemap.run --market "$MARKET" $ARGS
-            exit $?
+            RC=$?
+            echo "phasemap rc: $MARKET=$RC"
+            echo "rc_${MARKET}=$RC" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           python -m phasemap.run --market nasdaq $ARGS &
@@ -84,8 +103,10 @@ jobs:
           python -m phasemap.run --market asx $ARGS
           RC_ASX=$?
           echo "phasemap rc: asx=$RC_ASX nasdaq=$RC_NAS crypto=$RC_CRY"
-          # Crypto is best-effort (keyless feeds can be flaky); ASX+NASDAQ gate the job.
-          [ "$RC_ASX" -eq 0 ] && [ "$RC_NAS" -eq 0 ]
+          echo "rc_asx=$RC_ASX" >> "$GITHUB_OUTPUT"
+          echo "rc_nasdaq=$RC_NAS" >> "$GITHUB_OUTPUT"
+          echo "rc_crypto=$RC_CRY" >> "$GITHUB_OUTPUT"
+          exit 0
 
       # Specs — the third lens (volume-spike base breakouts, sub-$0.50).
       # Nightly cadence like PhaseMap; ASX + NASDAQ only (no crypto).
@@ -132,29 +153,52 @@ jobs:
       # validator (zones are bands, states/tiers legal, current ruleset version)
       # before it ships. latest.json is the SLIM published form — narration
       # lives in the narrations.json sidecar — so validate the pair together.
+      # confluence.json (REFINE200 #70) is checked against its latest.json:
+      # same run_date, and exactly latest's (ticker, direction, state) rows.
+      # The ruleset check applies only to markets that wrote this run (0/3):
+      # a REFUSED market's file is the last good one, which may predate a
+      # ruleset bump, and refusing the commit over it would discard the
+      # healthy markets again.
       - name: Verify PhaseMap snapshots
+        env:
+          RC_ASX: ${{ steps.scan.outputs.rc_asx }}
+          RC_NASDAQ: ${{ steps.scan.outputs.rc_nasdaq }}
+          RC_CRYPTO: ${{ steps.scan.outputs.rc_crypto }}
         run: |
           python - <<'PY'
           import json, glob, os, sys
           from phasemap.config import RULESET_VERSION
           from phasemap.output.writer import validate_published
+          wrote = {m for m in ("asx", "nasdaq", "crypto")
+                   if os.environ.get(f"RC_{m.upper()}") in ("0", "3")}
           files = glob.glob("public/data/phasemap/*/latest.json")
           if not files:
               print("SCHEMA GATE FAILED: no snapshots written"); sys.exit(1)
           bad = []
           for f in files:
+              market = os.path.basename(os.path.dirname(f))
               try:
                   slim = json.load(open(f, encoding="utf-8"))
                   nf = os.path.join(os.path.dirname(f), "narrations.json")
                   narr = json.load(open(nf, encoding="utf-8")) if os.path.exists(nf) else None
                   validate_published(slim, narr)
-                  if slim["ruleset_version"] != RULESET_VERSION:
+                  if market in wrote and slim["ruleset_version"] != RULESET_VERSION:
                       bad.append(f"{f}: ruleset {slim['ruleset_version']} != {RULESET_VERSION}")
+                  cf = os.path.join(os.path.dirname(f), "confluence.json")
+                  if os.path.exists(cf):
+                      conf = json.load(open(cf, encoding="utf-8"))
+                      want = [{"ticker": r["ticker"], "direction": r["direction"],
+                               "state": r["state"]} for r in slim["results"]]
+                      if conf.get("schema_version") != 1 or conf.get("run_date") != slim["run_date"] \
+                              or conf.get("rows") != want:
+                          bad.append(f"{cf}: does not match {f}")
+                  elif market in wrote:
+                      bad.append(f"{cf}: missing")
               except Exception as e:
                   bad.append(f"{f}: {e}")
           if bad:
               print("SCHEMA GATE FAILED:"); [print(" -", b) for b in bad]; sys.exit(1)
-          print(f"schema gate OK — {len(files)} published snapshots at ruleset v{RULESET_VERSION}")
+          print(f"schema gate OK — {len(files)} published snapshots; ruleset v{RULESET_VERSION} on {sorted(wrote)}")
           PY
 
       - name: Commit & push fresh data (triggers Cloudflare deploy)
@@ -165,6 +209,11 @@ jobs:
           # "Specs succeeded and wrote nothing", and those want opposite
           # responses: a warning, and a red job.
           SPECS_OK: ${{ steps.specs.outputs.ok }}
+          # REFINE200 #198 — each market's phasemap.run exit code (empty = not
+          # run): only a market that PUBLISHED owes a staged latest.json.
+          RC_ASX: ${{ steps.scan.outputs.rc_asx }}
+          RC_NASDAQ: ${{ steps.scan.outputs.rc_nasdaq }}
+          RC_CRYPTO: ${{ steps.scan.outputs.rc_crypto }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -174,6 +223,8 @@ jobs:
           # and stats/ (owned by lens_backtest.yml); re-applying those from
           # this run's stale checkout reverted the owners' fresher pushes.
           # journal/confluence_state.json dropped: confluence no longer runs here.
+          # Each market dir carries latest.json, narrations.json, confluence.json
+          # (REFINE200 #70) and the dated copies; the dir is ONE pathspec.
           # spec_graduation.json (2026-07-31): the Specs->VIVEK graduation
           # registry — spec_run is its ONLY writer, so it belongs to this
           # workflow's list. Deliberately NOT in the must-change gate below:
@@ -213,11 +264,43 @@ jobs:
           # regardless, and the step exits 1 at the END when any gate
           # tripped. The alarm is unchanged (same red run, same email);
           # only the discarding stops.
+          # PER MARKET, BY OUTCOME (REFINE200 #198/#45/#197): a market that
+          # published (0) must have staged latest.json AND confluence.json —
+          # on a schedule that is the must-change gate, by hand a warning. A
+          # CARRIED market (3) re-published the last scan under today's
+          # run_date; it is not asserted, because a same-day re-run is
+          # legitimately byte-identical. A REFUSED (4) or failed market turns
+          # the run red at the END, after whatever did stage has landed.
           GATE_FAILED=0
+          for M in asx nasdaq crypto; do
+            case "$M" in
+              asx) RC="${RC_ASX:-}" ;;
+              nasdaq) RC="${RC_NASDAQ:-}" ;;
+              crypto) RC="${RC_CRYPTO:-}" ;;
+            esac
+            case "$RC" in
+              "") echo "phasemap $M: not run this time" ;;
+              0)
+                if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+                  bash scripts/assert_staged.sh "phasemap $M" "public/data/phasemap/$M/latest.json" || GATE_FAILED=1
+                  bash scripts/assert_staged.sh "phasemap $M confluence" "public/data/phasemap/$M/confluence.json" || GATE_FAILED=1
+                else
+                  bash scripts/assert_staged.sh "phasemap $M (manual)" "public/data/phasemap/$M/latest.json" \
+                    || echo "::warning::phasemap $M: no latest.json staged (manual run; a --limit/--tickers quick test writes to a scratch dir and commits nothing)"
+                fi
+                ;;
+              3) echo "phasemap $M: no new completed bar since its last snapshot - the last scan was carried forward (not asserted)" ;;
+              4)
+                echo "::error::phasemap $M REFUSED to publish - Yahoo coverage fell below the floor; the last good snapshot and chart files stand"
+                GATE_FAILED=1
+                ;;
+              *)
+                echo "::error::phasemap $M failed (exit $RC) - its last snapshot stands"
+                GATE_FAILED=1
+                ;;
+            esac
+          done
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
-            bash scripts/assert_staged.sh "phasemap asx"    public/data/phasemap/asx/latest.json || GATE_FAILED=1
-            bash scripts/assert_staged.sh "phasemap nasdaq" public/data/phasemap/nasdaq/latest.json || GATE_FAILED=1
-            bash scripts/assert_staged.sh "phasemap crypto" public/data/phasemap/crypto/latest.json || GATE_FAILED=1
             # TOP100 #54 — the spec files got the same must-change treatment,
             # but GATED on the Specs step having reported success. Asserting
             # them unconditionally would convert a deliberately-tolerated
@@ -233,12 +316,6 @@ jobs:
             else
               echo "::warning::Specs reported failure - skipping its must-change gate. The spec files on the site are last night's or older, and confluence_alert reads them with no freshness check."
             fi
-          else
-            bash scripts/assert_staged.sh "phasemap (manual)" \
-              public/data/phasemap/asx/latest.json \
-              public/data/phasemap/nasdaq/latest.json \
-              public/data/phasemap/crypto/latest.json \
-              || echo "::warning::no latest.json staged (manual run)"
           fi
           if git diff --cached --quiet; then
             echo "No data changes to commit."

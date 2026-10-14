@@ -696,9 +696,18 @@ def test_the_phasemap_gate_collects_failures_instead_of_discarding_siblings():
     carries it (an `exit 0` there un-reds the alarm entirely)."""
     body = _load("phasemap.yml")["jobs"]["phasemap"]["steps"][-1]["run"]
     assert "GATE_FAILED=0" in body, "the verdict variable lost its initialisation"
-    sched = body[body.index('= "schedule"'):body.index("else")]
-    unguarded = [l for l in sched.splitlines()
-                 if "assert_staged.sh" in l and "|| GATE_FAILED=1" not in l]
+    # Every assert in the step, joined with its `\` continuation line, must be
+    # guarded: `|| GATE_FAILED=1` (scheduled) or `|| echo "::warning::` (by
+    # hand). (The old slice `body[index('= "schedule"'):index("else")]` was
+    # EMPTY — the first "else" sits in the staging loop above the schedule
+    # test — so this assertion had been vacuous. REFINE200 #198.)
+    lines = body.splitlines()
+    asserts = [(l + (lines[i + 1] if l.rstrip().endswith("\\") else ""))
+               for i, l in enumerate(lines)
+               if "assert_staged.sh" in l and not l.strip().startswith("#")]
+    assert len(asserts) >= 4, "the must-change asserts went missing"
+    unguarded = [a.strip() for a in asserts
+                 if "|| GATE_FAILED=1" not in a and '|| echo "::warning::' not in a]
     assert not unguarded, (
         "these scheduled asserts abort the step before the commit again, "
         f"re-opening the run-#63 discard: {unguarded}")
