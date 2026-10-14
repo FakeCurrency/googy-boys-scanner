@@ -12,6 +12,17 @@ public/data/<market>_spec.json for the SPECS page and the chart page's
 
 Crypto is excluded: SPEC_MAX_PRICE is a market-currency cents filter that
 has no meaning for coins (see config note).
+
+A MARKET WITH NO DATA KEEPS ITS LAST GOOD FILE (the momentum and Ignition
+lenses' rule, REFINE200 #179): a download covering under SPEC_MIN_COVERAGE of
+the universe writes nothing -- not the spec file, not a single chart prune --
+and the CLI exits 3, which phasemap.yml's Specs step reports as a failure
+(the files on the site are last night's) and its must-change gate skips.
+
+EXIT CODES
+    0  every requested market published
+    3  at least one market had no (or too little) data; its last file stands
+    1  a real failure (an exception)
 """
 
 from __future__ import annotations
@@ -21,6 +32,8 @@ import datetime
 import os
 import sys
 import zoneinfo
+
+import pandas as pd
 
 from . import config, data, output, scanerrors, spec, universe
 
@@ -102,14 +115,79 @@ def write_chart_json(market_key: str, sym: str, df) -> None:
                       ensure_ascii=False, newline=True)
 
 
-def scan_market(market_key: str, limit: int | None = None) -> dict:
+def bar_is_forming(market_key: str, last_idx, now: datetime.datetime) -> bool:
+    """Is a frame's last daily bar still FORMING at `now`, in the market's own
+    calendar? A bar dated after the local date is forming by definition; one
+    dated today is forming until the market's bar is final in the free feed
+    (config.IGNITION_BAR_FINAL: ASX 16:40 Sydney, NASDAQ 16:30 New York), or
+    until its session close for a market with no bar-final entry. The nightly
+    is timed after every close, but a late or manual run used to screen a
+    half-day NASDAQ bar as complete (REFINE200 #180)."""
+    tz = zoneinfo.ZoneInfo(getattr(config.MARKETS.get(market_key), "timezone", "UTC") or "UTC")
+    try:
+        last = pd.Timestamp(last_idx).date()
+    except Exception:
+        return False
+    local = now.astimezone(tz)
+    if last != local.date():
+        return last > local.date()
+    final = config.IGNITION_BAR_FINAL.get(market_key)
+    if final is not None:
+        return (local.hour * 60 + local.minute) < (final[1] * 60 + final[2])
+    sess = config.VIVEK_JOURNAL_SESSION.get(market_key)
+    if not sess:
+        return True
+    return (local.hour * 60 + local.minute) < (sess[2] * 60 + sess[3])
+
+
+def _usable(market_key: str, frames: dict, now: datetime.datetime) -> tuple:
+    """({yf: completed, fresh-enough frame}, forming bars dropped, stale frames
+    skipped). A frame past SPEC_MAX_DATA_AGE_DAYS is not screened at all; one
+    whose last bar is still forming loses that bar."""
+    tz = getattr(config.MARKETS.get(market_key), "timezone", None)
+    out, forming, stale = {}, 0, 0
+    for yf_sym, df in frames.items():
+        if df is None or df.empty:
+            continue
+        if bar_is_forming(market_key, df.index[-1], now):
+            df = df.iloc[:-1]
+            forming += 1
+            if df.empty:
+                continue
+        try:
+            age = data._frame_age_days(df, tz)
+        except Exception:
+            age = 10 ** 6                       # unknown is never fresh
+        if age > config.SPEC_MAX_DATA_AGE_DAYS:
+            stale += 1
+            continue
+        out[yf_sym] = df
+    return out, forming, stale
+
+
+def scan_market(market_key: str, limit: int | None = None, *,
+                frames: dict | None = None, items: list | None = None,
+                now: datetime.datetime | None = None) -> dict | None:
+    """Scan one market and publish it, or return None (writing NOTHING) when
+    the download covers under SPEC_MIN_COVERAGE of the universe. `frames`,
+    `items` and `now` are injectable so the guard is testable offline."""
     mk = config.MARKETS[market_key]
     cur = getattr(mk, "currency_symbol", "A$" if market_key == "asx" else "$")
-    items = universe.load_universe(market_key, full=True)
+    if items is None:
+        items = universe.load_universe(market_key, full=True)
     if limit:
         items = items[:limit]
     yf_map = {it["yf"]: it for it in items}
-    frames = data.download(list(yf_map), period="2y", interval="1d")
+    if frames is None:
+        frames = data.download(list(yf_map), period="2y", interval="1d")
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    downloaded = sum(1 for df in frames.values() if df is not None and not df.empty)
+    if not items or downloaded < config.SPEC_MIN_COVERAGE * len(items):
+        print(f"[{market_key}] specs: no usable data ({downloaded} of {len(items)} names "
+              f"downloaded, floor {config.SPEC_MIN_COVERAGE:.0%}) - keeping the existing "
+              f"file and charts", flush=True)
+        return None
+    frames, forming_dropped, stale_frames = _usable(market_key, frames, now)
 
     results = []
     # TOP100 #66 — TWO logs, because these are two different failures and
@@ -152,6 +230,12 @@ def scan_market(market_key: str, limit: int | None = None) -> dict:
         "setup_type": "spec",
         "currency_symbol": cur,
         "universe_size": len(items),
+        # REFINE200 #179/#180: how much of the universe the night really saw.
+        # The page prints "N of M downloaded" instead of calling the universe
+        # size "names scanned".
+        "downloaded": downloaded,
+        "stale_frames": stale_frames,
+        "forming_dropped": forming_dropped,
         "results": results,
         # TOP100 #66. `errors`/`error_sample` carry the SAME meaning as in the
         # vivek payload — a name that failed to produce a row — so a reader does
@@ -174,8 +258,9 @@ def scan_market(market_key: str, limit: int | None = None) -> dict:
                 removed += 1
     except FileNotFoundError:
         pass
-    print(f"[{market_key}] specs: {len(results)} setups from {len(items)} names -> {path}"
-          + (f" (pruned {removed})" if removed else ""))
+    print(f"[{market_key}] specs: {len(results)} setups from {downloaded} of {len(items)} "
+          f"names downloaded ({stale_frames} stale, {forming_dropped} forming bars dropped) "
+          f"-> {path}" + (f" (pruned {removed})" if removed else ""))
     return payload
 
 
@@ -189,8 +274,12 @@ def main(argv=None) -> int:
         if m not in MARKETS:
             print(f"unknown/unsupported market: {m}")
             return 2
+    rc = 0
     for m in markets:
         payload = scan_market(m, limit=args.limit)
+        if payload is None:
+            rc = 3                     # its last good file stands; say so
+            continue
         # Specs -> VIVEK graduation watch (owner-ruled, 2026-07-31): fold the
         # published results into the report-only registry, AFTER the specs
         # publish so it records what actually shipped. Same posture as
@@ -202,7 +291,7 @@ def main(argv=None) -> int:
         except (OSError, ValueError, TypeError, KeyError) as e:  # report-only
             print(f"[{m}] WARNING spec graduation update failed: "
                   f"{e.__class__.__name__}: {e}")
-    return 0
+    return rc
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@
   const GRADE_VAR = { "A+": "var(--grade-aplus)", A: "var(--grade-a)", B: "var(--grade-b)" };
 
   const state = {
-    data: null, grade: "all", q: "", view: "results", sort: "default",
+    data: null, grade: "all", q: "", sort: "default",
     confOnly: false,   // deck pill: only rows with 2+ lens alignment
     confl: null,
     market: (() => {
@@ -42,9 +42,7 @@
     const chips = [
       fund ? `<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund">⚠ FUND / REIT</span>` : "",
       ci ? PM.confluenceChipHTML(ci, "SPECS") : "",
-      r._stale
-        ? `<span class="rbadge struct" title="Starred snapshot — the setup is no longer in the live scan">NO ACTIVE SETUP · ${PM.esc(r._staleDate || "")}</span>`
-        : `<span class="rbadge wk" title="Volume vs 20-day average on the breakout">⚡ ${PM.esc(String(r.spike_ratio))}× volume</span>`,
+      `<span class="rbadge wk" title="Volume vs 20-day average on the breakout">⚡ ${PM.esc(String(r.spike_ratio))}× volume</span>`,
       r.low_rr ? `<span class="chip warn">LOW R:R</span>` : "",
     ].filter(Boolean);
     const detailChips = (r.chips || []).map((c) => `<span class="chip">${PM.esc(c)}</span>`).join("");
@@ -81,7 +79,7 @@
               <div class="dp-cell"><span class="dp-lbl">Off high</span><span class="dp-val">${r.off_high_pct != null ? r.off_high_pct + "%" : "—"}</span></div>
             </div>
             ${detailChips ? `<div class="detail-chips">${detailChips}</div>` : ""}
-            <div class="rd-analysis"><p>${PM.esc(r.analysis || "No saved analysis — this snapshot predates the current scan.")}</p></div>
+            ${r.analysis ? `<div class="rd-analysis"><p>${PM.esc(r.analysis)}</p></div>` : ""}
             <a class="vk-chart-btn sp-chart-link" href="${chartHref}">View chart →</a>
           </div>
         </div>
@@ -91,21 +89,6 @@
 
   function visibleRows() {
     const q = state.q.trim().toUpperCase();
-    if (state.view === "watchlist") {   // removed 2026-09-21 — unreachable: no tab or saved state selects it
-      const wl = {};
-      const out = [];
-      for (const [sym, entry] of Object.entries(wl).sort()) {
-        if (q && !sym.toUpperCase().includes(q)) continue;
-        const live = state.data && state.data.results.find((r) => r.symbol === sym);
-        if (live) out.push(live);
-        else if (entry.snap) out.push({ ...entry.snap, _stale: true, _staleDate: entry.date });
-        else out.push({ symbol: sym, name: sym, sector: "", grade: "B", score: 0,
-                        score_max: 11, chips: [], price: null, entry: null, stop: null,
-                        target: null, rr: null, analysis: "",
-                        _stale: true, _staleDate: entry.date });
-      }
-      return out;
-    }
     if (!state.data) return [];
     let rows = state.data.results.filter((r) =>
       (state.grade === "all" || r.grade === state.grade) &&
@@ -154,7 +137,6 @@
     // retry, so do not ALSO claim "no setups / the gates are strict".
     if (!state.data) {
       list.innerHTML = "";
-      renderCounts();
       return;
     }
     const rows = visibleRows();
@@ -173,11 +155,6 @@
         if (btn) btn.setAttribute("aria-expanded", String(open));
       });
     });
-    renderCounts();
-  }
-
-  function renderCounts() {
-    $("#sp-count-results").textContent = state.data ? state.data.results.length : 0;
   }
 
   // ── Specs → VIVEK graduates (owner-ruled, 2026-07-31) ────────────────────
@@ -190,10 +167,12 @@
     const host = $("#sp-grads");
     if (!host) return;
     host.hidden = true;
+    const m = state.market;                   // the market this fetch is FOR
     try {
       const res = await PM.fetchTimeout("data/spec_graduation.json", { cache: "no-cache" });
       if (!res.ok) return;                    // no registry yet — invisible
       const reg = await res.json();
+      if (m !== state.market) return;         // switched while in flight
       const mk = (reg && reg.markets && reg.markets[state.market]) || {};
       const grads = Array.isArray(mk.graduates) ? mk.graduates : [];
       const total = Number(mk.graduated_total) || grads.length;
@@ -239,27 +218,48 @@
     });
   }
 
+  // "1,732 of 1,928 downloaded" when the file says how much the night saw
+  // (REFINE200 #179); an older file only carries the universe size, which is
+  // NOT how many names were scanned, so it is named as what it is.
+  function coverageText(d) {
+    const n = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+    const fmt = (v) => v.toLocaleString("en-AU");
+    const got = n(d && d.downloaded), all = n(d && d.universe_size);
+    if (got != null && all != null) return `${fmt(got)} of ${fmt(all)} downloaded`;
+    return all != null ? `universe ${fmt(all)}` : "";
+  }
+
   async function load() {
-    $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()} · loading…`;
+    // The market this call is FOR. A switch can land while the fetch is in
+    // flight; applying the old answer would put ASX rows under the NASDAQ
+    // heading and join NASDAQ confluence onto them (Tier 5 #79's app.js bug,
+    // REFINE200 #175). Both the success and the failure path check it.
+    const m = state.market;
+    $("#sp-title").textContent = `SPECS · ${m.toUpperCase()} · loading…`;
     loadGrads();   // graduation strip rides beside the scan, never gates it
     try {
-      const res = await PM.fetchTimeout(`data/${state.market}_spec.json`, { cache: "no-cache" });
+      const res = await PM.fetchTimeout(`data/${m}_spec.json`, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      state.data = await res.json();
+      const data = await res.json();
+      if (m !== state.market) return;
+      state.data = data;
       $("#sp-title").textContent =
-        `SPECS · ${state.market.toUpperCase()} · ${state.data.results.length} setups`;
+        `SPECS · ${m.toUpperCase()} · ${state.data.results.length} setups`;
+      const cov = coverageText(state.data);
       $("#sp-sub").innerHTML = PM.esc(
-        `${PM.fmtMelb(state.data.generated_at)} · ${state.data.universe_size} names scanned · ` +
+        `${PM.fmtMelb(state.data.generated_at)} · ${cov ? cov + " · " : ""}` +
         `volume-spike breakouts · sub-$0.50 · the discovery lens`)
         + PM.staleBadgeHTML(state.data.generated_at);
       state.confl = null;
       renderPills();
-      PM.loadConfluence(state.market).then((c) => {
+      PM.loadConfluence(m).then((c) => {
+        if (m !== state.market) return;
         state.confl = c;
         renderPills();
         render();
       });
     } catch (err) {
+      if (m !== state.market) return;
       state.data = null;
       $("#sp-title").textContent = `SPECS · ${state.market.toUpperCase()}`;
       // Same split as the other lens pages (2026-07-29): only a 404 means the
@@ -283,14 +283,6 @@
     try { localStorage.setItem("sp-market", state.market); } catch (_) {}
     syncMarketButtons();
     load();
-  }));
-  $$("#sp-tabs .view-tab").forEach((tab) => tab.addEventListener("click", () => {
-    $$("#sp-tabs .view-tab").forEach((t) => {
-      t.classList.toggle("is-active", t === tab);
-      t.setAttribute("aria-selected", String(t === tab));
-    });
-    state.view = tab.dataset.view;
-    render();
   }));
   $$("#sp-grade-filter .seg-btn").forEach((chip) => chip.addEventListener("click", () => {
     $$("#sp-grade-filter .seg-btn").forEach((c) => c.classList.toggle("is-active", c === chip));

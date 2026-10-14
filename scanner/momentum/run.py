@@ -6,11 +6,10 @@ THE WRITE-SET IS THE FENCE. This module may write nowhere else, and
 `tests/test_momentum_fences.py` reads it to prove that -- it may not name
 another lens's artefact, the bot book, the alert history or the funnel ledger.
 
-A MARKET WITH NO DATA KEEPS ITS LAST GOOD FILE. This copies `scanner/run.py`
-rather than `scanner/spec_run.py`, deliberately: `spec_run.scan_market` has no
-empty-frames guard, so a Yahoo-blocked market still publishes `"results": []`
-OVER the previous good file, and the page then shows "nothing set up today" when
-the truth is "we could not look". Here an empty download is a reported decision
+A MARKET WITH NO DATA KEEPS ITS LAST GOOD FILE. This copies `scanner/run.py`:
+publishing `"results": []` OVER the previous good file would make the page say
+"nothing set up today" when the truth is "we could not look" (the defect
+`spec_run.py` had until REFINE200 #179). Here an empty download is a reported decision
 -- exit code 3, a `::warning::`-friendly line on stdout, nothing written -- and
 the workflow branches on it instead of failing a must-change gate that is
 correctly unmet.
