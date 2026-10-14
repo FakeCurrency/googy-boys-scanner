@@ -702,8 +702,23 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     snap["notional"] = plan["notional"]
     snap["leverage"] = plan["leverage"]
     snap["leverage_target"] = plan["leverage_target"]
+    # RISK AT THE FILL (REFINE200 #15). plan["risk_usd"] is units x (signal
+    # entry - stop): decide() sizes at the plan entry, the signal close. The
+    # row's own `risk` is fill - stop (_snapshot), and every dollar figure the
+    # book derives is R x risk_usd -- unreal_usd, the loss guard,
+    # kill_switch.trade_pnl, the review share -- so a fill-basis R was being
+    # priced with a signal-basis dollar (SMCI stored $563 against a real $692).
+    # Units and notional stay exactly as sized; only what one R of THIS fill
+    # costs is restated, and risk_pct with it where it is derived from it
+    # (fixed notional). Rows opened before this keep their signal-basis figure
+    # and are never restated; `risk_usd_basis` tells the two apart.
+    plan_risk = float(plan.get("risk_usd") or 0)
+    fill_risk = round(float(plan["units"]) * abs(fill - float(plan["stop"])), 2)
     snap["risk_pct"] = plan["risk_pct"]
-    snap["risk_usd"] = plan["risk_usd"]
+    if plan.get("sizing_mode") == "fixed_notional" and plan_risk > 0:
+        snap["risk_pct"] = round(float(plan["risk_pct"]) * fill_risk / plan_risk, 4)
+    snap["risk_usd"] = fill_risk
+    snap["risk_usd_basis"] = "fill"
     # WHICH SIZER PRODUCED THIS ROW (2026-07-28). size_position returns it and
     # decide() splats it onto the ticket, but nothing was copying it down here,
     # so the book recorded the NUMBERS of a sizing decision without recording
@@ -733,12 +748,16 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # only in a log line inside a finished Actions run, which is not a place a
     # decision gets made. On the row it reaches the journal page, the review
     # push below, and any later post-mortem asking "was this one marked when it
-    # was taken?". Stored as the plan's list verbatim, empty list when clean, so
+    # was taken?". Stored as a list, empty when clean, so
     # "no flags" and "written before flags existed" stay distinguishable at
     # every reader. Report-only, exactly as on the ticket: nothing downstream
     # branches on it -- vivek_run does not size, skip or close differently for a
     # flagged row, and the daily/weekly guards never read it.
-    snap["review"] = list(plan.get("review") or [])
+    # Re-measured at the FILL (REFINE200 #15) with the same review_flags the
+    # ticket used: same threshold, same wording, but against the risk this row
+    # actually carries. A fill at the signal price reproduces the ticket's list.
+    snap["review"] = vivek_bot.review_flags(
+        {"risk_usd": fill_risk, "entry": fill, "stop": float(plan["stop"])})
     snap["source"] = "vivek_bot"
     snap["lens"] = "vivek"     # lens attribution — journal lens tracker reads it
     # AUDIT-ONLY level_tf (n≥30 pack). Prefer the scan-row value the runner

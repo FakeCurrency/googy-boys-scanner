@@ -752,7 +752,11 @@ def test_live_bot_rows_are_sized_at_their_signal_entry():
         # sub-cent coin. A fill-basis restatement misses by the slippage
         # (ASTS 6.6%, SMCI 5.1% on 2026-09-27), so the tolerance still bites.
         assert p["units"] * sig == pytest.approx(p["notional"], rel=1e-3), p["symbol"]
-        assert p["units"] * abs(sig - rz.basis_stop(p)) == pytest.approx(
+        # REFINE200 #15: rows opened since carry risk_usd measured at the FILL
+        # (units x the row's own `risk`) and say so; older rows stay signal-basis.
+        per_unit = (float(p["risk"]) if p.get("risk_usd_basis") == "fill"
+                    else abs(sig - rz.basis_stop(p)))
+        assert p["units"] * per_unit == pytest.approx(
             p["risk_usd"], rel=1e-3, abs=0.05), p["symbol"]
 
 
