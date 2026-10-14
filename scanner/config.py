@@ -1062,9 +1062,14 @@ ALERT_SEVERITY = {
     "vivek_guard":     "CRITICAL",
 }
 
-# Set False to silence all Telegram sends without touching secrets.
-# Flip back to True when the bot is ready to go live again.
-TELEGRAM_ENABLED = False
+# Telegram delivers iff TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are both set:
+# the secrets are THE switch (REFINE200 #127, 2026-10-14). This flag stayed
+# False after the scalp-era bot it was muted for was removed (2026-09-17), a
+# hidden second off-switch: setting the secrets alone would still deliver
+# nothing, while every diagnostic blamed the secrets. True = follow the
+# secrets; False is a deliberate mute, and the watchdog's self-test and alert
+# summary name it when it is the reason.
+TELEGRAM_ENABLED = True
 
 # Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
 # by owner ruling — "get rid of the discord aspect, I will work on
@@ -1235,9 +1240,17 @@ MARKET_SCAN_WINDOWS = {
 # Run-history probes (GitHub Actions API): workflow file -> threshold on the
 # LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
 # GitHub already emails failures; the watchdog only covers SILENT problems.
+# `job` (REFINE200 #80, 2026-10-14): judge a run by THAT job's conclusion, not
+# the run's. scan.yml's gate skips most superset crons (the `scan` job is
+# skipped, the run still concludes success), and crypto_bot.yml's :52 backstop
+# skips when fresh, so "last successful run" was satisfied by runs that scanned
+# nothing. A run whose job was skipped is passed over; a jobs-API error falls
+# back to the run's own conclusion (fail-quiet, as for the runs API). The
+# kill switch's `check` job is named so the watchdog-alarm job's red run
+# (kill_switch.yml, REFINE200 #77) is never read as a kill-switch failure.
 WATCHDOG_RUNS = {
-    "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
-    "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
+    "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL", "job": "check"},
+    "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING", "job": "crypto"},
     # SESSION-AWARE (2026-09-21). scan.yml stopped running outside market
     # hours, so wall-clock age alarms every weekend: Friday's last scan to
     # Monday's first is ~52h, and a long weekend is ~75h. Raising the limit
@@ -1245,13 +1258,26 @@ WATCHDOG_RUNS = {
     # `session_aware` measures only the hours a market was actually OPEN, which
     # accrue at ~11h/day on weekdays and not at all at the weekend — so 12h is
     # about one missed session, and a quiet Sunday is correctly silent.
-    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True},
+    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True,
+                        "job": "scan"},
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
     "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
+    # The evidence files (REFINE200 #79): a weekly cron (Sunday 08:00 UTC, up to
+    # ~6h) gets a week plus a day; a monthly one (the 1st, 08:00 UTC; months
+    # run 28-31 days) gets 32 days. Either alarms about a day after a dropped run.
+    "lens_backtest.yml":  {"max_age_h": 8 * 24.0,  "severity": "WARNING"},
+    "vivek_backtest.yml": {"max_age_h": 32 * 24.0, "severity": "WARNING"},
 }
+# How far back a `job`-judged probe looks: one page of this many runs, reading
+# the jobs of at most WATCHDOG_JOB_LOOKUPS of them (newest first, stopping at
+# the first that did the work). scan.yml fires ~20 times a weekday and its gate
+# skips about half, so 30 runs is more than a day. Past the window with no real
+# run, the probe can still alarm on the window's OWN age (a lower bound).
+WATCHDOG_JOB_RUNS_PAGE = 30
+WATCHDOG_JOB_LOOKUPS = 12
 
 # THE CLOUD STOP/TARGET WATCHER IS GONE (2026-09-21). functions/api/tick.js
 # and stop_watcher.yml existed solely to close MANUAL paper positions inside

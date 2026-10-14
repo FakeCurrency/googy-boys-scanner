@@ -35,6 +35,8 @@ jobs:
     # holding `group: kill-switch` when the next two are due. The check
     # reads journals and probes run history; 15 is generous for that.
     timeout-minutes: 15
+    outputs:
+      watchdog_alarm: ${{ steps.watchdog.outputs.alarm }}
     steps:
       - uses: actions/checkout@v4
 
@@ -97,9 +99,13 @@ jobs:
       # loudly (a silent monitor is worse than none). See scanner/watchdog.py
       # and OPERATIONS.md "Watchdog alerts".
       - name: Freshness watchdog
+        id: watchdog
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WATCHDOG_HOST: kill_switch
+          # This host raises the red-run alarm (REFINE200 #77, see the
+          # watchdog-alarm job below); crypto_bot's copy only annotates.
+          WATCHDOG_RAISE: "1"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GBS_SMTP_HOST: ${{ secrets.GBS_SMTP_HOST }}
@@ -109,3 +115,30 @@ jobs:
           GBS_ALERT_TO: ${{ secrets.GBS_ALERT_TO }}
         run: python -m scanner.watchdog
 
+  # THE WATCHDOG'S RED RUN (REFINE200 #77, 2026-10-14). No alert channel is
+  # configured, so a CRITICAL watchdog finding reached nobody. The watchdog
+  # hands one here ONCE per episode (scanner/watchdog.raise_alarm: only while
+  # no CRITICAL channel is configured, stamped `raised` in its state) and this
+  # job fails on it, so GitHub's own failure email carries it. A SEPARATE job on
+  # purpose: the `check` job above stays green, so the kill switch is never
+  # reported as failed and actions/cache still saves the watchdog state (a red
+  # job skips that save, which would raise the alarm on every run). The
+  # watchdog judges kill_switch.yml by its `check` job, so this red run is not
+  # read as a kill-switch failure either.
+  watchdog-alarm:
+    name: Watchdog CRITICAL (the kill-switch check itself passed)
+    needs: check
+    if: needs.check.outputs.watchdog_alarm != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Raise the watchdog finding as a failed run
+        env:
+          ALARM: ${{ needs.check.outputs.watchdog_alarm }}
+        run: |
+          echo "::error title=Watchdog CRITICAL::$ALARM"
+          echo "Watchdog CRITICAL (no alert channel is configured): $ALARM"
+          echo "The kill-switch check in this run PASSED. Fix the finding; this"
+          echo "alarm fires once per episode (reminders: the run page annotations)."
+          exit 1
