@@ -97,6 +97,19 @@ The numbers come from `vivek_bot.size_position` itself, not from a scale factor
 computed here, so a restated row is sized by the same code that sizes a new one
 and cannot drift from it.
 
+WHICH RISK BASIS THE ROW CARRIES (REFINE200 #15 / WP16)
+-------------------------------------------------------
+Units and notional are always sized at the signal (above). `risk_usd` is not:
+rows opened since REFINE200 #15 carry `risk_usd_basis: "fill"` and store
+`risk_usd = units x |fill - stop|` (what one R of THIS fill costs; every dollar
+the book derives is R x risk_usd), with risk_pct derived from it the same way.
+Such a row restates on the SAME basis -- the new units times the row's own
+per-unit fill risk (`entry` minus the original stop) -- so it still moves by
+exactly the target ratio and keeps its marker; re-basing it to the signal would
+re-introduce the mispricing #15 removed. A row without the marker is a
+signal-basis row and restates as before. Its review flags were measured at the
+fill too, so their note's stop width is the fill's.
+
 REVIEW FLAGS (2026-09-27)
 -------------------------
 A `review` flag (vivek_bot.review_flags, `heavy_risk`) records what was known at
@@ -196,12 +209,14 @@ WRITES = ("units", "notional", "risk_usd", "risk_pct", "leverage",
 # before and after on every row; any difference is a bug, not a rounding.
 # signal_entry / fill_slip_bps joined 2026-09-27: the resize now READS
 # signal_entry as its sizing price, so it must provably never write it.
+# risk_usd_basis joined 2026-10-14 for the same reason: it is read to pick
+# the basis risk_usd restates on (REFINE200 WP16).
 FROZEN = ("id", "symbol", "market", "direction", "entry", "stop", "risk",
           "tp1", "tp2", "tp3", "scale", "last_mark", "mae", "mfe",
           "mae_r", "mfe_r", "unreal_r", "realized_r", "gross_r", "cost_r",
           "booked_pct", "tp1_hit", "tp2_hit", "tp3_hit", "exits",
           "entry_date", "opened_at", "status", "rr", "leverage_target",
-          "signal_entry", "fill_slip_bps")
+          "signal_entry", "fill_slip_bps", "risk_usd_basis")
 
 _CENT = 0.005
 
@@ -380,7 +395,8 @@ def resize_position(pos: dict, target: float, equity: float, stamp: str,
     may carry at what a position with that stop width would risk at the full
     target -- i.e. notional falls to `target * max_stop_pct / stop_pct` for a
     row whose stop is wider than that, measured at the price the row is sized
-    at. See the CLI help for why the option exists and why it is off by default.
+    at (a fill-basis row's dollar risk then reads at its fill). See the CLI help
+    for why the option exists and why it is off by default.
 
     Returns a change record: {"symbol", "action", "reason", "before", "after"}.
     `action` is "resized" or "skipped"; a skip never mutates. `want` is the
@@ -396,7 +412,7 @@ def resize_position(pos: dict, target: float, equity: float, stamp: str,
            "notional_before": pos.get("notional"), "notional_after": pos.get("notional"),
            "risk_usd_before": pos.get("risk_usd"), "risk_usd_after": pos.get("risk_usd"),
            "units_before": pos.get("units"), "units_after": pos.get("units"),
-           "sized_at": "", "review_restated": 0, "want": None,
+           "sized_at": "", "risk_basis": "", "review_restated": 0, "want": None,
            "booked_pct": pos.get("booked_pct"),
            "n_exits": (len(pos["exits"]) if isinstance(pos.get("exits"), list)
                        else 0),
@@ -436,12 +452,24 @@ def resize_position(pos: dict, target: float, equity: float, stamp: str,
         rec["reason"] = "sizer returned nothing"
         return rec
 
+    # RISK BASIS (see WHICH RISK BASIS above). A fill-basis row keeps pricing
+    # one R at its own fill: the new units times entry - original stop, and
+    # risk_pct derived from it exactly as vivek_run._ticket_to_position does.
+    new_risk, new_risk_pct = sizing["risk_usd"], sizing["risk_pct"]
+    fill_basis = str(pos.get("risk_usd_basis") or "") == "fill"
+    if fill_basis:
+        new_risk = round(sizing["units"] * abs(float(pos["entry"]) - stop), 2)
+        if sizing["sizing_mode"] == "fixed_notional" and sizing["risk_usd"] > 0:
+            new_risk_pct = round(float(sizing["risk_pct"]) * new_risk
+                                 / sizing["risk_usd"], 4)
+        spct = stop_pct(pos)                    # the flags were measured at the fill
+
     # The one factor every dollar field on the row moves by.
     try:
         rb = float(pos.get("risk_usd") or 0.0)
     except (TypeError, ValueError):
         rb = 0.0
-    k = sizing["risk_usd"] / rb if (math.isfinite(rb) and rb > 0) else 0.0
+    k = new_risk / rb if (math.isfinite(rb) and rb > 0) else 0.0
 
     # REVIEW FLAGS (2026-09-27). `review_before` keeps the list AS TAKEN: a
     # later resize must not overwrite the entry-time record with an already
@@ -462,8 +490,8 @@ def resize_position(pos: dict, target: float, equity: float, stamp: str,
 
     pos["units"] = sizing["units"]
     pos["notional"] = sizing["notional"]
-    pos["risk_usd"] = sizing["risk_usd"]
-    pos["risk_pct"] = sizing["risk_pct"]
+    pos["risk_usd"] = new_risk
+    pos["risk_pct"] = new_risk_pct
     pos["leverage"] = sizing["leverage"]
     pos["sizing_mode"] = sizing["sizing_mode"]
     # The dollar mark moves by the SAME factor as risk_usd, R unchanged. The
@@ -482,9 +510,10 @@ def resize_position(pos: dict, target: float, equity: float, stamp: str,
             ur = float(pos.get("unreal_r") or 0.0)
         except (TypeError, ValueError):
             ur = 0.0
-        pos["unreal_usd"] = round(ur * sizing["risk_usd"], 2)
+        pos["unreal_usd"] = round(ur * new_risk, 2)
 
     rec.update(action="resized", reason="", sized_at=basis,
+               risk_basis="fill" if fill_basis else "signal",
                notional_after=pos["notional"], risk_usd_after=pos["risk_usd"],
                units_after=pos["units"])
     return rec
@@ -605,7 +634,7 @@ def report(results: dict, target: float, equity: float) -> list[str]:
     lines: list[str] = []
     tot_before = tot_after = 0.0
     risk_before = risk_after = 0.0
-    n_resized = n_skipped = n_signal = n_review = n_banked = 0
+    n_resized = n_skipped = n_signal = n_review = n_banked = n_fill_risk = 0
     per_market: list[tuple[str, float]] = []
     wide: list[tuple[float, str, float]] = []
     gate = float(getattr(config, "VIVEK_BOT_MAX_STOP_PCT", 0) or 0)
@@ -631,6 +660,7 @@ def report(results: dict, target: float, equity: float) -> list[str]:
             if c["action"] == "resized":
                 n_resized += 1
                 n_signal += c.get("sized_at") == "signal_entry"
+                n_fill_risk += c.get("risk_basis") == "fill"
                 n_review += bool(c.get("review_restated"))
                 flag = f"  CAPPED (stop {c['capped']:.0f}%)" if c.get("capped") else ""
                 lines.append(
@@ -657,7 +687,8 @@ def report(results: dict, target: float, equity: float) -> list[str]:
     lines.append("")
     lines.append(f"  target ${target:,.0f}/position on ${equity:,.0f} equity")
     lines.append(f"  {n_resized} resized ({n_signal} sized at signal_entry, "
-                 f"{n_resized - n_signal} at the fill; {n_review} with review "
+                 f"{n_resized - n_signal} at the fill; {n_fill_risk} with "
+                 f"risk_usd at the fill; {n_review} with review "
                  f"flags restated), {n_skipped} skipped")
     if n_banked:
         lines.append(f"  {n_banked} restated row(s) carry a partial exit banked "

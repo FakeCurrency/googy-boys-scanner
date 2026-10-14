@@ -436,7 +436,7 @@ def test_the_dollar_mark_moves_by_the_same_factor_as_the_risk():
 
 
 def test_signal_entry_is_frozen_and_the_review_pair_is_writable():
-    assert {"signal_entry", "fill_slip_bps"} <= set(rz.FROZEN)
+    assert {"signal_entry", "fill_slip_bps", "risk_usd_basis"} <= set(rz.FROZEN)
     assert {"review", "review_before"} <= set(rz.WRITES)
     assert not ({"review", "review_before"} & set(rz.FROZEN))
 
@@ -449,6 +449,87 @@ def test_a_flagged_bot_row_resize_only_writes_its_allow_list(monkeypatch):
     moved = {k for k in set(before) | set(p) if before.get(k) != p.get(k)}
     assert "review" in moved and "review_before" in moved
     assert moved <= set(rz.WRITES), moved - set(rz.WRITES)
+
+
+# ── A2. fill-basis risk (REFINE200 #15 rows, WP16) ────────────────────────────
+#
+# Rows opened since REFINE200 #15 store risk_usd = units x |fill - stop| and say
+# so with `risk_usd_basis: "fill"`. Units/notional are still sized at the
+# signal, so they restate exactly as above; risk_usd must stay on the FILL
+# basis, or the resize re-introduces the mispricing #15 removed.
+
+def _fill_row(notional=2_500.0, sig=100.0, stop=80.0, fill=104.0) -> dict:
+    """A fill-basis row built by the REAL runner (vivek_run._ticket_to_position)
+    from a decide()-shaped plan, so the fixture cannot drift from the book."""
+    s = vivek_bot.size_position(150_000.0, sig, stop, notional_target=notional)
+    plan = {"symbol": "AAA", "name": "AAA Ltd", "sector": "Banks",
+            "direction": "long", "grade": "A+", "entry_type": "reclaim",
+            "entry_type_label": "Reclaim", "timeframe": "1D", "entry": sig,
+            "stop": stop, "tp1": sig * 1.3, "tp2": sig * 1.6, "tp3": sig * 2.0,
+            "scale": [0.25, 0.5, 0.15], "trigger_bar": None,
+            "leverage_target": 5, **s}
+    pos = vivek_run._ticket_to_position({"plan": plan}, fill, "asx", "2026-10-14")
+    assert pos is not None and pos["risk_usd_basis"] == "fill"
+    assert pos["entry"] == fill and pos["risk_usd"] != s["risk_usd"]
+    pos.update(unreal_r=0.2, unreal_usd=round(0.2 * pos["risk_usd"], 2))
+    return pos
+
+
+def test_a_fill_basis_row_restates_risk_at_its_own_fill():
+    p = _fill_row()                                  # 25 units: $600 at the fill
+    risk = p["risk_usd"]
+    assert risk == pytest.approx(25 * 24.0)
+    rec = rz.resize_position(p, 1_250.0, 150_000.0, STAMP2)
+    assert rec["action"] == "resized" and rec["sized_at"] == "signal_entry"
+    assert rec["risk_basis"] == "fill"
+    assert p["risk_usd_basis"] == "fill"             # the marker survives
+    # ...exactly what the runner books for a fresh $1,250 ticket at this fill:
+    fresh = _fill_row(notional=1_250.0)
+    for k in ("units", "notional", "risk_usd", "risk_pct", "leverage", "sizing_mode"):
+        assert p[k] == fresh[k], k
+    assert p["risk_usd"] == pytest.approx(risk * 0.5, abs=0.005)
+    # A signal-basis restatement would have priced one R at 12.5 x 20 = $250.
+    assert p["risk_usd"] != pytest.approx(250.0, abs=0.01)
+    assert p["unreal_usd"] == pytest.approx(0.2 * p["risk_usd"], abs=0.01)
+
+
+def test_a_signal_basis_row_still_restates_on_the_signal():
+    # No marker = a row opened before #15: risk_usd stays units x (signal - stop).
+    p = _bot_row(notional=2_500.0)
+    assert "risk_usd_basis" not in p
+    rec = rz.resize_position(p, 1_250.0, 150_000.0, STAMP2)
+    assert rec["risk_basis"] == "signal" and p["risk_usd"] == pytest.approx(250.0)
+    assert "risk_usd_basis" not in p
+
+
+def test_a_fill_basis_row_is_idempotent_and_writes_only_its_allow_list():
+    p = _fill_row()
+    before = copy.deepcopy(p)
+    rz.resize_position(p, 1_250.0, 150_000.0, STAMP2)
+    moved = {k for k in set(before) | set(p) if before.get(k) != p.get(k)}
+    assert moved <= set(rz.WRITES), moved - set(rz.WRITES)
+    again = copy.deepcopy(p)
+    assert rz.resize_position(p, 1_250.0, 150_000.0, STAMP2)["action"] == "skipped"
+    assert p == again
+
+
+def test_a_fill_basis_flag_restates_to_what_the_runner_would_flag_at_the_fill(
+        monkeypatch):
+    # The runner measured the flag at the FILL (23% stop here, not the 20% the
+    # signal reads), so the restated note must say the fill's width too.
+    monkeypatch.setattr(config, "VIVEK_BOT_REVIEW_DAILY_LOSS_PCT", 0.001)
+    p = _fill_row()
+    assert p["review"], "fixture must be flagged at entry"
+    rz.resize_position(p, 1_250.0, 150_000.0, STAMP2)
+    assert p["review"] == _fill_row(notional=1_250.0)["review"]
+    assert "23% stop" in p["review"][0]["note"]
+
+
+def test_the_report_counts_the_fill_basis_rows():
+    p = _fill_row()
+    rec = rz.resize_position(p, 1_250.0, 150_000.0, STAMP2)
+    lines = rz.report({"asx": {"changes": [rec]}}, 1_250.0, 150_000.0)
+    assert any("1 with risk_usd at the fill" in ln for ln in lines), lines
 
 
 # ── B. review flags ───────────────────────────────────────────────────────────
@@ -769,8 +850,10 @@ def test_live_flags_restate_to_exactly_what_review_flags_would_write(monkeypatch
     for p in rows:
         q = copy.deepcopy(p)
         assert rz.resize_position(q, 1_234.0, 150_000.0, STAMP2)["action"] == "resized"
-        fresh = _flags(q["risk_usd"], float(q["signal_entry"]), rz.basis_stop(q),
-                       monkeypatch, 0.001)
+        # A fill-basis row (REFINE200 #15) was flagged at its fill.
+        at = (float(q["entry"]) if q.get("risk_usd_basis") == "fill"
+              else float(q["signal_entry"]))
+        fresh = _flags(q["risk_usd"], at, rz.basis_stop(q), monkeypatch, 0.001)
 
         def drop(fl):
             return [{k: v for k, v in f.items() if k != "stop_pct"} for f in fl]
