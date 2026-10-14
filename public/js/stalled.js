@@ -11,7 +11,14 @@
    runner past TP1 is exempt from it forever — so a +0.1R runner can hold one
    of the book's scarce slots (60 since 2026-09-27; 30 when this was written)
    for months with nothing on any page saying so. With the book at its global
-   cap, every stalled row is a new A+ the bot must decline.
+   cap, every stalled row is a slot a new A/A+ setup cannot have.
+
+   EMERGENCY ONLY, FOLDED AWAY (2026-10-14, owner: "I'm no longer going to
+   close anything by hand"). The hc4-1 sample is meant to measure the rules,
+   and a hand close in it measures the owner's timing instead, so the per-row
+   Close buttons now sit inside a collapsed, plainly labelled "Emergency
+   close" <details> under the list, shut by default. The write path itself is
+   unchanged and still works for a genuine emergency.
 
    ONE WRITE PATH, AND IT IS THE OWNER'S FINGER (owner-ruled 2026-08-07).
    Nothing here decides. No threshold, no timer, no condition in this file
@@ -59,6 +66,24 @@
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // The page's ONE read of the book and the rules (nav.js window.VivekBook,
+  // REFINE200 #68) — journal.js reads the same promise. A poll passes `bust`
+  // to get past every cache layer (?t= + no-store). The direct fetch is the
+  // fallback for a page without the shared loader.
+  const BOOK_URL = "data/vivek_bot_book.json";
+  const readBook = (bust) => {
+    const VB = window.VivekBook;
+    if (VB) return VB.get(bust != null ? { bust } : undefined);
+    return fetch(BOOK_URL + (bust != null ? "?t=" + bust : ""), { cache: bust != null ? "no-store" : "no-cache" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  };
+  const readRules = () => {
+    const VB = window.VivekBook;
+    if (VB) return VB.rules();
+    return fetch("data/bot_rules.json", { cache: "no-cache" })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  };
 
   // ── the cohort ─────────────────────────────────────────────────────────────
   // The engine's mark is the whole definition. `status === "open"` is belt and
@@ -118,18 +143,32 @@
   // are the reclaimable share of it. Risk is stated in both currencies the
   // book itself uses — combined R (comparable across the 2026-07-28 resize)
   // and dollars-at-risk as a share of equity.
-  const summarize = (rows, book, rules) => {
+  //
+  // DOLLARS ARE CONVERTED, NOT ADDED AT FACE VALUE (REFINE200 #190). An ASX
+  // row's risk_usd is A$ (the notional is booked in each market's own
+  // currency), so summing it with US$ rows overstated the total by the FX
+  // rate. With the published AUD/USD (data/fx.json — the rate the journal's
+  // own US$ figures use) the total is US$; without it the two currencies are
+  // reported side by side and no equity share is claimed.
+  const isAsx = (p) => String((p && p.market) || "").toLowerCase() === "asx";
+  const summarize = (rows, book, rules, fx) => {
     const fin = (v) => (typeof v === "number" && isFinite(v)) ? v : null;
     const totalR = rows.reduce((s, p) => s + (fin(p.unreal_r) || 0), 0);
-    const riskUsd = rows.reduce((s, p) => s + (fin(p.risk_usd) || 0), 0);
+    const riskAud = rows.filter(isAsx).reduce((s, p) => s + (fin(p.risk_usd) || 0), 0);
+    const riskUs = rows.filter((p) => !isAsx(p)).reduce((s, p) => s + (fin(p.risk_usd) || 0), 0);
+    const rate = fin(fx) > 0 ? fx : null;
+    const hasAud = rows.some(isAsx);
+    const riskUsd = !hasAud ? riskUs : rate != null ? riskUs + riskAud * rate : null;
     const equity = fin(rules && rules.account_equity);
     const maxOpen = fin(rules && rules.max_open_total) || fin(rules && rules.max_positions);
     const open = ((book && book.open) || []).filter((p) => p && p.status === "open").length;
     const free = maxOpen != null ? Math.max(0, maxOpen - open) : null;
+    const grades = Array.isArray(rules && rules.grades) && rules.grades.length
+      ? rules.grades.map(String).join("/") : "A+/A";
     return {
-      n: rows.length, totalR, riskUsd,
-      riskPct: equity ? 100 * riskUsd / equity : null,
-      open, maxOpen, free, atCap: maxOpen != null && open >= maxOpen,
+      n: rows.length, totalR, riskUsd, riskUs, riskAud, rate,
+      riskPct: equity && riskUsd != null ? 100 * riskUsd / equity : null,
+      open, maxOpen, free, atCap: maxOpen != null && open >= maxOpen, grades,
     };
   };
 
@@ -139,11 +178,26 @@
   const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
   const MKT = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
 
+  // US$ when the ASX share could be converted; otherwise each currency on its
+  // own, never one figure that silently mixes them.
+  const riskClause = (s) => {
+    if (s.riskUsd != null) {
+      const how = s.riskAud && s.rate != null
+        ? ` title="ASX risk converted to US$ at AUD/USD ${s.rate.toFixed(4)} (data/fx.json)"` : "";
+      return `<b${how}>US${money(s.riskUsd)}</b> at risk` +
+        (s.riskPct != null ? " (" + s.riskPct.toFixed(1) + "% of equity)" : "");
+    }
+    return `<b>US${money(s.riskUs)}</b> + <b>A${money(s.riskAud)}</b> at risk`;
+  };
+
+  // "book slots", not "A+ slots": the bot has taken A and A+ since 2026-09-21,
+  // and the slot cap is the whole book's (REFINE200 #190).
   const slotsClause = (s) => {
     if (s.maxOpen == null) return "occupying " + s.n + " book slot" + (s.n === 1 ? "" : "s");
-    const base = "occupying <b>" + s.n + " of " + s.maxOpen + "</b> A+ slots";
+    const base = "occupying <b>" + s.n + " of " + s.maxOpen + "</b> book slots";
     if (s.atCap) {
-      return base + " — book <b>FULL</b>, so these are the only slots a new A+ can come from";
+      return base + " — book <b>FULL</b>, so these are the only slots a new " +
+        (s.grades || "A+/A") + " setup can come from";
     }
     return base + " (" + s.free + " free besides)";
   };
@@ -192,8 +246,15 @@
       <span class="st-r ${ur == null ? "" : ur >= 0 ? "st-up" : "st-down"}">${fmtR(ur)}</span>
       <span class="st-grade">${esc(pos.grade || "—")}</span>
       <span class="st-call" title="${esc(f.detail)}">${esc(f.label)}</span>
-      ${closeCell(pos)}
     </div>`;
+  };
+
+  // The Close control for one row, inside the folded Emergency close section.
+  const pickHTML = (pos) => {
+    const sym = String(pos.symbol || "?").toUpperCase();
+    return `<span class="st-pick-row"><b>${esc(sym)}</b>` +
+      `<em>${esc(MKT[pos.market] || String(pos.market || "").toUpperCase())}</em>` +
+      `${closeCell(pos)}</span>`;
   };
 
   // ── the close control: pick rows → ONE confirm → ONE request ───────────────
@@ -307,8 +368,8 @@
     const tick = () => {
       if (!inFlight) return;
       tries += 1;
-      fetch("data/vivek_bot_book.json?t=" + tries + "_" + inFlight.pending.size, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : null))
+      readBook(tries + "_" + inFlight.pending.size)
+        .catch(() => null)
         .then((bk) => {
           if (!inFlight) return;
           if (bk) {
@@ -412,12 +473,12 @@
       });
   };
 
-  function render(host, book, rules) {
+  function render(host, book, rules, fx) {
     const rows = stalledRows(book);
     if (!rows.length) { host.hidden = true; host.innerHTML = ""; return; }
     const day = bookDay(book);
     const maxHold = rules && typeof rules.max_hold_days === "number" ? rules.max_hold_days : 28;
-    const s = summarize(rows, book, rules);
+    const s = summarize(rows, book, rules, fx);
     // Longest-held first: the row that has been asking for a decision longest
     // is the one the summary is really about.
     const ordered = rows.slice().sort((a, b) =>
@@ -425,17 +486,22 @@
     host.hidden = false;
     host.innerHTML = `
       <div class="st-head">
-        <span class="st-tag" title="Flagged by the stale probe (≥2 weeks open, minimal movement) — going nowhere is a decision too. Tap a ticker for its chart. Close picks that row — pick as many as you want out, then the bar's Close N now sends them as ONE run: one commit, one deploy, every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking, and a row only reads closed ✓ once it is actually gone from the published book. Nothing here closes anything on its own.">⏳ STALLED</span>
+        <span class="st-tag" title="Flagged by the stale probe (≥2 weeks open, minimal movement). Routine: the rules manage these, and most are waiting on the 28-day time-stop. Tap a ticker for its chart. The only write is folded under Emergency close: pick rows there, then its bar's Close N now sends them as ONE run — one commit, one deploy, every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking, and a row only reads closed ✓ once it is actually gone from the published book. Nothing here closes anything on its own.">⏳ STALLED</span>
         <span class="st-sum"><b>${s.n}</b> position${s.n === 1 ? "" : "s"} stalled
           · <b>${fmtR(s.totalR)}</b> combined
-          · <b>${money(s.riskUsd)}</b> at risk${s.riskPct != null ? " (" + s.riskPct.toFixed(1) + "% of equity)" : ""}
+          · ${riskClause(s)}
           · ${slotsClause(s)}</span>
       </div>
-      <div class="st-bar" hidden></div>
       <div class="st-rows">
-        <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span><span>Act</span></div>
+        <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span></div>
         ${ordered.map((p) => rowHTML(p, day, maxHold)).join("")}
       </div>
+      <details class="st-emerg">
+        <summary>Emergency close</summary>
+        <p class="st-emerg-note">The rules manage these positions; a stall is routine and nothing here needs a click. Use this only to take a position out of the book by hand in an emergency — a hand close in the current cycle's sample measures your timing, not the rules'.</p>
+        <div class="st-bar" hidden></div>
+        <div class="st-picks">${ordered.map(pickHTML).join("")}</div>
+      </details>
       <!-- The explainer moved into the strip's own tooltip (UI pass
            2026-08-18): three permanent lines of teaching copy at full contrast,
            read once and scrolled past every day since, sitting in the block
@@ -483,15 +549,17 @@
     const get = (url) => ((window.PM && PM.fetchTimeout) ? PM.fetchTimeout : fetch)(url, { cache: "no-cache" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
     Promise.all([
-      get("data/vivek_bot_book.json"),
+      readBook(),
       // Rules are a degrade, not a dependency: without them the strip still
       // lists the cohort, it just cannot name the cap or the equity share.
-      get("data/bot_rules.json").catch(() => null),
+      readRules().catch(() => null),
+      // So is the FX rate: without it the risk is shown per currency.
+      get("data/fx.json").then((j) => (j && j.audusd > 0 ? +j.audusd : null)).catch(() => null),
     ])
       .catch(() => { host.hidden = true; return null; })
       .then((got) => {
         if (!got) return;
-        try { render(host, got[0], got[1]); } catch (err) { host.hidden = true; report(err); }
+        try { render(host, got[0], got[1], got[2]); } catch (err) { host.hidden = true; report(err); }
       });
   }
 })();

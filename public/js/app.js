@@ -2753,7 +2753,7 @@
       // read as one system.
       const capTxt = facts.maxOpen == null
         ? `${facts.open} open`
-        : `${facts.open} of ${facts.maxOpen} A+ slots · ` +
+        : `${facts.open} of ${facts.maxOpen} book slots · ` +
           `${facts.stalled.length} stalled · ` +
           (facts.atCap ? "FULL" : `${facts.free} free`);
       // THE RECORD, UNBLENDED (Session B, 2026-08-19, owner-ordered). This

@@ -56,12 +56,13 @@ function sliceConst(name) {
 
 // Same-realm sandbox (new Function, not vm) per the Tier 5 note: a vm context
 // is a separate realm and cross-realm deepStrictEqual fails on Array.prototype.
-const NAMES = ["esc", "stalledRows", "daysBetween", "bookDay", "framing",
-               "summarize", "fmtR", "slotsClause", "closePrice", "fmtPx"];
+const NAMES = ["esc", "stalledRows", "daysBetween", "bookDay", "framing", "isAsx",
+               "summarize", "fmtR", "money", "MKT", "riskClause", "slotsClause", "closePrice",
+               "fmtPx", "tipFor", "closeCell", "rowHTML", "pickHTML"];
 const body = NAMES.map(sliceConst).join("\n") +
   `\nreturn { ${NAMES.join(", ")} };`;
-const { esc, stalledRows, daysBetween, bookDay, framing, summarize, fmtR, slotsClause,
-        closePrice, fmtPx } = new Function(body)();
+const { esc, stalledRows, daysBetween, bookDay, framing, summarize, fmtR, riskClause, slotsClause,
+        closePrice, fmtPx, rowHTML, pickHTML } = new Function(body)();
 
 // CODE-only view of the shipped file. Every ban below asks whether stalled.js
 // DOES something, and a plain substring cannot answer that here: the reasoning
@@ -163,7 +164,52 @@ test("a full book reads FULL and names the stalled rows as the only source of sl
   const clause = slotsClause(s);
   assert.ok(clause.includes("8 of 30"), clause);
   assert.ok(clause.includes("FULL"), clause);
-  assert.ok(clause.includes("only slots a new A+ can come from"), clause);
+  assert.ok(clause.includes("book slots"), clause);
+  assert.ok(!clause.includes("A+ slots"), "the bot takes A and A+ since 2026-09-21 — the slots are the book's");
+  assert.ok(clause.includes("only slots a new A+/A setup can come from"), clause);
+});
+
+test("the setup grades come from the published rules", () => {
+  const open = Array.from({ length: 30 }, (_, i) => row({ symbol: "S" + i }));
+  const s = summarize(stalledRows({ open }), { open }, Object.assign({ grades: ["A+", "A"] }, RULES));
+  assert.ok(slotsClause(s).includes("a new A+/A setup"), slotsClause(s));
+  const t = summarize(stalledRows({ open }), { open }, Object.assign({ grades: ["A+"] }, RULES));
+  assert.ok(slotsClause(t).includes("a new A+ setup"), slotsClause(t));
+});
+
+suite("currencies — A$ and US$ are never added at face value (REFINE200 #190)");
+
+const MIXED = { open: [
+  row({ symbol: "NIC", market: "asx", risk_usd: 300 }),
+  row({ symbol: "AXON", market: "nasdaq", risk_usd: 200 }),
+] };
+
+test("ASX risk is converted at the published AUD/USD before it is summed", () => {
+  const s = summarize(stalledRows(MIXED), MIXED, RULES, 0.7);
+  assert.ok(Math.abs(s.riskUsd - (200 + 300 * 0.7)) < 1e-9, String(s.riskUsd));
+  assert.ok(Math.abs(s.riskPct - 100 * 410 / 150000) < 1e-9, String(s.riskPct));
+  const c = riskClause(s);
+  assert.ok(c.includes("US$410"), c);
+  assert.ok(c.includes("AUD/USD 0.7000"), "the rate used must be on the figure");
+});
+
+test("without a rate the two currencies are reported apart, and no equity share is claimed", () => {
+  const s = summarize(stalledRows(MIXED), MIXED, RULES, null);
+  assert.equal(s.riskUsd, null);
+  assert.equal(s.riskPct, null);
+  const c = riskClause(s);
+  assert.ok(c.includes("US$200") && c.includes("A$300"), c);
+  assert.ok(!c.includes("$500"), "the face-value sum is back: " + c);
+});
+
+test("a book with no ASX row needs no rate at all", () => {
+  const s = summarize(stalledRows(BOOK), BOOK, RULES, null);
+  assert.ok(s.riskUsd > 0 && s.riskPct != null);
+});
+
+test("the strip reads data/fx.json, the rate the journal's US$ figures use", () => {
+  assert.ok(/get\("data\/fx\.json"\)/.test(CODE), "stalled.js no longer reads the published FX rate");
+  assert.ok(/render\(host, got\[0\], got\[1\], got\[2\]\)/.test(CODE), "the rate never reaches the render");
 });
 
 test("missing rules degrade the summary, never break it", () => {
@@ -247,12 +293,19 @@ test("no store writes and no second transport were smuggled in", () => {
   }
 });
 
-test("it still READS only the two published artifacts", () => {
-  const urls = [...SRC.matchAll(/get\("([^"]+)"\)/g)].map((m) => m[1]);
-  assert.deepEqual(urls.sort(), ["data/bot_rules.json", "data/vivek_bot_book.json"]);
-  // The landing watcher re-reads the SAME book artifact and nothing else.
-  const polled = [...SRC.matchAll(/fetch\("(data\/[^"?]+)/g)].map((m) => m[1]);
-  assert.deepEqual([...new Set(polled)], ["data/vivek_bot_book.json"]);
+test("it still READS only published artifacts: the book, the rules and the FX rate", () => {
+  const urls = [...new Set([...CODE.matchAll(/"(data\/[^"?]+)/g)].map((m) => m[1]))].sort();
+  assert.deepEqual(urls, ["data/bot_rules.json", "data/fx.json", "data/vivek_bot_book.json"]);
+});
+
+test("book and rules come from the page's ONE shared read (nav.js VivekBook, REFINE200 #68)", () => {
+  assert.ok(/VB\.get\(/.test(CODE) && /VB\.rules\(\)/.test(CODE), "stalled.js no longer uses the shared loader");
+  assert.ok(/readBook\(\),/.test(CODE), "the mount no longer reads the book through readBook()");
+  // The landing watcher re-reads the SAME book, FRESH: a ?t= cache-buster
+  // (no-store) so a close that landed is seen, not a cached copy.
+  assert.ok(/readBook\(tries \+ "_" \+ inFlight\.pending\.size\)/.test(CODE),
+    "the landing poll no longer cache-busts the book read");
+  assert.ok(/\{ bust \}/.test(CODE) && /no-store/.test(CODE), "the bust path lost its cache bypass");
 });
 
 test("N picks become ONE request — the batch IS the concurrency fix", () => {
@@ -385,6 +438,21 @@ test("journal.html hosts #stalled-strip and requests stalled.js and stalled.css"
   assert.ok(html.includes('id="stalled-strip"'), "host section missing from journal.html");
   assert.match(html, /js\/stalled\.js\?v=\d+/, "script tag missing or unversioned");
   assert.match(html, /css\/stalled\.css\?v=\d+/, "stylesheet missing or unversioned");
+});
+
+test("the Close buttons live ONLY inside a folded 'Emergency close' section (REFINE200 #89)", () => {
+  // Owner, 2026-10-14: "I'm no longer going to close anything by hand." The
+  // write path stays for emergencies, but the stall rows must read as
+  // information, with the controls one deliberate tap away.
+  const r = rowHTML(row({ last_mark: 19.3 }), "2026-08-01", 28);
+  assert.ok(!/st-x/.test(r), "a Close button is back on the stall row itself");
+  assert.ok(/st-x/.test(pickHTML(row({ last_mark: 19.3 }))), "the emergency list lost its Close control");
+  assert.ok(/<details class="st-emerg">\s*<summary>Emergency close<\/summary>/.test(CODE),
+    "the fold is missing or no longer says plainly what it is");
+  assert.ok(!/<details class="st-emerg"[^>]*\bopen\b/.test(CODE), "the emergency fold must ship shut");
+  const fold = CODE.slice(CODE.indexOf('<details class="st-emerg">'), CODE.indexOf("</details>"));
+  assert.ok(/class="st-bar"/.test(fold), "the confirm bar must sit inside the fold with the picks");
+  assert.ok(/ordered\.map\(pickHTML\)/.test(fold), "the picks must render inside the fold");
 });
 
 test("the host section starts hidden, so a missing file costs nothing", () => {
