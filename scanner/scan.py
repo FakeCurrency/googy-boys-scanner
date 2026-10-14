@@ -199,7 +199,6 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
     """
     from . import vivek
     market = config.MARKETS[market_key]
-    liquid_tier = config.LIQUID_TIER.get(market_key, float("inf"))
     if universe is None:
         universe = load_universe(market_key, full=full)
         if limit:
@@ -431,7 +430,6 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 "scale": hp["scale"], "risk": hp["risk"],
                 "rr": hp["rr"],
                 "rr_text": f"{hp['rr']:.1f}:1",
-                "liquidity": "LIQUID" if turnover >= liquid_tier else "OK",
                 "turnover": round(turnover),
                 "data_age_days": age,   # 0 = fresh; >0 = reused cache (raw-frame age)
                 "spark": _spark(df),

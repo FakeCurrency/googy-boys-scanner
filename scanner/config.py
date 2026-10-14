@@ -25,10 +25,6 @@ LOW_RR_THRESHOLD = 1.5
 DEMOTE_LOW_RR = True
 MIN_TRADEABLE_RR = 1.5
 
-# Average daily turnover (local currency) at/above which a name is tagged
-# "LIQUID" rather than just "OK".
-LIQUID_TIER = {"asx": 1_000_000, "nasdaq": 20_000_000, "crypto": 100_000_000}
-
 # ---------------------------------------------------------------------------
 # Signal thresholds
 # ---------------------------------------------------------------------------
@@ -380,12 +376,14 @@ VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
 # How many tradeable coins the crypto universe holds, by market-cap rank
 # (owner, 2026-09-21: "see if you can branch into the top 200 coins rather
-# than the current selection"). Honest expectation, measured at 100: of 101
-# names in the universe only 69 had Yahoo data under "<SYM>-USD", and the
-# $100M crypto liquidity floor (LIQUID_TIER) cuts more of the tail. Doubling
-# the rank depth should scan ~110-130, not 200 — the bottom of the top 200 is
-# thin alt territory where a paper fill is the most fictional, and the
-# liquidity gate is what keeps it honest.
+# than the current selection"). Expect far fewer than 200 scanned rows: the
+# real floor is MARKETS["crypto"].liquidity_min ($3,000,000 of 20-day dollar
+# volume, owner-ruled "Keep"), read on single-venue exchange volume since
+# 2026-09-28 (63 of the top 100 cleared it at the switch), and the identity
+# check drops a coin no venue can confirm. The bottom of the top 200 is thin
+# alt territory where a paper fill is the most fictional, and the liquidity
+# gate is what keeps it honest. (The old "$100M floor" named here was
+# LIQUID_TIER, a display tag no reader used, removed 2026-10-14, REFINE200 #123.)
 # NOT DELIVERED UNTIL 2026-09-28: the one-page CoinGecko request asked for
 # per_page=260, above CoinGecko's 250 cap, which silently serves its default
 # 100 -- the universe SHRANK 101 -> 86. universe._fetch_crypto now pages at
