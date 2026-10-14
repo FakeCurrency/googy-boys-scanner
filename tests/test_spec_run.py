@@ -130,3 +130,11 @@ def test_the_forming_bar_is_dropped_before_screening(monkeypatch, out):
 def test_the_floors_live_in_config():
     assert 0 < config.SPEC_MIN_COVERAGE < 1
     assert config.SPEC_MAX_DATA_AGE_DAYS >= 4, "must clear a long weekend"
+
+
+def test_no_unreachable_C_grade_rank():
+    """The minimum Specs score (volume 2 + breakout 2, both mandatory) grades
+    B, so a C rank was dead code (REFINE200 #182)."""
+    from scanner.grading import grade_from_points
+    assert grade_from_points(4, config.SPEC_GRADE_CUTOFFS) == "B"
+    assert set(SR.GRADE_RANK) == {"A+", "A", "B"}

@@ -38,7 +38,9 @@ import pandas as pd
 from . import config, data, output, scanerrors, spec, universe
 
 MARKETS = ("asx", "nasdaq")
-GRADE_RANK = {"A+": 0, "A": 1, "B": 2, "C": 3}
+# No "C": the minimum score is 4 (a volume spike 2 + a breakout 2, both
+# mandatory), which already grades B (REFINE200 #182).
+GRADE_RANK = {"A+": 0, "A": 1, "B": 2}
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        "public", "data")
 
