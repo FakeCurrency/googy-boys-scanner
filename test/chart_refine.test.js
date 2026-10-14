@@ -514,6 +514,36 @@ test("a response that did not say (old payload), or another ticker's capture, st
   assert.equal(h.calls.length, 2, "a capture of a different ticker is not this ticker's answer");
 });
 
+/* ═══════════════ #118 ENTRY's distance is measured from the live quote ═══════════ */
+suite("#118 the ENTRY tag's '% vs live' follows the live quote");
+
+test("vsLive measures from the live price, says 'scan' until one lands", () => {
+  const at = CHART.indexOf("const vsLive = (price) =>");
+  assert.ok(at > 0, "render() no longer defines vsLive");
+  const src = CHART.slice(at, CHART.indexOf("};", at) + 2);
+  const mk = (live, scan) => new Function("liveState", "d", `${src} return vsLive;`)({ price: live }, { price: scan });
+  assert.equal(mk(null, 10)(11), " +10.00% vs scan", "before the first quote it is the scan price, and says so");
+  assert.equal(mk(12.5, 10)(11), " -12.00% vs live", "after a quote, the quote the header shows");
+  assert.equal(mk(11, 10)(11), "", "on the price: nothing to say");
+  assert.equal(mk(null, null)(11), "");
+});
+
+test("every ENTRY line is re-titled on each tick, through onLiveTick", () => {
+  assert.match(CODE, /onLiveTick\(\(\) => entryTags\.forEach\(\(t\) => \{\s*try \{ t\.handle\.applyOptions\(\{ title: t\.base \+ vsLive\(t\.price\) \}\);/);
+  const lv = fnSrc("applyVivekLevels");
+  assert.match(lv, /entryTags\.length = 0;/, "a TF switch drops the old line's tag");
+  assert.match(lv, /if \(isEntry\) entryTags\.push\(\{ handle, price, base: t \}\);/);
+  assert.ok(!/\(price - d\.price\) \/ d\.price/.test(CODE) && !/\(L\.price - d\.price\) \/ d\.price/.test(CODE),
+    "no ENTRY distance is computed from the frozen scan price any more");
+});
+
+/* ═══ (coordinator, from WP5) the browser Binance series reads QUOTE volume ═══ */
+test("binanceDirectBars takes k[7] (USD volume), as the proxy and the scan do", () => {
+  const f = fnSrc("binanceDirectBars");
+  assert.match(f, /volume: \+k\[7\] \|\| 0/);
+  assert.ok(!/volume: \+k\[5\]/.test(f), "k[5] is the coin count, not dollars");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);

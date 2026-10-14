@@ -1432,8 +1432,11 @@
       return rows
         .filter((k) => (seen.has(k[0]) ? false : (seen.add(k[0]), true)))
         .sort((a, b) => a[0] - b[0])
+        // Volume is the QUOTE (USD) volume, k[7], as the proxy (_prices.js)
+        // and the scan read it -- not the coin count in k[5], so the volume
+        // strip and its spikes match the series the scan measured.
         .map((k) => ({ time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2],
-                       low: +k[3], close: +k[4], volume: +k[5] || 0 }));
+                       low: +k[3], close: +k[4], volume: +k[7] || 0 }));
     };
     const fromHost = (i) => {
       if (i >= BINANCE_DIRECT_HOSTS.length) return Promise.resolve([]);
@@ -3049,6 +3052,23 @@
       }
     }
 
+    // ENTRY's distance from price (#74), measured against the LIVE quote the
+    // header shows and re-measured on every tick (REFINE200 #118). It was
+    // computed once from the scan row's frozen price and labelled "vs live"
+    // while the header ticked away from it (scans are up to an hour apart).
+    // Until the first quote lands it says what it is measured against.
+    const entryTags = [];                    // { handle, price, base }
+    const vsLive = (price) => {
+      const live = liveState.price != null && liveState.price > 0;
+      const ref = live ? liveState.price : d.price;
+      if (!(ref > 0) || price === ref) return "";
+      const g = (price - ref) / ref * 100;
+      return ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs ${live ? "live" : "scan"}`;
+    };
+    onLiveTick(() => entryTags.forEach((t) => {
+      try { t.handle.applyOptions({ title: t.base + vsLive(t.price) }); } catch (_) { /* line gone */ }
+    }));
+
     // Non-VIVEK: static level lines drawn once. VIVEK draws its levels PER
     // timeframe (applyVivekLevels) so they update when you switch 4H / D / W.
     if (!d._vivek) (d.level_lines || []).forEach((L) => {
@@ -3063,13 +3083,12 @@
           const rMult = Math.abs(L.price - ep) / riskDist;
           title += ` · ${rMult.toFixed(1)}R`;
         }
-      } else if (ep && L.price === ep && d.price > 0 && L.price !== d.price) {
-        // #74: ENTRY line shows its gap from the current price (trigger distance).
-        const g = (L.price - d.price) / d.price * 100;
-        title += ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs live`;
       }
-      candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
-        lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title });
+      const isEntry = !!(ep && L.price === ep);
+      // #74: ENTRY line shows its gap from the current price (trigger distance).
+      const handle = candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
+        lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: isEntry ? title + vsLive(L.price) : title });
+      if (isEntry) entryTags.push({ handle, price: L.price, base: title });
     });
 
     // MOMENTUM: the Pine template's AUTO trade box. Same five lines the owner's
@@ -3281,6 +3300,7 @@
       if (!lv) return;
       vkHandles.forEach((h) => { try { candle.removePriceLine(h); } catch (_) {} });
       vkHandles = [];
+      entryTags.length = 0;            // the previous TF's ENTRY line is gone
       const ep = lv.entry;
       // NARROW CHARTS (phones, < 560px): the bare name only. "200 SMA·D +1.90%
       // vs live" spanned over half a 322px plot and sat on the newest candles;
@@ -3298,15 +3318,16 @@
           t += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
           const rd = lv.stop ? Math.abs(ep - lv.stop) : 0;
           if (rd > 0) t += ` · ${(Math.abs(price - ep) / rd).toFixed(1)}R`;
-        } else if (price === ep && d.price > 0 && price !== d.price) {
-          // #74: the ENTRY line carries its distance from the current price —
-          // how far price must travel to arm the trade. (SL/TP above are
-          // labelled entry-relative — that's the R ladder of the plan itself.)
-          const g = (price - d.price) / d.price * 100;
-          t += ` ${g >= 0 ? "+" : ""}${g.toFixed(2)}% vs live`;
         }
-        vkHandles.push(candle.createPriceLine({ price, color, lineWidth: weight || 1,
-          lineStyle: dotted ? LC.LineStyle.Dotted : LC.LineStyle.Dashed, axisLabelVisible: true, title: t }));
+        // #74: the ENTRY line carries its distance from the current price —
+        // how far price must travel to arm the trade. (SL/TP above are
+        // labelled entry-relative — that's the R ladder of the plan itself.)
+        const isEntry = !bare && price === ep;
+        const handle = candle.createPriceLine({ price, color, lineWidth: weight || 1,
+          lineStyle: dotted ? LC.LineStyle.Dotted : LC.LineStyle.Dashed, axisLabelVisible: true,
+          title: isEntry ? t + vsLive(price) : t });
+        vkHandles.push(handle);
+        if (isEntry) entryTags.push({ handle, price, base: t });
       };
       // Visual hierarchy: the trade ladder (SL/Entry/TP1) is loudest; the 200 SMA
       // and the further targets are secondary. Swing lines were dropped — the
