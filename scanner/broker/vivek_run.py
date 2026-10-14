@@ -1137,7 +1137,7 @@ def _earnings_within(yf_symbol: str | None, buffer_days: int) -> bool:
 
 
 def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
-                market: str | None = None) -> None:
+                market: str | None = None, now: dt.datetime | None = None) -> None:
     """Stamp row['adv_usd'] (20-day average dollar volume, quote currency) on
     each scan row so the decision engine's liquidity gates can read it.
     Missing/broken data leaves the row un-stamped (exempt, fail-open).
@@ -1151,15 +1151,28 @@ def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
     vivek_backtest all honoured the flag. Owner: "Yeah fix it" (2026-09-28).
     Fixing it can only ADD crypto takes: scan.py's $3M real-volume floor still
     drops a thin coin before the bot sees it. Pinned equal to _adv_usd_at by
-    tests/test_enrich_adv.py."""
-    usd_volume = bool(getattr(config.MARKETS.get(market), "volume_is_usd", False)) \
-        if market else False
+    tests/test_enrich_adv.py.
+
+    COMPLETED BARS ONLY (REFINE200 #9), exactly like scan.py: a still-forming
+    trailing bar carries a part-day's volume, and averaging it in understated
+    every in-session ADV by up to 1/20 of a day -- the liquidity gate scan.py
+    applies drops it first (VIVEK_DROP_FORMING_BAR + _bar_is_forming) and so
+    does this now. `now` is the market-local clock (run_market's); without one
+    the market's own wall clock is read."""
+    mcfg = config.MARKETS.get(market) if market else None
+    usd_volume = bool(getattr(mcfg, "volume_is_usd", False))
+    if mcfg is not None and now is None:
+        now = dt.datetime.now(ZoneInfo(mcfg.timezone))
+    from ..scan import _bar_is_forming          # deferred: scan imports the broker lazily
     for row in results:
         df = frames.get(yf_map.get(row.get("symbol")))
         if df is None or "Volume" not in getattr(df, "columns", ()):
             continue
         try:
-            tail = df.tail(20)
+            if (config.VIVEK_DROP_FORMING_BAR and mcfg is not None and len(df)
+                    and _bar_is_forming(market, df.index[-1].date(), now)):
+                df = df.iloc[:-1]
+            tail = df.tail(config.LIQUIDITY_LOOKBACK)
             if usd_volume:
                 adv = float(tail["Volume"].mean())
             else:
@@ -1438,7 +1451,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # Sector rides along so decide() can enforce the per-sector correlation cap;
     # ADV is stamped on the rows for the liquidity gates; recently-stopped
     # symbols are handed over for the re-entry cooldown.
-    _enrich_adv(results, frames, yf_map, market)
+    _enrich_adv(results, frames, yf_map, market, now=now)
     # Sector merge (2026-07-28, owner-authorised — REFINEMENTS #38). The
     # per-sector cap exempts rows with no sector, so NASDAQ had no
     # correlation control whatsoever: its universe file ships no sector column.
