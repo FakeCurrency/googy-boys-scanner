@@ -90,7 +90,8 @@ def test_a_stock_market_is_due_at_its_bar_final_the_one_table_the_repo_keeps():
     plus a lag of the lens's own. 16:30 Sydney was ten minutes before the ASX
     bar is final in the free feed."""
     assert mcfg.BAR_FINAL == scfg.DAILY_BAR_FINAL
-    assert scfg.DAILY_BAR_FINAL is getattr(scfg, "IGNITION_" + "BAR_FINAL"), "one table, two names"
+    assert scfg.DAILY_BAR_FINAL is scfg.BAR_FINAL, "one table, two names"
+    assert scfg.DAILY_BAR_FINAL == getattr(scfg, "IGNITION_" + "BAR_FINAL")
     assert set(mcfg.BAR_FINAL) == {m for m in mcfg.MARKETS if m != "crypto"}
     for market, (zone, h, m) in mcfg.BAR_FINAL.items():
         assert zone == scfg.MARKETS[market].timezone, market
