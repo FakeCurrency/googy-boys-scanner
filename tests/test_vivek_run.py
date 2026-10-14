@@ -1221,3 +1221,92 @@ def test_the_trade_digest_prints_the_exit_price_not_none(tmp_path, monkeypatch):
     (digest,) = [a for a in sent if a[0] == "order_placed"]
     body = digest[2]
     assert "CLOSE BHP stop @ 95.5" in body and "None" not in body
+
+
+# ── REFINE200 #10: the earnings window is the MARKET's day, looked up once ────
+
+def _fake_yf(monkeypatch, dates, calls):
+    import types
+    mod = types.ModuleType("yfinance")
+
+    class T:
+        def __init__(self, sym):
+            calls.append(sym)
+
+        @property
+        def calendar(self):
+            if dates is RuntimeError:
+                raise RuntimeError("throttled")
+            return {"Earnings Date": dates}
+    mod.Ticker = T
+    monkeypatch.setitem(sys.modules, "yfinance", mod)
+
+
+def test_earnings_window_counts_from_the_market_date():
+    """Same report, same buffer: in the window from 2024-01-03 (Sydney), out of
+    it from 2024-01-02 (UTC at 10:30 Sydney) -- the day the runner used."""
+    import types
+    mod = types.ModuleType("yfinance")
+    mod.Ticker = lambda s: types.SimpleNamespace(calendar={"Earnings Date": [dt.date(2024, 1, 6)]})
+    sys.modules["yfinance"], old = mod, sys.modules.get("yfinance")
+    try:
+        assert vr._earnings_within("BHP.AX", 3, today=dt.date(2024, 1, 3)) is True
+        assert vr._earnings_within("BHP.AX", 3, today=dt.date(2024, 1, 2)) is False
+    finally:
+        if old is None:
+            sys.modules.pop("yfinance", None)
+        else:
+            sys.modules["yfinance"] = old
+
+
+def test_run_market_asks_with_its_own_local_date(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_EARNINGS_MARKETS", ("asx",))
+    seen = []
+
+    def spy(sym, buf, today=None, cache=None):
+        seen.append((sym, today, cache is vr._EARNINGS_CACHE))
+        return False
+    monkeypatch.setattr(vr, "_earnings_within", spy)
+    now = _aest(2024, 1, 3, 10, 30)                         # = 2024-01-02 23:30 UTC
+    vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)},
+                  [{"symbol": "BHP", "yf": "BHP.AX"}], now=now)
+    assert seen == [("BHP.AX", dt.date(2024, 1, 3), True)]
+    assert now.astimezone(dt.timezone.utc).date() == dt.date(2024, 1, 2)
+
+
+def test_a_report_in_the_market_window_blocks_the_fill(tmp_path, monkeypatch):
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(config, "VIVEK_BOT_EARNINGS_MARKETS", ("asx",))
+    monkeypatch.setattr(vr, "_EARNINGS_CACHE", {})
+    calls = []
+    _fake_yf(monkeypatch, [dt.date(2024, 1, 6)], calls)
+    bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)},
+                       [{"symbol": "BHP", "yf": "BHP.AX"}], now=_aest(2024, 1, 3, 10, 30))
+    assert bk["open"] == [] and calls == ["BHP.AX"]
+
+
+def test_the_calendar_is_looked_up_once_per_symbol_per_day(monkeypatch):
+    calls = []
+    _fake_yf(monkeypatch, [dt.date(2024, 1, 20)], calls)
+    cache = {}
+    d = dt.date(2024, 1, 3)
+    for _ in range(3):
+        assert vr._earnings_within("AAPL", 3, today=d, cache=cache) is False
+    assert calls == ["AAPL"]
+    vr._earnings_within("MSFT", 3, today=d, cache=cache)
+    assert calls == ["AAPL", "MSFT"]
+    # a new day asks again, and forgets yesterday's answers
+    assert vr._earnings_within("AAPL", 3, today=dt.date(2024, 1, 18), cache=cache) is True
+    assert calls == ["AAPL", "MSFT", "AAPL"]
+    assert set(cache) == {("AAPL", "2024-01-18")}
+
+
+def test_a_failed_lookup_fails_open_and_is_not_retried_that_day(monkeypatch):
+    calls = []
+    _fake_yf(monkeypatch, RuntimeError, calls)
+    cache = {}
+    d = dt.date(2024, 1, 3)
+    assert vr._earnings_within("AAPL", 3, today=d, cache=cache) is False
+    assert vr._earnings_within("AAPL", 3, today=d, cache=cache) is False
+    assert calls == ["AAPL"]
