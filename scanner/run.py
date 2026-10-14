@@ -357,7 +357,7 @@ def main() -> None:
             # Guard: nothing fresh AND nothing cached → the source is fully blocked.
             # Skip rather than clobber yesterday's good JSON.
             if not deep_frames:
-                print(f"  no data for {market_key} (download blocked/empty) — "
+                print(f"  no data for {market_key} (download blocked/empty) - "
                       f"keeping existing JSON", flush=True)
                 _record_skip(market_key)
                 dry = _scan_health(market_key, published=False)
@@ -399,7 +399,7 @@ def main() -> None:
                                      trigger=funnelhistory.trigger_from_env())
             except (OSError, ValueError, TypeError, KeyError) as e:  # report-only
                 print(f"  WARNING funnel history append failed: {e.__class__.__name__}: {e}")
-            print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) · "
+            print(f"  vivek: {len(vk['results'])} setups ({tradeable(vk)} A+/A) | "
                   f"{vk['scanned']}/{vk['universe_size']} scanned")
 
             # Slim per-market companion (2026-07-20, perf): the journal page
@@ -458,10 +458,18 @@ def main() -> None:
                     bo = sum(1 for p in bk["open"] if p.get("market") == market_key)
                     bs = sum(1 for p in bk["open"]
                              if p.get("market") == market_key and p.get("direction") == "short")
-                    print(f"  bot book: {bo} open · {bs} short"
-                          f"{' · DRY-RUN' if config.VIVEK_BOT_DRY_RUN else ''}")
+                    print(f"  bot book: {bo} open | {bs} short"
+                          f"{' | DRY-RUN' if config.VIVEK_BOT_DRY_RUN else ''}")
                 except Exception as e:
-                    print(f"  bot book: skipped ({e})", flush=True)
+                    # REFINE200 #20. This used to print "skipped" and walk on,
+                    # so a run_market crash -- the book not managed, no stop
+                    # tested, no entry decided -- exited 0 and read green. The
+                    # scan above is already written; the failure is recorded
+                    # beside the markets that threw, so main() still runs every
+                    # publish below and THEN exits non-zero, exactly as they do.
+                    print(f"  bot book: FAILED ({type(e).__name__}: {e})", flush=True)
+                    failed_markets.append(
+                        (market_key, f"bot book: {type(e).__name__}: {e}"))
         except Exception as e:
             print(f"  ERROR scanning {market_key}: {e}", flush=True)
             # EXCEPTIONS ONLY — the deliberate `continue` above (no data
@@ -531,8 +539,11 @@ def main() -> None:
     # `bash -e` step, so a non-zero exit fails the crypto job — which is the
     # whole point: it was green while doing nothing.
     if failed_markets:
-        print(f"\n!! {len(failed_markets)} market(s) FAILED to scan "
-              f"- data for them is unchanged from the previous run:", flush=True)
+        # A scan that threw left its data unchanged; a "bot book:" line means
+        # the scan WAS written and the paper book was not managed (#20).
+        print(f"\n!! {len(failed_markets)} market(s) FAILED "
+              f"- a scan failure leaves that market's data unchanged; a bot-book "
+              f"failure leaves its book unmanaged:", flush=True)
         for market_key, why in failed_markets:
             print(f"    {market_key}: {why}", flush=True)
         # stdout, then exit — Actions interleaves stdout and stderr unreliably,
