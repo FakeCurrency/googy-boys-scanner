@@ -220,16 +220,18 @@ def test_fixture_payloads_are_internally_dated_as_one_set(book: dict) -> None:
     """
     frozen = _frozen_instant(book)
     late = []
-    for path in sorted(FIXTURES.glob("*.json")):
+    # rglob: phasemap/ and momentum/ joined the set for the smoke test
+    # (2026-10-14); a run_date is a session date, so it counts from its start.
+    for path in sorted(FIXTURES.rglob("*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             continue
-        stamp = payload.get("generated_at") or payload.get("updated_at")
+        stamp = payload.get("generated_at") or payload.get("updated_at") or payload.get("run_date")
         if not stamp:
             continue
-        when = _parse(stamp)
+        when = _parse(stamp if "T" in stamp else stamp + "T00:00:00+00:00")
         if when > frozen:
-            late.append(f"{path.name} @ {when.isoformat()}")
+            late.append(f"{path.relative_to(FIXTURES).as_posix()} @ {when.isoformat()}")
     assert not late, (
         f"fixture(s) stamped after the frozen clock ({frozen.isoformat()}): {', '.join(late)} -- "
         "the shot would render them as data from the future"
