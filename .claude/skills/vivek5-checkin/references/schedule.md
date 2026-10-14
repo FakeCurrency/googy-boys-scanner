@@ -20,7 +20,7 @@ Times are Melbourne. Melbourne and Sydney share a clock. Below is AEDT (Oct to A
 - 16:40 ASX close ping (8587590). The close counts from 16:40 Sydney, because Yahoo shows the auction about 20 min late. Scan stamped about 16:45, saved by about 16:50.
 - 16:45 to 17:00 Ignition crypto publishes the new UTC bar.
 - 17:15 ASX digest from the first ladder rung. Rungs run every 30 min to 21:45.
-- About 17:16 to 17:25 Momentum ASX (it counts from 16:30).
+- About 17:16 to 17:25 Momentum ASX (it counts from 16:40, the ASX bar-final; under AEST the 06:41 UTC backstop or the next digest rung picks it up).
 - 17:20 ASX close probe (8587683). It heals only if no scan at or after 16:40 landed. No run from it is healthy.
 - About 17:30 to 18:15 Ignition ASX's first screen (GitHub cron `24 6` UTC = 17:24); a re-screen around 00:30 to 02:00 is common. A very late GitHub day can push the first one past midnight.
 

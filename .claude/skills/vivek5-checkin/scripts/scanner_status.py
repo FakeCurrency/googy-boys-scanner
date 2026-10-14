@@ -34,7 +34,7 @@ UTC = dt.timezone.utc
 
 # Copied from scanner/config.py (MARKET_SCAN_WINDOWS, MORNING_PLAYS_SLOT_GATE,
 # VIVEK_JOURNAL_SESSION, IGNITION_MARKETS, IGNITION_BAR_FINAL) and
-# scanner/momentum/config.py (PUBLISH_AFTER_CLOSE_MIN, CRYPTO_DUE_UTC), and from
+# scanner/momentum/config.py (BAR_FINAL, CRYPTO_DUE_UTC), and from
 # the cron-job.org jobs in CLAUDE.md. tests/test_vivek5_checkin.py fails if
 # config moves and these do not; the script stays stdlib-only so it runs with
 # `python3 -I` from any checkout.
@@ -48,7 +48,7 @@ FIRST_PING = {"asx": (11, 10), "nasdaq": (10, 40)}  # jobs 8587588 / 8587591
 FIRST_SCAN_LATE_MIN = 30   # first scan of a session this long after its ping = that ping was lost
 GAP_FLAG_MIN = 80          # hourly pings: a gap longer than this inside a session is a miss
 CRYPTO_GAP_FLAG_MIN = 120  # crypto pings hourly at :22; one ~100 min gap is normal
-MOMENTUM_OWE = {"asx": ((16, 30), SYD), "nasdaq": ((16, 30), NY)}  # session close + 30 min
+MOMENTUM_OWE = {"asx": ((16, 40), SYD), "nasdaq": ((16, 30), NY)}  # the bar-final (momentum BAR_FINAL)
 MOMENTUM_CRYPTO_DUE_UTC = (0, 30)  # crypto: daily, UTC
 MOMENTUM_FLAG_H = 3
 # Sunday and Monday (UTC) crypto Momentum rides GitHub's crons only (the digest

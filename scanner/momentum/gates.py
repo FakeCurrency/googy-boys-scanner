@@ -37,8 +37,8 @@ import pandas as pd
 from . import config
 
 __all__ = [
-    "dollar_adv", "is_product", "gate_frame", "rank_rows", "directions_agree",
-    "select",
+    "dollar_adv", "is_product", "gate_frame", "reason_key", "rank_rows",
+    "directions_agree", "select",
 ]
 
 # Compiled once. Word boundaries on the keywords, the measured patterns as
@@ -163,6 +163,23 @@ def gate_frame(frame: pd.DataFrame, market: str, *, cfg=None,
         if adv < adv_floor:
             return "turnover %.0f below the %s floor %.0f" % (adv, market, adv_floor)
     return None
+
+
+_NUMBER_RE = re.compile(r"\s*-?\d[\d.,]*")
+
+
+def reason_key(reason: str) -> str:
+    """The gate a skip reason names, with the name's own numbers stripped:
+    'price 0.0060 below the asx floor 0.0200' -> 'price below the asx floor',
+    'stale frame (3 sessions old)' -> 'stale frame'.
+
+    The screen's summary and the replay's gated count both tally on this. Keyed
+    on the full reason, every sub-floor price and turnover was its own bucket
+    (791 one-name keys, 69% of the ASX file), so "how many failed the price
+    floor" could not be read off the file at all.
+    """
+    head = str(reason or "").split(" (")[0]
+    return " ".join(_NUMBER_RE.sub(" ", head).split()) or str(reason or "")
 
 
 def directions_agree(row: Dict[str, Any]) -> bool:

@@ -79,13 +79,14 @@ def test_close_gates_match_the_digest_gate():
 
 
 def test_momentum_due_times_match_momentum_due():
-    """scripts/momentum_due.py: a stock market owes its file from the session
-    close + PUBLISH_AFTER_CLOSE_MIN; crypto from CRYPTO_DUE_UTC."""
+    """scripts/momentum_due.py: a stock market owes its file from its bar-final
+    instant (momentum config BAR_FINAL); crypto from CRYPTO_DUE_UTC."""
     m = _mod()
+    assert set(m.MOMENTUM_OWE) == set(mcfg.BAR_FINAL)
     for market, ((h, mi), tz) in m.MOMENTUM_OWE.items():
-        close_h, close_m = config.VIVEK_JOURNAL_SESSION[market][2:]
-        assert h * 60 + mi == close_h * 60 + close_m + mcfg.PUBLISH_AFTER_CLOSE_MIN, market
-        assert tz.key == config.MARKETS[market].timezone, market
+        zone, final_h, final_m = mcfg.BAR_FINAL[market]
+        assert (h, mi) == (final_h, final_m), market
+        assert tz.key == zone == config.MARKETS[market].timezone, market
     assert tuple(m.MOMENTUM_CRYPTO_DUE_UTC) == tuple(mcfg.CRYPTO_DUE_UTC)
 
 
