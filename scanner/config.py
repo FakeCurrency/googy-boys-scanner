@@ -844,6 +844,11 @@ VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 # the trailing 7 calendar days + open unrealised falls to -this% of equity,
 # new entries halt until the window rolls off. 0 = off.
 VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
+# ...and "trailing 7 calendar days" means [day-6 .. day], today included
+# (vivek_guard.week_pnl; it was day-7, an 8-day window, until 2026-10-14 --
+# REFINE200 #18). The definition the weekly limit is written against, not a
+# dial: vivek_run._DAY_MARK_KEEP (9) must keep covering it.
+VIVEK_BOT_WEEKLY_WINDOW_DAYS = 7
 # REVIEW threshold (2026-07-28, owner's instruction; 15.0 -> 7.5 with the
 # notional on 2026-09-27, owner). NOT a gate — nothing is ever skipped for
 # crossing it. When a plan the bot has already decided to take would risk this %
