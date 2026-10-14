@@ -34,7 +34,8 @@ const CSS = fs.readFileSync(path.join(ROOT, "public", "css", "chart.css"), "utf8
 const CODE = CHART.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
 function fnSrc(name, src = CHART) {
-  const at = src.search(new RegExp(`\\bfunction\\s+${name}\\s*\\(`));
+  // `async function` included, so an awaiting body still parses on its own.
+  const at = src.search(new RegExp(`\\b(async\\s+)?function\\s+${name}\\s*\\(`));
   assert.ok(at >= 0, `chart.js no longer defines ${name}`);
   for (let i = src.indexOf("{", at); i < src.length; i++) {
     if (src[i] !== "}") continue;
@@ -171,6 +172,134 @@ test("the link a PhaseMap-only ASX chart and a Momentum chart now get", () => {
     "https://www.tradingview.com/chart/?symbol=CRYPTO%3AJUPUSD");
   assert.equal(run("nasdaq", { symbol: "AAPL", asset_type: null }),
     "https://www.tradingview.com/chart/?symbol=AAPL");
+});
+
+/* ═══════════════ #104 Momentum's prev/next reads the Momentum list ═══════════ */
+suite("#104 a Momentum chart steps the Momentum list, not a 404");
+
+const sourceFor = (market, mode) => new Function("market", "mode", "isMomentum",
+  `${fnSrc("scanSource")} return scanSource();`)(market, mode, mode === "momentum");
+
+test("each mode reads the file that exists", () => {
+  assert.equal(sourceFor("asx", "momentum").file, "data/momentum/asx.json", "was data/asx.json (404)");
+  assert.equal(sourceFor("nasdaq", "momentum").file, "data/momentum/nasdaq.json");
+  assert.equal(sourceFor("asx", "vivek").file, "data/asx_vivek.json");
+  assert.equal(sourceFor("nasdaq", "spec").file, "data/nasdaq_spec.json");
+  assert.equal(sourceFor("scalp", "scalp").file, "data/scalp.json");
+  assert.equal(sourceFor("asx", "momentum").sOf({ symbol: "EOS" }), "EOS");
+  for (const [m, mode] of [["asx", "momentum"], ["asx", "vivek"], ["nasdaq", "spec"]]) {
+    assert.ok(fs.existsSync(path.join(ROOT, "public", sourceFor(m, mode).file)), `${m}/${mode} file is published`);
+  }
+});
+
+test("the arrows keep the reader in Momentum, and the dead lens suffixes are gone", () => {
+  const nav = fnSrc("wireScanNav");
+  assert.match(nav, /let \{ file, sOf \} = scanSource\(\);/);
+  assert.match(nav, /isMomentum \? `chart\.html\?m=\$\{market\}&s=\$\{encodeURIComponent\(s\)\}&src=momentum`/);
+  assert.match(fnSrc("fetchResultMeta"), /const \{ file, sOf \} = scanSource\(\);/, "one answer for both readers");
+  assert.ok(!/_reversal|"_short"/.test(CODE), "reversal/short lenses were removed months ago");
+});
+
+test("a crypto Momentum chart keeps its own timeframes (no 15M/30M/1H stream)", () => {
+  assert.match(CODE, /const pair = \(!d\._vivek && !d\._heldPlan && !d\._pm && !d\._momentum &&/,
+    "measured: BTC&src=momentum drew 15M/30M/1H scalp bars with two empty panes");
+});
+
+/* ═══════════════ #116 one request per data file ═══════════════ */
+suite("#116 opening a chart fetches each scan file once");
+
+test("fetchJsonOnce: one request per URL, shared; a failure resolves null", async () => {
+  const calls = [];
+  const fetch = (u) => { calls.push(u); return Promise.resolve(u.includes("bad")
+    ? { ok: false, status: 404 } : { ok: true, json: () => Promise.resolve({ u }) }); };
+  const once = new Function("fetch", `${constSrc("_jsonOnce")} ${fnSrc("fetchJsonOnce")} return fetchJsonOnce;`)(fetch);
+  const [a, b, c] = await Promise.all([once("data/asx_vivek.json"), once("data/asx_vivek.json"), once("data/asx_vivek.json")]);
+  assert.equal(calls.length, 1, "three readers, one request");
+  assert.ok(a === b && b === c, "and one parsed object");
+  assert.equal(await once("data/bad.json"), null);
+  const boom = new Function("fetch", `${constSrc("_jsonOnce")} ${fnSrc("fetchJsonOnce")} return fetchJsonOnce;`)(
+    () => Promise.reject(new Error("offline")));
+  assert.equal(await boom("x"), null, "a network failure must not reject into a second reader");
+});
+
+test("the summary, the book and the momentum file have no direct fetch left", () => {
+  assert.ok(!/fetch\(\s*`data\/\$\{market\}_vivek\.json`/.test(CODE), "<market>_vivek.json fetched outside fetchJsonOnce");
+  assert.ok(!/fetch\(\s*"data\/vivek_bot_book\.json"/.test(CODE), "the bot book fetched outside fetchJsonOnce");
+  assert.ok(!/fetch\(\s*`data\/momentum\//.test(CODE), "the momentum file fetched twice (row + arrows)");
+  for (const fn of ["fetchResultMeta", "wireScanNav", "wireBotPosBanner", "momentumRow", "pmChartBars"]) {
+    assert.match(fnSrc(fn), /fetchJsonOnce\(/, `${fn} must share the request`);
+  }
+});
+
+test("fetchResultMeta stamps currency on a COPY, never on the shared row", () => {
+  const f = fnSrc("fetchResultMeta");
+  assert.ok(!/row\.currency_symbol = /.test(f), "mutating the shared parsed file leaks into other readers");
+  assert.match(f, /Object\.assign\(\{\}, found, \{ currency_symbol:/);
+});
+
+/* ═══════════════ #71 a chart reads ONE PhaseMap record, not the market ═══════════ */
+suite("#71 the PhaseMap record comes from the per-ticker file when it carries one");
+
+function pmHarness(files, dir = "") {
+  const calls = [];
+  const fetch = (u) => {
+    calls.push(u);
+    const key = u.replace(/\?.*$/, "");
+    return Promise.resolve(key in files
+      ? { ok: true, json: () => Promise.resolve(JSON.parse(JSON.stringify(files[key]))) }
+      : { ok: false, status: 404, json: () => Promise.reject(new Error("404")) });
+  };
+  const api = new Function("fetch", "market", "symbol", "isMomentum", "params", "pmDirWanted",
+    `${constSrc("_jsonOnce")} ${fnSrc("fetchJsonOnce")} ${constSrc("pmTickerUrl")}
+     ${fnSrc("pmRecFromTickerFile")} ${fnSrc("pmRecFromLatest")} ${fnSrc("fetchPhaseMapRec")}
+     return { fetchPhaseMapRec, pmRecFromTickerFile };`)(
+    fetch, "asx", "abc", false, new URLSearchParams(""), dir);
+  return { api, calls };
+}
+const PMREC = (dir, extra) => Object.assign({ ticker: "ABC", direction: dir, state: "RUNNING", zones: [] }, extra || {});
+
+test("a per-ticker file WITH the record: one small request, no 1 MB market file", async () => {
+  const h = pmHarness({ "data/phasemap/charts/asx/ABC.json":
+    { ticker: "ABC", candles: [], records: [PMREC("bullish"), PMREC("bearish")],
+      narrations: { "ABC|bullish": "up story", "ABC|bearish": "down story" } } }, "bearish");
+  const rec = await h.api.fetchPhaseMapRec();
+  assert.equal(rec.direction, "bearish", "?dir= still picks the side");
+  assert.equal(rec.narration, "down story");
+  assert.deepEqual(h.calls, ["data/phasemap/charts/asx/ABC.json"]);
+});
+
+test("the record shapes the writer may use all read", () => {
+  const { api } = pmHarness({});
+  const one = api.pmRecFromTickerFile({ record: PMREC("bullish"), narration: "n" }, "ABC", "");
+  assert.equal(one.narration, "n");
+  const keyed = api.pmRecFromTickerFile({ record: [PMREC("bullish")], narration: { bullish: "b" } }, "ABC", "");
+  assert.equal(keyed.narration, "b");
+  const inline = api.pmRecFromTickerFile({ records: [PMREC("bullish", { narration: "own" })] }, "ABC", "");
+  assert.equal(inline.narration, "own");
+  assert.equal(api.pmRecFromTickerFile({ record: null }, "ABC", ""), null, "the file says: no record");
+  assert.equal(api.pmRecFromTickerFile({ ticker: "ABC", candles: [] }, "ABC", ""), undefined,
+    "a file from before the record keys -> the caller reads latest.json");
+  const src = { records: [PMREC("bullish")] };
+  api.pmRecFromTickerFile(src, "ABC", "");
+  assert.ok(!("narration" in src.records[0]), "the shared parsed file is not mutated");
+});
+
+test("an old per-ticker file falls back to latest.json + narrations, as before", async () => {
+  const h = pmHarness({
+    "data/phasemap/charts/asx/ABC.json": { ticker: "ABC", candles: [] },
+    "data/phasemap/asx/latest.json": { run_date: "2026-10-14", results: [PMREC("bullish")] },
+    "data/phasemap/asx/narrations.json": { run_date: "2026-10-14", narrations: { "ABC|bullish": "old path" } },
+  });
+  const rec = await h.api.fetchPhaseMapRec();
+  assert.equal(rec.narration, "old path");
+  assert.deepEqual(h.calls.slice(1).sort(), ["data/phasemap/asx/latest.json", "data/phasemap/asx/narrations.json"]);
+});
+
+test("no per-ticker file = no PhaseMap record, and nothing else is downloaded", async () => {
+  const h = pmHarness({ "data/phasemap/asx/latest.json": { results: [PMREC("bullish")] } });
+  assert.equal(await h.api.fetchPhaseMapRec(), null);
+  assert.deepEqual(h.calls, ["data/phasemap/charts/asx/ABC.json"],
+    "phasemap/run.py writes the file for every ticker with a record and prunes the rest");
 });
 
 runQueue().then(() => {
