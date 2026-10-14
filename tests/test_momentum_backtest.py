@@ -1,7 +1,11 @@
 """scanner/momentum/backtest.py + run.py --backtest -- the momentum replay.
 
-Driven over the COMMITTED daily bars in data/history/asx/, so these tests are
-about real series without a network. They pin four things a backtest must not
+Driven over real daily bars FROZEN into tests/fixtures/history/asx/ (12 names
+copied out of data/history/asx/ on 2026-10-14), so these tests are about real
+series without a network -- and without the drift of the live archive, which
+the scan rewrites on an ADJUSTED basis (history_archive.py re-bases every bar
+on a dividend or split), so a pin to the cent there could break with no code
+change. They pin four things a backtest must not
 get wrong: the plan is the owner's box (ELS to the cent), there is no
 look-ahead (a truncated replay agrees with the full one), the signals are the
 SCREEN's (Rule B's live score gate, the warm-up, the gates as of that day), and
@@ -22,7 +26,7 @@ from scanner.momentum import run as R
 from scanner.momentum.screen import evaluate
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-HIST = ROOT / "data" / "history" / "asx"
+HIST = ROOT / "tests" / "fixtures" / "history" / "asx"
 
 
 def _frame(symbol: str) -> pd.DataFrame:
@@ -53,10 +57,10 @@ def test_the_box_is_the_owners_tradingview_plan_on_ELS():
     assert els[0]["score"] == 2
 
 
-@pytest.mark.parametrize("symbol", ["ELS", "BHP", "CBA"])
+@pytest.mark.parametrize("symbol", ["ELS", "CBA", "AI1"])
 def test_no_look_ahead_a_truncated_replay_agrees_with_the_full_one(symbol):
-    if not (HIST / f"{symbol}.json").exists():
-        pytest.skip(f"no committed history for {symbol}")
+    # BHP was a case here that never ran: the archive keeps only names that
+    # set up, BHP never has, and the skip hid that. AI1 (a small cap) replaces it.
     full = _frame(symbol)
     cut = full.index[int(len(full) * 0.85)]
     a, _ = bt.replay_symbol(full, "asx", symbol=symbol)
@@ -95,8 +99,6 @@ def test_a_stop_inside_the_spread_is_not_a_trade():
     """AAA is a cash ETF; its box stop sits ~0.007% from entry and costs alone
     made each such trade about -20R. With no name (so no product gate) the
     house minimum stop still refuses every one of them."""
-    if not (HIST / "AAA.json").exists():
-        pytest.skip("no committed AAA history")
     trades, gated = bt.replay_symbol(_frame("AAA"), "asx", symbol="AAA")
     assert all(abs(t["entry"] - t["stop"]) / t["entry"] * 100 >= config.BT_MIN_STOP_PCT
                for t in trades)

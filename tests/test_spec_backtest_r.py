@@ -20,7 +20,10 @@ from scanner import config
 from scanner import spec_backtest as sb
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-HIST = ROOT / "data" / "history" / "asx"
+# Real bars frozen out of data/history/asx/ (2026-10-14): the race used to read
+# the first 120 files of the LIVE archive, whose membership and bars the scan
+# rewrites, so the sample and the runtime (24s, growing) moved on their own.
+HIST = ROOT / "tests" / "fixtures" / "history" / "asx"
 
 
 def _bars(rows):
@@ -76,7 +79,7 @@ def test_untradeable_plans_are_counted_not_scored():
 
 def test_the_r_model_and_the_race_agree_on_who_won():
     agree = collections.Counter()
-    for p in sorted(HIST.glob("*.json"))[:120]:
+    for p in sorted(HIST.glob("*.json")):
         bars = json.loads(p.read_text(encoding="utf-8"))["bars"]
         f = pd.DataFrame(bars, columns=["Date", "Open", "High", "Low", "Close", "Volume"])
         f.index = pd.to_datetime(f.pop("Date"))
