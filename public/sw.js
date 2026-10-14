@@ -12,7 +12,17 @@
                              cache fallback offline
    Bump CACHE below to force-refresh every cached asset on a breaking change. */
 
-const CACHE = "vivek5-v8";   // v8 2026-09-21: the MY JOURNAL side + MY NAMES page were removed — drop every shell that still cached them
+const CACHE = "vivek5-v9";   // v9 2026-10-14 (REFINE200 #74): data keys drop their query, /data/ is capped, old ?v= copies are evicted — start clean
+// v8 2026-09-21: the MY JOURNAL side + MY NAMES page were removed — drop every shell that still cached them
+
+// REFINE200 #74: the cache only ever grew. Every `?t=` cache-busted data read
+// was stored under its own URL (one 0.3-2 MB copy per bust, never read
+// again), and every ?v= bump left the previous copy of that asset behind
+// until the next CACHE rename. Data now caches under its path alone (the
+// offline fallback is "the last good copy of this file", whatever query
+// fetched it) and at most DATA_MAX of them; a ?v= asset evicts its older
+// versions when the new one lands.
+const DATA_MAX = 40;
 
 // #63: precache the app shell on install — read index.html and pull its
 // CURRENT versioned CSS/JS (so the list is always in sync with the deploy,
@@ -50,10 +60,33 @@ self.addEventListener("activate", (e) => {
   })());
 });
 
+// The cache key for a request: /data/ files by path only (no query).
+const keyOf = (req) => {
+  const u = new URL(req.url);
+  return u.pathname.startsWith("/data/") ? u.origin + u.pathname : req;
+};
+
+// Trim after a put: keep the newest DATA_MAX /data/ entries (Cache keys come
+// back in insertion order and a put re-inserts, so the oldest write goes
+// first), and drop every other copy of a ?v= asset's path.
+const trim = async (c, url) => {
+  const keys = await c.keys();
+  if (url.pathname.startsWith("/data/")) {
+    const data = keys.filter((k) => new URL(k.url).pathname.startsWith("/data/"));
+    await Promise.all(data.slice(0, Math.max(0, data.length - DATA_MAX)).map((k) => c.delete(k)));
+  } else if (url.search.includes("v=")) {
+    await Promise.all(keys.filter((k) => {
+      const ku = new URL(k.url);
+      return ku.pathname === url.pathname && ku.search !== url.search;
+    }).map((k) => c.delete(k)));
+  }
+};
+
 const put = async (req, res) => {
   try {
     const c = await caches.open(CACHE);
-    await c.put(req, res.clone());
+    await c.put(keyOf(req), res.clone());
+    await trim(c, new URL(req.url));
   } catch (_) { /* quota/opaque — skip */ }
   return res;
 };
@@ -63,7 +96,7 @@ const networkFirst = async (req) => {
     const res = await fetch(req);
     return res.ok ? put(req, res) : res;
   } catch (_) {
-    const hit = await caches.match(req);
+    const hit = await caches.match(keyOf(req));
     if (hit) return hit;
     throw _;
   }
