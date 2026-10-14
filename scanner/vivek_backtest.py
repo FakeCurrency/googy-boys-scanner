@@ -1179,8 +1179,10 @@ def _print(report: dict) -> None:
     r = report["results"]
     def line(label, m):
         pf = "inf" if m["profit_factor"] is None else f"{m['profit_factor']:.2f}"
+        hs = m.get("expectancy_r_house")
+        hs = "n/a" if hs is None else f"{hs:+.2f}R"
         print(f"  {label:<14} n={m['n']:<4} win {m['win_rate']:>5}%  "
-              f"avgR {m['avg_r']:+.2f}  exp {m['expectancy_r']:+.2f}R  "
+              f"avgR {m['avg_r']:+.2f}  exp {m['expectancy_r']:+.2f}R (house {hs})  "
               f"PF {pf:<5} totR {m['total_r']:+.1f}  ${m['total_usd']:+.0f}  maxDD ${m['max_dd_usd']:.0f}")
     print("\n=== VIVEK 5.0 BACKTEST ===")
     # TOP100 #61 — the console is the surface with no schema, so the units have
@@ -1217,7 +1219,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="VIVEK 5.0 walk-forward backtest")
     ap.add_argument("--market", action="append", choices=[*config.MARKETS, "all"])
     ap.add_argument("--limit", type=int, default=60, help="max symbols per market (0 = all)")
-    ap.add_argument("--period", default="10y", help="yfinance history period (e.g. 10y, max)")
+    ap.add_argument("--period", default=None,
+                    help="history period (e.g. 10y, max); default 10y, or "
+                         "VIVEK_PARITY_DEFAULT_PERIOD with --parity")
     ap.add_argument("--include-funds", action="store_true", help="don't exclude REITs/ETFs/funds")
     ap.add_argument("--long-only", action="store_true", help="skip short setups (long-only system)")
     ap.add_argument("--merge", action="store_true",
@@ -1228,9 +1232,15 @@ def main() -> None:
     # Parity mode (n≥30 decision pack): exact live lifecycle + variant grid.
     # Simulation only — does not touch vivek_bot.py / the live book rules.
     ap.add_argument("--parity", action="store_true",
-                    help="replay the LIVE bot lifecycle (A+/long-only/time-stop/ADV/"
-                         "global slots) and run the V1–V4 variant grid; writes "
+                    help="replay the LIVE bot lifecycle (hc4-1: A/A+ four cells, level "
+                         "gate, time stop, ADV, one chronological book across markets) "
+                         "and run the V1-V8 variant grid; writes "
                          "public/data/vivek_backtest_parity.json by default")
+    ap.add_argument("--workers", type=int, default=0,
+                    help="with --parity: processes for the signal pass (0 = every CPU)")
+    ap.add_argument("--summary-md", default=None,
+                    help="with --parity: APPEND the decision pack as markdown to this "
+                         "path (e.g. $GITHUB_STEP_SUMMARY)")
     ap.add_argument("--no-variants", action="store_true",
                     help="with --parity: skip the variant grid (baseline only)")
     ap.add_argument("--exclude-from", default=None,
@@ -1244,6 +1254,10 @@ def main() -> None:
                          "(e.g. parity_oos)")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    # The replay drives vivek_bot.manage_position, which logs every TP hit at
+    # INFO for the live book. Thousands of replayed trades (x every variant
+    # book) would bury the run's own progress lines; this process is a replay.
+    logging.getLogger("vivek_bot").setLevel(logging.WARNING)
     markets = list(config.MARKETS) if (not args.market or "all" in args.market) else args.market
 
     if args.parity:
@@ -1257,17 +1271,20 @@ def main() -> None:
             out = ROOT / default_name
         else:
             out = pathlib.Path(args.out)
-        period = args.period
-        if period == "10y":
-            # argparse default is 10y; parity default is the config knob (5y).
-            period = getattr(config, "VIVEK_PARITY_DEFAULT_PERIOD", "5y")
+        # An explicit --period is honoured as given (an explicit "10y" used to
+        # be read as "not given" and silently replaced by the 5y default).
+        period = args.period or getattr(config, "VIVEK_PARITY_DEFAULT_PERIOD", "5y")
+        workers = args.workers if args.workers > 0 else parity.default_workers()
         set_fx_path(out)
         excl = parity.load_exclude_map(args.exclude_from) if args.exclude_from else None
         tag = args.tag or ("parity_oos" if args.exclude_from else "parity")
         report = parity.run_parity(markets, args.limit or None, period,
                                    run_variants=not args.no_variants,
-                                   exclude_map=excl, tag=tag)
+                                   exclude_map=excl, tag=tag, workers=workers)
         parity.print_parity(report)
+        if args.summary_md:
+            with open(args.summary_md, "a", encoding="utf-8") as fh:
+                fh.write(parity.summary_markdown(report) + "\n")
         out.parent.mkdir(parents=True, exist_ok=True)
         output.write_json(out, report)
         if args.sample_out:
@@ -1285,6 +1302,7 @@ def main() -> None:
         print(f"\nwrote {out}  (parity complete, markets: {sorted(report.get('coverage', {}))})")
         return
 
+    args.period = args.period or "10y"
     out = pathlib.Path(args.out)
     # TOP100 #61 — before ANY report is built, so the memo cannot be primed from
     # the default location by a stray earlier call. See `set_fx_path`.

@@ -306,7 +306,7 @@ def _calls(rel: str, name: str) -> int:
         or (isinstance(node.func, ast.Attribute) and node.func.attr == name)))
 
 
-@pytest.mark.parametrize("rel", ["scanner/vivek_backtest.py"])
+@pytest.mark.parametrize("rel", ["scanner/vivek_backtest.py", "scanner/vivek_parity.py"])
 def test_the_replays_price_through_fetch_never_bare_download(rel):
     """The crypto-source-switch caller pin, extended to the two replays: a
     bare `download` would replay crypto on Yahoo's aggregate (and, for
