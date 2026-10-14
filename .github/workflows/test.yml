@@ -65,6 +65,9 @@ on:
       - "public/*.html"
       - "public/sw.js"
       - "public/version.json"
+      # public/_headers (2026-10-14, REFINE200 #75): test/site_headers.test.js
+      # resolves it; an edit decides how long every visitor caches every script.
+      - "public/_headers"
       # journal/** and data/** added 2026-08-13 — the same rule, and the
       # journal one is the sharpest hole this filter has had. THREE live tests
       # read the track record out of the working tree:
@@ -208,6 +211,12 @@ jobs:
       # stock, CHART_MAX_YEARS really clamps.
       - name: Price relay (price.js / quote.js / _relay_guard.js behaviour)
         run: node test/price_api.test.js
+      # public/_headers resolved the way Cloudflare Pages combines rules
+      # (REFINE200 #56 / #75): one Cache-Control per path, a year for ?v=
+      # assets, revalidate for HTML/data/sw.js, frame-ancestors everywhere,
+      # and every /js/ and /css/ reference carries the ?v= that makes that safe.
+      - name: Site headers (cache rules / frame-ancestors / ?v= precondition)
+        run: node test/site_headers.test.js
       # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
       # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
       # so the display can never disagree with what actually blocks a trade.
