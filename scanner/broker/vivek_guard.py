@@ -46,6 +46,16 @@ guard says "stop adding risk", which is the one thing it was built to say.
 
 `open_total_usd` still publishes the whole-life open P&L, so nothing that wants
 the old number has to reconstruct it.
+
+THE CLOSING DAY TELESCOPES TOO (2026-10-14, REFINE200 #14). The closed leg
+still charged a trade that closed inside the window its whole-life R measured
+FROM ENTRY, less only the partials banked before the window. But the move from
+entry to the window's reference had already been charged, day by day, while
+the position was open -- so a position sitting at -1R cost $0 on a quiet day,
+and the same position stopped at the same price that day cost the full -1R a
+second time. The closed leg is now the open leg's maths with nothing left
+open: each exit inside the window from the window's reference, so summing a
+closed trade's windows returns its whole-life P&L exactly as an open one's do.
 """
 
 import datetime as _dt
@@ -122,7 +132,7 @@ def _price(v) -> float | None:
     return f if f is not None and f > 0 else None
 
 
-def ref_price(pos: dict, since: str) -> float:
+def ref_price(pos: dict, since: str, *, closed: bool = False) -> float:
     """The price this position started the window opening at `since` from.
 
     Resolution order, each step a strict improvement on the next:
@@ -136,6 +146,13 @@ def ref_price(pos: dict, since: str) -> float:
          have never been through a stamping run. This is the pre-2026-07-28
          behaviour, kept as the floor so an un-stamped book degrades to the old
          numbers rather than to zero.
+
+    `closed=True` (a trade that closed inside the window, REFINE200 #14) skips
+    step 3. Every run stamps before it can close anything, so a closed trade
+    with no stamp inside the window was closed by HAND before that window's
+    first run -- and a hand close never touches `last_mark`, which therefore
+    still holds the mark it carried into the window: the exact reference, where
+    the oldest stamp would re-charge days that were charged while it was open.
     """
     entry = _num(pos.get("entry"))
     entry_date = str(pos.get("entry_date") or "")
@@ -148,7 +165,10 @@ def ref_price(pos: dict, since: str) -> float:
         clean = {k: v for k, v in clean.items() if v > 0}
         if clean:
             eligible = sorted(k for k in clean if not since or k >= since)
-            return clean[eligible[0]] if eligible else clean[sorted(clean)[0]]
+            if eligible:
+                return clean[eligible[0]]
+            if not closed:
+                return clean[sorted(clean)[0]]
 
     last = _num(pos.get("last_mark"))
     return last if last > 0 else entry
@@ -161,20 +181,24 @@ def _r_from(pos: dict, price: float, ref: float, risk: float) -> float:
     return (ref - price) / risk
 
 
-def _window_r(pos: dict, since: str, day: str, price: float | None) -> dict:
+def _window_r(pos: dict, since: str, day: str, price: float | None,
+              *, closed: bool = False) -> dict:
     """P&L attributable to the window [since..day] for ONE position, in R.
 
     Returns {"banked": R, "unrealised": R, "cost": R, "worst": R, "priced": bool}
     where `worst` is the unrealised leg re-valued at the position's own STOP —
     the floor on what an UNPRICED position can still cost this window, used by
     `check` to fail closed instead of open (TOP100 #15).
+
+    `closed=True` measures a row from the CLOSED list: nothing remains open,
+    and the reference follows `ref_price(..., closed=True)`.
     """
     out = {"banked": 0.0, "unrealised": 0.0, "cost": 0.0, "worst": 0.0,
            "priced": price is not None}
     risk = _num(pos.get("risk"))
     if not (risk > 0):
         return out
-    ref = ref_price(pos, since)
+    ref = ref_price(pos, since, closed=closed)
     if ref <= 0:
         return out
 
@@ -184,12 +208,14 @@ def _window_r(pos: dict, since: str, day: str, price: float | None) -> dict:
     booked_total = 0.0
     if exits:
         for e in exits:
-            pct = _num((e or {}).get("pct"))
-            px = _num((e or {}).get("price"))
+            if not isinstance(e, dict):
+                continue
+            pct = _num(e.get("pct"))
+            px = _num(e.get("price"))
             if pct <= 0 or px <= 0:
                 continue
             booked_total += pct
-            date = str((e or {}).get("date") or "")
+            date = str(e.get("date") or "")
             if since <= date <= day:
                 booked_in_window += pct
                 out["banked"] += pct * _r_from(pos, px, ref, risk)
@@ -210,7 +236,7 @@ def _window_r(pos: dict, since: str, day: str, price: float | None) -> dict:
         if booked_total > 0 or not entry_date or since <= entry_date <= day:
             out["banked"] = _num(pos.get("realized_r"))
 
-    remaining = 0.0 if pos.get("status") == "closed" else _remaining(pos)
+    remaining = 0.0 if (closed or pos.get("status") == "closed") else _remaining(pos)
     if remaining > 0:
         if price is not None:
             out["unrealised"] = remaining * _r_from(pos, price, ref, risk)
@@ -267,26 +293,7 @@ def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict
         exit_date = str(t.get("exit_date") or "")
         if not (since <= exit_date <= day):
             continue
-        risk_usd = _num(t.get("risk_usd"))
-        total = _num(t.get("realized_r")) * risk_usd
-        if t.get("exits"):
-            # Subtract the R this trade banked BEFORE the window opened — those
-            # partial exits were charged to their own days while it was still
-            # open, and counting the closing row's whole-life R would book them
-            # a second time (TOP100 #14).
-            prior = 0.0
-            entry = _num(t.get("entry"))
-            risk = _num(t.get("risk"))
-            if risk > 0:
-                for e in t["exits"]:
-                    pct = _num((e or {}).get("pct"))
-                    px = _num((e or {}).get("price"))
-                    if pct <= 0 or px <= 0:
-                        continue
-                    if str((e or {}).get("date") or "") < since:
-                        prior += pct * _r_from(t, px, entry, risk)
-            total -= prior * risk_usd
-        realised += total
+        realised += _closed_window_usd(t, since, day)
 
     return {
         "realised_usd": round(realised, 2),
@@ -297,6 +304,37 @@ def _window_pnl(book: dict, market: str, since: str, day: str, price_of) -> dict
         "unpriced_worst_usd": round(worst, 2),
         "open": open_n,
     }
+
+
+def _closed_window_usd(t: dict, since: str, day: str) -> float:
+    """Dollars a trade that CLOSED inside [since..day] adds to that window.
+
+    Exactly the open leg's maths with nothing left open (REFINE200 #14): each
+    exit dated inside the window, measured from the window's reference price
+    (`ref_price(..., closed=True)`), less its share of execution costs. Exits
+    before the window, and the move from entry to the reference, were charged
+    to their own days while the position was open; the whole-life R this used
+    to charge (less only the pre-window partials) re-charged that move on the
+    closing day. A trade that opened inside the window references its entry,
+    so its whole life counts, as it always did.
+
+    The price legs telescope exactly. Execution costs keep `_window_r`'s
+    activity-share attribution (only the total lands on the row), which is
+    exact whenever the trade lives inside one window and otherwise within a
+    fraction of its ~0.01R round trip.
+
+    A row with no usable exit ledger (no `exits`, no positive `risk` or no
+    reference) has nothing to date its R against, so it keeps the whole-life
+    `realized_r x risk_usd` -- the pre-#14 number, which over-counts, the
+    conservative direction for a loss guard.
+    """
+    risk_usd = _num(t.get("risk_usd"))
+    exits = t.get("exits")
+    if (isinstance(exits, list) and exits and _num(t.get("risk")) > 0
+            and ref_price(t, since, closed=True) > 0):
+        w = _window_r(t, since, day, None, closed=True)
+        return (w["banked"] - w["cost"]) * risk_usd
+    return _num(t.get("realized_r")) * risk_usd
 
 
 def session_pnl(book: dict, market: str, day: str, price_of) -> dict:

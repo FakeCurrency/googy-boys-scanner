@@ -444,17 +444,24 @@ def test_a_manual_close_moves_the_guard_it_just_changed(tmp_path, monkeypatch):
     """Closing at 98 realises a loss on $35 of risk. The saved session P&L has to
     show it, not the zero it was carrying before the close.
 
-    Asserted against the row's OWN `realized_r`, not the -0.5R the price move
-    implies: `_apply_costs` runs on close, so the realised figure is net of
-    slippage and fees. Hard-coding the gross number would make the test a
-    second, silently diverging implementation of the cost model."""
+    Bracketed by the row's OWN numbers rather than a hard-coded figure:
+    `_apply_costs` runs on close, so the realised figure is net of slippage
+    and fees, and re-deriving the cost model here would make the test a second,
+    silently diverging implementation of it. Since REFINE200 #14 the closing
+    day is a WINDOW: it charges the move from the mark the trade carried into
+    the day (no stamp and no last_mark here, so its 100 entry) plus the
+    exit's share of costs -- the entry's share belongs to the entry day. So it
+    sits strictly between the gross move and the whole-life net R."""
     read = _closeable(tmp_path, monkeypatch)
     vr.close_bot_position("MDB", "nasdaq", 98.0, day="2024-01-05")
     saved = read()
-    realized = saved["closed"][0]["realized_r"]
+    row = saved["closed"][0]
+    realized = row["realized_r"]
     assert realized < -0.5                                 # net of costs, so WORSE
+    assert "day_marks" not in row and not row.get("last_mark")
+    gross_today = (98.0 - row["entry"]) / row["risk"]      # -0.5R
     g = saved["guard"]["nasdaq"]
-    assert g["session_usd"] == pytest.approx(realized * 35.0, abs=0.01)
+    assert realized * 35.0 < g["session_usd"] < gross_today * 35.0
     assert g["session_usd"] < 0                            # moved off the stale 0.0
     assert g["breached"] is False                          # nowhere near the limit
 
