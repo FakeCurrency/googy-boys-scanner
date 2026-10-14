@@ -8,10 +8,8 @@ Different from the swing journal:
   • $1,000 margin × 5× leverage = $5,000 notional per trade
 """
 
-import datetime as dt
 import json
 import pathlib
-from zoneinfo import ZoneInfo
 
 from . import config
 from .journal_common import (
@@ -21,6 +19,9 @@ from .journal_common import (
     mark_to_market,
     utc_now_iso,
 )
+# The AEST day key now lives in journal_common (REFINE200 #91); re-exported
+# under its old name for this module's own callers and the legacy tests.
+from .journal_common import session_day as _session_day
 
 ROOT                 = pathlib.Path(__file__).resolve().parents[1]
 SCALP_JOURNAL_FILE   = ROOT / "journal" / "scalp_journal.json"
@@ -33,25 +34,6 @@ MAX_LOSS   = config.SCALP_MAX_DAILY_LOSS                           # $500
 SLIP       = config.SCALP_FILL_SLIPPAGE_PCT                        # 0.03% one-way
 DAY_ANCHOR = config.SCALP_DAY_ANCHOR_UTC                           # kept for compat
 MAX_GROUP  = config.SCALP_MAX_PER_GROUP                            # correlated positions cap
-_AEST      = ZoneInfo(config.SCALP_DAY_TZ)                        # Australia/Sydney
-
-
-def _session_day(ts: str | None = None) -> str:
-    """Trading-day key expressed as the calendar date in AEST (Australia/Sydney).
-
-    Pass an ISO timestamp (UTC) or None for 'now'. The day rolls over at midnight
-    Sydney time — naturally avoids bisecting the ASX or crypto sessions.
-    """
-    if ts:
-        try:
-            t = dt.datetime.fromisoformat(ts.replace("Z", "")[:19]).replace(
-                tzinfo=dt.timezone.utc
-            )
-        except ValueError:
-            t = dt.datetime.now(dt.timezone.utc)
-    else:
-        t = dt.datetime.now(dt.timezone.utc)
-    return t.astimezone(_AEST).strftime("%Y-%m-%d")
 
 
 def _corr_group(symbol: str, asset_type: str = "", sector: str = "") -> str:

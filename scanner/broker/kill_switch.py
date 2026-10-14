@@ -1,7 +1,8 @@
 """Daily-loss kill-switch.
 
-Checks the session P&L (realised + unrealised) against SCALP_MAX_DAILY_LOSS.
-If the limit is breached, flattens all broker positions and cancels all orders,
+Checks each market's session P&L on the BOT BOOK against the VIVEK daily loss
+limit (VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY). If the limit
+is breached, flattens the broker that holds that market and cancels its orders,
 then fires an alert via alert_dispatch.
 
 Runs as the half-hourly kill_switch.yml workflow (python -m
@@ -91,6 +92,22 @@ def _flatten(name: str) -> None:
     globals()[f"_flatten_{name}"]()
 
 
+def _vivek_daily_limit() -> float:
+    """The per-market daily loss limit in dollars: equity x MAX_DAILY_LOSS_PCT.
+
+    The same two config values vivek_guard.check reads. It is check_and_kill's
+    DEFAULT limit since 2026-10-14 (REFINE200 #91): the default used to be the
+    retired scalp journal's SCALP_MAX_DAILY_LOSS ($500), a number nothing in
+    the live system is sized against. Production never relied on it --
+    run_standalone has always passed this figure explicitly -- so the switch
+    behaves identically; only a bare call stops measuring a dead journal's rule.
+    """
+    from scanner import config
+    equity = float(getattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 0) or 0)
+    pct = float(getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0) or 0)
+    return equity * pct / 100.0
+
+
 def _armed_brokers(wanted, legacy: bool) -> list[str]:
     """Of the brokers this breach may flatten, the ones that can actually act.
 
@@ -115,9 +132,10 @@ def check_and_kill(j: dict, dry_run: bool = False,
     """Return True if the kill switch fired (caller must abort new orders).
 
     j          — journal-shaped dict: open[].unreal_pnl + closed[].{session_day,pnl}
-    limit_usd  — loss limit; defaults to the legacy SCALP_MAX_DAILY_LOSS so the
-                 pre-2026-07-20 call sites/tests behave identically. The bot-book
-                 path (run_standalone) passes the VIVEK guard limit instead.
+    limit_usd  — loss limit; defaults to the VIVEK daily limit
+                 (`_vivek_daily_limit`, the figure run_standalone passes). It
+                 was the retired scalp journal's SCALP_MAX_DAILY_LOSS until
+                 2026-10-14 (REFINE200 #91).
     label      — names the P&L source in logs/alerts (e.g. "bot book [asx]").
     brokers    — WHICH ACCOUNTS THIS BREACH IS ALLOWED TO FLATTEN. None (the
                  default, and every pre-existing caller) keeps the old
@@ -137,11 +155,10 @@ def check_and_kill(j: dict, dry_run: bool = False,
     abort new orders, and the operator must still hear about it. What changes is
     only that a paper market stops reaching for a live account.
     """
-    from scanner.config import SCALP_MAX_DAILY_LOSS
-    from scanner.scalp_journal import _session_day
+    from scanner.journal_common import session_day
 
-    limit = SCALP_MAX_DAILY_LOSS if limit_usd is None else float(limit_usd)
-    today        = _session_day()
+    limit = _vivek_daily_limit() if limit_usd is None else float(limit_usd)
+    today        = session_day()
     today_closed = [c for c in j.get("closed", []) if c.get("session_day") == today]
     today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
     unrealised   = sum(p.get("unreal_pnl") or 0 for p in j.get("open", []))
@@ -275,7 +292,7 @@ def _book_market_journal(book: dict, market: str, market_day: str,
     """Adapt ONE market's slice of the BOT BOOK to check_and_kill's journal shape.
 
     Selection is by the market-local day (exit_date), but rows are stamped with
-    the AEST _session_day() key because that is what check_and_kill compares
+    the AEST session_day() key because that is what check_and_kill compares
     against. Open positions are re-priced LIVE when `quotes` has a price for
     them (same _unreal_r maths the runner itself stamps with, so the two can
     never disagree on semantics); any position without a live quote falls back
@@ -287,10 +304,10 @@ def _book_market_journal(book: dict, market: str, market_day: str,
     risk_manager.py until the scalp-era risk stack was removed with the AI BOT
     page (2026-09-17); this is now its only consumer, so it lives here.
     """
-    from scanner.scalp_journal import _session_day
+    from scanner.journal_common import session_day
 
     from . import vivek_guard
-    key = _session_day()
+    key = session_day()
     closed = [{"session_day": key, "pnl": trade_pnl(t)}
               for t in book.get("closed", [])
               if t.get("market") == market and t.get("exit_date") == market_day]
@@ -362,9 +379,7 @@ def run_standalone(dry_run: bool = False) -> dict:
         log.info("kill-switch: live quotes for %d/%d open position(s); "
                  "the rest use last-scan marks", len(quotes), len(book["open"]))
 
-    equity = config.VIVEK_BOT_ACCOUNT_EQUITY
-    pct = getattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0.0) or 0.0
-    limit = equity * pct / 100.0
+    limit = _vivek_daily_limit()
     routing = getattr(config, "VIVEK_KILL_SWITCH_BROKERS", {}) or {}
     out = {"triggered": [], "checked": [], "flattened": []}
     done: set[str] = set()

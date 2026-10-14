@@ -25,6 +25,34 @@ def utc_now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def session_day(ts: str | None = None) -> str:
+    """Legacy trading-day key: the calendar date in config.SCALP_DAY_TZ (Sydney).
+
+    Pass an ISO timestamp (UTC) or None for 'now'. The day rolls over at
+    midnight Sydney time, which never bisects an ASX or crypto session. An
+    unparseable timestamp falls back to now rather than raising.
+
+    Moved here from scalp_journal.py (2026-10-14, REFINE200 #91) so the kill
+    switch, which still keys check_and_kill's journal shape by this day, no
+    longer imports the retired scalp journal to get it. scalp_journal
+    re-exports it as `_session_day` for its legacy callers; behaviour is
+    byte-for-byte the old function's.
+    """
+    from zoneinfo import ZoneInfo
+
+    from . import config
+    if ts:
+        try:
+            t = dt.datetime.fromisoformat(ts.replace("Z", "")[:19]).replace(
+                tzinfo=dt.timezone.utc
+            )
+        except ValueError:
+            t = dt.datetime.now(dt.timezone.utc)
+    else:
+        t = dt.datetime.now(dt.timezone.utc)
+    return t.astimezone(ZoneInfo(config.SCALP_DAY_TZ)).strftime("%Y-%m-%d")
+
+
 def atomic_write(path: pathlib.Path, payload: str, *, newline: str | None = None) -> None:
     """Write payload to path atomically via a temp file + rename (POSIX-safe).
 
