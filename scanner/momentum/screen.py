@@ -45,7 +45,7 @@ from __future__ import annotations
 
 import math
 
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,7 @@ from .pivots import (barssince, crossover, crossunder, pivot_high_confirmed,
 
 __all__ = [
     "prepare_frame", "rsi_divergence", "cross_signal", "evaluate",
-    "screen_symbol", "screen_frames", "assert_no_lookahead",
+    "screen_symbol", "assert_no_lookahead",
 ]
 
 
@@ -400,7 +400,10 @@ def screen_symbol(df: pd.DataFrame, cfg: Optional[MomentumConfig] = None,
     except ValueError as exc:
         # A bad config is a programming error, but this function is called in
         # a 3,600-symbol loop; reporting it on the row beats a traceback that
-        # kills the scan, and screen_frames() still validates once up front.
+        # kills the scan, and run.screen_market still validates once up front.
+        # (Ranking is gates.rank_rows, the one order the page publishes; the
+        # reference's screen_frames() ranked differently and was test-only, so
+        # it was deleted 2026-10-14, REFINE200 #182.)
         base["reason"] = "invalid config: %s" % exc
         return base
     try:
@@ -557,51 +560,6 @@ def screen_symbol(df: pd.DataFrame, cfg: Optional[MomentumConfig] = None,
                         base["rule_b_bars_ago"] if cfg.mode != "A" else None) if a is not None]
     base["best_bars_ago"] = min(ages) if ages else None
     return base
-
-
-def screen_frames(frames: Mapping[str, pd.DataFrame], cfg: Optional[MomentumConfig] = None,
-                  market: str = "", include_failures: bool = False) -> pd.DataFrame:
-    """Screen a whole universe. Returns one row per symbol, ranked.
-
-    Ranking is deliberately NOT a quality model -- there is no evidence here
-    that a score of 3 outperforms a 2, and sorting a scanner by its own
-    backtest is how a page becomes a curve fit. The order is only "what a
-    reviewer should look at first", and every tier is a stated preference
-    rather than a measured one:
-
-        1. passing rows before non-passing
-        2. freshest first (bars_ago ascending)
-        3. both rules before one rule
-        4. RULE A before a RULE-B-only row -- the divergence is the owner's
-           headline rule, the one mode 1 screens on by itself
-        5. higher |score| first
-        6. symbol, so the output is deterministic
-
-    `include_failures=False` (the default) returns only the passing rows.
-    """
-    cfg = (cfg or config.DEFAULTS).validate()
-    rows: List[Dict[str, Any]] = []
-    for sym in sorted(frames):
-        rows.append(screen_symbol(frames[sym], cfg, symbol=str(sym), market=market))
-    out = pd.DataFrame(rows)
-    if out.empty:
-        return out
-    if not include_failures:
-        out = out[out["passes"]]
-        if out.empty:
-            return out.reset_index(drop=True)
-    out = out.assign(
-        _age=pd.to_numeric(out["best_bars_ago"], errors="coerce").fillna(10 ** 6),
-        _nrules=out["rules"].astype("object").fillna("").map(
-            lambda s: -len(str(s).split("+")) if s else 0),
-        _nota=(~out["rule_a"].astype(bool)).astype(int),
-        _score=-pd.to_numeric(out["score"], errors="coerce").fillna(0),
-    ).sort_values(
-        by=["passes", "_age", "_nrules", "_nota", "_score", "symbol"],
-        ascending=[False, True, True, True, True, True],
-        kind="mergesort",
-    ).drop(columns=["_age", "_nrules", "_nota", "_score"])
-    return out.reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------

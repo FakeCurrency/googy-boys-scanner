@@ -139,6 +139,11 @@
 .mo-chip-lag { color: var(--muted-2); background: transparent; border-style: dashed; }
 .mo-chip-conflict { color: var(--orange); background: var(--orange-soft); border-color: rgba(255, 159, 10, 0.45); }
 .mo-chip-warn { color: var(--muted-2); border-style: dashed; }
+/* "no edge in the ASX backtest": the market's own replay scores this
+   direction at or below zero (REFINE200 #50). Amber, like the coverage
+   sentence -- a fact about the evidence, not an alarm. */
+.mo-chip-noedge { color: var(--orange); background: var(--orange-soft); border-color: rgba(255, 159, 10, 0.45); }
+.mo-noedge { font: 700 9.5px/1 var(--mono); color: var(--orange); letter-spacing: 0.02em; }
 
 .mo-right { text-align: right; padding-left: 8px; }
 .mo-price { font: 800 15px/1.1 var(--mono); color: var(--text); }

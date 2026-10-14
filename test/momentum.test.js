@@ -200,6 +200,9 @@ ok(/momentum:\s*\["momentum\.html"/.test(SRCBACK),
 
 /* ── the honest failures, executed ──────────────────────────────────────── */
 
+const LONG_SHORT_SRC = (/const LONG_SHORT = \{[^}]*\};/.exec(MOM) || [""])[0];
+assert.ok(LONG_SHORT_SRC, "momentum.js no longer declares LONG_SHORT");
+
 function slice(name) {
   const at = MOM.indexOf(`function ${name}(`);
   assert.ok(at > 0, `momentum.js no longer defines ${name}`);
@@ -264,6 +267,7 @@ function slice(name) {
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const env = (state) => new Function(
     "state", "esc", "fmtPrice", "fmtTurnover",
+    LONG_SHORT_SRC + "\n" + slice("btStream") + "\n" + slice("noEdgeOf") + "\n" +
     slice("dirOf") + "\n" + slice("chip") + "\n" + slice("rulesBadge") + "\n" +
     slice("rowHTML") + "; return rowHTML;")(
       state, esc, (x) => String(x), (x) => String(x));
@@ -1443,10 +1447,13 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
  */
 {
   const filtersSrc = MOM.slice(MOM.indexOf("const FILTERS = ["), MOM.indexOf("];", MOM.indexOf("const FILTERS = [")) + 2);
+  const RULE_PILLS_SRC = (/const RULE_PILLS = \[[^\]]*\];/.exec(MOM) || [""])[0];
+  ok(RULE_PILLS_SRC, "momentum.js no longer declares RULE_PILLS");
   const out = {};
   const run = (filter) => new Function("counts", "state", "esc", "$",
-    filtersSrc + "\nreturn (" + slice("renderPills") + ");")(
-    () => ({ all: 4, a: 4, b: 0, bull: 3, bear: 1 }), { filter },
+    filtersSrc + "\n" + RULE_PILLS_SRC + "\n" + LONG_SHORT_SRC + "\n" + slice("btStream") + "\n" +
+    slice("noEdgeOf") + "\nreturn (" + slice("renderPills") + ");")(
+    () => ({ all: 4, a: 4, b: 0, bull: 3, bear: 1 }), { filter, data: { mode: "B" } },
     (v) => String(v).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`),
     (id) => ({ set innerHTML(v) { out[id] = v; } }))();
   run("a");
@@ -1465,5 +1472,121 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok(/\.fpill\s*\{[^}]*border-radius/.test(CSS) && /\.fpill\.is-active\s*\{/.test(CSS),
      "styles.css defines .fpill and its active state");
 }
+
+
+/* ── REFINE200 #183 / #50 / #174 / #175 (2026-10-14) ───────────────────────── */
+{
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+  const filtersSrc = MOM.slice(MOM.indexOf("const FILTERS = ["), MOM.indexOf("];", MOM.indexOf("const FILTERS = [")) + 2);
+  const RULE_PILLS_SRC = (/const RULE_PILLS = \[[^\]]*\];/.exec(MOM) || [""])[0];
+  const lib = filtersSrc + "\n" + RULE_PILLS_SRC + "\n" + LONG_SHORT_SRC + "\n" +
+    slice("btStream") + "\n" + slice("noEdgeOf") + "\n";
+  const pills = (state) => {
+    const out = {};
+    new Function("counts", "state", "esc", "$", lib + "return (" + slice("renderPills") + ");")(
+      () => ({ all: 5, a: 5, b: 0, bull: 1, bear: 4 }), state, esc,
+      (id) => ({ set innerHTML(v) { out[id] = v; } }))();
+    return out["mo-pills"] || "";
+  };
+  // #183: mode A lists Rule A only, so RULE A (= ALL) and RULE B (always 0)
+  // are hidden; modes B and C keep them.
+  const a = pills({ filter: "all", data: { mode: "A" }, bt: {}, market: "asx" });
+  ok(!/data-pill="a"|data-pill="b"/.test(a), "mode A shows no RULE A / RULE B pills");
+  eq((a.match(/<button/g) || []).length, 3, "mode A: ALL, BULL, BEAR");
+  ok(/data-pill="b"/.test(pills({ filter: "all", data: { mode: "B" }, bt: {}, market: "asx" })),
+     "mode B keeps the RULE B pill");
+  ok(!/scored 20\/50 crosses/.test(HTML) && !/scored 20\/50 crosses/.test(MOM),
+     "the subtitle no longer advertises crosses mode A never lists");
+  ok(/mode A: divergence only/.test(MOM), "the header says what mode A is");
+
+  // #50: the market's OWN replay scores shorts below zero, so the BEAR pill
+  // and every bear row say so -- read off the file, never computed.
+  const BT = JSON.parse(fs.readFileSync(path.join(PUB, "data", "momentum", "asx_backtest.json"), "utf8"));
+  const noEdgeOf = new Function(LONG_SHORT_SRC + "\n" + slice("btStream") + "\n" +
+    slice("noEdgeOf") + "; return noEdgeOf;")();
+  const fake = { period: "5y", generated_at: "2026-09-23T00:00:00Z",
+                 summary: { rule_a_short: { trades: 2235, expectancy_r: -0.1 },
+                            rule_a_long: { trades: 1601, expectancy_r: 0.081 },
+                            short: { trades: 4693, expectancy_r: -0.101 },
+                            long: { trades: 3750, expectancy_r: 0.058 } } };
+  const ne = noEdgeOf(fake, "A", "bear", "asx");
+  ok(ne && ne.label === "no edge in the ASX backtest", `bear label: ${JSON.stringify(ne)}`);
+  ok(/Rule A shorts at -0\.1R a trade over 2,235 trades/.test(ne.tip), ne.tip);
+  eq(noEdgeOf(fake, "A", "bull", "asx"), null, "longs are positive: no label");
+  ok(/shorts at -0\.101R/.test(noEdgeOf(fake, "B", "bear", "asx").tip), "mode B reads the direction stream");
+  eq(noEdgeOf(null, "A", "bear", "nasdaq"), null, "no backtest file, no claim");
+  eq(noEdgeOf({ summary: { rule_a_short: { trades: 0, expectancy_r: -1 } } }, "A", "bear", "asx"), null,
+     "zero trades is not evidence");
+  eq(noEdgeOf(fake, "A", "all", "asx"), null, "only a direction can have no edge");
+  const live = noEdgeOf(BT, "A", "bear", "asx");
+  if (BT.summary.rule_a_short.expectancy_r <= 0) ok(live && /no edge/.test(live.label), "the committed ASX file labels shorts");
+  const bear = pills({ filter: "all", data: { mode: "A" }, bt: { asx: fake }, market: "asx" });
+  ok(/data-pill="bear"[^>]*title="[^"]*no edge[^"]*">BEAR <b>4<\/b> <span class="mo-noedge">no edge<\/span>/.test(bear),
+     "the BEAR pill carries the label and the evidence in its title");
+  ok(!/data-pill="bull"[^>]*>BULL <b>1<\/b> <span/.test(bear), "the BULL pill does not");
+  ok(/\.mo-chip-noedge\s*\{/.test(MOCSS) && /\.mo-noedge\s*\{/.test(MOCSS), "momentum.css styles both");
+
+  const rowHTML = new Function("state", "esc", "fmtPrice", "fmtTurnover",
+    LONG_SHORT_SRC + "\n" + slice("btStream") + "\n" + slice("noEdgeOf") + "\n" +
+    slice("dirOf") + "\n" + slice("chip") + "\n" + slice("rulesBadge") + "\n" +
+    slice("rowHTML") + "; return rowHTML;")(
+      { market: "asx", bt: { asx: fake }, data: { mode: "A", last_closed_bar: "2026-10-13" } },
+      esc, (x) => String(x), (x) => String(x));
+  const r = (over) => Object.assign({ symbol: "RIC", rule_a: true, rule_a_direction: "bear",
+    rule_a_bars_ago: 0, rule_a_pivot_bars_ago: 5, direction: "bear", close: 1, rsi: 50,
+    dollar_adv_20: 1, last_bar: "2026-10-13 00:00:00" }, over);
+  ok(/no edge in the ASX backtest/.test(rowHTML(r())), "a bear row says no edge");
+  ok(!/no edge/.test(rowHTML(r({ direction: "bull", rule_a_direction: "bull" }))), "a bull row does not");
+
+  // #174: a row screened on an older bar than the file's newest says so.
+  ok(/as of 2026-10-12/.test(rowHTML(r({ last_bar: "2026-10-12 00:00:00" }))), "an older bar is chipped");
+  ok(!/as of/.test(rowHTML(r())), "a row on the file's newest bar is not");
+
+  // #174: the dot turns amber when the FILE is stale, by the market's calendar.
+  const staleOf = new Function("fmtMelb", "STALE_WEEKDAY_H", "STALE_CRYPTO_H", "BAR_24_7",
+    slice("weekdayHours") + "\n" + slice("staleOf") + "; return staleOf;")(
+      (iso) => "MELB[" + iso + "]", 30, 30, ["crypto"]);
+  const T = (iso) => Date.parse(iso);
+  eq(staleOf({ generated_at: "2026-10-09T06:20:00Z" }, "asx", T("2026-10-12T05:00:00Z")), null,
+     "Friday's ASX file read Monday before the close: a weekend is not stale");
+  ok(staleOf({ generated_at: "2026-10-09T06:20:00Z" }, "asx", T("2026-10-13T06:20:00Z")),
+     "a missed Monday close is stale by Tuesday");
+  eq(staleOf({ generated_at: "2026-10-13T00:38:00Z" }, "crypto", T("2026-10-14T06:00:00Z")), null, "crypto 29h");
+  ok(/over 30 hours ago/.test(staleOf({ generated_at: "2026-10-13T00:38:00Z" }, "crypto", T("2026-10-14T07:00:00Z"))),
+     "crypto 30h+ is stale");
+  ok(staleOf({ generated_at: "garbage" }, "asx", T("2026-10-14T07:00:00Z")), "unreadable is never fresh");
+  ok(/const stale = staleOf\(state\.data, state\.market, Date\.now\(\)\)/.test(MOM) &&
+     /stale \? "deck-dot is-stale warn"/.test(MOM), "renderHead turns the dot amber on a stale file");
+}
+
+/* #175: a slow FAILURE for the previous market must not wipe the current one.
+ * Executed: the real load() with a fetch that rejects after the switch. */
+(async () => {
+  let reject;
+  const state = { market: "asx", filter: "all", data: null, err: null, loading: true, bt: {} };
+  const loadSrc = (() => {
+    const at = MOM.indexOf("async function load(");
+    assert.ok(at > 0, "momentum.js no longer defines async load()");
+    for (let i = MOM.indexOf("{", at); i < MOM.length; i++) {
+      if (MOM[i] !== "}") continue;
+      const cand = MOM.slice(at, i + 1);
+      try { new Function("return (" + cand + ");"); return cand; } catch (_) { /* keep going */ }
+    }
+    throw new Error("could not slice async load");
+  })();
+  const load = new Function("state", "render", "loadBacktest", "fetchTimeout",
+    "return (" + loadSrc + ");")(
+      state, () => {}, () => {},
+      () => new Promise((_, rej) => { reject = rej; }));
+  const pending = load("asx");
+  state.market = "nasdaq";                                   // the switch
+  state.data = { results: [{ symbol: "NQ" }] }; state.loading = false;
+  reject(new Error("HTTP 503"));
+  await pending;
+  assert.deepStrictEqual(state.data, { results: [{ symbol: "NQ" }] }, "the old failure wiped NASDAQ");
+  assert.strictEqual(state.err, null, "and claimed NASDAQ could not load");
+  checks += 2;
+  console.log(`momentum: async load race - ${checks} checks passed in total`);
+})();
 
 console.log(`momentum: ${checks} checks passed`);
