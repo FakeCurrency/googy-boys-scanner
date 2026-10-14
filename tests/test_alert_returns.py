@@ -41,12 +41,12 @@ SRC = (ROOT / "scripts" / "alert_returns.py").read_text(encoding="utf-8")
 
 
 def _entry(ticker="BHP", market="asx", side="long", count=2,
-           date="2026-08-01T05:18:11+00:00"):
+           date="2026-08-03T05:18:11+00:00"):
     return {"date": date, "market": market, "ticker": ticker, "side": side,
             "count": count, "lenses": ["PHASEMAP", "VIVEK"]}
 
 
-def _frames(sym, start="2026-08-01", n=30, base=100.0, step=1.0):
+def _frames(sym, start="2026-08-03", n=30, base=100.0, step=1.0):
     idx = pd.date_range(start, periods=n, freq="D")
     return {sym: pd.DataFrame({"Close": [base + i * step for i in range(n)]}, index=idx)}
 
@@ -79,8 +79,8 @@ def test_a_malformed_history_entry_is_skipped_not_fatal():
 
 def test_only_plausibly_matured_horizons_ask_for_prices():
     led = ar._fresh()
-    ar.ingest(led, [_entry(date="2026-08-01T05:00:00+00:00")])
-    assert ar.wanting_prices(led, dt.date(2026, 8, 1)) == {}, "same day - not even 1s can have matured"
+    ar.ingest(led, [_entry(date="2026-08-03T05:00:00+00:00")])
+    assert ar.wanting_prices(led, dt.date(2026, 8, 3)) == {}, "same day - not even 1s can have matured"
     want = ar.wanting_prices(led, dt.date(2026, 8, 10))
     assert "BHP.AX" in want, "ASX tickers price under their Yahoo suffix"
 
@@ -96,7 +96,7 @@ def test_a_fully_stamped_entry_never_downloads_again():
 
 def _stamped_ledger(n_bars):
     led = ar._fresh()
-    ar.ingest(led, [_entry(date="2026-08-01T05:00:00+00:00")])
+    ar.ingest(led, [_entry(date="2026-08-03T05:00:00+00:00")])
     want = ar.wanting_prices(led, dt.date(2026, 12, 1))
     n = ar.stamp(led, _frames("BHP.AX", n=n_bars), want)
     return led["entries"][0], n
@@ -119,7 +119,7 @@ def test_an_immature_horizon_stays_None_and_is_filled_next_run():
 
 def test_a_stamped_return_is_FROZEN_against_later_price_revisions():
     led = ar._fresh()
-    ar.ingest(led, [_entry(date="2026-08-01T05:00:00+00:00")])
+    ar.ingest(led, [_entry(date="2026-08-03T05:00:00+00:00")])
     want = ar.wanting_prices(led, dt.date(2026, 12, 1))
     ar.stamp(led, _frames("BHP.AX", n=30), want)
     before = json.dumps(led["entries"][0]["fwd"])
@@ -165,7 +165,7 @@ def test_a_legacy_row_without_the_1s_key_is_padded_not_wiped():
     # A missing key must read as "unstamped" (filled next run) — and stamping
     # the new horizon must never disturb the frozen old ones.
     led = ar._fresh()
-    ar.ingest(led, [_entry(date="2026-08-01T05:00:00+00:00")])
+    ar.ingest(led, [_entry(date="2026-08-03T05:00:00+00:00")])
     e = led["entries"][0]
     del e["fwd"]["1"]                              # simulate the legacy shape
     e["fwd"]["5"] = 0.123                          # a frozen old stamp
@@ -187,14 +187,14 @@ def test_crypto_session_day_is_the_UTC_calendar():
 
 def test_enrich_is_blank_only_and_day_honest(monkeypatch):
     led = ar._fresh()
-    ar.ingest(led, [_entry(ticker="BHP", market="asx", date="2026-08-01T05:00:00+00:00"),
+    ar.ingest(led, [_entry(ticker="BHP", market="asx", date="2026-08-03T05:00:00+00:00"),
                     _entry(ticker="OLD", market="asx", date="2026-07-15T05:00:00+00:00")])
     monkeypatch.setattr(ar, "_load_sectors", lambda: {("asx", "BHP"): "Materials",
                                                       ("asx", "OLD"): "Energy"})
-    monkeypatch.setattr(ar, "_breadth_series", lambda: {"asx": {"2026-08-01": 0.4321}})
+    monkeypatch.setattr(ar, "_breadth_series", lambda: {"asx": {"2026-08-03": 0.4321}})
     # The scan join carries ITS OWN day — only same-day entries may take it.
     monkeypatch.setattr(ar, "_scan_day_rows", lambda: {
-        ("asx", "2026-08-01"): {"BHP": {"grade_raw": "A+", "score": 9, "is_product": False}}})
+        ("asx", "2026-08-03"): {"BHP": {"grade_raw": "A+", "score": 9, "is_product": False}}})
     n = ar.enrich(led)
     bhp, old = led["entries"]
     assert bhp["sector"] == "Materials" and old["sector"] == "Energy"
@@ -206,9 +206,9 @@ def test_enrich_is_blank_only_and_day_honest(monkeypatch):
     assert n == 6
     # Frozen once written: a second pass with DIFFERENT sources changes nothing.
     monkeypatch.setattr(ar, "_load_sectors", lambda: {("asx", "BHP"): "Tech"})
-    monkeypatch.setattr(ar, "_breadth_series", lambda: {"asx": {"2026-08-01": 0.9}})
+    monkeypatch.setattr(ar, "_breadth_series", lambda: {"asx": {"2026-08-03": 0.9}})
     monkeypatch.setattr(ar, "_scan_day_rows", lambda: {
-        ("asx", "2026-08-01"): {"BHP": {"grade_raw": "B+", "score": 1, "is_product": True}}})
+        ("asx", "2026-08-03"): {"BHP": {"grade_raw": "B+", "score": 1, "is_product": True}}})
     assert ar.enrich(led) == 0
     assert bhp["sector"] == "Materials" and bhp["breadth200"] == 0.4321 and bhp["grade_raw"] == "A+"
 
@@ -224,8 +224,10 @@ def test_enrichment_counts_as_a_change_for_the_commit_gate():
 def test_the_script_never_writes_alert_history():
     # The history file is written inside the scan mutex by confluence_alert;
     # a second writer would race it. This script may only READ it.
+    # The second target is the same-job frames hand-off to edge_rosters.py
+    # (REFINE200: one Yahoo walk for both ledgers), a path the CLI is given.
     writes = re.findall(r"write_json\(([^,]+),", SRC)
-    assert writes == ["LEDGER"], f"only the ledger may be written, saw: {writes}"
+    assert sorted(writes) == ["LEDGER", "frames_path"], f"only the ledger may be written, saw: {writes}"
     assert "HISTORY" not in "".join(writes)
 
 
@@ -415,7 +417,7 @@ def test_main_judges_finality_on_a_clock_taken_BEFORE_the_download(tmp_path, mon
     import time as _time
     import scanner.data
     hist = tmp_path / "history.json"
-    hist.write_text(json.dumps({"entries": [_entry(date="2026-08-01T05:00:00+00:00")]}), encoding="utf-8")
+    hist.write_text(json.dumps({"entries": [_entry(date="2026-08-03T05:00:00+00:00")]}), encoding="utf-8")
     monkeypatch.setattr(ar, "HISTORY", str(hist))
     monkeypatch.setattr(ar, "LEDGER", str(tmp_path / "ledger.json"))
     seen = {}
@@ -608,3 +610,202 @@ def test_the_gates_cron_literal_is_the_backstop_in_the_schedule():
     assert crons == ["20 22 * * *", BACKSTOP], crons
     assert f'"{BACKSTOP}"' in _gate_body()
     assert doc["permissions"] == {"contents": "write"}, doc["permissions"]
+
+
+# ── REFINE200 (2026-10-14): forward-only fixes ───────────────────────────────
+
+def test_a_weekend_alert_on_a_stock_market_files_under_monday_once():
+    """#140: the nightly PhaseMap -> confluence pass logs Sat/Sun alignments
+    for shut stock markets; each was its own row, measured from Monday's
+    close like Monday's own row. They now file as ONE Monday row."""
+    led = ar._fresh()
+    sat, sun, mon = ("2026-10-10T09:00:00+00:00", "2026-10-11T09:00:00+00:00",
+                     "2026-10-12T01:00:00+00:00")
+    n = ar.ingest(led, [_entry(ticker="NGI", date=sat), _entry(ticker="NGI", date=sun),
+                        _entry(ticker="NGI", date=mon)])
+    assert n == 1 and len(led["entries"]) == 1
+    row = led["entries"][0]
+    assert row["base_day"] == "2026-10-12" and row["key"] == "2026-10-12|asx|NGI|long|2"
+    assert row["alert_day"] == "2026-10-10", "the alert's own day stays on the row"
+    # Crypto trades at the weekend: never rolled.
+    led2 = ar._fresh()
+    ar.ingest(led2, [_entry(ticker="BTC", market="crypto", date=sat)])
+    assert led2["entries"][0]["base_day"] == "2026-10-10" and "alert_day" not in led2["entries"][0]
+
+
+def test_an_old_weekend_row_is_never_ingested_again_under_mondays_key():
+    led = ar._fresh()
+    led["entries"].append({"key": "2026-10-11|asx|NGI|long|2", "market": "asx", "ticker": "NGI",
+                           "side": "long", "base_day": "2026-10-11", "base_close": None,
+                           "fwd": {str(h): None for h in ar.HORIZONS}})
+    assert ar.ingest(led, [_entry(ticker="NGI", date="2026-10-11T09:00:00+00:00")]) == 0
+
+
+def test_the_vivek_context_is_copied_from_the_history_entry():
+    """#139: confluence stamps grade_raw/score/is_product at alert time; the
+    ledger copies them at ingest instead of hoping the scan on disk is the
+    alert's own day (it never is for ASX by the time the run lands)."""
+    led = ar._fresh()
+    h = dict(_entry(), grade_raw="A", score=7, is_product=False)
+    ar.ingest(led, [h, dict(_entry(ticker="CBA"))])
+    bhp, cba = led["entries"]
+    assert (bhp["grade_raw"], bhp["score"], bhp["is_product"]) == ("A", 7, False)
+    assert "grade_raw" not in cba, "no context on the entry -> nothing invented"
+
+
+def test_a_window_that_starts_after_base_day_never_supplies_the_base():
+    """The AII shape: base_day 2026-06-01, a suspension, then a 3-month window
+    that starts 2026-07-14. The old stamp() took that window's FIRST bar as
+    the base and froze all four horizons off it."""
+    led, e = _one("asx", "AII", "2026-06-01")
+    days = pd.bdate_range("2026-07-14", periods=40)
+    tape = {d.date().isoformat(): 1.0 + 0.01 * i for i, d in enumerate(days)}
+    assert ar.stamp(led, _bars("AII.AX", tape), {"AII.AX": [e]}, _at(UTC, 2026, 10, 1, 0, 0)) == 0
+    assert e["base_close"] is None and all(v is None for v in e["fwd"].values())
+
+
+def test_a_base_up_to_the_gap_limit_is_accepted_and_one_past_it_is_not():
+    from scanner import config
+    gap = config.ALERT_RETURNS_BASE_MAX_GAP_DAYS
+    base = dt.date(2026, 9, 1)
+    ok = {(base + dt.timedelta(days=gap)).isoformat(): 10.0,
+          (base + dt.timedelta(days=gap + 1)).isoformat(): 11.0}
+    led, e = _one("crypto", "BTC", base.isoformat())
+    ar.stamp(led, _bars("BTC-USD", ok), {"BTC-USD": [e]}, _at(UTC, 2026, 10, 1, 0, 0))
+    assert e["base_close"] == 10.0
+    late = {(base + dt.timedelta(days=gap + 1)).isoformat(): 11.0}
+    led2, e2 = _one("crypto", "BTC", base.isoformat())
+    ar.stamp(led2, _bars("BTC-USD", late), {"BTC-USD": [e2]}, _at(UTC, 2026, 10, 1, 0, 0))
+    assert e2["base_close"] is None
+
+
+def test_new_stamps_record_when_which_bar_and_which_source():
+    """#30 (forward half): every NEW stamp carries `stamped_at`; a new base
+    carries its bar's date and the price source. A row's later stamps find
+    the recorded base bar, not a re-derived one."""
+    led, e = _one("nasdaq", "AAPL", "2026-10-02")
+    tape = {"2026-10-01": 99.0, "2026-10-02": 100.0, "2026-10-05": 103.0}
+    now = _at(UTC, 2026, 10, 5, 22, 20)
+    ar.stamp(led, _bars("AAPL", tape), {"AAPL": [e]}, now)
+    assert e["base_bar"] == "2026-10-02" and e["price_source"] == "yahoo"
+    assert e["stamped_at"] == {"base": "2026-10-05T22:20:00+00:00", "1": "2026-10-05T22:20:00+00:00"}
+    # A legacy row (no stamped_at) that is re-priced keeps every frozen value.
+    legacy, le = _one("nasdaq", "AAPL", "2026-10-02")
+    le["base_close"], le["fwd"]["1"] = 100.0, 0.03
+    ar.stamp(legacy, _bars("AAPL", tape), {"AAPL": [le]}, now)
+    assert "stamped_at" not in le and "bench" not in le and "base_bar" not in le
+
+
+def test_every_new_horizon_stamp_carries_the_benchmark_over_the_same_bars():
+    """#28: the market benchmark's return between the SAME two bar dates."""
+    from scanner import config
+    led, e = _one("nasdaq", "AAPL", "2026-10-02")
+    tape = {"2026-10-01": 99.0, "2026-10-02": 100.0, "2026-10-05": 103.0}
+    idx = {"2026-10-01": 1000.0, "2026-10-02": 1000.0, "2026-10-05": 1010.0}
+    frames = {**_bars("AAPL", tape), **_bars(config.ALERT_RETURNS_BENCHMARK["nasdaq"], idx)}
+    ar.stamp(led, frames, {"AAPL": [e]}, _at(UTC, 2026, 10, 5, 22, 20))
+    assert e["fwd"]["1"] == 0.03 and e["bench"] == {"1": 0.01}
+
+
+def test_a_missing_benchmark_is_retried_never_guessed_and_never_moves_the_return():
+    from scanner import config
+    sym = config.ALERT_RETURNS_BENCHMARK["nasdaq"]
+    led, e = _one("nasdaq", "AAPL", "2026-10-02")
+    tape = {"2026-10-02": 100.0, "2026-10-05": 103.0, "2026-10-06": 104.0}
+    ar.stamp(led, _bars("AAPL", tape), {"AAPL": [e]}, _at(UTC, 2026, 10, 5, 22, 20))
+    assert e["fwd"]["1"] == 0.03 and "bench" not in e, "no benchmark frame -> no bench"
+    idx = {"2026-10-02": 1000.0, "2026-10-05": 990.0, "2026-10-06": 1000.0}
+    ar.stamp(led, {**_bars("AAPL", tape), **_bars(sym, idx)}, {"AAPL": [e]},
+             _at(UTC, 2026, 10, 6, 22, 20))
+    assert e["fwd"]["1"] == 0.03, "frozen"
+    assert e["bench"] == {"1": -0.01}, "the owed benchmark is filled on the next pricing run"
+
+
+def test_the_download_reaches_back_past_the_oldest_wanted_base_day(monkeypatch):
+    import scanner.data
+    from scanner import config
+    asked = []
+    monkeypatch.setattr(scanner.data, "download",
+                        lambda syms, period=None: asked.append((tuple(syms), period)) or {})
+    led = ar._fresh()
+    for t, day in (("BHP", "2026-05-01"), ("CBA", "2026-09-30")):
+        led["entries"].append({"key": t, "market": "asx", "ticker": t, "side": "long",
+                               "base_day": day, "base_close": None,
+                               "fwd": {str(h): None for h in ar.HORIZONS}})
+    ar.price_frames(ar.wanting_prices(led, dt.date(2026, 10, 14)), dt.date(2026, 10, 14))
+    got = {s: p for syms, p in asked for s in syms}
+    assert got["BHP.AX"] == "6mo" and got["CBA.AX"] == "3mo"
+    assert got[config.ALERT_RETURNS_BENCHMARK["asx"]] == "6mo", "the benchmark covers its market's widest window"
+
+
+def test_crypto_is_priced_through_fetch_with_the_identity_check_required(tmp_path, monkeypatch):
+    """The JUP case: Yahoo's 'JUP-USD' is a different token (~$0.0003 for a
+    ~$0.34 coin). Crypto now goes through data.fetch - the entry point the
+    scan and the bot price through - armed against the crypto scan's own
+    prices, and a coin nothing vouches for is refused, not priced."""
+    import scanner.data
+    prices = tmp_path / "crypto_prices.json"
+    prices.write_text(json.dumps({"prices": {"JUP": 0.3354, "BTC": 83000.0}}), encoding="utf-8")
+    monkeypatch.setattr(ar, "CRYPTO_PRICES", str(prices))
+    seen = {}
+
+    def fetch(market, syms, period=None, **kw):
+        seen.update(market=market, syms=list(syms), **kw)
+        return {}, {"refused": []}
+
+    monkeypatch.setattr(scanner.data, "fetch", fetch)
+    monkeypatch.setattr(scanner.data, "download",
+                        lambda *a, **k: pytest.fail("crypto must never reach Yahoo's download directly"))
+    led, _ = _one("crypto", "JUP", "2026-10-01")
+    ar.price_frames(ar.wanting_prices(led, dt.date(2026, 10, 14)), dt.date(2026, 10, 14))
+    assert seen["market"] == "crypto" and set(seen["syms"]) == {"JUP-USD", "BTC-USD"}
+    assert seen["ref_prices"] == {"JUP-USD": 0.3354, "BTC-USD": 83000.0}
+    assert seen["require_identity"] is True
+
+
+def test_the_frames_hand_off_round_trips_and_a_stale_one_is_ignored(tmp_path):
+    p = str(tmp_path / "frames.json")
+    now = _at(UTC, 2026, 10, 14, 22, 20)
+    frames = _bars("BHP.AX", {"2026-10-13": 40.0, "2026-10-14": 41.5})
+    frames["BTC-USD"] = _bars("BTC-USD", {"2026-10-13": 1.0})["BTC-USD"]
+    frames["BTC-USD"].attrs["source"] = "binance_vision"
+    ar.save_frames(p, frames, {"BHP.AX": "3mo", "BTC-USD": "6mo"}, now)
+    got, periods, at = ar.load_frames(p, now + dt.timedelta(minutes=5))
+    assert at == now and periods == {"BHP.AX": "3mo", "BTC-USD": "6mo"}
+    assert list(got["BHP.AX"]["Close"]) == [40.0, 41.5]
+    assert got["BTC-USD"].attrs["source"] == "binance_vision"
+    from scanner import config
+    late = now + dt.timedelta(hours=config.ALERT_RETURNS_FRAMES_MAX_AGE_H + 0.1)
+    assert ar.load_frames(p, late) == ({}, {}, None), "a stale hand-off is a fresh download"
+    assert ar.load_frames(str(tmp_path / "absent.json"), now) == ({}, {}, None)
+
+
+def test_a_handed_off_frame_is_reused_only_when_its_window_covers(monkeypatch):
+    import scanner.data
+    asked = []
+    monkeypatch.setattr(scanner.data, "download",
+                        lambda syms, period=None: asked.append((tuple(syms), period)) or {})
+    led = ar._fresh()
+    for t, day in (("BHP", "2026-10-01"), ("CBA", "2026-05-01")):
+        led["entries"].append({"key": t, "market": "asx", "ticker": t, "side": "long",
+                               "base_day": day, "base_close": None,
+                               "fwd": {str(h): None for h in ar.HORIZONS}})
+    have = {"BHP.AX": pd.DataFrame({"Close": [1.0]}), "CBA.AX": pd.DataFrame({"Close": [1.0]})}
+    frames, _ = ar.price_frames(ar.wanting_prices(led, dt.date(2026, 10, 14)), dt.date(2026, 10, 14),
+                                have=have, have_periods={"BHP.AX": "3mo", "CBA.AX": "3mo"})
+    downloaded = {s for syms, _ in asked for s in syms}
+    assert "BHP.AX" not in downloaded and frames["BHP.AX"] is have["BHP.AX"]
+    assert "CBA.AX" in downloaded, "a 3mo hand-off cannot cover a May base"
+
+
+def test_main_hands_its_frames_to_the_roster_run(tmp_path, monkeypatch):
+    import scanner.data
+    hist = tmp_path / "history.json"
+    hist.write_text(json.dumps({"entries": [_entry(date="2026-08-03T05:00:00+00:00")]}), encoding="utf-8")
+    monkeypatch.setattr(ar, "HISTORY", str(hist))
+    monkeypatch.setattr(ar, "LEDGER", str(tmp_path / "ledger.json"))
+    monkeypatch.setattr(scanner.data, "download",
+                        lambda syms, period=None: _frames("BHP.AX", start="2026-08-03", n=5))
+    out = tmp_path / "frames.json"
+    assert ar.main(["--frames-out", str(out)]) == 0
+    assert "BHP.AX" in json.loads(out.read_text(encoding="utf-8"))["frames"]

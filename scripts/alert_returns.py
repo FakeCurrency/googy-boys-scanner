@@ -48,6 +48,28 @@ above-200-day share ON base_day — blank since the 2026-09-20 REGIME removal), 
 look-ahead - the VIVEK leg's `grade_raw`, `score`, `is_product`. All stamps
 are BLANK-ONLY and frozen once written, exactly like the returns.
 
+GOING FORWARD (REFINE200, 2026-10-14) - every change below applies to NEW
+stamps only; no existing row is rewritten or re-stamped (that is the owner's
+call, REFINE200 #30):
+  * the VIVEK context is COPIED from the history entry, where
+    confluence_alert stamps it at the moment the alignment is seen (#139);
+    the same-day scan join above remains the fallback;
+  * a Saturday/Sunday alert on a stock market is filed under the Monday
+    session whose close was always its base (#140) - one row, not a weekend
+    copy of Monday's;
+  * every stamp records `stamped_at` (UTC, the clock finality was judged
+    on), a new base records `base_bar` (the bar's date) and `price_source`;
+  * every new horizon stamp also stamps `bench` - the market benchmark
+    (config.ALERT_RETURNS_BENCHMARK) between the same two bar dates (#28);
+  * the base bar must sit within ALERT_RETURNS_BASE_MAX_GAP_DAYS of base_day,
+    and the download reaches back past each symbol's oldest wanted base_day,
+    so a suspended name that resumes is never measured off the window's
+    first bar;
+  * crypto prices through data.fetch with the identity check against the
+    crypto scan's own prices, never Yahoo's same-ticker strangers;
+  * the frames this run downloaded are handed to edge_rosters.py
+    (--frames-out), so one walk prices both ledgers.
+
 ASCII-only prints; atomic write via scanner.output.write_json.
 """
 import csv
@@ -64,13 +86,20 @@ from scanner import config, output                                  # noqa: E402
 
 HISTORY = os.path.join(ROOT, "public", "data", "phasemap", "alert_history.json")
 LEDGER = os.path.join(ROOT, "data", "alert_forward_returns.json")
+CRYPTO_PRICES = os.path.join(ROOT, "public", "data", "crypto_prices.json")
 
 HORIZONS = tuple(getattr(config, "ALERT_RETURNS_HORIZONS", (1, 5, 10, 20)))
 CAP = int(getattr(config, "ALERT_RETURNS_CAP", 20000))
+BENCH = dict(config.ALERT_RETURNS_BENCHMARK)
+MAX_GAP = int(config.ALERT_RETURNS_BASE_MAX_GAP_DAYS)
+FRAMES_MAX_AGE_H = float(config.ALERT_RETURNS_FRAMES_MAX_AGE_H)
+CONTEXT_KEYS = ("grade_raw", "score", "is_product")
 # An entry whose horizons still have holes this long after base_day is almost
 # certainly a delisting/suspension — count it out loud (survivorship is a bias
 # only when it is silent), keep retrying anyway (retries are cheap).
 STALE_UNMATURED_DAYS = 40
+# yfinance-valid periods by the calendar days they reliably cover.
+_PERIODS = ((88, "3mo"), (180, "6mo"), (360, "1y"), (720, "2y"))
 
 
 def _market_day(iso: str, market: str) -> str:
@@ -90,6 +119,28 @@ def entry_key(e: dict) -> str:
     return "|".join([_market_day(e.get("date", ""), e.get("market", "")),
                      str(e.get("market", "")), str(e.get("ticker", "")),
                      str(e.get("side", "")), str(e.get("count", ""))])
+
+
+def session_market(market: str) -> bool:
+    """A market with a session (config.VIVEK_JOURNAL_SESSION), i.e. one that
+    is shut at the weekend. Crypto and unknown markets trade every day."""
+    return config.VIVEK_JOURNAL_SESSION.get(market) is not None
+
+
+def base_day_for(day: str, market: str) -> str:
+    """The session whose close is an alert's base. A Saturday/Sunday alert on
+    a stock market (the nightly PhaseMap -> confluence pass) rolls FORWARD to
+    Monday - the bar stamp() always measured it from - so it files as the one
+    row it is, not a weekend copy of Monday's (REFINE200 #140)."""
+    if not session_market(market):
+        return day
+    try:
+        d = dt.date.fromisoformat(str(day)[:10])
+    except ValueError:
+        return day
+    while d.weekday() >= 5:
+        d += dt.timedelta(days=1)
+    return d.isoformat()
 
 
 def _fresh() -> dict:
@@ -112,17 +163,24 @@ def load_ledger(path: str = LEDGER) -> dict:
 
 
 def ingest(ledger: dict, history_entries: list[dict]) -> int:
-    """Copy alignments the ledger has not seen. Returns how many were new."""
+    """Copy alignments the ledger has not seen. Returns how many were new.
+
+    The identity check reads BOTH the raw alert-day key and the rolled
+    session key, so an older weekend row (filed under its raw day before the
+    roll existed) is never ingested a second time under Monday's key."""
     have = {e.get("key") for e in ledger["entries"]}
     added = 0
     for e in history_entries or []:
         if not (e.get("ticker") and e.get("market")):
             continue
-        k = entry_key(e)
-        if k in have:
+        raw = entry_key(e)
+        day = _market_day(e.get("date", ""), e.get("market", ""))
+        base = base_day_for(day, e["market"])
+        k = raw if base == day else "|".join([base] + raw.split("|")[1:])
+        if raw in have or k in have:
             continue
-        have.add(k)
-        ledger["entries"].append({
+        have.update((raw, k))
+        row = {
             "key": k,
             "date": e.get("date"),
             "market": e.get("market"),
@@ -130,10 +188,18 @@ def ingest(ledger: dict, history_entries: list[dict]) -> int:
             "side": e.get("side"),
             "count": e.get("count"),
             "lenses": e.get("lenses"),
-            "base_day": _market_day(e.get("date", ""), e.get("market", "")),
+            "base_day": base,
             "base_close": None,
             "fwd": {str(h): None for h in HORIZONS},
-        })
+        }
+        if base != day:
+            row["alert_day"] = day
+        # The VIVEK context confluence stamped at the moment it saw the
+        # alignment (REFINE200 #139): same session, no look-ahead.
+        for c in CONTEXT_KEYS:
+            if e.get(c) is not None:
+                row[c] = e[c]
+        ledger["entries"].append(row)
         added += 1
     return added
 
@@ -212,7 +278,7 @@ def enrich(ledger: dict) -> int:
                 n += 1
         row = (scans.get((m, day)) or {}).get(sym)
         if row:
-            for k in ("grade_raw", "score", "is_product"):
+            for k in CONTEXT_KEYS:
                 if e.get(k) is None and row.get(k) is not None:
                     e[k] = row[k]
                     n += 1
@@ -256,6 +322,189 @@ def final_bar_cutoff(market: str, now: dt.datetime) -> dt.date:
     return local.date()
 
 
+# ── prices: one walk, every market on its own plumbing ───────────────────────
+
+def period_for(days: int) -> str:
+    """The shortest yfinance period that covers `days` calendar days."""
+    for cap, name in _PERIODS:
+        if days <= cap:
+            return name
+    return "5y"
+
+
+def _period_rank(name) -> int:
+    names = [n for _, n in _PERIODS] + ["5y"]
+    return names.index(name) if name in names else -1
+
+
+def _crypto_refs(syms) -> dict:
+    """{yahoo-spelled coin: price} from the crypto scan's own slim prices
+    (public/data/crypto_prices.json - identity-checked exchange closes). The
+    reference that keeps a same-ticker stranger out of the ledger: the scan
+    stopped trusting Yahoo's <SYM>-USD on 2026-09-28 (JUP priced ~$0.0003)."""
+    try:
+        with open(CRYPTO_PRICES, encoding="utf-8") as fh:
+            prices = json.load(fh).get("prices") or {}
+    except (OSError, ValueError, AttributeError):
+        prices = {}
+    sfx = config.MARKETS["crypto"].suffix
+    out = {}
+    for s in syms:
+        p = prices.get(s[:-len(sfx)] if sfx and s.endswith(sfx) else s)
+        if isinstance(p, (int, float)) and p > 0:
+            out[s] = float(p)
+    return out
+
+
+def price_frames(want: dict, today: dt.date, have: dict | None = None,
+                 have_periods: dict | None = None) -> tuple[dict, dict]:
+    """({symbol: daily frame}, {symbol: period}) for every wanted symbol plus
+    each wanted market's benchmark.
+
+    Each symbol's window reaches back past its OLDEST wanted base_day (with
+    room for a weekend and a holiday), bucketed into yfinance periods, so a
+    long-suspended name is never measured off a window that starts after its
+    base. Stocks download from Yahoo; crypto goes through data.fetch - the
+    entry point every crypto price takes - with the identity check armed
+    against the crypto scan's own prices and REQUIRED (a coin nothing vouches
+    for stays unstamped and is retried, never priced as a stranger). `have`
+    is a hand-off already downloaded in this job: a frame there is reused when
+    its period covers the window."""
+    from scanner import data
+    have, have_periods = have or {}, have_periods or {}
+    need: dict = {}                                   # sym -> (market, days)
+    for sym, entries in want.items():
+        days = []
+        for e in entries:
+            try:
+                days.append((today - dt.date.fromisoformat(str(e.get("base_day", ""))[:10])).days)
+            except ValueError:
+                continue
+        if days:
+            need[sym] = (entries[0].get("market"), max(days) + 2 * MAX_GAP)
+    for m in sorted({mk for mk, _ in need.values()}):
+        b = BENCH.get(m)
+        if b:
+            span = max(d for mk, d in need.values() if mk == m)
+            need[b] = (m, max(span, need.get(b, (m, 0))[1]))
+    frames, periods, groups = {}, {}, {}
+    for sym, (m, days) in need.items():
+        period = period_for(days)
+        if sym in have and _period_rank(have_periods.get(sym)) >= _period_rank(period):
+            frames[sym], periods[sym] = have[sym], have_periods[sym]
+            continue
+        groups.setdefault(("crypto" if m == "crypto" else "stock", period), []).append(sym)
+    for (kind, period), syms in sorted(groups.items()):
+        syms = sorted(syms)
+        if kind == "crypto":
+            got, rep = data.fetch("crypto", syms, period=period,
+                                  ref_prices=_crypto_refs(syms),
+                                  ref_tol=float(config.CRYPTO_IDENTITY_TOL),
+                                  require_identity=True)
+            if rep.get("refused"):
+                print(f"crypto identity refused (left unstamped): {', '.join(rep['refused'][:20])}")
+        else:
+            got = data.download(syms, period=period)
+        for s, f in (got or {}).items():
+            frames[s], periods[s] = f, period
+    return frames, periods
+
+
+def save_frames(frames_path: str, frames: dict, periods: dict, now: dt.datetime) -> None:
+    """The hand-off edge_rosters.py reads (--frames-in): dates + closes only,
+    stamped with the clock finality is judged on (taken BEFORE the download)."""
+    payload = {"schema_version": 1,
+               "fetched_at": now.astimezone(dt.timezone.utc).isoformat(timespec="seconds"),
+               "frames": {}}
+    for sym, df in frames.items():
+        try:
+            payload["frames"][sym] = {
+                "period": periods.get(sym),
+                "source": (getattr(df, "attrs", None) or {}).get("source"),
+                "d": [(d.date() if hasattr(d, "date") else d).isoformat() for d in df.index],
+                "c": [float(c) for c in df["Close"]],
+            }
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+    output.write_json(frames_path, payload, indent=None, separators=(",", ":"))
+
+
+def load_frames(frames_path: str, now: dt.datetime) -> tuple[dict, dict, dt.datetime | None]:
+    """(frames, periods, fetched_at) from a same-job hand-off, or ({}, {},
+    None) when it is missing, unreadable, from the future or older than
+    ALERT_RETURNS_FRAMES_MAX_AGE_H - a stale hand-off is a fresh download."""
+    import pandas as pd
+    try:
+        with open(frames_path, encoding="utf-8") as fh:
+            d = json.load(fh)
+        at = dt.datetime.fromisoformat(d["fetched_at"])
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=dt.timezone.utc)
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}, {}, None
+    age_h = (now - at).total_seconds() / 3600
+    if not (0 <= age_h <= FRAMES_MAX_AGE_H):
+        print(f"frames hand-off ignored ({age_h:.1f}h old)")
+        return {}, {}, None
+    frames, periods = {}, {}
+    for sym, f in (d.get("frames") or {}).items():
+        try:
+            df = pd.DataFrame({"Close": [float(c) for c in f["c"]]},
+                              index=pd.to_datetime(list(f["d"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if f.get("source"):
+            df.attrs["source"] = f["source"]
+        frames[sym], periods[sym] = df, f.get("period")
+    return frames, periods, at
+
+
+# ── stamping ─────────────────────────────────────────────────────────────────
+
+def _bar_days(df) -> list:
+    return [d.date() if hasattr(d, "date") else d for d in df.index]
+
+
+def _base_index(e: dict, days: list, done: int, base_day: dt.date) -> int | None:
+    """The row's base bar among the completed bars, or None (retry later).
+
+    A row that recorded its `base_bar` finds THAT bar. Otherwise the base is
+    the first bar on/after base_day - but only within MAX_GAP calendar days of
+    it: a longer gap is a suspension, or a window that never reached back to
+    base_day, and its first bar is not this row's base (REFINE200)."""
+    bb = e.get("base_bar")
+    if bb:
+        try:
+            d = dt.date.fromisoformat(str(bb)[:10])
+        except ValueError:
+            return None
+        return next((i for i, x in enumerate(days[:done]) if x == d), None)
+    bi = next((i for i, x in enumerate(days[:done]) if x >= base_day), None)
+    if bi is None or (days[bi] - base_day).days > MAX_GAP:
+        return None
+    return bi
+
+
+def _bench_closes(frames: dict, market: str, cache: dict) -> dict:
+    """{bar date: close} of the market's benchmark frame (cached per call)."""
+    if market not in cache:
+        df = frames.get(BENCH.get(market, ""))
+        out = {}
+        if df is not None and not getattr(df, "empty", True):
+            for d, c in zip(_bar_days(df), df["Close"]):
+                try:
+                    if float(c) > 0:
+                        out[d] = float(c)
+                except (TypeError, ValueError):
+                    continue
+        cache[market] = out
+    return cache[market]
+
+
+def _stamp_time(e: dict, key: str, iso: str) -> None:
+    e.setdefault("stamped_at", {})[key] = iso
+
+
 def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None) -> int:
     """Fill matured horizons from downloaded daily bars. Returns stamps made.
 
@@ -265,23 +514,37 @@ def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None
     final_bar_cutoff(market, now) may still be forming, and a base or horizon
     read from it would freeze an intraday price for good. A missing frame, a
     not-yet-existing bar or a still-forming one leaves the horizon None for
-    the next run."""
+    the next run.
+
+    Returns are read off ONE frame - its base close and its horizon close -
+    because Yahoo's closes are dividend-adjusted (auto_adjust): the ratio is
+    the total return, where a stored base against a later-adjusted horizon
+    would not be. The stored base_close is never rewritten.
+
+    Every NEW stamp records `stamped_at` (REFINE200 #30); a new base records
+    `base_bar` and `price_source`; every horizon stamped under this regime
+    owes a `bench` - the market benchmark between the same two bar dates
+    (#28), measured when the horizon is, or retried while the row is still
+    being priced."""
     now = now or dt.datetime.now(dt.timezone.utc)
+    iso = now.astimezone(dt.timezone.utc).isoformat(timespec="seconds")
+    bench_cache: dict = {}
     stamped = 0
     for sym, entries in want.items():
         df = frames.get(sym)
         if df is None or getattr(df, "empty", True):
             continue
         closes = df["Close"]
-        days = [d.date() if hasattr(d, "date") else d for d in df.index]
+        days = _bar_days(df)
         for e in entries:
             try:
                 base_day = dt.date.fromisoformat(e["base_day"])
             except (KeyError, ValueError):
                 continue
-            cutoff = final_bar_cutoff(e.get("market", ""), now)
+            market = e.get("market", "")
+            cutoff = final_bar_cutoff(market, now)
             done = sum(1 for d in days if d < cutoff)    # bars are date-ascending
-            bi = next((i for i, d in enumerate(days[:done]) if d >= base_day), None)
+            bi = _base_index(e, days, done, base_day)
             if bi is None:
                 continue
             base_close = float(closes.iloc[bi])
@@ -289,22 +552,32 @@ def stamp(ledger: dict, frames: dict, want: dict, now: dt.datetime | None = None
                 continue
             if e.get("base_close") is None:
                 e["base_close"] = round(base_close, 8)
+                e["base_bar"] = days[bi].isoformat()
+                e["price_source"] = str((getattr(df, "attrs", None) or {}).get("source") or "yahoo")
+                _stamp_time(e, "base", iso)
                 stamped += 1        # recording the baseline is itself a change
             for h in HORIZONS:
                 key = str(h)
-                if e["fwd"].get(key) is not None:
-                    continue                       # frozen at first measurement
-                if bi + h < done:
+                if bi + h >= done:
+                    continue
+                if e["fwd"].get(key) is None:
                     e["fwd"][key] = round(float(closes.iloc[bi + h]) / base_close - 1.0, 6)
+                    _stamp_time(e, key, iso)
                     stamped += 1
+                if key in (e.get("stamped_at") or {}) and (e.get("bench") or {}).get(key) is None:
+                    b = _bench_closes(frames, market, bench_cache)
+                    c0, ch = b.get(days[bi]), b.get(days[bi + h])
+                    if c0 and ch:
+                        e.setdefault("bench", {})[key] = round(ch / c0 - 1.0, 6)
+                        stamped += 1
     return stamped
 
 
 def trim(ledger: dict, cap: int | None = None) -> int:
     """Drop the OLDEST fully-stamped entries past the cap - never an entry
     still waiting on a horizon (dropping those silently un-measures the
-    feature). `cap` defaults to the ledger's own; edge_rosters.py reuses this
-    with its roster cap."""
+    feature). `cap` defaults to the ledger's own. (edge_rosters.py used to
+    reuse this with a roster cap; since REFINE200 #62 it never trims.)"""
     cap = CAP if cap is None else cap
     entries = ledger["entries"]
     if len(entries) <= cap:
@@ -316,9 +589,18 @@ def trim(ledger: dict, cap: int | None = None) -> int:
     return len(drop)
 
 
+def arg_value(argv, flag):
+    """The value after `flag` in argv, or None."""
+    if flag in argv:
+        i = argv.index(flag) + 1
+        return argv[i] if i < len(argv) else None
+    return None
+
+
 def main(argv=None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     dry = "--dry-run" in argv
+    frames_out = arg_value(argv, "--frames-out")
 
     try:
         with open(HISTORY, encoding="utf-8") as fh:
@@ -338,9 +620,10 @@ def main(argv=None) -> int:
     want = wanting_prices(ledger, today)
     stamped = 0
     if want:
-        from scanner.data import download
-        frames = download(sorted(want), period="3mo")
+        frames, periods = price_frames(want, today)
         stamped = stamp(ledger, frames, want, now)
+        if frames_out and not dry:
+            save_frames(frames_out, frames, periods, now)
     dropped = trim(ledger)
 
     entries = ledger["entries"]
@@ -366,9 +649,11 @@ def main(argv=None) -> int:
                 and _age(e) >= STALE_UNMATURED_DAYS)
     triples = [e for e in entries if (e.get("count") or 0) >= 3]
     trip_m = sum(1 for e in triples if e["fwd"].get("5") is not None)
+    benched = sum(1 for e in entries if any(v is not None for v in (e.get("bench") or {}).values()))
     print(f"maturity: {per_h}")
     print(f"stale-unmatured (>{STALE_UNMATURED_DAYS}d, likely delisted - retried anyway): {stale}")
     print(f"triple-lens cohort: {len(triples)} tracked, {trip_m} matured at 5s")
+    print(f"benchmarked rows (excess returns): {benched}/{n}")
 
     if not (added or enriched or stamped or dropped):
         print("ALERT_RETURNS_UNCHANGED")
