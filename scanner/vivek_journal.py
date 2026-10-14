@@ -196,6 +196,41 @@ def _r_of(price, entry, risk, is_long):
     return (price - entry) / risk if is_long else (entry - price) / risk
 
 
+def _excursion(trade: dict, price: float) -> None:
+    """Fold one price the trade was actually marked or filled at into its
+    running MAE/MFE, and re-derive mae_r/mfe_r from them.
+
+    REFINE200 #144. `_mark` was the only writer, and it only runs in session, so
+    two kinds of price the book really used never reached these fields: a mark
+    ACCEPTED outside the session (the closing scan's close -- it becomes
+    last_mark, unreal_r and the guard's day reference) and a hand close's exit
+    fill. The live book showed both: closed rows whose exit sat beyond their
+    own MFE (RHC 51.53 vs mfe 51.17) or MAE (WHI), and day_marks below the
+    recorded MAE. mae_r/mfe_r feed the live-vs-backtest MAE comparison, so the
+    gap biased it toward zero. Stored to 8 dp like every other price (the
+    frames are float32-derived, so an unrounded copy reads 24.3799991607666).
+    """
+    px = float(price)
+    is_long = trade.get("direction") == "long"
+    mfe = trade.get("mfe", px)
+    mae = trade.get("mae", px)
+    trade["mfe"] = round(max(mfe, px) if is_long else min(mfe, px), 8)
+    trade["mae"] = round(min(mae, px) if is_long else max(mae, px), 8)
+    entry, risk = trade.get("entry"), trade.get("risk") or 0.0
+    if entry is not None and risk > 0:
+        trade["mae_r"] = round(_r_of(trade["mae"], entry, risk, is_long), 3)
+        trade["mfe_r"] = round(_r_of(trade["mfe"], entry, risk, is_long), 3)
+
+
+#: Fields that describe an OPEN position's live mark and nothing else. They are
+#: dropped when a row closes (REFINE200 #24): left behind they froze at the
+#: last pre-close run on every closed row (all 111 at the time), a second,
+#: contradictory P&L beside realized_r. Nothing reads them off a closed row --
+#: every reader (journal.js, app.js, recs.js, stalled.js, book_stress, the
+#: guard's day reference, data.held_price_kwargs) walks the OPEN list.
+_OPEN_ONLY_FIELDS = ("unreal_r", "unreal_usd", "day_marks")
+
+
 def _close_remaining(trade: dict, price: float, day: str, reason: str,
                      costs: tuple[float, float] | None,
                      exit_reason: str | None = None) -> None:
@@ -212,7 +247,11 @@ def _close_remaining(trade: dict, price: float, day: str, reason: str,
     fill: "stop" / "time" / "manual"); `exit_reason` is the trade-level verdict
     when it differs ("trail" / "target" on a stop fill, or a caller's label on a
     hand close). Both default to the same string.
+
+    The exit fill is folded into MAE/MFE (#144) and the open-only mark fields
+    are dropped (#24) -- for closes from now on; closed rows are never edited.
     """
+    _excursion(trade, price)
     is_long = trade.get("direction") == "long"
     remaining = round(1.0 - (trade.get("booked_pct") or 0.0), 6)
     trade.setdefault("gross_r", trade.get("realized_r", 0.0))
@@ -232,6 +271,8 @@ def _close_remaining(trade: dict, price: float, day: str, reason: str,
                               - dt.date.fromisoformat(trade["entry_date"])).days
     except Exception:
         trade["hold_days"] = None
+    for k in _OPEN_ONLY_FIELDS:
+        trade.pop(k, None)
 
 
 def _snapshot(row: dict, tf: str, plan: dict, market: str,
@@ -292,9 +333,8 @@ def _mark(trade: dict, price: float, day: str, costs: tuple[float, float] | None
         return
     # Accumulate gross R here; costs are applied to derive the net realized_r.
     trade.setdefault("gross_r", trade.get("realized_r", 0.0))
-    # running MAE/MFE from the prices we actually observe
-    trade["mfe"] = max(trade["mfe"], price) if is_long else min(trade["mfe"], price)
-    trade["mae"] = min(trade["mae"], price) if is_long else max(trade["mae"], price)
+    # running MAE/MFE (and their R) from the prices we actually observe
+    _excursion(trade, price)
 
     pos = {"symbol": trade["symbol"], "direction": trade["direction"], "entry": entry,
            "stop": trade["stop"], "tp1": trade["tp1"], "tp2": trade["tp2"],
@@ -306,6 +346,14 @@ def _mark(trade: dict, price: float, day: str, costs: tuple[float, float] | None
         _close_remaining(trade, price, day, "stop", costs,
                          exit_reason=("target" if pos["tp3_hit"]
                                       else "trail" if pos["tp1_hit"] else "stop"))
+        # STOP SLIPPAGE, in R (REFINE200 #26): how far past the stop the fill
+        # landed, per unit, as a multiple of the trade's own initial risk. 0 =
+        # filled at the stop; positive = worse than the stop (the fill_slip_bps
+        # sign convention). Stops fill at the OBSERVED price, so an overnight
+        # gap shows up here instead of hiding inside a -1.2R average. Per unit,
+        # not weighted by the remaining fraction: it measures the gap.
+        gap = (pos["stop"] - price) if is_long else (price - pos["stop"])
+        trade["stop_slip_r"] = round(gap / risk, 4)
     else:
         for a in manage_position(pos, price):          # books TPs reached + moves SL
             if a["action"] == "scale":
@@ -319,9 +367,6 @@ def _mark(trade: dict, price: float, day: str, costs: tuple[float, float] | None
         # Derive the NET realized_r from accumulated gross R minus execution
         # costs (the stop branch's _close_remaining does the same itself).
         _apply_costs(trade, costs)
-
-    trade["mae_r"] = round(_r_of(trade["mae"], entry, risk, is_long), 3)
-    trade["mfe_r"] = round(_r_of(trade["mfe"], entry, risk, is_long), 3)
 
 
 def _stats(trades: list[dict]) -> dict:

@@ -47,7 +47,7 @@ from zoneinfo import ZoneInfo
 
 from .. import config
 from . import vivek_bot, vivek_guard
-from ..vivek_journal import (_close_remaining, _current_price, _mark,
+from ..vivek_journal import (_close_remaining, _current_price, _excursion, _mark,
                              _snapshot, costs_for, market_open)
 from ..journal_common import atomic_write
 
@@ -1310,6 +1310,11 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         # challenge budget on a run that could never have managed anything.
         if price is not None:
             price = _mark_sanity(pos, price, market, session_open=is_open)
+        if price is not None:
+            # An ACCEPTED mark is a price the book used -- it becomes last_mark,
+            # unreal_r and tomorrow's guard reference -- so it belongs in
+            # MAE/MFE whether or not the session is open (REFINE200 #144).
+            _excursion(pos, price)
         if price is not None and market == "crypto":
             _stamp_identity(pos, frames.get(yf_map.get(pos["symbol"])), src, anchor_of)
         if is_open and price is not None:
