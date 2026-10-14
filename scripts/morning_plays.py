@@ -23,15 +23,18 @@ is reco_note.py / evidence_brief.py.
 
 WHAT QUALIFIES (owner spec): LONG only, never a SHORT; never a fund/REIT/LIC/
 preferred (`is_product`); and either
-  * HIGH CONVICTION  -- app.js isHighConviction: a WEEKLY (1W) reclaim that is
-    armed and is A/A+ grade or has strong structure (>= 2 structural TPs); or
+  * HIGH CONVICTION  -- the four-cell rule (owner, 2026-09-20), IMPORTED from
+    scanner/conviction.py (conviction.HC_CELLS): grade A/A+ with an ARMED plan
+    in a 1W reclaim, 1W break, 3D reclaim or 1D break -- one target mark per
+    cell it fires on; or
   * (opt-in) a plain A+ long, when MORNING_PLAYS_INCLUDE_ALL_APLUS is True.
 
 DE-DUP (owner ask, 2026-09-09): a ticker already SENT within the last
 MORNING_PLAYS_DEDUP_DAYS days is skipped, so the reader (who charts each name)
 is never handed the same ticker twice inside the window. Only tickers that were
 ACTUALLY DELIVERED are recorded -- a failed post, a dry run or a missing webhook
-records nothing, so no name is ever silently buried. The record is counted from
+records nothing, and a name cut by the per-market row cap (the "+N more" line)
+is not recorded either, so no name is ever silently buried. The record is counted from
 when a name was SENT, not from when it went high-conviction, so a still-valid
 setup reappears once the window passes.
 
@@ -243,7 +246,7 @@ def _market_block(market: str, picks: list[dict], cap: int,
     fewer marks first inside a label."""
     lines = [f"**{market.upper()} PLAYS**"]
     if not picks:
-        lines.append("(none this morning)")
+        lines.append("(none today)")
         return lines
     shown = picks[:cap]
     for label in LABEL_ORDER:
@@ -271,6 +274,21 @@ def _market_block(market: str, picks: list[dict], cap: int,
     return lines
 
 
+def row_cap() -> int:
+    """The per-market row cap (config.MORNING_PLAYS_MAX_ROWS). One reader for
+    both the renderer and the sent-list, so a name past the cap -- shown only
+    as "+N more" -- is never recorded as delivered."""
+    return int(getattr(config, "MORNING_PLAYS_MAX_ROWS", 20) or 20)
+
+
+def shown_rows(picks_by_market: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    """The rows the digest actually LISTS per market: the first row_cap() of
+    each (the order select() gave them, which is the order _market_block
+    renders them in)."""
+    cap = row_cap()
+    return {m: list(v[:cap]) for m, v in picks_by_market.items()}
+
+
 def build_messages(picks_by_market: dict[str, list[dict]],
                    ages: dict[str, float | None],
                    when_label: str, had_qualifying: bool = False) -> list[str]:
@@ -284,13 +302,13 @@ def build_messages(picks_by_market: dict[str, list[dict]],
     if not sum(len(v) for v in picks_by_market.values()):
         if had_qualifying:
             days = int(getattr(config, "MORNING_PLAYS_DEDUP_DAYS", 0) or 0)
-            return [header + f"\nNo new plays this morning — every current "
+            return [header + f"\nNo new plays today — every current "
                     f"high-conviction name was already shared in the last "
                     f"{days} days."]
         return [header + f"\nNo high-conviction plays across {markets_label} "
-                "this morning."]
+                "today."]
 
-    cap = int(getattr(config, "MORNING_PLAYS_MAX_ROWS", 20) or 20)
+    cap = row_cap()
     stale_h = float(getattr(config, "MORNING_PLAYS_STALE_H", 20.0) or 0)
     lines = [header]
     for market, picks in picks_by_market.items():
@@ -559,7 +577,9 @@ def main(argv=None, now=None) -> int:
             return 0
         state, slot_name, use_state = load_state(seen_path), None, (window > 0 and not args.force)
 
-    when_label = f"{now_local:%a %-d %b}, {now_local:%H:%M} Melbourne"
+    # Portable day number: the glibc no-pad flag ("%" "-d") is rejected by
+    # Windows' strftime, and the owner runs this locally on Windows.
+    when_label = f"{now_local:%a} {now_local.day} {now_local:%b}, {now_local:%H:%M} Melbourne"
     picks_by_market, ages = gather(markets, pathlib.Path(args.data_dir), now_utc)
 
     # 7-day ticker dedup applies whenever we keep state (never under --force).
@@ -576,10 +596,11 @@ def main(argv=None, now=None) -> int:
 
     rc, delivered = deliver(messages, args.dry_run)
     if delivered and use_state:
-        # Record ONLY what actually went out; mark the slot done so its other DST
-        # cron (and any repeat run today) stays silent. A failed send records
-        # nothing, so it retries next run.
-        record_sent(sent, new_by_market, today, window)
+        # Record ONLY what actually went out -- the rows the digest LISTED, not
+        # the overflow behind "+N more", which stays eligible for the next one.
+        # Mark the slot done so its other DST cron (and any repeat run today)
+        # stays silent. A failed send records nothing, so it retries next run.
+        record_sent(sent, shown_rows(new_by_market), today, window)
         if slot_name:
             state["slots"][slot_name] = today.isoformat()
         state["sent"] = sent

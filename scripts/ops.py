@@ -11,7 +11,8 @@ limit. So this script runs INSIDE ops.yml: Claude dispatches the workflow with
 an `action` + JSON `args`, the runner calls the API with a secret only it can
 read, and Claude reads the result back off the job log / step summary.
 
-Stdlib only (urllib + json). No scanner imports, no repo writes, no git.
+Stdlib only (urllib + json). One scanner import, the stdlib-only config, for
+SITE_URL (REFINE200 #129). No repo writes, no git.
 
 ACTIONS
     cronjob-list                       every job on the account
@@ -45,10 +46,14 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import re
 import sys
 import urllib.error
 import urllib.request
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from scanner import config  # noqa: E402  (stdlib-only module)
 
 CRONJOB_API = "https://api.cron-job.org"
 CF_API = "https://api.cloudflare.com/client/v4"
@@ -64,7 +69,7 @@ ACTIONS = (
     "cf-list-vars", "cf-set-var", "cf-delete-var", "cf-redeploy",
     "cf-deployments", "site-probe",
 )
-SITE = "https://googy-boys-scanner.pages.dev"
+SITE = config.SITE_URL
 
 
 class OpsError(Exception):

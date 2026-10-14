@@ -46,7 +46,7 @@ HISTORY_CAP = 800
 
 MARKETS = ("asx", "nasdaq", "crypto")
 PM_ACTIVE = {"SWEPT", "DISPLACED", "RUNNING"}
-SITE = getattr(config, "SITE_URL", "https://googy-boys-scanner.pages.dev")
+SITE = config.SITE_URL                 # one copy of the address (REFINE200 #129)
 
 
 def _read(path: pathlib.Path):
