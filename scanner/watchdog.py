@@ -550,13 +550,16 @@ _CHANNEL_SECRETS = {
 def channel_problem(ch: str, env=None) -> str:
     """Why `ch` cannot deliver, or "" when it is configured. ASCII."""
     env = os.environ if env is None else env
-    if ch == "telegram" and not getattr(config, "TELEGRAM_ENABLED", True):
-        return "muted by config.TELEGRAM_ENABLED = False"
     if ch not in _CHANNEL_SECRETS:
         return "no sender for this channel"
     missing = [n for n in _CHANNEL_SECRETS[ch]
                if not config.clean_secret(env.get(n))]
-    return f"secret(s) not set: {', '.join(missing)}" if missing else ""
+    why = f"secret(s) not set: {', '.join(missing)}" if missing else ""
+    if ch == "telegram" and not config.TELEGRAM_ENABLED:
+        # The deliberate mute is named FIRST: with it on, setting the secrets
+        # alone still delivers nothing (REFINE200 #127).
+        return "muted by config.TELEGRAM_ENABLED = False" + (f"; {why}" if why else "")
+    return why
 
 
 def _undelivered(wanted: list[str], sent: list[str]) -> str:

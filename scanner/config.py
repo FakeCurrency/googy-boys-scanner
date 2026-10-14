@@ -1062,14 +1062,15 @@ ALERT_SEVERITY = {
     "vivek_guard":     "CRITICAL",
 }
 
-# Telegram delivers iff TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are both set:
-# the secrets are THE switch (REFINE200 #127, 2026-10-14). This flag stayed
-# False after the scalp-era bot it was muted for was removed (2026-09-17), a
-# hidden second off-switch: setting the secrets alone would still deliver
-# nothing, while every diagnostic blamed the secrets. True = follow the
-# secrets; False is a deliberate mute, and the watchdog's self-test and alert
-# summary name it when it is the reason.
-TELEGRAM_ENABLED = True
+# Telegram mute (2026-07 scalp era; kept OFF in REFINE200, 2026-10-14). This
+# flag is a deliberate mute set when the scalp bot was paused ("flip back to
+# True when the bot is ready to go live again"). REFINE200 #127 found it acts
+# as a hidden second off-switch: setting the TELEGRAM_* secrets alone delivers
+# nothing. Flipping it would start pushing CRITICAL/WARNING alerts to whatever
+# chat the secrets name, so that is left to the owner. What changed instead:
+# the watchdog's self-test and alert summary now NAME this mute as the reason
+# Telegram did not deliver (watchdog.channel_problem), so it is no longer hidden.
+TELEGRAM_ENABLED = False
 
 # Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
 # by owner ruling — "get rid of the discord aspect, I will work on
