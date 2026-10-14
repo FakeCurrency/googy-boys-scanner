@@ -326,7 +326,13 @@ def random_timing(prepared: List[Prepared], real: List[dict], *, draws: int,
             sim = E.simulate(pr.o, pr.h, pr.lo, pr.c, pr.trail9, start=t0 + 1,
                              entry=entry, stop=stop, max_hold=hold)
             cost_r = (cost / 100.0) * entry / risk
+            # `_parent_entry`: the REAL trade this draw is a control for. The
+            # period splits file a draw by its PARENT, so a trade's controls
+            # always sit in the trade's own bucket (REFINE200 #178: filed by
+            # their own dates, draws for late-2023 parents counted as
+            # out-of-sample and the OOS baseline outgrew 5 draws a trade).
             out.append({"symbol": t["symbol"], "_t0": t0, "_mkt": pr.market,
+                        "_parent_entry": t.get("entry_date"),
                         "trigger_date": E._date(pr.df.index[t0]),
                         "entry_date": E._date(pr.df.index[t0 + 1]),
                         "exit_date": E._date(pr.df.index[sim["exit_bar"]]),
@@ -462,16 +468,51 @@ def _group(trades: List[dict], keyfn, *, boot: int = 0, seed: int = 0) -> dict:
     return {k: stats(v, boot=boot, seed=seed) for k, v in sorted(groups.items())}
 
 
+def _period_date(t: dict) -> str:
+    """The date a trade is FILED by for the period splits: its own entry, or,
+    for a random-timing draw, its parent trade's entry (`_parent_entry`)."""
+    return t.get("_parent_entry") or t["entry_date"]
+
+
 def _split_key(t: dict) -> str:
-    return "in_sample" if t["entry_date"] < config.IGNITION_BT_SPLIT_DATE else "out_of_sample"
+    return "in_sample" if _period_date(t) < config.IGNITION_BT_SPLIT_DATE else "out_of_sample"
+
+
+def _forward(trades: List[dict], start: str) -> List[dict]:
+    return [t for t in trades if not t.get("skipped") and _period_date(t) >= start]
 
 
 def _by_split(trades: List[dict], *, boot: int, seed: int) -> dict:
     out = _group(trades, _split_key, boot=boot, seed=seed)
     fwd = [t for t in trades if not t.get("skipped")
-           and t["entry_date"] >= E.mkt(t.get("_mkt") or "crypto", "IGNITION_BT_REGISTERED_DATE")]
+           and _period_date(t) >= E.mkt(t.get("_mkt") or "crypto", "IGNITION_BT_REGISTERED_DATE")]
     out["forward"] = stats(fwd, boot=boot, seed=seed)
     return out
+
+
+def forward_compare(primary: List[dict], compare: List[dict], market: str, *,
+                    boot: int, seed: int) -> dict:
+    """THE PRE-REGISTERED FORWARD COMPARISON (REFINE200 #49): the primary
+    exit and config.IGNITION_FORWARD_COMPARE_EXIT on EXACTLY the same
+    entries, over the forward bucket only -- the one span of data nobody had
+    seen when the comparison was registered (the later of the market's own
+    registration date and IGNITION_FORWARD_COMPARE_FROM). Reported, never
+    acted on: the primary exit does not move, and `versus` is the compare
+    exit's expectancy minus the primary's on the same trades."""
+    start = max(str(E.mkt(market, "IGNITION_BT_REGISTERED_DATE")),
+                str(config.IGNITION_FORWARD_COMPARE_FROM))
+    a, b = _forward(primary, start), _forward(compare, start)
+    return {
+        "from": start,
+        "primary_exit": "trail9",
+        "compare_exit": config.IGNITION_FORWARD_COMPARE_EXIT,
+        "registered": config.IGNITION_FORWARD_COMPARE_FROM,
+        "primary": stats(a, boot=boot, seed=seed),
+        "compare": stats(b, boot=boot, seed=seed),
+        "versus": versus(b, a, boot=boot, seed=seed),
+        "note": "pre-registered before any forward trade existed; the primary exit "
+                "does not change on this, it is the evidence for asking",
+    }
 
 
 def _rules_for(prepared: List[Prepared], p: E.Params) -> List[pd.DataFrame]:
@@ -577,8 +618,9 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
     primary = scored(primary_all)
     entries = _entries_of(primary)
 
-    exits = {spec: stats(run_all(prepared, p, rules, entries=entries, exit_spec=spec))
-             for spec in EXIT_SPECS}
+    exit_trades = {spec: scored(run_all(prepared, p, rules, entries=entries, exit_spec=spec))
+                   for spec in EXIT_SPECS}
+    exits = {spec: stats(tr) for spec, tr in exit_trades.items()}
     stops = {"struct": stats(primary),
              "floor": stats(run_all(prepared, p, rules, entries=entries, stop_spec="floor"))}
     cost_x2 = stats(run_all(prepared, p, rules, entries=entries,
@@ -602,6 +644,8 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
         "random_timing_any": versus(primary, rand_any, boot=boot, seed=seed),
         "breakout_only": versus(primary, brk, boot=boot, seed=seed),
         "no_rvol": versus(primary, norv, boot=boot, seed=seed),
+        # The baseline filed by each draw's PARENT trade (_split_key reads
+        # `_parent_entry`), so these are the OOS trades' own controls.
         "random_timing_out_of_sample": versus(
             [t for t in primary if not t.get("skipped") and _split_key(t) == "out_of_sample"],
             [t for t in rand if _split_key(t) == "out_of_sample"], boot=boot, seed=seed),
@@ -676,6 +720,8 @@ def backtest(frames: Dict[str, pd.DataFrame], market: str, *,
                 "regime_index": {"symbol": rg_idx, "label": rg_label}}),
         },
         "versus": vs,
+        "forward_compare": forward_compare(primary, exit_trades[config.IGNITION_FORWARD_COMPARE_EXIT],
+                                           market, boot=boot, seed=seed),
         "exits": exits,
         "exit_specs": EXIT_DESCRIPTIONS,
         "stops": stops,
@@ -799,6 +845,11 @@ def summary_lines(payload: dict) -> List[str]:
         f"  out-of-sample: {_brief(sp.get('out_of_sample'))}",
         f"  forward (from {(payload.get('pre_registered') or {}).get('registered')}): "
         f"{_brief(sp.get('forward'))}",
+        f"  forward exit comparison (pre-registered, from "
+        f"{(payload.get('forward_compare') or {}).get('from')}): "
+        f"{(payload.get('forward_compare') or {}).get('compare_exit')} "
+        f"{_brief((payload.get('forward_compare') or {}).get('compare'))} vs trail9 "
+        f"{_brief((payload.get('forward_compare') or {}).get('primary'))}",
         f"VERSUS random timing (same symbol, same season): {_vs(V.get('random_timing'))}",
         f"VERSUS random timing, out-of-sample only: {_vs(V.get('random_timing_out_of_sample'))}",
         f"VERSUS random timing (any time): {_vs(V.get('random_timing_any'))}",
