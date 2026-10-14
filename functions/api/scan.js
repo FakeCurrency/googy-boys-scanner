@@ -136,7 +136,9 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
 
   if (r.ok) {
     const scope = market === "all" ? "Full scan" : `${market.toUpperCase()} scan`;
-    const eta = market === "all" ? "~6–10 minutes" : "~2–4 minutes";
+    // REFINE200 #169: the measured dispatch-to-served latency (run + commit +
+    // Pages deploy; heartbeat.js records 13-18 min), not the old 2-4 guess.
+    const eta = market === "all" ? "~15–25 minutes" : "~10–20 minutes";
     return json(202, {
       ok: true,
       configured: true,

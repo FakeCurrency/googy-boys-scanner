@@ -299,6 +299,21 @@ window.PM = (() => {
      full house). Computed client-side from the three latest scan files so
      it's always as fresh as whatever each lens last published. */
   const PM_ACTIVE_STATES = ["SWEPT", "DISPLACED", "RUNNING"];
+  // REFINE200 #41: an evidence note, not a disclaimer. The study
+  // (vivek_confluence_study.json, C1 gap +0.0005R) and the forward ledger
+  // (edge_summary.json: aligned longs -2.71% at 20 sessions vs plain A+
+  // longs -3.19%) both found no edge, so the chip and pill say so.
+  const CONFLUENCE_UNPROVEN =
+    "Unproven: multi-lens alignment has not beaten plain A+ in the study or the forward ledger.";
+  // REFINE200 #70: the three fields this needs (ticker / direction / state)
+  // ship in PhaseMap's slim confluence.json; the 1MB latest.json is only the
+  // fallback for a market that has not published the slim file yet (404) or
+  // a body that does not parse. Returns the latest.json shape ({results}).
+  async function loadPhaseMapRows(market, grab) {
+    const slim = await grab(`data/phasemap/${market}/confluence.json`);
+    if (slim && Array.isArray(slim.rows)) return { results: slim.rows };
+    return grab(`data/phasemap/${market}/latest.json`);
+  }
   async function loadConfluence(market, vivekData = null) {
     const grab = (url) => fetchTimeout(url, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -307,7 +322,7 @@ window.PM = (() => {
     // downloaded twice per load. Callers that pass nothing behave as before.
     const [vivek, pm, spec] = await Promise.all([
       vivekData ? Promise.resolve(vivekData) : grab(`data/${market}_vivek.json`),
-      grab(`data/phasemap/${market}/latest.json`),
+      loadPhaseMapRows(market, grab),
       // No crypto Specs file exists — the guard every reader has always used.
       market !== "crypto" ? grab(`data/${market}_spec.json`) : null,
     ]);
@@ -403,7 +418,7 @@ window.PM = (() => {
     const triple = info.count >= 3;
     return `<span class="pm-conf${triple ? " pm-conf-3" : ""}" ` +
       `title="Multiple independent lenses have an ACTIVE ${info.side} setup on this ` +
-      `name right now — rare alignment, review every view">` +
+      `name right now — review every view. ${CONFLUENCE_UNPROVEN}">` +
       `${triple ? "🎯 " : "⨂ "}${info.count}-LENS · +${others.join(" +")}</span>`;
   }
 
@@ -461,7 +476,8 @@ window.PM = (() => {
            ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
            stepperHTML, whyHTML, glossaryHTML,
            isFundReit, toggleSpeak,
-           loadConfluence, confluenceChipHTML, confluenceBannerHTML,
+           loadConfluence, loadPhaseMapRows, CONFLUENCE_UNPROVEN,
+           confluenceChipHTML, confluenceBannerHTML,
            staleBadgeHTML, fmtMelb, loadFailKind, retryHTML,
            fetchTimeout, DATA_FETCH_TIMEOUT_MS };
 })();
