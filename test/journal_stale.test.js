@@ -53,24 +53,9 @@ vm.runInContext(
   "const scanAge = new Map();\n"
   + slice("const ageOf = (key)", ";\n") + "\n"
   + slice("const staleWord = (d)", ";\n") + "\n"
-  + slice("function markStale(cell, days) {", "\n  }") + "\n"
-  + "this.scanAge = scanAge; this.ageOf = ageOf; this.staleWord = staleWord;"
-  + "this.markStale = markStale;",
+  + "this.scanAge = scanAge; this.ageOf = ageOf; this.staleWord = staleWord;",
   ctx);
-const { scanAge, ageOf, staleWord, markStale } = ctx;
-
-// The smallest thing markStale can act on: it toggles one class and sets title.
-function cell() {
-  const set = new Set();
-  return {
-    title: "",
-    classList: {
-      toggle(c, on) { if (on) set.add(c); else set.delete(c); },
-      contains: (c) => set.has(c),
-    },
-  };
-}
-const isStale = (c) => c.classList.contains("jr-stale");
+const { scanAge, ageOf, staleWord } = ctx;
 
 // ── the sparse convention ────────────────────────────────────────────────────
 suite("absent means fresh");
@@ -91,46 +76,12 @@ test("a recorded age comes back as itself", () => {
 });
 
 // ── the badge ────────────────────────────────────────────────────────────────
+// markStale (a helper that toggled the badge on a live DOM cell) had no caller
+// since the live-quote chain went, 2026-09-21, and was deleted with its pins
+// (REFINE200 #94). The bot Now cell re-derives its class from ageOf() on every
+// render, and loadScanMeta's scanAge.delete clears an age that went fresh —
+// both pinned in "wiring" below, which is where the clearing now lives.
 suite("what the owner sees");
-
-test("a stale mark is badged and says where the price came from", () => {
-  const c = cell();
-  markStale(c, 6);
-  assert.ok(isStale(c));
-  // The title has to name the CAUSE, not just the age. "6 sessions old" invites
-  // "so what"; "missing from the latest scan, filled from cache" is the fact
-  // that tells him the R beside it is computed off a price nobody quoted today.
-  assert.match(c.title, /6 sessions/);
-  assert.match(c.title, /cache/i);
-});
-
-test("a fresh mark is left completely alone", () => {
-  const c = cell();
-  markStale(c, 0);
-  assert.ok(!isStale(c));
-  assert.equal(c.title, "");
-});
-
-test("THE ONE THAT MATTERS: a name that comes back loses its badge", () => {
-  // markStale has had no page caller since 2026-09-21 (the bot Now cell
-  // re-derives its class from ageOf() on each render, and loadScanMeta's
-  // scanAge.delete is what clears it); the helper is kept and pinned. If it
-  // only ever ADDED the badge, the first stale run would mark a cell permanently — and a badge that never
-  // clears is worse than no badge at all, because it trains you to read past
-  // the ones that are real. Both branches of the toggle always run.
-  const c = cell();
-  markStale(c, 9);
-  assert.ok(isStale(c));
-  markStale(c, 0);
-  assert.ok(!isStale(c), "the badge survived the name coming back into the scan");
-  assert.equal(c.title, "");
-});
-
-test("markStale is a no-op on a cell that is not there", () => {
-  // Kept for any future caller: a row may be re-rendered out from under it.
-  assert.doesNotThrow(() => markStale(null, 3));
-  assert.doesNotThrow(() => markStale(undefined, 0));
-});
 
 test("one session is a session, not sessions", () => {
   assert.equal(staleWord(1), "1 session");

@@ -70,21 +70,12 @@ function slice(startMarker, endMarker) {
 const ctx = vm.createContext({ console });
 vm.runInContext(
   "let EQUITY = 150000, POSITION_NOTIONAL = 2500, RISK_PCT = 0.35;\n"
-  + "const RISK_MIN = 0.25, RISK_MAX = 0.5;\n"
-  + "const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };\n"
   + "let SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };\n"
-  + "const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };\n"
-  + "const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };\n"
   + "const isCryptoTrade = (t) => (t.market || t.asset_type) === 'crypto';\n"
-  + "const today = () => '2026-07-28';\n"
   + "let FX_AUDUSD = 0.66;\n"
   + slice("const round = (v, n)", ";\n") + "\n"
   + slice("function marketOf(t) {", "\n  }") + "\n"
-  + slice("function sizeOf(market, entry, stop) {", "\n  }") + "\n"
-  + slice("const costsFor = (market) =>", "];\n") + "\n"
-  + slice("function costR(t, slip, comm) {", "\n  }") + "\n"
   + slice("const rOf = (price, entry, risk, isLong)", ";\n") + "\n"
-  + slice("const isVivek = (t) =>", ";\n") + "\n"
   + "let RULES_GEN = 1;\n"
   + slice("const isAudRow = (t) =>", ";\n") + "\n"
   + slice("const fxOf = (t) =>", ";\n") + "\n"
@@ -105,18 +96,16 @@ vm.runInContext(
   + "let painted = [];\n"
   + "function paintOpen(side) { painted.push(side); }\n"
   + slice("function setOpenSort(key) {", "\n  }") + "\n"
-  + "this.stats = stats; this.byExit = byExit; this.sizeOf = sizeOf;"
+  + "this.stats = stats; this.byExit = byExit;"
   + "this.bumpGen = () => { RULES_GEN++; }; this.gen = () => RULES_GEN;"
-  + "this.costR = costR;"
   + "this.openMetric = openMetric; this.sortedOpen = sortedOpen;"
   + "this.setOpenSort = setOpenSort; this.scanPrice = scanPrice;"
   + "this.sortState = () => ({ ...openSort });"
   + "this.resetSort = () => { openSort = { key: 'opened', dir: -1 }; painted = []; };"
   + "this.painted = () => painted.slice();",
   ctx);
-const { stats, byExit, sizeOf, bumpGen, gen } = ctx;
+const { stats, byExit } = ctx;
 const { openMetric, sortedOpen, setOpenSort, scanPrice, sortState, resetSort, painted } = ctx;
-const { costR } = ctx;
 
 // CODE-only view of the source. A substring ban that reads its own explanatory
 // comment as the offence passes forever against the bug it describes — this
@@ -232,62 +221,11 @@ test("journal.js adopts bot_rules.tp_scale and shouts when it differs", () => {
 });
 
 // ── #74 — the cost model's exit test ───────────────────────────────────────
-// Inverted 2026-08-07. `vivek_journal._cost_r` was flipped to a deny-list by
-// TOP100 #74 and this JS copy was left on the old ALLOW-list, under a comment
-// asserting the two agreed. Four exit reasons exist in the tree; the allow-list
-// knew two.
-suite("#74 — every exit that is not a resting limit pays slippage");
-
-// entry 100, stop 90 → 1R = 10 points. slip/comm as round numbers so the
-// arithmetic is checkable by hand rather than by copying the implementation.
-const SLIP = 0.001, COMM = 0.0005;
-const withExit = (reason) => ({
-  entry: 100, risk: 10, exits: [{ reason, price: 100, pct: 1 }],
-});
-
-test("a resting TP limit pays commission only", () => {
-  // entry leg 100*(slip+comm) + exit leg 100*comm, over 1R = 10
-  const want = (100 * (SLIP + COMM) + 100 * COMM) / 10;
-  for (const r of ["tp1", "tp2", "tp3"]) {
-    assert.equal(costR(withExit(r), SLIP, COMM), want, `${r} should not pay slippage`);
-  }
-});
-
-test("stop and manual pay slippage — unchanged by the inversion", () => {
-  const want = (100 * (SLIP + COMM) + 100 * (COMM + SLIP)) / 10;
-  assert.equal(costR(withExit("stop"), SLIP, COMM), want);
-  assert.equal(costR(withExit("manual"), SLIP, COMM), want);
-});
-
-test("time and eod pay slippage too — the two the allow-list missed", () => {
-  // vivek_run.py writes `time`; vivek_backtest.py writes `eod`. The Python has
-  // charged both since #74. Before the inversion this JS charged neither, which
-  // UNDER-reports cost and therefore OVER-reports realized R, win rate and
-  // expectancy — on the Me side of a Me-vs-Claude comparison.
-  const want = (100 * (SLIP + COMM) + 100 * (COMM + SLIP)) / 10;
-  assert.equal(costR(withExit("time"), SLIP, COMM), want, "a time-stop is a market exit");
-  assert.equal(costR(withExit("eod"), SLIP, COMM), want, "an eod close is a market exit");
-});
-
-test("an unknown reason fails EXPENSIVE, not cheap", () => {
-  // The whole point of the deny-list shape. A reason nobody has thought of yet
-  // must not silently arrive free — that error flatters the record and is
-  // invisible downstream (vivek_journal.py:83-88 makes the same argument).
-  const want = (100 * (SLIP + COMM) + 100 * (COMM + SLIP)) / 10;
-  assert.equal(costR(withExit("some_future_reason"), SLIP, COMM), want);
-  assert.equal(costR(withExit(""), SLIP, COMM), want);
-  assert.equal(costR({ entry: 100, risk: 10, exits: [{ price: 100, pct: 1 }] }, SLIP, COMM), want);
-});
-
-test("the JS deny-list is spelled the same way as the Python's", () => {
-  // Python: _LIMIT_EXIT_REASONS = ("tp1","tp2","tp3"); is_market = not startswith(...)
-  // If either side is edited alone, this and the numbers above disagree.
-  const py = fs.readFileSync(path.resolve(__dirname, "../scanner/vivek_journal.py"), "utf8");
-  assert.ok(/_LIMIT_EXIT_REASONS\s*=\s*\(\s*"tp1",\s*"tp2",\s*"tp3"\s*\)/.test(py),
-    "the Python limit-reason tuple moved — the JS mirror below is now guessing");
-  assert.ok(/const market = !\/\^tp\[123\]\//.test(CODE),
-    "journal.js costR is back on an allow-list, or the test moved");
-});
+// (costR — the JS mirror of vivek_journal._cost_r — had no caller on the page
+// after the manual journal went, 2026-09-21, and was deleted with its pins,
+// REFINE200 #94. The Python deny-list it mirrored is still pinned in
+// tests/test_vivek_journal.py; hygiene.test.js keeps the JS copy from coming
+// back without a caller.)
 
 // ── the open-positions sort ──────────────────────────────────────────────────
 // Owner-requested 2026-08-07: "toggle by which one is currently in the BEST $
@@ -523,8 +461,26 @@ test("the 3-minute refresh re-reads bot_rules.json, not just the book", () => {
   const i = SRC.indexOf("setInterval(async () => {");
   assert.ok(i >= 0, "the refresh interval is gone");
   const body = SRC.slice(i, SRC.indexOf("}, 180000);", i));
-  assert.ok(/loadBotRules\(\)/.test(body), "the refresh no longer re-reads the rules");
-  assert.ok(/loadBot\(\)/.test(body), "the refresh no longer re-reads the book");
+  // `true` = a FRESH read through the shared loader (REFINE200 #68): without
+  // it the refresh would be handed the page's first, memoised copy for ever.
+  assert.ok(/loadBotRules\(true\)/.test(body), "the refresh no longer re-reads the rules fresh");
+  assert.ok(/loadBot\(true\)/.test(body), "the refresh no longer re-reads the book fresh");
+});
+
+test("the book and the rules come from the page's ONE shared read (REFINE200 #68)", () => {
+  // nav.js window.VivekBook: stalled.js and the status sheet read the same
+  // promise, so the ~370 KB book crosses the network once per page.
+  assert.ok(/VB\.get\(\{ fresh \}\)/.test(CODE) && /VB\.rules\(\{ fresh \}\)/.test(CODE),
+    "journal.js no longer reads through the shared loader");
+  assert.ok(/await sharedRead\("book", fresh\)/.test(CODE), "loadBot bypasses the shared read");
+  assert.ok(/await sharedRead\("rules", fresh\)/.test(CODE), "loadBotRules bypasses the shared read");
+  assert.ok(!/fetch\("data\/vivek_bot_book\.json", \{ cache: "no-cache" \}\)\)/.test(CODE.replace(/sharedRead[\s\S]*?\n  \};/, "")),
+    "a second direct book fetch is back outside the fallback");
+});
+
+test("the full-scan price fallback is gone — the slim <m>_prices.json is the source (REFINE200 #72)", () => {
+  assert.ok(!/_vivek\.json/.test(CODE), "journal.js reads a full <m>_vivek.json again");
+  assert.ok(/data\/\$\{mkt\}_prices\.json/.test(CODE), "the slim prices read is gone");
 });
 
 test("journal.html requests a journal.css new enough to style the sort control", () => {
@@ -979,11 +935,17 @@ vm.runInContext(
   slice("const MECHANICAL_EXITS =", "];")
   + "\n" + slice("const W3_TAG =", ";")
   + "\n" + slice("const W3_TARGET =", ";")
+  + "\n" + slice("const W3_ENDED =", ";")
+  + "\n" + slice("const W3_BAND =", ";")
+  + "\nlet LIVE_CYCLE = 'hc4-1';"
   + "\n" + slice("const esc =", "[c]));")
+  + "\n" + slice("function w3Readout(d) {", "\n  }")
+  + "\n" + slice("const w3Verdict = (x) =>", ");\n")
   + "\n" + slice("function w3Rows(d) {", "\n  }")
   + "\n" + slice("function w3Line(d) {", "\n  }")
-  + "\nthis.w3Line = w3Line; this.w3Rows = w3Rows;", w3ctx);
-const { w3Line, w3Rows } = w3ctx;
+  + "\nthis.w3Line = w3Line; this.w3Rows = w3Rows; this.w3Readout = w3Readout;"
+  + "\nthis.setCycle = (t) => { LIVE_CYCLE = t; };", w3ctx);
+const { w3Line, w3Rows, w3Readout } = w3ctx;
 const w3row = (cycle) => (cycle ? { cycle } : {});
 const w3close = (o) => Object.assign(
   { cycle: "w3-1", symbol: "SGP", market: "asx", exit_reason: "manual",
@@ -1008,8 +970,10 @@ test("a different cycle tag is not counted as w3-1", () => {
 });
 
 test("renderSide injects it above the bot stats, and re-render does not duplicate", () => {
-  assert.ok(/document\.querySelectorAll\("#bot-w3"\)\.forEach\(\(el\) => el\.remove\(\)\);/.test(SRC),
+  assert.ok(/document\.querySelectorAll\("#bot-w3, #bot-hc"\)\.forEach\(\(el\) => el\.remove\(\)\);/.test(SRC),
     "the remove-before-insert guard is gone - every refresh would stack another line");
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", cycleLine\(d\)\)/.test(SRC),
+    "renderSide no longer renders the current-cycle scoreboard");
   assert.ok(/host\.insertAdjacentHTML\("beforebegin", w3Line\(d\)\)/.test(SRC),
     "renderSide no longer renders the w3 line");
 });
@@ -1224,6 +1188,284 @@ test("symbol and exit path are escaped before they reach innerHTML", () => {
   assert.ok(!/"evil"/.test(h) || /&quot;evil&quot;/.test(h), "exit path reached the DOM unescaped");
 });
 
+// ── w3-1 ENDED, AND ITS READOUT (REFINE200 #194) ────────────────────────────
+suite("w3-1 — the cycle ended, and its 30-close readout is printed");
+
+// 30+ closes: the first 30 in EXIT order are the pre-registered readout.
+const w3book = (n, rOf, extra) => ({ open: [w3row("w3-1")], closed: Array.from({ length: n }, (_, i) =>
+  w3close(Object.assign({ symbol: "S" + i, exit_date: `2026-09-${String(1 + Math.floor(i / 3)).padStart(2, "0")}`,
+    realized_r: rOf(i), exit_reason: i % 4 === 0 ? "stop" : "manual" }, (extra || {})[i] || {}))) });
+
+test("the strip says the cycle ENDED and names the current one", () => {
+  const h = w3Line({ open: [w3row("w3-1")], closed: [w3close()] });
+  assert.ok(/ended 2026-09-21/.test(h), "the strip still reads like a live cycle");
+  assert.ok(/hc4-1 is current/.test(h), "the current cycle is not named");
+  w3ctx.setCycle("hc5-1");
+  try { assert.ok(/hc5-1 is current/.test(w3Line({ open: [w3row("w3-1")], closed: [] })),
+    "the current cycle must follow the published tag, not a literal"); }
+  finally { w3ctx.setCycle("hc4-1"); }
+});
+
+test("below 30 closes there is no readout, only the counter", () => {
+  const h = w3Line(w3book(29, () => -0.2));
+  assert.equal(w3Readout(w3book(29, () => -0.2)), null);
+  assert.ok(/<b>29\/30<\/b>/.test(h) && !/jr-w3-readout/.test(h));
+});
+
+test("past 30 closes the counter becomes the readout, measured on the FIRST 30 in exit order", () => {
+  // First 30 average -0.20R; the 10 later closes are +1R each, so the all-close
+  // average (+0.10R) differs and a readout computed on everything would show.
+  const book = w3book(40, (i) => (i < 30 ? -0.2 : 1));
+  const shuffled = { open: book.open, closed: book.closed.slice().reverse() };
+  const ro = w3Readout(shuffled);
+  assert.ok(Math.abs(ro.readout - -0.2) < 1e-9, `readout ${ro.readout} is not the first 30's average`);
+  assert.ok(Math.abs(ro.all - ((30 * -0.2 + 10) / 40)) < 1e-9, String(ro.all));
+  assert.equal(ro.at, "2026-09-10", "the readout date is the 30th close's exit date");
+  const h = w3Line(shuffled);
+  assert.ok(!/\/30<\/b> closes/.test(h), "the strip still counts toward a target it passed");
+  assert.ok(/<b>40<\/b> closes/.test(h));
+  assert.ok(/Readout at 30 closes \(2026-09-10\): <b>-0\.20R<\/b> a trade/.test(h), h);
+  assert.ok(/at or past the -0\.05 kill line/.test(h), "the band verdict is missing");
+  assert.ok(/All 40 closes to date: \+0\.10R/.test(h), h);
+  assert.ok(/the rules' own 10 exits/.test(h), "the rules-only figure is missing");
+});
+
+test("the readout is placed against the band in plain words, at every level", () => {
+  const at = (r) => w3Line(w3book(30, () => r));
+  assert.ok(/below the band \(pess \+0\.056\)\./.test(at(0.0)), at(0.0));
+  assert.ok(/inside the band/.test(at(0.08)));
+  assert.ok(/at or above the band's mid/.test(at(0.2)));
+});
+
+test("the readout is still inert — a result, not an instruction", () => {
+  const h = w3Line(w3book(35, () => -0.5));
+  assert.ok(!/<button|<a\s|<form|onclick=/i.test(h));
+  assert.ok(!/\b(kill it|stop the|you should|switch off)\b/i.test(h), "the readout tells the owner what to do");
+});
+
+// ── the current cycle's per-cell scoreboard (REFINE200 #37) ─────────────────
+suite("current-cycle scoreboard — per entry cell");
+
+const hcctx = vm.createContext({ console });
+vm.runInContext(
+  slice("const MECHANICAL_EXITS =", "];")
+  + "\n" + slice("const esc =", "[c]));")
+  + "\n" + slice("const rcls = (r) =>", ";\n")
+  + "\n" + slice("const TF_NAME =", ";\n")
+  + "\n" + slice("const CYCLE_TAG =", ";")
+  + "\n" + slice("let LIVE_CYCLE =", ";")
+  + "\n" + slice("let ENTRY_CELLS =", ";\n")
+  + "\n" + slice("const cellsOf = (ec) =>", "\n  };")
+  + "\n" + slice("function cycleCells(d, tag, cells) {", "\n  }")
+  + "\n" + slice("function cycleLine(d) {", "\n  }")
+  + "\nthis.cycleCells = cycleCells; this.cycleLine = cycleLine; this.cellsOf = cellsOf;"
+  + "\nthis.setLive = (t, c) => { LIVE_CYCLE = t; if (c) ENTRY_CELLS = c; };"
+  + "\nthis.cells = () => ENTRY_CELLS;", hcctx);
+const hcRow = (o) => Object.assign({ cycle: "hc4-1", timeframe: "3D", entry_type: "reclaim" }, o || {});
+const HC_BOOK = {
+  open: [hcRow(), hcRow({ timeframe: "1W" }), hcRow({ timeframe: "1D", entry_type: "break" }), hcRow({ cycle: "w3-1" })],
+  closed: [
+    hcRow({ exit_reason: "stop", realized_r: -1.1 }), hcRow({ exit_reason: "trail", realized_r: 0.05 }),
+    hcRow({ exit_reason: "manual", realized_r: 0.3 }), hcRow({ timeframe: "1W", exit_reason: "time", realized_r: -0.2 }),
+    hcRow({ cycle: "w3-1", exit_reason: "stop", realized_r: -1 }),
+  ],
+};
+const CELLS4 = [["1W", "reclaim"], ["1W", "break"], ["3D", "reclaim"], ["1D", "break"]];
+
+test("each cell counts its own opens, closes, rules R and hand closes", () => {
+  const c = hcctx.cycleCells(HC_BOOK, "hc4-1", CELLS4);
+  const by = Object.fromEntries(c.map((x) => [x.tf + " " + x.et, x]));
+  assert.equal(c.length, 4, "no 'other' bucket when every row fits a cell");
+  assert.deepEqual([by["3D reclaim"].open, by["3D reclaim"].closed, by["3D reclaim"].rules, by["3D reclaim"].hand], [1, 3, 2, 1]);
+  assert.ok(Math.abs(by["3D reclaim"].rulesR - -1.05) < 1e-9, "rules R is the stop + the trail only");
+  assert.ok(Math.abs(by["3D reclaim"].handR - 0.3) < 1e-9, "the hand close is kept apart");
+  assert.deepEqual([by["1W reclaim"].open, by["1W reclaim"].rules], [1, 1]);
+  assert.equal(by["1D break"].open, 1);
+  assert.deepEqual([by["1W break"].open, by["1W break"].closed], [0, 0]);
+});
+
+test("only rows stamped with the CURRENT tag are counted", () => {
+  const c = hcctx.cycleCells(HC_BOOK, "hc4-1", CELLS4);
+  assert.equal(c.reduce((n, x) => n + x.open + x.closed, 0), 7, "a w3-1 row leaked into the hc4-1 board");
+});
+
+test("a stamped row outside every cell lands in 'other', never vanishes", () => {
+  const c = hcctx.cycleCells({ open: [hcRow({ timeframe: "4H" })], closed: [] }, "hc4-1", CELLS4);
+  assert.equal(c.length, 5);
+  assert.equal(c[4].et, "other");
+  assert.equal(c[4].open, 1);
+});
+
+test("the board renders per cell with avg R, and is INERT", () => {
+  const h = hcctx.cycleLine(HC_BOOK);
+  assert.ok(/hc4-1 · current cycle · <b>3<\/b> open · <b>4<\/b> closed · <b>3<\/b> by the rules · <b>1<\/b> by hand/.test(h), h);
+  assert.ok(/3-Day reclaim<\/td><td class="num">1<\/td><td class="num">3<\/td>/.test(h), h);
+  assert.ok(/-0\.53R/.test(h), "the 3D reclaim rules average (-1.05 / 2) is missing");
+  assert.ok(/Weekly break<\/td><td class="num">0<\/td><td class="num">0<\/td><td class="num">—<\/td>/.test(h),
+    "an empty cell must read as a dash, never a fake +0.00R");
+  assert.ok(!/<button|<a\s|<form|onclick=|<details[^>]*\bopen\b/i.test(h), "the scoreboard grew a control");
+});
+
+test("silent until a row carries the current tag", () => {
+  assert.equal(hcctx.cycleLine({ open: [hcRow({ cycle: "w3-1" })], closed: [] }), "");
+  assert.equal(hcctx.cycleLine({ open: [], closed: [] }), "");
+});
+
+test("the tag and the cells come from bot_rules.json when published", () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(hcctx.cellsOf({ "1W": ["reclaim", "break"], "3D": ["reclaim"], "1D": ["break"] }))),
+    CELLS4, "entry_cells must flatten in the order the bot walks them");
+  assert.equal(hcctx.cellsOf(null), null);
+  assert.equal(hcctx.cellsOf({ "1W": "reclaim" }), null, "a malformed table keeps the fallback");
+  hcctx.setLive("hc5-1", [["3D", "reclaim"]]);
+  try {
+    const h = hcctx.cycleLine({ open: [hcRow({ cycle: "hc5-1" })], closed: [] });
+    assert.ok(/hc5-1 · current cycle/.test(h), h);
+    assert.equal((h.match(/<tr><td>/g) || []).length, 1, "the board must follow the published cells");
+  } finally { hcctx.setLive("hc4-1", CELLS4); }
+});
+
+test("the fallback cells equal config's VIVEK_BOT_ENTRY_CELLS (order included)", () => {
+  const cfg = fs.readFileSync(path.resolve(__dirname, "../scanner/config.py"), "utf8");
+  const m = /VIVEK_BOT_ENTRY_CELLS\s*=\s*\{([\s\S]*?)\}/.exec(cfg);
+  assert.ok(m, "config.VIVEK_BOT_ENTRY_CELLS moved — this pin needs re-pointing");
+  const pairs = [];
+  for (const mm of m[1].matchAll(/"(\w+)"\s*:\s*\(([^)]*)\)/g))
+    for (const et of mm[2].matchAll(/"(\w+)"/g)) pairs.push([mm[1], et[1]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(hcctx.cells())), pairs);
+});
+
+
+// ── closes carry a DATE, not a time (REFINE200 #187) ────────────────────────
+// No closed row records when in the day it closed. exitMs used to parse
+// `${exit_date}T16:00`, so every closed trade read "04:00 PM" — for crypto and
+// NASDAQ closes alike — and the hold column was measured to that invented time.
+suite("close time — the date only, holds counted in days from dates");
+
+const tctx = vm.createContext({ console });
+vm.runInContext(
+  slice("function exitMs(t) {", "\n  }") + "\n"
+  + slice("const ymd = (d) =>", ";\n") + "\n"
+  + slice("function exitDay(t) {", "\n  }") + "\n"
+  + slice("function holdText(t) {", "\n  }") + "\n"
+  + slice("function stamp(ms) {", "\n  }") + "\n"
+  + slice("function closeStamp(t) {", "\n  }") + "\n"
+  + slice("function weekBounds(off) {", "\n  }") + "\n"
+  + "this.exitMs = exitMs; this.exitDay = exitDay; this.holdText = holdText;"
+  + "this.closeStamp = closeStamp; this.weekBounds = weekBounds;", tctx);
+
+test("a date-only close is ordered at its local midnight — never at an invented 16:00", () => {
+  const ms = tctx.exitMs({ exit_date: "2026-09-17" });
+  const d = new Date(ms);
+  assert.deepEqual([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()], [2026, 8, 17, 0, 0]);
+  assert.equal(tctx.exitMs({ exit_date: "" }), null);
+  assert.equal(tctx.exitMs({}), null);
+});
+
+test("the Closed cell prints the DATE alone for a date-only row", () => {
+  const txt = tctx.closeStamp({ exit_date: "2026-09-17" });
+  assert.ok(/17/.test(txt), txt);
+  assert.ok(!/:|AM|PM|04/.test(txt), `an invented time is back on the close: "${txt}"`);
+  assert.equal(tctx.closeStamp({}), "—");
+});
+
+test("a row that DOES carry closed_at keeps its real time", () => {
+  const at = "2026-09-17T05:30:00Z";
+  assert.equal(tctx.exitMs({ closed_at: at, exit_date: "2026-09-17" }), Date.parse(at));
+  assert.ok(/:/.test(tctx.closeStamp({ closed_at: at })), "a real close time must still be shown");
+});
+
+test("hold is whole days from the dates — the engine's hold_days first", () => {
+  assert.equal(tctx.holdText({ hold_days: 15, entry_date: "2026-01-01", exit_date: "2026-01-02" }), "15d");
+  assert.equal(tctx.holdText({ entry_date: "2026-09-01", exit_date: "2026-09-17" }), "16d");
+  assert.equal(tctx.holdText({ entry_date: "2026-09-17", exit_date: "2026-09-17" }), "0d");
+  assert.equal(tctx.holdText({ entry_date: "2026-09-17" }), "—");
+});
+
+test("the week review buckets closes by DATE against the week's seven local dates", () => {
+  const wb = tctx.weekBounds(0);
+  assert.equal(wb.days.length, 7);
+  const mon = wb.mon;
+  assert.equal(wb.days[0], `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`);
+  assert.equal(tctx.exitDay({ exit_date: wb.days[6] }), wb.days[6], "Sunday's date-only close lands on Sunday");
+  assert.ok(/weekDays\.includes\(exitDay\(t\)\)/.test(CODE), "the week filter went back to millisecond windows");
+  assert.ok(/weekDays\.indexOf\(exitDay\(t\)\)/.test(CODE), "the day dots went back to millisecond arithmetic");
+});
+
+test("no render path measures a close against an invented time any more", () => {
+  assert.ok(!/T\$\{t\.exit_time \|\| "16:00"\}/.test(CODE), "the 16:00 default is back");
+  assert.ok(!/durText\(openedMs\(t\), exitMs\(t\)\)/.test(CODE), "a hold is measured to exitMs again");
+  assert.ok(/\$\{closeStamp\(t\)\}<span class="num-sub"> · \$\{holdText\(t\)\}/.test(CODE), "the Closed cell lost its date/hold");
+});
+
+// ── exit quality + the R-distribution caption (REFINE200 #186) ─────────────
+suite("exit quality — slippage is a STOP measure; the caption tracks the average");
+
+const xqctx = vm.createContext({ console });
+vm.runInContext(
+  "const els = {}; const $ = (sel) => (els[sel] = els[sel] || { innerHTML: '', textContent: '', hidden: true });\n"
+  + "let state = { bot: { closed: [] } };\n"
+  + slice("const esc =", "[c]));") + "\n"
+  + slice("const up  = (s) =>", ";\n") + "\n"
+  + slice("const rcls = (r) =>", ";\n") + "\n"
+  + slice("const rfmt = (r) =>", ";\n") + "\n"
+  + slice("const MECHANICAL_EXITS =", "];") + "\n"
+  + slice("const SLIP_EPS =", ";") + "\n"
+  + slice("function renderExitQuality() {", "\n  }") + "\n"
+  + slice("function rdistNote(counts, n, extra) {", "\n  }") + "\n"
+  + "this.run = (closed) => { state = { bot: { closed } }; renderExitQuality();"
+  + " return { grid: $('#jr-xq-grid').innerHTML, verdict: $('#jr-xq-verdict').textContent }; };"
+  + "this.rdistNote = rdistNote;", xqctx);
+const xc = (reason, r, o) => Object.assign({ symbol: "S", exit_reason: reason, realized_r: r, mfe_r: 0.1, mae_r: Math.min(r, 0) }, o || {});
+// The live shape that bit: 4 stops past -1R, and many small hand-closed losers.
+const XQ = [xc("stop", -1.2), xc("stop", -1.25), xc("stop", -1.15), xc("stop", -1.2, { symbol: "WHC" }),
+  ...Array.from({ length: 12 }, () => xc("manual", -0.2)), xc("time", -0.3), xc("target", 2.1)];
+
+test("slippage reads off the stop exits — not '≈none' beside a column of stop breaches", () => {
+  const { grid, verdict } = xqctx.run(XQ);
+  assert.ok(!/≈none/.test(grid), "the stop exits average -1.20R; slippage is not 'none'");
+  assert.ok(/Stop slippage<\/span><span class="jr-dg-val neg">-0\.20R avg past plan/.test(grid), grid);
+  assert.ok(/Stop exits only \(4, average -1\.20R\)/.test(grid), "the cell must say what it averaged");
+  assert.ok(/4 of 17 losers closed past the −1R stop/.test(verdict), verdict);
+  assert.ok(/Stop exits average -1\.20R over 4 — about 0\.20R past plan/.test(verdict), verdict);
+  assert.ok(/12 of 17 closed by hand/.test(verdict), "the hand closes behind the average loser must be named");
+  assert.ok(!/× the planned 1R/.test(verdict), "the all-losers risk multiple is back");
+});
+
+test("stops that land AT the plan read ≈none, and the verdict agrees", () => {
+  // A hand close past -1R is a breach, but it is not slippage: the stop exits
+  // themselves average -1.02R, inside the 0.05R noise band.
+  const { grid, verdict } = xqctx.run([xc("stop", -1.0), xc("stop", -1.02), xc("stop", -1.03),
+    xc("manual", -1.3), xc("target", 2)]);
+  assert.ok(/Stop slippage<\/span><span class="jr-dg-val ">≈none/.test(grid), grid);
+  assert.ok(/Stop exits average -1\.02R over 3 — at the plan\./.test(verdict), verdict);
+  assert.ok(!/past plan/.test(verdict), "the verdict contradicts the ≈none cell");
+});
+
+test("no stop exit yet says so instead of inventing a slippage figure", () => {
+  const { grid } = xqctx.run([xc("manual", -0.3), xc("manual", -0.2), xc("time", -0.1), xc("target", 1.5)]);
+  assert.ok(/no stop exits yet/.test(grid), grid);
+});
+
+test("the R-distribution caption never approves a book that loses money on average", () => {
+  // counts: <=-2, -2..-1, -1..0, 0..1, 1..2, 2..3, >3
+  const counts = [0, 19, 49, 37, 3, 2, 1];
+  const neg = xqctx.rdistNote(counts, 111, { avg: -0.13, handInside: 40 });
+  assert.ok(!/built to produce/.test(neg), `a -0.13R book was told it has the intended shape: ${neg}`);
+  assert.ok(/19 closed at or past −1R and 49 between −1R and 0 \(40 of them closed by hand\)/.test(neg), neg);
+  assert.ok(/-0\.13R a trade on average/.test(neg), neg);
+  assert.ok(!/68 losses at the stop/.test(neg));
+  const pos = xqctx.rdistNote(counts, 111, { avg: 0.21, handInside: 0 });
+  assert.ok(/built to produce/.test(pos), "a positive book keeps the approving sentence");
+  assert.ok(/\+0\.21R a trade on average/.test(pos), pos);
+  const unknown = xqctx.rdistNote(counts, 111);
+  assert.ok(!/built to produce/.test(unknown), "no average, no approval");
+});
+
+test("renderRDist hands the caption the average and the hand closes inside -1R", () => {
+  assert.ok(/rdistNote\(counts, closed\.length, \{ avg, handInside \}\)/.test(CODE),
+    "the caption no longer sees the average it must branch on");
+});
+
 
 // ── loadBotRules sets the off-scale gate (owner, 2026-09-27) ─────────────────
 // The flag must follow the PUBLISHED key, not the drift loop: that loop only
@@ -1241,15 +1483,19 @@ async function atest(name, fn) {
 const rctx = vm.createContext({ console: { warn() {}, log() {}, error() {} } });
 vm.runInContext(
   "let EQUITY = 150000, POSITION_NOTIONAL = 2500, RISK_PCT = 0.35, NOTIONAL_LIVE = false, RULES_GEN = 1;\n"
+  + "let LIVE_CYCLE = 'hc4-1', ENTRY_CELLS = [['1W', 'reclaim']];\n"
   + "const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };\n"
   + "const LEVERAGE = { asx: 5, nasdaq: 5, crypto: 3 };\n"
   + "const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };\n"
   + "const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };\n"
   + "let RULES = {};\n"
   + "const fetch = async () => ({ ok: true, json: async () => RULES });\n"
-  + slice("async function loadBotRules() {", "\n  }") + "\n"
+  + slice("const sharedRead = (kind, fresh) =>", "\n  };") + "\n"
+  + slice("const cellsOf = (ec) =>", "\n  };") + "\n"
+  + slice("async function loadBotRules(fresh) {", "\n  }") + "\n"
   + "this.load = async (rules) => { RULES = rules; NOTIONAL_LIVE = false; POSITION_NOTIONAL = 2500;"
-  + " await loadBotRules(); return { live: NOTIONAL_LIVE, notional: POSITION_NOTIONAL }; };",
+  + " await loadBotRules(); return { live: NOTIONAL_LIVE, notional: POSITION_NOTIONAL,"
+  + " cycle: LIVE_CYCLE, cells: JSON.stringify(ENTRY_CELLS) }; };",
   rctx);
 
 (async () => {
@@ -1268,6 +1514,14 @@ vm.runInContext(
     assert.deepEqual([r.live, r.notional], [false, 2500]);
     const s = await rctx.load({ position_notional: "2500" });
     assert.equal(s.live, false, "only a NUMBER is a published notional");
+  });
+  await atest("the published cycle_tag and entry_cells are adopted (REFINE200 #37/#125)", async () => {
+    const r = await rctx.load({ cycle_tag: "hc5-1", entry_cells: { "3D": ["reclaim"], "1D": ["break"] } });
+    assert.equal(r.cycle, "hc5-1");
+    assert.equal(r.cells, JSON.stringify([["3D", "reclaim"], ["1D", "break"]]));
+    const k = await rctx.load({ cycle_tag: "  ", entry_cells: "nope" });
+    assert.equal(k.cycle, "hc5-1", "a blank tag must not replace a good one");
+    assert.equal(k.cells, JSON.stringify([["3D", "reclaim"], ["1D", "break"]]), "a malformed table keeps the last good one");
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);
