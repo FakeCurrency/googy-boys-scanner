@@ -4,7 +4,7 @@
 Usage:
   python scripts/backup_journal.py backup           # create timestamped backup
   python scripts/backup_journal.py verify [<path>]  # check the newest is complete
-  python scripts/backup_journal.py restore <path>   # restore from a backup directory
+  python scripts/backup_journal.py restore <path>   # restore DATA from a backup dir
   python scripts/backup_journal.py list             # list available backups
 
 Backup directory: backups/YYYY-MM-DDTHH-MM-SS/
@@ -13,24 +13,34 @@ public/data files were retired and deleted, see git history):
   journal/vivek_bot_book*.json  (canonical per-market books = THE track record)
   journal/journal.json + journal/scalp_journal.json  (frozen legacy history)
   journal/*.log  (last 50k lines each)
-  public/data/vivek_bot_book.json + events.json
-  scanner/config.py
+  public/data/vivek_bot_book.json
+  scanner/config.py  (REFERENCE ONLY: the rules in force that night; restore
+                      never writes it back -- see RESTORE_NEVER)
   (2026-07-28, TOP100 #50) accumulated state:
   data/sector_map.json + its public twin, journal/confluence_state.json,
-  public/data/phasemap/alert_history.json, data/universe_cache/*.json —
-  see the comment on BACKUP_FILES for why each one cannot be recomputed.
+  public/data/phasemap/alert_history.json
+  (2026-10-14, REFINE200 #81) the edge ledgers + the scan-publish ledger:
+  data/alert_forward_returns.json, data/edge_rosters.json (+ shards under
+  data/edge_rosters/), public/data/funnel_history.json
+  -- see the comment on BACKUP_FILES for why each one cannot be recomputed.
 
 REQUIRED_FILES is the subset `verify` insists on. It is what turns "a backup
 directory appeared" into "the backup contains the track record", which is the
 only version of the question worth asking.
 
 Restore:
-  Overwrites the live files from the backup directory after confirmation.
-  Does NOT restore *.log files (logs are append-only, no restore needed).
+  Overwrites the live DATA files from the backup directory after confirmation,
+  each one atomically (temp + os.replace, rule 7). It verifies the snapshot
+  first and refuses an incomplete one unless --allow-incomplete. It NEVER
+  writes code or config back (RESTORE_NEVER): restoring a month-old
+  scanner/config.py would roll back every rule change since (SIZING 2 among
+  them) and could drop constants newer modules import. Does NOT restore *.log
+  files (logs are append-only, no restore needed).
 """
 
 import argparse
 import json
+import os
 import pathlib
 import shutil
 import sys
@@ -56,7 +66,10 @@ BACKUP_FILES = [
     #  pullback/reversal/short scans, scalp*.json, health.json,
     #  performance.json — were deleted from public/data; entries dropped.
     #  _copy() skips missing files, so old backups still restore cleanly.)
-    "public/data/events.json",
+    # (2026-10-14: public/data/events.json dropped -- nothing has read or
+    #  written it since the AI BOT's event calendar went, 2026-09-17.)
+    # REFERENCE ONLY: the rules that were in force on the night. Backed up so
+    # a snapshot can be READ against them; never restored (RESTORE_NEVER).
     "scanner/config.py",
     # TOP100 #50 (2026-07-28) - state that ACCUMULATES and was never snapshotted.
     # The inclusion rule: back a file up when losing it loses information that
@@ -79,22 +92,36 @@ BACKUP_FILES = [
     #   public/data/phasemap/alert_history.json
     #                                 the permanent ALERTS-page log, append-only
     #                                 and 139KB of it. Nothing reconstructs it.
-    #   data/universe_cache/*.json    asx.json is effectively IRREPLACEABLE: the
-    #                                 ASX directory fetch is dead, so the 2,212
-    #                                 names in it are frozen and a refetch
-    #                                 returns nothing. nasdaq/crypto would come
-    #                                 back on the next fetch; they travel with
-    #                                 asx because a half-restored roster dir is
-    #                                 worse than a whole one.
+    #   (data/universe_cache/*.json left this list 2026-10-14, REFINE200
+    #   #67: the ASX directory fetch it was kept for is alive again -- every
+    #   scan re-saves the roster -- so all three re-fetch on the next scan,
+    #   and git history holds every committed copy anyway.)
     #
     "data/sector_map.json",
     "public/data/sector_map.json",
     "journal/confluence_state.json",
     "public/data/phasemap/alert_history.json",
-    "data/universe_cache/asx.json",
-    "data/universe_cache/nasdaq.json",
-    "data/universe_cache/crypto.json",
+    # REFINE200 #81 (2026-10-14) - the ledgers no run can rebuild:
+    #   data/alert_forward_returns.json  the confluence edge ledger. Returns
+    #                                 are FROZEN at first stamp and the alert
+    #                                 history it ingests is a rolling 800-cap
+    #                                 window, so lost rows can never come back.
+    #   data/edge_rosters.json        the daily A+ baseline cohort, same
+    #   data/edge_rosters/*.json      plumbing and the same freeze; the glob
+    #                                 covers its shards if it is split.
+    #   public/data/funnel_history.json  the scan-publish ledger the status
+    #                                 lamp's uptime is measured from; appended
+    #                                 by every publish, rebuilt by nothing.
+    #   All four ride only the newest LEDGER_KEEP snapshots (see there).
+    "data/alert_forward_returns.json",
+    "data/edge_rosters.json",
+    "data/edge_rosters/*.json",
+    "public/data/funnel_history.json",
 ]
+
+# Backed up, NEVER restored: code and config. A snapshot's config.py is the
+# record of the rules in force that night, not a state file.
+RESTORE_NEVER = frozenset({"scanner/config.py"})
 
 # The subset whose ABSENCE means the backup failed, checked by verify() after
 # the snapshot is written (TOP100 #50). Two different bugs land here:
@@ -112,7 +139,9 @@ BACKUP_FILES = [
 # about nothing, and a muted channel is how the original blackout happened:
 #   - vivek_bot_book.unassigned.json is written only when a row has no market,
 #     so it is normally absent and is NOT required (it is still backed up);
-#   - events.json is small, published, and cheap to lose.
+#   - data/edge_rosters.json may be split into data/edge_rosters/ shards, so
+#     neither form is required (both are backed up).
+# No glob is ever required: a pattern has no single file to check.
 REQUIRED_FILES = [
     "journal/vivek_bot_book.asx.json",
     "journal/vivek_bot_book.nasdaq.json",
@@ -126,7 +155,8 @@ REQUIRED_FILES = [
     "public/data/sector_map.json",
     "journal/confluence_state.json",
     "public/data/phasemap/alert_history.json",
-    "data/universe_cache/asx.json",
+    "data/alert_forward_returns.json",
+    "public/data/funnel_history.json",
 ]
 
 LOG_FILES = [
@@ -138,6 +168,23 @@ LOG_TAIL_LINES = 50_000
 # Keep the newest N; backup() prunes older ones (the workflow stages deletions
 # with `git add -A backups`). 30 dailies ≈ a month of restore points.
 BACKUP_KEEP = 30
+
+# The big ledgers (~5.4 MB together, against ~1.9 MB for the rest of a
+# snapshot) ride only the newest LEDGER_KEEP snapshots (REFINE200 #81). Thirty
+# full copies would add ~160 MB to every checkout of the repo, every CI job's
+# included, for copies that buy little: the ledgers are append-mostly (a
+# stamped return is frozen), so the newest good copy carries what the older
+# ones did, and git history holds every committed version besides. A week of
+# copies covers a bad write that lands unnoticed. prune() thins the older
+# snapshots and records what it took in their manifest ("thinned"), and
+# verify() does not count a thinned file as missing.
+LEDGER_FILES = (
+    "data/alert_forward_returns.json",
+    "data/edge_rosters.json",
+    "data/edge_rosters/*.json",
+    "public/data/funnel_history.json",
+)
+LEDGER_KEEP = 7
 
 
 def _dated_dirs() -> list[pathlib.Path]:
@@ -161,7 +208,48 @@ def prune(keep: int = BACKUP_KEEP) -> int:
         shutil.rmtree(d, ignore_errors=True)
         removed += 1
         print(f"  prune {d.name}")
+    thin_ledgers()
     return removed
+
+
+def thin_ledgers(keep: int = LEDGER_KEEP) -> int:
+    """Drop the LEDGER_FILES copies from every snapshot older than the newest
+    `keep`, recording them in that snapshot's manifest as "thinned". Returns
+    the number of files removed. Idempotent."""
+    if keep <= 0:
+        return 0
+    removed = 0
+    for d in _dated_dirs()[:-keep]:
+        gone = [rel for rel in _expand(d, LEDGER_FILES) if (d / rel).is_file()]
+        if not gone:
+            continue
+        for rel in gone:
+            (d / rel).unlink()
+        mf = d / "manifest.json"
+        try:
+            manifest = json.loads(mf.read_text())
+        except Exception:                                  # noqa: BLE001
+            manifest = {}
+        manifest["files"] = [f for f in manifest.get("files", []) if f not in gone]
+        manifest["thinned"] = sorted(set(manifest.get("thinned", [])) | set(gone))
+        mf.write_text(json.dumps(manifest, indent=2))
+        removed += len(gone)
+        print(f"  thin  {d.name} ({len(gone)} ledger file(s))")
+    return removed
+
+
+def _expand(base: pathlib.Path, entries) -> list[str]:
+    """BACKUP_FILES with each glob entry ('*' in it) replaced by the files it
+    matches under `base` (sorted, POSIX-relative); literal entries pass
+    through whether or not they exist (the callers say "skip")."""
+    out: list[str] = []
+    for rel in entries:
+        if "*" in rel:
+            out += sorted(p.relative_to(base).as_posix()
+                          for p in base.glob(rel) if p.is_file())
+        else:
+            out.append(rel)
+    return out
 
 
 def _ts() -> str:
@@ -174,7 +262,7 @@ def backup() -> pathlib.Path:
     dest.mkdir(parents=True, exist_ok=True)
 
     copied = []
-    for rel in BACKUP_FILES:
+    for rel in _expand(ROOT, BACKUP_FILES):
         src = ROOT / rel
         if not src.exists():
             print(f"  skip  {rel}  (not found)")
@@ -247,8 +335,15 @@ def verify(backup_path: str | None = None) -> int:
         print(f"VERIFY FAILED: not a backup directory: {dest}", file=sys.stderr)
         return 1
 
+    # A ledger prune() thinned out of an older snapshot is not missing.
+    try:
+        thinned = set(json.loads((dest / "manifest.json").read_text()).get("thinned", []))
+    except Exception:                                      # noqa: BLE001
+        thinned = set()
     problems = []
     for rel in REQUIRED_FILES:
+        if rel in thinned:
+            continue
         f = dest / rel
         if not f.exists():
             problems.append(f"{rel}  MISSING from the backup")
@@ -278,7 +373,23 @@ def verify(backup_path: str | None = None) -> int:
     return 0
 
 
-def restore(backup_path: str) -> None:
+def _atomic_copy(src: pathlib.Path, dest: pathlib.Path) -> None:
+    """Copy src over dest via a temp file + os.replace (project rule 7): a
+    crash mid-restore leaves the old file or the new one, never half of one."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".restore-tmp")
+    shutil.copy2(src, tmp)
+    os.replace(tmp, dest)
+
+
+def restore(backup_path: str, allow_incomplete: bool = False,
+            confirm=input) -> list[str]:
+    """Put a snapshot's DATA files back over the live tree. Returns what was
+    restored ([] when refused or aborted).
+
+    Verifies the snapshot first (the same check the nightly job runs) and
+    refuses an incomplete one unless `allow_incomplete`. Never restores
+    RESTORE_NEVER (code/config). Each file lands atomically."""
     src_dir = pathlib.Path(backup_path)
     if not src_dir.exists():
         # Try relative to BACKUP_DIR
@@ -292,27 +403,33 @@ def restore(backup_path: str) -> None:
         print("ERROR: not a valid backup (no manifest.json)", file=sys.stderr)
         sys.exit(1)
 
+    if verify(str(src_dir)) != 0 and not allow_incomplete:
+        print("Refusing to restore an incomplete snapshot (see above). A "
+              "snapshot taken before a file joined REQUIRED_FILES fails this "
+              "too; pass --allow-incomplete to restore what it does hold.",
+              file=sys.stderr)
+        return []
+
     manifest = json.loads(manifest_file.read_text())
+    wanted = [rel for rel in _expand(src_dir, BACKUP_FILES)
+              if rel not in RESTORE_NEVER and (src_dir / rel).exists()]
     print(f"Restoring backup from {manifest.get('created_at', '?')}")
-    print(f"Files: {', '.join(manifest.get('files', []))}")
+    print(f"Files: {', '.join(wanted)}")
+    print(f"Never restored (reference only): {', '.join(sorted(RESTORE_NEVER))}")
     print()
-    answer = input("Type 'yes' to confirm restore (this overwrites live files): ").strip()
+    answer = confirm("Type 'yes' to confirm restore (this overwrites live files): ").strip()
     if answer.lower() != "yes":
         print("Aborted.")
-        return
+        return []
 
     restored = []
-    for rel in BACKUP_FILES:
-        src = src_dir / rel
-        if not src.exists():
-            continue
-        dest = ROOT / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+    for rel in wanted:
+        _atomic_copy(src_dir / rel, ROOT / rel)
         restored.append(rel)
         print(f"  restored  {rel}")
 
     print(f"\nRestored {len(restored)} files.")
+    return restored
 
 
 def list_backups() -> None:
@@ -342,8 +459,10 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Backup/restore journal and scan data")
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("backup",  help="Create a timestamped backup")
-    rp = sub.add_parser("restore", help="Restore from a backup")
+    rp = sub.add_parser("restore", help="Restore DATA from a backup")
     rp.add_argument("path", help="Backup directory name or path")
+    rp.add_argument("--allow-incomplete", action="store_true",
+                    help="restore what a snapshot that fails verify does hold")
     sub.add_parser("list", help="List available backups")
     vp = sub.add_parser("verify", help="Check a backup contains every required file")
     vp.add_argument("path", nargs="?", default=None,
@@ -353,7 +472,7 @@ if __name__ == "__main__":
     if args.cmd == "backup":
         backup()
     elif args.cmd == "restore":
-        restore(args.path)
+        restore(args.path, allow_incomplete=args.allow_incomplete)
     elif args.cmd == "list":
         list_backups()
     elif args.cmd == "verify":

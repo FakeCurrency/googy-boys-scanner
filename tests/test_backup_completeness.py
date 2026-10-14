@@ -54,18 +54,33 @@ def test_the_accumulated_state_files_are_in_the_backup_list():
     sector_map is a SIGNAL PATH since REFINEMENTS #38, so a wipe
     changes which trades get taken until it refills; confluence_state is alert
     dedupe, whose 'regeneration' is re-firing every ping it had already sent;
-    alert_history is the permanent ALERTS log; universe_cache/asx.json is
-    frozen because the ASX directory fetch is dead, so a refetch returns
-    nothing at all.
+    alert_history is the permanent ALERTS log. REFINE200 #81 (2026-10-14)
+    added the ledgers whose rows are frozen at first stamp and fed by rolling
+    windows (the edge ledgers) or appended by every publish (funnel_history).
     """
     for rel in (
         "data/sector_map.json",
         "public/data/sector_map.json",
         "journal/confluence_state.json",
         "public/data/phasemap/alert_history.json",
-        "data/universe_cache/asx.json",
+        "data/alert_forward_returns.json",
+        "data/edge_rosters.json",
+        "data/edge_rosters/*.json",
+        "public/data/funnel_history.json",
     ):
         assert rel in bj.BACKUP_FILES, f"{rel} dropped out of BACKUP_FILES"
+
+
+def test_refetchable_and_orphaned_files_are_not_snapshotted():
+    """REFINE200 #67/#81: the ticker rosters re-fetch on every scan (the ASX
+    directory fetch they were kept for is alive again), and events.json has
+    had no reader or writer since the AI BOT went."""
+    assert not [r for r in bj.BACKUP_FILES if r.startswith("data/universe_cache/")]
+    assert "public/data/events.json" not in bj.BACKUP_FILES
+
+
+def test_no_required_file_is_a_glob():
+    assert not [r for r in bj.REQUIRED_FILES if "*" in r]
 
 
 def test_the_unassigned_book_is_backed_up_but_never_required():
@@ -105,7 +120,7 @@ def _tree(tmp_path):
     """A synthetic ROOT carrying every BACKUP_FILES path, plus a backups/ dir."""
     root = tmp_path / "repo"
     for rel in bj.BACKUP_FILES:
-        f = root / rel
+        f = root / rel.replace("*", "shard1")     # a glob entry gets one match
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text('{"ok": 1}' if rel.endswith(".json") else "# config\n")
     return root
@@ -204,6 +219,89 @@ def test_the_manifest_is_not_what_verify_trusts(live):
     assert "data/sector_map.json" in manifest["files"]
     (dest / "data" / "sector_map.json").unlink()   # manifest still claims it
     assert bj.verify() == 1
+
+
+def test_a_glob_entry_backs_up_every_file_it_matches(live):
+    (live / "data" / "edge_rosters" / "shard2.json").write_text('{"ok": 2}')
+    dest = bj.backup()
+    got = sorted(p.name for p in (dest / "data" / "edge_rosters").iterdir())
+    assert got == ["shard1.json", "shard2.json"]
+    manifest = json.loads((dest / "manifest.json").read_text())
+    assert "data/edge_rosters/shard2.json" in manifest["files"]
+
+
+def test_the_ledgers_ride_only_the_newest_week_of_snapshots(live, monkeypatch):
+    """30 full copies of ~5.4 MB of ledgers would add ~160 MB to every
+    checkout; the newest LEDGER_KEEP keep them, older ones are thinned, the
+    manifest says so, and verify() does not call a thinned file missing."""
+    assert set(bj.LEDGER_FILES) <= set(bj.BACKUP_FILES)
+    stamps = iter(f"2026-10-{d:02d}T21-35-00" for d in range(1, 31))
+    monkeypatch.setattr(bj, "_ts", lambda: next(stamps))
+    for _ in range(bj.LEDGER_KEEP + 2):
+        bj.backup()
+    dated = bj._dated_dirs()
+    for d in dated[-bj.LEDGER_KEEP:]:
+        assert (d / "data" / "alert_forward_returns.json").exists(), d.name
+    old = dated[0]
+    assert not (old / "data" / "alert_forward_returns.json").exists()
+    assert not (old / "data" / "edge_rosters" / "shard1.json").exists()
+    assert (old / "journal" / "vivek_bot_book.asx.json").exists(), "only ledgers thin"
+    manifest = json.loads((old / "manifest.json").read_text())
+    assert "data/alert_forward_returns.json" in manifest["thinned"]
+    assert "data/alert_forward_returns.json" not in manifest["files"]
+    assert bj.verify(str(old)) == 0
+    assert bj.thin_ledgers() == 0, "idempotent"
+
+
+# --------------------------------------------------------------------------
+# restore() -- data only, verified, atomic (REFINE200, 2026-10-14)
+# --------------------------------------------------------------------------
+
+def _yes(_prompt):
+    return "yes"
+
+
+def test_restore_never_writes_code_or_config_back(live):
+    """Restoring a month-old scanner/config.py would roll back every rule
+    change since (SIZING 2 among them) and could drop constants newer modules
+    import. The snapshot keeps it for reference; restore leaves it alone."""
+    dest = bj.backup()
+    (live / "scanner" / "config.py").write_text("# today's rules\n")
+    (live / "data" / "sector_map.json").write_text('{"ok": "edited"}')
+    restored = bj.restore(str(dest), confirm=_yes)
+    assert (live / "scanner" / "config.py").read_text() == "# today's rules\n"
+    assert json.loads((live / "data" / "sector_map.json").read_text()) == {"ok": 1}
+    assert "scanner/config.py" not in restored
+    assert "data/sector_map.json" in restored
+    assert "scanner/config.py" in bj.BACKUP_FILES and "scanner/config.py" in bj.RESTORE_NEVER
+    assert not [r for r in bj.RESTORE_NEVER if not r.endswith(".py")], "code only"
+
+
+def test_restore_refuses_an_incomplete_snapshot_unless_asked(live):
+    dest = bj.backup()
+    (dest / "journal" / "confluence_state.json").unlink()
+    (live / "data" / "sector_map.json").write_text('{"ok": "live"}')
+    assert bj.restore(str(dest), confirm=_yes) == []
+    assert json.loads((live / "data" / "sector_map.json").read_text()) == {"ok": "live"}
+    got = bj.restore(str(dest), allow_incomplete=True, confirm=_yes)
+    assert "data/sector_map.json" in got and "journal/confluence_state.json" not in got
+
+
+def test_restore_is_atomic_and_leaves_no_temp_files(live, monkeypatch):
+    dest = bj.backup()
+    replaced = []
+    real = os.replace
+    monkeypatch.setattr(bj.os, "replace", lambda a, b: (replaced.append(b), real(a, b)))
+    bj.restore(str(dest), confirm=_yes)
+    assert replaced, "every file lands through os.replace"
+    assert not list(live.rglob("*.restore-tmp"))
+
+
+def test_a_declined_restore_writes_nothing(live):
+    dest = bj.backup()
+    (live / "data" / "sector_map.json").write_text('{"ok": "live"}')
+    assert bj.restore(str(dest), confirm=lambda _p: "no") == []
+    assert json.loads((live / "data" / "sector_map.json").read_text()) == {"ok": "live"}
 
 
 # --------------------------------------------------------------------------
