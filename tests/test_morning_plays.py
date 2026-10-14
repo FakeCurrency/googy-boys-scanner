@@ -13,6 +13,7 @@ label, the message shape/chunking, the de-dup memory, and the exit codes.
 import datetime as dt
 import json
 import pathlib
+import re
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -160,7 +161,9 @@ def test_a_market_with_no_plays_still_shows_a_header():
     msgs = mp.build_messages({"asx": [_row("JHX")], "nasdaq": [], "crypto": []},
                              {"asx": 1.0, "nasdaq": 1.0, "crypto": 1.0}, "Mon 1 Jan")
     text = "\n".join(msgs)
-    assert "**NASDAQ PLAYS**" in text and "(none this morning)" in text
+    assert "**NASDAQ PLAYS**" in text and "(none today)" in text
+    # Slot-neutral wording: the ASX digest posts in the AFTERNOON.
+    assert "morning" not in text.lower()
 
 
 def test_a_long_list_is_chunked_under_the_discord_limit():
@@ -864,3 +867,63 @@ def test_redeliver_skips_only_the_per_day_marker_and_still_records(tmp_path, mon
     wf = (ROOT / ".github" / "workflows" / "morning_plays.yml").read_text()
     assert 'REDELIVER: ${{ github.event.inputs.redeliver }}' in wf
     assert '--redeliver' in wf
+
+
+# ── REFINE200 folded fixes (2026-10-14) ──────────────────────────────────────
+
+def test_names_cut_by_the_row_cap_are_not_recorded_as_sent(tmp_path, monkeypatch):
+    """The module promises no name is ever silently buried. A name behind the
+    '+N more' line was never LISTED, so it must stay eligible for the next
+    digest instead of sitting out the 7-day window unseen."""
+    _utc_tz(monkeypatch)
+    monkeypatch.setattr(config, "MORNING_PLAYS_MAX_ROWS", 3)
+    monkeypatch.setenv(config.MORNING_PLAYS_WEBHOOK_ENV, "https://discord.test/wh")
+    posts = []
+    monkeypatch.setattr(mp, "post",
+                        lambda url, payload, ua, **k: posts.append(payload["content"]) or 204)
+    d = tmp_path / "public" / "data"
+    d.mkdir(parents=True)
+    rows = [_row(f"S{i}", score=100 - i) for i in range(5)]
+    (d / "asx_vivek.json").write_text(json.dumps({
+        "generated_at": "2026-09-09T16:45:00+10:00", "results": rows}))
+    seen = _seen(tmp_path)
+    assert mp.main(["--slot", "asx", "--data-dir", str(d), "--seen-file", seen],
+                   now=ASX_SLOT) == 0
+    assert "+2 more" in posts[0]
+    sent = mp.load_state(seen)["sent"]
+    assert sorted(sent) == ["asx:S0", "asx:S1", "asx:S2"], sent
+    # and the overflow is the next digest's lead, not a 7-day ghost
+    (d / "asx_vivek.json").write_text(json.dumps({
+        "generated_at": "2026-09-10T16:45:00+10:00", "results": rows}))
+    later = ASX_SLOT + dt.timedelta(days=1)
+    assert mp.main(["--slot", "asx", "--data-dir", str(d), "--seen-file", seen],
+                   now=later) == 0
+    assert "S3" in posts[1] and "S4" in posts[1] and "S0" not in posts[1]
+
+
+def test_the_header_date_uses_no_platform_specific_strftime_flag(tmp_path, monkeypatch):
+    """`%-d` is a glibc extension: Windows' strftime raises on it, which broke
+    the documented local `--force --dry-run` on the owner's machine."""
+    src = (ROOT / "scripts" / "morning_plays.py").read_text(encoding="utf-8")
+    assert not re.search(r"%-[a-zA-Z]", src), "use a portable day format"
+    _utc_tz(monkeypatch)
+    printed = []
+    monkeypatch.setattr(mp, "deliver",
+                        lambda msgs, dry: printed.extend(msgs) or (0, False))
+    mp.main(["--force", "--dry-run", "--data-dir", str(_fixtures(tmp_path)),
+             "--seen-file", _seen(tmp_path)],
+            now=dt.datetime(2026, 9, 9, 6, 30, tzinfo=dt.timezone.utc))
+    assert "Wed 9 Sep, 06:30 Melbourne" in printed[0]
+
+
+def test_the_digest_carries_the_site_link_from_site_url():
+    """REFINE200 #129: the link sat empty while config.SITE_URL held it."""
+    assert config.MORNING_PLAYS_APP_URL == config.SITE_URL
+    msgs = mp.build_messages({"asx": [_row("JHX")]}, {"asx": 1.0}, "Mon 1 Jan")
+    assert msgs[-1].endswith(config.SITE_URL)
+
+
+def test_the_docstring_describes_the_rule_the_code_imports():
+    doc = mp.__doc__
+    assert "conviction.HC_CELLS" in doc and "four-cell" in doc
+    assert ">= 2 structural" not in doc, "the structure branch was dropped 2026-09-20"

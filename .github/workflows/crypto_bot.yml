@@ -68,6 +68,8 @@ jobs:
           # :52 backstop (Fix-10 #8): freshness-gated, fail-open. Deliberately
           # bypasses the weekday window-ownership skip below — if the data is
           # stale, whichever workflow owned the hour has already missed it.
+          # The URL is config.SITE_URL's (this job checks nothing out, so it
+          # cannot read it - move both together, REFINE200 #129).
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "52 * * * *" ]; then
             AGE=$(curl -sS --max-time 20 "https://googy-boys-scanner.pages.dev/data/crypto_vivek.json" \
               | python3 -c "import json,sys,datetime as dt; j=json.load(sys.stdin); t=dt.datetime.fromisoformat(j['generated_at']); print('fresh' if (dt.datetime.now(dt.timezone.utc)-t).total_seconds()<3900 else 'stale')" \

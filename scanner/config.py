@@ -1270,7 +1270,11 @@ CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this m
                                      # removal: confluence_alert still computes what deserves a
                                      # push and records it as undelivered, so the next channel
                                      # pings everything current on its first run.)
-SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
+# THE site's address (REFINE200 #129): chart links in alerts, the digest's app
+# link and ops.py's site-probe all read this one constant. Two copies cannot
+# import it: crypto_bot.yml's freshness curl (commented to point here) and the
+# example URLs in functions/api/morning_plays.js's header comment.
+SITE_URL               = "https://googy-boys-scanner.pages.dev"
 
 # ---------------------------------------------------------------------------
 # Data quality
@@ -1654,6 +1658,8 @@ MORNING_PLAYS_UA = "vivek5-morning/1.0"   # named UA — Discord 403s Python's d
 # whose newest scan is older than this many hours.
 MORNING_PLAYS_STALE_H = 20.0
 # Absolute URL of the deployed app, for a "open the SCAN page" link in the
-# digest. Empty = omit the link (a dead link is worse than none). The owner
-# can set their Cloudflare Pages URL here.
-MORNING_PLAYS_APP_URL = ""
+# digest. Empty = omit the link (a dead link is worse than none). It IS
+# SITE_URL (REFINE200 #129): it sat empty for a month while SITE_URL held the
+# address, so the digest never carried its link. A custom domain is then a
+# one-line change to SITE_URL.
+MORNING_PLAYS_APP_URL = SITE_URL
