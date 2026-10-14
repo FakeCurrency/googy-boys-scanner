@@ -47,6 +47,17 @@ Usage:
 Exit code is 0 even when findings exist (this is a monitor, not a gate — the
 alerts ARE the signal); it is non-zero only if the watchdog itself crashes,
 which must be loud too.
+
+THE ALERTS HAD NOWHERE TO GO (REFINE200 #77, 2026-10-14). Every channel in
+config.ALERT_CHANNELS is unconfigured since the 2026-08-27 Discord removal, so
+the dispatch reached nobody. Two outputs now carry a finding regardless:
+  * a GitHub annotation (::error:: for CRITICAL, ::warning:: below it) on the
+    same first-alert / reminder cadence, so the run page names it;
+  * on kill_switch.yml (WATCHDOG_RAISE=1) a CRITICAL that no configured
+    channel can carry is raised ONCE per episode as `alarm=` in
+    $GITHUB_OUTPUT, which fails that workflow's separate `watchdog-alarm` job:
+    a red run, i.e. GitHub's failure email. See raise_alarm for why it is a
+    separate job and not this step's exit code.
 """
 
 import datetime as dt
@@ -351,6 +362,57 @@ def session_hours_between(start: dt.datetime, end: dt.datetime) -> float:
     return open_steps * 0.25
 
 
+def _job_conclusion(fetch, repo: str, run: dict, job: str) -> str | None:
+    """The conclusion of the job named `job` inside `run` (the jobs API), or
+    None when the run lists no such job (cancelled before it was created, a
+    renamed job). Raises whatever `fetch` raises."""
+    url = run.get("jobs_url")
+    if not url:
+        if run.get("id") is None:
+            return None
+        url = f"https://api.github.com/repos/{repo}/actions/runs/{run['id']}/jobs"
+    data = fetch(url + ("&" if "?" in url else "?") + "per_page=100") or {}
+    for j in data.get("jobs") or []:
+        if j.get("name") == job:
+            return j.get("conclusion")
+    return None
+
+
+def _judge_by_job(fetch, repo: str, wf: str, concluded: list[dict], job: str,
+                  notes: list | None) -> tuple[list[dict], dt.datetime | None, int]:
+    """Re-read concluded runs (newest first) by the conclusion of `job`.
+
+    A run whose job was SKIPPED did none of the work (scan.yml's gate skips
+    most superset crons, and the run still concludes success), so it is passed
+    over. Every other run takes its job's conclusion. Stops at the first
+    success, or after config.WATCHDOG_JOB_LOOKUPS lookups. Returns (runs that
+    did the work, start of the oldest run examined, runs examined).
+
+    Fail-quiet, like the runs API: when the jobs cannot be read (an API error,
+    or no job of that name) the run keeps its OWN conclusion -- the pre-#80
+    reading, never a finding invented out of an outage.
+    """
+    out: list[dict] = []
+    oldest = None
+    examined = 0
+    for r in concluded[:max(1, int(config.WATCHDOG_JOB_LOOKUPS))]:
+        examined += 1
+        oldest = r.get("run_started_at") or oldest
+        try:
+            c = _job_conclusion(fetch, repo, r, job)
+        except Exception as e:                                     # noqa: BLE001
+            if notes is not None:
+                notes.append(f"{wf}: jobs lookup failed ({e}) - read the "
+                             f"run's own conclusion")
+            c = None
+        if c == "skipped":
+            continue
+        out.append(dict(r, conclusion=c or r.get("conclusion")))
+        if out[-1]["conclusion"] == "success":
+            break
+    return out, _parse_ts(oldest), examined
+
+
 def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
                notes: list | None = None) -> list[dict]:
     """GitHub Actions run history per critical workflow — the heartbeat.
@@ -359,7 +421,13 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
     in the last page. If the newest concluded run failed -> stay silent
     (GitHub emailed already; note it in the summary instead). Otherwise, if
     the newest success is older than the threshold -> finding. Zero recorded
-    runs -> note only (a brand-new workflow is not a breach)."""
+    runs -> note only (a brand-new workflow is not a breach).
+
+    A workflow with a `job` in config.WATCHDOG_RUNS is judged by that job's
+    conclusion (_judge_by_job), so a run that skipped the work is not a
+    success. If no run in the window did the work, the newest real one is
+    older than the window, so the window's own age is a LOWER bound: alarm
+    when even that breaches, note and stay quiet when it does not."""
     repo = repo or os.environ.get("GITHUB_REPOSITORY", "")
     out: list[dict] = []
     if not repo:
@@ -367,8 +435,10 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
             notes.append("run-history probes skipped (no GITHUB_REPOSITORY)")
         return out
     for wf, spec in config.WATCHDOG_RUNS.items():
+        job = spec.get("job")
+        per_page = int(config.WATCHDOG_JOB_RUNS_PAGE) if job else 10
         url = (f"https://api.github.com/repos/{repo}/actions/workflows/"
-               f"{wf}/runs?per_page=10&exclude_pull_requests=true")
+               f"{wf}/runs?per_page={per_page}&exclude_pull_requests=true")
         try:
             runs = fetch(url).get("workflow_runs", [])
         except Exception as e:
@@ -380,13 +450,43 @@ def probe_runs(fetch, now: dt.datetime, repo: str | None = None,
             if notes is not None:
                 notes.append(f"{wf}: no recorded runs yet")
             continue
-        if concluded[0].get("conclusion") in _NOISY_CONCLUSIONS:
+        oldest, examined = None, 0
+        if job:
+            concluded, oldest, examined = _judge_by_job(
+                fetch, repo, wf, concluded, job, notes)
+        if concluded and concluded[0].get("conclusion") in _NOISY_CONCLUSIONS:
             if notes is not None:
                 notes.append(f"{wf}: latest run FAILED - GitHub emailed; "
                              f"watchdog staying quiet")
             continue
         succ = next((r for r in concluded
                      if r.get("conclusion") == "success"), None)
+        if succ is None and job:
+            # Nothing in the window did the work: the newest real success (if
+            # any) started before `oldest`, so its age is AT LEAST this.
+            low = _age_h(oldest, now)
+            if low is None:
+                if notes is not None:
+                    notes.append(f"{wf}: no run of its `{job}` job in the last "
+                                 f"{examined} runs, and none of them is dated")
+                continue
+            measured, unit = low, "h"
+            if spec.get("session_aware"):
+                measured, unit = session_hours_between(oldest, now), "h in-session"
+            if measured > spec["max_age_h"]:
+                extra = (f", {measured:.1f}h of it in market hours"
+                         if spec.get("session_aware") else "")
+                out.append(_finding(
+                    f"run_{wf}", spec["severity"],
+                    f"{wf}: no run of its `{job}` job succeeded in the last "
+                    f"{examined} runs (the oldest started {low:.1f}h ago{extra}; "
+                    f"limit {spec['max_age_h']:.0f}{unit}) - schedule skipped "
+                    f"or silently doing nothing"))
+            elif notes is not None:
+                notes.append(f"{wf}: none of the last {examined} runs ran its "
+                             f"`{job}` job successfully (the oldest started "
+                             f"{low:.1f}h ago) - inside the limit so far")
+            continue
         last = _parse_ts((succ or {}).get("run_started_at"))
         age = _age_h(last, now)
         # A session-aware target is measured in hours a market was OPEN, not
@@ -426,7 +526,9 @@ def reconcile(state: dict, findings: list[dict], now: dt.datetime,
             last = _parse_ts(prev.get("last_alert"))
             if last is None or _age_h(last, now) >= renotify_h:
                 to_alert.append(f)
-                new_state[key] = {"first": prev.get("first"),
+                # Keep the rest of the entry (the `raised` stamp, #77): a
+                # reminder is the same episode, not a new one.
+                new_state[key] = {**prev,
                                   "last_alert": now.isoformat(timespec="seconds")}
             else:
                 new_state[key] = prev
@@ -435,6 +537,44 @@ def reconcile(state: dict, findings: list[dict], now: dt.datetime,
 
 
 # ── sending (reuses alert_dispatch channel primitives; send() untouched) ──────
+
+# The secrets each channel needs (alert_dispatch reads the same names), so a
+# NOT-delivered line can say WHICH one is missing instead of "unconfigured or
+# failing" (REFINE200 #127).
+_CHANNEL_SECRETS = {
+    "telegram": ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"),
+    "email": ("GBS_SMTP_HOST", "GBS_SMTP_USER", "GBS_SMTP_PASS", "GBS_ALERT_TO"),
+}
+
+
+def channel_problem(ch: str, env=None) -> str:
+    """Why `ch` cannot deliver, or "" when it is configured. ASCII."""
+    env = os.environ if env is None else env
+    if ch == "telegram" and not getattr(config, "TELEGRAM_ENABLED", True):
+        return "muted by config.TELEGRAM_ENABLED = False"
+    if ch not in _CHANNEL_SECRETS:
+        return "no sender for this channel"
+    missing = [n for n in _CHANNEL_SECRETS[ch]
+               if not config.clean_secret(env.get(n))]
+    return f"secret(s) not set: {', '.join(missing)}" if missing else ""
+
+
+def _undelivered(wanted: list[str], sent: list[str]) -> str:
+    """'telegram (why), email (why)' for each wanted channel that did not
+    deliver; a configured channel that still failed says so."""
+    return ", ".join(
+        f"{c} ({channel_problem(c) or 'configured, but the send failed - see the log'})"
+        for c in wanted if c not in sent)
+
+
+def _annotation(kind: str, title: str, msg: str) -> str:
+    """A GitHub workflow command (::error:: / ::warning:: / ::notice::), with
+    the data and property escaping GitHub requires, so a finding shows on the
+    run page whatever channel config says (REFINE200 #77)."""
+    def esc(v, prop=False):
+        v = str(v).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        return v.replace(":", "%3A").replace(",", "%2C") if prop else v
+    return f"::{kind} title={esc(title, prop=True)}::{esc(msg)}"
 
 def _dispatch(severity: str, text: str) -> list[str]:
     from .broker import alert_dispatch as ad
@@ -485,6 +625,7 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
     crit = [f for f in to_alert if f["severity"] == "CRITICAL"]
     warn = [f for f in to_alert if f["severity"] != "CRITICAL"]
     sent: dict = {}
+    alarm: list[dict] = []
     if not dry_run:
         if crit:
             sent["CRITICAL"] = _dispatch("CRITICAL", _alert_text("CRITICAL", crit, host))
@@ -494,6 +635,7 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
             txt = ("✅ [Vivek 5.0] Watchdog recovered: "
                    + ", ".join(recovered) + f" (host: {host})")
             sent["RECOVERY"] = _dispatch("WARNING", txt)
+        alarm = raise_alarm(new_state, findings, now)
         from .output import write_json      # TOP100 #64 — atomic + NaN-safe
         write_json(state_path, new_state)
 
@@ -505,6 +647,25 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
         print(f"{log_prefix}   [{f['severity']}] {f['msg']}")
     for n in notes:
         print(f"{log_prefix}   (note) {n}")
+
+    # THE RUN PAGE CARRIES IT (REFINE200 #77). Every channel in ALERT_CHANNELS
+    # is unconfigured, so the dispatch above tells nobody; the annotation puts
+    # the finding on the run page on the same first-alert / reminder cadence
+    # (to_alert), whatever channels say. A finding raised as an alarm this run
+    # is annotated too, even when it is not due a reminder here.
+    if not dry_run:
+        for f in to_alert + [a for a in alarm if a not in to_alert]:
+            kind = "error" if f["severity"] == "CRITICAL" else "warning"
+            print(_annotation(kind, f"Watchdog {f['severity']}", f["msg"]))
+        if recovered:
+            print(_annotation("notice", "Watchdog recovered", ", ".join(recovered)))
+        for sev in ("CRITICAL", "WARNING"):
+            if sev in sent:
+                miss = _undelivered(config.ALERT_CHANNELS.get(sev, []), sent[sev])
+                if miss:
+                    print(f"{log_prefix}   (note) {sev} alert NOT delivered: {miss}")
+                    notes.append(f"{sev} alert NOT delivered: {miss}")
+        _write_alarm_output(alarm)
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary and not dry_run:
@@ -520,7 +681,52 @@ def run(dry_run: bool = False, now: dt.datetime | None = None) -> dict:
                 fh.write(f"\n- note: {n}")
             fh.write("\n")
     return {"findings": findings, "alerted": to_alert,
-            "recovered": recovered, "sent": sent, "notes": notes}
+            "recovered": recovered, "sent": sent, "notes": notes,
+            "alarm": alarm}
+
+
+def raise_alarm(new_state: dict, findings: list[dict], now: dt.datetime,
+                env=None) -> list[dict]:
+    """The CRITICAL findings this run must raise as a RED RUN (REFINE200 #77).
+
+    Only on the host that can (WATCHDOG_RAISE=1: kill_switch.yml, whose
+    `watchdog-alarm` job fails on this output while the kill-switch `check`
+    job stays green and keeps its cache), only while NO CRITICAL channel is
+    configured (a configured one carries the alert itself), and ONCE per
+    episode: the finding's state entry is stamped `raised`, the stamp rides
+    the shared watchdog state, and recovery drops the entry, so the next
+    episode raises again. A CRITICAL first seen by the other host (crypto_bot,
+    which never raises) is raised by this one on its next run.
+
+    The red run is GitHub's own failure email -- the one alarm that reaches
+    the owner today. Failing the watchdog STEP instead was rejected: a red job
+    skips actions/cache's post-save (post-if: success()), so the state that
+    makes it once-per-episode would never persist and every run would go red.
+    """
+    env = os.environ if env is None else env
+    if env.get("WATCHDOG_RAISE", "") != "1":
+        return []
+    if any(not channel_problem(c, env) for c in config.ALERT_CHANNELS.get("CRITICAL", [])):
+        return []
+    out = []
+    for f in findings:
+        entry = new_state.get(f["key"])
+        if f["severity"] != "CRITICAL" or entry is None or entry.get("raised"):
+            continue
+        new_state[f["key"]] = {**entry, "raised": now.isoformat(timespec="seconds")}
+        out.append(f)
+    return out
+
+
+def _write_alarm_output(alarm: list[dict]) -> None:
+    """Hand the alarm to the workflow as one `alarm=` line in $GITHUB_OUTPUT
+    (empty = no alarm). Single line by construction: messages are joined."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if not path:
+        return
+    text = " | ".join(f["msg"] for f in alarm).replace("\r", " ").replace("\n", " ")
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(f"alarm={text}\n")
 
 
 def test_alert() -> None:
@@ -539,11 +745,12 @@ def test_alert() -> None:
     for severity in ("WARNING", "CRITICAL"):
         wanted = config.ALERT_CHANNELS.get(severity, [])
         sent = _dispatch(severity, f"{text} [severity route: {severity}]")
-        missing = [c for c in wanted if c not in sent]
+        missing = _undelivered(wanted, sent)
+        # The REAL reason per channel (REFINE200 #127): a missing secret by
+        # name, the TELEGRAM_ENABLED mute, or a configured channel that failed.
         print(f"{log_prefix} test-alert {severity}: sent via "
               f"{','.join(sent) or 'NONE'}"
-              + (f" - NOT delivered: {','.join(missing)} "
-                 f"(channel unconfigured or failing)" if missing else ""))
+              + (f" - NOT delivered: {missing}" if missing else ""))
 
 
 def main(argv: list[str] | None = None) -> None:

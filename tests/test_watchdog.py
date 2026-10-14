@@ -11,7 +11,6 @@ getter are both injected, and the two tests that exercise the real
 import datetime as dt
 import json
 import subprocess
-import urllib.error
 
 import pytest
 
@@ -305,6 +304,290 @@ def test_state_mixed_new_ongoing_recovered():
     assert [a["key"] for a in alerts] == ["new"]         # only the new one
     assert rec == ["gone"]
     assert set(state2) == {"old", "new"}
+
+
+# ── job-judged run history (REFINE200 #80) ─────────────────────────────────────
+
+def _jobs_fetch(by_wf, jobs_by_id, boom_jobs=False):
+    """Runs per workflow plus a jobs API: {run id: {job name: conclusion}}."""
+    def fetch(url):
+        if "/actions/runs/" in url and "/jobs" in url:
+            if boom_jobs:
+                raise RuntimeError("jobs api down")
+            rid = int(url.split("/actions/runs/")[1].split("/")[0])
+            return {"jobs": [{"name": n, "conclusion": c}
+                             for n, c in jobs_by_id.get(rid, {}).items()]}
+        for wf, runs in by_wf.items():
+            if f"/workflows/{wf}/runs" in url:
+                return {"workflow_runs": runs}
+        return {"workflow_runs": []}
+    return fetch
+
+
+def _rid(rid, hours_ago, conclusion="success"):
+    return {"id": rid, "conclusion": conclusion, "run_started_at": _iso(hours_ago)}
+
+
+def _fresh_except(**over):
+    by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
+    by.update(over)
+    return by
+
+
+def test_a_gate_skipped_scan_run_is_not_a_successful_scan(monkeypatch):
+    """THE #80 BUG: scan.yml's gate skips the `scan` job on most superset
+    crons and the RUN still concludes success, so a scan that has not run for
+    30 session-hours read as healthy off a skip from half an hour ago."""
+    monkeypatch.setattr(wd, "session_hours_between", lambda a, b: _age_h_of(a, b))
+    by = _fresh_except(**{"scan.yml": [_rid(1, 0.5), _rid(2, 1.5), _rid(3, 30.0)]})
+    jobs = {1: {"gate": "success", "scan": "skipped"},
+            2: {"gate": "success", "scan": "skipped"},
+            3: {"gate": "success", "scan": "success"}}
+    probs = wd.probe_runs(_jobs_fetch(by, jobs), NOW, repo="x/y")
+    assert [p["key"] for p in probs] == ["run_scan.yml"]
+    assert "30.0h ago" in probs[0]["msg"]
+    # the same history with a real scan half an hour ago is silent
+    jobs[1]["scan"] = "success"
+    assert wd.probe_runs(_jobs_fetch(by, jobs), NOW, repo="x/y") == []
+
+
+def _age_h_of(a, b):
+    return (b - a).total_seconds() / 3600.0
+
+
+def test_a_jobs_api_error_falls_back_to_the_runs_own_conclusion():
+    """Fail-quiet, like the runs API: an outage must not invent a finding."""
+    by = _fresh_except(**{"scan.yml": [_rid(1, 0.5), _rid(3, 30.0)]})
+    notes = []
+    probs = wd.probe_runs(_jobs_fetch(by, {}, boom_jobs=True), NOW, repo="x/y",
+                          notes=notes)
+    assert probs == []
+    assert any("scan.yml" in n and "jobs lookup failed" in n for n in notes)
+
+
+def test_a_run_that_lists_no_such_job_keeps_its_own_conclusion():
+    by = _fresh_except(**{"scan.yml": [_rid(1, 0.5)]})
+    assert wd.probe_runs(_jobs_fetch(by, {1: {"other": "success"}}), NOW, repo="x/y") == []
+
+
+def test_a_window_with_no_real_run_alarms_only_when_its_own_age_breaches(monkeypatch):
+    """No run in the window did the work, so the newest real one is OLDER than
+    the window: its age is a lower bound. Breach -> finding; else a note."""
+    monkeypatch.setattr(wd, "session_hours_between", lambda a, b: _age_h_of(a, b))
+    skipped = {i: {"scan": "skipped"} for i in range(1, 4)}
+    old = _fresh_except(**{"scan.yml": [_rid(1, 1.0), _rid(2, 5.0), _rid(3, 20.0)]})
+    probs = wd.probe_runs(_jobs_fetch(old, skipped), NOW, repo="x/y")
+    assert [p["key"] for p in probs] == ["run_scan.yml"]
+    assert "no run of its `scan` job succeeded in the last 3 runs" in probs[0]["msg"]
+    young = _fresh_except(**{"scan.yml": [_rid(1, 1.0), _rid(2, 2.0), _rid(3, 3.0)]})
+    notes = []
+    assert wd.probe_runs(_jobs_fetch(young, skipped), NOW, repo="x/y", notes=notes) == []
+    assert any("inside the limit so far" in n for n in notes)
+
+
+def test_the_jobs_lookups_are_capped(monkeypatch):
+    monkeypatch.setattr(config, "WATCHDOG_JOB_LOOKUPS", 2)
+    calls = []
+    runs = [_rid(i, 0.1 * i) for i in range(1, 9)]
+    base = _jobs_fetch(_fresh_except(**{"scan.yml": runs}),
+                       {i: {"scan": "skipped"} for i in range(1, 9)})
+
+    def fetch(url):
+        if "/jobs" in url and "/runs/" in url:
+            calls.append(url)
+        return base(url)
+    wd.probe_runs(fetch, NOW, repo="x/y")
+    assert len([u for u in calls if "/runs/" in u]) == 2
+
+
+def test_the_alarm_jobs_red_run_is_not_read_as_a_kill_switch_failure():
+    """kill_switch.yml is judged by its `check` job: the watchdog-alarm job's
+    red run (#77) must neither silence the kill-switch probe as 'GitHub
+    emailed' nor count as a missing check."""
+    by = _fresh_except(**{"kill_switch.yml": [_rid(7, 0.3, "failure")]})
+    jobs = {7: {"check": "success", "Watchdog CRITICAL (the kill-switch check itself passed)": "failure"}}
+    notes = []
+    assert wd.probe_runs(_jobs_fetch(by, jobs), NOW, repo="x/y", notes=notes) == []
+    assert not any("kill_switch.yml" in n for n in notes)
+    assert config.WATCHDOG_RUNS["kill_switch.yml"]["job"] == "check"
+
+
+def test_the_judged_jobs_exist_in_their_workflows():
+    """A renamed job would read as 'no such job' and silently fall back to the
+    run's conclusion -- the very bug #80 fixed."""
+    import yaml
+    for wf, spec in config.WATCHDOG_RUNS.items():
+        if spec.get("job"):
+            doc = yaml.safe_load((wd.ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8"))
+            job = doc["jobs"].get(spec["job"])
+            assert job is not None, f"{wf} has no job {spec['job']!r}"
+            assert "name" not in job, f"{wf}:{spec['job']} has a display name; the API reports that"
+
+
+def test_the_backtest_workflows_are_watched_at_their_cadence():
+    """REFINE200 #79: a weekly and a monthly evidence refresh, each alarming
+    about a day after a dropped run -- never inside its own cadence."""
+    import yaml
+    for wf, cadence_h in (("lens_backtest.yml", 7 * 24), ("vivek_backtest.yml", 31 * 24)):
+        spec = config.WATCHDOG_RUNS[wf]
+        assert cadence_h < spec["max_age_h"] <= cadence_h + 48, wf
+        doc = yaml.safe_load((wd.ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8"))
+        crons = [c["cron"] for c in doc[True]["schedule"]]
+        want = "0 8 * * 0" if wf == "lens_backtest.yml" else "0 8 1 * *"
+        assert crons == [want], f"{wf} cadence moved: re-check its WATCHDOG_RUNS limit"
+
+
+# ── the run page carries it (REFINE200 #77) ────────────────────────────────────
+
+def _live_run(monkeypatch, tmp_path, findings, state=None, env=None, now=NOW):
+    st = tmp_path / "state.json"
+    if state is not None:
+        st.write_text(json.dumps(state), encoding="utf-8")
+    out = tmp_path / "gh_output"
+    out.write_text("", encoding="utf-8")
+    monkeypatch.setenv("WATCHDOG_STATE", str(st))
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.delenv("WATCHDOG_RAISE", raising=False)
+    for k, v in (env or {}).items():
+        monkeypatch.setenv(k, v)
+    monkeypatch.setattr(wd, "probe_content", lambda root, n: list(findings))
+    monkeypatch.setattr(wd, "probe_runs", lambda fetch, n, notes=None: [])
+    monkeypatch.setattr(wd, "_dispatch", lambda sev, text: [])
+    res = wd.run(now=now)
+    return res, json.loads(st.read_text(encoding="utf-8")), out.read_text(encoding="utf-8")
+
+
+def test_a_due_finding_is_annotated_on_the_run_page(monkeypatch, tmp_path, capsys):
+    _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL"), _f("pm", "WARNING")])
+    out = capsys.readouterr().out
+    assert "::error title=Watchdog CRITICAL::book_stale" in out
+    assert "::warning title=Watchdog WARNING::pm" in out
+
+
+def test_a_finding_not_due_a_reminder_is_not_re_annotated(monkeypatch, tmp_path, capsys):
+    state = {"book_stale": {"first": _iso(1), "last_alert": _iso(1)}}
+    _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")], state=state)
+    assert "::error" not in capsys.readouterr().out
+
+
+def test_the_annotation_escapes_what_github_would_read_as_commands():
+    a = wd._annotation("error", "a: b, c", "50% done\nnext")
+    assert a == "::error title=a%3A b%2C c::50%25 done%0Anext"
+
+
+def test_an_undelivered_alert_names_the_missing_secrets(monkeypatch, tmp_path, capsys):
+    res, _, _ = _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")])
+    out = capsys.readouterr().out
+    assert "CRITICAL alert NOT delivered: telegram (secret(s) not set: " \
+           "TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)" in out
+    assert "GBS_SMTP_HOST" in out
+
+
+# ── the red-run alarm (REFINE200 #77) ──────────────────────────────────────────
+
+RAISE = {"WATCHDOG_RAISE": "1"}
+
+
+def test_a_critical_is_raised_once_per_episode(monkeypatch, tmp_path):
+    crit = [_f("book_stale", "CRITICAL")]
+    res, state, out = _live_run(monkeypatch, tmp_path, crit, env=RAISE)
+    assert [a["key"] for a in res["alarm"]] == ["book_stale"]
+    assert out == "alarm=book_stale\n"
+    assert state["book_stale"]["raised"] == NOW.isoformat(timespec="seconds")
+    # next run: same episode -> no alarm, and the stamp survives a REMINDER
+    later = NOW + dt.timedelta(hours=config.WATCHDOG_RENOTIFY_HOURS + 1)
+    res2, state2, out2 = _live_run(monkeypatch, tmp_path, crit, env=RAISE, now=later)
+    assert res2["alarm"] == [] and out2 == "alarm=\n"
+    assert state2["book_stale"]["raised"] == state["book_stale"]["raised"]
+    # recovery, then a NEW episode raises again
+    _live_run(monkeypatch, tmp_path, [], env=RAISE, now=later)
+    res3, _, _ = _live_run(monkeypatch, tmp_path, crit, env=RAISE, now=later)
+    assert [a["key"] for a in res3["alarm"]] == ["book_stale"]
+
+
+def test_a_critical_first_seen_by_the_other_host_is_raised_by_this_one(monkeypatch, tmp_path):
+    seen = {"book_stale": {"first": _iso(0.4), "last_alert": _iso(0.4)}}   # crypto_bot alerted
+    res, _, _ = _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")],
+                          state=seen, env=RAISE)
+    assert [a["key"] for a in res["alarm"]] == ["book_stale"]
+
+
+def test_only_the_raising_host_and_only_criticals_raise(monkeypatch, tmp_path):
+    res, _, out = _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")])
+    assert res["alarm"] == [] and out == "alarm=\n"          # no WATCHDOG_RAISE
+    res, _, _ = _live_run(monkeypatch, tmp_path, [_f("pm", "WARNING")], env=RAISE)
+    assert res["alarm"] == []
+
+
+def test_a_configured_critical_channel_carries_it_instead(monkeypatch, tmp_path):
+    env = dict(RAISE, TELEGRAM_BOT_TOKEN="123:abc", TELEGRAM_CHAT_ID="-9")
+    res, _, _ = _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")], env=env)
+    assert res["alarm"] == []
+
+
+def test_a_dry_run_raises_nothing_and_writes_nothing(monkeypatch, tmp_path):
+    out = tmp_path / "gh_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    monkeypatch.setenv("WATCHDOG_RAISE", "1")
+    monkeypatch.setenv("WATCHDOG_STATE", str(tmp_path / "state.json"))
+    monkeypatch.setattr(wd, "probe_content", lambda root, n: [_f("book_stale", "CRITICAL")])
+    monkeypatch.setattr(wd, "probe_runs", lambda fetch, n, notes=None: [])
+    res = wd.run(dry_run=True, now=NOW)
+    assert res["alarm"] == [] and not out.exists()
+    assert not (tmp_path / "state.json").exists()
+
+
+def test_the_kill_switch_workflow_raises_from_a_separate_job():
+    """The alarm must fail a job that is NOT the kill-switch check: a red
+    `check` would read as a failed kill switch and skip actions/cache's
+    post-save, so the once-per-episode state would never persist."""
+    import yaml
+    doc = yaml.safe_load((wd.ROOT / ".github" / "workflows" / "kill_switch.yml").read_text(encoding="utf-8"))
+    check = doc["jobs"]["check"]
+    step = next(s for s in check["steps"] if s.get("name") == "Freshness watchdog")
+    assert step["id"] == "watchdog" and step["env"]["WATCHDOG_RAISE"] == "1"
+    assert step is check["steps"][-1], "the watchdog runs after the kill-switch check"
+    assert check["outputs"]["watchdog_alarm"] == "${{ steps.watchdog.outputs.alarm }}"
+    alarm = doc["jobs"]["watchdog-alarm"]
+    assert alarm["needs"] == "check"
+    assert alarm["if"] == "needs.check.outputs.watchdog_alarm != ''"
+    assert alarm["permissions"] == {} and alarm["timeout-minutes"] <= 5
+    assert "exit 1" in alarm["steps"][-1]["run"]
+    crypto = (wd.ROOT / ".github" / "workflows" / "crypto_bot.yml").read_text(encoding="utf-8")
+    assert "WATCHDOG_RAISE" not in crypto, "one raising host, so one red run per episode"
+
+
+# ── channel diagnostics (REFINE200 #127) ──────────────────────────────────────
+
+def test_telegram_follows_its_secrets_not_a_hidden_flag():
+    assert config.TELEGRAM_ENABLED is True
+
+
+def test_channel_problem_names_the_real_reason(monkeypatch):
+    env = {}
+    assert wd.channel_problem("telegram", env) == \
+        "secret(s) not set: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID"
+    env = {"TELEGRAM_BOT_TOKEN": "﻿123:abc", "TELEGRAM_CHAT_ID": " "}
+    assert wd.channel_problem("telegram", env) == "secret(s) not set: TELEGRAM_CHAT_ID"
+    env["TELEGRAM_CHAT_ID"] = "-9"
+    assert wd.channel_problem("telegram", env) == ""
+    monkeypatch.setattr(config, "TELEGRAM_ENABLED", False)
+    assert "TELEGRAM_ENABLED" in wd.channel_problem("telegram", env)
+    assert wd.channel_problem("pigeon", env) == "no sender for this channel"
+
+
+def test_the_self_test_says_why_each_channel_did_not_deliver(monkeypatch, capsys):
+    monkeypatch.setattr(wd, "_dispatch", lambda sev, text: [])
+    wd.test_alert()
+    out = capsys.readouterr().out
+    assert "NOT delivered: telegram (secret(s) not set: TELEGRAM_BOT_TOKEN, " \
+           "TELEGRAM_CHAT_ID)" in out
+    assert "unconfigured or failing" not in out
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:abc")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "-9")
+    wd.test_alert()
+    assert "telegram (configured, but the send failed" in capsys.readouterr().out
 
 
 # ── assert_staged.sh (the must-change gate) ────────────────────────────────────

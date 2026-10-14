@@ -143,3 +143,14 @@ def stub_alerts(monkeypatch):
     except Exception:
         pass
     return True
+
+
+@pytest.fixture(autouse=True)
+def _no_live_alert_channels(monkeypatch):
+    """No test may deliver a real alert (REFINE200 #127, 2026-10-14). Telegram
+    now sends whenever its secrets are set (config.TELEGRAM_ENABLED = True), so
+    a developer shell that exports them would have pytest ping the owner's
+    phone. Tests that exercise a channel set their own fake values."""
+    for name in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "GBS_SMTP_HOST",
+                 "GBS_SMTP_USER", "GBS_SMTP_PASS", "GBS_ALERT_TO"):
+        monkeypatch.delenv(name, raising=False)
