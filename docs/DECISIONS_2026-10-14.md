@@ -551,8 +551,8 @@ Watch shows **+10.9R a trade**, with a profit factor of 25.
 
 **Options.** (a) Move PhaseMap crypto onto the exchange feed with its
 identity check. Only the price bars change, not the detection maths. (b) Hide
-the crypto stats. (c) Leave the page as now: labelled unreliable, which was
-done in this batch.
+the crypto stats. (c) Leave the data as it is and keep the crypto stats
+labelled unreliable on the page.
 
 **Recommendation: (a).** The spec governs the data provider, so it needs your
 OK.
@@ -653,9 +653,10 @@ forming. Tuesday's scan sees a week that so far holds only Monday's session.
 the entry on the first day a plan arms. (d) Scale the volume test by how much
 of the candle has formed.
 
-**Recommendation: no change mid-cycle.** The "is the trigger candle
-complete?" flag ships in this batch, so the question can be measured. PR-5
-decides (b) on the replay. Do (d) at hc4-2 if PR-5 shows the 1W-break cell
+**Recommendation: no change mid-cycle.** Publish an "is the trigger candle
+complete?" field on 1W/3D plans and in the backtest trades. That is a label,
+not a rule, so it is safe mid-cycle, and it lets the question be measured.
+PR-5 decides (b) on the replay. Do (d) at hc4-2 if PR-5 shows the 1W-break cell
 behaving differently once volume is scaled.
 
 **What would change it.** PR-5: completed-candle triggers beat forming ones
@@ -681,8 +682,9 @@ returns, all rows: A+ +0.20% (233), A -0.98% (216), **B+ +0.75% (270)**, WATCH
 **What it says.** B+ legs do no worse than A+ legs. Removing them would shrink
 the evidence without improving it.
 
-**Recommendation: keep counting them.** The grade split, shipped in this
-batch, keeps the question visible. No trades are affected: the bot never
+**Recommendation: keep counting them.** From this batch every alignment
+records the VIVEK grade at alert time (#139), so the split can be read on
+any day. No trades are affected: the bot never
 reads confluence.
 
 **What would change it.** At 20 sessions, B+ legs end up clearly behind A+
