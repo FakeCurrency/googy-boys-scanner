@@ -404,7 +404,9 @@ def main(argv=None) -> int:
                        for h in HORIZONS)
     print(f"edge rosters: +{added} ingested, +{stamped} stamps; {len(entries)} tracked "
           f"(no cap - monthly shards){' - migrating the single file to shards' if migrated else ''}")
+    benched = sum(1 for e in entries if any(v is not None for v in (e.get("bench") or {}).values()))
     print(f"roster maturity: {per_h}")
+    print(f"benchmarked rows (excess returns): {benched}/{len(entries)}")
 
     if not (added or stamped or migrated):
         print("EDGE_ROSTERS_UNCHANGED")
