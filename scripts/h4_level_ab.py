@@ -35,7 +35,7 @@ from pathlib import Path
 import numpy as np
 
 # Run straight from a checkout (`python3 scripts/h4_level_ab.py`) — the repo root
-# is not on sys.path there. Same bootstrap as scripts/lens_fill_confluence.py.
+# is not on sys.path there.
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
