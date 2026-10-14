@@ -197,7 +197,7 @@ def test_the_adv_series_is_adv_usd_at_bar_for_bar():
             assert (want is None and np.isnan(s[j])) or s[j] == pytest.approx(want), (mk, j)
 
 
-def _frame(n=300, seed=5):
+def _frame(n=270, seed=5):
     rng = np.random.default_rng(seed)
     px = 40 * np.cumprod(1 + rng.normal(0, 0.012, n))
     return pd.DataFrame({"Open": px, "High": px * 1.012, "Low": px * 0.988, "Close": px,
