@@ -401,6 +401,52 @@ test("two loads one session apart build the SAME 3D candles", () => {
   assert.match(fnSrc("momentumFallback"), /sessionGroups\(daily, 3, MOM_3D_ANCHOR\)/);
 });
 
+/* ═══════════════ #112 REPLAY on a Momentum chart shows only the knowable ═══════════ */
+suite("#112 Momentum replay clips the panes, tags, labels, box and ATH");
+
+function momMarksHarness(tfs) {
+  return new Function("tfs", "el", `const NARROW_CHART_PX = 560;
+    ${constSrc("MOM_VIEW_MONTHS")} ${constSrc("MOM_REGIME_MULT")} ${constSrc("MOM_VIEW_MIN_BARS")}
+    ${fnSrc("momentumViewStart")} ${fnSrc("momRsiMarks")} ${fnSrc("momPriceMarks")}
+    return { momRsiMarks, momPriceMarks };`)(tfs, { clientWidth: 1200 });
+}
+
+test("a divergence appears only once its confirming pivot has closed", () => {
+  const cs = Array.from({ length: 40 }, (_, i) => ({ time: 1000 + i, close: 1 }));
+  const h = momMarksHarness({ "1D": { candles: cs, divs: [
+    { bull: true, pivot: 10, confirm: 15 }, { bull: false, pivot: 30, confirm: 35 }] } });
+  assert.equal(h.momRsiMarks("1D").length, 2, "outside replay: every divergence");
+  assert.deepEqual(h.momRsiMarks("1D", 1033).map((m) => m.text), ["Bull"],
+    "at bar 33 the Bear pivot (30) exists but is not CONFIRMED until bar 35");
+  assert.deepEqual(h.momRsiMarks("1D", 1035).map((m) => m.text), ["Bull", "Bear"]);
+});
+
+test("cross labels stop at the cut; the Rule A pair waits for its confirmation", () => {
+  const cs = Array.from({ length: 40 }, (_, i) => ({ time: 1000 + i, close: 1 }));
+  const ruleA = [{ time: 1020, text: "BULL DIV" }, { time: 1025, text: "confirmed" }];
+  const h = momMarksHarness({ "1D": { candles: cs, markers: ruleA,
+    crosses: [{ i: 5, bull: true, score: 2 }, { i: 22, bull: false, score: 3 }, { i: 38, bull: true, score: 1 }] } });
+  const at = (t) => h.momPriceMarks("1D", t).map((m) => m.time);
+  assert.deepEqual(at(undefined), [1005, 1020, 1022, 1025, 1038], "no cut: everything");
+  assert.deepEqual(at(1023), [1005, 1022], "Rule A not yet confirmed at 1023; the 1038 cross not yet printed");
+  assert.deepEqual(at(1030), [1005, 1020, 1022, 1025]);
+});
+
+test("rApply re-cuts every Momentum series and recomputes the box and ATH at the scrub point", () => {
+  const r = fnSrc("rApply");
+  for (const s of ["macdHistS", "macdLineS", "macdSigS", "rsiSigS"]) {
+    assert.match(r, new RegExp(`${s}\\.setData\\(pn \\? upTo\\(`), `${s} must be clipped in replay`);
+  }
+  assert.match(r, /rsiS\.setData\(pn \? upTo\(pn\.rsi\) : \[\]\)/);
+  assert.match(r, /rsiS\.setMarkers\(momRsiMarks\(curTF, tCut\)\)/);
+  assert.match(r, /candle\.setMarkers\(momPriceMarks\(curTF, tCut\)\)/);
+  assert.match(r, /applyMomentumPlan\(curTF, idx\)/);
+  const a = fnSrc("applyMomentumPlan");
+  assert.match(a, /const pl = upto \? momentumPlan\(cs, tfNow\.mp\) : tfNow\.plan;/, "the box as of the cut");
+  assert.match(a, /const ath = upto \? cs\.reduce\(/, "the high as of the cut");
+  assert.match(fnSrc("momentumFallback"), /tf\.mp = mp;/, "the replay plan uses the scan's own params");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
