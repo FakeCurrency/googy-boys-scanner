@@ -73,6 +73,36 @@ the PR-0 read, around Tue 27 Oct.
 
 ---
 
+## Replay results (decision_replay run 1, 2026-10-14)
+
+`decision_replay.yml` run 38537806354 (artifact `decision-replay-38537806354`):
+300 names per market, 5 years, the live hc4-1 rules (A/A+, four cells, weekly/3d
+level gate, 28-day time stop, 7-day cooldown, $2,500 x 60), crypto on exchange
+klines. Each variant re-runs the whole book.
+
+| Run | Trades | R per slot-month | vs live |
+|---|---|---|---|
+| **Live hc4-1 (baseline)** | 1,177 | 0.0318 | -- |
+| V5 A+ only (#3) | 948 | 0.0244 | worse |
+| V6 no 3D reclaim (#2) | 671 | 0.0390 | better, fails gate |
+| V7 no ASX (#1) | 974 | 0.0324 | same |
+| V8 ASX without 3D reclaim (#1/#2) | 1,104 | 0.0351 | better, fails gate |
+| V3 weekly level only (#4) | 638 | 0.0253 | worse |
+| V1 time stop 42d / 56d / off (#32) | | 0.0321 / 0.0178 / 0.0281 | 28d holds up |
+| V2 cut at day 14 if MFE < 0.5R | | 0.0535 | best, fails gate |
+
+Baseline expectancy +0.058R a trade at the worst-print stop fill (+0.104R with
+the stop filled at the stop or the gapped open), 51.6% winners. Exits: stops
+172 trades -221R, time 751 +26R, targets 63 +152R, trails 174 +112R.
+
+**No variant passed the pre-registered gate** (better in ASX and NASDAQ
+separately and in both halves). So: no rule change now, which is what every
+recommendation below already says. Read with them: A+ only is worse (keep A);
+dropping ASX changes nothing (keep ASX); weekly-only is worse; dropping 3D reclaim
+and the day-14 early cut look better but are not robust -- both are left to the
+live checkpoints (PR-1 ~26 Oct for 3D reclaim). The per-section "pending" notes
+below are answered by this table.
+
 ## The headline: why the clean sample matters
 
 The whole closed book is **112 closes, -15.16R** (38% won). Split by who
