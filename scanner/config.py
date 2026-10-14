@@ -1231,8 +1231,8 @@ VIVEK_SPLIT_RATIO_TOL = 0.03
 # most scheduled scans outright (week to 2026-10-05: 5/35 ASX, 8/35 NASDAQ,
 # 41/~168 crypto), which is why cron-job.org's heartbeat pings are the primary
 # scan clock since 2026-10-06. So the WATCHDOG_RUNS entries below that measure
-# a GitHub-cron workflow's own runs (kill_switch.yml, crypto_bot.yml) can fire
-# on a scheduler drop rather than an outage; the content probes (book, crypto
+# a GitHub-cron workflow's own runs (crypto_bot.yml) can fire on a scheduler
+# drop rather than an outage; the content probes (book, crypto
 # scan, backups) measure the outcome. Harmless only while no alert channel is
 # live. CRITICAL routes per ALERT_CHANNELS
 # (incl. email); WARNING skips email. One alert on first detection, one
@@ -1403,11 +1403,14 @@ MARKET_SCAN_WINDOWS = {
 # skipped, the run still concludes success), and crypto_bot.yml's :52 backstop
 # skips when fresh, so "last successful run" was satisfied by runs that scanned
 # nothing. A run whose job was skipped is passed over; a jobs-API error falls
-# back to the run's own conclusion (fail-quiet, as for the runs API). The
-# kill switch's `check` job is named so the watchdog-alarm job's red run
-# (kill_switch.yml, REFINE200 #77) is never read as a kill-switch failure.
+# back to the run's own conclusion (fail-quiet, as for the runs API).
+# kill_switch.yml is NOT watched (owner, 2026-10-14: "drop it"). GitHub runs
+# its :15/:45 cron every 4-7 hours, so a 2h limit raised a CRITICAL -- and a
+# red "Kill-switch check" email -- on nearly every run, from the kill switch's
+# own run, about a scheduler drop and not an outage. Paper only, no broker
+# keys: a late kill switch flattens nothing either way. The content probes
+# (book, crypto scan, backups) still catch a real stall.
 WATCHDOG_RUNS = {
-    "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL", "job": "check"},
     "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING", "job": "crypto"},
     # SESSION-AWARE (2026-09-21). scan.yml stopped running outside market
     # hours, so wall-clock age alarms every weekend: Friday's last scan to

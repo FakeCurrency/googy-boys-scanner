@@ -86,7 +86,7 @@ A heartbeat for crypto prints `scan gate: heartbeat:  -> crypto`.
   - GitHub runs it about every 4 to 7 hours, not every 30 minutes. That is a known gap and Viv's decision.
 - **Watchdog.** `watchdog: N finding(s), M alerted, K recovered (live, host=kill_switch)`, then `watchdog:   [CRITICAL|WARNING] <msg>` lines.
   - "alerted" reaches nobody: Telegram and email are empty.
-  - The `kill_switch.yml: last successful run Xh ago (limit 2h)` CRITICAL is chronic, from the throttling above.
+  - There is no `kill_switch.yml: last successful run` finding any more: Viv dropped that probe on 2026-10-14 (it fired on nearly every run from the throttling above). A red "Kill-switch check" run before that date was this alarm.
   - The `crypto_bot.yml` WARNING is noise: crypto is scanned by the heartbeat through scan.yml now.
 
 ## 8. ops.yml and cron-job.org
