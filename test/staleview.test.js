@@ -50,9 +50,18 @@ function pull(name) {
 }
 
 let passed = 0;
+// An async test returns a promise: it is reported when it SETTLES (REFINE200
+// #165 -- it used to print PASS on the spot and fail later as an unhandled
+// rejection, so the log named a failing test as passed). The summary at the
+// bottom waits for every one of them.
+const PENDING = [];
+const pass = (name) => { passed++; console.log("PASS  " + name); };
+const fail = (name, e) => { console.error("FAIL  " + name + "\n      " + e.message); process.exitCode = 1; };
 const test = (name, fn) => {
-  try { fn(); passed++; console.log("PASS  " + name); }
-  catch (e) { console.error("FAIL  " + name + "\n      " + e.message); process.exitCode = 1; }
+  let out;
+  try { out = fn(); } catch (e) { fail(name, e); return; }
+  if (out && typeof out.then === "function") PENDING.push(out.then(() => pass(name), (e) => fail(name, e)));
+  else pass(name);
 };
 
 const TTL = 5 * 60 * 1000;
@@ -2081,4 +2090,5 @@ test("NEWS page: 'Read updated' prints Sydney's date, digits and abbreviation, w
 });
 
 
-console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`);
+Promise.all(PENDING).then(() =>
+  console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`));

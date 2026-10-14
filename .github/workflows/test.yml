@@ -143,10 +143,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # functions/api/*.js are ES modules, and `node --check file.js` on a
+      # file with import/export syntax EXITS 0 WHATEVER IS IN IT (Node 22's
+      # module detection skips the check; verified with `export const x = ;`).
+      # So they are checked as modules on stdin, which does fail. (REFINE200 #166)
       - name: Syntax-check every shipped script
         run: |
           set -e
           for f in public/js/*.js; do node --check "$f"; done
+          for f in functions/api/*.js; do
+            node --input-type=module --check < "$f" || { echo "::error file=$f::syntax error in $f"; exit 1; }
+          done
       - name: SWR cache-layer tests (#97)
         run: node test/cache.test.js
       - name: Design-token contrast gate (#96)
