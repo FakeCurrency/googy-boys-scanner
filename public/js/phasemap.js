@@ -123,10 +123,14 @@
     const speak = window.speechSynthesis
       ? `<button class="pm-speak" data-speak="${idx}" title="Read aloud" aria-label="Read analysis aloud">▶ READ</button>`
       : "";
-    // FLASH cue: the event printed on THIS scan's date — review the chart now
+    // FLASH cue: the event printed on the market's newest completed bar —
+    // review the chart now. Keyed off as_of (the BAR date), not run_date:
+    // the nightly lands after Melbourne midnight, so run_date is a day past
+    // the bar and this never fired in 21 snapshots (REFINE200 #196). An old
+    // payload without as_of keeps the run_date reading.
     const m = rec.metrics || {};
-    const rd = state.data && state.data.run_date;
-    const flashed = rd && (m.displacement_date === rd || m.sweep_date === rd);
+    const asOf = state.data && (state.data.as_of || state.data.run_date);
+    const flashed = asOf && (m.displacement_date === asOf || m.sweep_date === asOf);
     const ci = state.confl ? state.confl.of(rec.ticker) : null;
     const aligned = ci && ci.side === (rec.direction === "bearish" ? "short" : "long");
     const key = `${rec.ticker}|${rec.direction}`;
@@ -138,7 +142,7 @@
         ${isNew ? '<span class="pm-tag pm-tag-new" title="Appeared since your last visit">NEW</span>' : ""}
         ${was ? `<span class="pm-tag pm-tag-new" title="State changed since your last visit">${PM.esc(was.replace("_", " "))} → ${PM.esc(rec.state.replace("_", " "))}</span>` : ""}
         ${aligned ? PM.confluenceChipHTML(ci, "PHASEMAP") : ""}
-        ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the latest scan day — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
+        ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the newest completed session — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
         ${rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : ""}
         ${PM.headBadgesHTML(rec)}
         ${speak}
@@ -506,54 +510,79 @@
     });
   }
 
+  // The header line: what ran (scan = the Melbourne date it published),
+  // what it read (bars to = the newest completed bar, REFINE200 #196), and
+  // how much of the universe Yahoo actually returned (#197).
+  function subLine(d) {
+    const n = (v) => Number(v).toLocaleString("en-AU");
+    const bars = d.as_of
+      ? ` · bars to ${d.as_of}` + (d.carried_from ? ` (no new bar since the ${d.carried_from} scan)` : "")
+      : "";
+    const universe = typeof d.fetched === "number"
+      ? `${n(d.fetched)} of ${n(d.universe_size)} tickers fetched`
+      : `${d.universe_size} tickers scanned`;
+    return `${state.market.toUpperCase()} · scan ${d.run_date}${bars} · ruleset v${d.ruleset_version} · ` +
+      `${universe} · ${d.results.length} results`;
+  }
+
   async function load() {
+    // MARKET-SWITCH RACE (REFINE200, folded #127): every await below can
+    // resolve after the user has tapped another market — the 1 MB ASX file
+    // routinely lands after the 150 KB crypto one — and whichever resolved
+    // last used to win state.data, so crypto's tab showed ASX cards and
+    // wrote them into pm-seen:crypto. Each resume checks it is still wanted.
+    const market = state.market;
+    const stale = () => market !== state.market;
     $("#pm-sub").textContent = "Loading latest scan…";
     $("#pm-list").innerHTML = SKELETON.repeat(4);   // shimmer, not a blank page
     try {
       // narrations ship in a sidecar file (latest.json is ~25% lighter);
       // fetched in parallel and merged back. Old full payloads still work.
       const [res, narrRes] = await Promise.all([
-        PM.fetchTimeout(`data/phasemap/${state.market}/latest.json`, { cache: "no-cache" }),
-        PM.fetchTimeout(`data/phasemap/${state.market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
+        PM.fetchTimeout(`data/phasemap/${market}/latest.json`, { cache: "no-cache" }),
+        PM.fetchTimeout(`data/phasemap/${market}/narrations.json`, { cache: "no-cache" }).catch(() => null),
       ]);
+      if (stale()) return;
       if (!res.ok) throw new Error("HTTP " + res.status);
-      state.data = await res.json();
+      const data = await res.json();
+      if (stale()) return;
       try {
         let nj = narrRes && narrRes.ok ? await narrRes.json() : null;
         // The pair ships together but is fetched in parallel — a deploy landing
         // between the two requests can leave the sidecar on the PREVIOUS scan
         // (review H5). run_date-match the pair and refetch the sidecar once,
         // cache-busted by the wanted run_date (shared, CDN-friendly buster).
-        if (nj && nj.run_date && state.data.run_date && nj.run_date !== state.data.run_date) {
+        if (nj && nj.run_date && data.run_date && nj.run_date !== data.run_date) {
           try {
             const r2 = await PM.fetchTimeout(
-              `data/phasemap/${state.market}/narrations.json?rd=${encodeURIComponent(state.data.run_date)}`,
+              `data/phasemap/${market}/narrations.json?rd=${encodeURIComponent(data.run_date)}`,
               { cache: "reload" });
             if (r2.ok) nj = await r2.json();
           } catch (_) { /* keep the mismatched sidecar — better than nothing */ }
         }
         const nm = (nj && nj.narrations) || {};
-        state.data.results.forEach((r) => {
+        data.results.forEach((r) => {
           if (r.narration == null) r.narration = nm[`${r.ticker}|${r.direction}`] || "";
         });
       } catch (_) {
-        state.data.results.forEach((r) => { if (r.narration == null) r.narration = ""; });
+        data.results.forEach((r) => { if (r.narration == null) r.narration = ""; });
       }
-      $("#pm-sub").innerHTML = PM.esc(
-        `${state.market.toUpperCase()} · scan ${state.data.run_date} · ruleset v${state.data.ruleset_version} · ` +
-        `${state.data.universe_size} tickers scanned · ${state.data.results.length} results`)
-        + PM.staleBadgeHTML(state.data.run_date);
+      if (stale()) return;
+      state.data = data;
+      $("#pm-sub").innerHTML = PM.esc(subLine(data)) + PM.staleBadgeHTML(data.run_date);
       state.sinceDismissed = false;
       diffSinceLastVisit();
       // multi-lens confluence badges + banner (async — re-render when known)
       state.confl = null;
       renderConfBanner();
-      PM.loadConfluence(state.market).then((c) => {
+      PM.loadConfluence(market).then((c) => {
+        if (stale()) return;
         state.confl = c;
         render();
         renderConfBanner();
       });
     } catch (err) {
+      if (stale()) return;
       state.data = null;
       // 404 = the artefact is genuinely missing; anything else is a
       // connection/CDN failure where the scan EXISTS and deserves a retry
