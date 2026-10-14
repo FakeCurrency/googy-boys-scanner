@@ -242,6 +242,10 @@ def test_long_reclaim_trigger_fires_and_arms():
     """Price pierced the level then closed back above it on the last bar → reclaim."""
     df = _frame("long_bounce")
     sig = vivek.evaluate(df)
+    # The signal itself: a long reacting AT its level (the reclaim's premise).
+    assert sig is not None
+    assert sig["direction"] == "long" and sig["at_level"] is True
+    assert sig["reaction"] == "bounce"
     plan = vivek.build_tf_plan(df, "long")
     assert plan is not None
     # The dip-then-bounce fixture closes back above its ~100 level → an armed reclaim.

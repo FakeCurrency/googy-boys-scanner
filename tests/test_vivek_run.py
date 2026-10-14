@@ -101,8 +101,10 @@ def test_dry_run_decides_but_never_writes_the_book(tmp_path, monkeypatch):
     bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)}, uni,
                        now=_aest(2024, 1, 2, 11, 0))
     # The returned book reflects the would-be fill in memory, but nothing persists.
+    assert [p["symbol"] for p in bk["open"]] == ["BHP"]
     assert not (tmp_path / "vivek_bot_book.json").exists()
     assert not (tmp_path / "public_book.json").exists()
+    assert not _mfile(tmp_path, "asx").exists()
 
 
 def test_live_mode_is_treated_as_paper_in_this_phase(tmp_path, monkeypatch):
