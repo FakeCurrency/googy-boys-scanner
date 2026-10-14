@@ -269,7 +269,8 @@ jobs:
       # Refresh the market-cap cache FIRST, on a fresh IP — Yahoo throttles its
       # fundamentals endpoint after the heavy scan download, so fetching caps
       # here (before the scan) is the reliable window. Reads the previous scan's
-      # A+/A symbols; the persistent cache fills in over a couple of runs.
+      # published rows (every grade since REFINE200 #157) and refreshes those
+      # whose cap is missing or stale, capped per run (MARKETCAP_REFRESH_MAX).
       - name: Refresh market-cap cache
         continue-on-error: true
         run: python -m scanner.marketcaps
