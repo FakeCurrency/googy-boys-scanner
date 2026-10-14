@@ -2,17 +2,20 @@
 
 The scheduled kill-switch used to read the retired scalp journal — always
 $0.00, could never fire. It now reads journal/vivek_bot_book.json per market
-with the VIVEK guard limit. These tests pin the adapter maths and the
-end-to-end trigger path (dry-run — never flattens a broker in tests).
+with the VIVEK guard limit, and (2026-10-14, REFINE200 #16) measures the same
+session WINDOW the runner's guard does. These tests pin the adapter maths and
+the end-to-end trigger path (dry-run — never flattens a broker in tests).
 """
 
+import datetime as dt
 import json
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from scanner import config
 from scanner.broker import kill_switch as ks
-from scanner.journal_common import session_day as _session_day
+from scanner.broker import vivek_guard as vg
 
 pytestmark = pytest.mark.risk
 
@@ -22,19 +25,22 @@ def _book(open_=None, closed=None):
             "open": list(open_ or []), "closed": list(closed or [])}
 
 
-def test_adapter_selects_market_day_and_stamps_session_key():
+def _market_today(market):
+    return dt.datetime.now(ZoneInfo(config.MARKETS[market].timezone)).strftime("%Y-%m-%d")
+
+
+def test_adapter_selects_the_market_and_the_market_day():
     book = _book(
-        open_=[{"market": "asx", "unreal_usd": -50.0, "realized_r": 0.5, "risk_usd": 40.0},
-               {"market": "nasdaq", "unreal_usd": -999.0}],          # other market: excluded
+        open_=[_pos("BHP", "asx", last_mark=100.0, day_marks={"2024-01-02": 100.0}),
+               _pos("MDB", "nasdaq", last_mark=50.0, risk_usd=999.0)],   # other market
         closed=[{"market": "asx", "exit_date": "2024-01-02", "realized_r": -2.0, "risk_usd": 100.0},
-                {"market": "asx", "exit_date": "2024-01-01", "realized_r": -5.0, "risk_usd": 100.0}],  # other day
+                {"market": "asx", "exit_date": "2024-01-01", "realized_r": -5.0, "risk_usd": 100.0},  # other day
+                {"market": "nasdaq", "exit_date": "2024-01-02", "realized_r": -9.0, "risk_usd": 100.0}],
     )
     j = ks._book_market_journal(book, "asx", "2024-01-02")
-    assert len(j["closed"]) == 1 and j["closed"][0]["pnl"] == pytest.approx(-200.0)
-    assert j["closed"][0]["session_day"] == _session_day()   # comparable key for check_and_kill
-    # open leg: stamped unreal on remaining size + banked partial-exit R
-    assert len(j["open"]) == 1
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0 + 0.5 * 40.0)
+    assert j["guard"]["realised_usd"] == pytest.approx(-200.0)   # today's asx close only
+    assert j["positions"] == 1
+    assert j["session_usd"] == pytest.approx(-200.0)             # BHP flat on its day ref
 
 
 def test_check_and_kill_honours_custom_limit(stub_alerts):
@@ -88,36 +94,47 @@ def _pos(symbol="BHP", market="asx", **kw):
     return p
 
 
-def test_adapter_live_quote_repriceses_with_runner_maths():
-    """A live quote replaces the stamped mark using the SAME _unreal_r the
-    runner stamps with: long, entry 100, risk 5, quote 90 -> -2R on $100."""
-    j = ks._book_market_journal(_book(open_=[_pos()]), "asx", "2024-01-02",
+def test_adapter_live_quote_reprices_from_the_days_reference():
+    """A live quote is measured from the mark the position carried into the
+    day: carried in at 100, quote 90 -> -2R on $100."""
+    pos = _pos(day_marks={"2024-01-02": 100.0}, last_mark=95.0)
+    j = ks._book_market_journal(_book(open_=[pos]), "asx", "2024-01-02",
                                 quotes={("BHP", "asx"): 90.0})
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-200.0)
+    assert j["session_usd"] == pytest.approx(-200.0)
     assert j["live_marks"] == 1
 
 
-def test_adapter_no_quote_falls_back_to_stamped_mark():
-    j = ks._book_market_journal(_book(open_=[_pos()]), "asx", "2024-01-02",
+def test_adapter_no_quote_falls_back_to_the_last_scan_mark():
+    pos = _pos(day_marks={"2024-01-02": 100.0}, last_mark=95.0)
+    j = ks._book_market_journal(_book(open_=[pos]), "asx", "2024-01-02",
                                 quotes={})
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0)
-    assert j["live_marks"] == 0
+    assert j["session_usd"] == pytest.approx(-100.0)     # 100 -> 95 = -1R
+    assert j["live_marks"] == 0 and j["guard"]["unpriced"] == []
 
 
-def test_adapter_malformed_row_keeps_stamp_not_crash():
-    bad = _pos()
-    del bad["entry"]                      # _unreal_r would KeyError
+def test_adapter_malformed_row_cannot_crash_or_poison_the_check():
+    bad = _pos(last_mark=95.0)
+    del bad["entry"]                      # _unreal_r used to KeyError on this
+    bad["risk"] = float("nan")
     j = ks._book_market_journal(_book(open_=[bad]), "asx", "2024-01-02",
                                 quotes={("BHP", "asx"): 90.0})
-    assert j["open"][0]["unreal_pnl"] == pytest.approx(-50.0)
+    assert j["session_usd"] == pytest.approx(0.0)
+
+
+def test_adapter_never_writes_the_book_it_measures():
+    pos = _pos(last_mark=95.0)
+    book = _book(open_=[pos])
+    before = json.dumps(book, sort_keys=True)
+    ks._book_market_journal(book, "asx", "2024-01-02", quotes={("BHP", "asx"): 90.0})
+    assert json.dumps(book, sort_keys=True) == before    # no day_marks stamped
 
 
 def test_run_standalone_fires_on_live_move_stale_mark_says_fine(
         tmp_path, monkeypatch, stub_alerts):
-    """THE reason for Phase 4: mark stamped at last scan says -$50 (fine), the
-    market has since moved to -$800 — the live quote must trip the switch."""
+    """THE reason for Phase 4: the mark stamped at last scan says -$80 (fine),
+    the market has since moved to -$720 — the live quote must trip the switch."""
     import scanner.broker.vivek_run as vr
-    book = _book(open_=[_pos(risk_usd=400.0)])          # live -2R * $400 = -$800
+    book = _book(open_=[_pos(risk_usd=400.0, last_mark=99.0)])   # 99 -> 90 = -1.8R x $400
     p = tmp_path / "vivek_bot_book.json"
     p.write_text(json.dumps(book), encoding="utf-8")
     monkeypatch.setattr(vr, "BOOK_FILE", p)
@@ -361,9 +378,10 @@ def test_the_alert_does_not_promise_a_flatten_that_will_not_happen(
 # ── run_standalone routing: the map, the de-dupe, the unmapped fallback ────────
 
 def _breached_book(markets):
-    """One open position per named market, each far past any sane limit."""
-    return _book(open_=[_pos(f"SYM{i}", m, risk_usd=100_000.0, unreal_usd=-99_000.0)
-                        for i, m in enumerate(markets)])
+    """One close TODAY (market-local) per named market, far past any sane limit."""
+    return _book(closed=[{"symbol": f"SYM{i}", "market": m, "exit_date": _market_today(m),
+                          "realized_r": -1.0, "risk_usd": 100_000.0}
+                         for i, m in enumerate(markets)])
 
 
 @pytest.fixture
@@ -485,3 +503,114 @@ def test_the_shipped_config_map_covers_every_market_and_names_real_brokers():
         assert isinstance(brokers, tuple), market
         for b in brokers:
             assert b in ks._FLATTEN_KEYS, f"{market} -> unknown broker {b!r}"
+
+
+# ── REFINE200 #16: the switch measures the window the runner's guard measures ──
+#
+# It used to hand check_and_kill each open position's WHOLE-LIFE P&L as
+# "today": a position down 5R since June read as a 5R day every half hour --
+# and on this switch a false breach is a flatten, not a halted entry.
+
+def _guard_book(day):
+    """A book that exercises every leg: a stamped open position, one the runner
+    has not stamped yet today, a scaled runner, today's close, an old close."""
+    return _book(
+        open_=[
+            _pos("OLD", entry_date="2026-06-01", risk_usd=400.0, last_mark=80.0,
+                 day_marks={"2026-07-27": 82.0, day: 80.0}),
+            _pos("FRESH", entry_date="2026-07-01", risk_usd=200.0, last_mark=104.0,
+                 day_marks={"2026-07-27": 101.0}),          # no stamp for today yet
+            _pos("RUN", entry_date="2026-07-01", risk_usd=100.0, last_mark=110.0,
+                 day_marks={day: 108.0}, booked_pct=0.25, realized_r=0.5,
+                 exits=[{"reason": "tp1", "price": 110.0, "pct": 0.25, "date": day}]),
+        ],
+        closed=[
+            {"symbol": "GONE", "market": "asx", "direction": "long", "entry": 100.0,
+             "risk": 5.0, "risk_usd": 300.0, "entry_date": "2026-07-01",
+             "status": "closed", "exit_date": day, "booked_pct": 1.0,
+             "realized_r": -1.2, "last_mark": 94.0, "day_marks": {day: 96.0},
+             "exits": [{"reason": "stop", "price": 94.0, "pct": 1.0, "date": day}]},
+            {"symbol": "LAST", "market": "asx", "exit_date": "2026-07-20",
+             "realized_r": -3.0, "risk_usd": 300.0},
+        ])
+
+
+def test_the_kill_switch_and_the_guard_agree_on_one_book():
+    """THE PIN. Same book, same prices: the switch's session figure IS the
+    runner's guard figure -- after the runner's own day stamp, which the switch
+    reproduces on a copy for any position the day's first run has not reached."""
+    import copy
+
+    import scanner.broker.vivek_run as vr
+    day = "2026-07-28"
+    quotes = {("OLD", "asx"): 76.0, ("FRESH", "asx"): 101.0}     # RUN unquoted
+    book = _guard_book(day)
+    j = ks._book_market_journal(book, "asx", day, quotes=quotes)
+
+    stamped = copy.deepcopy(book)                 # what the runner sees after stamping
+    for p in stamped["open"]:
+        vr._stamp_day_ref(p, day, None)
+    prices = {"OLD": 76.0, "FRESH": 101.0, "RUN": 110.0}         # RUN at its last mark
+    guard = vg.check(stamped, "asx", day, 150_000, prices.get)
+    assert j["session_usd"] == guard["session_usd"]
+    assert j["guard"] == vg.session_pnl(stamped, "asx", day, prices.get)
+    # and the number is a DAY's: OLD -0.8R, FRESH -0.6R, RUN +0.1 banked +0.3
+    # open, GONE -0.4R -- not OLD's -4.8R life nor GONE's -1.2R
+    assert j["session_usd"] == pytest.approx(-320.0 - 120.0 + 40.0 - 120.0)
+
+
+def test_an_old_loser_flat_today_does_not_fire_the_switch(
+        tmp_path, monkeypatch, stub_alerts):
+    """The live failure the window model exists for, on the switch: down 5R
+    since June ($2,000 on $400 of risk) and flat since the day began."""
+    import scanner.broker.vivek_run as vr
+    day = _market_today("asx")
+    book = _book(open_=[_pos("OLD", entry_date="2026-06-01", risk_usd=400.0,
+                             last_mark=75.0, day_marks={day: 75.0})])
+    p = tmp_path / "vivek_bot_book.json"
+    p.write_text(json.dumps(book), encoding="utf-8")
+    monkeypatch.setattr(vr, "BOOK_FILE", p)
+    monkeypatch.setattr(config, "VIVEK_BOT_ACCOUNT_EQUITY", 10_000)
+    monkeypatch.setattr(config, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 3.0)   # $300
+    monkeypatch.setattr(ks, "_live_marks", lambda b: {("OLD", "asx"): 75.0})
+    assert ks.run_standalone(dry_run=True)["triggered"] == []
+    # control: the same position losing a real 1R today does fire
+    monkeypatch.setattr(ks, "_live_marks", lambda b: {("OLD", "asx"): 70.0})
+    assert ks.run_standalone(dry_run=True)["triggered"] == ["asx"]
+
+
+def test_before_the_days_first_run_the_switch_measures_from_the_carried_mark():
+    """No stamp for today yet (the ASX's first scan is 11:00; the switch runs
+    from midnight): the reference is the mark the last run left, exactly what
+    that first run will stamp -- never the position's oldest stamp."""
+    day = "2026-07-28"
+    pos = _pos("A", entry_date="2026-07-01", risk_usd=100.0, last_mark=90.0,
+               day_marks={"2026-07-20": 110.0, "2026-07-27": 95.0})
+    j = ks._book_market_journal(_book(open_=[pos]), "asx", day,
+                                quotes={("A", "asx"): 90.0})
+    assert j["session_usd"] == pytest.approx(0.0)        # not (90-110)/5 = -4R
+
+
+def test_a_nan_quote_never_reaches_the_loss_check(monkeypatch):
+    """REFINE200 #19: NaN passed `px <= 0` and the sanity ratio."""
+    import pandas as pd
+
+    import scanner.data as sdata
+    idx = pd.date_range(end="2024-01-02", periods=3, freq="D")
+    monkeypatch.setattr(sdata, "download", lambda t, period=None, retries=None, **kw:
+                        {"BHP.AX": pd.DataFrame({"Close": [1.0, 2.0, float("nan")]}, index=idx)})
+    assert ks._live_marks(_book(open_=[_pos("BHP", "asx", last_mark=2.0)])) == {}
+
+
+def test_a_nan_row_does_not_fire_check_and_kill(stub_alerts):
+    """A NaN total compares False against `>= -limit`, which FIRED the switch."""
+    j = {"open": [{"unreal_pnl": float("nan")}, {"unreal_pnl": -10.0}], "closed": []}
+    assert ks.check_and_kill(j, dry_run=True, limit_usd=300.0) is False
+    assert ks.check_and_kill({"session_usd": float("nan")}, dry_run=True,
+                             limit_usd=300.0) is False
+
+
+def test_a_zero_limit_is_off_as_it_is_in_the_guard(stub_alerts):
+    j = {"session_usd": -10_000.0}
+    assert ks.check_and_kill(j, dry_run=True, limit_usd=0.0) is False
+    assert ks.check_and_kill(j, dry_run=True, limit_usd=300.0) is True

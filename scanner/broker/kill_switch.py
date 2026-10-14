@@ -11,6 +11,7 @@ removed with the AI BOT page on 2026-09-17.)
 """
 
 import logging
+import math
 import os
 import pathlib
 import sys
@@ -58,34 +59,22 @@ def _flatten_alpaca() -> None:
 _FLATTEN_KEYS = {"bybit": "BYBIT_API_KEY", "alpaca": "ALPACA_API_KEY"}
 
 
-def trade_pnl(t: dict) -> float:
-    """Realised dollar P&L of one CLOSED trade, from either journal shape.
+def _finite_or_zero(v) -> float:
+    """`v` as a float, or 0.0 when it is missing, junk, NaN or infinite.
 
-    Two closed-trade shapes exist: the legacy scalp journal writes `pnl`; the
-    BOT BOOK (the one and only track record) writes no `pnl` at all, it stores
-    `realized_r` and the `risk_usd` that R is denominated in. An explicit `pnl`
-    wins when it is a real number; otherwise derive from R. None-safe and
-    NaN-safe on purpose: a NaN inside a sum makes every downstream comparison
-    False, i.e. it DISARMS the guard rather than tripping it.
-    (Moved here from risk_manager.py on 2026-09-17 when that module went with
-    the AI BOT page; identical arithmetic.)
+    check_and_kill's sums go through this (REFINE200 #19). A NaN term made the
+    session total NaN, and `NaN >= -limit` is False -- so one corrupt row did
+    not disarm this switch, it FIRED it, flattening an account on garbage.
+
+    (`trade_pnl`, the closed-row converter that applied the same rule, went
+    with the whole-life adapter on 2026-10-14 -- REFINE200 #16: a close is now
+    valued inside vivek_guard's window, whose inputs are NaN-safe too.)
     """
-    import math
-    raw = t.get("pnl")
-    if raw is not None:
-        try:
-            v = float(raw)
-        except (TypeError, ValueError):
-            v = float("nan")
-        if not math.isnan(v):
-            return v
     try:
-        r = float(t.get("realized_r") or 0.0)
-        risk = float(t.get("risk_usd") or 0.0)
+        f = float(v)
     except (TypeError, ValueError):
         return 0.0
-    v = r * risk
-    return 0.0 if math.isnan(v) else v
+    return f if math.isfinite(f) else 0.0
 
 
 def _flatten(name: str) -> None:
@@ -126,12 +115,32 @@ def _armed_brokers(wanted, legacy: bool) -> list[str]:
     return armed[:1] if legacy else armed
 
 
+def _session_total(j: dict) -> float:
+    """The session P&L check_and_kill compares with its limit.
+
+    A bot-book slice carries vivek_guard's own window figure (`session_usd`,
+    set by `_book_market_journal`), used as is. Anything else is the legacy
+    journal shape: today's closed `pnl` (keyed by journal_common.session_day)
+    plus every open row's `unreal_pnl`. Non-finite terms count as 0.
+    """
+    if "session_usd" in j:
+        return _finite_or_zero(j.get("session_usd"))
+    from scanner.journal_common import session_day
+    today = session_day()
+    return (sum(_finite_or_zero(c.get("pnl")) for c in j.get("closed", [])
+                if c.get("session_day") == today)
+            + sum(_finite_or_zero(p.get("unreal_pnl")) for p in j.get("open", [])))
+
+
 def check_and_kill(j: dict, dry_run: bool = False,
                    limit_usd: float | None = None, label: str = "session",
                    brokers: tuple[str, ...] | None = None) -> bool:
     """Return True if the kill switch fired (caller must abort new orders).
 
-    j          — journal-shaped dict: open[].unreal_pnl + closed[].{session_day,pnl}
+    j          — the session to judge: either a bot-book slice already measured
+                 by vivek_guard (`session_usd`, what run_standalone passes), or
+                 the legacy journal shape open[].unreal_pnl +
+                 closed[].{session_day,pnl}, summed here (`_session_total`)
     limit_usd  — loss limit; defaults to the VIVEK daily limit
                  (`_vivek_daily_limit`, the figure run_standalone passes). It
                  was the retired scalp journal's SCALP_MAX_DAILY_LOSS until
@@ -154,17 +163,14 @@ def check_and_kill(j: dict, dry_run: bool = False,
     is not the same as not firing: the breach is real, the caller must still
     abort new orders, and the operator must still hear about it. What changes is
     only that a paper market stops reaching for a live account.
+
+    A limit of 0 (or less) is OFF, as it is in vivek_guard.check: it used to
+    fire on any loss at all, i.e. flatten on the first red cent.
     """
-    from scanner.journal_common import session_day
-
     limit = _vivek_daily_limit() if limit_usd is None else float(limit_usd)
-    today        = session_day()
-    today_closed = [c for c in j.get("closed", []) if c.get("session_day") == today]
-    today_pnl    = sum(c.get("pnl", 0) for c in today_closed)
-    unrealised   = sum(p.get("unreal_pnl") or 0 for p in j.get("open", []))
-    total_session = today_pnl + unrealised
+    total_session = _session_total(j)
 
-    if total_session >= -limit:
+    if limit <= 0 or total_session >= -limit:
         return False
 
     legacy  = brokers is None
@@ -264,7 +270,10 @@ def _live_marks(book: dict) -> dict:
         quotes = {}
         for yf_t, key in want.items():
             px = _current_price(frames, yf_t)
-            if px is None or px <= 0:
+            # NaN passes `px <= 0` AND the sanity ratio below (every NaN
+            # comparison is False), so a NaN close on a forming bar used to
+            # reach the loss check as a live quote (REFINE200 #19).
+            if px is None or not math.isfinite(px) or px <= 0:
                 continue
             # Mark-sanity filter (2026-07-21, Phase 6 P1): a split/bad print
             # must not fake-trigger the loss check either. A quote that moved
@@ -289,43 +298,59 @@ def _live_marks(book: dict) -> dict:
 
 def _book_market_journal(book: dict, market: str, market_day: str,
                          quotes: dict | None = None) -> dict:
-    """Adapt ONE market's slice of the BOT BOOK to check_and_kill's journal shape.
+    """Measure ONE market's slice of the BOT BOOK the way the runner's guard does.
 
-    Selection is by the market-local day (exit_date), but rows are stamped with
-    the AEST session_day() key because that is what check_and_kill compares
-    against. Open positions are re-priced LIVE when `quotes` has a price for
-    them (same _unreal_r maths the runner itself stamps with, so the two can
-    never disagree on semantics); any position without a live quote falls back
-    to the unreal_usd mark from the last scan. Banked partial-exit R
-    (realized_r) is added either way.
+    TODAY MEANS A WINDOW (2026-10-14, REFINE200 #16). This used to hand
+    check_and_kill each open position's WHOLE-LIFE P&L as "today" (its
+    unrealised R from entry plus every partial it ever banked) and each of
+    today's closes at its whole-life R -- the exact model vivek_guard dropped
+    on 2026-07-28 (TOP100 #13/#14) because it arrived pre-breached: a position
+    down 5R since June read as a 5R day, every half hour, until it closed. And
+    on this switch a false breach is not a halted entry, it is a flatten.
 
-    The closed-row conversion is trade_pnl (below), the same
-    `realized_r x risk_usd` this line has always hand-rolled. It lived in
-    risk_manager.py until the scalp-era risk stack was removed with the AI BOT
-    page (2026-09-17); this is now its only consumer, so it lives here.
+    So the figure is now vivek_guard.session_pnl itself, for `market_day`:
+      * each open position is a COPY given the runner's own day reference
+        (vivek_run._stamp_day_ref, which never overwrites one a run already
+        wrote) -- between the day's first run and midnight the runner has
+        stamped it; before that first run the copy gets exactly the stamp that
+        run will write, the mark carried in from the last run;
+      * priced at its live quote where `quotes` has one, else at its last-scan
+        mark (`last_mark`), the fallback the runner's own restamp uses;
+      * today's closes through the same closed-leg window.
+    The book itself is never touched (this job commits nothing anyway).
+
+    Only the MEASURED figure is acted on. A position with neither a quote nor a
+    mark is left out (named in `guard["unpriced"]`), not valued at its stop:
+    halting new entries on a blind spot is the runner guard's job (#15), and
+    flattening an account on one is not this switch's.
+
+    Returns {"session_usd", "guard" (the full session_pnl dict), "positions",
+    "live_marks"}; check_and_kill reads `session_usd`.
     """
-    from scanner.journal_common import session_day
+    import copy
+
+    from scanner.broker import vivek_run as vr
 
     from . import vivek_guard
-    key = session_day()
-    closed = [{"session_day": key, "pnl": trade_pnl(t)}
-              for t in book.get("closed", [])
-              if t.get("market") == market and t.get("exit_date") == market_day]
-    open_, live_n = [], 0
+    open_rows, marks, live_n = [], {}, 0
     for p in book.get("open", []):
         if p.get("market") != market:
             continue
-        unreal = p.get("unreal_usd") or 0.0          # last-scan stamp (fallback)
-        q = (quotes or {}).get((p.get("symbol"), market))
+        row = copy.deepcopy(p)
+        vr._stamp_day_ref(row, market_day, None)
+        open_rows.append(row)
+        sym = row.get("symbol")
+        q = (quotes or {}).get((sym, market))
         if q is not None:
-            try:
-                unreal = vivek_guard._unreal_r(p, q) * (p.get("risk_usd") or 0.0)
-                live_n += 1
-            except Exception:                        # malformed row: keep stamp
-                unreal = p.get("unreal_usd") or 0.0
-        open_.append({"unreal_pnl": unreal
-                      + (p.get("realized_r") or 0.0) * (p.get("risk_usd") or 0.0)})
-    return {"open": open_, "closed": closed, "live_marks": live_n}
+            marks[sym] = q
+            live_n += 1
+        else:
+            marks[sym] = vr._book_mark(row)
+    closed = [t for t in book.get("closed", []) if t.get("market") == market]
+    pnl = vivek_guard.session_pnl({"open": open_rows, "closed": closed}, market,
+                                  market_day, marks.get)
+    return {"session_usd": pnl["session_usd"], "guard": pnl,
+            "positions": len(open_rows), "live_marks": live_n}
 
 
 def run_standalone(dry_run: bool = False) -> dict:
@@ -335,7 +360,9 @@ def run_standalone(dry_run: bool = False) -> dict:
     journal, whose file no longer exists — session P&L was always $0.00 and
     the switch could never fire. It now reads journal/vivek_bot_book.json and
     applies the same per-market limit the runner's own guard uses
-    (VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY).
+    (VIVEK_BOT_MAX_DAILY_LOSS_PCT of VIVEK_BOT_ACCOUNT_EQUITY), to the same
+    session figure the runner's guard computes (vivek_guard.session_pnl over
+    the market-local day; see _book_market_journal, REFINE200 #16).
     Returns {"triggered": [markets], "checked": [markets], "flattened": [brokers]}.
 
     EACH BROKER IS FLATTENED AT MOST ONCE PER RUN (2026-07-28). The loop calls
@@ -411,11 +438,10 @@ def run_standalone(dry_run: bool = False) -> dict:
                 done.update(hit)
                 out["flattened"].extend(b for b in hit if b not in out["flattened"])
         else:
-            pnl = (sum(c["pnl"] for c in j["closed"])
-                   + sum(p["unreal_pnl"] for p in j["open"]))
-            log.info("kill-switch OK [%s] - book P&L $%.2f / limit -$%.2f "
-                     "(%d open, %d live-priced)",
-                     market, pnl, limit, len(j["open"]), j.get("live_marks", 0))
+            log.info("kill-switch OK [%s] - session P&L $%.2f / limit -$%.2f "
+                     "(%d open, %d live-priced, %d unpriced)",
+                     market, _session_total(j), limit, j.get("positions", 0),
+                     j.get("live_marks", 0), len(j["guard"].get("unpriced") or []))
     return out
 
 
