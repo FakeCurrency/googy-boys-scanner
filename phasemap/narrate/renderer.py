@@ -44,13 +44,61 @@ def _zone_by_id(record: dict, zid: str) -> dict:
     return None
 
 
+# The stats artefact stores the market code upper-cased ("CRYPTO"), which
+# rendered "on the CRYPTO" (REFINE200 #195).
+MARKET_PHRASE = {"ASX": "on the ASX", "NASDAQ": "on NASDAQ", "CRYPTO": "in crypto"}
+
+
+def sessions(n) -> str:
+    """'1 session' / '3 sessions' — the live cards said '1 sessions'."""
+    if not isinstance(n, int):
+        return f"{n} sessions"
+    return f"{n} session" if n == 1 else f"{n} sessions"
+
+
 def _stats_text(stats: dict) -> str:
     """M4 wires this. Until then it must stay empty — never hardcode a claim."""
     if not stats:
         return ""
+    market = str(stats.get("market", ""))
+    where = MARKET_PHRASE.get(market.upper(), f"on {market}")
     return (" Historically this pattern reached its first target zone within "
             f"{stats['window_sessions']} sessions {stats['hit_rate_pct']}% of the "
-            f"time on the {stats['market']}.")
+            f"time {where}.")
+
+
+def _names(ids: list) -> str:
+    ids = [i.upper() for i in ids]
+    return ids[0] if len(ids) == 1 else ", ".join(ids[:-1]) + " and " + ids[-1]
+
+
+def _draw_slots(targets: list) -> dict:
+    """The draw clause names the first UNCONSUMED target (REFINE200 #195):
+    78 of 193 live RUNNING/DISPLACED cards called an already-CONSUMED T1 the
+    'First draw' while their own WANTED NEXT line pointed at T2/T3."""
+    consumed = []
+    for z in targets:
+        if z["status"] != "CONSUMED":
+            break
+        consumed.append(z["id"])
+    live = [z for z in targets if z["status"] != "CONSUMED"]
+    if not live:
+        return {"draw_clause": ("Every mapped target zone is already consumed"
+                                if targets else "No target zone is mapped beyond price"),
+                "t2_clause": ""}
+    d = live[0]
+    zone = f"the {fmt_price(d['low'])}–{fmt_price(d['high'])} zone ({_sources_text(d)})"
+    if consumed:
+        verb = "is" if len(consumed) == 1 else "are"
+        clause = f"{_names(consumed)} {verb} already consumed; the next draw is {zone}"
+    else:
+        clause = f"First draw is {zone}"
+    t2 = ""
+    if len(live) > 1:
+        n = live[1]
+        t2 = (f"; beyond that, {fmt_price(n['low'])}–{fmt_price(n['high'])} "
+              f"({_sources_text(n)})")
+    return {"draw_clause": clause, "t2_clause": t2}
 
 
 def render(record: dict, stats: dict = None) -> str:
@@ -59,14 +107,21 @@ def render(record: dict, stats: dict = None) -> str:
     template = TEMPLATES[(state, direction)]
     m = record.get("metrics", {})
 
+    targets = [z for z in record.get("zones", []) if z["type"] == "TARGET"]
+    # The {stats} claim is about reaching the FIRST target — once T1 is
+    # consumed it describes something that already happened (REFINE200 #195).
+    t1_open = not (targets and targets[0]["status"] == "CONSUMED")
     slots = {
         "ticker": record["ticker"],
-        "stats": _stats_text(stats),
+        "stats": _stats_text(stats) if t1_open else "",
         "tr_mult": f"{CONFIG.displacement_tr_mult:g}",
         "sweep_date": m.get("sweep_date", "?"),
         "displacement_date": m.get("displacement_date", "?"),
         "bars_in_box": m.get("bars_in_box", "?"),
+        "bars_in_box_sessions": sessions(m.get("bars_in_box", "?")),
         "bars_remaining": m.get("bars_remaining", "?"),
+        "bars_remaining_sessions": sessions(m.get("bars_remaining", "?")),
+        "stalled_expiry": CONFIG.stalled_expiry_bars,
     }
     if "box_height_pct" in m:
         slots["box_height_pct"] = fmt_pct(m["box_height_pct"])
@@ -91,21 +146,10 @@ def render(record: dict, stats: dict = None) -> str:
         slots["inv_soft_low"] = fmt_price(inv_soft["low"])
         slots["inv_soft_high"] = fmt_price(inv_soft["high"])
 
-    targets = [z for z in record.get("zones", []) if z["type"] == "TARGET"]
+    slots.update(_draw_slots(targets))
     if targets:
-        t1 = targets[0]
-        slots["t1_low"] = fmt_price(t1["low"])
-        slots["t1_high"] = fmt_price(t1["high"])
-        slots["t1_sources"] = _sources_text(t1)
         slots["t_final_low"] = fmt_price(targets[-1]["low"])
         slots["t_final_high"] = fmt_price(targets[-1]["high"])
-        if len(targets) > 1:
-            t2 = targets[1]
-            slots["t2_clause"] = (
-                f"; beyond that, {fmt_price(t2['low'])}–{fmt_price(t2['high'])} "
-                f"({_sources_text(t2)})")
-        else:
-            slots["t2_clause"] = ""
 
     text = template.format(**slots)
     return f"{text} {DISCLAIMER}"
@@ -120,7 +164,13 @@ def render_next(record: dict) -> str:
         "window": CONFIG.displacement_window_bars,
         "tr_mult": f"{CONFIG.displacement_tr_mult:g}",
         "bars_remaining": m.get("bars_remaining", "?"),
+        "bars_remaining_sessions": sessions(m.get("bars_remaining", "?")),
+        "stalled_expiry": CONFIG.stalled_expiry_bars,
     }
+    inv_hard = _zone_by_id(record, "inv_hard")
+    if inv_hard:
+        slots["inv_hard_floor"] = fmt_price(inv_hard["low"])
+        slots["inv_hard_ceiling"] = fmt_price(inv_hard["high"])
     if "cluster_low" in m:
         slots["cluster_low"] = fmt_price(m["cluster_low"])
         slots["cluster_high"] = fmt_price(m["cluster_high"])

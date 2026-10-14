@@ -15,13 +15,13 @@ DISCLAIMER = "Analysis only — not financial advice."
 # Keys: (state, direction). direction: "bullish" | "bearish".
 TEMPLATES = {
     ("TRAP_SET", "bullish"): (
-        "{ticker} has spent {bars_in_box} sessions inside a {box_height_pct}% range. "
+        "{ticker} has spent {bars_in_box_sessions} inside a {box_height_pct}% range. "
         "Equal lows are resting at {cluster_low}–{cluster_high} — that's where the "
         "stops are sitting. Nothing to do yet: the setup only begins if that area "
         "is swept and price closes back above it.{stats}"
     ),
     ("TRAP_SET", "bearish"): (
-        "{ticker} has spent {bars_in_box} sessions inside a {box_height_pct}% range. "
+        "{ticker} has spent {bars_in_box_sessions} inside a {box_height_pct}% range. "
         "Equal highs are resting at {cluster_low}–{cluster_high} — that's where the "
         "stops are sitting. Nothing to do yet: the setup only begins if that area "
         "is swept and price closes back below it.{stats}"
@@ -29,45 +29,43 @@ TEMPLATES = {
     ("SWEPT", "bullish"): (
         "{ticker} ran the {demand_low}–{demand_high} lows on {sweep_date} and closed "
         "back inside the range. The trap has been sprung. The market now has "
-        "{bars_remaining} sessions to prove it with a displacement candle — range at "
+        "{bars_remaining_sessions} to prove it with a displacement candle — range at "
         "least {tr_mult}× normal, small lower wick, close near its high. "
         "No displacement, no setup.{stats}"
     ),
     ("SWEPT", "bearish"): (
         "{ticker} ran the {demand_low}–{demand_high} highs on {sweep_date} and closed "
         "back inside the range. The trap has been sprung. The market now has "
-        "{bars_remaining} sessions to prove it with a displacement candle — range at "
+        "{bars_remaining_sessions} to prove it with a displacement candle — range at "
         "least {tr_mult}× normal, small upper wick, close near its low. "
         "No displacement, no setup.{stats}"
     ),
     ("DISPLACED", "bullish"): (
-        "{ticker} printed a displacement candle today, {displacement_date} — "
-        "oversized range with a close near its high — after sweeping the "
-        "{demand_low}–{demand_high} lows. First draw is the {t1_low}–{t1_high} zone "
-        "({t1_sources}). The continuation thesis stays valid while pullbacks hold "
+        "{ticker} printed a displacement candle on its latest session, "
+        "{displacement_date} — oversized range with a close near its high — after "
+        "sweeping the {demand_low}–{demand_high} lows. {draw_clause}{t2_clause}. "
+        "The continuation thesis stays valid while pullbacks hold "
         "above the {inv_soft_low}–{inv_soft_high} area; structural invalidation only "
         "on a daily close below {inv_hard_floor}.{stats}"
     ),
     ("DISPLACED", "bearish"): (
-        "{ticker} printed a displacement candle today, {displacement_date} — "
-        "oversized range with a close near its low — after sweeping the "
-        "{demand_low}–{demand_high} highs. First draw is the {t1_low}–{t1_high} zone "
-        "({t1_sources}). The continuation thesis stays valid while bounces hold "
+        "{ticker} printed a displacement candle on its latest session, "
+        "{displacement_date} — oversized range with a close near its low — after "
+        "sweeping the {demand_low}–{demand_high} highs. {draw_clause}{t2_clause}. "
+        "The continuation thesis stays valid while bounces hold "
         "below the {inv_soft_low}–{inv_soft_high} area; structural invalidation only "
         "on a daily close above {inv_hard_ceiling}.{stats}"
     ),
     ("RUNNING", "bullish"): (
-        "Displacement confirmed on {displacement_date}. First draw is the "
-        "{t1_low}–{t1_high} zone ({t1_sources}){t2_clause}. The continuation thesis "
-        "stays valid while pullbacks hold above the {inv_soft_low}–{inv_soft_high} "
+        "Displacement confirmed on {displacement_date}. {draw_clause}{t2_clause}. "
+        "The continuation thesis stays valid while pullbacks hold above the {inv_soft_low}–{inv_soft_high} "
         "area — one touch of that zone and this becomes a rotation candidate "
         "instead. Structural invalidation only on a daily close below "
         "{inv_hard_floor}.{stats}"
     ),
     ("RUNNING", "bearish"): (
-        "Displacement confirmed on {displacement_date}. First draw is the "
-        "{t1_low}–{t1_high} zone ({t1_sources}){t2_clause}. The continuation thesis "
-        "stays valid while bounces hold below the {inv_soft_low}–{inv_soft_high} "
+        "Displacement confirmed on {displacement_date}. {draw_clause}{t2_clause}. "
+        "The continuation thesis stays valid while bounces hold below the {inv_soft_low}–{inv_soft_high} "
         "area — one touch of that zone and this becomes a rotation candidate "
         "instead. Structural invalidation only on a daily close above "
         "{inv_hard_ceiling}.{stats}"
@@ -75,14 +73,16 @@ TEMPLATES = {
     ("STALLED", "bullish"): (
         "{ticker} touched the 50% area at {inv_soft_low}–{inv_soft_high}. The "
         "expansion thesis is finished — this is no longer a continuation setup. "
-        "Structure is still intact above {inv_hard_floor}, so it moves to the "
-        "rotation watchlist where deep-retracement logic applies.{stats}"
+        "Structure is still intact above {inv_hard_floor}: it stays on the "
+        "rotation list until a daily close below that floor kills it, or drops "
+        "off after {stalled_expiry} sessions.{stats}"
     ),
     ("STALLED", "bearish"): (
         "{ticker} touched the 50% area at {inv_soft_low}–{inv_soft_high}. The "
         "expansion thesis is finished — this is no longer a continuation setup. "
-        "Structure is still intact below {inv_hard_ceiling}, so it moves to the "
-        "rotation watchlist where deep-retracement logic applies.{stats}"
+        "Structure is still intact below {inv_hard_ceiling}: it stays on the "
+        "rotation list until a daily close above that ceiling kills it, or drops "
+        "off after {stalled_expiry} sessions.{stats}"
     ),
     ("COMPLETE", "bullish"): (
         "{ticker} closed through the far edge of its final target zone "
@@ -125,11 +125,11 @@ NEXT_EVIDENCE = {
         "them, then a displacement candle within {window} sessions"),
     ("SWEPT", "bullish"): (
         "a displacement candle — range at least {tr_mult}× normal, small lower "
-        "wick, close near its high — within {bars_remaining} sessions, or the "
+        "wick, close near its high — within {bars_remaining_sessions}, or the "
         "setup expires"),
     ("SWEPT", "bearish"): (
         "a displacement candle — range at least {tr_mult}× normal, small upper "
-        "wick, close near its low — within {bars_remaining} sessions, or the "
+        "wick, close near its low — within {bars_remaining_sessions}, or the "
         "setup expires"),
     ("DISPLACED", "bullish"): (
         "shallow pullbacks holding above the {inv_soft_low}–{inv_soft_high} "
@@ -144,11 +144,13 @@ NEXT_EVIDENCE = {
         "bounces staying below {inv_soft_low}–{inv_soft_high}; next "
         "objective {next_target}"),
     ("STALLED", "bullish"): (
-        "nothing here — the expansion thesis is done; deep-retracement "
-        "(rotation) logic owns it now"),
+        "nothing revives it — the continuation thesis is finished; it drops "
+        "off after {stalled_expiry} sessions, or dies on a daily close below "
+        "{inv_hard_floor}"),
     ("STALLED", "bearish"): (
-        "nothing here — the expansion thesis is done; deep-retracement "
-        "(rotation) logic owns it now"),
+        "nothing revives it — the continuation thesis is finished; it drops "
+        "off after {stalled_expiry} sessions, or dies on a daily close above "
+        "{inv_hard_ceiling}"),
     ("COMPLETE", "bullish"): (
         "a new range to form — every mapped objective was consumed"),
     ("COMPLETE", "bearish"): (
