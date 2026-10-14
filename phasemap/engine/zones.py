@@ -10,9 +10,29 @@ CONSUMED/VIOLATED.
   "above" — price approaches from below (bull targets, bear supply/invalidations)
 """
 
+import math
 from dataclasses import dataclass, field
 
-from phasemap.config import CONFIG
+from phasemap.config import CONFIG, PRICE_SIG_FIGS
+
+
+def round_sig(x: float, sig: int) -> float:
+    """Round to `sig` significant figures; 0 and non-finite pass through."""
+    if not x or not math.isfinite(x):
+        return x
+    return round(x, sig - 1 - math.floor(math.log10(abs(x))))
+
+
+def round_price(x: float) -> float:
+    """Publish rounding for a PRICE (REFINE200 #132): CONFIG.price_decimals
+    or PRICE_SIG_FIGS significant figures, whichever keeps MORE digits. Fixed
+    4 dp published BONK (3e-06) as 0.0 and every sub-cent band as a single
+    point; at >= ~$10 this is byte-identical to the old 4 dp. Display only —
+    the engine's floats are never rounded."""
+    nd = CONFIG.price_decimals
+    if not x or not math.isfinite(x):
+        return round(x, nd) if math.isfinite(x) else x
+    return round(x, max(nd, PRICE_SIG_FIGS - 1 - math.floor(math.log10(abs(x)))))
 
 
 @dataclass
@@ -64,12 +84,11 @@ class Zone:
                 self.status = "RESPECTED"
 
     def to_dict(self) -> dict:
-        nd = CONFIG.price_decimals
         d = {
             "id": self.id,
             "type": self.type,
-            "low": round(self.low, nd),
-            "high": round(self.high, nd),
+            "low": round_price(self.low),
+            "high": round_price(self.high),
             "status": self.status,
         }
         if self.confluence > 1 or self.sources:

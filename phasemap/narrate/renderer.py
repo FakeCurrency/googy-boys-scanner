@@ -5,6 +5,8 @@ backtest harness; until it supplies real numbers the {stats} slot renders
 empty (guardrail: no performance claims before M4).
 """
 
+import math
+
 from phasemap.config import CONFIG
 from phasemap.narrate.templates import (DISCLAIMER, NEXT_EVIDENCE,
                                         SOURCE_NAMES, TEMPLATES)
@@ -14,7 +16,11 @@ def fmt_price(x: float) -> str:
     if x is None:
         return "?"
     if x < 0.10:
-        return f"{x:.4f}"
+        # >= 3 significant figures below a cent (REFINE200 #132): a fixed
+        # 4 dp read FLOKI's equal highs as "0.0000-0.0000" and printed RSR's
+        # 0.00158-0.00162 band as the single price "0.0016-0.0016"
+        mag = math.floor(math.log10(abs(x))) if x else 0
+        return f"{x:.{max(4, 2 - mag)}f}"
     if x < 2.00:
         return f"{x:.3f}"
     return f"{x:.2f}"
