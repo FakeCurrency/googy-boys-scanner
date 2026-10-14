@@ -8,16 +8,8 @@ Reconstructed from the original app's "How it works" methodology — tune freely
 from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
-# Signal point weights — the grade is simply the sum of the points scored.
+# Grades
 # ---------------------------------------------------------------------------
-
-# Grade cut-offs on total points (checked high -> low). Max possible = 13.
-GRADE_CUTOFFS = [
-    ("A+", 10),
-    ("A", 8),
-    ("B", 5),
-    ("C", 3),
-]
 
 # Grades considered "tradeable" vs "watch only" (drives counters / tabs)
 TRADEABLE_GRADES = {"A+", "A"}
@@ -40,14 +32,13 @@ LIQUID_TIER = {"asx": 1_000_000, "nasdaq": 20_000_000, "crypto": 100_000_000}
 # ---------------------------------------------------------------------------
 # Signal thresholds
 # ---------------------------------------------------------------------------
-VOLUME_MULT = 1.4              # latest volume >= 1.4x its recent average
 LIQUIDITY_LOOKBACK = 20        # bars used for the average-turnover liquidity test
 
 
 # ---------------------------------------------------------------------------
-# Entry / stop / target levels
+# Entry / stop / target levels (Specs' compute_levels / detail; ATR_PERIOD and
+# SUPERTREND_MULT also drive the legacy swing journal's trailing stop)
 # ---------------------------------------------------------------------------
-SWING_LOOKBACK = 20            # bars to find the recent swing low (for the stop)
 STOP_BUFFER = 0.01            # place stop 1% below the swing low
 RESIST_LOOKBACK = 120         # bars to search for the nearest resistance above
 PIVOT_WINDOW = 3              # bars each side that define a pivot high
@@ -69,38 +60,14 @@ MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across al
 # PULSE constant removed 2026-07-20 — the module was deleted (feature retired
 # 2026-07-03/09); payloads keep an empty "pulse" key for cached-JS back-compat.
 
-# ---------------------------------------------------------------------------
-# REVERSALS scanner — early trend-reversal / base-breakout setups.
-# Uses the user's own indicators: SMA 9/26/43/200, RSI 14 (+ its MA), Vol 20.
-# ---------------------------------------------------------------------------
-REV_RSI_PERIOD = 14
-REV_RSI_MA = 14                # SMA of RSI (the yellow RSI line on the charts)
-REV_VOL_LOOKBACK = 20          # Vol-20 average
-
-# Signal points (grade = sum). Order reflects importance (see chat).
-REV_POINTS = {
-    "reclaim": 4,     # price reclaimed + 9 crossed up over 26 (the trigger)
-    "base": 3,        # beaten-down / basing (room to run)
-    "volume": 3,      # volume expansion confirms the move
-    "breakout": 2,    # closing above the base high / descending resistance
-    "rsi": 2,         # RSI turning up through its MA
-}
-REV_GRADE_CUTOFFS = [("A+", 11), ("A", 9), ("B", 6), ("C", 4)]
-
-# Thresholds
-REV_CROSS_LOOKBACK = 15        # 9-over-26 cross must be this fresh (bars)
-REV_SLOPE_BARS = 5             # bars used to judge an MA is curling up
-REV_BASE_OFF_HIGH = 0.20       # >=20% below the 1-year high => beaten down
-REV_BASE_HIGH_LOOKBACK = 252   # window for the "1-year high"
-REV_BELOW200_LOOKBACK = 45     # recently traded below the 200 SMA => recovering
-REV_VOL_MULT = 1.4             # 5-day avg volume >= 1.4x Vol-20
-REV_VOL_SPIKE = 2.0            # or a single day >= 2.0x Vol-20
-REV_BREAKOUT_BASE = (45, 5)    # base = highs from bar -45 to -5; break = close above it
-REV_RSI_BAND = (48, 72)        # RSI turned up but not yet overbought
-REV_STOP_LOOKBACK = 12         # recent swing low for the stop
-REV_MIN_HISTORY = 230          # need warm-up for SMA200 + base lookbacks
-REV_BREAKOUT_TOL = 0.999       # price >= base_high * this => breakout (0.1% tolerance)
-REV_STOP_FALLBACK_PCT = 0.95   # fallback stop = entry * this when swing low is above entry
+# The REVERSALS and Fib-pullback scanners were retired long ago; their engine
+# code and the constants only it read (GRADE_CUTOFFS, REV_POINTS,
+# REV_GRADE_CUTOFFS, 11 more REV_* thresholds, VOLUME_MULT, SWING_LOOKBACK) were
+# deleted 2026-10-14 (REFINE200 #119). The five REV_* values Specs still read
+# moved into the SPECS block below, unchanged: REV_RSI_PERIOD, REV_RSI_MA,
+# REV_BREAKOUT_TOL, REV_STOP_LOOKBACK and REV_STOP_FALLBACK_PCT are now
+# SPEC_RSI_PERIOD, SPEC_RSI_MA, SPEC_BREAKOUT_TOL, SPEC_STOP_LOOKBACK and
+# SPEC_STOP_FALLBACK_PCT.
 
 # ---------------------------------------------------------------------------
 # SPECS scanner — speculative volume-spike breakouts from a base (ASX-style).
@@ -119,9 +86,14 @@ SPEC_BREAKOUT_BASE = (40, 3)  # base = highs from bar -40 to -3; breakout = clos
 SPEC_NEWHIGH_LONG = 63        # bonus if it's also a fresh ~3-month high
 SPEC_CROSS_LOOKBACK = 12      # fresh 9-over-26 cross within this many bars (bonus)
 SPEC_SLOPE_BARS = 5           # bars used to judge the 9-SMA is curling up
-SPEC_RSI_BAND = (45, 85)      # specs can run hot — wider band than reversals
+SPEC_RSI_PERIOD = 14
+SPEC_RSI_MA = 14              # SMA of RSI (the yellow RSI line on the charts)
+SPEC_RSI_BAND = (45, 85)      # specs can run hot — a wide band
+SPEC_BREAKOUT_TOL = 0.999     # price >= base_high * this => breakout (0.1% tolerance)
 SPEC_MAX_EXT = 0.60           # skip if already >60% above the 9-SMA (too late / chased)
 SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
+SPEC_STOP_LOOKBACK = 12       # recent swing low for the stop
+SPEC_STOP_FALLBACK_PCT = 0.95 # fallback stop = entry * this when swing low is above entry
 
 SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown

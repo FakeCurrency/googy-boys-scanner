@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scanner import config, indicators, reversal, scan, sectorcache, vivek
+from scanner import config, indicators, scan, sectorcache, spec, vivek
 
 pytestmark = pytest.mark.risk
 
@@ -246,39 +246,59 @@ def test_the_only_readings_that_moved_are_the_two_undefined_ones():
         pd.testing.assert_series_equal(old.iloc[1:], new.iloc[1:])
 
 
-@pytest.mark.parametrize("consumer", [reversal])
-def test_no_live_consumer_outcome_changes(monkeypatch, consumer):
+def _spec_breakout(seed, n=320):
+    """A beaten-down base that breaks out on a volume spike: the shape
+    `spec.evaluate`'s mandatory gates admit, so the RSI comparison below runs
+    on frames that actually reach the RSI chip."""
+    rs = np.random.RandomState(seed)
+    close = np.concatenate([np.linspace(1.0, 0.30, 100),
+                            0.30 * (1 + rs.normal(0, 0.02, n - 105)),
+                            np.linspace(0.31, 0.30 * (1.15 + 0.05 * (seed % 4)), 5)])
+    df = _ohlc(close)
+    vol = np.full(n, 1e6) * (1 + rs.uniform(0, 0.3, n))
+    vol[-3:] *= 4 + seed % 6
+    df["Volume"] = vol
+    return df
+
+
+def test_no_live_consumer_outcome_changes(monkeypatch):
     """The "no behaviour change" claim, tested rather than argued.
 
-    Runs the REAL `evaluate` twice — once against the shipped `rsi`, once against
-    the pre-#71 one — and compares every derived field. The raw `rsi`/`rsi_ma`
-    readings are excluded because they are the thing that changed.
+    Runs the REAL `spec.evaluate` (the one live RSI consumer since the dead
+    `reversal.evaluate` was deleted, REFINE200 #119) twice — once against the
+    shipped `rsi`, once against the pre-#71 one — and compares every derived
+    field. The raw `rsi`/`rsi_ma` readings are excluded because they are the
+    thing that changed.
     """
-    frames = [_walk(400, seed=s, drift=d)
-              for s, d in ((5, 0.05), (6, -0.05), (7, 0.0), (8, 0.15))]
+    frames = [_spec_breakout(s) for s in range(12)]
+    frames += [_walk(400, seed=s, drift=d)
+               for s, d in ((5, 0.05), (6, -0.05), (7, 0.0), (8, 0.15))]
+    compared = 0
     for df in frames:
-        new = consumer.evaluate(df)
-        monkeypatch.setattr(consumer, "rsi", _rsi_pre_71)
-        old = consumer.evaluate(df)
+        new = spec.evaluate(df)
+        monkeypatch.setattr(spec, "rsi", _rsi_pre_71)
+        old = spec.evaluate(df)
         monkeypatch.undo()
         assert (new is None) == (old is None)
         if new is None:
             continue
+        compared += 1
         derived = {k: v for k, v in new.items() if k not in ("rsi", "rsi_ma")}
         assert derived == {k: v for k, v in old.items() if k not in ("rsi", "rsi_ma")}
+    assert compared >= 8, "the frames must reach the RSI chip or this proves nothing"
 
 
 def test_a_halted_name_never_reaches_the_rsi_chip_at_all(monkeypatch):
     """Why the flat-series change cannot move a trade, stated as a test.
 
-    `reversal.evaluate` returns None at `c <= s26l` — a flat close IS its own
-    26-SMA — so the halted frame that #71 re-values is rejected several steps
-    before RSI is consulted. Under BOTH implementations.
+    `spec.evaluate` returns None at its mandatory volume-spike gate — a halted
+    name's volume never spikes — so the halted frame that #71 re-values is
+    rejected several steps before RSI is consulted. Under BOTH implementations.
     """
     df = _flat(400)
-    assert reversal.evaluate(df) is None
-    monkeypatch.setattr(reversal, "rsi", _rsi_pre_71)
-    assert reversal.evaluate(df) is None
+    assert spec.evaluate(df) is None
+    monkeypatch.setattr(spec, "rsi", _rsi_pre_71)
+    assert spec.evaluate(df) is None
 
 
 # ══ #72 — a "200 SMA" that is not a 200 SMA now says so ══════════════════════
