@@ -85,11 +85,12 @@ def test_the_sessions_are_read_from_scanner_config_not_restated():
 
 
 def test_a_stock_market_is_due_at_its_bar_final_the_one_table_the_repo_keeps():
-    """REFINE200 #173: the due instant is config.IGNITION_BAR_FINAL (the scan
-    gate's, the digest's and the Ignition backstop's), never the bell plus a
-    lag of the lens's own. 16:30 Sydney was ten minutes before the ASX bar is
-    final in the free feed."""
-    assert mcfg.BAR_FINAL == scfg.IGNITION_BAR_FINAL
+    """REFINE200 #173: the due instant is config.DAILY_BAR_FINAL (the scan
+    gate's, the digest's and the Ignition backstop's table), never the bell
+    plus a lag of the lens's own. 16:30 Sydney was ten minutes before the ASX
+    bar is final in the free feed."""
+    assert mcfg.BAR_FINAL == scfg.DAILY_BAR_FINAL
+    assert scfg.DAILY_BAR_FINAL is getattr(scfg, "IGNITION_" + "BAR_FINAL"), "one table, two names"
     assert set(mcfg.BAR_FINAL) == {m for m in mcfg.MARKETS if m != "crypto"}
     for market, (zone, h, m) in mcfg.BAR_FINAL.items():
         assert zone == scfg.MARKETS[market].timezone, market
