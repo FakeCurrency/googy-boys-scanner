@@ -7,7 +7,7 @@ name: PhaseMap nightly scan
 # Scheduled 08:30 UTC, but GitHub lands it hours late (15:00-18:00 UTC most
 # nights — inside the NASDAQ session), so phasemap.run itself refuses any bar
 # that is not final yet (crypto: the forming UTC candle; ASX/NASDAQ: today's
-# bar before 16:40 Sydney / 16:30 New York — REFINE200 #131). Crypto trades
+# bar before 16:45 Sydney / 16:30 New York — REFINE200 #131). Crypto trades
 # 24/7, so the job runs every day; a stock market with no newly completed bar
 # since its last snapshot (weekends) is carried forward, not re-downloaded
 # (exit 3 — REFINE200 #45).

@@ -16,13 +16,13 @@ import pytest
 from phasemap import run
 from phasemap.config import PUBLISH_MIN_COVERAGE, RULESET_VERSION
 from phasemap.data.provider import FrameProvider
-from phasemap.data.session import drop_unfinal_bar, latest_final_session
+from phasemap.data.session import bar_final, drop_unfinal_bar, latest_final_session
 from phasemap.output.writer import validate_published
 from phasemap.tests import synth
 
 UTC = dt.timezone.utc
 FRI = dt.date(2026, 10, 9)                    # a Friday
-# 19:30 Sydney on Friday (AEDT) — after the ASX's 16:40 bar-final
+# 19:30 Sydney on Friday (AEDT) — after the ASX's 16:45 bar-final
 FRI_EVENING = dt.datetime(2026, 10, 9, 8, 30, tzinfo=UTC)
 SAT = dt.datetime(2026, 10, 10, 16, 0, tzinfo=UTC)
 MON_LATE = dt.datetime(2026, 10, 12, 16, 0, tzinfo=UTC)   # Tue 03:00 Sydney
@@ -278,6 +278,14 @@ def test_nasdaq_mid_session_bar_is_dropped_before_detection(root):
     run.run_market("nasdaq", _args(force=True), "2026-10-14", str(root), now=final,
                    provider=FrameProvider(frames))
     assert _load(root, "nasdaq", "latest.json")["as_of"] == tue.isoformat()
+
+
+def test_the_bar_final_table_is_read_from_the_house_config_not_retyped():
+    from scanner import config as house
+    for m, (hh, mm) in house.ALERT_RETURNS_BAR_FINAL.items():
+        tz, h2, m2 = bar_final(m)
+        assert (str(tz), h2, m2) == (house.MARKETS[m].timezone, hh, mm)
+    assert bar_final("crypto") is None
 
 
 def test_latest_final_session_walks_back_over_the_weekend_and_pre_final():
