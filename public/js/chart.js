@@ -1139,7 +1139,7 @@
       grade: (meta && meta.grade) || "", score: (meta && meta.score) || 0,
       score_max: (meta && meta.score_max) || 0, chips: (meta && meta.chips) || [],
       sector: (meta && meta.sector) || "", currency_symbol: cur,
-      tv_symbol: (meta && meta.tv_symbol) || SYM, dir,
+      is_product: meta ? meta.is_product : undefined, dir,
       rr: (meta && meta.rr) || 0, low_rr: (meta && meta.low_rr) || false,
       rr_text: (meta && meta.rr_text) || "", risk_pct: (meta && meta.risk_pct) ?? null,
       entry: meta && meta.entry, stop: meta && meta.stop, target: meta && meta.target,
@@ -1209,7 +1209,7 @@
       grade: m.grade || "", score: m.score || 0, score_max: m.score_max || 0,
       chips: m.chips || [], sector: m.sector || "", currency_symbol: cur,
       plans: m.plans || null,                                // raw per-TF plans (for high-conviction)
-      tv_symbol: m.tv_symbol || SYM, dir,
+      is_product: m.is_product, dir,
       rr: m.rr || 0, low_rr: m.low_rr || false, rr_text: m.rr_text || "",
       entry: m.entry, stop: m.stop, target: m.tp2,            // headline target = TP2
       tp1: m.tp1, tp2: m.tp2, tp3: m.tp3, scale: m.scale, risk: m.risk,
@@ -1427,7 +1427,7 @@
       chips: rec ? [rec.state.replace("_", " "), rec.regime].concat(rec.tags || []) : [],
       sector: m.sector || (rec && rec.sector) || "",
       currency_symbol: m.currency_symbol || (market === "asx" ? "A$" : "$"),
-      tv_symbol: m.tv_symbol || SYM, dir: rec ? (bull ? "LONG" : "SHORT") : "",
+      is_product: m.is_product, dir: rec ? (bull ? "LONG" : "SHORT") : "",
       analysis: (rec && rec.narration) ||
         "No live VIVEK or PhaseMap setup on this name right now — showing the raw chart (candles + SMAs) so every ticker always opens.",
       default_tf: "1D", level_lines: [], timeframes: {},
@@ -1584,7 +1584,7 @@
       chips,
       sector: (row && row.sector) || "",
       currency_symbol: market === "asx" ? "A$" : "$",
-      tv_symbol: SYM,
+      is_product: row ? row.is_product : undefined,
       dir: row && row.rule_a ? (bull ? "LONG" : "SHORT") : "",
       analysis: row
         ? `${MOM_CAPTION} ${bull ? "Bullish" : "Bearish"} RSI divergence` +
@@ -1688,7 +1688,7 @@
       symbol: String(SYM).toUpperCase(), name: SYM, asset_type: assetType,
       price: null, grade: "", score: 0, score_max: 0, chips: [], sector: "",
       currency_symbol: market === "asx" ? "A$" : "$",
-      tv_symbol: SYM, dir: isLong ? "LONG" : "SHORT",
+      dir: isLong ? "LONG" : "SHORT",
       entry: plan.entry, stop: plan.stop, target,
       tp1: plan.tp1, tp2: plan.tp2, tp3: plan.tp3,
       rr, low_rr: rr > 0 && rr < 1.5,
@@ -1765,9 +1765,7 @@
     h.innerHTML = `<a class="back-link" href="${esc(bk[0])}">${esc(bk[1])}</a>`;
     const d = document.createElement("div");
     d.className = "chart-error" + (offline ? " is-offline" : "");
-    const tvSym = symbol
-      ? encodeURIComponent(market === "crypto" ? `CRYPTO:${symbol}USD` : market === "asx" ? `ASX:${symbol}` : symbol)
-      : "";
+    const tvSym = symbol ? encodeURIComponent(tvSymbolFor(symbol, null)) : "";
     // #78: an offline failure is a distinct, non-alarming state — say so plainly
     // rather than implying the chart is broken.
     const head = offline ? "You're offline" : "Chart unavailable";
@@ -1935,18 +1933,25 @@
     return convictionCells(d).length > 0;
   }
 
-  // REIT / ETF / LIC / managed fund — mirrors scanner/broker/vivek_bot.py. The
-  // bot won't trade these and most CFD brokers (e.g. CMC) don't list them.
-  const FUND_NAME_KW = ["REIT", "TRUST", "FUND", "ETF", "SPDR", "ISHARES",
-    "VANGUARD", "BETASHARES", "VANECK", "GLOBAL X"];
-  const FUND_SECTOR_HINTS = ["reit", "real estate investment trust"];
-  const NON_OP_SECTORS = new Set(["not applicable", "not applic", "n/a"]);
+  // REIT / ETF / LIC / managed fund / preferred line — the bot won't trade
+  // these and most CFD brokers (e.g. CMC) don't list them. ONE rule for the
+  // site: PM.isFundReit (phasemap-shared.js, loaded on chart.html before this
+  // file). The scanner's published `is_product` wins in EITHER direction, and
+  // only a record without it (PhaseMap, a held position, an old payload) falls
+  // back to WORD-BOUNDARY keywords. This page used to keep its own substring
+  // copy that never read the flag: TRMK (Trustmark, a bank, is_product false)
+  // wore "⚠ FUND / REIT" off the "TRUST" inside its name, while five A+
+  // preferred/LIC lines (STRK, HBANP, UMBFO, PAX, NGI) wore nothing
+  // (REFINE200 #107). Every fallback copies `is_product` from its row onto `d`.
   function isFundReit(d) {
-    const sector = String((d && d.sector) || "").trim().toLowerCase();
-    if (FUND_SECTOR_HINTS.some((h) => sector.includes(h))) return true;
-    if (NON_OP_SECTORS.has(sector)) return true;
-    const name = String((d && (d.name || d.symbol)) || "").toUpperCase();
-    return FUND_NAME_KW.some((kw) => name.includes(kw));
+    if (!d) return false;
+    const rec = { name: d.name || "", ticker: d.symbol || "", sector: d.sector || "",
+                  is_product: d.is_product };
+    const pm = typeof window !== "undefined" ? window.PM : null;
+    if (pm && typeof pm.isFundReit === "function") return !!pm.isFundReit(rec);
+    // The shared helpers failed to load: trust the scanner's verdict alone
+    // rather than guessing from a name.
+    return d.is_product === true;
   }
 
   // DATA HONESTY chip (2026-08-15): label what this series cannot support
@@ -2103,7 +2108,6 @@
       (d.analysis ? d.analysis + "  " : "") + refTxt + trigTxt +
       "SL management: at TP1 → break-even · at TP2 → below new support · SL never moves against the trade.";
     if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
-    $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbolFor(d.symbol, d.asset_type))}`;
     // Cross-check note: our prices/SMAs are dividend-adjusted; tell the user how
     // to make TradingView match (else dividend-payers read a few % off).
     const note = $("#cf-tvnote");
@@ -2159,6 +2163,13 @@
     const cur = d.currency_symbol || "";
     const metric = (label, val, cls) =>
       `<div class="cf-metric"><span class="cfm-label">${label}</span><span class="cfm-val ${cls || ""}">${val}</span></div>`;
+    // ONE TradingView link for every mode, set before any branch returns
+    // (REFINE200 #109). The Momentum branch returned without setting it -- a
+    // dead <a> on the one lens checked against TradingView -- and the generic
+    // branch linked `d.tv_symbol || d.symbol`, where no payload carries
+    // tv_symbol, so a PhaseMap-only BHP opened the NYSE ADR, not ASX:BHP.
+    const tv = $("#cf-tv");
+    if (tv) tv.href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbolFor(d.symbol, d.asset_type))}`;
 
     // VIVEK: render the default-TF levels now; applyTF re-renders per timeframe.
     if (d._vivek) {
@@ -2184,7 +2195,6 @@
     ].join("");
     $("#cf-analysis").textContent = d.analysis || "";
     if (d.low_rr) $("#cf-lowrr").innerHTML = `<span class="chip warn">LOW R:R (${d.rr_text})</span>`;
-    $("#cf-tv").href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.tv_symbol || d.symbol)}`;
   }
 
   // Real-money position sizer: your account + risk% against THIS setup's

@@ -297,12 +297,17 @@ test("every per-render timer and window listener is registered for teardown", ()
   // own; that box went with the manual journal on 2026-09-21.
   const regs = (CHART.match(/onRenderTeardown\(/g) || []).length;
   assert.ok(regs >= 4,
-    `only ${regs} teardown registrations — the live interval, the socket, the drag sweep and ` +
+    `only ${regs} teardown registrations — the live interval, the socket, the Momentum panes and ` +
     `the tick unsubscribe are the floor, not the target`);
-  // The drag helper is the one that leaks onto WINDOW, which outlives the box.
-  assert.ok(/window\.addEventListener\("resize", restore\)/.test(CHART));
-  assert.ok(/window\.removeEventListener\("resize", restore\)/.test(CHART),
-    "the per-box resize handler must be removed, or every timeframe click adds one");
+  // The drag helper was the one that leaked onto WINDOW, which outlives the
+  // box; it went with the floating live box (REFINE200 #94, 2026-10-14). The
+  // class of leak is what is pinned now: any window resize listener the chart
+  // adds must have a matching removal, or every re-render adds another.
+  assert.ok(!/function makeLiveBoxDraggable\(/.test(CHART), "the uncalled drag helper is back");
+  const adds = (CHART.match(/window\.addEventListener\("resize"/g) || []).length;
+  const removes = (CHART.match(/window\.removeEventListener\("resize"/g) || []).length;
+  assert.ok(removes >= adds,
+    `${adds} window resize listener(s) added, ${removes} removed -- every timeframe click would add one`);
 });
 
 test("no beforeunload listener survives anywhere in public/js", () => {
