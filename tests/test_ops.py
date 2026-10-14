@@ -114,6 +114,50 @@ def test_cronjob_update_sends_only_the_fields_given(monkeypatch):
     assert seen["body"] == {"job": {"enabled": False}}
 
 
+def test_a_partial_schedule_update_keeps_the_jobs_weekdays(monkeypatch):
+    """REFINE200 (2026-10-14): a one-field retime of a Mon-Fri job used to send
+    wdays [-1] and make it fire seven days a week. The update now reads the
+    job's live schedule and merges the given fields over it."""
+    calls = []
+    live = {"timezone": "Australia/Sydney", "minutes": [10], "hours": [11, 12],
+            "mdays": [-1], "months": [-1], "wdays": [1, 2, 3, 4, 5], "expiresAt": 0}
+
+    def fake_call(method, url, headers=None, body=None, raw_body=None):
+        calls.append((method, url, body))
+        if method == "GET":
+            return 200, {"jobDetails": {"jobId": 8587588, "schedule": dict(live)}}
+        return 200, {}
+
+    monkeypatch.setattr(ops, "call", fake_call)
+    ops.run("cronjob-update", {"id": 8587588, "minutes": [12]}, env=ENV)
+    assert [c[0] for c in calls] == ["GET", "PATCH"]
+    assert calls[1][1] == ops.CRONJOB_API + "/jobs/8587588"
+    assert calls[1][2] == {"job": {"schedule": dict(live, minutes=[12])}}
+
+
+def test_a_schedule_update_patches_nothing_when_the_job_cannot_be_read(monkeypatch):
+    calls = []
+
+    def fake_call(method, url, headers=None, body=None, raw_body=None):
+        calls.append(method)
+        return 404, {"error": "not found"}
+
+    monkeypatch.setattr(ops, "call", fake_call)
+    status, _ = ops.run("cronjob-update", {"id": 9, "hours": [6]}, env=ENV)
+    assert status == 404 and calls == ["GET"], "never PATCH a guessed schedule"
+
+
+def test_a_create_still_states_every_axis():
+    body = ops.cronjob_body({"minutes": [5]})
+    assert body["job"]["schedule"] == {"minutes": [5], "mdays": [-1],
+                                       "months": [-1], "wdays": [-1]}
+
+
+def test_the_site_url_is_configs():
+    from scanner import config
+    assert ops.SITE == config.SITE_URL
+
+
 def test_cf_set_var_patches_the_production_config(monkeypatch):
     seen = {}
 
