@@ -216,3 +216,93 @@ def test_pin_runner_applies_costs_and_gap_pricing_end_to_end(tmp_path, monkeypat
     assert t["gross_r"] == pytest.approx((88 - 101) / 5, abs=1e-6)   # -2.6R
     assert t["cost_r"] > 0                                  # costs applied by the RUNNER
     assert t["realized_r"] == pytest.approx(t["gross_r"] - t["cost_r"], abs=1e-9)
+
+
+# ── REFINE200 #15: one R of the row is priced at the FILL ─────────────────────
+#
+# decide() sizes at the plan entry (the signal close); the book fills later at
+# a live quote. `risk` (fill - stop) was always fill-basis, but `risk_usd` was
+# copied off the ticket (signal - stop), so every dollar figure the book derives
+# as R x risk_usd was off by the slippage (SMCI: $563 stored, $692 real).
+
+def _fixed_plan(entry=100.0, stop=96.0, **kw):
+    from scanner.broker import vivek_bot as vb
+    sizing = vb.size_position(config.VIVEK_BOT_ACCOUNT_EQUITY, entry, stop,
+                              notional_target=2_500.0)
+    p = _decide_plan(entry=entry, stop=stop, tp1=entry * 1.12, tp2=entry * 1.24,
+                     tp3=entry * 1.4, **sizing)
+    p.update(kw)
+    return p
+
+
+def test_risk_usd_is_measured_from_the_fill_not_the_signal():
+    plan = _fixed_plan()                               # 25 units, $100 at the signal
+    assert plan["units"] == 25.0 and plan["risk_usd"] == 100.0
+    pos = vr._ticket_to_position({"plan": plan}, 105.0, "asx", "2026-10-14")
+    assert pos["risk"] == 9.0
+    assert pos["risk_usd"] == 225.0                    # 25 x (105 - 96)
+    assert pos["risk_usd_basis"] == "fill"
+    # sized exactly as decided: units and notional are NOT restated
+    assert pos["units"] == plan["units"] and pos["notional"] == plan["notional"]
+    # risk_pct is derived from risk_usd in fixed mode, so it moves with it
+    assert pos["risk_pct"] == pytest.approx(plan["risk_pct"] * 2.25, abs=1e-4)
+
+
+def test_a_fill_at_the_signal_changes_nothing():
+    plan = _fixed_plan()
+    pos = vr._ticket_to_position({"plan": plan}, 100.0, "asx", "2026-10-14")
+    assert pos["risk_usd"] == plan["risk_usd"] and pos["risk_pct"] == plan["risk_pct"]
+
+
+def test_the_dollar_mark_now_agrees_with_units_times_the_move():
+    """The point of the fix: unreal_usd = unreal_r x risk_usd must be what the
+    units really made, and the guard / kill switch use the same product."""
+    from scanner.broker import vivek_guard
+    plan = _fixed_plan()
+    pos = vr._ticket_to_position({"plan": plan}, 105.0, "asx", "2026-10-14")
+    ur = vivek_guard._unreal_r(pos, 110.0)
+    assert ur * pos["risk_usd"] == pytest.approx(pos["units"] * (110.0 - 105.0))
+
+
+def test_a_risk_pct_plan_keeps_its_configured_risk_pct():
+    """In risk-% mode the percentage is the INPUT the sizer was given; only
+    the dollar figure is re-measured."""
+    plan = _fixed_plan(sizing_mode="risk_pct", risk_pct=0.35)
+    pos = vr._ticket_to_position({"plan": plan}, 105.0, "asx", "2026-10-14")
+    assert pos["risk_pct"] == 0.35 and pos["risk_usd"] == 225.0
+
+
+def test_review_flags_are_re_measured_at_the_fill(monkeypatch):
+    monkeypatch.setattr(config, "VIVEK_BOT_REVIEW_DAILY_LOSS_PCT", 7.5)   # $337.50
+    # $300 at the signal (clean) -> $400 at a 104 fill (flagged)
+    plan = _fixed_plan(stop=88.0)
+    assert plan["risk_usd"] == 300.0
+    pos = vr._ticket_to_position({"plan": plan}, 104.0, "asx", "2026-10-14")
+    assert [f["code"] for f in pos["review"]] == ["heavy_risk"]
+    assert pos["review"][0]["risk_usd"] == 400.0
+    # $350 at the signal (flagged) -> $300 at a 98 fill (clean)
+    plan = _fixed_plan(stop=86.0)
+    pos = vr._ticket_to_position({"plan": plan}, 98.0, "asx", "2026-10-14")
+    assert pos["review"] == []
+
+
+def test_the_runner_books_the_fill_basis_end_to_end(tmp_path, monkeypatch):
+    monkeypatch.setattr(vr, "BOOK_DIR", tmp_path)
+    monkeypatch.setattr(vr, "BOOK_FILE", tmp_path / "vivek_bot_book.json")
+    monkeypatch.setattr(vr, "UNASSIGNED_FILE", tmp_path / "vivek_bot_book.unassigned.json")
+    monkeypatch.setattr(vr, "PUBLIC_FILE", tmp_path / "public_book.json")
+    monkeypatch.setattr(config, "VIVEK_BOT_ENABLED", True)
+    monkeypatch.setattr(config, "VIVEK_BOT_DRY_RUN", False)
+    plan = {"armed": True, "entry_trigger": "break", "trigger_bar": None,
+            "entry": 100.0, "stop": 96.0, "tp1": 106.0, "tp2": 112.0, "tp3": 120.0,
+            "rr": 3.0, "scale": config.VIVEK_TP_SCALE_LONG}
+    row = {"symbol": "BHP", "name": "BHP", "sector": "", "grade": "A+", "dir": "LONG",
+           "entry_types": ["break"], "level_tf": "weekly", "plans": {"1D": plan}}
+    idx = pd.date_range(end="2024-01-02", periods=5, freq="D")
+    frame = pd.DataFrame({"Open": 101.0, "High": 101.0, "Low": 101.0, "Close": 101.0,
+                          "Volume": 1e6}, index=idx)
+    bk = vr.run_market("asx", [row], {"BHP.AX": frame}, [{"symbol": "BHP", "yf": "BHP.AX"}],
+                       now=dt.datetime(2024, 1, 2, 11, 0, tzinfo=ZoneInfo("Australia/Sydney")))
+    (pos,) = bk["open"]
+    assert pos["entry"] == 101.0 and pos["signal_entry"] == 100.0
+    assert pos["risk_usd"] == round(pos["units"] * 5.0, 2)          # (101 - 96)
