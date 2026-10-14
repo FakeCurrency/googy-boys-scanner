@@ -65,7 +65,9 @@ breakout on crypto, ASX and NASDAQ.
   (2026-09-20); the MY JOURNAL "Me" side, stars, KV journal sync, `/api/tick`,
   `stop_watcher.yml` (2026-09-21); the NEWS page's ELI5 box, biggest-volume
   list, indices cards and TradingView widget (2026-09-27; `sectors.html`
-  stays); WHAT NEEDS MY EYES (2026-10-09); the Reversals/Fib engine (REFINE200).
+  stays); WHAT NEEDS MY EYES (2026-10-09); the Reversals/Fib engine (REFINE200);
+  the 2026-07-09 "track-record journal" (every armed A+/A, uncapped) as a
+  headline number.
 - **Discord carries only the morning-plays digest**, on its own secret
   `DISCORD_MORNING_WEBHOOK_URL`. The removed alert webhook's secret name must
   never appear in a workflow, even in a comment (`tests/test_alert_credentials.py`).
@@ -238,6 +240,8 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   `site-probe` (`paths` = up to 10 site GETs). Confirm mutations with a
   read-back; "merged" is not "live". Output is redacted. Pass a credential
   failure (missing secret, 401/403) to the owner yourself.
+- **Every job carries `timeout-minutes`** (TOP100 #44): one stuck run in the
+  `scan` group silently costs a whole session.
 - **Routines can't help** (no MCP connectors, no push token); a cloud session
   triggers work by pushing a kick file.
 
@@ -297,6 +301,10 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
 - **`bot_rules.json`** carries rules AND state (`open_total`, `closed_total`,
   `entry_quality`; `null` = unreadable); unenforced limits sit under
   `not_enforced`. Readers: status.js, journal.js, the deck, the evidence brief.
+  Moving the cap or the notional also moves the close ceilings and fallbacks
+  (`close.js`, journal.js, `vivek_run.CLOSE_BATCH_MAX`, close_position.yml,
+  status.js `FALLBACK_CAP`, system.html) — `tests/test_close_ceiling_parity.py`
+  names every one.
 
 **Loss guards** (`vivek_guard.py`): daily 3% / weekly 6% of equity per market
 ($4,500 / $9,000). P&L is WINDOWED off `day_marks` (each position's mark
@@ -517,7 +525,9 @@ counted exclusions).
   DELIVERED names; `--force` touches no state. State is an actions/cache file
   (job read-only). Missing secret = green warning; failed delivery = exit 1.
   `/api/morning_plays` (`MORNING_PLAYS_TRIGGER_SECRET`, fails closed 503/401,
-  5-min KV cooldown per slot) is driven by the cron-job.org ladders.
+  5-min KV cooldown per slot) is driven by the cron-job.org ladders. Manual
+  dispatch: `slot` blank = force-send every market (a test, writes no state);
+  `slot=asx|us` = run that slot now AND mark it sent.
 
 ---
 
@@ -568,7 +578,12 @@ counted exclusions).
   footer, `tipPop()` and `window.VivekBook` (the one shared book + rules read on
   a nav page; app.js, recs.js and chart.js keep their own fetches).
 - **The journal is the bot book only**; a failed book load says so, never a
-  fake empty book.
+  fake empty book. Its STALLED strip lists exactly the rows the engine stamped
+  `stale_pinged` (no stall logic of its own).
+- **A fetch result is applied only to the market it was started for** (TOP100
+  #78/#79 and REFINE200 race guards on the deck, Specs, Momentum, PhaseMap): a
+  poll that lands after a market switch is dropped; a cached payload is painted
+  with its age, never as live.
 - PWA: `sw.js` network-first for `data/` + HTML (keyed by path, `/data/` capped
   at 40), cache-first for `?v=` assets, never `/api/`; bump `CACHE` (now
   `vivek5-v9`) on scheme changes. `public/version.json` is the deploy stamp.
