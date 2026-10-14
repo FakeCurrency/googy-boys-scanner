@@ -1,7 +1,7 @@
 /* E2E smoke (UI backlog #8) — plain Node + Playwright, no test runner.
  *
  * Serves public/ statically, then walks the flows a human hits daily:
- *   1. deck paints (title + filter pills from committed scan data)
+ *   1. deck paints (title + filter pills from the fixture scan data)
  *   2. pill filtering (⨂ Multi-lens click-to-filter narrows the list)
  *   3. row expand (horizontal SL→IN→TP1→TP2→TP3 ladder renders)
  *   4. sort control (label cycles, arrow flips)
@@ -9,8 +9,16 @@
  *   6. 390px mobile: zero horizontal overflow, toolbar + price visible
  *   7. momentum chart: back link, header caption, no PhaseMap without ?pm=1
  *   8. momentum page: heading renders; rows + ?s=&src=momentum links whenever
- *      the committed asx.json has results (no symbol is hard-coded)
+ *      the fixture asx.json has results (no symbol is hard-coded)
  * Any uncaught page error on any page fails the run.
+ *
+ * FIXTURE DATA (REFINE200, 2026-10-14): every /data/ request is served from
+ * test/e2e/fixtures/data -- the set screenshot-diff, hang-probe and Lighthouse
+ * already pin -- and a file with no fixture is a 404 (each page's own
+ * missing-file path). This script used to read the LIVE scan output, so the
+ * ladder check, the PhaseMap card count and the 80ms sort budget were measured
+ * on whatever the tape held that day; scan commits never trigger test.yml, so a
+ * quiet or a broad market went red on the next unrelated code push.
  *
  * CI: test.yml installs playwright + chromium and runs this file.
  * Local: set PW_CHROMIUM=/path/to/chromium if playwright's own browser
@@ -26,7 +34,9 @@ try { ({ chromium } = require("playwright")); }
 catch (_) { ({ chromium } = require("/home/claude/.npm-global/lib/node_modules/playwright")); }
 
 const ROOT = path.join(__dirname, "..", "..", "public");
-const PORT = 8943;
+const FIXTURES = path.join(__dirname, "fixtures");
+const fixture = (rel) => path.join(FIXTURES, "data", rel);
+const PORT = Number(process.env.E2E_PORT) || 8943;
 const BASE = `http://localhost:${PORT}`;
 
 const waitPort = (port, tries = 50) => new Promise((res, rej) => {
@@ -53,6 +63,15 @@ const check = (ok, label) => {
     const pageErrors = [];
     const newPage = async (vp) => {
       const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
+      await ctx.route("**/data/**", (route) => {
+        const rel = new URL(route.request().url()).pathname.replace(/^\/+/, "");
+        const fix = path.join(FIXTURES, rel);
+        if (fs.existsSync(fix)) {
+          route.fulfill({ status: 200, contentType: "application/json", body: fs.readFileSync(fix) });
+        } else {
+          route.fulfill({ status: 404, contentType: "text/plain", body: "no fixture" });
+        }
+      });
       const page = await ctx.newPage();
       // UX #3: mark as already-onboarded so the first-visit tour scrim never
       // intercepts the suite's clicks.
@@ -106,9 +125,11 @@ const check = (ok, label) => {
 
     // #57: input-latency budget — the synchronous cost of a sort interaction
     // (buildList + first-chunk paint) on the largest list must stay snappy.
-    await page.evaluate(() => { const b = document.querySelector('.market-btn[data-market="nasdaq"]'); if (b) b.click(); });
-    await page.waitForTimeout(1500);
+    // The ASX fixture is the largest list (the NASDAQ and crypto fixtures are
+    // empty), so the budget is measured on a FIXED row count: it gates the
+    // code, not how many names set up on the day.
     const nRows = await page.$$eval(".row-wrap", (n) => n.length);
+    check(nRows > 0, `sort budget runs on a real list (${nRows} rows)`);
     const sortMs = await page.evaluate(() => {
       const t0 = performance.now();
       document.getElementById("sort-cycle").click();   // sync handler → first-chunk render
@@ -146,7 +167,7 @@ const check = (ok, label) => {
     // when the committed JSON has no results; the row assertions only run when
     // there is data to paint. A quiet market must never fail CI.
     const specData = (() => {
-      try { return require(path.join(ROOT, "data", "asx_spec.json")); } catch (_) { return null; }
+      try { return require(fixture("asx_spec.json")); } catch (_) { return null; }
     })();
     const specN = ((specData && specData.results) || []).length;
     page = await newPage({ width: 1500, height: 950 });
@@ -237,14 +258,13 @@ const check = (ok, label) => {
     }
 
     // ── 8. MOMENTUM page (nap audit 7d) ─────────────────────────────────────
-    // Served from the COMMITTED public/data/momentum/asx.json, which the
-    // scheduled scan rewrites, so the row checks follow whatever that file
-    // holds today and name no symbol. An empty day still has to render the
-    // heading.
+    // Served from the fixture momentum/asx.json; the row checks follow
+    // whatever that file holds and name no symbol. An empty file still has to
+    // render the heading.
     {
       let n = 0, sum = null;
       try {
-        const doc = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "momentum", "asx.json"), "utf8"));
+        const doc = JSON.parse(fs.readFileSync(fixture(path.join("momentum", "asx.json")), "utf8"));
         n = (doc.results || []).length;
         sum = doc.summary || null;
       } catch (_) { /* a missing file leaves n = 0: heading-only check */ }
