@@ -1,0 +1,19 @@
+# The CI test gate (.github/workflows/test.yml) and local development.
+# Production workflows install requirements.txt only (REFINE200, 2026-10-14):
+# nothing under scanner/, phasemap/ or scripts/ imports any package below, so
+# a scheduled scan has no reason to download them.
+-r requirements.txt
+
+pytest==9.1.1
+# tests/test_workflow_*.py and every workflow pin parse the .github/workflows
+# files. Nothing in the scanner imports yaml and it is NOT a transitive dep of
+# anything in requirements.txt (2026-07-28) -- without this pin the workflow
+# tests error on a clean CI image.
+PyYAML==6.0.3
+# test.yml runs `pytest -n auto --dist loadfile`: one worker per runner core,
+# each test FILE kept on one worker so module fixtures are built once.
+pytest-xdist==3.8.0
+execnet==2.1.2
+# test.yml lints tests/ and phasemap/tests: an unused result in a test is the
+# shape of an assertion that was never written.
+pyflakes==4.0.3

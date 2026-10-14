@@ -11,7 +11,17 @@ name: Code checks (CI)
 # runs the lot in ~2 minutes: 1255 pytest (58 files) + 650 JS assertions across
 # 16 suites, measured 2026-07-29. The numbers are a smell test, not a gate —
 # a big drop means a directory stopped being collected, which is the failure
-# `pytest.ini` being in the path filter above exists to make visible.
+# `pytest.ini` being in the path filter above exists to make visible. The
+# pytest step prints them (REFINE200, 2026-10-14): it used to pass `-q` on top
+# of pytest.ini's `-q`, and `-qq` drops the "N passed, M skipped" line.
+#
+# ONE RED STEP NO LONGER HIDES THE REST (REFINE200, 2026-10-14): a failing step
+# used to skip every later one, so a run reported ONE verdict and the gates
+# behind it went unexecuted (the Lighthouse section of CLAUDE.md paid for this
+# once). Every independent gate now carries `if: success() || failure()` -- it
+# runs after an earlier gate failed, the job still ends red, and a cancelled run
+# still stops. In the e2e job the gates also require the toolchain install to
+# have succeeded, since without it every one of them fails for the same reason.
 on:
   push:
     branches: [main]
@@ -23,6 +33,14 @@ on:
       - "public/js/**"
       - "functions/**"
       - "requirements.txt"
+      # requirements-dev.txt (REFINE200, 2026-10-14) is what THIS job installs
+      # (pytest, PyYAML, pytest-xdist, pyflakes); requirements.txt stays the
+      # production set every scheduled workflow installs.
+      - "requirements-dev.txt"
+      # reviews/** (REFINE200 #86), same rule as TOP100 #48 below:
+      # tests/test_bot_vs_cells.py holds reviews/2026-09-24-bot-vs-cells.md to
+      # the live gate it quotes, so an edit to the note alone must run the gate.
+      - "reviews/**"
       # TOP100 #48 — four paths the suites READ but the filter did not list, so
       # editing any of them shipped to production with the gate skipped. A
       # skipped gate is not a red run you can ignore, it is a green tick on a
@@ -134,10 +152,22 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      # requirements-dev.txt = requirements.txt + the test-only pins
+      # (REFINE200 #83). Production workflows install requirements.txt alone.
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
+      # -n auto --dist loadfile (pytest-xdist): one worker per runner core, each
+      # test FILE on one worker so module fixtures are built once. -rs names
+      # every skip and --durations prints the slowest tests, so a test that
+      # starts sleeping on the network again shows up in the log. NO extra -q:
+      # pytest.ini's addopts already has one, and -qq hides the totals.
       - name: pytest (tests/ + phasemap/tests)
-        run: python -m pytest -q
+        run: python -m pytest -n auto --dist loadfile -rs --durations=15
+      # An unused result in a test is the shape of an assertion that was never
+      # written (REFINE200: two tests computed their main claim and dropped it).
+      - name: pyflakes (tests/ + phasemap/tests)
+        if: success() || failure()
+        run: python -m pyflakes tests phasemap/tests
 
   javascript:
     runs-on: ubuntu-latest
@@ -152,6 +182,7 @@ jobs:
       # module detection skips the check; verified with `export const x = ;`).
       # So they are checked as modules on stdin, which does fail. (REFINE200 #166)
       - name: Syntax-check every shipped script
+        if: success() || failure()
         run: |
           set -e
           for f in public/js/*.js; do node --check "$f"; done
@@ -159,40 +190,56 @@ jobs:
             node --input-type=module --check < "$f" || { echo "::error file=$f::syntax error in $f"; exit 1; }
           done
       - name: SWR cache-layer tests (#97)
+        if: success() || failure()
         run: node test/cache.test.js
       - name: Design-token contrast gate (#96)
+        if: success() || failure()
         run: node test/contrast.test.js
       - name: Freshness-probe tests (/api/health per-market mode)
+        if: success() || failure()
         run: node test/health.test.js
       - name: Self-heal tests (/api/heartbeat per-market mode)
+        if: success() || failure()
         run: node test/heartbeat.test.js
       - name: Journal review-chip tests (heavy-position flag)
+        if: success() || failure()
         run: node test/journal_review.test.js
       - name: Journal close-all tests (bot book, fail-closed)
+        if: success() || failure()
         run: node test/close_all.test.js
       - name: Deep chart history tests (stitched windows, reverse switch)
+        if: success() || failure()
         run: node test/deep_history.test.js
       - name: System page live backtest panel
+        if: success() || failure()
         run: node test/system_backtest.test.js
       - name: Journal stale-mark tests (cached-frame age, TOP100 #24)
+        if: success() || failure()
         run: node test/journal_stale.test.js
       - name: Journal money-path tests (TOP100 #30/#33/#74, open sort, exit evidence)
+        if: success() || failure()
         run: node test/journal_money.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
+        if: success() || failure()
         run: node test/escaping.test.js
       - name: Stale-payload + racing-poll + cold-fail + timeout + book-strip + funnel-trend + v5-split rules (TOP100 #78/#79)
+        if: success() || failure()
         run: node test/staleview.test.js
       - name: Leak + backoff rules (TOP100 #80/#81/#82)
+        if: success() || failure()
         run: node test/leaks.test.js
       - name: Deferred layout read in the deck render path (TOP100 #86)
+        if: success() || failure()
         run: node test/statekeep.test.js
       - name: Stalled-position decision surface (read-only, probe marks only)
+        if: success() || failure()
         run: node test/stalled.test.js
       # Runs in the CHEAP job on purpose. It exercises the baseline-provenance
       # sentinel out of the e2e file without a browser, so the rule that keeps
       # the screenshot gate from going red on a stale baseline is checked on
       # every push in ~50ms rather than behind a Playwright install.
       - name: Screenshot baseline-provenance sentinel (out of band, 14)
+        if: success() || failure()
         run: node test/screenshot_sentinel.test.js
       # The state-touching Pages Functions' guard rails (out of band,
       # 2026-07-29): the scan/close cooldowns refund on a failed dispatch, a
@@ -200,12 +247,14 @@ jobs:
       # overdue without paging on success. (The journal sync limiter and the
       # tick watcher were tested here until they went, 2026-09-21.)
       - name: API guard rails (dispatch refunds / close batch / heartbeat self-heal)
+        if: success() || failure()
         run: node test/api_guards.test.js
       # Endpoint access log (2026-08-20): the unauthenticated dispatch
       # endpoints (close, scan) write who-called-me envelopes to KV for
       # incident diagnosis. Two pinned properties: a call gets logged, and a
       # KV failure never blocks the underlying close/scan action.
       - name: Access log (logged calls / best-effort / no coalescing)
+        if: success() || failure()
         run: node test/access_log.test.js
       # External trigger for the plays digest (2026-09-10): GitHub's cron ran
       # the ASX slot hours late / not at all, so a real-time pinger now kicks
@@ -213,6 +262,7 @@ jobs:
       # secret, refuses a bad key, validates the slot, dispatches the right
       # workflow+input, never echoes the GitHub token, refunds the cooldown.
       - name: Plays-digest external trigger (fail-closed / dispatch / no-echo / clean secret, 12)
+        if: success() || failure()
         run: node test/morning_plays_api.test.js
       # The price relay (2026-10-14, REFINE200 #166): /api/price and /api/quote
       # serve every chart and header quote and no test had ever run them.
@@ -221,17 +271,20 @@ jobs:
       # chart, the server-side Binance leg off by default, a bare ticker is a
       # stock, CHART_MAX_YEARS really clamps.
       - name: Price relay (price.js / quote.js / _relay_guard.js behaviour)
+        if: success() || failure()
         run: node test/price_api.test.js
       # public/_headers resolved the way Cloudflare Pages combines rules
       # (REFINE200 #56 / #75): one Cache-Control per path, a year for ?v=
       # assets, revalidate for HTML/data/sw.js, frame-ancestors everywhere,
       # and every /js/ and /css/ reference carries the ?v= that makes that safe.
       - name: Site headers (cache rules / frame-ancestors / ?v= precondition)
+        if: success() || failure()
         run: node test/site_headers.test.js
       # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
       # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
       # so the display can never disagree with what actually blocks a trade.
       - name: Sector-cap marking (bucket parity / chip rules / wiring)
+        if: success() || failure()
         run: node test/sector_cap.test.js
       # STATUS control (2026-08-19, Session 1). The lamp is the only surface
       # that claims the system is healthy, so two of its promises are gated
@@ -241,6 +294,7 @@ jobs:
       # it is derived from instead of counting the dark before the ledger
       # existed as healthy.
       - name: Status control (read-only promise / uptime clamp / states matrix)
+        if: success() || failure()
         run: node test/status.test.js
       # MOMENTUM (2026-09-22). The lens is report-only, so what is gated here is
       # the nav contract and the page's honest failures rather than any signal:
@@ -252,6 +306,7 @@ jobs:
       # carries both the bar the scanner could know on and the bar TradingView
       # draws the label on, which are five apart and mean different things.
       - name: Momentum lens (nav contract, purple scoping, row evidence)
+        if: success() || failure()
         run: node test/momentum.test.js
       # IGNITION (2026-09-28). The coil -> ignition crypto lens is report-only,
       # so what is gated is the deck surface's honesty: the pill counts only
@@ -263,17 +318,20 @@ jobs:
       # swallowed by the fetch's catch. Paths: scanner/**, public/js/**,
       # public/css/** and test/** above already cover every file it reads.
       - name: Ignition lens (deck pill count rule, panel states, escaping, hide-when-absent)
+        if: success() || failure()
         run: node test/ignition.test.js
       # HYGIENE (2026-09-23). Symbols proven dead (declaration was their only
       # reference, comments stripped) and deleted stay deleted: each pin fails
       # on the name coming back even as a string, and each file must still
       # carry a known-live symbol so a moved file cannot pass vacuously.
       - name: Hygiene (proven-dead symbols stay gone)
+        if: success() || failure()
         run: node test/hygiene.test.js
       # REFINE200 WP7 (2026-10-14): deck entry-quality from bot_rules, slim
       # PhaseMap confluence, row caps + age, SMA-proxy chip, SCAN poll window,
       # service-worker cache bounds, RECS/ALERTS/NEWS honesty, CSS focus rings.
       - name: Deck + small pages (REFINE200 WP7)
+        if: success() || failure()
         run: node test/refine_deck.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
@@ -283,6 +341,19 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The e2e toolchain, pinned (REFINE200, 2026-10-14). The repo has no
+    # package.json, so the install used to take whatever was latest on the day
+    # for all five tools. PLAYWRIGHT_VERSION is ALSO part of the baseline cache
+    # key below: a Playwright release ships a new Chromium, whose rasterisation
+    # must not be diffed against baselines the old one drew. Bump a pin
+    # deliberately, in its own commit, and expect the baselines to re-cut once
+    # when it is Playwright's.
+    env:
+      PLAYWRIGHT_VERSION: "1.64.0"
+      LIGHTHOUSE_VERSION: "13.5.0"
+      CHROME_LAUNCHER_VERSION: "1.2.2"
+      PIXELMATCH_VERSION: "8.0.0"
+      PNGJS_VERSION: "7.0.0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -295,11 +366,21 @@ jobs:
       # screenshot-diff step died on a missing require (run #77). Installing
       # everything in one command removes the prune hazard entirely.
       - name: Install Playwright + Chromium + tool deps
+        id: toolchain
         run: |
           npm init -y > /dev/null 2>&1
-          npm install --no-save playwright lighthouse chrome-launcher pixelmatch pngjs > /dev/null 2>&1
+          npm install --no-save "playwright@${PLAYWRIGHT_VERSION}" "lighthouse@${LIGHTHOUSE_VERSION}" \
+            "chrome-launcher@${CHROME_LAUNCHER_VERSION}" "pixelmatch@${PIXELMATCH_VERSION}" \
+            "pngjs@${PNGJS_VERSION}" > /dev/null 2>&1
           npx playwright install --with-deps chromium
+      # SMOKE + MOBILE MATRIX READ FIXTURES (REFINE200, 2026-10-14): both now
+      # route /data/ to test/e2e/fixtures/data, like the three gates below. They
+      # used to read the live scan output, so the ladder check, the PhaseMap card
+      # count, the 80ms sort budget and every overflow check measured that day's
+      # tape -- and since scan commits never trigger this workflow, a broad or a
+      # quiet market went red on the next unrelated code push.
       - name: E2E smoke (dashboard + recs · desktop + 390px)
+        if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: node test/e2e/smoke.e2e.js
       # Hang-probe (owner-ruled, 2026-07-31): a data fetch that neither
       # resolves nor rejects — the one failure mode Phase B exists for, and
@@ -313,10 +394,12 @@ jobs:
       # untouched, and /data/ is fixture-pinned like the two gates below, so
       # this can never fail on a quiet live tape.
       - name: Hang-probe (hung fetch -> timeout -> Tap to retry)
+        if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: node test/e2e/hangprobe.e2e.js
       # Mobile screenshot matrix (#40): 6 pages x 360/390/430, asserts zero
       # overflow and uploads the shots so mobile layout is reviewable per run.
       - name: Mobile screenshot matrix (360/390/430)
+        if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: node test/e2e/screenshots.e2e.js
       # Lighthouse budget tripwire (#70): fails ONLY on an egregious layout-
       # stability or payload regression (CLS < 0.50, transfer < 1.7MB — the
@@ -331,6 +414,7 @@ jobs:
       # unrelated code push landed next. The REAL payload is printed every run
       # and warns past 7MB, but can never fail this step.
       - name: Lighthouse budget (CLS + transfer tripwire)
+        if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: |
           export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           node test/e2e/lighthouse.e2e.js
@@ -368,7 +452,11 @@ jobs:
       #
       # NO `restore-keys`, ever: a prefix fallback would restore the very
       # baseline a bump exists to discard.
+      # Runs after a red gate too, or screenshot-diff would self-baseline from
+      # nothing and pass comparing nothing (cache@v4 saves only when the whole
+      # job succeeds, so a red run never stores what it drew).
       - name: Restore screenshot baselines
+        if: (success() || failure()) && steps.toolchain.outcome == 'success'
         uses: actions/cache@v4
         with:
           path: test/e2e/__baseline__
@@ -475,8 +563,20 @@ jobs:
           # <=480px, row chips on their own full-width line, the sort control
           # pinned again), journal-390 3.84% (the LONG pill no longer clipped,
           # two-column phone cards, coloured R/$), journal-desktop 1.72%.
-          key: screenshot-baselines-v24-${{ runner.os }}-${{ hashFiles('test/e2e/fixtures/data/*.json') }}
+          #
+          # v24 + pw<version> + fixtures/** (2026-10-14, REFINE200): NOT a visual
+          # change, and the version stays v24. The key now carries the pinned
+          # Playwright version (see the job's env), so a Playwright bump cuts
+          # fresh baselines instead of diffing a new Chromium against an old
+          # one's pixels, and the digest covers the fixture SUBDIRECTORIES
+          # (phasemap/, momentum/ joined the set for the smoke test) as well as
+          # the top-level files. Both move the key, so this commit's run re-cuts
+          # the baselines ONCE. Measured locally before the change: the new
+          # fixtures drift index-desktop, index-390, journal-desktop and
+          # journal-390 0.00% each.
+          key: screenshot-baselines-v24-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
+        if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: |
           export PW_CHROMIUM="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           node test/e2e/screenshot-diff.e2e.js
