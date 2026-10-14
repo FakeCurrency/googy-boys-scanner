@@ -14,7 +14,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=121" />
+  <link rel="stylesheet" href="css/styles.css?v=122" />
   <link rel="stylesheet" href="css/status.css?v=4" />
   <style>
     /* doc-local layout — everything else inherits the app theme */
@@ -126,8 +126,8 @@
     <nav class="sys-toc">
       <a href="#data">Data sources</a><a href="#sched">Schedules</a><a href="#lenses">The 3 lenses</a>
       <a href="#grading">Grading</a><a href="#bot">Bot rulebook</a><a href="#sizing">Sizing &amp; costs</a>
-      <a href="#mgmt">Trade management</a><a href="#storage">Storage map</a><a href="#safety">Safety gates</a>
-      <a href="#evidence">Evidence</a><a href="#limits">Known limits</a>
+      <a href="#mgmt">Trade management</a><a href="#backtest">Backtest</a><a href="#storage">Storage map</a>
+      <a href="#safety">Safety gates</a><a href="#evidence">Evidence</a><a href="#limits">Known limits</a>
     </nav>
 
     <!-- ═══════════════ 1 · DATA SOURCES ═══════════════ -->
@@ -135,11 +135,12 @@
       <h2>1 · Where the data comes from</h2>
       <table class="sys-t">
         <tr><th>Data</th><th>Source</th><th>Freshness</th></tr>
-        <tr><td>Historical bars (all scans, all lenses)</td><td><code>yfinance</code> (Yahoo Finance), pinned version, downloaded in GitHub Actions</td><td>~15&nbsp;min delayed; daily/weekly bars</td></tr>
-        <tr><td>Live crypto prices (chart)</td><td>Binance public API (<code>&lt;SYM&gt;USDT</code>), Yahoo <code>&lt;SYM&gt;-USD</code> fallback</td><td>Real-time</td></tr>
+        <tr><td>Stock bars (all scans, all lenses)</td><td><code>yfinance</code> (Yahoo Finance), pinned version, downloaded in GitHub Actions</td><td>~15&nbsp;min delayed; daily/weekly bars</td></tr>
+        <tr><td>Crypto bars (VIVEK scan, bot, kill switch, Ignition)</td><td>Exchange daily klines since 2026-09-28: Binance’s market-data mirror first, then Coinbase; Yahoo only for a coin no exchange lists. Every coin’s close must sit near CoinGecko’s price, so a ticker that names a different token is left out. PhaseMap and Momentum still read Yahoo for crypto</td><td>The completed daily bar + today’s forming bar</td></tr>
+        <tr><td>Live crypto prices (chart)</td><td>A Binance-sourced row reads Binance candles from your browser (the Cloudflare proxy cannot reach Binance); everything else, and the fallback, is Yahoo <code>&lt;SYM&gt;-USD</code> via <code>/api/price</code></td><td>Real-time</td></tr>
         <tr><td>Live stock quotes (chart)</td><td>Yahoo via the <code>/api/quote</code> Cloudflare proxy (query1→query2 fallback)</td><td>~15&nbsp;min delayed</td></tr>
         <tr><td>Journal marks</td><td>The bot book is marked to market server-side on every scan (<code>unreal_r</code> / <code>unreal_usd</code> in <code>vivek_bot_book.json</code>)</td><td>Refreshed each scan</td></tr>
-        <tr><td>Universes</td><td>ASX full list (~2,000) · NASDAQ Global Select (~1,430) · crypto top-100 + extras; bundled CSVs in <code>data_universe/</code> as fallback</td><td>Rebuilt per scan</td></tr>
+        <tr><td>Universes</td><td>ASX full list (~2,000) · NASDAQ Global Select (~1,430) · crypto top-200 by market cap (CoinGecko, paged) + extras, stablecoins and tokenised cash filtered; bundled CSVs in <code>data_universe/</code> as fallback</td><td>Rebuilt per scan</td></tr>
         <tr><td>Market caps / sectors</td><td>Yahoo fundamentals, persistent cache (<code>market_caps.json</code>)</td><td>Best-effort, fills over runs</td></tr>
           </table>
       <p class="sys-note">⚠ Honesty note: Yahoo throttles bursts, so scans keep a <em>last-good cache</em> per ticker —
@@ -150,13 +151,22 @@
 
     <!-- ═══════════════ 2 · SCHEDULES ═══════════════ -->
     <section class="sys" id="sched">
-      <h2>2 · What runs when <span class="who">(GitHub Actions cron, UTC — best-effort ±few min)</span></h2>
+      <h2>2 · What runs when <span class="who">(cron-job.org is the clock, GitHub Actions cron the backup)</span></h2>
+      <p>GitHub’s own crons ran hours late or not at all (in the week to 5 Oct they ran 5 of 35 ASX scans), so
+        free cron-job.org jobs ping <code>/api/heartbeat</code> in each market’s own timezone and it dispatches a
+        scan only when that market’s data is stale. GitHub’s crons stay as a free backup. Times below are
+        UTC unless a city is named.</p>
       <table class="sys-t">
         <tr><th>Job</th><th>When</th><th>Does</th></tr>
-        <tr><td>Stock scans + bot</td><td>Market hours only, weekdays, in each market’s own calendar: ASX ~hourly 11:07→16:07 plus the 16:40 Sydney closing scan (the close counts from 16:40, once Yahoo shows the auction) · NASDAQ ~hourly 10:37→16:07 New York (plus a closing backstop)</td><td>Scan one stock market per run, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
-        <tr><td>Crypto bot</td><td>:22 and :52 every hour, 24/7 (:52 skips when the scan is fresh)</td><td>Crypto scan + the crypto slice of the bot book</td></tr>
-        <tr><td>PhaseMap nightly</td><td>08:30 UTC daily</td><td>PhaseMap states for all markets + per-symbol chart data</td></tr>
+        <tr><td>Stock scans + bot</td><td>Market hours only, weekdays, in each market’s own calendar: ASX ~hourly 11:10→16:10 plus the 16:40 Sydney closing scan (the close counts from 16:40, once Yahoo shows the auction) and a 17:20 probe · NASDAQ 10:40 and ~hourly 11:10→16:10 New York (plus a closing backstop)</td><td>Scan one stock market per run, re-grade, mark the bot book, fill new entries, commit → site redeploys</td></tr>
+        <tr><td>Crypto bot</td><td>Hourly at :22, 24/7 (cron-job.org; GitHub :22 and :52 as backup, :52 skips when the scan is fresh)</td><td>Crypto scan + the crypto slice of the bot book</td></tr>
         <tr><td>Kill-switch check</td><td>:15 and :45, 24/7</td><td>Loss check on the bot book per market, open positions re-priced with live quotes</td></tr>
+        <tr><td>PhaseMap nightly</td><td>08:30 UTC daily (confluence ping straight after)</td><td>PhaseMap states for all markets + per-symbol chart data</td></tr>
+        <tr><td>Plays digest (Discord)</td><td>ASX ~30 min after its close; NASDAQ + crypto the next Melbourne morning (a cron-job.org ladder that sends on the first post-close run)</td><td>Posts the day’s high-conviction longs</td></tr>
+        <tr><td>Ignition (report-only)</td><td>Crypto 00:14 UTC; ASX after the Sydney close; NASDAQ after 16:30 New York — each with backstops and intraday refreshes</td><td>Coil → breakout screen per market (<code>data/ignition/</code>)</td></tr>
+        <tr><td>Momentum (report-only)</td><td>After each market’s close</td><td>EMA + RSI-divergence screen per market (<code>data/momentum/</code>)</td></tr>
+        <tr><td>Edge pipeline</td><td>22:20 UTC daily (+23:50 backstop)</td><td>Forward returns for every alignment and the plain-A+ baseline, book stress, edge summary</td></tr>
+        <tr><td>Book backup</td><td>21:35 UTC daily (+23:35 backstop)</td><td>Snapshots the bot book and journal state into <code>backups/</code></td></tr>
         <tr><td>Weekly lens backtests</td><td>Sun 08:00 UTC</td><td>Refreshes <code>vivek_backtest.json</code> (canonical, both directions)</td></tr>
         <tr><td>VIVEK long-only backtest</td><td>1st of month, 08:00 UTC</td><td>Refreshes <code>vivek_backtest_longonly.json</code> — the bot-relevant evidence</td></tr>
         <tr><td>Tests</td><td>Every push</td><td>The pytest suite + every JS suite in <code>test.yml</code> gate all code</td></tr>
@@ -168,10 +178,10 @@
       <h2>3 · The three lenses</h2>
       <h3>VIVEK 5.0 — the core (SCAN tab)</h3>
       <p>Price <em>reacting</em> at its <strong>200-SMA</strong> on Weekly / 3-Day / Daily levels.
-        Three entry triggers, colour-coded by backtest edge:
-        <span class="rule">reclaim</span> (close back above the 200-SMA after rejection — carries the edge) ·
-        <span class="rule amber">break</span> (break of small structure at the level — okay) ·
-        <span class="rule red">retest</span> (retest + confirmation — weak; the bot skips it).
+        Three entry triggers, each tinted on the deck by the latest long-only backtest:
+        <span class="rule blue">reclaim</span> (close back above the 200-SMA after rejection) ·
+        <span class="rule blue">break</span> (break of small structure at the level) ·
+        <span class="rule blue">retest</span> (retest + confirmation — in none of the bot’s cells, so the bot skips it).
         Each setup carries per-timeframe plans (entry / SL / TP1-3), ARMED (trigger fired) vs WATCHING
         (near the level), grade hysteresis, and the still-forming bar is dropped so grades don’t wobble intraday.</p>
       <h3>PhaseMap — the trap lens</h3>
@@ -182,8 +192,9 @@
       <h3>Specs — the discovery lens</h3>
       <p>Sub-$0.50 names breaking out of a base on a <strong>≥3× volume spike</strong>. Its own backtest says it’s a
         <em>shortlist generator, not an entry system</em> — treat SPECS results as candidates to chart, not signals to buy.</p>
-      <p class="sys-note">🔗 Multi-lens confluence: when 2+ lenses agree on the same name in the same direction you get
-        banners on the dashboard/lens pages and an ALERTS page entry (triples are queued for the next push channel).</p>
+      <p class="sys-note">🔗 Multi-lens confluence: when 2+ lenses agree on the same name in the same direction the row
+        wears a ⨂ chip, the deck’s ⨂ Multi-lens pill filters to them, and the ALERTS page logs the recent ones. There is
+        no push channel. Unproven: alignment has not beaten plain A+ in the study or the forward ledger.</p>
     </section>
 
     <!-- ═══════════════ 4 · GRADING ═══════════════ -->
@@ -200,7 +211,7 @@
         the four cells that carried the edge in the walk-forward backtest — <strong>1W reclaim, 1W break, 3D reclaim,
         1D break</strong> (widened 2026-09-20 from “weekly reclaim only”; the old “strong structure” branch measured
         negative and was dropped). A name fires on up to three cells and wears one 🎯 per cell. This line used to
-        quote fixed numbers; it now points at <a href="#backtest">section 9</a>, which reads whatever the latest
+        quote fixed numbers; it now points at <a href="#backtest">section 8</a>, which reads whatever the latest
         run actually produced.</p>
     </section>
 
@@ -209,8 +220,8 @@
       <h2>5 · Autonomous bot rulebook <span class="who">(live from bot_rules.json)</span></h2>
       <table class="sys-t">
         <tr><th>Rule</th><th>Value</th><th>Why</th></tr>
-        <tr><td>Grade</td><td class="rule" data-r="grades">A+ / A</td><td>Aligned to HIGH CONVICTION 🎯 (2026-09-21): the four cells at A/A+ ran +0.212R over 2,403 long trades vs +0.216R at A+ only — same edge, 70% more trades</td></tr>
-        <tr><td>Direction</td><td class="rule" data-r="allow_shorts">long-only</td><td>Shorts lost on every cell and every market (HC-cell shorts −0.36R, PF 0.43)</td></tr>
+        <tr><td>Grade</td><td class="rule" data-r="grades">A+ / A</td><td>Aligned to HIGH CONVICTION 🎯 (2026-09-21): in the 600-name replay of 2026-09-20 (not published) grade A matched A+ inside the four cells, with 70% more trades. Today’s numbers: <a href="#backtest">§8</a></td></tr>
+        <tr><td>Direction</td><td class="rule" data-r="allow_shorts">long-only</td><td>Shorts lost on every cell and every market in that replay; the owner ruled them out (2026-09-21)</td></tr>
         <tr><td>Entry cells</td><td class="rule blue" data-r="entry_cells">1W reclaim/break · 3D reclaim · 1D break</td><td>Walked 1W → 3D → 1D; the first armed plan whose trigger sits in its cell is traded. Retest is in no cell (worst trigger on every timeframe)</td></tr>
         <tr><td>Level gate</td><td class="rule blue">weekly / 3d</td><td>Rows reacting at the Weekly or 3-Day 200 only — the thrice-replicated w3 cohort; unchanged by the 2026-09-21 alignment</td></tr>
         <tr><td>Minimum R:R (to TP2)</td><td class="rule" data-r="min_rr">1.5</td><td>Skip poor-reward setups</td></tr>
@@ -284,9 +295,9 @@
       <p>Stops only ever move <em>in the trade’s favour</em>. Shorts mirror with 50/25/15 scaling.</p>
     </section>
 
-    <!-- ═══════════════ 8 · STORAGE MAP ═══════════════ -->
+    <!-- ═══════════════ 8 · BACKTEST ═══════════════ -->
     <section class="sys" id="backtest">
-      <h2>9 · Backtest evidence <span class="who">(live from the published reports)</span></h2>
+      <h2>8 · Backtest evidence <span class="who">(live from the published reports)</span></h2>
       <p>Every backtest run lands here. Nothing on this page is typed in by hand — if a number below
         looks wrong, the run produced it, and the fix is a better test rather than a better sentence.</p>
       <p class="bt-warn">Read these as evidence, not as a promise. Each replay covers a SAMPLE of the
@@ -296,9 +307,9 @@
       <div id="sys-backtest"><p class="bt-none">Loading the latest reports…</p></div>
     </section>
 
-    <!-- ═══════════════ 8 · STORAGE ═══════════════ -->
+    <!-- ═══════════════ 9 · STORAGE ═══════════════ -->
     <section class="sys" id="storage">
-      <h2>8 · Storage map — who writes what</h2>
+      <h2>9 · Storage map — who writes what</h2>
       <table class="sys-t">
         <tr><th>File</th><th>Written by</th><th>Read by</th></tr>
         <tr><td><code>data/&lt;m&gt;_vivek.json</code></td><td>Scan (Actions)</td><td>Dashboard, chart, journal (incl. whole-universe <code>prices</code> map)</td></tr>
@@ -312,9 +323,9 @@
         2026-09-21; the paper bot book is the only journal.</p>
     </section>
 
-    <!-- ═══════════════ 9 · SAFETY ═══════════════ -->
+    <!-- ═══════════════ 10 · SAFETY ═══════════════ -->
     <section class="sys" id="safety">
-      <h2>9 · Safety gates</h2>
+      <h2>10 · Safety gates</h2>
       <ul>
         <li><strong>Paper only.</strong> No real orders anywhere. Live execution requires — all together — per-market
           <code>MODE="live"</code> + <code>VIVEK_LIVE_CONFIRMED=True</code> + a wired, reviewed broker layer. None exist today.</li>
@@ -325,49 +336,48 @@
       </ul>
     </section>
 
-    <!-- ═══════════════ 10 · EVIDENCE ═══════════════ -->
+    <!-- ═══════════════ 11 · EVIDENCE ═══════════════ -->
     <section class="sys" id="evidence">
-      <h2>10 · Evidence — why these rules</h2>
+      <h2>11 · Evidence — why these rules</h2>
       <p>A walk-forward backtest replays the <em>real engine</em> bar-by-bar (causal, pessimistic intrabar fills:
         stop checked before target). Headline findings that set today’s rules:</p>
+      <p>The rules below were set off a 600-name replay run on 2026-09-20. That replay was not published,
+        so its figures are not quoted here.</p>
       <ul>
-        <li><strong>Long only.</strong> Shorts ran negative in every cell on every market (the four
-          conviction cells short: −0.36R over 793 trades), so the bot takes none.</li>
-        <li><strong>Weekly reclaim is the best cell</strong> (+0.30R), with 3D reclaim, 1W break and 1D break
-          behind it — the four cells High Conviction 🎯 selects for, and since 2026-09-21 the ONLY cells the
-          bot trades, walked 1W → 3D → 1D.</li>
+        <li><strong>Long only.</strong> Shorts ran negative in every cell on every market, so the bot takes none.</li>
+        <li><strong>Four cells.</strong> 1W reclaim, 1W break, 3D reclaim and 1D break carried the edge — the
+          cells High Conviction 🎯 selects for, and since 2026-09-21 the ONLY cells the bot trades, walked
+          1W → 3D → 1D.</li>
         <li><strong>A and A+ both, retests never.</strong> Inside the four cells grade A carried the same edge
-          as A+ (+0.212R vs +0.216R); the retest trigger was the worst on every timeframe and sits in no cell.
-          The old rule (A+ only, any armed 1W plan bar retests) measured +0.094R over the same replay.</li>
+          as A+; the retest trigger was the worst on every timeframe and sits in no cell.</li>
       </ul>
-      <p class="bt-warn">The figures that used to sit in this list were typed in from an early run and
-        could not be checked against anything published. They are gone. <a href="#backtest">Section 9</a>
-        now reads the current reports, and the numbers there are whatever the latest run produced —
-        including where that is less flattering than these rules imply. Note also that the original
-        long-only claim was made <em>excluding NASDAQ</em>, while the published replay includes it, so the
-        two were never measuring the same population.</p>
-      <p>Forward evidence accrues in the journal’s <strong>Edge Tracker</strong> (expectancy per setup cell from real
-        closed trades — needs ~20 per cell to mean anything) and refreshes automatically: weekly (canonical) + monthly (long-only).</p>
+      <p class="bt-warn"><a href="#backtest">Section 8</a> reads the current published reports, and the numbers
+        there are whatever the latest run produced — including where they disagree with the rules above. Note
+        also that the original long-only claim was made <em>excluding NASDAQ</em>, while the published replay
+        includes it, so the two were never measuring the same population.</p>
+      <p>Forward evidence accrues in the paper book on the <a href="journal.html">journal</a> page (the
+        Performance fold’s “what’s working” card reads expectancy per cell from real closed trades — it needs ~20
+        per cell to mean anything). The replays refresh automatically: weekly (canonical) + monthly (long-only).</p>
     </section>
 
-    <!-- ═══════════════ 11 · LIMITS ═══════════════ -->
+    <!-- ═══════════════ 12 · LIMITS ═══════════════ -->
     <section class="sys" id="limits">
-      <h2>11 · Known limitations (read before trusting any number)</h2>
+      <h2>12 · Known limitations (read before trusting any number)</h2>
       <ul>
         <li><strong>~15-min delayed data</strong>; the bot marks positions at each scan. Real gaps can and do blow through stops — losses beyond −1R are recorded honestly.</li>
         <li><strong>Survivorship bias</strong> in backtests (current index membership). Discount NASDAQ cells hardest.</li>
         <li><strong>Paper ≠ broker:</strong> the model prices commission + slippage but not CFD spread or overnight financing (~7–8%/yr on notional at CMC) — your real P&amp;L will lag the paper book.</li>
-        <li><strong>Cron is best-effort:</strong> scans can run minutes late; weekday crons don’t know market holidays.</li>
-        <li><strong>Zero-to-few closed trades</strong> so far — the forward record, not the backtest, is the verdict. Judge on R over 40+ closed trades.</li>
+        <li><strong>Schedulers are best-effort:</strong> GitHub’s crons have run hours late or not at all (hence cron-job.org as the clock); weekday schedules don’t know market holidays.</li>
+        <li><strong><span data-r="closed_total">Few</span> closed trades</strong> so far — the forward record, not the backtest, is the verdict. Judge on R over 40+ closed trades per cell.</li>
       </ul>
     </section>
 
-    <footer class="site-footer"><p class="credit">Vivek 5.0 · data via Yahoo Finance · refreshed daily after each market close</p></footer>
+    <footer class="site-footer"><p class="credit">Vivek 5.0 · stocks via Yahoo Finance (~15&nbsp;min delayed) · crypto via exchange bars (Binance, Coinbase) · scanned hourly while each market trades, crypto around the clock</p></footer>
   </main>
 
   <script src="js/nav.js?v=29"></script>
   <script src="js/status.js?v=11"></script>
-  <script src="js/system-backtest.js?v=2"></script>
+  <script src="js/system-backtest.js?v=3"></script>
   <script>
   /* Contents jumps: publish the sticky top bar's height as --sys-bar so
      section.sys's scroll-margin-top clears it at every width (the bar wraps
@@ -387,7 +397,9 @@
   (async () => {
     const body = document.getElementById("sys-cov-body");
     if (!body) return;
-    const FLOOR = { asx: [800, "~2,000"], nasdaq: [600, "~1,430"], crypto: [50, "~100"] };
+    // crypto: the paged top-200 universe (2026-09-28); 150 flags a fall back
+    // to the ~60-coin bundled list, which 50 waved through as FULL.
+    const FLOOR = { asx: [800, "~2,000"], nasdaq: [600, "~1,430"], crypto: [150, "~200"] };
     const head = async (m) => {
       const url = `data/${m}_vivek.json`;
       let text = "";
@@ -460,6 +472,7 @@
       if (j.reentry_cooldown_days != null) set("reentry_cooldown_days", j.reentry_cooldown_days ? `${j.reentry_cooldown_days} days after a stop-out` : "off");
       if (j.earnings_buffer_days != null) set("earnings_buffer_days", j.earnings_buffer_days ? `no new entry within ${j.earnings_buffer_days} days of earnings` : "off");
       if (j.max_weekly_loss_pct != null) set("max_weekly_loss_pct", j.max_weekly_loss_pct ? `−${j.max_weekly_loss_pct}% / market / trailing 7 days` : "off");
+      if (typeof j.closed_total === "number") set("closed_total", j.closed_total.toLocaleString());
       if (j.commission_bps) set("commission_bps", `ASX ${j.commission_bps.asx} · NASDAQ ${j.commission_bps.nasdaq} · crypto ${j.commission_bps.crypto} bps`);
       if (j.slippage_bps) set("slippage_bps", `ASX ${j.slippage_bps.asx} · NASDAQ ${j.slippage_bps.nasdaq} · crypto ${j.slippage_bps.crypto} bps`);
       // One timestamp convention: Melbourne on screen, UTC in the tooltip.
