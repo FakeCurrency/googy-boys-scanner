@@ -35,7 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # stdlib-only — no pip install needed.
+      # The repo's interpreter, not the runner image's (REFINE200 #85): the
+      # system python3 moves whenever ubuntu-latest does, every other job runs
+      # 3.12. stdlib-only (+ the stdlib-only scanner/config.py) — no pip.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       #
       # TOP100 #51 (2026-07-28) — `a | tee b` exits with TEE's status, and tee
       # succeeds essentially always. GitHub's default shell is `bash -e {0}`,

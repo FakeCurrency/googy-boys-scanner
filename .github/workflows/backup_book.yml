@@ -46,6 +46,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The repo's interpreter, not the runner image's (REFINE200 #85): the
+      # system python3 moves whenever ubuntu-latest does, every other job runs
+      # 3.12. Before the gate because the verify step at the end always runs.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       # The backstop cron's freshness gate — LOCAL, off the fresh checkout:
       # snapshots are committed in-tree as backups/<UTC-timestamp>/, so
       # "did the 21:35 slot land" is one ls. Fail-open: an unreadable dir
