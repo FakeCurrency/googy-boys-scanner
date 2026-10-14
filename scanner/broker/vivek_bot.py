@@ -80,7 +80,7 @@ def _is_fund_or_reit(row: dict) -> bool:
 
 def _cells() -> dict:
     """The (timeframe -> triggers) table the bot may trade, in walk order."""
-    cells = getattr(_cfg, "VIVEK_BOT_ENTRY_CELLS", None)
+    cells = _cfg.VIVEK_BOT_ENTRY_CELLS
     return dict(cells) if isinstance(cells, dict) and cells else {}
 
 
@@ -127,23 +127,23 @@ def evaluate_setup(row: dict, cells: dict | None = None, min_rr: float | None = 
 
     # Long-only: shorts lost on every market in the backtest, so the bot skips
     # them while VIVEK_BOT_ALLOW_SHORTS is False.
-    if not getattr(_cfg, "VIVEK_BOT_ALLOW_SHORTS", True) and _direction(row) == "short":
+    if not _cfg.VIVEK_BOT_ALLOW_SHORTS and _direction(row) == "short":
         return skip("shorts_disabled", f"{sym} is a short — bot is long-only")
 
     # Don't trade REITs / ETFs / LICs / managed funds (they hug the 200 SMA).
-    if getattr(_cfg, "VIVEK_BOT_EXCLUDE_FUNDS", True) and _is_fund_or_reit(row):
+    if _cfg.VIVEK_BOT_EXCLUDE_FUNDS and _is_fund_or_reit(row):
         return skip("fund_reit", f"{sym} is a REIT/ETF/fund — excluded from bot trading")
 
     # Data freshness (2026-07-20): a row computed off a cache-reused frame is
     # days old — its "armed" trigger and prices describe a market that has
     # since moved. Never open a position on stale data.
-    max_age = int(getattr(_cfg, "VIVEK_BOT_MAX_DATA_AGE_DAYS", 0) or 0)
+    max_age = int(_cfg.VIVEK_BOT_MAX_DATA_AGE_DAYS or 0)
     age = int(row.get("data_age_days") or 0)
     if max_age > 0 and age > max_age:
         return skip("stale_data", f"{sym} data is {age}d old (cache reuse) — max {max_age}d")
 
     # Rule 1 — grade A/A+ (VIVEK_BOT_GRADES), read off grade_raw.
-    grades = tuple(getattr(_cfg, "VIVEK_BOT_GRADES", ("A+",)) or ("A+",))
+    grades = tuple(_cfg.VIVEK_BOT_GRADES or ("A+",))
     if grade not in grades:
         return skip("grade_excluded", f"grade {grade} — bot trades {'/'.join(grades)} only")
 
@@ -167,7 +167,7 @@ def evaluate_setup(row: dict, cells: dict | None = None, min_rr: float | None = 
     # Tradeability: a structural stop miles from entry (e.g. −95% on a weekly
     # crypto plan) makes risk-based sizing meaningless — units go microscopic and
     # the "trade" is a lottery ticket. Cap the stop distance as a % of entry.
-    max_stop_pct = float(getattr(_cfg, "VIVEK_BOT_MAX_STOP_PCT", 0) or 0)
+    max_stop_pct = float(_cfg.VIVEK_BOT_MAX_STOP_PCT or 0)
     if max_stop_pct > 0 and e > 0:
         stop_pct = abs(e - s) / e * 100.0
         if stop_pct > max_stop_pct:
@@ -178,7 +178,7 @@ def evaluate_setup(row: dict, cells: dict | None = None, min_rr: float | None = 
     # (stablecoin-likes, defensives glued to the SMA). Risk sizing then buys a
     # leverage-capped MAX position in something that doesn't move — a slot
     # squatter, not a trade.
-    min_stop_pct = float(getattr(_cfg, "VIVEK_BOT_MIN_STOP_PCT", 0) or 0)
+    min_stop_pct = float(_cfg.VIVEK_BOT_MIN_STOP_PCT or 0)
     if min_stop_pct > 0 and e > 0:
         stop_pct = abs(e - s) / e * 100.0
         if stop_pct < min_stop_pct:
@@ -228,7 +228,7 @@ def size_position(equity: float, entry: float, stop: float,
     path (0) regardless of config — used by the tests to pin both behaviours.
     """
     max_lev = _cfg.VIVEK_MAX_LEVERAGE if max_leverage is None else max_leverage
-    fixed = (getattr(_cfg, "VIVEK_BOT_POSITION_NOTIONAL", 0)
+    fixed = (_cfg.VIVEK_BOT_POSITION_NOTIONAL
              if notional_target is None else notional_target)
     fixed = float(fixed or 0)
 
@@ -309,8 +309,8 @@ def daily_loss_limit() -> float:
     on a plan, and it must not become a reason for the guard and the flag to
     share a code path that a later edit could make circular.
     """
-    equity = float(getattr(_cfg, "VIVEK_BOT_ACCOUNT_EQUITY", 0) or 0)
-    pct = float(getattr(_cfg, "VIVEK_BOT_MAX_DAILY_LOSS_PCT", 0) or 0)
+    equity = float(_cfg.VIVEK_BOT_ACCOUNT_EQUITY or 0)
+    pct = float(_cfg.VIVEK_BOT_MAX_DAILY_LOSS_PCT or 0)
     if equity <= 0 or pct <= 0:
         return 0.0
     return round(equity * pct / 100.0, 2)
@@ -324,7 +324,7 @@ def review_flags(ticket: dict) -> list[dict]:
     """
     flags: list[dict] = []
     limit = daily_loss_limit()
-    thresh = float(getattr(_cfg, "VIVEK_BOT_REVIEW_DAILY_LOSS_PCT", 0) or 0)
+    thresh = float(_cfg.VIVEK_BOT_REVIEW_DAILY_LOSS_PCT or 0)
     risk = float(ticket.get("risk_usd") or 0)
     if limit > 0 and thresh > 0 and risk > 0:
         share = risk / limit * 100.0
@@ -356,7 +356,7 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
 
     # Tradeability: sub-floor prices (e.g. a $0.021 ASX micro-cap) carry spreads
     # worth multiple R — a paper fill at "the price" is fiction. Per-market floor.
-    floors = getattr(_cfg, "VIVEK_BOT_MIN_PRICE", None) or {}
+    floors = _cfg.VIVEK_BOT_MIN_PRICE or {}
     floor = float(floors.get(market, floors.get("default", 0)) or 0)
     px = float(row.get("price") or 0)
     if floor > 0 and 0 < px < floor:
@@ -381,7 +381,7 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
     adv = row.get("adv_usd")
     if adv is not None and adv > 0:
         sym = row.get("symbol", "?")
-        floors = getattr(_cfg, "VIVEK_BOT_MIN_ADV", None) or {}
+        floors = _cfg.VIVEK_BOT_MIN_ADV or {}
         min_adv = float(floors.get(market, floors.get("default", 0)) or 0)
         if min_adv > 0 and adv < min_adv:
             reason = (f"20d avg dollar volume {adv:,.0f} below the {market} "
@@ -389,7 +389,7 @@ def plan_trade(row: dict, equity: float, market: str | None = None,
             log.info("SKIP  %-8s [illiquid] %s", sym, reason)
             return {"take": False, "grade": decision.get("grade"), "reason": reason,
                     "code": "illiquid", "plan": None}
-        max_adv_pct = float(getattr(_cfg, "VIVEK_BOT_MAX_NOTIONAL_PCT_ADV", 0) or 0)
+        max_adv_pct = float(_cfg.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV or 0)
         if max_adv_pct > 0 and sizing["notional"] > adv * (max_adv_pct / 100.0):
             reason = (f"notional {sizing['notional']:,.0f} is "
                       f"{sizing['notional'] / adv * 100:.1f}% of ADV {adv:,.0f} "
@@ -517,7 +517,7 @@ def _sector_key(symbol: str, sector: str | None, market: str | None) -> str:
     if s:
         return s
     if market == "crypto":
-        majors = {m.upper() for m in getattr(_cfg, "VIVEK_BOT_CRYPTO_MAJORS", ()) or ()}
+        majors = {m.upper() for m in _cfg.VIVEK_BOT_CRYPTO_MAJORS or ()}
         return "crypto-major" if str(symbol or "").upper() in majors else "crypto-alt"
     return ""
 
@@ -624,7 +624,7 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     # Correlation control: positions per sector (existing + taken this run), so
     # the book can't quietly become one macro bet. Unknown sectors are exempt —
     # except crypto, which gets synthetic major/alt buckets via _sector_key.
-    max_sector = int(kw.get("max_per_sector", getattr(_cfg, "VIVEK_BOT_MAX_PER_SECTOR", 0)) or 0)
+    max_sector = int(kw.get("max_per_sector", _cfg.VIVEK_BOT_MAX_PER_SECTOR) or 0)
     sector_counts: Counter = Counter()
     for p in book:
         sk = _sector_key(p.get("symbol"), p.get("sector"), market)
