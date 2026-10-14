@@ -603,6 +603,72 @@ test("the generic footer prints only the fields a chart has; the banner names a 
   assert.match(fnSrc("heldPlanFallback"), /fetchJsonOnce\("data\/vivek_bot_book\.json"\)/, "shares the banner's request");
 });
 
+/* ═══════════════ #115 the chart refuses a stranger's series ═══════════════ */
+suite("#115 a crypto chart draws only an identity-checked series");
+
+test("CRYPTO_IDENTITY_TOL mirrors scanner/config.py, and the band is identity_ok's", () => {
+  const cfg = fs.readFileSync(path.join(ROOT, "scanner", "config.py"), "utf8");
+  const py = +(/^CRYPTO_IDENTITY_TOL = ([\d.]+)\s*$/m.exec(cfg) || [])[1];
+  const js = +(/const CRYPTO_IDENTITY_TOL = ([\d.]+);/.exec(CHART) || [])[1];
+  assert.ok(py > 0, "config.py no longer declares CRYPTO_IDENTITY_TOL");
+  assert.equal(js, py, "chart.js and scanner/config.py must agree on the identity band");
+  const ex = fs.readFileSync(path.join(ROOT, "scanner", "exchange_data.py"), "utf8");
+  assert.match(ex, /return 1\.0 \/ \(1\.0 \+ tol\) <= ratio <= 1\.0 \+ tol/, "the band the chart mirrors moved in Python");
+  const ok = new Function(`${constSrc("CRYPTO_IDENTITY_TOL")} ${fnSrc("cryptoIdentityOk")} return cryptoIdentityOk;`)();
+  assert.equal(ok(0.331, 0.331), true);
+  assert.equal(ok(0.331 * 1.4, 0.331), true, "1.40x is inside");
+  assert.equal(ok(0.331 / 1.4, 0.331), true, "1/1.40x is inside");
+  assert.equal(ok(0.331 * 1.41, 0.331), false);
+  assert.equal(ok(0.00026, 0.331), false, "Yahoo's JUP-USD against Binance's JUP");
+  assert.equal(ok(0.00026, null), true, "no reference price: no check (as before)");
+  assert.equal(ok(0, 0.331), false);
+});
+
+function venueHarness(handler) {
+  const body = CHART.slice(CHART.indexOf("const BINANCE_DIRECT_HOSTS"), CHART.indexOf("// ── PhaseMap-only chart"));
+  const calls = [];
+  const fetch = (url) => { calls.push(url); return Promise.resolve(handler(url)); };
+  const api = new Function("fetch", `let VIVEK_CRYPTO_SRC = "binance"; let DATA_META = null;
+    ${body}
+    return { vivekCryptoBars, setRef: (v) => { VIVEK_CRYPTO_REF = v; }, meta: () => DATA_META };`)(fetch);
+  return { api, calls };
+}
+const notBinance = { ok: false, status: 451, json: () => Promise.resolve({}) };
+const proxyCloses = (close) => ({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, bars: 7,
+  candles: Array.from({ length: 7 }, (_, i) => ({ time: 1790000000 + i * 86400, open: close, high: close, low: close, close })) }) });
+
+test("browser cannot reach Binance + the proxy answers a stranger -> refused, not drawn", async () => {
+  const h = venueHarness((u) => (u.startsWith("/api/price") ? proxyCloses(0.00026) : notBinance));
+  h.api.setRef(0.331);
+  await assert.rejects(h.api.vivekCryptoBars("JUP", "5y", "1d", true), (e) =>
+    e.venueRefused === true && e.got === 0.00026 && e.ref === 0.331 && e.venue === "binance");
+  assert.equal(h.api.meta(), null, "a refused series records no honesty metadata either");
+});
+
+test("the proxy's answer IS the coin -> drawn, exactly as before", async () => {
+  const h = venueHarness((u) => (u.startsWith("/api/price") ? proxyCloses(0.35) : notBinance));
+  h.api.setRef(0.331);
+  assert.equal((await h.api.vivekCryptoBars("JUP", "5y", "1d", true)).length, 7);
+  const n = venueHarness((u) => (u.startsWith("/api/price") ? proxyCloses(0.00026) : notBinance));
+  assert.equal((await n.api.vivekCryptoBars("JUP", "5y", "1d")).length, 7, "no row price: unchecked, as before");
+});
+
+test("the refusal reaches the reader as its own message; the quote is checked too", () => {
+  const msg = new Function("fmt", `${fnSrc("chartFailMsg")} return chartFailMsg;`)((v) => String(v));
+  const t = msg({ venueRefused: true, got: 0.00026, ref: 0.331, venue: "binance" }, "jup");
+  assert.match(t, /^Price source unavailable for JUP\./);
+  assert.match(t, /could not reach Binance/);
+  assert.match(t, /\(last 0\.00026\) is a different instrument from the one the scan priced \(0\.331\)/);
+  assert.match(msg(new Error("thin"), "x"), /^No chart data for X yet/);
+  for (const fb of ["vivekFallback", "pmOnlyFallback"]) {
+    assert.match(fnSrc(fb), /VIVEK_CRYPTO_REF = isCryptoMarket\(assetType\) && \+m\.price > 0 \? \+m\.price : null;/, fb);
+    assert.match(fnSrc(fb), /\.catch\(\(e\) => fail\(chartFailMsg\(e, SYM\)\)\)/, fb);
+  }
+  assert.match(fnSrc("startStockLive"), /if \(isCryptoQuote && !cryptoIdentityOk\(px, VIVEK_CRYPTO_REF\)\) return;/);
+  assert.match(fnSrc("pmOnlyFallback"), /cryptoIdentityOk\(\+bars\[bars\.length - 1\]\.close, VIVEK_CRYPTO_REF\)/,
+    "PhaseMap's committed crypto candles are Yahoo's too");
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);
