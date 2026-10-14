@@ -2,9 +2,14 @@
 // GET /api/quote?sym=BHP.AX  → { price, currency, time, source }
 // GET /api/quote?sym=BTC-USD → { price, currency, time, source }
 //
-// Crypto prefers Binance (real-time, 24/7); stocks/commodities use Yahoo across
-// both hosts. Currency is preserved from Yahoo meta (so ASX returns AUD).
-import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart, yahooCryptoSymbol } from "./_prices.js";
+// Everything reads Yahoo across both hosts (crypto as "<base>-USD"); crypto asks
+// Binance first only when PRICES_TRY_BINANCE=1 (see _prices.js serverBinance --
+// Cloudflare cannot reach Binance, so the chart reads it from the browser).
+// Crypto is recognised by its -USD/USDT suffix only (REFINE200 #167: LINK is
+// Interlink Electronics, not Chainlink). Currency is preserved from Yahoo meta
+// (so ASX returns AUD).
+import { isCryptoSymbol, fetchBinancePrice, fetchYahooChart, yahooCryptoSymbol,
+         serverBinance } from "./_prices.js";
 import { overPxLimit, cacheMatch, cachePut } from "./_relay_guard.js";
 
 // Successful quotes are edge-cached for ~20s via the Cache API (cachePut below —
@@ -43,9 +48,9 @@ export async function onRequestGet(ctx) {
 
   const now = Math.floor(Date.now() / 1000);
 
-  // Crypto: Binance first (keyless, real-time), Yahoo as a backstop.
+  // Crypto: Binance first when enabled (keyless, real-time), Yahoo as a backstop.
   const crypto = isCryptoSymbol(sym);
-  if (crypto && prefer !== "yahoo") {
+  if (crypto && prefer !== "yahoo" && serverBinance(ctx.env)) {
     const px = await fetchBinancePrice(sym);
     if (px != null) {
       return cachePut(ctx, json(200, { price: px, currency: "USD", time: now, source: "binance" }));

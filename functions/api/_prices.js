@@ -4,9 +4,9 @@
  * into the Functions that import it and is never itself a routable endpoint.
  *
  * Design goals (resilience + consistency):
- *   • Live prices never depend on a single upstream. Crypto prefers Binance
- *     (real-time, keyless, 24/7) and falls back to Yahoo; everything else uses
- *     Yahoo across BOTH hosts (query1 → query2) before giving up.
+ *   • Live prices never depend on a single upstream. Everything uses Yahoo
+ *     across BOTH hosts (query1 → query2) before giving up. Crypto can ask
+ *     Binance first, but only when PRICES_TRY_BINANCE=1 (see serverBinance).
  *   • Historical candles are trimmed to a target bar-count per range so every
  *     asset type returns a consistent-length series for the chart.
  *   • Every fetch has a timeout and is wrapped so one dead source can't hang or
@@ -23,19 +23,30 @@ const BINANCE_HOSTS = ["https://data-api.binance.vision", "https://api.binance.c
 const BINANCE_PAGE = 1000;         // Binance's per-request kline cap
 const BINANCE_MAX_PAGES = 4;       // 4000 bars: 5y daily / ~5.5 months hourly, bounded subrequests
 
-// Common base tickers that are crypto even without a -USD/USDT suffix.
-const KNOWN_CRYPTO = new Set([
-  "BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "AVAX", "LINK", "DOT",
-  "MATIC", "LTC", "TRX", "ATOM", "UNI", "ARB", "OP", "SUI", "APT", "NEAR",
-  "INJ", "TIA", "SEI", "RNDR", "FIL", "AAVE", "MKR", "PEPE", "WIF", "BONK",
-]);
+/** Whether the SERVER-side Binance leg runs at all (REFINE200 #76, 2026-10-14).
+ *
+ *  MEASURED 2026-09-28 (ops.yml site-probe, paths=/api/price...): from
+ *  Cloudflare's servers Binance never answers -- BNB and QNT asked src=binance
+ *  came back source "yahoo", TAO came back 502. Every crypto chart and quote
+ *  therefore paid for two dead Binance hosts before reaching Yahoo. The chart
+ *  reads Binance from the BROWSER instead (chart.js binanceDirectBars /
+ *  binanceDirectPrice) and this proxy is its fallback, so the leg is OFF unless
+ *  PRICES_TRY_BINANCE=1 is set in Cloudflare Pages env vars -- re-measure with
+ *  site-probe before setting it. */
+export function serverBinance(env) {
+  return Boolean(env && env.PRICES_TRY_BINANCE === "1");
+}
 
-/** True if the symbol looks like a crypto pair (suffix or known base). */
+/** True if the symbol is a crypto pair by its SUFFIX (-USD, -USDT, USDT).
+ *
+ *  A bare base used to count too, off a list of 30 common coins (REFINE200
+ *  #167): ATOM, LINK, OP, LTC, SOL, TRX, APT and SEI are also US equity tickers
+ *  (Atomera, Interlink Electronics, ...), so /api/quote?sym=LINK quoted
+ *  Chainlink. Every crypto caller on the site already sends "<base>-USD" or
+ *  type=crypto, so the suffix (or the type hint) is the whole rule. */
 export function isCryptoSymbol(sym) {
   const s = String(sym || "").toUpperCase();
-  if (/-USD$/.test(s) || /USDT$/.test(s) || /-USDT$/.test(s)) return true;
-  const base = s.replace(/-USD$/, "").replace(/-USDT$/, "").replace(/USDT$/, "");
-  return KNOWN_CRYPTO.has(base);
+  return /-USD$/.test(s) || /USDT$/.test(s) || /-USDT$/.test(s);
 }
 
 /** Normalise any crypto symbol to its Binance USDT pair (BTC-USD → BTCUSDT). */
@@ -141,7 +152,13 @@ export async function fetchBinancePrice(sym, timeout = 6000) {
  *  PAGED (2026-09-28): one request is capped at 1000 bars, which is ~2.7 years
  *  of daily candles -- short of the weekly 200-SMA the VIVEK chart reads. Now
  *  that the crypto scan reads Binance, its chart must too, at full depth: pages
- *  walk BACKWARD with endTime until `limit` bars or the listing date. */
+ *  walk BACKWARD with endTime until `limit` bars or the listing date.
+ *
+ *  VOLUME IS QUOTE (USDT) VOLUME, k[7], unrounded (REFINE200 #168): the scan
+ *  builds Volume from k[7] (scanner/exchange_data.py) and treats it as USD for
+ *  liquidity and Ignition's 3x trigger, and Yahoo's crypto volume is USD too.
+ *  k[5] is the BASE volume in coins, which understates a breakout's spike by
+ *  the price move and changed units with the source. */
 export async function fetchBinanceCandles(sym, { interval = "1d", limit = 260, timeout = 9000 } = {}) {
   const want = Math.max(1, Math.min(limit, BINANCE_PAGE * BINANCE_MAX_PAGES));
   for (const host of BINANCE_HOSTS) {
@@ -169,7 +186,7 @@ export async function fetchBinanceCandles(sym, { interval = "1d", limit = 260, t
         .map((k) => ({
           time: Math.floor(k[0] / 1000),
           open: +k[1], high: +k[2], low: +k[3], close: +k[4],
-          volume: k[5] == null ? 0 : Math.round(+k[5]),
+          volume: k[7] == null ? 0 : +k[7],
         }));
     } catch (_) { /* next host */ }
   }
@@ -227,11 +244,15 @@ export async function fetchYahooWindow(sym, { p1, p2, interval = "1d", timeout =
  *
  * Windows are fetched IN PARALLEL (5 subrequests, well inside a Worker's
  * budget) because sequential chunks would add ~1.5s to every chart open.
- * A window that fails is SKIPPED, not fatal: a symbol younger than the span
- * legitimately 400s on the windows before it existed, and half a chart beats
- * none. Bars are deduped by timestamp (adjacent windows share their boundary
- * session) and sorted ascending, so a source that answers newest-first or
- * repeats a seam bar cannot double-count. */
+ * An OLDER window that fails is SKIPPED, not fatal: a symbol younger than the
+ * span legitimately 400s on the windows before it existed, and half a chart
+ * beats none. The NEWEST window failing is fatal (REFINE200 #160): the stitch
+ * would be the older windows alone -- a chart that silently ends five years
+ * ago, served ok:true and edge-cached, with the dividend chip and the basis
+ * read off a 2021 window -- so it returns no candles and history() falls
+ * through to its single-range path. Bars are deduped by timestamp (adjacent
+ * windows share their boundary session) and sorted ascending, so a source
+ * that answers newest-first or repeats a seam bar cannot double-count. */
 export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
                                             chunkYears = DEEP_CHUNK_YEARS } = {}) {
   const now = Math.floor(Date.now() / 1000);
@@ -244,8 +265,11 @@ export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
     const p1 = now - Math.min(k + chunkYears, years) * yearSec;
     jobs.push(fetchYahooWindow(sym, { p1, p2, interval }));
   }
-  const results = (await Promise.all(jobs)).filter(Boolean);
-  if (!results.length) return { candles: [], result: null };
+  // Indexed by window, NEWEST FIRST (k = 0) -- never filtered before reading [0].
+  const windows = await Promise.all(jobs);
+  const newest = windows[0];
+  if (!newest) return { candles: [], result: null, chunks: 0 };
+  const results = windows.filter(Boolean);
 
   const byTime = new Map();
   for (const r of results) {
@@ -254,9 +278,9 @@ export async function fetchYahooDeep(sym, { years = 25, interval = "1d",
     }
   }
   const candles = [...byTime.values()].sort((a, b) => a.time - b.time);
-  // results[0] is the NEWEST window — the one whose dividend events and adjusted
-  // flag describe the tape the chart is actually reading right now.
-  return { candles, result: results[0], chunks: results.length };
+  // `result` is the NEWEST window — the one whose dividend events, adjusted
+  // flag and live price describe the tape the chart is actually reading now.
+  return { candles, result: newest, chunks: results.length };
 }
 
 /** Yahoo chart result → clean candle objects (nulls dropped).
@@ -337,13 +361,21 @@ export function trimCandles(candles, n) {
   return n > 0 && candles.length > n ? candles.slice(candles.length - n) : candles;
 }
 
+/** The live price a Yahoo chart result carries in its meta (any request shape). */
+function metaPrice(result) {
+  const m = result?.meta;
+  const px = m?.regularMarketPrice ?? m?.previousClose ?? null;
+  return px == null ? null : +px;
+}
+
 /**
- * Resilient live price with a source-aware fallback chain.
+ * Resilient live price with a source-aware fallback chain. The Binance leg
+ * runs only when the caller passes tryBinance (serverBinance(env)).
  * @returns {{price:number|null, source:string|null, delayed:boolean}}
  */
-export async function livePrice(sym, assetType, prefer = null) {
+export async function livePrice(sym, assetType, prefer = null, { tryBinance = false } = {}) {
   const crypto = assetType ? assetType === "crypto" : isCryptoSymbol(sym);
-  if (crypto && prefer !== "yahoo") {
+  if (crypto && tryBinance && prefer !== "yahoo") {
     const b = await fetchBinancePrice(sym);
     if (b != null) return { price: +b, source: "binance", delayed: false };
   }
@@ -352,9 +384,8 @@ export async function livePrice(sym, assetType, prefer = null) {
   const ySym = crypto ? yahooCryptoSymbol(sym) : sym;
   try {
     const result = await fetchYahooChart(ySym, { interval: "1d", range: "1d" });
-    const m = result?.meta;
-    const px = m?.regularMarketPrice ?? m?.previousClose ?? null;
-    if (px != null) return { price: +px, source: "yahoo", delayed: !crypto };
+    const px = metaPrice(result);
+    if (px != null) return { price: px, source: "yahoo", delayed: !crypto };
   } catch (_) { /* give up */ }
   return { price: null, source: null, delayed: false };
 }
@@ -378,7 +409,10 @@ export async function fetchEodhdCandles(sym, { range = "1y", interval = "1d", ke
   if (!key || interval !== "1d") return [];
   const es = eodhdSymbol(sym);
   if (!es) return [];
-  const YEARS = { "1mo": 1, "3mo": 1, "6mo": 1, "1y": 1, "2y": 2, "5y": 5, "10y": 10, "max": 30 };
+  // 15y/20y/25y were missing and fell to `|| 1` (REFINE200 #161): every stock
+  // chart asks for 25y, so installing the key would have cut them all to a year.
+  const YEARS = { "1mo": 1, "3mo": 1, "6mo": 1, "1y": 1, "2y": 2, "5y": 5, "10y": 10,
+                  "15y": 15, "20y": 20, "25y": 25, "max": 30 };
   const yrs = YEARS[range] || 1;
   const from = new Date(Date.now() - yrs * 365.25 * 86400 * 1000).toISOString().slice(0, 10);
   try {
@@ -405,30 +439,37 @@ export async function fetchEodhdCandles(sym, { range = "1y", interval = "1d", ke
 
 /**
  * Resilient candle history, consistent-length across asset types.
- * Crypto → Binance klines (fallback Yahoo); stocks → EODHD when a key is
- * configured (CHART/HISTORY PATH ONLY — the live scan engine has no access to
- * this key by construction), falling back to Yahoo (dual host) on any failure.
- * @returns {{candles:Array, source:string|null, delayed:boolean}}
+ * Crypto → Binance klines when tryBinance (fallback Yahoo); stocks → EODHD
+ * when a key is configured (CHART/HISTORY PATH ONLY — the live scan engine has
+ * no access to this key by construction), falling back to Yahoo (dual host) on
+ * any failure.
+ *
+ * `price` (REFINE200 #162) is the live price the Yahoo answer already carries,
+ * so /api/price no longer spends a separate Yahoo call on it before history
+ * even starts; null when the bars came from Binance or EODHD (the caller uses
+ * the last close).
+ * @returns {{candles:Array, source:string|null, delayed:boolean, price:number|null}}
  */
-export async function history(sym, assetType, { range = "1y", interval = "1d", prefer = null, eodKey = null } = {}) {
+export async function history(sym, assetType, { range = "1y", interval = "1d", prefer = null,
+                                                eodKey = null, tryBinance = false } = {}) {
   const crypto = assetType ? assetType === "crypto" : isCryptoSymbol(sym);
   const want = targetBars(range, interval);
 
   // `prefer:"yahoo"` skips the Binance pair guess — used by the VIVEK daily chart
   // so a thin coin (no/!=Binance pair) matches the scan's Yahoo <base>-USD series
   // exactly, instead of a wrong pair that throws the price scale off.
-  if (crypto && prefer !== "yahoo") {
+  if (crypto && tryBinance && prefer !== "yahoo") {
     const c = await fetchBinanceCandles(sym, { interval, limit: want });
     // Binance is raw exchange data, but crypto has no dividends/splits — its
     // raw and adjusted bases are the same thing, so "adj" is honest here.
-    if (c.length) return { candles: trimCandles(c, want), source: "binance", delayed: false, basis: "adj" };
+    if (c.length) return { candles: trimCandles(c, want), source: "binance", delayed: false, basis: "adj", price: null };
   }
   // Stocks: EODHD first when the owner has installed a key (adjusted basis,
   // 30y depth, official actions). [] on any failure/miss → Yahoo, unchanged.
   if (!crypto && eodKey) {
     const c = await fetchEodhdCandles(sym, { range, interval, key: eodKey });
     if (c.length) {
-      return { candles: trimCandles(c, want), source: "eodhd", delayed: !crypto, basis: "adj" };
+      return { candles: trimCandles(c, want), source: "eodhd", delayed: !crypto, basis: "adj", price: null };
     }
   }
   // Crypto on Yahoo MUST be "<base>-USD" (a bare base = a same-named equity).
@@ -444,21 +485,26 @@ export async function history(sym, assetType, { range = "1y", interval = "1d", p
       if (d.candles.length) {
         return { candles: trimCandles(d.candles, want), source: "yahoo-deep", delayed: !crypto,
                  basis: crypto ? "adj" : (isAdjusted(d.result) ? "adj" : "raw"),
-                 recent_div: recentDividend(d.result), chunks: d.chunks };
+                 recent_div: recentDividend(d.result), chunks: d.chunks, price: metaPrice(d.result) };
       }
     } catch (_) { /* fall through to the ordinary single-range path */ }
   }
 
+  // A deep range reaching here means the stitcher failed (its newest window,
+  // #160). Yahoo's range= has no "15y"/"20y"/"25y", so ask for the newest 5
+  // years -- the window size proven to stay daily -- rather than a range Yahoo
+  // rejects: a recent chart beats none.
+  const yRange = deep ? "5y" : range;
   try {
-    const result = await fetchYahooChart(ySym, { interval, range });
+    const result = await fetchYahooChart(ySym, { interval, range: yRange });
     const c = yahooCandles(result);
     if (c.length) {
       return { candles: trimCandles(c, want), source: "yahoo", delayed: !crypto,
                basis: crypto ? "adj" : (isAdjusted(result) ? "adj" : "raw"),
-               recent_div: recentDividend(result) };
+               recent_div: recentDividend(result), price: metaPrice(result) };
     }
   } catch (_) { /* fall through */ }
-  return { candles: [], source: null, delayed: false, basis: "raw" };
+  return { candles: [], source: null, delayed: false, basis: "raw", price: null };
 }
 
 /** Most recent dividend within ~45 days from a Yahoo chart result (events=div),

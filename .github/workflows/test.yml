@@ -198,8 +198,16 @@ jobs:
       # the workflow via this endpoint. Pinned: fails CLOSED without its
       # secret, refuses a bad key, validates the slot, dispatches the right
       # workflow+input, never echoes the GitHub token, refunds the cooldown.
-      - name: Plays-digest external trigger (fail-closed / dispatch / no-echo, 11)
+      - name: Plays-digest external trigger (fail-closed / dispatch / no-echo / clean secret, 12)
         run: node test/morning_plays_api.test.js
+      # The price relay (2026-10-14, REFINE200 #166): /api/price and /api/quote
+      # serve every chart and header quote and no test had ever run them.
+      # Pinned: bad symbols 400, the per-IP 429, the edge cache serves hits and
+      # never stores an error or a zero-candle answer, one upstream round per
+      # chart, the server-side Binance leg off by default, a bare ticker is a
+      # stock, CHART_MAX_YEARS really clamps.
+      - name: Price relay (price.js / quote.js / _relay_guard.js behaviour)
+        run: node test/price_api.test.js
       # Sector-cap deck marking (2026-08-20): sectorKeyOf mirrors the bot's
       # _sector_key bucketing and the chip mirrors decide()'s sector_cap skip,
       # so the display can never disagree with what actually blocks a trade.

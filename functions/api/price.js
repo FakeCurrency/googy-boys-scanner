@@ -1,8 +1,11 @@
 /* Cloudflare Pages Function — GET /api/price?symbol=BTC-USD
  *
- * Resilient price + history proxy. Crypto prefers Binance (real-time, 24/7) and
- * falls back to Yahoo; stocks/commodities use Yahoo across both hosts. History
- * is trimmed to a consistent bar-count per range so every asset type returns a
+ * Resilient price + history proxy. Everything reads Yahoo across both hosts
+ * (crypto as "<base>-USD"); crypto asks Binance first only when
+ * PRICES_TRY_BINANCE=1 (_prices.js serverBinance: Cloudflare cannot reach
+ * Binance, so the chart reads it from the browser and this is the fallback).
+ * Stocks read EODHD first when EODHD_API_TOKEN is set. History is trimmed to a
+ * consistent bar-count per range so every asset type returns a
  * comparable-length series for the chart.
  *
  *   GET /api/price?symbol=AAPL
@@ -10,14 +13,16 @@
  *   GET /api/price?symbol=BTC-USD&range=1y&interval=1d&type=crypto
  *     → { ok, price, symbol, source, delayed, bars, candles:[{time,open,high,low,close,volume}] }
  */
-import { livePrice, history, intervalDegraded } from "./_prices.js";
+import { livePrice, history, intervalDegraded, serverBinance } from "./_prices.js";
 import { overPxLimit, cacheMatch, cachePut } from "./_relay_guard.js";
+import { cleanSecret } from "./_secrets.js";
 
 // Successful responses edge-cache for ~20s via the Cache API (cachePut below —
 // a Cache-Control header alone does NOT edge-cache a Function response) — chart
 // opens and journal refreshes re-request the same symbols in bursts; a short
 // shared cache absorbs those instead of hammering Yahoo into throttling.
-// Errors are never cached. The per-IP guard is in-memory — zero KV operations
+// Errors are never cached, and neither is a candle request that got no candles
+// (REFINE200 #163: that used to be a cached 200 ok:true with bars:0). The per-IP guard is in-memory — zero KV operations
 // on this hot path (the old KV counter burned the daily write quota by itself).
 const json = (status, body) =>
   new Response(JSON.stringify(body), {
@@ -79,10 +84,10 @@ export const onRequestGet = async (ctx) => {
     return json(429, { ok: false, error: "Too many price requests — slow down." });
   }
 
+  const tryBinance = serverBinance(ctx.env);
   try {
-    const live = await livePrice(symbol, assetType, prefer);
-
     if (!wantCandles) {
+      const live = await livePrice(symbol, assetType, prefer, { tryBinance });
       if (live.price == null) return json(502, { ok: false, error: "no price from any source", symbol });
       return cachePut(ctx, json(200, { ok: true, price: +live.price.toFixed(8), symbol, source: live.source }));
     }
@@ -91,16 +96,21 @@ export const onRequestGet = async (ctx) => {
     // CHART/HISTORY path only. The key exists solely in Cloudflare Pages, so
     // the GitHub-Actions scan engine cannot read it even by accident — that
     // is the live-grade-path fence, structural rather than promised.
+    //
+    // ONE upstream round (REFINE200 #162): the candle path used to await a
+    // separate live-price call (one more Yahoo hit per chart request, before
+    // history even started) for a `price` no chart reads. history() now hands
+    // back the live price Yahoo already put in its answer.
     const hist = await history(symbol, assetType,
-      { range: effRange, interval, prefer,
-        eodKey: ctx.env && ctx.env.EODHD_API_TOKEN ? ctx.env.EODHD_API_TOKEN : null });
-    // Prefer the live tick for `price`; fall back to the last candle close.
-    const lastClose = hist.candles.length ? hist.candles[hist.candles.length - 1].close : null;
-    const price = live.price != null ? +live.price : lastClose;
+      { range: effRange, interval, prefer, tryBinance,
+        eodKey: ctx.env && ctx.env.EODHD_API_TOKEN ? cleanSecret(ctx.env.EODHD_API_TOKEN) || null : null });
 
-    if (price == null && !hist.candles.length) {
-      return json(502, { ok: false, error: "no price or history from any source", symbol });
+    // A candle request with no candles failed, whatever else came back (#163).
+    if (!hist.candles.length) {
+      return json(502, { ok: false, error: "no history from any source", symbol });
     }
+    const lastClose = hist.candles[hist.candles.length - 1].close;
+    const price = hist.price != null ? +hist.price : lastClose;
 
     // DATA HONESTY (2026-08-15) — three facts the chart needs to stop
     // presenting a series as something it is not:
@@ -120,7 +130,7 @@ export const onRequestGet = async (ctx) => {
       ok: true,
       symbol,
       price: price == null ? null : +price.toFixed(8),
-      source: hist.source || live.source,
+      source: hist.source,
       delayed: hist.delayed,
       bars: hist.candles.length,
       candles: hist.candles,
