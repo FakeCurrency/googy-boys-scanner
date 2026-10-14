@@ -1,7 +1,7 @@
 # NEXT-CYCLE-PROTOCOL — Pre-registered after OOS level-split test
 **Issued:** 2026-08-01  
 **Repo:** `googy-boys-scanner` @ main  
-**Inputs:** `public/data/vivek_backtest_parity.json` (IS), `public/data/vivek_backtest_parity_oos.json` (OOS), `public/data/vivek_parity_oos_gates.json`  
+**Inputs:** `data/research/vivek_backtest_parity.json` (IS), `data/research/vivek_backtest_parity_oos.json` (OOS), `data/research/vivek_parity_oos_gates.json`  
 **Units:** R only. **Caveat on every number:** survivorship bias (today’s universe, yfinance, no delisteds).  
 **Constraint:** simulation + proposal only. `vivek_bot.py` untouched. No live rule change until the owner signs this protocol.
 
@@ -162,19 +162,19 @@ python -c "from scanner.vivek_parity import reconstruct_is_sample; import json; 
 # OOS run (already committed artefact)
 python -m scanner.vivek_backtest --parity --market asx --market nasdaq \
   --limit 240 --period 5y --no-variants \
-  --exclude-from public/data/vivek_parity_is_symbols.json \
-  --tag parity_oos --out public/data/vivek_backtest_parity_oos.json
+  --exclude-from data/research/vivek_parity_is_symbols.json \
+  --tag parity_oos --out data/research/vivek_backtest_parity_oos.json
 
 # Gates
 python -m scripts.parity_oos_analysis
 ```
 
 Artefacts:  
-- `public/data/vivek_backtest_parity.json`  
-- `public/data/vivek_backtest_parity_oos.json`  
-- `public/data/vivek_parity_is_symbols.json`  
-- `public/data/vivek_parity_oos_symbols.json`  
-- `public/data/vivek_parity_oos_gates.json`  
+- `data/research/vivek_backtest_parity.json`  
+- `data/research/vivek_backtest_parity_oos.json`  
+- `data/research/vivek_parity_is_symbols.json`  
+- `data/research/vivek_parity_oos_symbols.json`  
+- `data/research/vivek_parity_oos_gates.json`  
 - `DECISION-PACK-N30.md` (tables regenerated from IS artefact)
 
 ---

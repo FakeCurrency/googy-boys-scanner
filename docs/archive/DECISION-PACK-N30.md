@@ -44,7 +44,7 @@
 
 **Coverage (this run):** stratified sample **120 ASX + 120 NASDAQ + 95 crypto (full)** over **5y**  
 (ASX 6.7% of 1,792 liquid non-fund names; NASDAQ 8.7% of 1,372; crypto 100%).  
-Artefact: `public/data/vivek_backtest_parity.json` (per-trade records with `taken` flag; recompute any row below from `trades` where `taken==true`).
+Artefact: `data/research/vivek_backtest_parity.json` (per-trade records with `taken` flag; recompute any row below from `trades` where `taken==true`).
 
 | Cohort | n | Win% | Exp R | Total R | R / slot-month | Slot-months |
 |---|---|---|---|---|---|---|
@@ -167,7 +167,7 @@ Fails only because ASX R/sm does not improve (essentially flat-to-worse on thin 
 ## 5. Reproducibility
 
 ```bash
-# Parity + variant grid → public/data/vivek_backtest_parity.json
+# Parity + variant grid → data/research/vivek_backtest_parity.json
 python -m scanner.vivek_backtest --parity --market all --limit 120 --period 5y
 
 # Full universe (slow; same code path, limit 0)

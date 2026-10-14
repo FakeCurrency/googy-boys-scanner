@@ -2,9 +2,9 @@
 **Issued:** 2026-08-01  
 **Repo:** `googy-boys-scanner` @ main  
 **Inputs (committed, recomputable):**  
-- `public/data/vivek_backtest_parity.json` + `vivek_backtest_parity_oos.json` (1,200 taken trades)  
-- `public/data/vivek_fill_sensitivity.json`  
-- `public/data/vivek_confluence_study.json`  
+- `data/research/vivek_backtest_parity.json` + `vivek_backtest_parity_oos.json` (1,200 taken trades)  
+- `data/research/vivek_fill_sensitivity.json`  
+- `data/research/vivek_confluence_study.json`  
 **Units:** R only. **Caveat on every number:** survivorship bias (today’s universe, yfinance).  
 **Ringfence:** `vivek_bot.py` and PhaseMap detection maths untouched. Simulation only.
 
@@ -116,8 +116,8 @@ Under midpoint fills the pooled book is slightly positive and the stop hole shri
 
 ```bash
 python -m scripts.lens_fill_confluence
-# → public/data/vivek_fill_sensitivity.json
-# → public/data/vivek_confluence_study.json
+# → data/research/vivek_fill_sensitivity.json
+# → data/research/vivek_confluence_study.json
 ```
 
 ---

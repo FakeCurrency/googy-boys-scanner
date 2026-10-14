@@ -819,7 +819,12 @@ VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
 # instead of scattering magic numbers through vivek_backtest / vivek_parity.
 # Changing them does NOT change the live bot — vivek_bot.py / vivek_run.py never
 # import the VIVEK_PARITY_* names. The live time-stop remains VIVEK_BOT_MAX_HOLD_DAYS.
-VIVEK_PARITY_OUT_FILE = "public/data/vivek_backtest_parity.json"
+# Research output, NOT a site file (REFINE200 #63): nothing on the site reads
+# the parity report, so it lives in data/research/ beside the earlier studies
+# (OOS / C3 samples, fill sensitivity, confluence study) and never ships to
+# Cloudflare. Its FX rate still comes from the scan's public/data/fx.json.
+VIVEK_PARITY_OUT_FILE = "data/research/vivek_backtest_parity.json"
+VIVEK_PARITY_OOS_OUT_FILE = "data/research/vivek_backtest_parity_oos.json"
 VIVEK_PARITY_DEFAULT_PERIOD = "5y"
 # MFE checkpoints stamped on every parity trade (calendar days from entry).
 # Used by the V2 early-momentum variants and the decision pack.
