@@ -884,6 +884,14 @@ VIVEK_BOT_MAX_MARK_AGE_H = 2.0
 # per run, not the universe) and any lookup failure lets the trade through.
 VIVEK_BOT_EARNINGS_BUFFER_DAYS = 3
 VIVEK_BOT_EARNINGS_MARKETS     = ("nasdaq",)   # ASX earnings data on yfinance is too patchy to trust
+# Capacity release (REFINE200 #6): decide() reserves a slot / notional / sector
+# place for every plan it returns, and a plan the FILL then refuses (stale
+# frame, no price, earnings, don't-chase, stop too wide at the fill) used to
+# hold that place empty for the run. The runner re-asks decide() over the rows
+# it has not refused, against the book as filled -- same rows, order and caps
+# -- at most this many extra times per run, and only when a cap turned a row
+# away. 0 = off (the old single pass).
+VIVEK_BOT_REFILL_PASSES = 2
 # Crypto correlation: coins have no GICS sector, so the per-sector cap never
 # bound them — 4 alts are usually ONE beta-to-BTC bet. Synthetic sectors:
 # majors below get "crypto-major", everything else "crypto-alt", then the
