@@ -290,7 +290,7 @@ def test_every_published_row_carries_the_evidence_to_open_a_chart(market_fixture
 
 
 def test_a_blocked_market_KEEPS_ITS_LAST_GOOD_FILE(tmp_path, monkeypatch):
-    """The defect `spec_run.py` has and `run.py` does not.
+    """The defect `spec_run.py` had until REFINE200 #179 (tests/test_spec_run.py).
 
     With no frames, publishing `"results": []` would make the page say "nothing
     set up today" when the truth is "we could not look" -- and it would do it

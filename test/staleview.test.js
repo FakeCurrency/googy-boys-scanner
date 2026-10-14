@@ -2094,5 +2094,83 @@ test("NEWS page: 'Read updated' prints Sydney's date, digits and abbreviation, w
 });
 
 
+
+// ---------------------------------------------------------------------------
+// REFINE200 #175: specs.js applied an in-flight fetch after a market switch.
+// The real load() (and coverageText) are sliced and RUN against stubs: the
+// ASX answer arriving after a switch to NASDAQ must change nothing, on the
+// success path, the failure path and the confluence join alike.
+// ---------------------------------------------------------------------------
+const SPECS_JS = fs.readFileSync(path.join(__dirname, "..", "public", "js", "specs.js"), "utf8");
+function specsFn(head) {
+  const at = SPECS_JS.indexOf(head);
+  assert.ok(at > 0, `specs.js no longer defines ${head}`);
+  for (let i = SPECS_JS.indexOf("{", at); i < SPECS_JS.length; i++) {
+    if (SPECS_JS[i] !== "}") continue;
+    const cand = SPECS_JS.slice(at, i + 1);
+    try { new Function("return (" + cand + ");"); return cand; } catch (_) { /* keep walking */ }
+  }
+  throw new Error("could not slice " + head);
+}
+const specsPending = [];
+function specsRace(outcome) {
+  const els = {};
+  const $ = (sel) => (els[sel] = els[sel] || { textContent: "", innerHTML: "" });
+  let settle, confl;
+  const PM = {
+    fetchTimeout: () => new Promise((res, rej) => { settle = { res, rej }; }),
+    fmtMelb: (x) => String(x), esc: (x) => String(x), staleBadgeHTML: () => "",
+    loadFailKind: () => "unreachable", retryHTML: () => "",
+    loadConfluence: () => new Promise((res) => { confl = res; }),
+  };
+  const state = { market: "asx", data: null, confl: null };
+  const load = new Function("state", "$", "PM", "loadGrads", "renderPills", "render",
+    specsFn("function coverageText(") + "\nreturn (" + specsFn("async function load(") + ");")(
+      state, $, PM, () => {}, () => {}, () => {});
+  return { state, els, run: async () => {
+    const p = load();
+    const NQ = { results: [{ symbol: "NQ" }], generated_at: "x", universe_size: 1 };
+    state.market = "nasdaq"; state.data = NQ; state.confl = "nasdaq-confl";
+    $("#sp-title").textContent = "SPECS · NASDAQ · 1 setups";   // the NASDAQ load painted
+    $("#sp-sub").innerHTML = "nasdaq sub";
+    if (outcome === "ok") settle.res({ ok: true, json: async () => ({ results: [{ symbol: "AX" }] }) });
+    else settle.rej(new Error("HTTP 503"));
+    await p;
+    assert.strictEqual(state.data, NQ, `${outcome}: the ASX answer replaced NASDAQ's rows`);
+    assert.strictEqual(state.confl, "nasdaq-confl", `${outcome}: confluence was reset`);
+    assert.strictEqual(els["#sp-title"].textContent, "SPECS · NASDAQ · 1 setups",
+      `${outcome}: the ASX answer repainted the NASDAQ title`);
+    assert.strictEqual(els["#sp-sub"].innerHTML, "nasdaq sub", `${outcome}: ...and its sub line`);
+  } };
+}
+for (const outcome of ["ok", "fail"]) {
+  specsPending.push(specsRace(outcome).run().then(() => { passed++; console.log(`PASS  specs load race (${outcome})`); }));
+}
+// The confluence join started for ASX resolves after the switch: dropped.
+specsPending.push((async () => {
+  const els = {};
+  const $ = (sel) => (els[sel] = els[sel] || { textContent: "", innerHTML: "" });
+  let confl;
+  const PM = { fetchTimeout: async () => ({ ok: true, json: async () => ({ results: [], universe_size: 3, downloaded: 2 }) }),
+    fmtMelb: (x) => String(x), esc: (x) => String(x), staleBadgeHTML: () => "",
+    loadFailKind: () => "unreachable", retryHTML: () => "",
+    loadConfluence: () => new Promise((res) => { confl = res; }) };
+  const state = { market: "asx", data: null, confl: null };
+  const load = new Function("state", "$", "PM", "loadGrads", "renderPills", "render",
+    specsFn("function coverageText(") + "\nreturn (" + specsFn("async function load(") + ");")(
+      state, $, PM, () => {}, () => {}, () => {});
+  await load();
+  assert.ok(/2 of 3 downloaded/.test(els["#sp-sub"].innerHTML), "REFINE200 #179: coverage in counts");
+  state.market = "nasdaq";
+  confl("asx-confl");
+  await new Promise((r) => setTimeout(r, 0));
+  assert.notStrictEqual(state.confl, "asx-confl", "ASX confluence joined onto the NASDAQ view");
+  passed++; console.log("PASS  specs confluence join is dropped after a switch");
+})());
+PENDING.push(Promise.all(specsPending).catch((e) => {
+  console.error("FAIL  specs load race\n      " + e.message); process.exitCode = 1;
+}));
+
+
 Promise.all(PENDING).then(() =>
   console.log(process.exitCode ? "\nSOME STALE-VIEW TESTS FAILED" : `\nALL ${passed} stale-view tests passed`));

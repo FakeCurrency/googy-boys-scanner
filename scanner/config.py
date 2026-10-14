@@ -138,6 +138,18 @@ SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
 
 SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
                               # disabled for crypto, where per-coin price is meaningless)
+# The Specs nightly's data floors (scanner/spec_run.py, REFINE200 #179/#180).
+# A frame whose last bar is older than this many calendar days (market
+# calendar) is skipped, not screened: a suspended name whose last five bars
+# hold the spike stayed a "fresh" setup every night. 5 = Ignition's stock
+# ceiling (a long weekend; Easter's Thu -> Tue).
+SPEC_MAX_DATA_AGE_DAYS = 5
+# A market whose download covers less than this share of its universe keeps
+# its LAST GOOD file (exit 3) instead of publishing a partial list over it:
+# on a Yahoo blackout the nightly wrote `"results": []` and deleted every spec
+# chart, so the page said "the gates are strict" when the truth was "we could
+# not look". A normal night covers 90-100%.
+SPEC_MIN_COVERAGE = 0.5
 
 # ---------------------------------------------------------------------------
 # EXCHANGE KLINES -- scanner/exchange_data.py (2026-09-28)
