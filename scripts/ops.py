@@ -21,7 +21,8 @@ ACTIONS
     cronjob-create   {"title","url","minutes":[35],"hours":[6],"wdays":[-1],
                       "timezone":"Australia/Melbourne","enabled":true,
                       "saveResponses":true}
-    cronjob-update   {"id": N, ...any of the create fields}
+    cronjob-update   {"id": N, ...any of the create fields; a schedule field
+                      is merged into the job's CURRENT schedule (read first)}
     cronjob-delete   {"id": N}
     cf-list-vars                       production env var NAMES + types only
     cf-set-var       {"name","value","type":"secret_text"|"plain_text"}
@@ -143,20 +144,27 @@ _JOB_FIELDS = ("title", "url", "enabled", "saveResponses", "requestMethod")
 _SCHED_FIELDS = ("timezone", "minutes", "hours", "mdays", "months", "wdays", "expiresAt")
 
 
-def cronjob_body(args):
+_EVERY_AXES = ("mdays", "months", "wdays")
+
+
+def cronjob_body(args, current_schedule=None):
     """Translate the flat args dict into cron-job.org's {"job": {...}} shape.
-    Only fields present in args are sent, so an update touches nothing else."""
+    Only fields present in args are sent, so an update touches nothing else.
+
+    A schedule is sent WHOLE, so its unstated axes need values. For a create
+    they default to -1 ("every"). For an update pass the job's CURRENT schedule
+    (`current_schedule`) and the given fields are merged over it: until
+    2026-10-14 an update defaulted them too, so a one-field retime of a Mon-Fri
+    job ({"id": N, "minutes": [12]}) silently made it fire seven days a week
+    (REFINE200)."""
     job = {k: args[k] for k in _JOB_FIELDS if k in args}
     sched = {k: args[k] for k in _SCHED_FIELDS if k in args}
     if sched:
-        # -1 means "every" on cron-job.org; a create needs every axis stated.
-        if "mdays" not in sched:
-            sched["mdays"] = [-1]
-        if "months" not in sched:
-            sched["months"] = [-1]
-        if "wdays" not in sched:
-            sched["wdays"] = [-1]
-        job["schedule"] = sched
+        base = {k: [-1] for k in _EVERY_AXES}      # -1 = "every" on cron-job.org
+        base.update({k: v for k, v in (current_schedule or {}).items()
+                     if k in _SCHED_FIELDS})
+        base.update(sched)
+        job["schedule"] = base
     return {"job": job}
 
 
@@ -191,7 +199,16 @@ def do_cronjob(action, args, env):
         return call("PUT", f"{CRONJOB_API}/jobs", h, body)
     if action == "cronjob-update":
         jid = _need_id(args)
-        return call("PATCH", f"{CRONJOB_API}/jobs/{jid}", h, cronjob_body(args))
+        current = None
+        if any(k in args for k in _SCHED_FIELDS):
+            # Read the live schedule first and merge into it; if it cannot be
+            # read, PATCH nothing rather than guess the axes not given.
+            status, js = call("GET", f"{CRONJOB_API}/jobs/{jid}", h)
+            if status != 200 or not isinstance(js, dict):
+                return status, js
+            current = (js.get("jobDetails") or {}).get("schedule") or {}
+        return call("PATCH", f"{CRONJOB_API}/jobs/{jid}", h,
+                    cronjob_body(args, current_schedule=current))
     if action == "cronjob-delete":
         return call("DELETE", f"{CRONJOB_API}/jobs/{_need_id(args)}", h)
     raise OpsError(f"unknown cronjob action {action}")
