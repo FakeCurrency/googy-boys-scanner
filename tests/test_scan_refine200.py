@@ -181,3 +181,28 @@ def test_run_py_publishes_the_stamped_copy_and_builds_slim_prices_from_vk():
     src = (runmod.REPO_ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
     assert "output.write_vivek_pair(scan.published(vk, market_key), args.out, market_key)" in src
     assert '"prices": vk["prices"]' in src
+
+
+# -- #136 a coin pinned to $1.00 for 90 days is a peg whatever its name -------
+
+def test_a_dollar_peg_is_skipped_by_behaviour(monkeypatch):
+    _stub_engine(monkeypatch, {"1W": _plan(1.0, risk=0.04)})
+    peg = _frame(close=1.0, vol=5e6, n=120)
+    peg["Close"] = [1.0 + 0.01 * ((i % 5) - 2) / 2 for i in range(120)]   # 0.99..1.01
+    coin = _frame(close=1.0, vol=5e6, n=120)
+    coin.loc[coin.index[-30], "Close"] = 1.08                              # left the band once
+    out = scan.scan_vivek_market("crypto", universe=_uni("PEG", "COIN", suffix="-USD"),
+                                 frames={"PEG-USD": peg, "COIN-USD": coin},
+                                 pulse_data=[], progress=False)
+    assert [r["symbol"] for r in out["results"]] == ["COIN"]
+    assert out["funnel"]["no_setup"] == 1
+
+
+def test_the_peg_band_is_crypto_only_and_needs_the_full_window(monkeypatch):
+    _stub_engine(monkeypatch, {"1W": _plan(1.0, risk=0.04)})
+    out = scan.scan_vivek_market("asx", universe=_uni("ONE", suffix=".AX"),
+                                 frames={"ONE.AX": _frame(close=1.0, n=120)},
+                                 pulse_data=[], progress=False)
+    assert [r["symbol"] for r in out["results"]] == ["ONE"], "a $1 stock is not a peg"
+    assert not scan._dollar_peg(_frame(close=1.0, n=config.CRYPTO_PEG_BARS - 1))
+    assert scan._dollar_peg(_frame(close=1.0, n=config.CRYPTO_PEG_BARS))

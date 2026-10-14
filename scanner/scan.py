@@ -155,6 +155,23 @@ def _turnover_today(df, market) -> float:
     return float(df["Close"].iloc[-1]) * vol
 
 
+def _dollar_peg(df) -> bool:
+    """True when the last CRYPTO_PEG_BARS closes all sit within CRYPTO_PEG_BAND
+    of $1.00 -- a dollar peg the universe's ticker/name rules missed
+    (REFINE200 #136). A frame too short to tell is not called a peg."""
+    bars = int(getattr(config, "CRYPTO_PEG_BARS", 0) or 0)
+    band = float(getattr(config, "CRYPTO_PEG_BAND", 0) or 0)
+    if bars <= 0 or band <= 0:
+        return False
+    try:
+        closes = df["Close"].astype(float).dropna().iloc[-bars:]
+    except (KeyError, TypeError, ValueError):
+        return False
+    if len(closes) < bars:
+        return False
+    return bool(((closes - 1.0).abs() <= band).all())
+
+
 def _spark(df) -> list[float]:
     """The last SPARK_BARS closes for the row's thumbnail, at SPARK_SIG_FIGS
     significant figures (REFINE200 #66): rounding to 8 DECIMALS shipped the
@@ -297,6 +314,9 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
             if (config.VIVEK_DROP_FORMING_BAR and len(df)
                     and _bar_is_forming(market_key, df.index[-1].date(), now)):
                 df = df.iloc[:-1]
+            if market_key == "crypto" and _dollar_peg(df):
+                funnel["no_setup"] += 1      # a peg has no setup (#136)
+                continue
             sig = vivek.evaluate(df)
             if sig is None:
                 funnel["no_setup"] += 1

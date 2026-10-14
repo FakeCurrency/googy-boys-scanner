@@ -82,3 +82,38 @@ def test_a_cached_universe_saved_under_the_old_rule_is_refiltered(monkeypatch, t
     monkeypatch.setattr(universe, "_fetch_crypto", lambda suffix: [])
     got = [i["symbol"] for i in universe.load_universe("crypto")]
     assert len(got) == 45 and "EURCV" not in got and "U" not in got
+
+
+# ── REFINE200 #136: seven more that took universe slots ─────────────────────
+# All in data/universe_cache/crypto.json on 2026-10-14; STRCX (a tokenised
+# preferred built to hold $100 par) was being scanned.
+
+def test_the_seven_found_on_2026_10_14_are_skipped_by_their_real_names():
+    for sym, name in [("SOFID", "SoFiUSD"), ("USX", "USX"), ("CASH", "CASH"),
+                      ("SAFO", "Spiko Amundi Overnight Swap Fund"),
+                      ("PC0000031", "Tradable NA Rent Financing Platform SSTN"),
+                      ("JPYSC", "JPYSC"), ("STRCX", "Strategy PP Variable xStock")]:
+        assert _is_stable(sym, name), (sym, name)
+
+
+def test_the_new_rules_catch_the_next_one_without_a_list_entry():
+    assert _is_stable("ZZZ", "AcmeUSD"), "a word ending in USD is a dollar peg"
+    assert _is_stable("ZZZ", "Some Overnight Swap Fund"), "a swap fund is a NAV"
+    assert _is_stable("JPYX"), "JPY<X> tickers are yen pegs like USD<X>/EUR<X>"
+
+
+def test_the_new_rules_keep_coins_that_float():
+    for sym, name in [("CRCLB", "Circle Internet Group (bStocks Tokenized Stock)"),
+                      ("BTT", "BitTorrent"), ("XEC", "eCash"), ("CAKE", "PancakeSwap"),
+                      ("USELESS", "Useless Coin"), ("UNI", "Uniswap"),
+                      ("BCH", "Bitcoin Cash")]:
+        assert not _is_stable(sym, name), (sym, name)
+
+
+def test_the_cached_universe_has_no_known_peg_left():
+    import json
+    import pathlib
+    p = pathlib.Path(__file__).resolve().parents[1] / "data" / "universe_cache" / "crypto.json"
+    items = json.loads(p.read_text(encoding="utf-8"))["items"]
+    kept = {i["symbol"] for i in items if not _is_stable(i["symbol"], i.get("name", ""))}
+    assert not kept & {"SOFID", "USX", "CASH", "SAFO", "PC0000031", "JPYSC", "STRCX"}
