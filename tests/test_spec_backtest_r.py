@@ -105,3 +105,59 @@ def test_the_report_carries_the_r_section(tmp_path, monkeypatch):
     md = open(path, encoding="utf-8").read()
     assert "## R model" in md and "| ALL SIGNALS | 1 |" in md
     assert f"${config.LENS_BACKTEST_NOTIONAL:,.0f}" in md
+
+
+# ---------------------------------------------------------------------------
+# REFINE200 #181: the evidence's grade is the page's grade, and a throwing
+# frame is counted, never swallowed
+# ---------------------------------------------------------------------------
+
+def test_published_grade_demotes_a_low_rr_plan_exactly_as_the_page_does():
+    from scanner import spec
+    lo = config.MIN_TRADEABLE_RR - 0.01
+    assert spec.published_grade("A+", lo) == "B"
+    assert spec.published_grade("A", lo) == "B"
+    assert spec.published_grade("A+", config.MIN_TRADEABLE_RR) == "A+"
+    assert spec.published_grade("B", 0.1) == "B"
+    src = (ROOT / "scanner" / "spec_run.py").read_text(encoding="utf-8")
+    assert "spec.published_grade(grade, lv[\"rr\"])" in src, "build_row must use the one helper"
+
+
+def _spike_frame(n=config.SPEC_MIN_HISTORY + 30):
+    idx = pd.bdate_range(end="2026-10-09", periods=n)
+    c = np.full(n, 0.2)
+    v = np.full(n, 1e5)
+    v[-20] = 1e7                                   # the spike the pre-gate needs
+    return pd.DataFrame({"Open": c, "High": c * 1.02, "Low": c * 0.98, "Close": c,
+                         "Volume": v}, index=idx)
+
+
+def test_the_replay_files_a_low_rr_A_plus_under_B_like_the_page(monkeypatch):
+    """T88 scored 10 (A+ by points) with rr 0.67 and the page showed it as B;
+    the replay filed the same signal under A+."""
+    from scanner import spec
+    monkeypatch.setattr(spec, "evaluate", lambda df, max_price=None: {"close": 0.2})
+    monkeypatch.setattr(spec, "score_and_grade", lambda sig: (10, "A+", ["volume"]))
+    monkeypatch.setattr(spec, "compute_levels",
+                        lambda df, sig: {"entry": 0.2, "stop": 0.18, "target": 0.2134, "rr": 0.67})
+    sigs = sb.replay_ticker("T88", _spike_frame(), "asx")
+    assert sigs, "the fixture produced no signal - is the pre-gate still met?"
+    assert {s["grade"] for s in sigs} == {"B"}
+    assert {s["grade_raw"] for s in sigs} == {"A+"}
+
+
+def test_a_frame_that_throws_is_counted_and_published_not_skipped_in_silence(monkeypatch, tmp_path):
+    items = [{"symbol": "AAA", "yf": "AAA.AX"}, {"symbol": "BBB", "yf": "BBB.AX"}]
+    monkeypatch.setattr(sb.universe, "load_universe", lambda m, full=True: items)
+    monkeypatch.setattr(sb.data, "download", lambda t, **k: {i["yf"]: _spike_frame() for i in items})
+
+    def boom(sym, df, market="asx"):
+        raise ValueError("engine regression")
+    monkeypatch.setattr(sb, "replay_ticker", boom)
+    monkeypatch.setattr(sb, "write_report", lambda *a, **k: str(tmp_path / "r.md"))
+    written = {}
+    monkeypatch.setattr(sb.output, "write_json", lambda path, body, **k: written.update(body))
+    assert sb.main(["--market", "asx"]) == 0
+    assert written["errors"] == 2, written.get("errors")
+    assert written["error_sample"] and "engine regression" in json.dumps(written["error_sample"])
+    assert "grade_rule" in written

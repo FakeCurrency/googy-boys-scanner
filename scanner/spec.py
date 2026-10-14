@@ -136,6 +136,20 @@ def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
     return points, grade_from_points(points, config.SPEC_GRADE_CUTOFFS), fired
 
 
+def published_grade(grade: str | None, rr: float) -> str | None:
+    """The grade the SPECS page shows: an A+/A plan whose R:R is under
+    config.MIN_TRADEABLE_RR is demoted to B (config.DEMOTE_LOW_RR).
+
+    One helper, two readers (spec_run.build_row and the backtest's
+    replay_ticker), so the evidence's "A+" cohort is the page's A+. The replay
+    used to keep the raw points grade, so ~9 in 10 of its "A+" signals would
+    have shown on the page as B (REFINE200 #181).
+    """
+    if config.DEMOTE_LOW_RR and grade in ("A+", "A") and rr < config.MIN_TRADEABLE_RR:
+        return "B"
+    return grade
+
+
 def build_chips(fired: list[str], sig: dict) -> list[str]:
     chips: list[str] = []
     for key in fired:
