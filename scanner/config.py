@@ -199,6 +199,15 @@ EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit
 EXCHANGE_DEAD_AFTER_ERRORS = 8   # a venue erroring this often is dropped for the run
+# PRECISION CHECK (REFINE200 #135). Yahoo stores crypto at 6 decimals, so a
+# coin under a millionth of a dollar (BTT, HTX) arrives as one or two repeated
+# ticks with a full-precision newest close that passes the identity check, and
+# every plan built on it is nonsense (zero risk, negative stop). data.fetch
+# refuses a crypto Yahoo frame whose last CRYPTO_QUANTISED_BARS closes before
+# the newest take CRYPTO_QUANTISED_MAX_DISTINCT or fewer values -- like a
+# stranger: not scanned, not refilled from the cache. Only removes coins.
+CRYPTO_QUANTISED_BARS = 30
+CRYPTO_QUANTISED_MAX_DISTINCT = 2
 # The pair every fetch probes first, serially, to learn which venues are dead
 # before fanning out: listed on every venue, so an error on it is the venue,
 # never the coin (REFINE200 #21 -- the probe used to be whichever coin was
