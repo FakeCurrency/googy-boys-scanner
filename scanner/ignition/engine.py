@@ -392,7 +392,8 @@ def _date(idx) -> str:
         return str(idx)
 
 
-def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> dict:
+def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str,
+                 next_open: Optional[tuple] = None) -> dict:
     """Everything the page says about a trigger at bar t0, plus how the
     primary exit rule has treated it since (completed bars only).
 
@@ -400,9 +401,13 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
     the trade is priced from ITS OPEN -- the fill the backtest books -- so the
     R on the page and the R in the evidence are one number, not two (the
     audit measured up to 0.36R between them when the page used the trigger
-    close). Until that bar exists the trigger close is the only reference,
-    and `entry_basis` says which one a row is using. A next open at or under
-    the stop is no trade at all, exactly as the replay skips it.
+    close). That bar's open is in hand as soon as the bar STARTS forming:
+    `next_open` = (date, open) of the forming bar when the trigger is the last
+    completed bar (REFINE200 #176 -- an intraday run, and crypto's 00:14 run,
+    used to price off the trigger close and show a live trade the replay had
+    already skipped as gap_below_stop). With neither, the trigger close is the
+    only reference, and `entry_basis` says which one a row is using. A next
+    open at or under the stop is no trade at all, exactly as the replay skips it.
     """
     r = feat.iloc[t0]
     trig_close, stop = float(r["close"]), float(r["stop"])
@@ -410,9 +415,11 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
     trail = feat["trail"].to_numpy()
     T = len(feat) - 1
     if T > t0:
-        entry, basis = float(o[t0 + 1]), "next_open"
+        entry, basis, entry_date = float(o[t0 + 1]), "next_open", _date(feat.index[t0 + 1])
+    elif next_open is not None and np.isfinite(next_open[1]) and next_open[1] > 0:
+        entry, basis, entry_date = float(next_open[1]), "next_open", _date(next_open[0])
     else:
-        entry, basis = trig_close, "trigger_close"
+        entry, basis, entry_date = trig_close, "trigger_close", None
     risk = entry - stop
     mm = float(r["mm_target"])
     out = {
@@ -420,7 +427,7 @@ def _trigger_row(df: pd.DataFrame, feat: pd.DataFrame, t0: int, market: str) -> 
         "trigger_close": _f(trig_close, 8),
         "entry": _f(entry, 8),
         "entry_basis": basis,
-        "entry_date": _date(feat.index[t0 + 1]) if T > t0 else None,
+        "entry_date": entry_date,
         "bars_since": int(T - t0),
         "rvol": _f(r["rvol"], 2),
         "ext_pct": _f(r["ext"] * 100, 1),
@@ -490,10 +497,17 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
     T = len(feat) - 1
     keep = max(int(config.IGNITION_KEEP_BARS), 1)
     trig_pos = np.flatnonzero(feat["trigger"].to_numpy()[max(0, T - keep + 1):])
+    # The forming bar, only when it is ONE new bar after the last completed
+    # one (the same guard the provisional recompute and thumbs.py apply).
+    fc = clean(forming) if forming is not None and len(forming) else None
+    nxt_bar = fc if fc is not None and len(fc) and fc.index[-1] > df.index[-1] else None
     row: Optional[dict] = None
+    t0: Optional[int] = None
     if len(trig_pos):
         t0 = max(0, T - keep + 1) + int(trig_pos[-1])
-        row = _trigger_row(df, feat, t0, market)
+        nxt = ((nxt_bar.index[0], float(nxt_bar["Open"].iloc[0]))
+               if nxt_bar is not None and t0 == T else None)
+        row = _trigger_row(df, feat, t0, market, next_open=nxt)
         if "exit_reason" in row:
             row["state"] = "CLOSED"
         elif T - t0 < int(config.IGNITION_FRESH_BARS):
@@ -514,8 +528,8 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
 
     price = float(df["Close"].iloc[-1])
     provisional = False
-    if forming is not None and len(forming) and (row is None or row["state"] in ("COILED", "CLOSED")):
-        both = clean(pd.concat([df, clean(forming)]))
+    if fc is not None and len(fc) and _forming_can_fire(row, p, T, t0):
+        both = clean(pd.concat([df, fc]))
         if len(both) == len(df) + 1:
             f2 = compute(both, market, p)
             price = float(both["Close"].iloc[-1])
@@ -523,10 +537,8 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
                 row = _trigger_row(both, f2, len(f2) - 1, market)
                 row["state"] = "IGNITING"
                 provisional = True
-    elif forming is not None and len(forming):
-        fc = clean(forming)
-        if len(fc):
-            price = float(fc["Close"].iloc[-1])
+    elif fc is not None and len(fc):
+        price = float(fc["Close"].iloc[-1])
 
     if row is None:
         return None
@@ -540,6 +552,31 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
             row["r_now"] = _f((price - en) / (en - st), 2)
         row["trail"] = _f(feat["trail"].iloc[-1], 8)
     return row
+
+
+def _forming_can_fire(row: Optional[dict], p: Params, T: int, t0: Optional[int]) -> bool:
+    """Could the forming bar T+1 be a trigger? Only then is the whole frame
+    recomputed with it -- that recompute is the screen's dearest step (~40 ms
+    a name, ~2 minutes per pair of intraday stock runs, REFINE200 #177).
+
+      no row   coil_open[T] is False (else the row would be COILED), and the
+               coil window a trigger at T+1 reads (coiled on T+1-L .. T) is
+               exactly coil_open[T]'s window, so it cannot fire -- unless the
+               coil condition is ablated (require_coil False).
+      COILED   it can.
+      CLOSED   only once its trigger t0 is OUTSIDE T+1's rearm window: t0 is a
+               raw trigger, so T+1 is re-armed only when T+1 - t0 > rearm_bars
+               (never, while KEEP_BARS <= REARM_BARS).
+      IGNITING / RUNNING  never recomputed: a live trigger is not overridden.
+    """
+    if row is None:
+        return not p.require_coil
+    st = row.get("state")
+    if st == "COILED":
+        return True
+    if st == "CLOSED":
+        return t0 is None or (T + 1 - t0) > p.rearm_bars
+    return False
 
 
 def state_rank(row: dict) -> tuple:
