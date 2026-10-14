@@ -18,7 +18,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=121" />
+  <link rel="stylesheet" href="css/styles.css?v=122" />
   <link rel="stylesheet" href="css/status.css?v=4" />
   <link rel="stylesheet" href="css/phasemap.css?v=23" />
   <script src="js/nav.js?v=29"></script>
@@ -42,7 +42,7 @@
 
   <main class="wrap pm-wrap">
     <div class="pm-head">
-      <h2 class="pm-title">ALERT HISTORY <span class="pm-title-sub">every multi-lens alignment the system called, newest first</span></h2>
+      <h2 class="pm-title">ALERT HISTORY <span class="pm-title-sub">recent multi-lens alignments the system called, newest first</span></h2>
       <p class="pm-sub" id="al-sub">Loading…</p>
     </div>
     <div class="pm-filters">
@@ -59,9 +59,9 @@
       </div>
     </div>
     <section id="al-list"></section>
-    <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). This page is the durable record — push delivery is being rebuilt, and triples are queued for it.</p>
+    <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). There is no push channel: this page is where alignments show. It is a rolling window of the newest entries — older ones roll off. Every alignment's forward returns are kept in the edge ledger (<code>data/alert_forward_returns.json</code>). Unproven: alignment has not beaten plain A+ in the study or the forward ledger.</p>
   </main>
 
-  <script src="js/alerts.js?v=9"></script>
+  <script src="js/alerts.js?v=10"></script>
 </body>
 </html>

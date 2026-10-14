@@ -1,6 +1,8 @@
-/* ALERTS page — the multi-lens alignment log, the durable record of every
-   alignment (push delivery was removed 2026-08-27, so this page is the only
-   place they show). Reads public/data/phasemap/alert_history.json.
+/* ALERTS page — the multi-lens alignment log (push delivery was removed
+   2026-08-27, so this page is the only place they show). Reads
+   public/data/phasemap/alert_history.json, a ROLLING window: confluence_alert
+   keeps only the newest HISTORY_CAP entries, so the sub-line says how far back
+   it reaches (REFINE200 #192) rather than implying it is every alignment.
    2026-07-10: market filter + collapsible day groups (the log grew fast —
    ~27 alignments/day — so only the newest day starts expanded). */
 (() => {
@@ -57,6 +59,20 @@
       `</a>`;
   }
 
+  // " · the log keeps the newest 800, back to 26 Sep": the oldest entry's
+  // Melbourne date, read off the file, so the window is stated, never assumed.
+  const melbShort = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne",
+    day: "numeric", month: "short" });
+  function windowNote(entries) {
+    let oldest = Infinity;
+    for (const e of entries || []) {
+      const t = Date.parse((e && e.date) || "");
+      if (isFinite(t) && t < oldest) oldest = t;
+    }
+    if (!isFinite(oldest)) return "";
+    return ` · the log keeps the newest ${entries.length}, back to ${melbShort.format(new Date(oldest))}`;
+  }
+
   function render() {
     const list = document.getElementById("al-list");
     const sub = document.getElementById("al-sub");
@@ -83,7 +99,8 @@
       return;
     }
     sub.textContent = `${rows.length} alignment event(s)` +
-      (state.market === "all" ? "" : ` · ${state.market.toUpperCase()}`) + " · newest first";
+      (state.market === "all" ? "" : ` · ${state.market.toUpperCase()}`) + " · newest first" +
+      windowNote(state.entries);
     const byDay = {};
     rows.forEach((e) => {
       const day = melbDay(e.date || "");
