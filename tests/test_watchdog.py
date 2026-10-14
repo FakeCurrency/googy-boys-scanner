@@ -477,6 +477,7 @@ def test_the_annotation_escapes_what_github_would_read_as_commands():
 
 
 def test_an_undelivered_alert_names_the_missing_secrets(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(config, "TELEGRAM_ENABLED", True)  # secrets-path test; the real flag is the owner's mute
     res, _, _ = _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")])
     out = capsys.readouterr().out
     assert "CRITICAL alert NOT delivered: telegram (secret(s) not set: " \
@@ -521,6 +522,7 @@ def test_only_the_raising_host_and_only_criticals_raise(monkeypatch, tmp_path):
 
 
 def test_a_configured_critical_channel_carries_it_instead(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "TELEGRAM_ENABLED", True)  # secrets-path test; the real flag is the owner's mute
     env = dict(RAISE, TELEGRAM_BOT_TOKEN="123:abc", TELEGRAM_CHAT_ID="-9")
     res, _, _ = _live_run(monkeypatch, tmp_path, [_f("book_stale", "CRITICAL")], env=env)
     assert res["alarm"] == []
@@ -560,11 +562,19 @@ def test_the_kill_switch_workflow_raises_from_a_separate_job():
 
 # ── channel diagnostics (REFINE200 #127) ──────────────────────────────────────
 
-def test_telegram_follows_its_secrets_not_a_hidden_flag():
-    assert config.TELEGRAM_ENABLED is True
+def test_the_telegram_mute_is_named_not_hidden(monkeypatch):
+    """TELEGRAM_ENABLED stays the owner's mute (kept False in REFINE200), but a
+    NOT-delivered line must name it rather than blame the secrets alone."""
+    monkeypatch.setattr(config, "TELEGRAM_ENABLED", False)
+    env = {"TELEGRAM_BOT_TOKEN": "123:abc", "TELEGRAM_CHAT_ID": "42"}
+    assert wd.channel_problem("telegram", env) == "muted by config.TELEGRAM_ENABLED = False"
+    assert wd.channel_problem("telegram", {}) == (
+        "muted by config.TELEGRAM_ENABLED = False; "
+        "secret(s) not set: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID")
 
 
 def test_channel_problem_names_the_real_reason(monkeypatch):
+    monkeypatch.setattr(config, "TELEGRAM_ENABLED", True)
     env = {}
     assert wd.channel_problem("telegram", env) == \
         "secret(s) not set: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID"
@@ -578,6 +588,7 @@ def test_channel_problem_names_the_real_reason(monkeypatch):
 
 
 def test_the_self_test_says_why_each_channel_did_not_deliver(monkeypatch, capsys):
+    monkeypatch.setattr(config, "TELEGRAM_ENABLED", True)  # secrets-path test; the real flag is the owner's mute
     monkeypatch.setattr(wd, "_dispatch", lambda sev, text: [])
     wd.test_alert()
     out = capsys.readouterr().out
