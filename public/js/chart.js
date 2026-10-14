@@ -4952,6 +4952,10 @@
       if (e.key === "Escape" && !sheet.hidden) { setOpen(false); fab.focus(); }
     });
     document.body.append(scrim, sheet, fab);
+    // The FAB follows the sheet, not the viewport width (chart.css): rotate a
+    // phone to landscape and the controls are still one tap away
+    // (REFINE200 #113).
+    document.body.classList.add("ct-has-sheet");
   }
 
   function boot() {

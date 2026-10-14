@@ -505,8 +505,13 @@ body.is-replay #ct-fab { display: none; }
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #ct-sheet .draw-btn.is-active::after { color: inherit; }
+/* REFINE200 #113: the FAB shows whenever the SHEET holds the controls, not
+   only while the viewport is <= 560px. The sheet is built once at boot (the
+   nodes are MOVED into it), so rotating a phone to landscape (844x390) hid the
+   FAB by width and stranded draw tools, Plan, Share, PNG, TradingView, REPLAY
+   and VS until a reload. chart.js sets .ct-has-sheet when it builds it. */
+body.ct-has-sheet:not(.is-replay) #ct-fab { display: grid; place-items: center; }
 @media (max-width: 560px) {
-  #ct-fab { display: grid; place-items: center; }
   /* the sheet owns these on phones — hide their old positions if JS moved them
      is moot (they're physically in the sheet), this is belt-and-braces for the
      pre-boot flash */
