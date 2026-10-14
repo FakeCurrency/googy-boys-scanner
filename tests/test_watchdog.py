@@ -184,7 +184,7 @@ def test_runs_fresh_success_is_silent():
 
 def test_runs_old_success_fires_with_config_severity(monkeypatch):
     by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
-    by["kill_switch.yml"] = [_run(3.0)]          # limit 2h, CRITICAL
+    by["backup_book.yml"] = [_run(30.0)]         # limit 26h, CRITICAL
     by["scan.yml"] = [_run(30.0)]                # limit 12h IN-SESSION, WARNING
     # scan.yml is session_aware since 2026-09-21: wall-clock age no longer
     # decides it (that is the whole point -- a weekend is 52 wall hours and
@@ -193,7 +193,7 @@ def test_runs_old_success_fires_with_config_severity(monkeypatch):
     monkeypatch.setattr(wd, "session_hours_between", lambda a, b: 30.0)
     probs = wd.probe_runs(_runs_fetch(by), NOW, repo="x/y")
     got = {p["key"]: p["severity"] for p in probs}
-    assert got == {"run_kill_switch.yml": "CRITICAL", "run_scan.yml": "WARNING"}
+    assert got == {"run_backup_book.yml": "CRITICAL", "run_scan.yml": "WARNING"}
 
 
 def test_a_weekend_never_alarms_the_scan_workflow_but_a_lost_session_does():
@@ -400,16 +400,14 @@ def test_the_jobs_lookups_are_capped(monkeypatch):
     assert len([u for u in calls if "/runs/" in u]) == 2
 
 
-def test_the_alarm_jobs_red_run_is_not_read_as_a_kill_switch_failure():
-    """kill_switch.yml is judged by its `check` job: the watchdog-alarm job's
-    red run (#77) must neither silence the kill-switch probe as 'GitHub
-    emailed' nor count as a missing check."""
-    by = _fresh_except(**{"kill_switch.yml": [_rid(7, 0.3, "failure")]})
-    jobs = {7: {"check": "success", "Watchdog CRITICAL (the kill-switch check itself passed)": "failure"}}
-    notes = []
-    assert wd.probe_runs(_jobs_fetch(by, jobs), NOW, repo="x/y", notes=notes) == []
-    assert not any("kill_switch.yml" in n for n in notes)
-    assert config.WATCHDOG_RUNS["kill_switch.yml"]["job"] == "check"
+def test_the_kill_switch_workflow_is_not_watched():
+    """Owner, 2026-10-14 ("drop it"): GitHub runs kill_switch.yml every 4-7h,
+    so a run-age probe on it alarmed from its own run on nearly every run --
+    a scheduler drop, not an outage. Re-adding it brings the emails back."""
+    assert "kill_switch.yml" not in config.WATCHDOG_RUNS
+    by = {wf: [_run(0.5)] for wf in config.WATCHDOG_RUNS}
+    by["kill_switch.yml"] = [_run(30.0)]
+    assert wd.probe_runs(_runs_fetch(by), NOW, repo="x/y") == []
 
 
 def test_the_judged_jobs_exist_in_their_workflows():
