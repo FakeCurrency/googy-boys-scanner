@@ -1,11 +1,43 @@
 """Central configuration for the scanner.
 
-Everything tunable lives here: the EMA ladder, signal thresholds, the point
-weights that make up a grade, the grade cut-offs, and per-market settings.
-Reconstructed from the original app's "How it works" methodology — tune freely.
+Every threshold and constant the engines, the bot, the lenses and the
+workflows read lives here (project rule: config first, never a magic number
+twice), along with the per-market settings (MARKETS). PhaseMap keeps its own
+in phasemap/config.py.
+
+NOT "tune freely": many values here are OWNER-RULED (the bot's grades, cells,
+sizing, slots, sector cap and loss guards; the $3M crypto liquidity floor),
+and changing one changes which trades the paper bot takes. Change those only
+on the owner's say-so.
 """
 
 from dataclasses import dataclass
+
+
+# ---------------------------------------------------------------------------
+# Helpers — the one function in this module; it has no dependencies, so it
+# lives above every constant. Callers import it as `config.clean_secret`.
+# ---------------------------------------------------------------------------
+
+def clean_secret(value) -> str:
+    """Strip the invisible baggage a hand-pasted secret can carry.
+
+    Found live 2026-08-01: the stored DISCORD_WEBHOOK_URL began with U+FEFF —
+    a byte-order mark, invisible in the GitHub secrets box — which urllib
+    rejects as `unknown url type: \\ufeffhttps`. Every sender wraps its post
+    in try/log-warning, so the entire Discord channel (stale probes, trade
+    reviews, sector alarms, kill-switch notices) failed SILENTLY for as long
+    as that paste was in place; the evidence brief's first delivery was
+    simply the first caller that let the exception fail a run out loud.
+
+    Every consumer of a pasted credential routes through here, so the next
+    stray BOM, zero-width character or trailing newline dies at the boundary
+    instead of inside a swallowed exception. Interior characters are never
+    touched — this trims ends only.
+    """
+    return str(value or "").strip(
+        " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+
 
 # ---------------------------------------------------------------------------
 # Grades
@@ -132,11 +164,17 @@ CRYPTO_IDENTITY_TOL = 0.40
 # HISTORY ANCHORS. When no fresh CoinGecko price exists -- the universe is the
 # snapshot, or the caller prices HELD positions (kill switch, off-universe
 # fetch) -- a venue's frame must reproduce a price the system already RECORDED
-# for this coin on a past date (the last identity-checked cached frame, or the
-# position's own day_marks): its close on that date within this band. A real
-# move since cannot fail it; a same-ticker stranger does; a venue outage falls
-# through to the next venue. 0.15: day_marks[D] is the last mark taken BEFORE
-# day D's first run, which can sit a few hours before the D-1 close.
+# for this coin on a past date: its close on that date within this band. The
+# recorded price is a real COMPLETED close -- for the universe, the last
+# identity-checked cached frame's (data.identity_kwargs); for a held position,
+# its stored `anchor` [date, close] (data.held_price_kwargs, stamped by
+# vivek_run._stamp_identity). A real move since cannot fail it; a same-ticker
+# stranger does; a venue outage falls through to the next venue. 0.15 covers
+# two venues disagreeing on one completed close (the measured median gap is
+# 0.07%, 90th pct 1.27%) with wide headroom while staying far inside every
+# collision (MET, -43%). It was first sized for the LEGACY fallback still used
+# by rows stamped before `anchor` existed: day_marks[D], the last mark taken
+# before day D's first run, which can sit a few hours before the D-1 close.
 CRYPTO_ANCHOR_TOL = 0.15
 # A venue whose newest daily bar is older than this does NOT list the coin any
 # more (Binance's market-data mirror keeps serving a delisted pair's frozen
@@ -681,26 +719,33 @@ VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade — ONLY used whe
 # block pathological entries the paper model can't price honestly:
 #  • MIN_PRICE: sub-5c ASX names (e.g. a $0.021 micro-cap) trade with spreads
 #    worth multiple R — a paper fill at "the price" is fiction. Per-market floor.
-#  • MAX_STOP_PCT: a structural stop >50% from entry (seen: −95% on a weekly
-#    crypto plan) makes R sizing meaningless — risk-based units go microscopic
-#    and the position is a lottery ticket, not a managed trade.
+#  • MAX_STOP_PCT: a very wide structural stop (seen: −95% on a weekly crypto
+#    plan) is a lottery ticket, not a managed trade. Under FIXED NOTIONAL
+#    (since 2026-07-28) the units never shrink with the stop -- the dollar loss
+#    grows with it instead: at 25% a 1R loss is $625 of a $2,500 position,
+#    already 13.9% of the daily loss guard. (Written for risk-% sizing, where
+#    the units went microscopic; the cap itself did not move.)
 VIVEK_BOT_MIN_PRICE      = {"asx": 0.05, "nasdaq": 1.0, "crypto": 0.0, "default": 0.0}
 VIVEK_BOT_MAX_STOP_PCT   = 25.0    # skip if |entry−stop| > this % of entry (0 = off).
                                    # Was 50 — which waved through 1D tickets whose stop
                                    # anchored to a distant higher-frame SMA (AXON: a 37%
                                    # stop, TP1 +62%, on a "daily" trade).
 #  • MIN_STOP_PCT: the inverse pathology — a stop <1% from entry usually means a
-#    dead/pegged instrument (stablecoin-likes, defensives glued to the SMA).
-#    Risk sizing then buys a leverage-capped MAX position in something that
-#    doesn't move, squatting in a scarce slot for months. 0 = off.
+#    dead/pegged instrument (stablecoin-likes, defensives glued to the SMA). A
+#    fixed $2,500 then sits in something that doesn't move, squatting in a
+#    scarce slot for months. (Under the old risk-% path such a stop also
+#    bought a leverage-capped MAX position.) 0 = off.
 VIVEK_BOT_MIN_STOP_PCT   = 1.0
 #  • MIN_ADV / MAX_NOTIONAL_PCT_ADV: liquidity honesty. Values are 20-day average
 #    dollar volume in the market's QUOTE currency (A$ for ASX, US$ elsewhere).
 #    Below MIN_ADV a real fill would eat multiple R in spread/impact, so the
 #    paper edge is fiction exactly where it looks best. On top of the floor the
-#    position's notional may not exceed MAX_NOTIONAL_PCT_ADV % of ADV. Crypto
-#    top-100 is deep enough that the floor is off there. Unknown ADV = exempt
-#    (fail-open, same as unknown sectors). 0 = off.
+#    position's notional may not exceed MAX_NOTIONAL_PCT_ADV % of ADV. The
+#    crypto floor is 0 here because the scan already drops any coin under
+#    MARKETS["crypto"].liquidity_min ($3M of 20-day single-venue dollar volume)
+#    before the bot sees it (the % of ADV cap -- $125k ADV for a $2,500
+#    position -- sits far below that). Unknown ADV = exempt (fail-open, same
+#    as unknown sectors). 0 = off.
 VIVEK_BOT_MIN_ADV        = {"asx": 250_000, "nasdaq": 2_000_000, "crypto": 0, "default": 0}
 VIVEK_BOT_MAX_NOTIONAL_PCT_ADV = 2.0
 # Slot hygiene — positions are capital even when flat:
@@ -907,7 +952,9 @@ VIVEK_KILL_SWITCH_BROKERS = {
 # you can read big-money rotation (mega) AND discovery (small caps) separately.
 # ---------------------------------------------------------------------------
 MOVER_PER_TIER = 5            # up to this many MEGA + this many SMALL per side
-MOVER_MEGA_CAP_USD = 10e9     # market cap >= $10B counts as a "mega" company
+MOVER_MEGA_CAP_USD = 10e9     # market cap >= 10B counts as a "mega" company. Compared
+                              # with marketcaps' cache in the market's OWN currency, so
+                              # despite the name the ASX line is A$10B (~US$7B).
 # Fallback when a name's market cap isn't cached: tier by 20-day average dollar
 # volume (mega names trade vastly more $ than small caps). Per-market floors.
 MOVER_MEGA_DVOL = {"asx": 30_000_000, "us": 300_000_000}
@@ -970,7 +1017,7 @@ CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades (m
 
 
 # ---------------------------------------------------------------------------
-# Phase 7: Advanced Monitoring & Alerting
+# Alert routing (scanner/broker/alert_router.py, alert_dispatch.py)
 # ---------------------------------------------------------------------------
 
 # Map event_type → severity level (CRITICAL / WARNING / NOTICE / INFO).
@@ -1082,9 +1129,16 @@ VIVEK_MARK_SANITY_PCT = {"asx": 0.35, "nasdaq": 0.35, "crypto": 0.60}
 VIVEK_MARK_SANITY_ACCEPT_RUNS = 3
 
 # ── Freshness watchdog (2026-07-20, Phase 5 — scanner/watchdog.py) ────────────
-# Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). Thresholds
-# are >= 2x the worst GitHub cron drift ever observed in this repo (48 min) so
-# scheduler jitter can never page anyone. CRITICAL routes per ALERT_CHANNELS
+# Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). The
+# thresholds were set at >= 2x a 48-minute cron drift, the worst seen when they
+# were written (2026-07). GitHub has since run crons 2-5 HOURS late and dropped
+# most scheduled scans outright (week to 2026-10-05: 5/35 ASX, 8/35 NASDAQ,
+# 41/~168 crypto), which is why cron-job.org's heartbeat pings are the primary
+# scan clock since 2026-10-06. So the WATCHDOG_RUNS entries below that measure
+# a GitHub-cron workflow's own runs (kill_switch.yml, crypto_bot.yml) can fire
+# on a scheduler drop rather than an outage; the content probes (book, crypto
+# scan, backups) measure the outcome. Harmless only while no alert channel is
+# live. CRITICAL routes per ALERT_CHANNELS
 # (incl. email); WARNING skips email. One alert on first detection, one
 # reminder every WATCHDOG_RENOTIFY_HOURS, one recovery notice — never more.
 WATCHDOG_RENOTIFY_HOURS = 6.0
@@ -1101,6 +1155,8 @@ WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
 # and would then take three days to notice anything. 40 weekday-hours lets one
 # fully missed session pass in silence and fires on the second.
 WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
+# Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
+WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 
 # ── Confluence forward-return ledger (scripts/alert_returns.py, 2026-08-20) ──
 # Research artefact only: measures whether multi-lens alignment predicts
@@ -1140,25 +1196,24 @@ ALERT_ROSTER_CAP = 20000
 # a reversion of breadth to its 6-month mean as measured 2026-08-20; -10% is
 # the February trough revisited.
 BOOK_STRESS_SHOCKS = (0.03, 0.05, 0.08, 0.10)
-# Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
-WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
-# Run-history probes (GitHub Actions API): workflow file -> threshold on the
-# LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
-# GitHub already emails failures; the watchdog only covers SILENT problems.
 # MARKET SCAN WINDOWS (owner, 2026-09-21) — the canonical session table.
 # (market -> (tz, first-scan minute-of-day, last-scan minute-of-day), market-local,
 # weekdays only.) First scan is one hour after the open; the tail runs past the
 # close so the closing auction is captured and the Discord plays digest has a
 # post-close scan to gate on.
 #
-# THE MIRROR: scan.yml's gate job checks out nothing (contents: read, by
-# design), so it cannot import this — it carries the same numbers inline and
-# tests/test_scan_windows.py parses them back out and fails if the two drift.
+# ONE TABLE, NO MIRROR: scan.yml's gate job sparse-checks out scanner/config.py
+# beside scripts/scan_gate.py, which imports this table directly (stdlib only).
+# tests/test_scan_windows.py fails if an inline copy of the windows ever comes
+# back to the workflow.
 MARKET_SCAN_WINDOWS = {
     "asx":    ("Australia/Sydney",  11 * 60,      16 * 60 + 45),
     "nasdaq": ("America/New_York",  10 * 60 + 30, 16 * 60 + 45),
 }
 
+# Run-history probes (GitHub Actions API): workflow file -> threshold on the
+# LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
+# GitHub already emails failures; the watchdog only covers SILENT problems.
 WATCHDOG_RUNS = {
     "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
     "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
@@ -1184,32 +1239,9 @@ WATCHDOG_RUNS = {
 # — it is marked and stop-checked by the scan and by kill_switch.yml.
 
 
-# ---------------------------------------------------------------------------
-# Alert credentials — the boundary every pasted secret crosses
-# ---------------------------------------------------------------------------
-# (The Discord digest that used to live under this heading was removed with
-# the whole Discord channel on 2026-08-27; clean_secret stays because it
-# guards EVERY pasted credential, not one channel's.)
-
-
-def clean_secret(value) -> str:
-    """Strip the invisible baggage a hand-pasted secret can carry.
-
-    Found live 2026-08-01: the stored DISCORD_WEBHOOK_URL began with U+FEFF —
-    a byte-order mark, invisible in the GitHub secrets box — which urllib
-    rejects as `unknown url type: \\ufeffhttps`. Every sender wraps its post
-    in try/log-warning, so the entire Discord channel (stale probes, trade
-    reviews, sector alarms, kill-switch notices) failed SILENTLY for as long
-    as that paste was in place; the evidence brief's first delivery was
-    simply the first caller that let the exception fail a run out loud.
-
-    Every consumer of a pasted credential routes through here, so the next
-    stray BOM, zero-width character or trailing newline dies at the boundary
-    instead of inside a swallowed exception. Interior characters are never
-    touched — this trims ends only.
-    """
-    return str(value or "").strip(
-        " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+# Confluence push policy (scanner/confluence_alert.py) and the site URL alerts
+# link to. (config.clean_secret, which used to sit here, is at the top of the
+# module.)
 CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this many lenses
                                      # (3 = triples only — owner's call 2026-07-02; the site
                                      # still shows every 2-lens alignment visually. Channel-
@@ -1222,7 +1254,8 @@ SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links 
 # ---------------------------------------------------------------------------
 # Data quality
 # ---------------------------------------------------------------------------
-DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
+DATA_PERIOD = "1y"            # default history window for data.download/fetch when the caller
+                              # names none (VIVEK passes VIVEK_DATA_PERIOD, 5y)
 DATA_DAILY_BARS = 252         # bars the daily scanners see (tail-slice of VIVEK's deep download = 1y, unchanged behaviour)
 SCALP_DATA_MIN_BARS  = 65     # INERT (kept by the SCALP_* ruling): its one reader, data.validate_bars,
                               # went 2026-10-14 with DATA_STALENESS_HOURS (REFINE200 #120)
@@ -1273,6 +1306,7 @@ SCAN_ERROR_SAMPLE_MAX    = 12   # error rows published per market (0 = count onl
 SCAN_ERROR_MSG_MAX       = 160  # chars kept per error message before truncation
 SCAN_ERROR_KINDS_MAX     = 4    # distinct exception types named in the summary line
 SCAN_ERROR_LOUD_PCT      = 5.0  # >= this % of names failing prints the '!!' marker
+                                # (0 = never loud)
 
 # ---------------------------------------------------------------------------
 # Deliberate-skip marker (TOP100 #67 follow-up, 2026-07-28 incident)
@@ -1336,7 +1370,6 @@ SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX = 12
 SCAN_ARRIVING_MIN_RVOL = 3.0
 SCAN_ARRIVING_MAX      = 12    # cap, sorted by today's turnover (participation,
                                # not multiple — the multiple is the pump smell)
-                                # (0 = never loud)
 
 # Funnel history (2026-07-30, owner-ruled Task 2) — an APPEND-ONLY record of
 # each scan's funnel counts (scanned / with-data / published / floor-killed /
@@ -1346,8 +1379,9 @@ SCAN_ARRIVING_MAX      = 12    # cap, sorted by today's turnover (participation,
 # back (test-pinned, same fence as the arriving list). Columnar per market to
 # keep the committed artefact small.
 SCAN_FUNNEL_HISTORY_FILE = "funnel_history.json"   # under the publish root
-SCAN_FUNNEL_HISTORY_MAX  = 2000   # rows kept PER MARKET (crypto ~40 days at
-                                  # 48 scans/day, ASX ~8 months at 8/day —
+SCAN_FUNNEL_HISTORY_MAX  = 2000   # rows kept PER MARKET (measured 2026-10:
+                                  # crypto ~80 days at ~25 scans/day, ASX and
+                                  # NASDAQ ~a year of weekdays at ~7-8/day --
                                   # uneven on purpose: the cap is a size
                                   # guard, the chart buckets by day anyway)
 
@@ -1378,7 +1412,8 @@ class MarketConfig:
                            # tz_label (AEDT/AEST, EDT/EST, UTC) -- never a
                            # fixed string: "AEST" was wrong half the year.
     liquidity_min: float   # minimum average daily turnover, in local currency
-    volume_is_usd: bool = False   # crypto: Yahoo volume is already USD dollar-volume
+    volume_is_usd: bool = False   # crypto: Volume is already US$ dollar-volume (exchange quote
+                                  # volume since 2026-09-28; Yahoo's USD volume for fallback coins)
 
 
 MARKETS = {
@@ -1447,11 +1482,6 @@ SECTOR_MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
 SECTOR_MOVER_MIN_DVOL_DEFAULT = 1_000_000
 
 # ---------------------------------------------------------------------------
-# Feeds — YouTube channels + AI narrative (feeds.py / feeds_run.py)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # MORNING PLAYS — the daily Discord digest of HIGH-CONVICTION VIVEK 5.0 setups
 # (owner ask, 2026-09-08; scheduling reworked 2026-09-09). scripts/morning_plays
 # reads the COMMITTED scan JSON (no scan, no Yahoo, no scan mutex) and posts to
@@ -1487,8 +1517,9 @@ MORNING_PLAYS_TZ = "Australia/Melbourne"
 # miss: the run sends its slot as long as Melbourne is AT OR PAST the slot's
 # target time today and the slot has not already gone out today (a per-day marker
 # in the sent-list). "at or past" (not "==") is the whole delay fix; the marker
-# is what stops the slot's OTHER DST superset cron from double-sending. `minute`
-# is only the intended send time shown in the message; the gate keys on `hour`.
+# is what stops the slot's OTHER DST superset cron from double-sending. The
+# floor is `hour`:`minute` together (morning_plays._slot_floor), so 16:30 and
+# 06:30 Melbourne are the real floors; no message prints the time.
 MORNING_PLAYS_SLOTS = {
     "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # FLOOR: never before 16:30 Melbourne
     "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # FLOOR: never before 06:30 Melbourne
