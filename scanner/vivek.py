@@ -63,7 +63,8 @@ def _structure(df: pd.DataFrame, direction: str) -> float:
     return round(score, 2)
 
 
-def evaluate(df: pd.DataFrame, h4_sma: float | None = None) -> dict | None:
+def evaluate(df: pd.DataFrame, h4_sma: float | None = None,
+             resampled: dict | None = None) -> dict | None:
     """Find a 200 SMA reaction. Returns a signal dict or None if no setup.
 
     `h4_sma` is the TRUE 4H 200-SMA, and it is optional and defaults to None on
@@ -75,6 +76,11 @@ def evaluate(df: pd.DataFrame, h4_sma: float | None = None) -> dict | None:
     real engine (scripts/h4_level_ab.py) instead of a re-typed copy of it, and
     so that turning it on later is one caller passing one number rather than a
     rewrite of this function.
+
+    `resampled` (REFINE200 #97, perf only): pass a dict and the 3-Day frame
+    this call builds is left in it under "3D", so `build_plans(df, sig,
+    resampled=...)` on the SAME frame reuses it instead of resampling again.
+    Nothing it returns changes.
     """
     if df is None or len(df) < config.VIVEK_MIN_HISTORY:
         return None
@@ -101,6 +107,8 @@ def evaluate(df: pd.DataFrame, h4_sma: float | None = None) -> dict | None:
     sma_3d = None
     if getattr(config, "VIVEK_INCLUDE_3D_LEVEL", False):
         d3 = _resample_3day_ohlc(df)
+        if resampled is not None:
+            resampled["3D"] = d3
         if d3 is not None and len(d3) >= config.VIVEK_SMA:
             v = float(sma(d3["Close"], config.VIVEK_SMA).iloc[-1])
             if np.isfinite(v) and v > 0:
@@ -375,16 +383,19 @@ def compute_levels(df: pd.DataFrame, sig: dict) -> dict:
     return lv or {"rr": 0}
 
 
+# One aggregation spec for every OHLCV resample. A single `.agg` pass is the
+# SAME arithmetic as five per-column resamples (first/max/min/last/sum, NaN
+# skipped, an empty bin's sum 0) and is pinned bit-identical to them by
+# tests/test_vivek_resample_perf.py -- it builds the bins once instead of five
+# times: W-FRI 37ms -> 8ms on a 5-year frame, ~10s of an ASX scan (#97).
+_OHLCV_AGG = {"Open": "first", "High": "max", "Low": "min", "Close": "last",
+              "Volume": "sum"}
+
+
 def _resample_weekly_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
     """Daily OHLCV -> a true Weekly (W-FRI) OHLCV frame, for the Weekly plan."""
     try:
-        wk = pd.DataFrame({
-            "Open":   df["Open"].resample("W-FRI").first(),
-            "High":   df["High"].resample("W-FRI").max(),
-            "Low":    df["Low"].resample("W-FRI").min(),
-            "Close":  df["Close"].resample("W-FRI").last(),
-            "Volume": df["Volume"].resample("W-FRI").sum(),
-        }).dropna()
+        wk = df.resample("W-FRI").agg(_OHLCV_AGG).dropna()
         return wk if len(wk) else None
     except Exception:
         return None
@@ -403,13 +414,7 @@ def _resample_4h_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
     NOT match the chart, and two 4H series that disagree about where a bar
     starts is the one outcome worth avoiding here."""
     try:
-        h4 = pd.DataFrame({
-            "Open":   df["Open"].resample("4h").first(),
-            "High":   df["High"].resample("4h").max(),
-            "Low":    df["Low"].resample("4h").min(),
-            "Close":  df["Close"].resample("4h").last(),
-            "Volume": df["Volume"].resample("4h").sum(),
-        }).dropna()
+        h4 = df.resample("4h").agg(_OHLCV_AGG).dropna()
         return h4 if len(h4) else None
     except Exception:
         return None
@@ -443,13 +448,7 @@ def _resample_3day_ohlc(df: pd.DataFrame) -> pd.DataFrame | None:
     try:
         # "72h" (a tick-like freq) so origin="epoch" actually takes effect — a
         # plain "3D" silently ignores the origin and anchors to the data start.
-        d3 = pd.DataFrame({
-            "Open":   df["Open"].resample("72h", origin="epoch").first(),
-            "High":   df["High"].resample("72h", origin="epoch").max(),
-            "Low":    df["Low"].resample("72h", origin="epoch").min(),
-            "Close":  df["Close"].resample("72h", origin="epoch").last(),
-            "Volume": df["Volume"].resample("72h", origin="epoch").sum(),
-        }).dropna()
+        d3 = df.resample("72h", origin="epoch").agg(_OHLCV_AGG).dropna()
         return d3 if len(d3) else None
     except Exception:
         return None
@@ -603,16 +602,22 @@ def build_tf_plan(frame: pd.DataFrame, direction: str) -> dict | None:
     }
 
 
-def build_plans(df: pd.DataFrame, sig: dict) -> dict:
+def build_plans(df: pd.DataFrame, sig: dict, resampled: dict | None = None) -> dict:
     """Per-timeframe plans for a signal's direction. The Daily plan is the row/bot
     headline; the 3-Day and Weekly plans each get their OWN 200-SMA reaction so
-    the chart's 3D and W toggles surface real setups (not a Daily reference)."""
+    the chart's 3D and W toggles surface real setups (not a Daily reference).
+
+    `resampled`: the dict `evaluate(df, resampled=...)` filled for this SAME
+    frame -- its 3-Day frame is reused rather than rebuilt (#97)."""
     direction = sig["direction"]
     plans: dict[str, dict] = {}
     p1d = build_tf_plan(df, direction)
     if p1d:
         plans["1D"] = p1d
-    d3 = _resample_3day_ohlc(df)
+    if resampled is not None and "3D" in resampled:
+        d3 = resampled["3D"]
+    else:
+        d3 = _resample_3day_ohlc(df)
     if d3 is not None:
         p3d = build_tf_plan(d3, direction)
         if p3d:
