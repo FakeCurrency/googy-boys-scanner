@@ -68,6 +68,13 @@ for (const [rel, { live, dead }] of Object.entries(GONE)) {
   for (const sym of ["sizeOf", "costR", "costsFor", "markStale", "isVivek", "RISK_MIN", "RISK_MAX"])
     ok(!new RegExp(`\\b${sym}\\b`).test(src),
        `js/journal.js: ${sym} was proven dead and deleted 2026-10-14 (REFINE200 #94); re-adding it needs a caller`);
+  // REFINE200 WP16: the edge/lens tracker TABLES lost their #edge-tracker /
+  // #lens-tracker hosts on 2026-09-21, so both renderers returned before
+  // drawing; their row helpers had no other caller. The edge CARD stays.
+  ok(src.includes("function renderEdgeCard("), "js/journal.js moved -- pins would be vacuous");
+  for (const sym of ["renderEdgeTracker", "renderLensTracker", "sideRow", "sideEmptyRow", "thinMark"])
+    ok(!new RegExp(`\\b${sym}\\b`).test(src),
+       `js/journal.js: ${sym} was proven dead and deleted 2026-10-14 (REFINE200 WP16); re-adding it needs a caller`);
 }
 
 // CSS: the floating live-P&L box went with the manual journal (2026-09-21);
