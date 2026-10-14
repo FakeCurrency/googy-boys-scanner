@@ -45,12 +45,12 @@ _SIG = {"direction": "long", "close": 100.0, "level_tf": "weekly", "level": 99.0
 
 
 def _stub_engine(monkeypatch, plans, raw=("A+", 8), held=None):
-    monkeypatch.setattr(vivek, "evaluate", lambda df: dict(_SIG))
+    monkeypatch.setattr(vivek, "evaluate", lambda df, **kw: dict(_SIG))
     monkeypatch.setattr(vivek, "score_and_grade", lambda sig: (raw[1], raw[0], ["CHIP"]))
     if held is not None:  # force a hysteresis hold different from the raw grade
         monkeypatch.setattr(vivek, "apply_grade_hysteresis",
                             lambda *a, **k: (held, 1))
-    monkeypatch.setattr(vivek, "build_plans", lambda df, sig: dict(plans))
+    monkeypatch.setattr(vivek, "build_plans", lambda df, sig, **kw: dict(plans))
     monkeypatch.setattr(vivek, "build_markers", lambda plans: {})
     monkeypatch.setattr(vivek, "build_detail", lambda df, sig, lv: {})
     monkeypatch.setattr(vivek, "narrative", lambda *a, **k: "n/a")
@@ -68,7 +68,8 @@ def _run():
 def test_headline_follows_the_armed_traded_plan(monkeypatch):
     plans = {"1D": _plan(100.0, armed=False), "1W": _plan(103.0, armed=True)}
     (row,) = _run() if _stub_engine(monkeypatch, plans) is None else ()
-    assert row["headline_tf"] == "1W" and row["armed_tf"] == "1W"
+    assert row["headline_tf"] == "1W" and row["armed"] is True
+    assert "armed_tf" not in row, "REFINE200 #72: = headline_tf when armed; no reader"
     assert row["entry"] == 103.0 and row["stop"] == 99.0     # weekly numbers
     assert row["entry_trigger"] == "reclaim"
     assert row["grade"] == "A+" and row["grade_raw"] == "A+"
@@ -77,7 +78,7 @@ def test_headline_follows_the_armed_traded_plan(monkeypatch):
 def test_watching_setup_keeps_1d_headline_and_caps_at_b_plus(monkeypatch):
     plans = {"1D": _plan(100.0, armed=False), "1W": _plan(103.0, armed=False)}
     (row,) = _run() if _stub_engine(monkeypatch, plans) is None else ()
-    assert row["headline_tf"] == "1D" and row["armed_tf"] is None
+    assert row["headline_tf"] == "1D" and row["armed"] is False
     assert row["entry"] == 100.0
     assert row["grade"] == "B+" and row["grade_raw"] == "B+"   # gate demotes both
 
@@ -157,7 +158,7 @@ def test_funnel_counts_a_clean_setup_through_to_grades(monkeypatch):
 
 def test_funnel_counts_no_setup(monkeypatch):
     _stub_engine(monkeypatch, {"1W": _plan(103.0, armed=True)})
-    monkeypatch.setattr(vivek, "evaluate", lambda df: None)
+    monkeypatch.setattr(vivek, "evaluate", lambda df, **kw: None)
     f = _run_full(monkeypatch)["funnel"]
     assert f["no_setup"] == 1 and f["setups"] == 0
 
@@ -187,7 +188,7 @@ def test_funnel_identity_holds_with_a_thrown_name(monkeypatch):
     real_frame = _frame()
     calls = {"n": 0}
 
-    def evaluate(df):
+    def evaluate(df, **kw):
         calls["n"] += 1
         if calls["n"] == 2:
             raise RuntimeError("synthetic failure")
@@ -227,7 +228,7 @@ def test_funnel_is_additive_not_a_schema_bump(monkeypatch):
 def test_tz_label_names_the_zone_at_the_scan_instant(monkeypatch, freeze_now, market,
                                                      ticker, instant, label, offset):
     _stub_engine(monkeypatch, {})
-    monkeypatch.setattr(vivek, "evaluate", lambda df: None)    # no rows, nothing fetched
+    monkeypatch.setattr(vivek, "evaluate", lambda df, **kw: None)    # no rows, nothing fetched
     at = dt.datetime.fromisoformat(instant)
     freeze_now(scan, at)
     out = scan.scan_vivek_market(

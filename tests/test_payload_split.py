@@ -85,7 +85,7 @@ def test_pairing_stamps_match_and_planless_rows_survive():
 
 def test_run_py_publishes_the_pair_not_the_monolith():
     src = (ROOT / "scanner" / "run.py").read_text(encoding="utf-8")
-    assert "output.write_vivek_pair(vk, args.out, market_key)" in src
+    assert "output.write_vivek_pair(scan.published(vk, market_key), args.out, market_key)" in src
     assert 'output.write(vk, args.out, name=f"{market_key}_vivek")' not in src
 
 
