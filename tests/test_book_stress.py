@@ -34,6 +34,38 @@ def test_the_math_by_hand():
     assert s20["stopped"] == 1 and abs(s20["unreal_r"] - (-0.5)) < 1e-9
 
 
+def test_a_partially_banked_row_is_shocked_on_the_same_R_basis_as_its_base():
+    """REFINE200 (2026-10-14): the book stamps unreal_r on the REMAINING open
+    fraction (vivek_guard._unreal_r). The live INTR row read +0.498R stored
+    (+1.992R full size, 75% booked) and a -3% shock re-marked it at full size,
+    so a drawdown 'gave back' NEGATIVE R. Both sides now share one basis."""
+    # entry 100, risk 10, mark 120 -> +2.0R full size; 75% booked -> +0.5R.
+    intr = _pos(mark=120.0, stop=100.0, entry=100.0, risk=10.0, ur=0.5, booked_pct=0.75)
+    out = bs.stress([intr], shocks=(0.03, 0.20))
+    s3, s20 = out["shocks"]
+    # -3%: 116.4 -> +1.64R full, x0.25 = +0.41R; gives back 0.09R, never a gain.
+    assert abs(s3["unreal_r"] - 0.41) < 1e-9
+    assert s3["given_back_r"] >= 0, "a drawdown can never add R"
+    assert abs(s3["given_back_r"] - 0.09) < 1e-9
+    # -20%: 96 <= stop 100 -> stopped at breakeven: 0R on the remainder.
+    assert s20["stopped"] == 1 and abs(s20["unreal_r"]) < 1e-9
+    # Nothing booked behaves exactly as before.
+    plain = bs.stress([_pos(booked_pct=0.0)], shocks=(0.05,))["shocks"][0]
+    assert abs(plain["unreal_r"] - 0.45) < 1e-9
+
+
+def test_every_shock_gives_back_R_on_the_live_book_shape():
+    # Monotone: a deeper tape never leaves more unrealized R than a shallower
+    # one, and none gives back a negative amount, whatever is banked.
+    rows = [_pos(mark=120.0, stop=100.0, ur=0.5, booked_pct=0.75),
+            _pos(mark=117.6, stop=104.0, ur=1.32, booked_pct=0.25),
+            _pos(mark=104.3, stop=95.0, ur=0.43)]
+    out = bs.stress(rows, shocks=(0.03, 0.05, 0.08, 0.10))
+    assert all(s["given_back_r"] >= 0 for s in out["shocks"])
+    vals = [s["unreal_r"] for s in out["shocks"]]
+    assert vals == sorted(vals, reverse=True)
+
+
 def test_a_stop_boundary_hit_counts_as_stopped():
     # mark*(1-d) EXACTLY at the stop is a fill, not a survival.
     out = bs.stress([_pos(mark=100.0, stop=95.0)], shocks=(0.05,))
