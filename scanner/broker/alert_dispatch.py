@@ -1,7 +1,11 @@
 """Unified event-alert dispatcher: email, Telegram.
 
-All broker events that warrant human attention — kill switch trigger, daily
-loss limit, order failures, scan anomalies — flow through here.
+The events that warrant human attention -- the event types in
+config.ALERT_SEVERITY: a kill-switch trigger, the paper book's loss guard
+(vivek_guard), a scan error or a run of empty scans, an anomaly, and the
+NOTICE-tier trade_review / stale_position prompts -- flow through here (via
+alert_router.smart_send). The scalp-era daily_loss / order_failed types went
+2026-10-14 (REFINE200 #90).
 
 The Discord sender was REMOVED 2026-08-27 (owner ruling: "get rid of the
 discord aspect, I will work on implementing something new in the future").
@@ -14,7 +18,8 @@ Environment vars (all optional; unused channels are silently skipped):
   TELEGRAM_BOT_TOKEN     Bot API token from @BotFather
   TELEGRAM_CHAT_ID       Target chat/channel ID (negative for group chats)
 
-Email uses the same GBS_SMTP_* vars as scanner/alerts.py.
+Email reads GBS_SMTP_HOST / _USER / _PASS / _PORT, GBS_ALERT_TO and the
+optional GBS_ALERT_FROM (see _email below).
 """
 
 import json as _json

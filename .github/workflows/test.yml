@@ -87,14 +87,15 @@ on:
       # resolves it; an edit decides how long every visitor caches every script.
       - "public/_headers"
       # journal/** and data/** added 2026-08-13 — the same rule, and the
-      # journal one is the sharpest hole this filter has had. THREE live tests
-      # read the track record out of the working tree:
-      #   tests/test_phase7.py:13                snapshots journal/alert_state.json
+      # journal one is the sharpest hole this filter has had. Live tests read
+      # the track record out of the working tree (re-checked 2026-10-14; the
+      # test_phase7.py alert_state.json snapshot it used to cite is gone):
       #   tests/test_resize_book_notional.py:308 globs journal/vivek_bot_book.*.json
       #                                          and asserts every stop only ever
       #                                          moved favourably — on the LIVE book
-      #   tests/test_backup_completeness.py:85   asserts 8 journal/* and 3 data/*
-      #                                          paths exist in the checkout
+      #                                          (and :824 / :844 read its open rows)
+      #   tests/test_backup_completeness.py:106  asserts every REQUIRED journal/*
+      #                                          and data/* path exists in the checkout
       # journal/ is committed by six workflows and holds the only track record,
       # so an edit or a loss there could ship with this entire gate skipped.
       - "journal/**"
