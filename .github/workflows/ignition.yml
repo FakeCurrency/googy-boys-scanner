@@ -16,12 +16,15 @@ name: Ignition scan
 # closed back inside it) and the RUNNING rows' live marks. Every run
 # recomputes the whole file from bars, so a late or duplicate run is harmless.
 #
-# THE BACKTEST is not scheduled: it answers a question, it is not a feed. It
-# runs on a manual dispatch with `backtest: true`, OR on a push that touches
+# THE BACKTEST runs WEEKLY (Sunday 03:37 UTC; 2026-10-14, REFINE200 #48),
+# on a manual dispatch with `backtest: true`, OR on a push that touches
 # .github/ignition-kick (the dispatch_scan.yml pattern -- a cloud Claude
-# session can push but cannot call the dispatch API). A kick runs the screen
-# AND the backtest, and commits both files back to the branch that was pushed,
-# so a feature branch can be evaluated before anything reaches main.
+# session can push but cannot call the dispatch API). Weekly because the
+# FORWARD bucket (triggers after the registration date, the only data no one
+# had seen) only fills if the replay re-runs, and until then it read n=0 for
+# ever. Each run screens AND replays and commits both files back to the branch
+# that ran, so a feature-branch kick is evaluated before anything reaches
+# main. The twins replay at staggered Sunday times (ASX 02:17, NASDAQ 04:47).
 #
 # ITS OWN CONCURRENCY GROUP. It writes no book, so it has no business in the
 # `scan` mutex (tests/test_workflow_mutex.py would then demand it in
@@ -32,6 +35,7 @@ on:
     - cron: "14 0 * * *"     # just past 00:00 UTC: the new completed crypto bar
     - cron: "14 1,2 * * *"   # scheduler-drop backstops for the run above
     - cron: "44 5,11,17,21 * * *"   # intraday: provisional breaks + RUNNING marks
+    - cron: "37 3 * * 0"         # WEEKLY REPLAY (Sunday 03:37 UTC): the forward bucket only fills if the replay re-runs
   push:
     paths:
       - ".github/ignition-kick"
@@ -82,6 +86,10 @@ jobs:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -u
+          # The WEEKLY REPLAY cron also runs the backtest step (REFINE200 #48).
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "${SCHEDULE:-}" = "37 3 * * 0" ]; then
+            echo "backtest=true" >> "$GITHUB_OUTPUT"
+          fi
           if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "14 1,2 * * *" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
@@ -148,7 +156,7 @@ jobs:
 
       - name: Backtest crypto
         id: bt
-        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true)
+        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true || steps.due.outputs.backtest == 'true')
         run: |
           set -u
           set -o pipefail

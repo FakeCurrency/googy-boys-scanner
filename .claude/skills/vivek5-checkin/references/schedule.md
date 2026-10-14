@@ -47,6 +47,8 @@ Times are Melbourne. Melbourne and Sydney share a clock. Below is AEDT (Oct to A
 - **A loss-guard breach.** The guard working: new entries pause for the day and nothing is sold. Amber, not red.
 - **"REVIEW <SYM>" lines in a scan log.** Flagged plans before the caps ran. Names the 60 cap dropped never opened. Only rows in the book were bought.
 - **The connected Gmail has no GitHub emails.** It is the wrong inbox. Use the run list.
+- **Sunday Ignition commits with a `_backtest.json`.** Each Ignition workflow re-runs its replay weekly (UTC Sunday: ASX 02:17, crypto 03:37, NASDAQ 04:47; the stock replays take 30 to 60 minutes) so its forward bucket fills. A screen re-stamp rides along. Expected.
+- **An Ignition ASX or NASDAQ backstop runs although a file landed after the close.** The gate also re-runs when the file's bars are behind (more than half its names a bar old, or no name on the close's bar yet; on an exchange holiday that is every backstop). Expected.
 
 ## Season shifts
 

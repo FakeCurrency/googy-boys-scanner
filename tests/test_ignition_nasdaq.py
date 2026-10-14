@@ -330,7 +330,7 @@ def test_the_port_did_not_move_the_asx_caveats():
 
 WFDIR = ROOT / ".github" / "workflows"
 NQ = yaml.safe_load((WFDIR / "ignition_nasdaq.yml").read_text(encoding="utf-8"))
-CRONS = ["34 21 * * 1-5", "34 22,23 * * 1-5", "54 14,16,18 * * 1-5"]
+CRONS = ["34 21 * * 1-5", "34 22,23 * * 1-5", "54 14,16,18 * * 1-5", "47 4 * * 0"]
 _on = lambda d: d.get("on") or d[True]
 
 

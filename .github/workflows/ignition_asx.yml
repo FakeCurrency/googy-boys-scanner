@@ -21,9 +21,11 @@ name: Ignition scan (ASX)
 # still-forming bar as "provisional" (never counted) and move RUNNING marks.
 # Weekdays only: there is no ASX bar on a weekend.
 #
-# THE BACKTEST is not scheduled. A manual dispatch with `backtest: true`, or a
-# push touching .github/ignition-asx-kick, runs the screen AND the replay and
-# commits both files back to the PUSHED branch. ~2,000 listings (a name that
+# THE BACKTEST runs WEEKLY (Sunday 02:17 UTC, staggered from its twins;
+# REFINE200 #48: the forward bucket only fills if the replay re-runs). That
+# run, a manual dispatch with `backtest: true`, or a push touching
+# .github/ignition-asx-kick, runs the screen AND the replay and
+# commits both files back to the branch that ran. ~2,000 listings (a name that
 # never clears the turnover floors is dropped before the replay), full Yahoo
 # history: bounded at 300 minutes rather than the crypto job's 60.
 #
@@ -36,6 +38,7 @@ on:
     - cron: "24 6 * * 1-5"     # just past the ASX close in both DST regimes
     - cron: "24 7,9 * * 1-5"   # scheduler-drop backstops for the run above
     - cron: "54 0,2,4 * * 1-5" # intraday: provisional breaks + RUNNING marks
+    - cron: "17 2 * * 0"         # WEEKLY REPLAY (Sunday 02:17 UTC): the forward bucket only fills if the replay re-runs
   push:
     paths:
       - ".github/ignition-asx-kick"
@@ -87,6 +90,10 @@ jobs:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -u
+          # The WEEKLY REPLAY cron also runs the backtest step (REFINE200 #48).
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "${SCHEDULE:-}" = "17 2 * * 0" ]; then
+            echo "backtest=true" >> "$GITHUB_OUTPUT"
+          fi
           if [ "${GITHUB_EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE:-}" != "24 7,9 * * 1-5" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
@@ -157,7 +164,7 @@ jobs:
 
       - name: Backtest ASX
         id: bt
-        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true)
+        if: steps.due.outputs.run == 'true' && (github.event_name == 'push' || inputs.backtest == true || steps.due.outputs.backtest == 'true')
         run: |
           set -u
           set -o pipefail
