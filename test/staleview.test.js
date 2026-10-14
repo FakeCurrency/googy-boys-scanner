@@ -1729,11 +1729,15 @@ test("the duplicate toolbar chip retires from BOTH the markup and the runtime", 
 });
 
 // ---- fix 5: one vocabulary -----------------------------------------------
-test("deck and journal say the same words: 'A+ slots' and 'stalled'", () => {
+test("deck and journal say the same words: 'book slots' and 'stalled'", () => {
+  // "A+ slots" until REFINE200 #190: the bot takes A and A+ since 2026-09-21,
+  // and the slot cap is the whole book's, so both surfaces say "book slots".
   const code = codeOnly(APP);
   const st = codeOnly(fs.readFileSync(path.join(__dirname, "..", "public", "js", "stalled.js"), "utf8"));
-  assert.ok(/of \$\{facts\.maxOpen\} A\+ slots/.test(code),
+  assert.ok(/of \$\{facts\.maxOpen\} book slots/.test(code),
     "the deck strip must reuse the journal's wording verbatim");
+  assert.ok(/<\/b> book slots"/.test(st), "the stalled strip no longer says 'book slots'");
+  assert.ok(!/A\+ slots/.test(code) && !/A\+ slots/.test(st), "'A+ slots' is back");
   assert.ok(!/sitting still/.test(code), "'sitting still' is back in app.js");
   assert.ok(!/sitting still/.test(st), "'sitting still' is back in the stalled strip");
   assert.ok(/stalled/.test(st));
