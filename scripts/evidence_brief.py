@@ -13,8 +13,15 @@ Covers exactly the ruled set: pipeline health (real issues only), funnel
 snapshot + direction, arriving names (or zero), graduation events (or zero),
 paper book delta vs the newest backup (closes, new stalls, R change), the
 cycle w3-1 clock (added at enablement, owner-signed 2026-08-02 - see
-RESEARCH-LEDGER.md), and one "what needs human eyes" line whose default
-answer is nothing.
+RESEARCH-LEDGER.md) and, once it reached n=30, its frozen-protocol VERDICT,
+the LIVE cycle's own line (its tag read from bot_rules.json), and one "what
+needs human eyes" line whose default answer is nothing.
+
+"New stalls" are the ENGINE's stale_pinged stamps (vivek_run's stale probe:
+held >= VIVEK_BOT_STALE_PROBE_DAYS and |unreal_r| below its band), current
+book vs the newest backup -- the one definition the journal's STALLED strip
+and the status lamp read. The brief used to recompute its own rule (14 days
+and no TP1), which named a different cohort (45 vs 35 on 2026-10-14).
 """
 from __future__ import annotations
 
@@ -39,6 +46,15 @@ NOW = datetime.datetime.now(datetime.timezone.utc)
 CYCLE = "w3-1"
 CYCLE_TARGET = 30
 CYCLE_BAND = "band pess +0.056 / mid +0.10 R/t"
+# The n=30 verdict, judged on the FIRST CYCLE_TARGET closes (exit order) with
+# the protocol's own frozen lines. w3-1 passed n=30 on 2026-09-16 and ended
+# 2026-09-21 (hc4-1 replaced it); the brief kept counting "58/30" with no
+# verdict. A KILL is an ISSUE only while the cycle is the LIVE one -- an
+# ended cycle's verdict is history, printed every day but never an alarm that
+# cannot stop ringing.
+CYCLE_PASS_RT = 0.0       # pass: >= 0 R/trade AND >= 0 R/slot-month
+CYCLE_KILL_RT = -0.05     # kill: <= -0.05 R/trade
+SLOT_MONTH_DAYS = 30.4375
 
 
 def _load(path):
@@ -65,17 +81,44 @@ def _day_stats(cols, day):
             for k in ("published", "floor_killed", "arriving")}
 
 
-def _stall_syms(book, at):
-    out = set()
-    for p in book.get("open") or []:
-        try:
-            age = (at - datetime.datetime.fromisoformat(
-                str(p.get("opened_at")).replace("Z", "+00:00"))).days
-        except (TypeError, ValueError):
-            continue
-        if age >= 14 and not p.get("tp1_hit"):
-            out.add(p.get("symbol"))
-    return out
+def _stalled(book):
+    """Symbols the engine's stale probe has stamped (`stale_pinged`). Read,
+    never recomputed: the probe owns the definition."""
+    return {p.get("symbol") for p in (book or {}).get("open") or [] if p.get("stale_pinged")}
+
+
+def _cycle_stats(rows):
+    """(R/trade, R/slot-month or None) over closed rows; R/slot-month uses
+    each row's own hold_days and is None until a close carries one."""
+    tot = sum(t.get("realized_r") or 0 for t in rows)
+    sm = sum(t.get("hold_days") or 0 for t in rows) / SLOT_MONTH_DAYS
+    return tot / len(rows), (tot / sm if sm > 0 else None)
+
+
+def cycle_verdict(closed):
+    """The pre-registered n=CYCLE_TARGET read: (verdict, R/t, R/sm, date of
+    the n-th close) on the FIRST CYCLE_TARGET closes in exit order (a stable
+    sort, so same-day closes keep the book's close order), or None before n
+    is reached. PASS needs >= 0 R/t AND >= 0 R/sm; KILL is <= -0.05 R/t;
+    anything between is INCONCLUSIVE."""
+    if len(closed) < CYCLE_TARGET:
+        return None
+    first = sorted(closed, key=lambda t: str(t.get("exit_date") or ""))[:CYCLE_TARGET]
+    rt, rsm = _cycle_stats(first)
+    if rt <= CYCLE_KILL_RT:
+        verdict = "KILL"
+    elif rt >= CYCLE_PASS_RT and rsm is not None and rsm >= CYCLE_PASS_RT:
+        verdict = "PASS"
+    else:
+        verdict = "INCONCLUSIVE"
+    return verdict, rt, rsm, str(first[-1].get("exit_date") or "?")
+
+
+def _fmt_stats(rows):
+    if not rows:
+        return "no closes yet"
+    rt, rsm = _cycle_stats(rows)
+    return f"exp {rt:+.3f}R/t" + (f", {rsm:+.3f} R/sm" if rsm is not None else "")
 
 
 def main() -> int:
@@ -141,7 +184,8 @@ def main() -> int:
     # scanner.config, so it takes the number the scan publishes from config
     # (bot_rules.json max_open_total); unreadable or 0 (off) prints no
     # denominator rather than a guessed one.
-    cap = (_load(os.path.join(DATA, "bot_rules.json")) or {}).get("max_open_total")
+    rules = _load(os.path.join(DATA, "bot_rules.json")) or {}
+    cap = rules.get("max_open_total")
     cap_txt = f"/{cap}" if isinstance(cap, int) and cap > 0 else ""
     open_r = sum(p.get("unreal_r") or 0 for p in op)
     backups = sorted(glob.glob(os.path.join(ROOT, "backups", "*", "journal", "vivek_bot_book.json")))
@@ -152,13 +196,7 @@ def main() -> int:
         closes = [t for t in book.get("closed") or []
                   if f"{t.get('symbol')}|{t.get('exit_date')}" not in seen]
         closes_txt = ", ".join(f"{t['symbol']} {t.get('realized_r') or 0:+.2f}R" for t in closes) or "none"
-        try:
-            bat = datetime.datetime.strptime(
-                os.path.basename(os.path.dirname(os.path.dirname(backups[-1])))[:19],
-                "%Y-%m-%dT%H-%M-%S").replace(tzinfo=datetime.timezone.utc)
-        except ValueError:
-            bat = NOW
-        new_stalls = sorted(_stall_syms(book, NOW) - _stall_syms(prev_book, bat))
+        new_stalls = sorted(s for s in _stalled(book) - _stalled(prev_book) if s)
         prev_r = sum(p.get("unreal_r") or 0 for p in prev_book.get("open") or [])
         lines.append(f"book: {len(op)}{cap_txt} open, R {open_r:+.2f} ({open_r - prev_r:+.2f} vs {bstamp} backup) | "
                      f"closes since: {closes_txt} | new stalls: {', '.join(new_stalls) or 'none'}")
@@ -169,17 +207,33 @@ def main() -> int:
     # Counted on rows STAMPED cycle=="w3-1" (written at entry by the runner),
     # so pre-gate history can never blur into the cycle. R/slot-month uses
     # each closed row's own hold_days (omitted until a close carries one).
+    # Once n=30 is reached the clock becomes the VERDICT on the first 30.
+    live = rules.get("cycle_tag") if isinstance(rules.get("cycle_tag"), str) else None
     cyc_closed = [t for t in book.get("closed") or [] if t.get("cycle") == CYCLE]
     cyc_open = sum(1 for p in op if p.get("cycle") == CYCLE)
-    if cyc_closed:
-        tot = sum(t.get("realized_r") or 0 for t in cyc_closed)
-        sm = sum(t.get("hold_days") or 0 for t in cyc_closed) / 30.4375
-        stats = f"exp {tot / len(cyc_closed):+.3f}R/t" + (
-            f", {tot / sm:+.3f} R/sm" if sm > 0 else "")
+    v = cycle_verdict(cyc_closed)
+    if v is None:
+        lines.append(f"cycle {CYCLE}: {len(cyc_closed)}/{CYCLE_TARGET} closed "
+                     f"({_fmt_stats(cyc_closed)}) | {cyc_open} open gated | {CYCLE_BAND}")
     else:
-        stats = "no closes yet"
-    lines.append(f"cycle {CYCLE}: {len(cyc_closed)}/{CYCLE_TARGET} closed ({stats}) | "
-                 f"{cyc_open} open gated | {CYCLE_BAND}")
+        verdict, rt, rsm, nth = v
+        state = "" if live is None else ("LIVE, " if live == CYCLE else "ended, ")
+        rsm_txt = f", {rsm:+.3f} R/sm" if rsm is not None else ""
+        lines.append(f"cycle {CYCLE}: {state}n={CYCLE_TARGET} verdict {verdict} at {nth} "
+                     f"({rt:+.3f}R/t{rsm_txt}; pass >= 0 & >= 0 R/sm, kill <= {CYCLE_KILL_RT}) | "
+                     f"all {len(cyc_closed)} closed {_fmt_stats(cyc_closed)} | "
+                     f"{cyc_open} open gated | {CYCLE_BAND}")
+        if verdict == "KILL" and live == CYCLE:
+            issues.append(f"cycle {CYCLE} n={CYCLE_TARGET} verdict KILL ({rt:+.3f}R/t)")
+
+    # -- the LIVE cycle (bot_rules.json cycle_tag): the sample being run now --
+    # No frozen protocol is recorded for it here, so it gets numbers, never a
+    # verdict: closes, R/t (and R/slot-month), open count.
+    if live and live != CYCLE:
+        lv_closed = [t for t in book.get("closed") or [] if t.get("cycle") == live]
+        lv_open = sum(1 for p in op if p.get("cycle") == live)
+        lines.append(f"cycle {live} (live): {len(lv_closed)} closed ({_fmt_stats(lv_closed)}) | "
+                     f"{lv_open} open")
 
     # -- the one human line --------------------------------------------------
     lines.append("human eyes today: " + ("; ".join(issues) if issues else "nothing"))
