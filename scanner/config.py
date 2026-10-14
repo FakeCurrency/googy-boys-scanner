@@ -496,7 +496,9 @@ VIVEK_MIN_TF_BARS      = 30        # min bars to build a per-timeframe plan (e.g
 VIVEK_H4_PLANS         = True      # build a real 4H plan for published rows
 VIVEK_H4_PERIOD        = "2y"      # Yahoo's intraday ceiling is ~730 days
 VIVEK_H4_INTERVAL      = "1h"      # bucketed to 4H locally (Yahoo has no 4h)
-VIVEK_H4_BUCKET_HOURS  = 4
+# (The 4-hour bucket itself is NOT a setting: vivek._resample_4h_ohlc must cut
+# exactly where chart.js bucketBars(intraday, 4*3600) does. The unread
+# VIVEK_H4_BUCKET_HOURS that suggested otherwise went 2026-10-14, REFINE200 #91.)
 # Cap the extra download so a huge result set cannot stretch a scheduled scan.
 # Rows beyond this simply keep today's behaviour (the chart falls back to the
 # Daily plan and labels it), which is a degrade, never a failure.
