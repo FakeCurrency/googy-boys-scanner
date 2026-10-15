@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-15T00:49:31+00:00",
+  "generated_at": "2026-10-15T18:48:38+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-14",
@@ -50,7 +50,7 @@
     }
   },
   "summary": {
-    "universe": 1428,
+    "universe": 1429,
     "downloaded": 1428,
     "screened": 1324,
     "skipped": {
@@ -60,30 +60,29 @@
       "IGNITING": 0,
       "RUNNING": 1,
       "CLOSED": 1,
-      "COILED": 16,
+      "COILED": 8,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
       "completed_last": "2026-10-14",
-      "raw_last": "2026-10-14",
+      "raw_last": "2026-10-15",
       "expected_completed": "2026-10-14",
-      "lagging": 618,
+      "lagging": 0,
       "screened": 1428,
       "completed_dist": {
-        "2026-10-14": 810,
-        "2026-10-13": 618
+        "2026-10-14": 1428
       },
       "raw_dist": {
-        "2026-10-14": 810,
-        "2026-10-13": 618
+        "2026-10-15": 1420,
+        "2026-10-14": 8
       },
-      "rows_lagging": 14
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1428
+        "yahoo": 1429
       },
       "dead": {},
       "errors": {},
@@ -98,18 +97,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1428,
-      "reused": 0,
+      "fresh": 1416,
+      "reused": 12,
       "merged": 1428,
-      "universe": 1428,
+      "universe": 1429,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 18,
-      "have": 18
+      "rows": 10,
+      "have": 10
     },
-    "elapsed_s": 193.8
+    "elapsed_s": 217.6
   },
   "results": [
     {
@@ -122,7 +121,7 @@
       "entry": 73.34999847,
       "entry_basis": "next_open",
       "entry_date": "2026-10-06",
-      "bars_since": 6,
+      "bars_since": 7,
       "rvol": 9.98,
       "ext_pct": 25.9,
       "turnover_trigger": 1101689675.0,
@@ -150,11 +149,11 @@
       "mfe_r": 0.0,
       "state": "RUNNING",
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 66.80000305,
-      "change_pct": -8.9,
-      "r_now": -0.57,
-      "trail": 65.98388841,
+      "last_bar": "2026-10-14",
+      "price": 65.15000153,
+      "change_pct": -11.2,
+      "r_now": -0.71,
+      "trail": 67.26166662,
       "mcap": 11036785664.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -169,7 +168,7 @@
       "entry": 5.73000002,
       "entry_basis": "next_open",
       "entry_date": "2026-09-23",
-      "bars_since": 15,
+      "bars_since": 16,
       "rvol": 3.64,
       "ext_pct": 13.5,
       "turnover_trigger": 21576948.0,
@@ -202,11 +201,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 5.3499999,
-      "change_pct": -6.6,
-      "r_now": -0.6,
-      "trail": 5.5488889,
+      "last_bar": "2026-10-14",
+      "price": 5.42500019,
+      "change_pct": -5.3,
+      "r_now": -0.48,
+      "trail": 5.50277779,
       "mcap": 695410432.0,
       "mcap_asof": "2026-10-14",
       "mcap_src": "previous"
@@ -218,13 +217,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.47,
-        "atr_pctl": 0.4,
-        "vol_pctl": 2.6,
+        "ribbon_pct": 3.14,
+        "atr_pctl": 0.2,
+        "vol_pctl": 1.0,
         "drawdown_pct": 51.2,
         "coiled": true,
-        "coiled_bars": 88,
-        "last_coiled": "2026-10-13"
+        "coiled_bars": 89,
+        "last_coiled": "2026-10-14"
       },
       "base": {
         "high": 15.60000038,
@@ -233,8 +232,8 @@
       },
       "breakout_level": 15.60000038,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 14.30500031,
+      "last_bar": "2026-10-14",
+      "price": 14.375,
       "mcap": 823169408.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
@@ -246,13 +245,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.96,
-        "atr_pctl": 0.4,
-        "vol_pctl": 14.3,
-        "drawdown_pct": 52.1,
+        "ribbon_pct": 6.84,
+        "atr_pctl": 2.0,
+        "vol_pctl": 14.9,
+        "drawdown_pct": 53.6,
         "coiled": true,
-        "coiled_bars": 15,
-        "last_coiled": "2026-10-13"
+        "coiled_bars": 16,
+        "last_coiled": "2026-10-14"
       },
       "base": {
         "high": 6.73000002,
@@ -261,123 +260,11 @@
       },
       "breakout_level": 6.73000002,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 5.21999979,
+      "last_bar": "2026-10-14",
+      "price": 5.21500015,
       "mcap": 2255801088.0,
       "mcap_asof": "2026-10-12",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "HCAT",
-      "name": "Health Catalyst, Inc - Common stock",
-      "yf": "HCAT",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 2.43,
-        "atr_pctl": 7.5,
-        "vol_pctl": 8.1,
-        "drawdown_pct": 84.8,
-        "coiled": true,
-        "coiled_bars": 14,
-        "last_coiled": "2026-10-13"
-      },
-      "base": {
-        "high": 2.4000001,
-        "low": 1.52999997,
-        "bars": 60
-      },
-      "breakout_level": 2.4000001,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 1.74000001,
-      "mcap": 131698672.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "ASPS",
-      "name": "Altisource Portfolio Solutions S.A. - Common Stock",
-      "yf": "ASPS",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.19,
-        "atr_pctl": 14.7,
-        "vol_pctl": 8.8,
-        "drawdown_pct": 84.8,
-        "coiled": true,
-        "coiled_bars": 11,
-        "last_coiled": "2026-10-14"
-      },
-      "base": {
-        "high": 6.78999996,
-        "low": 5.0,
-        "bars": 60
-      },
-      "breakout_level": 6.76000023,
-      "provisional": false,
-      "last_bar": "2026-10-14",
-      "price": 5.71999979,
-      "mcap": 70005864.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "XBIT",
-      "name": "XBiotech Inc. - Common Stock",
-      "yf": "XBIT",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 7.79,
-        "atr_pctl": 11.3,
-        "vol_pctl": 24.8,
-        "drawdown_pct": 78.3,
-        "coiled": true,
-        "coiled_bars": 10,
-        "last_coiled": "2026-10-13"
-      },
-      "base": {
-        "high": 2.47000003,
-        "low": 2.13000011,
-        "bars": 60
-      },
-      "breakout_level": 2.47000003,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 2.16000009,
-      "mcap": 69816904.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "CRNT",
-      "name": "Ceragon Networks Ltd. - Ordinary Shares",
-      "yf": "CRNT",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.7,
-        "atr_pctl": 17.1,
-        "vol_pctl": 8.9,
-        "drawdown_pct": 66.0,
-        "coiled": true,
-        "coiled_bars": 9,
-        "last_coiled": "2026-10-14"
-      },
-      "base": {
-        "high": 2.38000011,
-        "low": 1.99000001,
-        "bars": 60
-      },
-      "breakout_level": 2.38000011,
-      "provisional": false,
-      "last_bar": "2026-10-14",
-      "price": 1.95000005,
-      "mcap": 189863456.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
     },
     {
       "symbol": "GPRE",
@@ -402,38 +289,10 @@
       "breakout_level": 18.17000008,
       "provisional": false,
       "last_bar": "2026-10-14",
-      "price": 14.92000008,
+      "price": 14.34500027,
       "mcap": 1092085248.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "KLTR",
-      "name": "Kaltura, Inc. - Common Stock",
-      "yf": "KLTR",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.5,
-        "atr_pctl": 3.8,
-        "vol_pctl": 8.7,
-        "drawdown_pct": 51.4,
-        "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-10-13"
-      },
-      "base": {
-        "high": 2.04999995,
-        "low": 1.24399996,
-        "bars": 60
-      },
-      "breakout_level": 2.04999995,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 1.37,
-      "mcap": 213571696.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
     },
     {
       "symbol": "VFS",
@@ -442,13 +301,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.23,
+        "ribbon_pct": 10.35,
         "atr_pctl": 14.3,
-        "vol_pctl": 14.9,
-        "drawdown_pct": 67.4,
+        "vol_pctl": 15.7,
+        "drawdown_pct": 67.6,
         "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-10-13"
+        "coiled_bars": 4,
+        "last_coiled": "2026-10-14"
       },
       "base": {
         "high": 3.47000003,
@@ -457,8 +316,8 @@
       },
       "breakout_level": 3.47000003,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 3.02999997,
+      "last_bar": "2026-10-14",
+      "price": 3.19180012,
       "mcap": 7088794624.0,
       "mcap_asof": "2026-10-14",
       "mcap_src": "previous"
@@ -486,7 +345,7 @@
       "breakout_level": 10.14999962,
       "provisional": false,
       "last_bar": "2026-10-14",
-      "price": 8.81000042,
+      "price": 9.10000038,
       "mcap": 375856288.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
@@ -498,10 +357,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.55,
-        "atr_pctl": 8.7,
-        "vol_pctl": 63.7,
-        "drawdown_pct": 57.3,
+        "ribbon_pct": 9.63,
+        "atr_pctl": 13.5,
+        "vol_pctl": 65.3,
+        "drawdown_pct": 58.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-02"
@@ -513,37 +372,9 @@
       },
       "breakout_level": 44.31608389,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 34.49000168,
+      "last_bar": "2026-10-14",
+      "price": 34.27999878,
       "mcap": 8559130112.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "MOLN",
-      "name": "Molecular Partners AG - American Depositary Shares",
-      "yf": "MOLN",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.99,
-        "atr_pctl": 37.9,
-        "vol_pctl": 15.1,
-        "drawdown_pct": 71.1,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-08"
-      },
-      "base": {
-        "high": 4.71999979,
-        "low": 3.52999997,
-        "bars": 60
-      },
-      "breakout_level": 4.71999979,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 3.67000008,
-      "mcap": 145176848.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
     },
@@ -554,9 +385,9 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.07,
-        "atr_pctl": 41.7,
-        "vol_pctl": 57.9,
+        "ribbon_pct": 10.24,
+        "atr_pctl": 38.9,
+        "vol_pctl": 59.9,
         "drawdown_pct": 85.0,
         "coiled": false,
         "coiled_bars": 0,
@@ -569,37 +400,9 @@
       },
       "breakout_level": 9.86999989,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 8.35999966,
+      "last_bar": "2026-10-14",
+      "price": 8.51000023,
       "mcap": 432770720.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "SPWH",
-      "name": "Sportsman's Warehouse Holdings, Inc. - Common Stock",
-      "yf": "SPWH",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 15.15,
-        "atr_pctl": 1.6,
-        "vol_pctl": 2.2,
-        "drawdown_pct": 80.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-02"
-      },
-      "base": {
-        "high": 1.36000001,
-        "low": 1.10000002,
-        "bars": 60
-      },
-      "breakout_level": 1.36000001,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 1.11000001,
-      "mcap": 43838440.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
     },
@@ -610,10 +413,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 15.94,
-        "atr_pctl": 29.7,
-        "vol_pctl": 6.9,
-        "drawdown_pct": 57.1,
+        "ribbon_pct": 18.96,
+        "atr_pctl": 49.0,
+        "vol_pctl": 11.6,
+        "drawdown_pct": 61.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-06"
@@ -625,37 +428,9 @@
       },
       "breakout_level": 27.6760006,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 19.70999908,
+      "last_bar": "2026-10-14",
+      "price": 18.18000031,
       "mcap": 11709338624.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "PLRX",
-      "name": "Pliant Therapeutics, Inc. - Common Stock",
-      "yf": "PLRX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 17.28,
-        "atr_pctl": 16.5,
-        "vol_pctl": 2.6,
-        "drawdown_pct": 95.1,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-06"
-      },
-      "base": {
-        "high": 1.23000002,
-        "low": 0.97000003,
-        "bars": 60
-      },
-      "breakout_level": 1.23000002,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 0.96799999,
-      "mcap": 61054988.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
     }
