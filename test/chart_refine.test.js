@@ -294,6 +294,22 @@ test("the record shapes the writer may use all read", () => {
   assert.ok(!("narration" in src.records[0]), "the shared parsed file is not mutated");
 });
 
+test("the writer's two-direction shape: records = [{record, narration}]", () => {
+  // phasemap/run.py _chart_payload; WEB (asx) on 2026-10-15 never left
+  // "Loading chart..." because the wrapper was read as the record.
+  const { api } = pmHarness({});
+  const tj = { ticker: "ABC", candles: [], record: PMREC("bullish"), narration: "up",
+    records: [{ record: PMREC("bullish"), narration: "up" }, { record: PMREC("bearish"), narration: "down" }] };
+  const bear = api.pmRecFromTickerFile(tj, "ABC", "bearish");
+  assert.equal(bear.state, "RUNNING");
+  assert.equal(bear.direction, "bearish");
+  assert.equal(bear.narration, "down");
+  const first = api.pmRecFromTickerFile(tj, "ABC", "");
+  assert.equal(first.direction, "bullish");
+  assert.equal(first.narration, "up");
+  assert.ok(!("narration" in tj.records[1].record), "the shared parsed file is not mutated");
+});
+
 test("an old per-ticker file falls back to latest.json + narrations, as before", async () => {
   const h = pmHarness({
     "data/phasemap/charts/asx/ABC.json": { ticker: "ABC", candles: [] },

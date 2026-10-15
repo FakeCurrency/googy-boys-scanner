@@ -267,7 +267,15 @@
     const has = (k) => Object.prototype.hasOwnProperty.call(tj, k);
     if (!has("record") && !has("records")) return undefined;
     const raw = has("records") ? tj.records : tj.record;
+    // phasemap/run.py writes `records` as [{record, narration}] (one per
+    // direction): unwrap each into the record with its narration on it. A
+    // wrapper read as a record has no state, and pmOnlyFallback threw on
+    // rec.state.replace, leaving the chart on "Loading chart..." for good.
     const recs = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+      .map((r) => (r && typeof r === "object" && r.record && typeof r.record === "object"
+        ? Object.assign({}, r.record, r.narration != null && r.record.narration == null
+          ? { narration: r.narration } : {})
+        : r))
       .filter((r) => r && typeof r === "object")
       .filter((r) => !r.ticker || String(r.ticker).toUpperCase() === want);
     if (!recs.length) return null;
