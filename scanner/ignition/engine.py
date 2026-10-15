@@ -254,12 +254,21 @@ def apply_rules(bf: pd.DataFrame, p: Params) -> pd.DataFrame:
     if p.require_coil:
         raw &= coil_window
     trigger = raw & ~_any_prior(raw, p.rearm_bars)
+    # The base turnover a trigger on the NEXT bar would read (turnover_base at
+    # T+1 = the mean dollar volume of the n bars through T). A COILED row
+    # needs it at the floor: a name that cannot pass the trigger's own floor
+    # tomorrow is not one close from a trigger (owner, 2026-10-15 -- 19 of
+    # 100 ASX coils were sub-cent names that had barely traded). The trigger
+    # itself is unchanged.
+    n = config.IGNITION_RVOL_LEN
+    coil_liquid = (bf["turnover_day"].rolling(n, min_periods=n).mean()
+                   >= p.min_base_turnover)
 
     stop = np.maximum(bf["base_low"], bf["base_high"] - p.stop_atr_mult * bf["atr_prev"])
     return pd.DataFrame({
         "inputs_ready": inputs_ready,
         "coiled": coiled, "coil_window": coil_window, "coil_open": coil_open,
-        "coiled_run": _run_length(coiled),
+        "coiled_run": _run_length(coiled), "coil_liquid": coil_liquid,
         "breakout": breakout, "raw_trigger": raw, "trigger": trigger,
         "stop": stop,
         "mm_target": bf["base_high"] + (bf["base_high"] - bf["base_low"]),
@@ -485,6 +494,8 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
                 kept on the page ON PURPOSE: a list of only the winners is the
                 survivorship this lens was built to stop fooling us with
       COILED    no recent trigger, and a trigger on the NEXT bar would count
+                (coiled inside the lookback AND the base turnover it would
+                read is at the floor)
 
     `provisional` = the FORMING bar is the trigger. Never a confirmed state:
     QNT's own 23 Sep poke above the base closed back inside it.
@@ -514,7 +525,7 @@ def screen_frame(df: pd.DataFrame, market: str, *, forming: Optional[pd.DataFram
             row["state"] = "IGNITING"
         else:
             row["state"] = "RUNNING"
-    elif bool(feat["coil_open"].iloc[-1]):
+    elif bool(feat["coil_open"].iloc[-1]) and bool(feat["coil_liquid"].iloc[-1]):
         row = {"state": "COILED", "coil": _coil_block(feat, T)}
         last_coiled = np.flatnonzero(feat["coiled"].to_numpy())
         row["coil"]["last_coiled"] = _date(feat.index[last_coiled[-1]]) if len(last_coiled) else None
@@ -559,10 +570,11 @@ def _forming_can_fire(row: Optional[dict], p: Params, T: int, t0: Optional[int])
     recomputed with it -- that recompute is the screen's dearest step (~40 ms
     a name, ~2 minutes per pair of intraday stock runs, REFINE200 #177).
 
-      no row   coil_open[T] is False (else the row would be COILED), and the
-               coil window a trigger at T+1 reads (coiled on T+1-L .. T) is
-               exactly coil_open[T]'s window, so it cannot fire -- unless the
-               coil condition is ablated (require_coil False).
+      no row   coil_open[T] or coil_liquid[T] is False (else the row would be
+               COILED). The coil window a trigger at T+1 reads (coiled on
+               T+1-L .. T) is exactly coil_open[T]'s, and the base turnover
+               it reads is exactly coil_liquid[T]'s, so it cannot fire --
+               unless the coil condition is ablated (require_coil False).
       COILED   it can.
       CLOSED   only once its trigger t0 is OUTSIDE T+1's rearm window: t0 is a
                raw trigger, so T+1 is re-armed only when T+1 - t0 > rearm_bars
