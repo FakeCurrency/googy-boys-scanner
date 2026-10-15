@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-15T00:02:39+00:00",
+  "generated_at": "2026-10-15T00:49:31+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-13",
+  "last_closed_bar": "2026-10-14",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -68,17 +68,17 @@
       "completed_last": "2026-10-14",
       "raw_last": "2026-10-14",
       "expected_completed": "2026-10-14",
-      "lagging": 1301,
+      "lagging": 618,
       "screened": 1428,
       "completed_dist": {
-        "2026-10-14": 127,
-        "2026-10-13": 1301
+        "2026-10-14": 810,
+        "2026-10-13": 618
       },
       "raw_dist": {
-        "2026-10-14": 127,
-        "2026-10-13": 1301
+        "2026-10-14": 810,
+        "2026-10-13": 618
       },
-      "rows_lagging": 18
+      "rows_lagging": 14
     },
     "sources": {
       "mode": "yahoo",
@@ -109,7 +109,7 @@
       "rows": 18,
       "have": 18
     },
-    "elapsed_s": 218.1
+    "elapsed_s": 193.8
   },
   "results": [
     {
@@ -296,6 +296,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "ASPS",
+      "name": "Altisource Portfolio Solutions S.A. - Common Stock",
+      "yf": "ASPS",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.19,
+        "atr_pctl": 14.7,
+        "vol_pctl": 8.8,
+        "drawdown_pct": 84.8,
+        "coiled": true,
+        "coiled_bars": 11,
+        "last_coiled": "2026-10-14"
+      },
+      "base": {
+        "high": 6.78999996,
+        "low": 5.0,
+        "bars": 60
+      },
+      "breakout_level": 6.76000023,
+      "provisional": false,
+      "last_bar": "2026-10-14",
+      "price": 5.71999979,
+      "mcap": 70005864.0,
+      "mcap_asof": "2026-10-13",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "XBIT",
       "name": "XBiotech Inc. - Common Stock",
       "yf": "XBIT",
@@ -324,47 +352,19 @@
       "mcap_src": "previous"
     },
     {
-      "symbol": "ASPS",
-      "name": "Altisource Portfolio Solutions S.A. - Common Stock",
-      "yf": "ASPS",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.27,
-        "atr_pctl": 14.3,
-        "vol_pctl": 9.5,
-        "drawdown_pct": 84.3,
-        "coiled": true,
-        "coiled_bars": 10,
-        "last_coiled": "2026-10-13"
-      },
-      "base": {
-        "high": 7.03000021,
-        "low": 5.0,
-        "bars": 60
-      },
-      "breakout_level": 6.78999996,
-      "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 5.92000008,
-      "mcap": 70005864.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "CRNT",
       "name": "Ceragon Networks Ltd. - Ordinary Shares",
       "yf": "CRNT",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.53,
-        "atr_pctl": 7.3,
-        "vol_pctl": 8.1,
-        "drawdown_pct": 64.0,
+        "ribbon_pct": 11.7,
+        "atr_pctl": 17.1,
+        "vol_pctl": 8.9,
+        "drawdown_pct": 66.0,
         "coiled": true,
-        "coiled_bars": 8,
-        "last_coiled": "2026-10-13"
+        "coiled_bars": 9,
+        "last_coiled": "2026-10-14"
       },
       "base": {
         "high": 2.38000011,
@@ -373,8 +373,8 @@
       },
       "breakout_level": 2.38000011,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 2.05999994,
+      "last_bar": "2026-10-14",
+      "price": 1.95000005,
       "mcap": 189863456.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -386,23 +386,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 0.94,
-        "atr_pctl": 1.6,
-        "vol_pctl": 25.8,
-        "drawdown_pct": 51.2,
+        "ribbon_pct": 0.73,
+        "atr_pctl": 2.8,
+        "vol_pctl": 21.4,
+        "drawdown_pct": 53.3,
         "coiled": true,
-        "coiled_bars": 7,
-        "last_coiled": "2026-10-13"
+        "coiled_bars": 8,
+        "last_coiled": "2026-10-14"
       },
       "base": {
-        "high": 19.21999931,
+        "high": 18.17000008,
         "low": 13.43000031,
         "bars": 60
       },
       "breakout_level": 18.17000008,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 15.57999992,
+      "last_bar": "2026-10-14",
+      "price": 14.92000008,
       "mcap": 1092085248.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
@@ -470,13 +470,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.44,
-        "atr_pctl": 4.8,
-        "vol_pctl": 32.3,
-        "drawdown_pct": 72.4,
+        "ribbon_pct": 6.32,
+        "atr_pctl": 12.9,
+        "vol_pctl": 17.3,
+        "drawdown_pct": 73.3,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-10-13"
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-14"
       },
       "base": {
         "high": 10.14999962,
@@ -485,8 +485,8 @@
       },
       "breakout_level": 10.14999962,
       "provisional": false,
-      "last_bar": "2026-10-13",
-      "price": 9.10000038,
+      "last_bar": "2026-10-14",
+      "price": 8.81000042,
       "mcap": 375856288.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
