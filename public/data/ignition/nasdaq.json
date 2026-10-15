@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-14T19:06:12+00:00",
+  "generated_at": "2026-10-15T00:02:39+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-13",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 27204.38,
-    "sma200": 24874.11,
+    "close": 26692.87,
+    "sma200": 24889.6,
     "above_200": true,
-    "vs_200_pct": 9.4,
-    "as_of": "2026-10-13"
+    "vs_200_pct": 7.2,
+    "as_of": "2026-10-14"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -54,8 +54,7 @@
     "downloaded": 1428,
     "screened": 1324,
     "skipped": {
-      "short history": 103,
-      "stale frame": 1
+      "short history": 104
     },
     "counts": {
       "IGNITING": 0,
@@ -66,21 +65,20 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-13",
+      "completed_last": "2026-10-14",
       "raw_last": "2026-10-14",
-      "expected_completed": "2026-10-13",
-      "lagging": 0,
-      "screened": 1427,
+      "expected_completed": "2026-10-14",
+      "lagging": 1301,
+      "screened": 1428,
       "completed_dist": {
-        "2026-10-13": 1427,
-        "2026-10-06": 1
+        "2026-10-14": 127,
+        "2026-10-13": 1301
       },
       "raw_dist": {
-        "2026-10-14": 1421,
-        "2026-10-13": 6,
-        "2026-10-06": 1
+        "2026-10-14": 127,
+        "2026-10-13": 1301
       },
-      "rows_lagging": 0
+      "rows_lagging": 18
     },
     "sources": {
       "mode": "yahoo",
@@ -100,8 +98,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1415,
-      "reused": 13,
+      "fresh": 1428,
+      "reused": 0,
       "merged": 1428,
       "universe": 1428,
       "stale_dropped": 0,
@@ -111,7 +109,7 @@
       "rows": 18,
       "have": 18
     },
-    "elapsed_s": 234.8
+    "elapsed_s": 218.1
   },
   "results": [
     {
@@ -153,9 +151,9 @@
       "state": "RUNNING",
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 67.43000031,
-      "change_pct": -8.1,
-      "r_now": -0.51,
+      "price": 66.80000305,
+      "change_pct": -8.9,
+      "r_now": -0.57,
       "trail": 65.98388841,
       "mcap": 11036785664.0,
       "mcap_asof": "2026-10-13",
@@ -205,9 +203,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 5.40500021,
-      "change_pct": -5.7,
-      "r_now": -0.51,
+      "price": 5.3499999,
+      "change_pct": -6.6,
+      "r_now": -0.6,
       "trail": 5.5488889,
       "mcap": 695410432.0,
       "mcap_asof": "2026-10-14",
@@ -236,7 +234,7 @@
       "breakout_level": 15.60000038,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 14.26500034,
+      "price": 14.30500031,
       "mcap": 823169408.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
@@ -264,7 +262,7 @@
       "breakout_level": 6.73000002,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 5.0,
+      "price": 5.21999979,
       "mcap": 2255801088.0,
       "mcap_asof": "2026-10-12",
       "mcap_src": "cache"
@@ -320,7 +318,7 @@
       "breakout_level": 2.47000003,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 2.18499994,
+      "price": 2.16000009,
       "mcap": 69816904.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -348,7 +346,7 @@
       "breakout_level": 6.78999996,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 5.69999981,
+      "price": 5.92000008,
       "mcap": 70005864.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -376,7 +374,7 @@
       "breakout_level": 2.38000011,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 1.97000003,
+      "price": 2.05999994,
       "mcap": 189863456.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -404,7 +402,7 @@
       "breakout_level": 18.17000008,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 14.93000031,
+      "price": 15.57999992,
       "mcap": 1092085248.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
@@ -432,7 +430,7 @@
       "breakout_level": 2.04999995,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 1.38499999,
+      "price": 1.37,
       "mcap": 213571696.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -460,7 +458,7 @@
       "breakout_level": 3.47000003,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 3.00999999,
+      "price": 3.02999997,
       "mcap": 7088794624.0,
       "mcap_asof": "2026-10-14",
       "mcap_src": "previous"
@@ -488,7 +486,7 @@
       "breakout_level": 10.14999962,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 8.80000019,
+      "price": 9.10000038,
       "mcap": 375856288.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
@@ -516,7 +514,7 @@
       "breakout_level": 44.31608389,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 33.72499847,
+      "price": 34.49000168,
       "mcap": 8559130112.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -544,7 +542,7 @@
       "breakout_level": 4.71999979,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 3.53340006,
+      "price": 3.67000008,
       "mcap": 145176848.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -572,7 +570,7 @@
       "breakout_level": 9.86999989,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 8.41499996,
+      "price": 8.35999966,
       "mcap": 432770720.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -600,7 +598,7 @@
       "breakout_level": 1.36000001,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 1.07000005,
+      "price": 1.11000001,
       "mcap": 43838440.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -628,7 +626,7 @@
       "breakout_level": 27.6760006,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 17.95499992,
+      "price": 19.70999908,
       "mcap": 11709338624.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -656,7 +654,7 @@
       "breakout_level": 1.23000002,
       "provisional": false,
       "last_bar": "2026-10-13",
-      "price": 0.89960003,
+      "price": 0.96799999,
       "mcap": 61054988.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
