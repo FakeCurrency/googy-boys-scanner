@@ -423,7 +423,9 @@ The tree must not mention `IGNITION_`. Inverted-looking grades and crypto on
 Yahoo are OWNER (spec) items.
 
 **IGNITION** (REPORT-ONLY). COIL: SMA 9/26/43/200 within 12%, ATR% bottom 25%
-and 20d volume bottom 35% of a 2-year window, ≥50% under the 3-year high.
+and 20d volume bottom 35% of a 2-year window, ≥50% under the 3-year high; a
+COILED row also needs the trigger's base-turnover floor (2026-10-15: untraded
+sub-cent "flat bases" filled the ASX list; triggers unchanged, no bump).
 TRIGGER (completed bar): coiled in the prior 10 bars, close > the 60-bar base
 high, volume ≥ 3× its 20-day average, ≤60% over the 9-SMA, turnover floors.
 Stop = max(base low, base high − 1 ATR); exit next open after a close under

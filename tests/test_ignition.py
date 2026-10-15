@@ -244,7 +244,10 @@ def replay_state(df: pd.DataFrame, full: pd.DataFrame, k: int):
             return {"state": "CLOSED", "t0": t0, "exit": ex}
         return {"state": "IGNITING" if k - t0 < FRESH else "RUNNING", "t0": t0}
     lb = int(config.IGNITION_COIL_LOOKBACK)
-    if full["coiled"].to_numpy()[max(0, k - lb + 1):k + 1].any():
+    n = int(config.IGNITION_RVOL_LEN)
+    nxt_turnover = full["turnover_day"].to_numpy()[k - n + 1:k + 1]   # what bar k+1 reads
+    liquid = k - n + 1 >= 0 and nxt_turnover.mean() >= E.Params.from_config(MARKET).min_base_turnover
+    if full["coiled"].to_numpy()[max(0, k - lb + 1):k + 1].any() and liquid:
         return {"state": "COILED"}
     return None
 
@@ -1079,6 +1082,19 @@ def test_nothing_coiling_and_nothing_firing_is_no_row():
     assert E.screen_frame(fx("chop").iloc[:T], MARKET) is None
     assert E.screen_frame(fx("chop").iloc[:T], MARKET, forming=fx("base").iloc[T - 1:T]) is None
     assert E.screen_frame(fx("base").iloc[:450], MARKET) is None     # decline, no coil yet
+
+
+def test_a_coil_below_the_base_turnover_floor_is_no_row():
+    """COILED means a trigger on the next bar could count, and a trigger needs
+    the base turnover floor: a quiet name that has barely TRADED (the ASX's
+    sub-cent flat bases, 2026-10-15) is not one close from a trigger."""
+    df = fx("short").iloc[:400]
+    p = E.Params.from_config(MARKET)
+    assert E.screen_frame(df, MARKET, p=p)["state"] == "COILED"
+    n = int(config.IGNITION_RVOL_LEN)
+    have = float(E.compute(df, MARKET, p)["turnover_day"].iloc[-n:].mean())
+    assert E.screen_frame(df, MARKET, p=p.replace(min_base_turnover=have * 1.001)) is None
+    assert E.screen_frame(df, MARKET, p=p.replace(min_base_turnover=have * 0.999))["state"] == "COILED"
 
 
 def test_short_history_is_no_row_and_it_is_the_length_gate(monkeypatch):
