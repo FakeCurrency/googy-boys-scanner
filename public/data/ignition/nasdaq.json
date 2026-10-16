@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-16T18:34:24+00:00",
+  "generated_at": "2026-10-16T23:47:09+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-15",
+  "last_closed_bar": "2026-10-16",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 26713.03,
-    "sma200": 24905.8,
+    "close": 26140.03,
+    "sma200": 24919.4,
     "above_200": true,
-    "vs_200_pct": 7.3,
-    "as_of": "2026-10-15"
+    "vs_200_pct": 4.9,
+    "as_of": "2026-10-16"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,31 +52,32 @@
   "summary": {
     "universe": 1429,
     "downloaded": 1429,
-    "screened": 1326,
+    "screened": 1328,
     "skipped": {
-      "short history": 103
+      "short history": 101
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 2,
-      "COILED": 9,
+      "COILED": 10,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-15",
+      "completed_last": "2026-10-16",
       "raw_last": "2026-10-16",
-      "expected_completed": "2026-10-15",
-      "lagging": 1,
+      "expected_completed": "2026-10-16",
+      "lagging": 9,
       "screened": 1429,
       "completed_dist": {
-        "2026-10-15": 1428,
+        "2026-10-16": 1420,
+        "2026-10-15": 8,
         "2026-10-14": 1
       },
       "raw_dist": {
-        "2026-10-16": 1413,
-        "2026-10-15": 15,
+        "2026-10-16": 1420,
+        "2026-10-15": 8,
         "2026-10-14": 1
       },
       "rows_lagging": 0
@@ -99,18 +100,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1416,
-      "reused": 13,
+      "fresh": 1429,
+      "reused": 0,
       "merged": 1429,
       "universe": 1429,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 11,
-      "have": 11
+      "rows": 12,
+      "have": 12
     },
-    "elapsed_s": 198.8
+    "elapsed_s": 173.0
   },
   "results": [
     {
@@ -123,7 +124,7 @@
       "entry": 73.34999847,
       "entry_basis": "next_open",
       "entry_date": "2026-10-06",
-      "bars_since": 8,
+      "bars_since": 9,
       "rvol": 9.98,
       "ext_pct": 25.9,
       "turnover_trigger": 1101689675.0,
@@ -150,17 +151,17 @@
       },
       "mfe_r": 0.0,
       "exit_reason": "trail",
-      "exit_date": "2026-10-15",
-      "exit_price": 65.26999664,
-      "exit_r": -0.7,
-      "exit_pending": true,
+      "exit_date": "2026-10-16",
+      "exit_price": 65.12999725,
+      "exit_r": -0.71,
+      "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 63.11500168,
-      "change_pct": -14.0,
-      "r_now": -0.89,
-      "trail": 68.23833296,
+      "last_bar": "2026-10-16",
+      "price": 63.61999893,
+      "change_pct": -13.3,
+      "r_now": -0.84,
+      "trail": 67.10499954,
       "mcap": 11036785664.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -175,7 +176,7 @@
       "entry": 5.73000002,
       "entry_basis": "next_open",
       "entry_date": "2026-09-23",
-      "bars_since": 17,
+      "bars_since": 18,
       "rvol": 3.64,
       "ext_pct": 13.5,
       "turnover_trigger": 21576948.0,
@@ -208,42 +209,14 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 5.25500011,
-      "change_pct": -8.3,
-      "r_now": -0.75,
-      "trail": 5.45166667,
+      "last_bar": "2026-10-16",
+      "price": 5.25,
+      "change_pct": -8.4,
+      "r_now": -0.76,
+      "trail": 5.35833332,
       "mcap": 695410432.0,
       "mcap_asof": "2026-10-14",
       "mcap_src": "previous"
-    },
-    {
-      "symbol": "INMD",
-      "name": "InMode Ltd.  - Ordinary Shares",
-      "yf": "INMD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 2.81,
-        "atr_pctl": 0.4,
-        "vol_pctl": 2.0,
-        "drawdown_pct": 50.9,
-        "coiled": true,
-        "coiled_bars": 90,
-        "last_coiled": "2026-10-15"
-      },
-      "base": {
-        "high": 15.60000038,
-        "low": 13.86100006,
-        "bars": 60
-      },
-      "breakout_level": 15.60000038,
-      "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 14.18000031,
-      "mcap": 823169408.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "cache"
     },
     {
       "symbol": "PTON",
@@ -252,13 +225,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.52,
-        "atr_pctl": 2.4,
-        "vol_pctl": 19.6,
-        "drawdown_pct": 51.1,
+        "ribbon_pct": 6.17,
+        "atr_pctl": 5.0,
+        "vol_pctl": 19.0,
+        "drawdown_pct": 52.1,
         "coiled": true,
-        "coiled_bars": 17,
-        "last_coiled": "2026-10-15"
+        "coiled_bars": 18,
+        "last_coiled": "2026-10-16"
       },
       "base": {
         "high": 6.73000002,
@@ -267,10 +240,10 @@
       },
       "breakout_level": 6.73000002,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 5.21500015,
-      "mcap": 2255801088.0,
-      "mcap_asof": "2026-10-12",
+      "last_bar": "2026-10-16",
+      "price": 5.21999979,
+      "mcap": 2290910720.0,
+      "mcap_asof": "2026-10-16",
       "mcap_src": "cache"
     },
     {
@@ -280,80 +253,24 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 1.07,
-        "atr_pctl": 4.4,
-        "vol_pctl": 23.2,
-        "drawdown_pct": 55.2,
+        "ribbon_pct": 1.42,
+        "atr_pctl": 3.4,
+        "vol_pctl": 22.8,
+        "drawdown_pct": 54.7,
         "coiled": true,
-        "coiled_bars": 9,
-        "last_coiled": "2026-10-15"
+        "coiled_bars": 10,
+        "last_coiled": "2026-10-16"
       },
       "base": {
         "high": 18.17000008,
         "low": 13.43000031,
         "bars": 60
       },
-      "breakout_level": 18.17000008,
+      "breakout_level": 17.65999985,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 14.39000034,
+      "last_bar": "2026-10-16",
+      "price": 14.47000027,
       "mcap": 1092085248.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "cache"
-    },
-    {
-      "symbol": "VFS",
-      "name": "VinFast Auto Ltd. - Ordinary Shares",
-      "yf": "VFS",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.64,
-        "atr_pctl": 19.8,
-        "vol_pctl": 19.2,
-        "drawdown_pct": 65.5,
-        "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-15"
-      },
-      "base": {
-        "high": 3.47000003,
-        "low": 2.8499999,
-        "bars": 60
-      },
-      "breakout_level": 3.47000003,
-      "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 3.1400001,
-      "mcap": 7088794624.0,
-      "mcap_asof": "2026-10-14",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "PERI",
-      "name": "Perion Network Ltd - Ordinary Shares",
-      "yf": "PERI",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 5.8,
-        "atr_pctl": 13.1,
-        "vol_pctl": 9.5,
-        "drawdown_pct": 72.4,
-        "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-10-15"
-      },
-      "base": {
-        "high": 10.14999962,
-        "low": 8.34000015,
-        "bars": 60
-      },
-      "breakout_level": 10.14999962,
-      "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 8.77999973,
-      "mcap": 375856288.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "cache"
     },
@@ -364,53 +281,165 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.6,
-        "atr_pctl": 2.2,
-        "vol_pctl": 20.0,
-        "drawdown_pct": 66.7,
+        "ribbon_pct": 11.08,
+        "atr_pctl": 2.6,
+        "vol_pctl": 18.3,
+        "drawdown_pct": 67.5,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-10-15"
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-16"
       },
       "base": {
         "high": 9.85000038,
         "low": 7.51999998,
         "bars": 60
       },
-      "breakout_level": 9.85000038,
+      "breakout_level": 9.58500004,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 8.89789963,
+      "last_bar": "2026-10-16",
+      "price": 8.93000031,
       "mcap": 402096992.0,
       "mcap_asof": "2026-10-14",
       "mcap_src": "cache"
     },
     {
-      "symbol": "LINE",
-      "name": "Lineage, Inc. - Common Stock",
-      "yf": "LINE",
+      "symbol": "AVNW",
+      "name": "Aviat Networks, Inc. - Common Stock",
+      "yf": "AVNW",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.74,
-        "atr_pctl": 9.7,
-        "vol_pctl": 64.7,
-        "drawdown_pct": 57.7,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-02"
+        "ribbon_pct": 5.47,
+        "atr_pctl": 23.0,
+        "vol_pctl": 27.6,
+        "drawdown_pct": 51.2,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-16"
       },
       "base": {
-        "high": 44.31608389,
-        "low": 33.43999863,
+        "high": 24.0,
+        "low": 18.55999947,
         "bars": 60
       },
-      "breakout_level": 44.31608389,
+      "breakout_level": 24.0,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 33.22000122,
-      "mcap": 8559130112.0,
+      "last_bar": "2026-10-16",
+      "price": 18.94000053,
+      "mcap": 271317120.0,
+      "mcap_asof": "2026-10-06",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.13,
+        "atr_pctl": 11.9,
+        "vol_pctl": 32.9,
+        "drawdown_pct": 77.7,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-16"
+      },
+      "base": {
+        "high": 4.5999999,
+        "low": 3.50999999,
+        "bars": 60
+      },
+      "breakout_level": 4.5999999,
+      "provisional": false,
+      "last_bar": "2026-10-16",
+      "price": 3.5,
+      "mcap": 656002624.0,
+      "mcap_asof": "2026-09-30",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "INMD",
+      "name": "InMode Ltd.  - Ordinary Shares",
+      "yf": "INMD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 2.65,
+        "atr_pctl": 0.6,
+        "vol_pctl": 1.0,
+        "drawdown_pct": 47.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-15"
+      },
+      "base": {
+        "high": 15.60000038,
+        "low": 13.86100006,
+        "bars": 60
+      },
+      "breakout_level": 15.60000038,
+      "provisional": false,
+      "last_bar": "2026-10-16",
+      "price": 14.15999985,
+      "mcap": 823169408.0,
       "mcap_asof": "2026-10-13",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "PERI",
+      "name": "Perion Network Ltd - Ordinary Shares",
+      "yf": "PERI",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 5.91,
+        "atr_pctl": 30.4,
+        "vol_pctl": 8.7,
+        "drawdown_pct": 73.5,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-15"
+      },
+      "base": {
+        "high": 10.14999962,
+        "low": 8.34000015,
+        "bars": 60
+      },
+      "breakout_level": 10.14999962,
+      "provisional": false,
+      "last_bar": "2026-10-16",
+      "price": 8.73999977,
+      "mcap": 375856288.0,
+      "mcap_asof": "2026-10-13",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "VFS",
+      "name": "VinFast Auto Ltd. - Ordinary Shares",
+      "yf": "VFS",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.45,
+        "atr_pctl": 25.8,
+        "vol_pctl": 19.4,
+        "drawdown_pct": 66.5,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-15"
+      },
+      "base": {
+        "high": 3.47000003,
+        "low": 2.8499999,
+        "bars": 60
+      },
+      "breakout_level": 3.47000003,
+      "provisional": false,
+      "last_bar": "2026-10-16",
+      "price": 3.11999989,
+      "mcap": 7088794624.0,
+      "mcap_asof": "2026-10-14",
       "mcap_src": "previous"
     },
     {
@@ -420,10 +449,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.98,
-        "atr_pctl": 31.7,
-        "vol_pctl": 59.7,
-        "drawdown_pct": 84.8,
+        "ribbon_pct": 9.81,
+        "atr_pctl": 33.3,
+        "vol_pctl": 42.7,
+        "drawdown_pct": 85.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-05"
@@ -435,8 +464,8 @@
       },
       "breakout_level": 9.86999989,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 8.43000031,
+      "last_bar": "2026-10-16",
+      "price": 8.35000038,
       "mcap": 432770720.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
@@ -448,23 +477,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 21.98,
-        "atr_pctl": 50.3,
-        "vol_pctl": 22.0,
-        "drawdown_pct": 60.3,
+        "ribbon_pct": 26.33,
+        "atr_pctl": 80.4,
+        "vol_pctl": 23.7,
+        "drawdown_pct": 64.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-06"
       },
       "base": {
         "high": 27.6760006,
-        "low": 17.84499931,
+        "low": 16.38999939,
         "bars": 60
       },
       "breakout_level": 27.6760006,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 16.38759995,
+      "last_bar": "2026-10-16",
+      "price": 16.13999939,
       "mcap": 11709338624.0,
       "mcap_asof": "2026-10-13",
       "mcap_src": "previous"
