@@ -17,3 +17,10 @@ execnet==2.1.2
 # test.yml lints tests/ and phasemap/tests: an unused result in a test is the
 # shape of an assertion that was never written.
 pyflakes==4.0.3
+# tests/test_tradingview_pine.py parses every tradingview/*.pine with a real
+# Pine grammar (2026-10-17): the chart scripts are written with no compiler, and
+# three earlier pastes failed in TradingView on errors CI can catch. LGPL-3.0,
+# test tooling only; antlr4-python3-runtime and click are its dependencies.
+pynescript==0.3.0
+antlr4-python3-runtime==4.13.2
+click==8.5.0
