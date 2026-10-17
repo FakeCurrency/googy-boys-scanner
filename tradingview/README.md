@@ -3,8 +3,10 @@
 Pine Script v6 sources for the indicators that make up the chart layout.
 Chart-only: nothing in the scanner reads this folder and it is outside every
 signal path. `tests/test_tradingview_pine.py` parses every `.pine` file with a
-real Pine grammar (pynescript) and estimates its plot slots, so a syntax slip
-or a plot budget over 64 fails CI instead of the paste.
+real Pine grammar (pynescript), checks that every statement is indented by a
+multiple of 4 spaces, and estimates its plot slots, so a bracket or token
+slip, a mis-indented block or a plot budget over 64 fails CI instead of the
+paste (a wrapped line outside brackets is not checked).
 
 | File | Pane | Replaces |
 |---|---|---|
@@ -133,12 +135,12 @@ What was measured, and is in the script as measured:
 
 | Element | Rule | Fit |
 |---|---|---|
-| Fast / Mid / Slow | SMA 12 / 26 / 200 of close | header within ~0.5 point; the mid trace RMSE 1.0 point. EMA 9/21/200 misses the mid by 15 points, any 20/50/200 set by 13-30 |
+| Fast / Mid / Slow | SMA 12 / 26 / 200 of close | header within ~1 point (+0.16 / -0.52 / -0.83, the slow error being the digitised-close bias); the mid trace RMSE 1.0 point. EMA 9/21/200 misses the mid by 15 points, any 20/50/200 set by 13-30 |
 | Thick line colour | green while the 200 SMA rises (`slow > slow[1]`), red while it falls | 263 / 265 bars |
 | Thin line colour | one colour for both: green when Fast > Mid and the 200 rises, red when Fast < Mid and the 200 falls, blue otherwise; Fast drawn fainter | 192 / 193 readable bars |
 | Grey band | fill between Fast and Slow, one grey throughout | fill pixels on 100% of the Fast-Mid gap when Mid lies inside it |
 | Candle colour | green: body above Fast and Mid and close above the 200; red: the mirror; blue otherwise | ~96% of clean bars; every miss within 2 points of a line |
-| `Bullish +200` / `-200 Bearish` | **strategy order markers**: order name + order size. The original is a `strategy()` that is always in the market with 100 units, so each reversal order is 200 | the size never varies, the markers strictly alternate, and the old daily charts' `+2` / `-2` is the same marker at 1 unit (so the "score" reading in the table above was a guess that does not hold) |
+| `Bullish +200` / `-200 Bearish` | **strategy order markers**: order name + order size. Most simply a `strategy()` that is always in the market with 100 units, so each reversal order is 200. A long-only 200-unit strategy whose exit is named `Bearish` draws identical markers, and the screenshot cannot separate the two; the script draws the reversal reading | the size never varies, the markers strictly alternate, and the old daily charts' `+2` / `-2` is the same marker at 1 unit (so the "score" reading in the table above was a guess that does not hold) |
 | Vertical columns | `bgcolor` on the bar the setup fired; the order fills at the next bar's open, so the marker sits one bar right of its column. A setup on the side already held gets a column and no marker | 4 of 5 markers sit exactly one bar after a column; the 2 columns with no marker are the 2 repeat setups |
 | Setup context | bearish setups only above the 200 with Fast > Mid, bullish only below it with Fast < Mid (counter-trend fades) | 7 of 7 setup bars, on every close series and under noise |
 
@@ -148,8 +150,12 @@ more than a million rule variants against the six column bars (RSI 2-21 and
 the pane's own RSI line, Stochastic, StochRSI, CCI including +-200, Williams
 %R, MACD, pivot and new-extreme divergences, pivots, Bollinger / Keltner,
 N-bar extremes, engulfing / pin bars, stretch from each MA, Heikin-Ashi, TD
-counts, MA crosses, k-of-N scores, and pairs of all of these). The best
-reached 2 of 5 markers, or all 6 columns only with 40+ false ones. One marker
+counts, MA crosses, k-of-N scores, and pairs of all of these). Nothing held
+up. The usual best was 2 of 5 markers with no false ones, on one close fit
+only. One knife-edge pair (RSI 5 crossing 70 plus two closes above the close
+two bars back) hit 4 of 5 with none false on the digitised closes, but 0 of 5
+on the fitted closes, and kept 4 of 5 in only 1 of 50 noise trials. All 5
+markers took 46+ false ones, all 6 columns 39+. One marker
 (Wed 14 Oct 05:45 Bearish) has no column at all, so the original also has a
 second, unplotted way to go short. The trigger is therefore a **stand-in**,
 chosen under `Setup trigger`:
@@ -172,9 +178,12 @@ fill bar exactly where TradingView would. Alerts fire on the setup bar's close
 (use **Once Per Bar Close**); the entry is the next open.
 
 **Install:** as above, a new indicator saved as `Vivek 5.0 Strategy`. Remove
-`Vivek 5.0 Top` from the chart first. Candles are coloured with `barcolor`.
-The original's wicks stay a fixed blue-grey whatever the body colour; if yours
-take the body colour, that is the one visible difference.
+`Vivek 5.0 Top` from the chart first. Candles are coloured with `barcolor`,
+which paints the body, border and wick in one colour, so your wicks follow the
+body. The original's wicks stay a fixed blue-grey whatever the body colour
+(probably `plotcandle` with its own `wickcolor`; not tested). The other
+visible differences are the stand-in markers above and the ~4% of candles
+that sit within a couple of points of a line.
 
 **The two lower panes in the same screenshot**, measured for reference (the
 existing scripts were not changed):
