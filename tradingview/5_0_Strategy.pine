@@ -3,13 +3,14 @@
 // 5_0_Strategy  --  the price pane of the 5.0 "Strategy" chart  (v1, 2026-10-17)
 // -----------------------------------------------------------------------------
 // Rebuilt from one screenshot of the author's "5_0_Strategy" on FXCM:SPX500,
-// 15 minutes, 10-16 Oct 2026. The screenshot was digitised bar by bar (about
-// 480 candles, the three lines and the header values) and each rule below was
-// fitted against it. Measured, not guessed:
+// 15 minutes, Fri 9 Oct 16:45 to Fri 16 Oct 22:45 2026 (chart time, UTC+3).
+// The screenshot was digitised bar by bar (about 480 candles, the three lines
+// and the header values) and each rule below was fitted against it. Measured,
+// not guessed:
 //
 //   * Fast / Mid / Slow = SMA 12 / 26 / 200 of close. The header's three values
-//     (7658.20 / 7693.51 / 7719.41) match to within about 0.5 point. EMAs and
-//     the 20/50/200 or 9/21/200 sets miss by 12-30 points.
+//     (7658.20 / 7693.51 / 7719.41) match to within 1 point (+0.16 / -0.52 /
+//     -0.83). EMAs and the 20/50/200 or 9/21/200 sets miss by 12-30 points.
 //   * Slow line: green while the 200 SMA is rising, red while it is falling
 //     (263 of 265 measurable bars).
 //   * Fast and Mid lines share one colour: green when Fast > Mid and the 200 is
@@ -20,9 +21,12 @@
 //     above the 200, red for the mirror, blue otherwise (about 96% of clean bars;
 //     every miss is within 2 points of a line).
 //   * "Bullish +200" / "-200 Bearish" are TradingView STRATEGY order markers:
-//     "Bullish" / "Bearish" is the order name and 200 the order size, i.e. an
-//     always-in-the-market strategy of 100 units reversing (close 100, open 100).
-//     The author's daily charts showed "+2" / "-2": the same thing at 1 unit.
+//     "Bullish" / "Bearish" is the order name and 200 the order size. Most
+//     simply an always-in-the-market strategy of 100 units reversing (close
+//     100, open 100); a long-only strategy of 200 units whose exit is named
+//     "Bearish" draws exactly the same markers, and one screenshot cannot tell
+//     them apart. This script draws the reversal reading. The author's daily
+//     charts showed "+2" / "-2": the same marker at 1 unit (2 if long-only).
 //     The vertical column is the bar the setup fired on; the order fills at the
 //     next bar's open, which is where the marker sits. A setup in the direction
 //     already held prints a column but no marker (pyramiding 0). This script
@@ -78,7 +82,7 @@ rsiLen   = input.int(14, "RSI length", minval = 1, group = gSig, inline = "rsi",
 rsiOB    = input.float(70, "OB", group = gSig, inline = "rsi", display = display.none)
 rsiOS    = input.float(30, "OS", group = gSig, inline = "rsi", display = display.none)
 qty      = input.int(100, "Position size shown on the markers", minval = 1, group = gSig, display = display.none,
-     tooltip = "The original strategy holds 100 units, so each reversal shows 200. The first marker on the chart shows the size alone.")
+     tooltip = "Read as a strategy holding 100 units and reversing, so each reversal shows 200 (a 200-unit long-only strategy with an exit named Bearish draws the same markers; the screenshot cannot separate them). The first marker on the chart shows the size alone.")
 colTr    = input.int(80, "Column transparency", minval = 0, maxval = 100, group = gSig, display = display.none)
 cColBear = input.color(#22c55e, "Bearish setup column", group = gSig, inline = "col")
 cColBull = input.color(#ef4444, "Bullish setup column", group = gSig, inline = "col")
@@ -112,8 +116,10 @@ barcolor(paintBars ? (candleBull ? cBull : candleBear ? cBear : cNeutral) : na, 
 basis    = ta.sma(close, bbLen)
 dev      = bbMult * ta.stdev(close, bbLen)
 rsiV     = ta.rsi(close, rsiLen)
-bandBear = ta.crossunder(close, basis + dev)
-bandBull = ta.crossover(close, basis - dev)
+// a zero-width band (20 identical closes) has no outside to come back from;
+// keep each ta.* call as the LEFT operand: v6 `and` is lazy
+bandBear = ta.crossunder(close, basis + dev) and dev[1] > 0
+bandBull = ta.crossover(close, basis - dev) and dev[1] > 0
 rsiBear  = ta.crossunder(rsiV, rsiOB)
 rsiBull  = ta.crossover(rsiV, rsiOS)
 

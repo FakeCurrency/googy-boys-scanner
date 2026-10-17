@@ -4,10 +4,13 @@ There is no Pine compiler in CI, and every one of these scripts was written
 without one. The history in tradingview/README.md is the case for this file:
 v5 of the Top script failed its first paste at 71 plot slots, v5.2 at 68 (the
 limit is 64), and every fix was found by the owner pasting it into TradingView.
-pynescript is a real Pine grammar (ANTLR), so a bracket, indentation or
-continuation-line slip fails here instead of in the owner's Pine Editor. It
-does not type-check, so the plot budget is estimated separately, on the high
-side.
+pynescript is a real Pine grammar (ANTLR), so a bracket, comma, operator or
+string slip fails here instead of in the owner's Pine Editor. It does NOT
+apply Pine's indentation rules (any indent parses), so statement indents are
+checked separately: a multiple of 4 spaces, no tabs. Still not caught: a
+wrapped line OUTSIDE brackets indented by a multiple of 4, or a block
+indented two levels at once. It does not type-check, so the plot budget is
+estimated separately, on the high side.
 
 Chart-only scripts: nothing in the scanner reads them. This gate pins only what
 can break a paste, the brand on the chart header, and the measured defaults of
@@ -38,7 +41,7 @@ PLOT_LIMIT = 64
 PLOT_CALLS = {
     "plot": (1, {"color": 2}),
     "plotshape": (1, {"color": 4, "textcolor": 7}),
-    "plotchar": (1, {"color": 4, "textcolor": 8}),
+    "plotchar": (1, {"color": 4, "textcolor": 7}),
     "plotarrow": (1, {"colorup": 2, "colordown": 3}),
     "plotcandle": (4, {"color": 5, "wickcolor": 6, "bordercolor": 9}),
     "plotbar": (4, {"color": 5}),
@@ -83,8 +86,11 @@ def _slots(call):
 
 def _ta_calls_in_conditional_scope(node, scopes=()):
     """(call text, enclosing scope) for every ta.* call under an if / switch /
-    ternary / loop, outside function bodies (a function's own body is judged
-    where it is called, which this gate does not follow)."""
+    ternary branch, a loop, or a non-first and/or operand (v6 evaluates and/or
+    lazily), outside function bodies (a function's own body is judged where it
+    is called, which this gate does not follow). An if / ternary condition and
+    a switch subject run whenever their statement does, so they are not
+    conditional."""
     kind = type(node).__name__
     if kind == "FunctionDef":
         return []
@@ -93,8 +99,34 @@ def _ta_calls_in_conditional_scope(node, scopes=()):
         found.append((pine.unparse(node), scopes[-1]))
     inner = scopes + (kind,) if kind in CONDITIONAL_SCOPES else scopes
     for child in pine.iter_child_nodes(node):
-        found += _ta_calls_in_conditional_scope(child, inner)
+        if ((kind in ("If", "Conditional") and child is node.test)
+                or (kind == "Switch" and child is node.subject)):
+            child_scopes = scopes                 # runs whenever the statement does
+        elif kind == "BoolOp" and child is not node.values[0]:
+            child_scopes = scopes + ("BoolOp",)   # v6: and / or are lazy
+        else:
+            child_scopes = inner
+        found += _ta_calls_in_conditional_scope(child, child_scopes)
     return found
+
+
+def _misindented(src, tree):
+    """(line, indent) of every statement that starts its line at an indent that
+    is not a multiple of 4 spaces. pynescript accepts any block indent, but
+    TradingView reads such a line as a wrapped continuation of the line above,
+    so a 3-space `if` body fails the paste. A statement after `=>` on the same
+    line (a one-line function or switch case) does not start its line and is
+    not judged."""
+    lines = src.splitlines()
+    found = set()
+    for node in pine.walk(tree):
+        if not isinstance(node, pine.stmt):
+            continue
+        line = lines[node.lineno - 1]
+        indent = len(line) - len(line.lstrip(" "))
+        if node.col_offset == indent and indent % 4:
+            found.add((node.lineno, indent))
+    return sorted(found)
 
 
 @pytest.fixture(scope="module", params=SCRIPTS, ids=[p.name for p in SCRIPTS])
@@ -115,6 +147,15 @@ def test_the_folder_has_the_scripts_the_readme_describes():
 def test_every_script_is_pine_v6(script):
     path, src, _ = script
     assert src.splitlines()[0].strip() == "//@version=6", path.name
+
+
+def test_every_block_is_indented_by_a_multiple_of_four_spaces(script):
+    path, src, tree = script
+    tabs = [n for n, line in enumerate(src.splitlines(), 1)
+            if "\t" in line[:len(line) - len(line.lstrip())]]
+    assert tabs == [], f"{path.name}: indent with spaces, not tabs (lines {tabs})"
+    off = _misindented(src, tree)
+    assert off == [], f"{path.name}: statements at (line, indent) {off}"
 
 
 def test_every_script_carries_the_brand_on_the_chart_header(script):
@@ -148,10 +189,22 @@ def test_the_gate_catches_what_it_claims_to():
     bad = pine.parse('//@version=6\nindicator("Vivek 5.0 x")\n'
                      'a = close > open ? ta.sma(close, 9) : close\nplot(a)\n')
     assert [scope for _, scope in _ta_calls_in_conditional_scope(bad)] == ["Conditional"]
+    lazy = pine.parse('//@version=6\nindicator("Vivek 5.0 x")\n'
+                      'x = close > open and ta.crossover(close, open)\nplot(x ? 1 : 0)\n')
+    assert [scope for _, scope in _ta_calls_in_conditional_scope(lazy)] == ["BoolOp"]
+    # a ta.* call in an if condition runs on every bar the if does: not flagged
+    cond = pine.parse('//@version=6\nindicator("Vivek 5.0 x")\nvar int p = 0\n'
+                      'if ta.crossover(close, open)\n    p := 1\nplot(p)\n')
+    assert _ta_calls_in_conditional_scope(cond) == []
     two = pine.parse('//@version=6\nindicator("Vivek 5.0 x")\n'
                      'plot(close, "c", close > open ? color.green : color.red)\n'
                      'plot(close, "d", #ff0000)\n')
     assert [_slots(c) for c in _calls(two) if _name(c) == "plot"] == [2, 1]
+    # a 3-space `if` body parses but fails the paste; a one-line function's
+    # body after `=>` is not a block line
+    odd = ('//@version=6\nindicator("Vivek 5.0 x")\nvar int p = 0\n'
+           'if close > open\n   p := 1\nfx(x) => x + 1\nplot(fx(p))\n')
+    assert _misindented(odd, pine.parse(odd)) == [(5, 3)]
 
 
 def test_5_0_strategy_keeps_the_measured_defaults():
