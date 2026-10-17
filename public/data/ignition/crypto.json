@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-10-16T23:53:39+00:00",
+  "generated_at": "2026-10-17T04:19:48+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-15",
+  "last_closed_bar": "2026-10-16",
   "report_only": true,
   "regime": {
-    "btc_close": 82245.93,
-    "btc_sma200": 72324.35,
+    "btc_close": 81615.64,
+    "btc_sma200": 72398.44,
     "btc_above_200": true,
-    "btc_vs_200_pct": 13.7,
-    "as_of": "2026-10-15"
+    "btc_vs_200_pct": 12.7,
+    "as_of": "2026-10-16"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -49,39 +49,40 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 171,
+    "downloaded": 172,
     "screened": 142,
     "skipped": {
-      "short history": 29
+      "short history": 30
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 2,
-      "COILED": 8,
+      "COILED": 6,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-15",
-      "raw_last": "2026-10-16",
-      "expected_completed": "2026-10-15",
-      "lagging": 0,
-      "screened": 171,
+      "completed_last": "2026-10-16",
+      "raw_last": "2026-10-17",
+      "expected_completed": "2026-10-16",
+      "lagging": 29,
+      "screened": 172,
       "completed_dist": {
-        "2026-10-15": 171
+        "2026-10-16": 143,
+        "2026-10-15": 29
       },
       "raw_dist": {
-        "2026-10-16": 171
+        "2026-10-17": 172
       },
-      "rows_lagging": 0
+      "rows_lagging": 2
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
         "binance_vision": 125,
         "yahoo": 29,
-        "coinbase": 17
+        "coinbase": 18
       },
       "dead": {
         "binance": "HTTP 451",
@@ -99,7 +100,6 @@
         "BGB",
         "BORG",
         "BP",
-        "BR",
         "BSV",
         "BTSE",
         "BTT",
@@ -151,9 +151,6 @@
       ],
       "yahoo_fallback": 29,
       "identity_rejected": {
-        "BR": [
-          "yahoo"
-        ],
         "KAG": [
           "yahoo"
         ],
@@ -191,7 +188,6 @@
         ]
       },
       "refused": [
-        "BR-USD",
         "BTT-USD",
         "HTX-USD",
         "KAG-USD",
@@ -205,18 +201,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 171,
+      "fresh": 172,
       "reused": 0,
-      "merged": 171,
+      "merged": 172,
       "universe": 201,
       "stale_dropped": 0,
-      "refused": 8
+      "refused": 7
     },
     "mcap": {
-      "rows": 10,
-      "have": 10
+      "rows": 8,
+      "have": 8
     },
-    "elapsed_s": 121.3
+    "elapsed_s": 130.4
   },
   "results": [
     {
@@ -229,7 +225,7 @@
       "entry": 0.06167,
       "entry_basis": "next_open",
       "entry_date": "2026-10-11",
-      "bars_since": 5,
+      "bars_since": 6,
       "rvol": 17.06,
       "ext_pct": 14.4,
       "turnover_trigger": 26458844.0,
@@ -262,13 +258,13 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 0.0556,
-      "change_pct": -9.8,
-      "r_now": -0.9,
-      "trail": 0.05651667,
-      "mcap": 291407537.0,
-      "mcap_asof": "2026-10-16",
+      "last_bar": "2026-10-16",
+      "price": 0.05549,
+      "change_pct": -10.0,
+      "r_now": -0.92,
+      "trail": 0.05694778,
+      "mcap": 291666957.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     },
     {
@@ -315,12 +311,40 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-15",
-      "price": 0.03374527,
+      "price": 0.03375712,
       "change_pct": -2.4,
-      "r_now": -0.54,
+      "r_now": -0.53,
       "trail": 0.03406589,
-      "mcap": 673572282.0,
-      "mcap_asof": "2026-10-16",
+      "mcap": 673633638.0,
+      "mcap_asof": "2026-10-17",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "FARTCOIN",
+      "name": "Fartcoin",
+      "yf": "FARTCOIN-USD",
+      "source": "coinbase",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.52,
+        "atr_pctl": 21.3,
+        "vol_pctl": 8.2,
+        "drawdown_pct": 90.9,
+        "coiled": true,
+        "coiled_bars": 7,
+        "last_coiled": "2026-10-16"
+      },
+      "base": {
+        "high": 0.22344,
+        "low": 0.13046,
+        "bars": 60
+      },
+      "breakout_level": 0.22344,
+      "provisional": false,
+      "last_bar": "2026-10-16",
+      "price": 0.1532,
+      "mcap": 153182081.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     },
     {
@@ -346,37 +370,9 @@
       "breakout_level": 2.18014312,
       "provisional": false,
       "last_bar": "2026-10-15",
-      "price": 1.90261436,
-      "mcap": 1332551232.0,
-      "mcap_asof": "2026-10-16",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "FARTCOIN",
-      "name": "Fartcoin",
-      "yf": "FARTCOIN-USD",
-      "source": "coinbase",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.37,
-        "atr_pctl": 24.4,
-        "vol_pctl": 8.3,
-        "drawdown_pct": 90.8,
-        "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-10-15"
-      },
-      "base": {
-        "high": 0.22344,
-        "low": 0.13046,
-        "bars": 60
-      },
-      "breakout_level": 0.22344,
-      "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 0.15415,
-      "mcap": 154281311.0,
-      "mcap_asof": "2026-10-16",
+      "price": 1.90510583,
+      "mcap": 1334125092.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     },
     {
@@ -386,13 +382,13 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.35,
-        "atr_pctl": 3.9,
-        "vol_pctl": 12.8,
-        "drawdown_pct": 88.0,
+        "ribbon_pct": 10.07,
+        "atr_pctl": 1.9,
+        "vol_pctl": 11.7,
+        "drawdown_pct": 88.1,
         "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-10-15"
+        "coiled_bars": 4,
+        "last_coiled": "2026-10-16"
       },
       "base": {
         "high": 0.0748,
@@ -401,38 +397,10 @@
       },
       "breakout_level": 0.0748,
       "provisional": false,
-      "last_bar": "2026-10-15",
+      "last_bar": "2026-10-16",
       "price": 0.057,
-      "mcap": 1810904528.0,
-      "mcap_asof": "2026-10-16",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "FLOKI",
-      "name": "FLOKI",
-      "yf": "FLOKI-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 4.76,
-        "atr_pctl": 37.3,
-        "vol_pctl": 12.6,
-        "drawdown_pct": 93.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-06"
-      },
-      "base": {
-        "high": 3.131e-05,
-        "low": 1.966e-05,
-        "bars": 60
-      },
-      "breakout_level": 3.131e-05,
-      "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 2.418e-05,
-      "mcap": 232753388.0,
-      "mcap_asof": "2026-10-16",
+      "mcap": 1810222154.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     },
     {
@@ -442,9 +410,9 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.97,
-        "atr_pctl": 35.1,
-        "vol_pctl": 9.9,
+        "ribbon_pct": 6.89,
+        "atr_pctl": 30.7,
+        "vol_pctl": 9.6,
         "drawdown_pct": 88.8,
         "coiled": false,
         "coiled_bars": 0,
@@ -457,10 +425,10 @@
       },
       "breakout_level": 6.27e-06,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 5.1e-06,
-      "mcap": 3000578969.0,
-      "mcap_asof": "2026-10-16",
+      "last_bar": "2026-10-16",
+      "price": 5.07e-06,
+      "mcap": 2987840564.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     },
     {
@@ -470,53 +438,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.17,
-        "atr_pctl": 32.3,
-        "vol_pctl": 14.7,
-        "drawdown_pct": 83.2,
+        "ribbon_pct": 9.04,
+        "atr_pctl": 29.5,
+        "vol_pctl": 14.4,
+        "drawdown_pct": 83.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-11"
       },
       "base": {
         "high": 0.10589,
-        "low": 0.06904,
+        "low": 0.06947,
         "bars": 60
       },
       "breakout_level": 0.10589,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 0.08093,
-      "mcap": 12647539795.0,
-      "mcap_asof": "2026-10-16",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "LUNC",
-      "name": "Terra Luna Classic",
-      "yf": "LUNC-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 18.4,
-        "atr_pctl": 16.7,
-        "vol_pctl": 5.1,
-        "drawdown_pct": 82.7,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-06"
-      },
-      "base": {
-        "high": 6.406e-05,
-        "low": 4.6e-05,
-        "bars": 60
-      },
-      "breakout_level": 6.406e-05,
-      "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 4.882e-05,
-      "mcap": 269109323.0,
-      "mcap_asof": "2026-10-16",
+      "last_bar": "2026-10-16",
+      "price": 0.08044,
+      "mcap": 12572777615.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     },
     {
@@ -526,25 +466,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 20.93,
-        "atr_pctl": 76.6,
-        "vol_pctl": 45.9,
-        "drawdown_pct": 92.7,
+        "ribbon_pct": 22.92,
+        "atr_pctl": 76.0,
+        "vol_pctl": 46.7,
+        "drawdown_pct": 92.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-11"
       },
       "base": {
         "high": 0.002999,
-        "low": 0.001114,
+        "low": 0.001117,
         "bars": 60
       },
       "breakout_level": 0.002999,
       "provisional": false,
-      "last_bar": "2026-10-15",
-      "price": 0.001928,
-      "mcap": 120530165.0,
-      "mcap_asof": "2026-10-16",
+      "last_bar": "2026-10-16",
+      "price": 0.001938,
+      "mcap": 121668710.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "coingecko"
     }
   ],
