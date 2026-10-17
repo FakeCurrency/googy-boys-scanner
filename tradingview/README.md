@@ -1,11 +1,14 @@
 # TradingView templates (Vivek 5.0 chart layout)
 
-Pine Script v6 sources for the three indicators that make up the chart
-layout. Chart-only: nothing in the scanner reads this folder, no test runs
-over it, and it is outside every signal path.
+Pine Script v6 sources for the indicators that make up the chart layout.
+Chart-only: nothing in the scanner reads this folder and it is outside every
+signal path. `tests/test_tradingview_pine.py` parses every `.pine` file with a
+real Pine grammar (pynescript) and estimates its plot slots, so a syntax slip
+or a plot budget over 64 fails CI instead of the paste.
 
 | File | Pane | Replaces |
 |---|---|---|
+| `5_0_Strategy.pine` | price (overlay) | nothing: a separate price-pane script rebuilt from the author's **5_0_Strategy** screenshot (SPX500, 15 m, Oct 2026). Titled **Vivek 5.0 Strategy** on the chart. Use it **instead of** `Vivek 5.0 Top`, not with it: both draw a fast / mid / slow set of moving averages and Bullish / Bearish markers, on different rules. See [5_0_Strategy](#5_0_strategy-the-strategy-chart-2026-10-17) below. |
 | `Final_Top_Script.pine` | price (overlay) | your existing `Final_Top_Script`. Since v5.2 it is titled **Vivek 5.0 Top** on the chart: TradingView had ended up with several saved scripts under the old name and the chart kept attaching to the v1 copy, so the running version was impossible to tell apart. Remove every `Final_Top_Script` from the chart and from *My scripts*, then add this one. |
 | `Final_Bottom_MACD.pine` | MACD | your existing `Final_Bottom_MACD` (same 12 / 26 / 9, same status-line order). Titled **Vivek 5.0 MACD** on the chart. |
 | `Final_RSI_Plus.pine` | RSI+ | the plain `RSI 14 close` pane at the top of your chart. Titled **Vivek 5.0 RSI+** on the chart. |
@@ -115,6 +118,76 @@ one-line fix.
 - Check the price scale on your screenshot: the numbers grow downwards
   (27 at the top, 280 at the bottom), which is the **Invert scale** option.
   Right-click the price scale to turn it off if it was not intended.
+
+## 5_0_Strategy (the Strategy chart, 2026-10-17)
+
+Source: one screenshot of the author's `5_0_Strategy` on FXCM:SPX500, 15 m,
+Fri 9 Oct 16:45 to Fri 16 Oct 22:45 (chart time, UTC+3), with the MACD and
+`(D7R) RSI+` panes under it. The price pane was digitised bar by bar (about
+480 candles from the pixels, at 2.283 px per point and 3.27 px per bar; the
+thick line traced as a spline; the faint thin lines traced separately) and
+each rule was scored against it. The header's three values at the last bar
+(7658.20 / 7693.51 / 7719.41) and the last bar's exact OHLC were the anchors.
+
+What was measured, and is in the script as measured:
+
+| Element | Rule | Fit |
+|---|---|---|
+| Fast / Mid / Slow | SMA 12 / 26 / 200 of close | header within ~0.5 point; the mid trace RMSE 1.0 point. EMA 9/21/200 misses the mid by 15 points, any 20/50/200 set by 13-30 |
+| Thick line colour | green while the 200 SMA rises (`slow > slow[1]`), red while it falls | 263 / 265 bars |
+| Thin line colour | one colour for both: green when Fast > Mid and the 200 rises, red when Fast < Mid and the 200 falls, blue otherwise; Fast drawn fainter | 192 / 193 readable bars |
+| Grey band | fill between Fast and Slow, one grey throughout | fill pixels on 100% of the Fast-Mid gap when Mid lies inside it |
+| Candle colour | green: body above Fast and Mid and close above the 200; red: the mirror; blue otherwise | ~96% of clean bars; every miss within 2 points of a line |
+| `Bullish +200` / `-200 Bearish` | **strategy order markers**: order name + order size. The original is a `strategy()` that is always in the market with 100 units, so each reversal order is 200 | the size never varies, the markers strictly alternate, and the old daily charts' `+2` / `-2` is the same marker at 1 unit (so the "score" reading in the table above was a guess that does not hold) |
+| Vertical columns | `bgcolor` on the bar the setup fired; the order fills at the next bar's open, so the marker sits one bar right of its column. A setup on the side already held gets a column and no marker | 4 of 5 markers sit exactly one bar after a column; the 2 columns with no marker are the 2 repeat setups |
+| Setup context | bearish setups only above the 200 with Fast > Mid, bullish only below it with Fast < Mid (counter-trend fades) | 7 of 7 setup bars, on every close series and under noise |
+
+What could **not** be recovered: the trigger that picks the setup bar inside
+that context. Three search agents and three independent skeptics scored
+more than a million rule variants against the six column bars (RSI 2-21 and
+the pane's own RSI line, Stochastic, StochRSI, CCI including +-200, Williams
+%R, MACD, pivot and new-extreme divergences, pivots, Bollinger / Keltner,
+N-bar extremes, engulfing / pin bars, stretch from each MA, Heikin-Ashi, TD
+counts, MA crosses, k-of-N scores, and pairs of all of these). The best
+reached 2 of 5 markers, or all 6 columns only with 40+ false ones. One marker
+(Wed 14 Oct 05:45 Bearish) has no column at all, so the original also has a
+second, unplotted way to go short. The trigger is therefore a **stand-in**,
+chosen under `Setup trigger`:
+
+- `Band re-entry` (default): the close comes back inside Bollinger 20 / 2.5.
+  The closest family, and it fires about as often (6 markers on the
+  screenshot week against the original's 5), but not on the same bars.
+- `RSI exhaustion`: RSI 14 comes back below 70 / above 30.
+- `Off`: lines, candles and band only.
+
+To pin the real trigger down, the most useful evidence is the original
+strategy's **Strategy Tester, List of Trades** (every entry's date, time and
+price), or three or four more screenshots with markers on other symbols or
+timeframes.
+
+The script is an `indicator()`, not a `strategy()`, so it draws the markers
+itself: it replays the position (a setup fills at the next bar, a setup on the
+side already held is skipped, a reversal shows twice the size) and labels the
+fill bar exactly where TradingView would. Alerts fire on the setup bar's close
+(use **Once Per Bar Close**); the entry is the next open.
+
+**Install:** as above, a new indicator saved as `Vivek 5.0 Strategy`. Remove
+`Vivek 5.0 Top` from the chart first. Candles are coloured with `barcolor`.
+The original's wicks stay a fixed blue-grey whatever the body colour; if yours
+take the body colour, that is the one visible difference.
+
+**The two lower panes in the same screenshot**, measured for reference (the
+existing scripts were not changed):
+
+- RSI+ columns sit at RSI >= 70 / <= 30 (75 / 25 matches none of the 21 blue
+  column bars); `Final_RSI_Plus` keeps 75 / 25 as set in v2. The RSI line is
+  drawn thick, navy above its MA and dark red below; the MA fits an EMA of
+  about 16 (status value 27.07); the last status value (36.26) is the RSI
+  itself, and the first (38.20) is an RSI-like series that could not be
+  identified (RSI 7 is the nearest, and it does not fit well).
+- MACD is 12 / 26 / 9 (EMA signal) as in `Final_Bottom_MACD`, but with a
+  pink-red MACD line, an orange signal, and a histogram that is teal when
+  positive and rising, red when falling, light pink when negative and rising.
 
 ## Alerts
 

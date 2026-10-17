@@ -122,6 +122,11 @@ on:
       # pins the owner's pre-registered checkpoint lines in the decision pack to
       # scripts/decision_pack.py, so an edit to the doc alone must run the gate.
       - "docs/DECISIONS_*.md"
+      # tradingview/** (2026-10-17), same rule: tests/test_tradingview_pine.py
+      # parses every .pine file there, and tests/test_momentum_screen.py has
+      # always read tradingview/scanner-spec/reference/ -- an edit to either
+      # alone skipped the gate until now.
+      - "tradingview/**"
   pull_request:
   workflow_dispatch:
 
