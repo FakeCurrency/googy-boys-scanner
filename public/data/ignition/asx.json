@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-16T11:41:35+00:00",
+  "generated_at": "2026-10-18T07:20:04+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-16",
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 1923,
-    "downloaded": 1728,
-    "screened": 1649,
+    "universe": 2051,
+    "downloaded": 1822,
+    "screened": 1742,
     "skipped": {
-      "short history": 79
+      "short history": 80
     },
     "counts": {
       "IGNITING": 0,
@@ -68,18 +68,18 @@
       "completed_last": "2026-10-16",
       "raw_last": "2026-10-16",
       "expected_completed": "2026-10-16",
-      "lagging": 341,
-      "screened": 1728,
+      "lagging": 269,
+      "screened": 1822,
       "completed_dist": {
-        "2026-10-16": 1387,
-        "2026-10-15": 135,
-        "2026-10-14": 202,
+        "2026-10-16": 1553,
+        "2026-10-15": 113,
+        "2026-10-14": 152,
         "2026-10-13": 4
       },
       "raw_dist": {
-        "2026-10-16": 1387,
-        "2026-10-15": 135,
-        "2026-10-14": 202,
+        "2026-10-16": 1553,
+        "2026-10-15": 113,
+        "2026-10-14": 152,
         "2026-10-13": 4
       },
       "rows_lagging": 1
@@ -87,7 +87,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1339
+        "yahoo": 1372
       },
       "dead": {},
       "errors": {},
@@ -102,10 +102,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1339,
-      "reused": 389,
-      "merged": 1728,
-      "universe": 1923,
+      "fresh": 1372,
+      "reused": 450,
+      "merged": 1822,
+      "universe": 2051,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -113,7 +113,7 @@
       "rows": 11,
       "have": 11
     },
-    "elapsed_s": 258.9
+    "elapsed_s": 243.3
   },
   "results": [
     {
@@ -140,15 +140,15 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 0.64999998,
-      "mcap": 393776608.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "previous"
+      "mcap": 390770656.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.53,
@@ -168,21 +168,21 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 0.92500001,
-      "mcap": 656299904.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "previous"
+      "mcap": 639028864.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "WEB",
       "name": "Webbeds Group Limited",
       "yf": "WEB.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.2,
-        "atr_pctl": 24.0,
-        "vol_pctl": 1.0,
-        "drawdown_pct": 64.5,
+        "ribbon_pct": 10.21,
+        "atr_pctl": 23.6,
+        "vol_pctl": 1.6,
+        "drawdown_pct": 64.3,
         "coiled": true,
         "coiled_bars": 6,
         "last_coiled": "2026-10-16"
@@ -195,10 +195,10 @@
       "breakout_level": 3.92000008,
       "provisional": false,
       "last_bar": "2026-10-16",
-      "price": 3.45000005,
-      "mcap": 1221692544.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "previous"
+      "price": 3.47000003,
+      "mcap": 1246845056.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "ADH",
@@ -252,8 +252,8 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 0.315,
-      "mcap": 572275008.0,
-      "mcap_asof": "2026-10-13",
+      "mcap": 551274112.0,
+      "mcap_asof": "2026-10-17",
       "mcap_src": "cache"
     },
     {
@@ -280,9 +280,9 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 2.73000002,
-      "mcap": 1200711808.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "previous"
+      "mcap": 1126440960.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "TER",
@@ -308,9 +308,9 @@
       "provisional": false,
       "last_bar": "2026-10-14",
       "price": 0.066,
-      "mcap": 122109056.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "previous"
+      "mcap": 105706336.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CAT",
@@ -336,9 +336,9 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 3.21000004,
-      "mcap": 1007961920.0,
-      "mcap_asof": "2026-10-12",
-      "mcap_src": "previous"
+      "mcap": 1014281408.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "MYX",
@@ -392,9 +392,9 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 21.39999962,
-      "mcap": 2074956288.0,
-      "mcap_asof": "2026-10-13",
-      "mcap_src": "previous"
+      "mcap": 2027582848.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "AGE",
