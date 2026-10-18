@@ -4529,6 +4529,77 @@
       },
       "unreal_r": 0.008,
       "unreal_usd": 3.17
+    },
+    {
+      "id": "GOMINING:long:3D:2026-10-18",
+      "symbol": "GOMINING",
+      "name": "GoMining Token",
+      "sector": "",
+      "market": "crypto",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "3D",
+      "entry": 0.37694559,
+      "stop": 0.31648192,
+      "tp1": 0.46445999,
+      "tp2": 0.50969201,
+      "tp3": 0.54888201,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.06046367,
+      "rr": 2.2,
+      "trigger_bar": null,
+      "entry_date": "2026-10-18",
+      "opened_at": "2026-10-18T07:25:22+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 0.37694559,
+      "mfe": 0.37694559,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 6678.49204992,
+      "notional": 2500.0,
+      "leverage": 0.02,
+      "leverage_target": 3.0,
+      "risk_pct": 0.2692,
+      "risk_usd": 403.81,
+      "risk_usd_basis": "fill",
+      "sizing_mode": "fixed_notional",
+      "cycle": "hc4-1",
+      "review": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 9.0,
+          "stop_pct": 16.0,
+          "risk_usd": 403.81,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $404 - 9% of the $4,500 daily loss guard, on a 16% stop"
+        }
+      ],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 0.374336,
+      "fill_slip_bps": 69.7,
+      "last_mark": 0.37694559,
+      "last_mark_day": "2026-10-18",
+      "data_source": "yahoo",
+      "anchor": [
+        "2026-10-17",
+        0.3743360043
+      ]
     }
   ],
   "closed": [
@@ -14695,9 +14766,9 @@
     }
   },
   "summary": {
-    "open": 59,
+    "open": 60,
     "unreal_usd": -923.45,
     "updated_day": "2026-10-18"
   },
-  "updated_at": "2026-10-18T06:06:07+00:00"
+  "updated_at": "2026-10-18T07:25:28+00:00"
 }
