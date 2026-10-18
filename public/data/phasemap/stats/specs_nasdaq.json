@@ -1,6 +1,6 @@
 {
  "market": "NASDAQ",
- "generated": "2026-10-11",
+ "generated": "2026-10-18",
  "period": "5y",
  "survivorship_bias": true,
  "all": {
@@ -15,22 +15,35 @@
  },
  "grades": {
   "A+": {
-   "n": 10,
-   "fwd_5": -0.0645,
-   "fwd_10": -0.0943,
-   "fwd_20": -0.0162,
-   "mae": -0.3582,
-   "target": 20.0,
-   "stop": 30.0,
-   "open": 50.0
+   "n": 4,
+   "fwd_5": -0.0446,
+   "fwd_10": 0.0255,
+   "fwd_20": 0.2261,
+   "mae": -0.2303,
+   "target": 25.0,
+   "stop": 0.0,
+   "open": 75.0
+  },
+  "B": {
+   "n": 6,
+   "fwd_5": -0.0779,
+   "fwd_10": -0.1741,
+   "fwd_20": -0.1777,
+   "mae": -0.4435,
+   "target": 16.7,
+   "stop": 50.0,
+   "open": 33.3
   }
  },
  "baseline_random": {
   "n": 200,
-  "fwd_5": 0.0461,
-  "fwd_10": 0.1288,
-  "fwd_20": 0.6381
+  "fwd_5": 0.0124,
+  "fwd_10": 0.0092,
+  "fwd_20": 0.7203
  },
+ "grade_rule": "published: an A+/A plan under MIN_TRADEABLE_RR 1.5 is filed as B, as the SPECS page shows it",
+ "errors": 0,
+ "error_sample": [],
  "r_model": {
   "fill": "house",
   "all": {
@@ -73,22 +86,41 @@
   },
   "grades": {
    "A+": {
-    "trades": 10,
-    "wins": 4,
-    "losses": 6,
-    "win_pct": 40.0,
-    "r_won": 4.68,
-    "r_lost": -4.46,
-    "net_r": 0.22,
-    "expectancy_r": 0.022,
-    "profit_factor": 1.05,
-    "avg_win_r": 1.169,
-    "avg_loss_r": -0.743,
+    "trades": 4,
+    "wins": 3,
+    "losses": 1,
+    "win_pct": 75.0,
+    "r_won": 3.92,
+    "r_lost": -0.35,
+    "net_r": 3.56,
+    "expectancy_r": 0.89,
+    "profit_factor": 11.04,
+    "avg_win_r": 1.305,
+    "avg_loss_r": -0.355,
     "open_at_end": 0,
     "notional": 1000.0,
-    "usd_won": 1338.27,
-    "usd_lost": -2022.69,
-    "net_usd": -684.42,
+    "usd_won": 1158.34,
+    "usd_lost": -214.24,
+    "net_usd": 944.1,
+    "skipped": {}
+   },
+   "B": {
+    "trades": 6,
+    "wins": 1,
+    "losses": 5,
+    "win_pct": 16.7,
+    "r_won": 0.76,
+    "r_lost": -4.1,
+    "net_r": -3.34,
+    "expectancy_r": -0.557,
+    "profit_factor": 0.19,
+    "avg_win_r": 0.76,
+    "avg_loss_r": -0.821,
+    "open_at_end": 0,
+    "notional": 1000.0,
+    "usd_won": 179.93,
+    "usd_lost": -1808.45,
+    "net_usd": -1628.52,
     "skipped": {}
    }
   }

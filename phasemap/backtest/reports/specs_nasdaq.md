@@ -1,6 +1,6 @@
 # Specs backtest — NASDAQ
 
-Generated 2026-10-11 · engine scanner/spec.py (restored 2026-07-02) · universe 1428 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
+Generated 2026-10-18 · engine scanner/spec.py (restored 2026-07-02) · universe 1429 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** yfinance has no delisted history. Sub-$0.50 specs delist *constantly* — this cohort is missing its casualties and every number below is optimistic. Directional use only.
 
@@ -9,7 +9,8 @@ A **signal** = the first day a fire-streak passes every mandatory gate (3× volu
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | target first | stopped | still open | MAE |
 |---|---|---|---|---|---|---|---|---|
 | ALL SIGNALS | 10 | -6.5% | -9.4% | -1.6% | 20.0% | 30.0% | 50.0% | -35.8% |
-| grade A+ | 10 | -6.5% | -9.4% | -1.6% | 20.0% | 30.0% | 50.0% | -35.8% |
+| grade A+ | 4 | -4.5% | +2.5% | +22.6% | 25.0% | 0.0% | 75.0% | -23.0% |
+| grade B | 6 | -7.8% | -17.4% | -17.8% | 16.7% | 50.0% | 33.3% | -44.4% |
 
 ## R model — what trading the signals earned
 
@@ -19,9 +20,10 @@ Entry at the signal close, the engine's stop, its one target booked in full (res
 |---|---|---|---|---|---|---|---|
 | ALL SIGNALS | 10 | 40.0% | +4.7R | -4.5R | **+0.2R** | +0.022R | $-684 |
 | ALL SIGNALS, stop at the worst print | 10 | 40.0% | +4.7R | -4.9R | **-0.2R** | -0.025R | $-886 |
-| grade A+ | 10 | 40.0% | +4.7R | -4.5R | **+0.2R** | +0.022R | $-684 |
+| grade A+ | 4 | 75.0% | +3.9R | -0.3R | **+3.6R** | +0.890R | $+944 |
+| grade B | 6 | 16.7% | +0.8R | -4.1R | **-3.3R** | -0.557R | $-1,629 |
 
 ## Baseline
-- Random entry on the same sub-$0.50 universe (200 samples, seeded): fwd 5: +4.6% · fwd 10: +12.9% · fwd 20: +63.8%
+- Random entry on the same sub-$0.50 universe (200 samples, seeded): fwd 5: +1.2% · fwd 10: +0.9% · fwd 20: +72.0%
 
 Analysis only — not financial advice.
