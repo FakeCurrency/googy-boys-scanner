@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-19T05:35:24+00:00",
+  "generated_at": "2026-10-19T13:44:57+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-19",
@@ -51,11 +51,10 @@
   },
   "summary": {
     "universe": 2051,
-    "downloaded": 1836,
-    "screened": 1753,
+    "downloaded": 1854,
+    "screened": 1774,
     "skipped": {
-      "short history": 79,
-      "stale frame": 4
+      "short history": 80
     },
     "counts": {
       "IGNITING": 0,
@@ -69,28 +68,22 @@
       "completed_last": "2026-10-19",
       "raw_last": "2026-10-19",
       "expected_completed": "2026-10-19",
-      "lagging": 636,
-      "screened": 1832,
+      "lagging": 2,
+      "screened": 1854,
       "completed_dist": {
-        "2026-10-19": 1196,
-        "2026-10-16": 439,
-        "2026-10-15": 72,
-        "2026-10-14": 125,
-        "2026-10-13": 4
+        "2026-10-19": 1852,
+        "2026-10-16": 2
       },
       "raw_dist": {
-        "2026-10-19": 1196,
-        "2026-10-16": 439,
-        "2026-10-15": 72,
-        "2026-10-14": 125,
-        "2026-10-13": 4
+        "2026-10-19": 1852,
+        "2026-10-16": 2
       },
-      "rows_lagging": 2
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1457
+        "yahoo": 1853
       },
       "dead": {},
       "errors": {},
@@ -105,18 +98,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1457,
-      "reused": 379,
-      "merged": 1836,
+      "fresh": 1853,
+      "reused": 1,
+      "merged": 1854,
       "universe": 2051,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
       "rows": 12,
-      "have": 11
+      "have": 12
     },
-    "elapsed_s": 399.8
+    "elapsed_s": 427.4
   },
   "results": [
     {
@@ -176,34 +169,6 @@
       "mcap_src": "previous"
     },
     {
-      "symbol": "WEB",
-      "name": "Webbeds Group Limited",
-      "yf": "WEB.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.21,
-        "atr_pctl": 23.6,
-        "vol_pctl": 1.6,
-        "drawdown_pct": 64.3,
-        "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-10-16"
-      },
-      "base": {
-        "high": 3.92000008,
-        "low": 2.5,
-        "bars": 60
-      },
-      "breakout_level": 3.92000008,
-      "provisional": false,
-      "last_bar": "2026-10-16",
-      "price": 3.47000003,
-      "mcap": 1246845056.0,
-      "mcap_asof": "2026-10-18",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "ADH",
       "name": "Adairs Limited",
       "yf": "ADH.AX",
@@ -212,7 +177,7 @@
       "coil": {
         "ribbon_pct": 10.71,
         "atr_pctl": 15.5,
-        "vol_pctl": 32.5,
+        "vol_pctl": 32.7,
         "drawdown_pct": 50.4,
         "coiled": true,
         "coiled_bars": 6,
@@ -229,34 +194,6 @@
       "price": 1.32000005,
       "mcap": 237074736.0,
       "mcap_asof": "2026-10-19",
-      "mcap_src": "yahoo"
-    },
-    {
-      "symbol": "TER",
-      "name": "Terracom Limited",
-      "yf": "TER.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 7.26,
-        "atr_pctl": 52.4,
-        "vol_pctl": 46.8,
-        "drawdown_pct": 84.7,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-07"
-      },
-      "base": {
-        "high": 0.088,
-        "low": 0.05,
-        "bars": 60
-      },
-      "breakout_level": 0.088,
-      "provisional": false,
-      "last_bar": "2026-10-14",
-      "price": 0.066,
-      "mcap": 105706336.0,
-      "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
     },
     {
@@ -344,6 +281,34 @@
       "mcap_src": "cache"
     },
     {
+      "symbol": "WEB",
+      "name": "Webbeds Group Limited",
+      "yf": "WEB.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.4,
+        "atr_pctl": 27.8,
+        "vol_pctl": 1.6,
+        "drawdown_pct": 64.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-16"
+      },
+      "base": {
+        "high": 3.92000008,
+        "low": 2.6400001,
+        "bars": 60
+      },
+      "breakout_level": 3.92000008,
+      "provisional": false,
+      "last_bar": "2026-10-19",
+      "price": 3.5,
+      "mcap": 1246845056.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "MYX",
       "name": "Mayne Pharma Group Limited",
       "yf": "MYX.AX",
@@ -369,7 +334,35 @@
       "price": 2.54999995,
       "mcap": 209640672.0,
       "mcap_asof": "2026-10-19",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "TER",
+      "name": "Terracom Limited",
+      "yf": "TER.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 16.18,
+        "atr_pctl": 67.7,
+        "vol_pctl": 25.4,
+        "drawdown_pct": 85.9,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 0.088,
+        "low": 0.05,
+        "bars": 60
+      },
+      "breakout_level": 0.088,
+      "provisional": false,
+      "last_bar": "2026-10-19",
+      "price": 0.06,
+      "mcap": 105706336.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "previous"
     },
     {
       "symbol": "DMP",
@@ -408,7 +401,7 @@
       "coil": {
         "ribbon_pct": 23.67,
         "atr_pctl": 52.6,
-        "vol_pctl": 36.1,
+        "vol_pctl": 35.3,
         "drawdown_pct": 60.2,
         "coiled": false,
         "coiled_bars": 0,
@@ -425,7 +418,7 @@
       "price": 0.033,
       "mcap": 154678352.0,
       "mcap_asof": "2026-10-19",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PMM",
@@ -451,9 +444,9 @@
       "provisional": false,
       "last_bar": "2026-10-19",
       "price": 0.345,
-      "mcap": null,
-      "mcap_asof": null,
-      "mcap_src": null
+      "mcap": 25839128.0,
+      "mcap_asof": "2026-10-19",
+      "mcap_src": "yahoo"
     }
   ],
   "errors": []
