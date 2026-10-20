@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-18T09:10:11+00:00",
+  "generated_at": "2026-10-20T00:32:45+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-16",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 26140.03,
-    "sma200": 24919.4,
+    "close": 26430.89,
+    "sma200": 24935.35,
     "above_200": true,
-    "vs_200_pct": 4.9,
-    "as_of": "2026-10-16"
+    "vs_200_pct": 6.0,
+    "as_of": "2026-10-19"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 1429,
-    "downloaded": 1429,
-    "screened": 1328,
+    "universe": 1426,
+    "downloaded": 1426,
+    "screened": 1326,
     "skipped": {
-      "short history": 101
+      "short history": 100
     },
     "counts": {
       "IGNITING": 0,
@@ -65,25 +65,27 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-16",
-      "raw_last": "2026-10-16",
-      "expected_completed": "2026-10-16",
-      "lagging": 1,
-      "screened": 1429,
+      "completed_last": "2026-10-19",
+      "raw_last": "2026-10-19",
+      "expected_completed": "2026-10-19",
+      "lagging": 1304,
+      "screened": 1426,
       "completed_dist": {
-        "2026-10-16": 1428,
+        "2026-10-19": 122,
+        "2026-10-16": 1303,
         "2026-10-14": 1
       },
       "raw_dist": {
-        "2026-10-16": 1428,
+        "2026-10-19": 122,
+        "2026-10-16": 1303,
         "2026-10-14": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 12
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1429
+        "yahoo": 1426
       },
       "dead": {},
       "errors": {},
@@ -98,10 +100,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1429,
+      "fresh": 1426,
       "reused": 0,
-      "merged": 1429,
-      "universe": 1429,
+      "merged": 1426,
+      "universe": 1426,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -109,7 +111,7 @@
       "rows": 12,
       "have": 12
     },
-    "elapsed_s": 179.8
+    "elapsed_s": 217.0
   },
   "results": [
     {
@@ -162,7 +164,7 @@
       "trail": 67.10499954,
       "mcap": 10013129728.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CTKB",
@@ -212,9 +214,9 @@
       "change_pct": -8.4,
       "r_now": -0.76,
       "trail": 5.35833332,
-      "mcap": 695410432.0,
-      "mcap_asof": "2026-10-14",
-      "mcap_src": "previous"
+      "mcap": 682412096.0,
+      "mcap_asof": "2026-10-20",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PTON",
@@ -270,7 +272,7 @@
       "price": 14.47000027,
       "mcap": 1014279424.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CRNC",
@@ -296,8 +298,8 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 8.93000031,
-      "mcap": 402096992.0,
-      "mcap_asof": "2026-10-14",
+      "mcap": 403906208.0,
+      "mcap_asof": "2026-10-18",
       "mcap_src": "cache"
     },
     {
@@ -326,7 +328,7 @@
       "price": 18.94000053,
       "mcap": 243542480.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "IRWD",
@@ -354,7 +356,7 @@
       "price": 3.5,
       "mcap": 578339840.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "INMD",
@@ -410,7 +412,7 @@
       "price": 8.73999977,
       "mcap": 360987232.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "VFS",
@@ -436,9 +438,9 @@
       "provisional": false,
       "last_bar": "2026-10-16",
       "price": 3.11999989,
-      "mcap": 7088794624.0,
-      "mcap_asof": "2026-10-14",
-      "mcap_src": "previous"
+      "mcap": 6784654848.0,
+      "mcap_asof": "2026-10-20",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PRTA",
@@ -466,7 +468,7 @@
       "price": 8.35000038,
       "mcap": 428663776.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "GLXY",
@@ -494,7 +496,7 @@
       "price": 16.13999939,
       "mcap": 9511259136.0,
       "mcap_asof": "2026-10-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
