@@ -181,16 +181,24 @@
       // From the market alone — state.data may still hold the PREVIOUS
       // market's payload when this fires at the top of a market switch.
       const cur = state.market === "asx" ? "A$" : "$";
+      // UI100 #97 (2026-10-20): the strip folds to one line ("SPECS → VIVEK
+      // · 51 graduates ▸"); the note and the latest six open under it. A fold
+      // the reader opened stays open across a market switch.
+      const wasOpen = !!host.querySelector(".spg-fold[open]");
+      const fold = (n, note, body) => `<details class="spg-fold"${wasOpen ? " open" : ""}>
+          <summary class="spg-head">
+            <span class="spg-title">SPECS → VIVEK</span>
+            <b class="spg-count">${Number(n) || 0}</b>
+            <span class="spg-lbl">graduate${Number(n) === 1 ? "" : "s"}</span>
+          </summary>
+          <p class="spg-note">${note}</p>${body}
+        </details>`;
       if (!total && !watching) {
         // The registry exists but this market has nothing recorded yet —
         // say so instead of vanishing, so "no graduates" reads as the
         // surface's honest state rather than a broken strip (owner item 3;
         // still display-only, still fed by the same report file).
-        host.innerHTML = `<div class="spg-head">
-            <span class="spg-title">SPECS → VIVEK GRADUATES</span>
-            <b class="spg-count">0</b>
-            <span class="spg-note">none yet for ${PM.esc(state.market.toUpperCase())} — Specs names enter the watch on first appearance and are counted when they later cross into the published VIVEK scan</span>
-          </div>`;
+        host.innerHTML = fold(0, `None yet for ${PM.esc(state.market.toUpperCase())} — Specs names enter the watch on first appearance and are counted when they later cross into the published VIVEK scan.`, "");
         host.hidden = false;
         return;
       }
@@ -201,11 +209,10 @@
           ${g.grade ? `<span class="spg-grade" title="VIVEK grade on graduation day">${PM.esc(g.grade)}</span>` : ""}
           <span class="spg-days" title="Days from first Specs appearance to VIVEK graduation">${PM.esc(g.days != null ? g.days + "d" : "—")}</span>
         </div>`).join("");
-      host.innerHTML = `<div class="spg-head">
-          <span class="spg-title">SPECS → VIVEK GRADUATES</span>
-          <b class="spg-count">${Number(total) || 0}</b>
-          <span class="spg-note">names this lens surfaced first that later crossed into the published VIVEK scan · watching ${Number(watching) || 0}</span>
-        </div>${rows ? `<div class="spg-rows">${rows}</div>` : ""}`;
+      host.innerHTML = fold(total,
+        `Names this lens surfaced first that later crossed into the published VIVEK scan · watching ${Number(watching) || 0}` +
+        (grads.length ? ` · the latest ${Math.min(6, grads.length)}:` : ""),
+        rows ? `<div class="spg-rows">${rows}</div>` : "");
       host.hidden = false;
     } catch (_) { /* report-only strip — it never breaks the page */ }
   }

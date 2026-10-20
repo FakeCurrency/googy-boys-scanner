@@ -249,6 +249,11 @@
     const sub = $("mo-sub");
     const dot = $("mo-dot");
     const cover = $("mo-cover");
+    // UI100 #14 (2026-10-20): the stamp lives in the title card now; it is
+    // cleared with the title so a market switch never shows the last
+    // market's scan time under the new heading.
+    const stamp = $("mo-stamp");
+    if (state.loading || !state.data) { stamp.textContent = ""; stamp.title = ""; }
     if (state.loading) {
       title.textContent = "MOMENTUM · loading…";
       dot.className = "deck-dot";
@@ -283,7 +288,6 @@
     // it is the date every number on this page was measured on.
     if (state.data.last_closed_bar) bits.push(`last bar ${state.data.last_closed_bar}`);
     sub.textContent = bits.join(" · ");
-    const stamp = $("mo-stamp");
     stamp.textContent = state.data.generated_at
       ? `scanned ${fmtMelb(state.data.generated_at)}` : "";
     stamp.title = state.data.last_closed_bar

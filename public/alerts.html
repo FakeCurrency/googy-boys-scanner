@@ -40,10 +40,13 @@
     </div>
   </header>
 
-  <main class="wrap pm-wrap">
+  <main class="wrap pm-wrap al-page">
     <div class="pm-head">
-      <h2 class="pm-title">ALERT HISTORY <span class="pm-title-sub">recent multi-lens alignments the system called, newest first</span></h2>
-      <p class="pm-sub" id="al-sub">Loading…</p>
+      <!-- UI100 #95 (2026-10-20): title + ONE sub-line (count and how far
+           back the rolling log reaches); the "recent multi-lens alignments
+           the system called, newest first" tagline went. -->
+      <h2 class="pm-title" title="Multi-lens alignments the system called, newest first">ALERT HISTORY</h2>
+      <p class="pm-sub al-sub" id="al-sub">Loading…</p>
     </div>
     <div class="pm-filters">
       <div class="pm-filter-group" id="al-market">
@@ -62,6 +65,6 @@
     <p class="pm-disclaimer">Logged when an alignment first forms or upgrades (2-lens and up). There is no push channel: this page is where alignments show. It is a rolling window of the newest entries — older ones roll off. Every alignment's forward returns are kept in the edge ledger (<code>data/alert_forward_returns.json</code>). Unproven: alignment has not beaten plain A+ in the study or the forward ledger.</p>
   </main>
 
-  <script src="js/alerts.js?v=10"></script>
+  <script src="js/alerts.js?v=11"></script>
 </body>
 </html>

@@ -125,10 +125,16 @@
   const load = (f) => fetch(f, { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
-  Promise.all([
-    load("data/vivek_backtest_longonly.json"),
-    load("data/vivek_backtest.json"),
-  ]).then(([lo, both]) => {
+  function show() {
+    return Promise.all([
+      load("data/vivek_backtest_longonly.json"),
+      load("data/vivek_backtest.json"),
+    ]).then(render).catch(() => {
+      host.innerHTML = `<p class="bt-none">The backtest reports could not be loaded.</p>`;
+    });
+  }
+
+  function render([lo, both]) {
     if (!lo && !both) {
       host.innerHTML = `<p class="bt-none">No backtest report is published yet.</p>`;
       return;
@@ -145,7 +151,25 @@
         "full picture, not because it is the one being traded.", false);
     }
     host.innerHTML = html;
-  }).catch(() => {
-    host.innerHTML = `<p class="bt-none">The backtest reports could not be loaded.</p>`;
-  });
+  }
+
+  // UI100 #99 (2026-10-20): the two reports are ~1.8 MB together and sit in
+  // section 8 of 12, so they load as the section comes within ~1.5 screens
+  // BELOW the viewport (or into it), not on page open. The margin is below
+  // only, and the top 150px (the sticky header) does not count: a contents
+  // jump to section 9 leaves section 8's last few pixels under the header,
+  // and loading there would push the section the reader jumped to ~2,000px
+  // down the page. A link straight to #backtest (or a jump to it) loads them
+  // at once; no IntersectionObserver (old browser, the test sandbox) means
+  // load now, as before.
+  let started = false;
+  const start = () => { if (!started) { started = true; show(); } };
+  const atBacktest = () => typeof location !== "undefined" && location.hash === "#backtest";
+  const IO = typeof window !== "undefined" ? window.IntersectionObserver : undefined;
+  if (!IO || atBacktest()) { start(); return; }
+  const io = new IO((entries) => {
+    if (entries.some((e) => e.isIntersecting)) { io.disconnect(); start(); }
+  }, { rootMargin: "-150px 0px 1200px 0px" });
+  io.observe(host);
+  window.addEventListener("hashchange", () => { if (atBacktest()) { io.disconnect(); start(); } });
 })();

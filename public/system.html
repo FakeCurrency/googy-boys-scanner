@@ -372,12 +372,12 @@
       </ul>
     </section>
 
-    <footer class="site-footer"><p class="credit">Vivek 5.0 · stocks via Yahoo Finance (~15&nbsp;min delayed) · crypto via exchange bars (Binance, Coinbase) · scanned hourly while each market trades, crypto around the clock</p></footer>
+    <footer class="site-footer"><p class="credit">Vivek 5.0 · stocks ~15&nbsp;min delayed (Yahoo) · crypto from exchange bars</p></footer>
   </main>
 
   <script src="js/nav.js?v=30"></script>
   <script src="js/status.js?v=11"></script>
-  <script src="js/system-backtest.js?v=3"></script>
+  <script src="js/system-backtest.js?v=4"></script>
   <script>
   /* Contents jumps: publish the sticky top bar's height as --sys-bar so
      section.sys's scroll-margin-top clears it at every width (the bar wraps
@@ -437,9 +437,13 @@
   (async () => {
     const live = document.getElementById("sys-live");
     try {
-      const r = await fetch("data/bot_rules.json", { cache: "no-cache" });
-      if (!r.ok) throw 0;
-      const j = await r.json();
+      // UI100 #99 (2026-10-20): nav.js's shared read (window.VivekBook), the
+      // same request the status lamp and the tab badge use, not a second one.
+      const j = window.VivekBook ? await window.VivekBook.rules()
+        : await fetch("data/bot_rules.json", { cache: "no-cache" }).then((r) => {
+          if (!r.ok) throw 0;
+          return r.json();
+        });
       const set = (k, v) => document.querySelectorAll(`[data-r="${k}"]`).forEach((el) => { el.textContent = v; });
       if (Array.isArray(j.grades)) set("grades", j.grades.join(" / "));
       set("allow_shorts", j.allow_shorts ? "longs + shorts" : "long-only");
