@@ -578,10 +578,14 @@ counted exclusions).
   `.x[hidden] { display: none; }` (no global `[hidden]` rule).
 - Nav pills hidden ≤680px; every page uses `topbar deck-top`. `nav.js` owns nav,
   footer, `tipPop()` and `window.VivekBook` (the one shared book + rules read on
-  a nav page; app.js, recs.js and chart.js keep their own fetches).
+  a nav page; app.js and recs.js read through it with `{fresh:true}` on their
+  own refresh — chart.js, which has no nav.js, keeps its own fetch). One page
+  width: `--page-max` (1320px) in `:root`, centred; sticky bars are solid
+  (no `backdrop-filter`; overlays may keep theirs).
 - **The journal is the bot book only**; a failed book load says so, never a
   fake empty book. Its STALLED strip lists exactly the rows the engine stamped
-  `stale_pinged` (no stall logic of its own).
+  `stale_pinged` (no stall logic of its own); it is a one-line fold, shut by
+  default, under the open positions (UI100).
 - **A fetch result is applied only to the market it was started for** (TOP100
   #78/#79 and REFINE200 race guards on the deck, Specs, Momentum, PhaseMap): a
   poll that lands after a market switch is dropped; a cached payload is painted
@@ -611,7 +615,7 @@ counted exclusions).
   `public/js/*.js` (`new Function(body)()`, one realm; `fnSrc()` lets the parser
   find a function's end). Mutation-verify new pins.
 - **Screenshot gate**: clock frozen to the fixtures' `FROZEN_MS`; the key
-  digests the fixtures + Playwright version (`screenshot-baselines-v24`); a
+  digests the fixtures + Playwright version (`screenshot-baselines-v25`); a
   `.clock` sentinel discards (never fails) a foreign baseline; NO
   `restore-keys`; > 2% drift on a deliberate change → bump the key, record it.
 - **Lighthouse gate** serves a STAGED root on the fixtures: 1.7 MB transfer,
@@ -684,3 +688,31 @@ the decision pack `docs/DECISIONS_2026-10-14.md`. No trade rule moved.
 - **Owner actions outstanding:** Cloudflare Access (#55), an alert channel
   (#78), the checkpoints, yfinance 1.7.0 (#84). (The two dead state files
   were deleted with the owner's OK, 2026-10-14.)
+
+---
+
+## UI100 (2026-10-20)
+
+Owner: *"Go through the entire user interface from a PHONE and from a PC and
+suggest 100 things worth correcting for a snappier, smoother, easier on the
+eye, not 10000 things on the screen … Then we execute."* Ledger with the
+measurements: `docs/UI100_2026-10-20.md`. Display, layout, wording and loading
+only — no trade rule, grade, gate or book row moved.
+
+- **Frame:** two-row phone header; Melbourne + New York clocks only, HH:MM,
+  repainted once a minute (no 1 Hz timers in the header); no refresh countdown,
+  BACK pill or rotating quote; MOMENTUM is a plain nav pill.
+- **Deck:** with nothing saved it opens on **Longs** (`gbs:prefs.dir`; a saved
+  choice, a view or `?dirf=` wins; "all" = both) and the A+/A/WATCH tab counts
+  follow the side, so tab, section bar and list agree. No A+/A/★ pills on the
+  status card (the toolbar has the counts), no SMA legend, no deck stalled strip
+  (the count is in the book line). Phone rows: grade edge, at most two WHOLE
+  chips (never an ellipsis), ~84px.
+- **PhaseMap:** a phone with no saved `pm-density` opens in COMPACT (one line
+  per record; ILLIQUID / HALT RISK never dropped from it). The engine's trailing
+  "Analysis only — not financial advice." is stripped at DISPLAY
+  (`PM.stripDisclaimer`; chart.js has its own) — the engine still writes it by
+  spec Section 6, and dropping it at the source is an OWNER (spec) item.
+- **Loading:** system.html fetches the backtest files only as their section
+  approaches; alerts render only the newest day until another is opened.
+
