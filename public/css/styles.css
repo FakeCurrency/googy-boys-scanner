@@ -602,6 +602,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* the ° hysteresis mark beside the score — a phone's (UI100 #31: its grade
    block is a thin edge there); a PC shows it on the grade block */
 .rk-held { display: none; font-size: 10px; vertical-align: super; opacity: .7; cursor: help; margin-left: 1px; }
+/* UI100 review (2026-10-20): the phone row's grade in WORDS over the score —
+   its 4px edge is colour alone and the WATCH tab mixes B+ / WATCH / B / C.
+   Stacked, not inline: "WATCH" (~30px) fits the column's 44px floor, so no
+   row's price column moves. A PC row prints the grade in its grade block. */
+.rk-grade { display: none; }
 
 .row-copy-debug {
   appearance: none; border: 0; background: transparent; cursor: pointer;
@@ -1610,8 +1615,26 @@ body { letter-spacing: -0.012em; }
    empty card on the recs / specs / phasemap / momentum decks.
    UI100 (2026-10-20): re-measured after the card lost its A+/A/★ pills, the
    coverage pill, the long subline and the stalled strip — loaded heights
-   102 / 154 (≤1150) / 206 (≤780) / 183 (phones, 320-600). */
+   102 / 154 (≤1150) / 206 (≤780) / 183 (phones, 320-600).
+   UI100 review (2026-10-20): those were ONE market's heights, and the rule
+   is the MINIMUM over every market. Re-measured on all three (live data and
+   the e2e fixtures), loaded deck height per band:
+     >1150   asx/nasdaq/crypto 102 (nasdaq 154 to ~1180) · fixtures 130
+     961-1150  crypto 102 from ~980 (asx/nasdaq 154 — asx 102 at 1150 on a
+               quieter tape) · fixtures 130-157
+     681-960   154 (asx/nasdaq 206 at 681-780) · fixtures 156-219
+     ≤680      183 every market (199 at 320) · fixtures 185-234
+   so 100 / 150 / 180 below, never the 150 / 200 / 200 that left 46-48px of
+   empty card under crypto's book line (and 17px on every market at 601-680).
+   The one payload under them is the fixtures' empty crypto stub (0 rows, no
+   funnel: 78 / 130): honouring it would drop every PC reservation below the
+   78px the deck paints BEFORE data — no reservation at all. */
 .deck:has(> .deck-bot) { min-height: 100px; }
+/* UI100 review (2026-10-20): lines pack to the TOP. With the default
+   (stretch) any reserved height the content did not fill was shared out
+   among the deck's flex lines, so a line added below (the book fold) pulled
+   every line above it up (the book toggle moved 9px at 640px). */
+.deck:has(> .deck-bot) { align-content: flex-start; }
 .deck-status { min-width: 0; }
 .deck-title { font: 800 19px/1.25 var(--sans); letter-spacing: -0.02em; color: var(--text); }
 .deck-sub {
@@ -1640,15 +1663,17 @@ body { letter-spacing: -0.012em; }
    wraps to two lines — so the loaded height climbs as the viewport narrows.
    Reservations are tiered from MEASURED loaded heights (always a few px UNDER
    actual, so an over-reserve can never leave a permanent gap). */
-@media (max-width: 1150px) { .deck:has(> .deck-bot) { min-height: 150px; } .deck { align-items: flex-start; } }
-@media (max-width: 860px) { .deck:has(> .deck-bot) .deck-status { min-height: 74px; } }
-@media (max-width: 780px) { .deck:has(> .deck-bot) { min-height: 200px; } }
+@media (max-width: 1150px) { .deck { align-items: flex-start; } }
+@media (max-width: 960px) { .deck:has(> .deck-bot) { min-height: 150px; } }
+@media (max-width: 860px) { .deck:has(> .deck-bot) .deck-status { min-height: 72px; } }   /* loaded 74 */
 /* In the reserved band the deck is top-aligned (above) so the empty state
    paints children at their loaded positions — centering redistributed them
    when the content arrived, which was itself a shift. */
 /* Mobile: the deck stacks fully (title / pills wrap / full-width bot strip) so
-   its loaded height is taller again — reserve the measured mobile heights. */
-@media (max-width: 600px) {
+   its loaded height is taller again — reserve the measured mobile heights.
+   UI100 review: from 680px, where the phone layout starts (it stopped at 600,
+   so 601-680 kept the 200px tablet value over a 183px deck). */
+@media (max-width: 680px) {
   .deck:has(> .deck-bot) { min-height: 180px; }
   .deck-pills { min-height: 38px; }
   .deck .deck-bot[hidden] { min-height: 34px; }   /* the book is one line now */
@@ -1691,7 +1716,15 @@ body { letter-spacing: -0.012em; }
   background: var(--fill-2); border: 1px solid var(--border-soft);
   border-radius: 999px; padding: 8px 13px;
 }
-.deck-bot .ba-events { padding-top: 6px; }
+/* UI100 review (2026-10-20): the fold is the deck's own full-width line under
+   the book line (app.js), not a line inside it — so opening it can never
+   re-flow the book line and move its toggle. */
+.deck > .ba-events { flex: 1 0 100%; padding-top: 0; }
+/* on a PC the book line sits at the deck's right edge: the fold opens under it */
+@media (min-width: 681px) {
+  .deck > .ba-events { justify-content: flex-end; }
+  .deck > .ba-events .ba-facts { text-align: right; }
+}
 
 /* ---- RECOMMENDATIONS page (owner 2026-07-22) — deck-language cards ---- */
 .rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 14px; }
@@ -2299,6 +2332,30 @@ body { letter-spacing: -0.012em; }
   #toolbar .vkf-sep { margin: 0 2px; }
   .tb-line > .tb-chips, .tb-line > .tb-sort { margin-left: 6px; padding-left: 8px; }
 }
+/* UI100 review (2026-10-20): it still wrapped — NASDAQ with both sides shown
+   ("A+ 112 A 93 WATCH 109", "All 339 … Longs 179 Shorts 160") needed 1284px
+   of the 1280, so SCORE dropped to a line of its own (a 90px sticky bar).
+   ~50px tighter: room for three-digit counts on every chip and tab. And from
+   1200px (where the chips share the tabs' line; below it they take a row of
+   their own) the line no longer wraps: if the counts outgrow it, the chips
+   wrap INSIDE their own strip and the sort stays pinned to the right edge
+   of the first line, as it is on phones — it used to drop alone to the left
+   of a second line. ...and the sort sits there from the FIRST paint: the
+   grouping rule's margin-left (0,2,0) beat .tb-sort's `auto`, so it painted
+   beside the grade tabs until the chip strip unhid, then jumped ~900px. */
+@media (min-width: 1200px) {
+  #toolbar .tb-line { flex-wrap: nowrap; }
+  .tb-line > .tb-chips[hidden] + .tb-sort { margin-left: auto; }
+}
+@media (min-width: 1320px) {
+  #toolbar .vkf-chip { padding: 6px 6px; gap: 4px; }
+  #toolbar #vk-filters { gap: 3px; }
+  #toolbar .vkf-sep { margin: 0 1px; }
+  #toolbar .seg-btn { padding: 6px 7px; }
+  #toolbar .tb-sort-label { padding: 7px 8px; }
+  #toolbar .tb-sort-dir { padding: 7px 9px; }
+  .tb-line > .tb-chips, .tb-line > .tb-sort { margin-left: 4px; padding-left: 6px; }
+}
 
 /* ── UX top-10 #10: cross-document view transitions (progressive) ────────── */
 @view-transition { navigation: auto; }
@@ -2585,6 +2642,29 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
   .deck-top-right { order: 1; gap: 6px; }
   .deck-top .market-switch { order: 2; }
 }
+/* UI100 review (2026-10-20): ONE rule for every header with a market switch
+   (deck, specs, momentum, phasemap) at ≤680px — TWO rows, decided by width
+   alone: brand · actions, then the switch on a row of its own. It used to be
+   decided by what had loaded: the deck at 604-673px first painted ONE row
+   (brand | search/bell/SCAN | switch) and the lamp's mount at DOMContentLoaded
+   wrapped the switch to row 2 (it jumped ~390px, the page dropped 44px, load
+   CLS 0.39-0.47); phasemap did the same at 590-662px; and the lens pages that
+   fit one row read brand | lamp · INSIGHTS | switch, the switch trailing the
+   actions. Now the actions box takes all but 240px of row 1 (its items
+   pushed right), so the switch (140-220px) can never fit beside it — before
+   the lamp mounts or after, whatever the lamp's label says. (flex-basis:100%
+   on the switch itself would stretch its pill track across the whole row.)
+   At 320px the actions still wrap to a row of their own; nothing overflows. */
+@media (max-width: 680px) {
+  .deck-top:has(.market-switch) .deck-top-right {
+    flex: 1 0 calc(100% - 240px); justify-content: flex-end; min-width: 0;
+  }
+}
+/* ...and above 560px the lamp is its labelled 34px chip (status.css), 2px
+   taller than the brand: hold its row from the first paint. */
+@media (min-width: 561px) and (max-width: 680px) {
+  .deck-top:has(.market-switch) .deck-top-right { min-height: 34px; }
+}
 /* 360px phones: the brand row is ~16px short — a tighter brand and buttons
    win it back. (At 320px the actions wrap to row 2; nothing overflows.) */
 @media (max-width: 400px) {
@@ -2691,9 +2771,10 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 }
 /* states-9: on phones the dashboard's status column grew from its pre-data
    height once loaded, shoving everything under it down. Reserve just UNDER
-   the loaded height, so a loaded deck is never made taller (71px at 320-600
-   since UI100 #15-#17 shortened the column, 2026-10-20). */
-@media (max-width: 600px) { .deck:has(> .deck-bot) .deck-status { min-height: 70px; } }
+   the loaded height, so a loaded deck is never made taller (71px at 320-680
+   since UI100 #15-#17 shortened the column, 2026-10-20; to 680 in the UI100
+   review — 601-680 kept the 74px tablet value over a 71px column). */
+@media (max-width: 680px) { .deck:has(> .deck-bot) .deck-status { min-height: 70px; } }
 /* an empty freshness pill (a failed load) drew as a bare green capsule */
 .deck-sub .scan-fresh:empty { display: none; }
 /* specrec-10 / states-5: the lens pages' status text, same orphan-dot fix */
@@ -2712,7 +2793,10 @@ body:has(.pm-retry) .deck-dot { background: var(--orange); box-shadow: 0 0 7px v
    but not this grid, so they are left alone.
    UI100 (2026-10-20): #31 the grade block is a 4px grade-coloured EDGE (the
    list shows one grade at a time; the row's aria-label names it and the °
-   hysteresis mark moves beside the score) — ~40px more for the name. #32 at
+   hysteresis mark moves beside the score) — ~40px more for the name.
+   UI100 review (2026-10-20): "one grade at a time" was wrong for WATCH (B+ /
+   WATCH / B / C mixed, interleaved by any sort but SCORE), so the edge is no
+   longer the only cue — .rk-grade prints the grade over the score. #32 at
    most two chips and never one cut mid-word: rowChips picks how many fit
    whole, and the strip is ONE wrapped line tall, so a chip that still would
    not fit drops out whole instead of ending in "…". #39 the row trims from
@@ -2729,6 +2813,12 @@ body:has(.pm-retry) .deck-dot { background: var(--orange); box-shadow: 0 0 7px v
   }
   .row-wrap:not(.sp-row) .row-grade .rg-held { display: none; }
   .row-wrap:not(.sp-row) .rk-held { display: inline; }
+  /* never colour alone: the grade's letters ride over the score (UI100 review) */
+  .row-wrap:not(.sp-row) .rk-grade {
+    display: block; margin-bottom: -4px;   /* row height unchanged (measured) */
+    font: 800 10px/1 var(--mono); letter-spacing: 0.04em;
+    color: var(--grade-color, var(--muted));
+  }
   .row-wrap:not(.sp-row) .row-line1 { grid-column: 2; grid-row: 1; padding: 8px 0 4px 12px; min-width: 0; }
   /* line 2 = the mcap badge + the name (the badge used to wrap onto a line
      of its own whenever HELD / SECTOR sat beside the ticker) */

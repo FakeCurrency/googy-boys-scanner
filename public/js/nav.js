@@ -40,13 +40,30 @@
   // chart.html does not load nav.js and keeps its own fetch; app.js and
   // recs.js read through here too, with {fresh:true} on their own refresh
   // cadence (UI100 #92/#100, 2026-10-20).
+  //
+  // UI100 review (2026-10-20): every read carries a 20s abort, the deck's
+  // own fetch timeout. Before #100 app.js read the rules through
+  // PM.fetchTimeout; since then it shares THIS request (the tab badge starts
+  // it at defer time), and a bare fetch on a hung connection never settles —
+  // the bot strip stayed blank and the entry-quality fallback never ran, for
+  // the life of the tab. Now a hang rejects at 20s like any failure, the memo
+  // drops it, and the next caller asks again. 20000ms — KEEP IN STEP with
+  // PM.DATA_FETCH_TIMEOUT_MS (phasemap-shared.js) and index.html's head
+  // preload: nav.js runs before PM on most pages, so it carries the number
+  // itself (test/staleview.test.js pins all three). Feature-detected: no
+  // AbortSignal.timeout → the old no-timeout read.
   const VivekBook = (() => {
     const URLS = { book: "data/vivek_bot_book.json", rules: "data/bot_rules.json" };
+    const READ_TIMEOUT_MS = 20000;
     const memo = { book: null, rules: null };
-    const read = (url, cache) => fetch(url, { cache }).then((r) => {
-      if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
-      return r.json();
-    });
+    const read = (url, cache) => {
+      let signal;
+      try { signal = AbortSignal.timeout(READ_TIMEOUT_MS); } catch (_) { signal = undefined; }
+      return fetch(url, signal ? { cache, signal } : { cache }).then((r) => {
+        if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+        return r.json();
+      });
+    };
     const load = (kind, opts) => {
       const o = opts || {};
       const bust = o.bust != null;

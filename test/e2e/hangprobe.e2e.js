@@ -162,7 +162,9 @@ const check = (ok, label) => {
     check(other.rows > 0, `market switch paints ASX fixture rows mid-hang (${other.rows})`);
     check(!/Couldn't load|Loading latest scan/.test(other.title),
       `ASX shows a real scan title ("${other.title.slice(0, 40)}…")`);
-    check(other.pills >= 3, `deck pills recover with the working market (${other.pills})`);
+    // UI100 #18/#19 (2026-10-20): the A+ / A / ★ pills left the card; ⨂ and ◎
+    // remain on the fixtures (no Ignition file), same floor as smoke.e2e.js.
+    check(other.pills >= 2, `deck pills recover with the working market (${other.pills})`);
 
     check(pageErrors.length === 0,
       `zero uncaught page errors — every abort was handled (${pageErrors.length ? pageErrors.join(" | ") : "clean"})`);

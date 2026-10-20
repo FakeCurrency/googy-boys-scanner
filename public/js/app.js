@@ -1276,6 +1276,10 @@
     const capCls = sectorCapped(r) ? " row-capdim" : "";
     // The ° hysteresis mark rides the grade block; on a phone that block is a
     // thin edge (UI100 #31), so the score carries the mark there (.rk-held).
+    // UI100 review (2026-10-20): the edge is colour ALONE, and the WATCH tab
+    // mixes B+ / WATCH (and B / C) — interleaved by any sort but SCORE, with
+    // no group headers. So a phone row also PRINTS its grade, small, over the
+    // score (.rk-grade; hidden on a PC, where the grade block says it).
     const heldGrade = r.grade_raw && r.grade !== r.grade_raw;
     return `<div class="row-wrap${dimCls}${capCls}${enter}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}${enter ? `;--row-i:${stagger}` : ""}">
      <div class="row">
@@ -1299,6 +1303,7 @@
           ${spark(r.spark, 64, 28, COLOR[r.trend] || COLOR.blue)}
         </a>
         <div class="row-kpis">
+          <span class="rk-grade">${esc(r.grade)}</span>
           <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span>${heldGrade ? `<span class="rk-held" title="Grade held by hysteresis — this scan earned ${esc(r.grade_raw)}">°</span>` : ""}</span>
           <span class="rk-rr ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(1) + "R" + rrStar}</span>
         </div>
@@ -1418,9 +1423,30 @@
     inner.dataset.filled = "1";
     // UI100 #45: the narrative clamps to 3 lines; "more" shows only when the
     // clamp actually cut something (measured once laid out).
+    requestAnimationFrame(() => fitWhyMore(inner));
+  }
+
+  // UI100 review (2026-10-20): "more" is measured on EVERY open and on every
+  // layout change, not once at fill. Measured once, a panel filled at 1400px
+  // and read at 390px (or a 1024→768 rotation) kept its 3-line clamp with no
+  // "more", and closing + reopening could not fix it (dataset.filled skips the
+  // refill). An opened narrative ("less") keeps its button whatever it measures.
+  function fitWhyMore(inner) {
+    const why = inner && inner.querySelector(".vk-why");
+    const more = inner && inner.querySelector(".vk-more");
+    if (!why || !more) return;
+    more.hidden = !(why.scrollHeight > why.clientHeight + 1) && !why.classList.contains("is-open");
+  }
+  // Every OPEN panel, re-measured once per frame at most: wired ONCE at init
+  // (window resize — which a rotation fires too — and late web-font loads),
+  // never per render, so nothing accumulates (test/leaks.test.js).
+  let _fitWhyQueued = false;
+  function refitOpenWhy() {
+    if (_fitWhyQueued) return;
+    _fitWhyQueued = true;
     requestAnimationFrame(() => {
-      const why = inner.querySelector(".vk-why"), more = inner.querySelector(".vk-more");
-      if (why && more && why.scrollHeight > why.clientHeight + 1) more.hidden = false;
+      _fitWhyQueued = false;
+      document.querySelectorAll("#results .row-wrap.open > .detail-anim > .detail-inner").forEach(fitWhyMore);
     });
   }
 
@@ -2810,7 +2836,20 @@
       }
       evts.sort((a, b2) => b2.t - a.t);
       const recent = evts.slice(0, 4);
-      if (!recent.length) { box.hidden = true; return; }
+      // UI100 review (2026-10-20): the fold is the DECK's child, after the
+      // book line — not inside it. Inside, opening it (a 100%-wide line) made
+      // the short .deck-bot too wide to sit beside the pills, so the whole
+      // line re-flowed to the left of a new row: the toggle jumped out from
+      // under the pointer ((1016,149) → (98,220) at 1440). As a sibling the
+      // book line keeps its size and place; the fold opens a full-width line
+      // under it. (Created here for a cached index.html without the slot.)
+      let fold = document.getElementById("ba-fold");
+      if (!fold) {
+        fold = document.createElement("div");
+        fold.id = "ba-fold"; fold.className = "ba-events"; fold.hidden = true;
+        box.after(fold);
+      }
+      if (!recent.length) { box.hidden = true; fold.hidden = true; return; }
       // UI100 #21/#22/#24 (2026-10-20): ONE short line — "Book 60/60 · 23
       // stalled · +1.6R open ▾" — with Journal → inline beside it. The fold
       // holds the rest: the Journal's slot wording, the market split, the
@@ -2818,7 +2857,7 @@
       // age). The amber stalled strip left the deck: its count is in the line,
       // its list on the Journal (no hand closes since 2026-10-14). The 3-min
       // re-render keeps an open fold open.
-      const wasOpen = !!box.querySelector(".ba-events:not([hidden])");
+      const wasOpen = !fold.hidden;
       const facts = bookFacts(b, rules);
       const fmtR = (r) => (r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(1)}R`);
       // CAPACITY FIRST (owner-ordered 2026-08-13). The cap is global, so a full
@@ -2856,20 +2895,19 @@
         `<button class="ba-sum" type="button" aria-expanded="${wasOpen}" aria-controls="ba-fold" ` +
           `title="The paper bot book: open positions of the cap · how many the stall probe flagged (open ≥2 weeks with minimal movement — it never closes anything; the list is on the Journal) · unrealized R. Tap for the record and the recent events. The record is split by WHO closed the trade: the rules (stop / target / trail / time stop) and you (manual). They are different systems and pooling them hides both.">${esc(lineTxt)}` +
           `<span class="ba-chev" aria-hidden="true">▾</span></button>` +
-        `<a class="ba-more" href="journal.html">Journal →</a>` +
-        `<div class="ba-events" id="ba-fold"${wasOpen ? "" : " hidden"}>` +
+        `<a class="ba-more" href="journal.html">Journal →</a>`;
+      fold.innerHTML =
         `<div class="ba-facts">${esc(foldTxt)}</div>` +
         recent.map((e) =>
           `<a class="ba-item" href="journal.html" title="${esc(e.sub)}">` +
           `<span class="ba-kind-${e.kind}${e.kind === "close" ? (e.r >= 0 ? " pos" : " neg") : ""}">${esc(e.txt)}</span>` +
-          `<span class="ba-ago">${agoText(e.t)}</span></a>`).join("") +
-        `</div>`;
+          `<span class="ba-ago">${agoText(e.t)}</span></a>`).join("");
+      fold.hidden = !wasOpen;
       box.classList.toggle("ba-open", wasOpen);
       const sumBtn = box.querySelector(".ba-sum");
-      const list = box.querySelector(".ba-events");
-      if (sumBtn && list) sumBtn.addEventListener("click", () => {
-        const open = !list.hidden;
-        list.hidden = open;
+      if (sumBtn) sumBtn.addEventListener("click", () => {
+        const open = !fold.hidden;
+        fold.hidden = open;
         sumBtn.setAttribute("aria-expanded", String(!open));
         box.classList.toggle("ba-open", !open);
       });
@@ -3445,6 +3483,11 @@
     rowsHost.addEventListener("touchend", cancelLongPress, { passive: true });
     rowsHost.addEventListener("touchcancel", cancelLongPress, { passive: true });
 
+    // UI100 review (2026-10-20): an open panel's "more" follows the layout —
+    // a resize / rotation re-wraps the narrative, and so can a late font.
+    window.addEventListener("resize", refitOpenWhy, { passive: true });
+    try { if (document.fonts) document.fonts.addEventListener("loadingdone", refitOpenWhy); } catch (_) {}
+
     // Row interactions (delegated): copy-debug, chart link, expand details.
     $("#results").addEventListener("click", (e) => {
       if (_slop > 12) { _slop = 0; return; }   // drag, not a tap (v2 #34)
@@ -3475,6 +3518,8 @@
         const expanded = !!(why && why.classList.toggle("is-open"));
         more.textContent = expanded ? "less" : "more";
         more.setAttribute("aria-expanded", String(expanded));
+        // "less" at a width where the text now fits: no "more" to offer.
+        if (!expanded) fitWhyMore(more.closest(".detail-inner"));
         return;
       }
       // A click INSIDE the open panel never collapses the row — only its
@@ -3516,6 +3561,9 @@
     if (!wrap.classList.contains("open")) fillDetail(wrap);
     const open = wrap.classList.toggle("open");
     wrap.setAttribute("aria-expanded", open ? "true" : "false");
+    // UI100 review: re-measure "more" once .open applies — the width may have
+    // changed since the panel was filled (see fitWhyMore).
+    if (open) requestAnimationFrame(() => fitWhyMore(wrap.querySelector(".detail-inner")));
   }
 
   // ---- live clocks ----------------------------------------------------------
