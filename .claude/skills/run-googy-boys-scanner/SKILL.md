@@ -330,10 +330,13 @@ both), so a test that is slow is slow on CPU. The e2e smoke test serves
 - **`wait` means visible.** `#stalled-strip` exists on the journal but is
   `hidden` when no position is stale (always, on fixtures), so waiting on it
   times out. Wait on `#jr-pnl` for the journal, `.row-wrap` for the deck.
-- **The deck lists one grade tier at a time** (A+ by default), so
-  `count .row-wrap` is that tier's rows: e.g. the ⨂ Multi-lens pill read 27
-  while the filtered A+ list held 7. The `.vkf-chip` counts (High conviction
-  etc.) also cover every tier. Do not assert a pill count against the list.
+- **The deck lists one grade tier at a time** (A+ by default) **and, with
+  nothing saved, Longs only** (UI100 #27, 2026-10-20; the A+/A/WATCH tab counts
+  follow that side), so `count .row-wrap` is that tier's long rows: e.g. the
+  ⨂ Multi-lens pill read 27 while the filtered A+ list held 7. Tap the active
+  ▲ Longs chip (`.vkf-chip`) to list both sides. The `.vkf-chip` counts (High
+  conviction etc.) also cover every tier. Do not assert a pill count against
+  the list.
 - **Live data moves.** `public/data/` is whatever the last scan committed
   (row counts, "Last scanned: 50m ago"). Use `--fixtures` when you want the
   same page twice; the deck reads "75d ago" and it 404s the files the fixture set
