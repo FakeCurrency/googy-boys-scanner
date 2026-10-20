@@ -239,8 +239,11 @@ def test_the_off_universe_fetch_prices_a_held_coin_on_its_own_coin(venues, tmp_p
     plan = {"stop": 0.42, "tp1": 0.6, "tp2": 0.7, "tp3": 0.8,
             "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "break",
             "armed": True, "trigger_bar": None}
-    pos = _snapshot(row, "1D", plan, "crypto", 0.50, "2026-09-20")
-    pos.update(market="crypto", risk_usd=500.0, last_mark=0.50, opened_at="2026-09-20",
+    # Opened 5 days ago, not on a fixed date: a pinned 2026-09-20 aged past
+    # the 28-day time stop on 2026-10-18 and the position closed before the
+    # mark this test is about (2026-10-20).
+    pos = _snapshot(row, "1D", plan, "crypto", 0.50, _yday(5))
+    pos.update(market="crypto", risk_usd=500.0, last_mark=0.50, opened_at=_yday(5),
                day_marks={_yday(0): 0.50})
     _book_with(tmp_path, monkeypatch, pos)
     log, asked = venues(binance={"AI": 0.05}, yahoo={"AI-USD": 0.49})
@@ -273,7 +276,7 @@ def test_a_held_position_is_stamped_with_the_venue_that_marked_it(tmp_path, monk
     plan = {"stop": 560.0, "tp1": 900.0, "tp2": 950.0, "tp3": 1000.0,
             "scale": config.VIVEK_TP_SCALE_LONG, "entry_trigger": "reclaim",
             "armed": True, "trigger_bar": None}
-    pos = _snapshot(row, "1W", plan, "crypto", 760.0, "2026-09-20")
+    pos = _snapshot(row, "1W", plan, "crypto", 760.0, _yday(5))   # relative: see above
     pos.update(market="crypto", risk_usd=500.0, last_mark=776.0)
     assert "data_source" not in pos
     _book_with(tmp_path, monkeypatch, pos)
