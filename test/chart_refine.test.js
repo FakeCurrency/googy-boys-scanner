@@ -167,7 +167,8 @@ test("footer() sets #cf-tv before any branch returns, from tvSymbolFor", () => {
 test("the link a PhaseMap-only ASX chart and a Momentum chart now get", () => {
   const run = (market, d) => {
     const el = { href: null };
-    const $ = (sel) => (sel === "#cf-tv" ? el : { set innerHTML(_) {}, set textContent(_) {}, hidden: true });
+    const $ = (sel) => (sel === "#cf-tv" ? el : { set innerHTML(_) {}, set textContent(_) {}, hidden: true,
+      classList: { add() {}, remove() {} } });
     const fn = new Function("market", "$", "renderVivekFooter", "renderMomentumFooter", "fmt",
       `const isCryptoMarket = (t) => t === "crypto" || market === "crypto";
        ${fnSrc("tvSymbolFor")} ${fnSrc("footer")} return footer;`)(market, $, () => {}, () => {}, String);
@@ -858,9 +859,11 @@ test("#80 one setup line: the MTF read and Claude's position, no boxed banners",
   assert.match(mtf[2], /<span class="csl-full">⚡ Multi-timeframe setup · armed on 3D \+ W<\/span>/);
   assert.match(mtf[2], /<span class="csl-short"[^>]*>⚡ 3D \+ W armed<\/span>/, "the phone's short form");
   assert.deepEqual(btns["1W"].cls, ["s-armed"]);
-  assert.equal(btns["1W"].html, '<span class="tf-sub">rec 3.0R</span>', "the chip's state rides on its button");
+  // The trigger word is its own span, which a phone hides (UI100 review below).
+  assert.equal(btns["1W"].html, '<span class="tf-sub"><span class="tf-trig">rec </span>3.0R</span>',
+    "the chip's state rides on its button");
   assert.equal(btns["1D"].html, '<span class="tf-sub">0.6%</span>');
-  assert.match(btns["3D"].title, /3D 200-SMA plan · ARMED/);
+  assert.match(btns["3D"].title, /3D 200-SMA plan · ARMED · retest · R:R 3\.0 · /, "the whole read is on the title");
 });
 
 test("#82 phones: PhaseMap zones keep their shading but lose their axis tags; held lines go bare", () => {
@@ -911,7 +914,93 @@ test("#86-#88 rule chips in the plan block, a compact action row, a 3-column pho
     "the rule chips left the header");
   assert.match(CSS_CODE, /\.cf-actions \.tv-btn \{ padding: 6px 11px; font-size: 12px; \}/);
   const phone = CSS_CODE.slice(CSS_CODE.indexOf("@media (max-width: 560px) {"));
-  assert.match(phone, /\.cf-metrics \{ display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+  assert.match(phone, /\.cf-metrics\.cf-metrics-vk \{ display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+});
+
+/* ═══════ UI100 review (2026-10-20): three defects de2982e left on the chart ═══════ */
+suite("UI100 review: one-line phone timeframe row, a VIVEK-only grid, borrowed plans unlit");
+
+// The `@media (max-width: 560px)` block that holds the phone timeframe bar,
+// comments stripped, cut at its own closing brace.
+const phoneBlock = (() => {
+  const at = CSS_CODE.indexOf("@media (max-width: 560px) {\n  /* The header scrolls away");
+  const from = at >= 0 ? at : CSS_CODE.search(/@media \(max-width: 560px\) \{\s*\.chart-top \{ position: relative; \}/);
+  assert.ok(from >= 0, "the phone block that lays out the timeframe bar is gone");
+  let depth = 0;
+  for (let i = CSS_CODE.indexOf("{", from); i < CSS_CODE.length; i++) {
+    if (CSS_CODE[i] === "{") depth++;
+    else if (CSS_CODE[i] === "}" && --depth === 0) return CSS_CODE.slice(from, i + 1);
+  }
+  throw new Error("unclosed phone block");
+})();
+
+test("#1 the phone timeframe row is ONE line: nowrap, shrinkable buttons, the ✏ never shrinks", () => {
+  assert.match(phoneBlock, /\.tf-toggle \{ flex-wrap: nowrap;/, "4H + D + 3D + W + ✏ never wrap at 360px");
+  const btn = /\.tf-toggle \.tf-btn\[data-tf\] \{([^}]*)\}/.exec(phoneBlock);
+  assert.ok(btn, "the timeframe buttons have a phone rule");
+  // A length, not `auto` (the content size): the button shrinks past its
+  // sub-label to a 44px tap target, and no further.
+  assert.match(btn[1], /flex: 0 1 auto; min-width: 44px;/, "a button may shrink below its content, to 44px");
+  assert.match(btn[1], /display: inline-flex;/, "so the sub-label is the part that clips, not the name");
+  assert.match(phoneBlock, /\.tf-toggle \.tf-sub \{ min-width: 0; overflow: hidden; white-space: nowrap;/);
+  assert.match(phoneBlock, /\.tf-toggle \.tf-trig \{ display: none; \}/, "the phone's sub-label is the R alone");
+  const fab = /#ct-fab \{([^}]*)\}/.exec(CSS_CODE);
+  assert.ok(fab && /flex: none;/.test(fab[1]), "the pencil keeps its size, so it can never wrap alone");
+  // An overlay's VS chip may take a second line, but only AFTER the pencil.
+  assert.match(phoneBlock, /\.tf-toggle:has\(> \.rs-chip:not\(\[hidden\]\)\) \{ flex-wrap: wrap; \}/);
+  assert.match(phoneBlock, /\.tf-toggle \.rs-chip \{ order: 1; \}/, "the chip, never the pencil, starts line 2");
+});
+
+test("#2 the 3-column phone grid is the VIVEK footer's alone", () => {
+  assert.ok(!/\.cf-metrics \{[^}]*display: grid/.test(CSS_CODE), "no footer-wide grid");
+  assert.ok(!/(^|[\s,}])\.cf-metric \.cfm-val \{[^}]*overflow-wrap/.test(CSS_CODE),
+    "the break-anywhere rule rides with the grid, not on every footer");
+  // Run the three writers against one fake #cf-metrics: VIVEK sets the class,
+  // the Momentum (plan and no plan) and the generic footers clear it.
+  const el = { cls: new Set(), innerHTML: "", textContent: "", hidden: true, href: null,
+    classList: { add(c) { el.cls.add(c); }, remove(c) { el.cls.delete(c); } } };
+  const $ = () => el;
+  const fns = new Function("$", "fmt", "TV_PLAN", "smaTfCode", "market",
+    `const isCryptoMarket = () => false; const esc = String;
+     ${fnSrc("tvSymbolFor")} ${fnSrc("renderVivekFooter")} ${fnSrc("renderMomentumFooter")} ${fnSrc("footer")}
+     return { renderVivekFooter, renderMomentumFooter, footer };`)(
+    $, String, { autoMaxAge: 60, maxStopPct: 15 }, () => "D", "asx");
+  const vk = { _vivek: true, symbol: "REV", grade: "A+", score: 8, score_max: 8, timeframes: {},
+    level: 1, entry: 1, stop: 0.9, tp1: 1.1, tp2: 1.2, tp3: 1.3, rr: 2, armed: true, entry_trigger: "reclaim" };
+  fns.footer(vk);
+  assert.ok(el.cls.has("cf-metrics-vk"), "the VIVEK strip is the grid");
+  fns.renderMomentumFooter({ timeframes: { "1W": {} } }, "1W");
+  assert.ok(!el.cls.has("cf-metrics-vk"), "Momentum's no-plan sentence is not squeezed into a third");
+  assert.match(el.innerHTML, /No Auto box on this TF/);
+  fns.renderVivekFooter(vk, vk, "1D");
+  fns.renderMomentumFooter({ timeframes: { "1D": { plan: { dir: 1, entry: 1, stop: 0.9, tp1: 1, tp2: 1, tp3: 1,
+    age: 3, score: 3, capped: true } } } }, "1D");
+  assert.ok(!el.cls.has("cf-metrics-vk"), "nor its SIGNAL value");
+  fns.renderVivekFooter(vk, vk, "1D");
+  fns.footer({ symbol: "BHP", _pm: true, entry: 1, stop: 0.9, target: 1.3, rr: 2 });
+  assert.ok(!el.cls.has("cf-metrics-vk"), "held-plan / PhaseMap-only / Specs footers wrap as before");
+});
+
+test("#3 a timeframe that borrows the Daily plan carries no state and no sub-label", () => {
+  const mkBtn = (title) => { const b = { cls: [], title, html: "" };
+    b.classList = { add: (c) => b.cls.push(c) }; b.insertAdjacentHTML = (_, h) => { b.html += h; }; return b; };
+  const btns = { "4H": mkBtn("4-hour candles · trade levels are the Daily plan"), "1D": mkBtn(""), "1W": mkBtn("") };
+  const toggle = { querySelector: (sel) => btns[(/data-tf="([^"]+)"/.exec(sel) || [])[1]] || null };
+  const parts = [];
+  const run = new Function("setLinePart", "onRenderTeardown",
+    `${constSrc("TF_LABEL")} ${constSrc("esc")} ${constSrc("TFS_MIN_RR")} ${constSrc("TFS_NEAR_PCT")}
+     ${fnSrc("renderTFSetups")} return renderTFSetups;`)((...a) => parts.push(a), () => {});
+  const daily = { armed: true, entry_trigger: "retest", rr: 3, level: 1.9 };
+  run({ "4H": { approx: true, levels: daily, candles: [{ close: 1.905 }] },
+        "1D": { levels: daily, candles: [{ close: 1.905 }] },
+        "1W": { levels: { armed: false, rr: 0, level: 1.5 }, candles: [{ close: 1.905 }] } }, toggle);
+  assert.deepEqual(btns["4H"].cls, [], "no s-armed on a borrowed plan");
+  assert.equal(btns["4H"].html, "", "no green 'ret 3.0R' on a borrowed plan");
+  assert.match(btns["4H"].title, /4H — reference view \(uses the Daily plan\)$/, "the title still says why");
+  assert.deepEqual(btns["1D"].cls, ["s-armed"], "the real Daily plan keeps its state");
+  assert.equal(btns["1D"].html, '<span class="tf-sub"><span class="tf-trig">ret </span>3.0R</span>');
+  const mtf = parts.find((p) => p[0] === "csl-mtf");
+  assert.match(mtf[2], /Armed on D · retest/, "the borrowed 4H never counts toward the MTF read");
 });
 
 runQueue().then(() => {
