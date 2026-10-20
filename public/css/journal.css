@@ -50,6 +50,15 @@
 .jr-sym { font-weight: 700; color: var(--text); }
 .jr-symlink { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; }
 .jr-symlink:hover { color: var(--blue-ink); }
+/* A THUMB-SIZED CHART LINK (UI100 review, 2026-10-20). Without the LONG pill
+   (UI100 #59) the link is the bare ticker — 16x18px for "ZS". On a phone a
+   transparent ::before stretches the hit area to 44px tall (more below the
+   ticker than above, so the first row's stays inside the table's clipped box)
+   and past the ticker's ends, without moving a pixel. */
+@media (max-width: 680px) {
+  .jr-symlink { position: relative; }
+  .jr-symlink::before { content: ""; position: absolute; top: -11px; bottom: -16px; left: -12px; right: -8px; }
+}
 .jr-stamp { font: 600 11px/1.3 var(--mono); color: var(--muted); white-space: nowrap; }
 /* The Opened cell's age after its stamp ("Sep 29 01:58 PM · 21d"); the two are
    separate spans so the phone's compact row can print "opened 21d" alone. */
@@ -287,6 +296,31 @@
    (UI100 #53). The title rule's own top margin is the gap from the hero. */
 .jr-open { min-width: 0; margin-bottom: 18px; }
 .jr-open > .jr-section-title:first-child { margin-top: 8px; }
+/* FIRST LOAD (UI100 review, 2026-10-20). journal.html ships
+   <body class="jr-loading">; journal.js init lifts it once the first book load
+   has settled, either way. Until then the open table keeps its "Loading…"
+   placeholder (paintOpen writes nothing before a load was tried), its section
+   holds a screen's height so the rows land in space that is already theirs,
+   and the blocks below stay out of the layout — painted on the rules alone
+   they printed zeros and "No closed trades yet", then 24+ rows shoved them off
+   the first screen. CLS on the e2e fixtures (clock frozen, book served at 0
+   and after 2.5s): 390px 0.78 -> 0, 1280px 0.56 -> 0.0003 (5f057e6, before
+   the table moved up: 0.38 / 0.22). */
+.jr-loading #sec-open { min-height: 100vh; }
+.jr-loading #stalled-strip, .jr-loading .jr-fold-perf, .jr-loading .sides,
+.jr-loading .jr-howto { display: none; }
+/* The title line keeps the height of the sort control that arrives with the
+   rows (one .jr-osort-b: 10.5px type, 4px padding and a 1px border top and
+   bottom; 36px tall on a phone, below), so "Open positions" does not step down. */
+.jr-loading #bot-open-sort::before { content: ""; display: inline-block; height: 20.5px; vertical-align: middle; }
+@media (max-width: 680px) { .jr-loading #bot-open-sort::before { height: 36px; } }
+/* Below ~375px "Open positions (60)" and the control do not fit one line, and
+   the bare loading title did: give the control its own line there, loaded or
+   not, so the title is the same height either way. */
+@media (max-width: 374px) {
+  #bot-open-sort { flex-basis: 100%; }
+  #bot-open-sort .jr-osort { margin-left: 0; }
+}
 .side {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 4px 18px 22px; margin-bottom: 26px; border-left-width: 3px;
@@ -340,12 +374,15 @@
 }
 .dir-s { background: var(--red);   color: #1a0606; }
 /* UI100 #60: a small amber outline, not a pulsing filled pill — still the one
-   coloured flag on the row, because the chart turned against the position. */
+   coloured flag on the row, because the chart turned against the position.
+   UI100 review (2026-10-20): line-height 1 and no vertical padding, so the
+   outlined box sits inside the line the muted tags already make — at 1.2 with
+   1px padding it made a flagged row ~3px taller than its neighbours. */
 .jr-flip {
   display: inline-block; margin-left: 7px; vertical-align: baseline;
-  font: 600 10.5px/1.2 var(--sans); white-space: nowrap; cursor: help;
+  font: 600 10.5px/1 var(--sans); white-space: nowrap; cursor: help;
   color: var(--orange); border: 1px solid color-mix(in srgb, var(--orange) 45%, transparent);
-  border-radius: 999px; padding: 1px 6px;
+  border-radius: 999px; padding: 0 6px;
 }
 
 /* A "Now" price that is NOT from today's session (TOP100 #24) — the name was
@@ -389,6 +426,10 @@
 .jr-pnl-total.r-pos { color: var(--green); }
 .jr-pnl-total.r-neg { color: var(--red-ink); }
 .jr-pnl-sub { font: 500 12px/1.4 var(--sans); color: var(--muted-2); }
+/* Empty until the book lands, and an empty baseline-aligned item has no
+   descent: filling it grew the hero ~4px at PC widths and nudged the table
+   under it (UI100 review, 2026-10-20). A no-break space holds the line. */
+.jr-pnl-sub:empty::before { content: "\00a0"; }
 
 /* fold-away sections: the analytics stay one click away instead of stacking */
 details.jr-fold { margin: 0 0 14px; }
@@ -411,6 +452,10 @@ details.jr-fold.jr-fold-quiet > summary {
    larger half of the phone's ~0.99 CLS). Reserve the filled height — re-measured
    without the "🤖 Claude" chip (UI100 #57): 112px / 87px filled, was 162 / 137. */
 @media (max-width: 420px) { .jr-pnl { min-height: 112px; align-content: flex-start; } }
+/* At this width a filled hero is three lines — label, total, sub — while the
+   "—" placeholder fit all three on one, so they jumped when the book landed
+   (UI100 review, 2026-10-20). Each takes its own line from the first paint. */
+@media (max-width: 420px) { .jr-pnl-label, .jr-pnl-sub { flex-basis: 100%; } }
 @media (min-width: 421px) and (max-width: 680px) { .jr-pnl { min-height: 87px; align-content: flex-start; } }
 @media (max-width: 600px) {
   .jr-pnl { padding: 14px 16px; }
@@ -555,14 +600,21 @@ details.jr-fold.jr-fold-quiet > summary {
   .jr-open-tbl .jr-at { display: none; }
   .jr-open-tbl .jr-age { font-size: inherit; color: inherit; }
   .jr-open-tbl .jr-age::before { content: none; }
-  /* The printed notes (stop distance, high-water) would make each row three
-     lines; their tooltips stay. A STALE mark keeps its note beside the price —
-     that one says the price is not today's (TOP100 #24). */
+  /* The printed notes are chosen per cell (UI100 review, 2026-10-20 — this
+     said "their tooltips stay", but a touch screen has no tooltip). The
+     stop-distance note is not printed: line 2 already shows the stop. On a
+     touch phone (below) a STALE mark keeps its note beside the price — the
+     price is not today's (TOP100 #24) — and the high-water prints under the R
+     it qualifies: an open +0.1R that has been +1.2R is a different position. */
   .jr-open-tbl td[data-note]::after { content: none; }
 }
 @media (max-width: 680px) and (hover: none) {
   .jr-open-tbl td.jr-now.jr-stale[data-note]::after {
     content: " · " attr(data-note); font: 500 11px/1.3 var(--sans); color: var(--muted-2);
+  }
+  .jr-open-tbl td.jr-ur[data-note]::after {
+    content: attr(data-note); display: block; margin-top: 1px;
+    font: 500 10.5px/1.15 var(--sans); color: var(--muted-2); white-space: nowrap;
   }
 }
 

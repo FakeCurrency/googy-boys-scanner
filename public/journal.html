@@ -17,16 +17,22 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-800.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
+  <!-- UI100 review (2026-10-20): every journal table cell is mono 500. Fetched
+       only once the rows painted, its swap grew each row 1px (CLS). -->
+  <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-500.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
   <link rel="stylesheet" href="css/styles.css?v=124" />
   <link rel="stylesheet" href="css/status.css?v=4" />
-  <link rel="stylesheet" href="css/journal.css?v=49" />
+  <link rel="stylesheet" href="css/journal.css?v=50" />
   <link rel="stylesheet" href="css/stalled.css?v=10" />
   <script src="js/nav.js?v=31"></script>
   <script src="js/status.js?v=11"></script>
   <script src="js/sw-register.js?v=4" defer></script>
 </head>
-<body>
+<!-- UI100 review (2026-10-20): .jr-loading holds the page still until the
+     first book load settles, either way (journal.css; journal.js init lifts
+     it). Set here, not by the script, so it is in force from the first paint. -->
+<body class="jr-loading">
   <!-- #79: shared deck header (matches index/specs/phasemap) — brand · nav ·
        right-aligned status. The P&L headline stays the first thing in <main>. -->
   <header class="topbar deck-top">
@@ -176,7 +182,7 @@
     <p class="credit">Vivek 5.0 · stocks ~15&nbsp;min delayed (Yahoo) · crypto from exchange bars</p>
   </footer>
 
-  <script src="js/journal.js?v=94"></script>
+  <script src="js/journal.js?v=95"></script>
   <script src="js/stalled.js?v=11"></script>
 </body>
 </html>
