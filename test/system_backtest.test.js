@@ -193,6 +193,95 @@ test("only expectancy is coloured — a 45% win rate is not a failure", async ()
   assert.ok(!/bt-neg[^>]*>44\.4%/.test(h), "win rate must not be coloured red");
 });
 
+suite("the lazy load keeps the reader's place (UI100 review, 2026-10-20)");
+
+/* A two-section page in stubs: #sys-backtest is the last child of section 8,
+ * section 9 follows. Rendering grows the host by GROW px, which pushes section
+ * 9 down unless the script scrolls by the same amount. `hostTop` is where the
+ * "Loading…" line sits on a 844px-tall screen when the data lands (its top
+ * third ends at 281px). */
+const GROW = 2000;
+function inPage({ hostTop, hash = "", fire = true, hashTo = null }) {
+  let html = `<p class="bt-none">Loading the latest reports…</p>`;
+  const page = { scrolledBy: 0, fetches: 0, anchorDuringSwap: null };
+  const listeners = {};
+  let ioCb = null;
+  const root = { style: { overflowAnchor: "" } };
+  const win = {
+    innerHeight: 844, scrollY: 5000,
+    IntersectionObserver: function (cb) { ioCb = cb; return { observe() {}, disconnect() {} }; },
+    addEventListener: (t, f) => { (listeners[t] = listeners[t] || []).push(f); },
+    scrollBy: (x, y) => { page.scrolledBy += y; win.scrollY += y; },
+  };
+  const grown = () => (html.length > 200 ? GROW : 0);
+  const storage = { getBoundingClientRect: () => ({ top: hostTop + 70 + grown() - page.scrolledBy }) };
+  const section = { nextElementSibling: storage, parentElement: null };
+  const host = {
+    nextElementSibling: null, parentElement: section,
+    set innerHTML(v) { html = v; page.anchorDuringSwap = root.style.overflowAnchor; },
+    get innerHTML() { return html; },
+    getBoundingClientRect: () => ({ top: hostTop - page.scrolledBy }),
+  };
+  const doc = { querySelector: (s) => (s === "#sys-backtest" ? host : null),
+                scrollingElement: root, documentElement: root };
+  const loc = { hash };
+  const fetchStub = (f) => {
+    page.fetches++;
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(REPORT()) });
+  };
+  new Function("document", "fetch", "window", "location", SRC)(doc, fetchStub, win, loc);
+  if (hashTo != null) { loc.hash = hashTo; (listeners.hashchange || []).forEach((f) => f()); }
+  if (fire && ioCb) ioCb([{ isIntersecting: true }]);
+  page.storageTop = () => storage.getBoundingClientRect().top;
+  page.html = () => html;
+  page.root = root;
+  return new Promise((res) => setTimeout(() => res(page), 5));
+}
+
+test("coming back UP into section 8, the section below stays where it was", async () => {
+  // the repro: a contents jump to section 9, then 200px up -- the Loading line
+  // sits ~+198px down the screen when the tables land
+  const p = await inPage({ hostTop: 198 });
+  assert.ok(p.html().length > 200, "the tables rendered");
+  assert.equal(p.scrolledBy, GROW, "the page must scroll by exactly what the tables added above section 9");
+  assert.equal(p.storageTop(), 198 + 70, "section 9 must not move on screen");
+  assert.equal(p.anchorDuringSwap, "none", "the browser's own anchoring is off for the swap (one adjustment, not two)");
+  assert.equal(p.root.style.overflowAnchor, "", "and restored after it");
+});
+
+test("a reader who has scrolled PAST section 8 keeps their place", async () => {
+  const p = await inPage({ hostTop: -400 });
+  assert.equal(p.scrolledBy, GROW, "the line is above the screen: everything on it is below the host");
+  const near = await inPage({ hostTop: 150 });
+  assert.equal(near.scrolledBy, GROW, "the line in the top third: section 9 fills the screen under it");
+});
+
+test("with the Loading line low on the screen nothing is moved: the tables grow below what is being read", async () => {
+  // scrolling down into section 8 on a slow line, or scrolled up past the
+  // line and reading section 8's opening: the text above it is being read
+  const p = await inPage({ hostTop: 600 });
+  assert.ok(p.html().length > 200);
+  assert.equal(p.scrolledBy, 0, "a reader above the host must not be scrolled");
+  const edge = await inPage({ hostTop: 300 });
+  assert.equal(edge.scrolledBy, 0, "below the top third the host is under what is being read");
+  const below = await inPage({ hostTop: 2000 });
+  assert.equal(below.scrolledBy, 0, "a host still below the screen is never compensated");
+});
+
+test("a #backtest link loads at once and leaves the section's heading where the jump put it", async () => {
+  const p = await inPage({ hostTop: 400, hash: "#backtest", fire: false });
+  assert.equal(p.fetches, 2, "#backtest must load the reports at page open");
+  assert.equal(p.scrolledBy, 0);
+  const q = await inPage({ hostTop: 100, hashTo: "#backtest", fire: false });
+  assert.equal(q.fetches, 2, "a jump to #backtest must load them");
+  assert.equal(q.scrolledBy, 0, "an upward contents jump to #backtest must not push its heading away");
+});
+
+test("still lazy: nothing is fetched until the section is approached", async () => {
+  const p = await inPage({ hostTop: 9000, fire: false });
+  assert.equal(p.fetches, 0, "the 1.8 MB of reports must not load at page open");
+});
+
 suite("the page cannot drift back to hand-typed claims");
 
 test("the old fixed '~65% win, +0.85R' claim is gone", async () => {

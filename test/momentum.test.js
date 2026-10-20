@@ -1464,6 +1464,48 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
 }
 
 
+/* ── THE PILLS PAINT WHERE THEY END UP (UI100 review, 2026-10-20) ─────────────
+ * The pills followed a status column sized by its own text: narrow while
+ * loading (an empty 35ch stamp), wide once the deck line and the coverage
+ * sentence landed, so they jumped from x=515 to under it at x=38 -- load CLS
+ * 0.35 at 1024x768 and 0.29 at 844x390. Their place now comes from the width
+ * alone: their own row up to 1100px, the status's right-hand side above it,
+ * and the coverage sentence (which arrives late) comes AFTER them.
+ */
+{
+  const css = MOCSS.replace(/\/\*[\s\S]*?\*\//g, "");
+  // every @media block of momentum.css, with its body (brace-matched)
+  const media = [];
+  for (let at = css.indexOf("@media"); at >= 0; at = css.indexOf("@media", at + 1)) {
+    const open = css.indexOf("{", at);
+    let depth = 0, end = open;
+    for (; end < css.length; end++) {
+      if (css[end] === "{") depth++;
+      else if (css[end] === "}" && --depth === 0) break;
+    }
+    media.push({ q: css.slice(at, open).trim(), body: css.slice(open + 1, end) });
+  }
+  const maxW = (q) => +((/max-width:\s*(\d+)px/.exec(q) || [])[1] || 0);
+  const minW = (q) => +((/min-width:\s*(\d+)px/.exec(q) || [])[1] || 0);
+  const own = media.filter((m) => /#mo-pills\s*\{[^}]*flex-basis:\s*100%/.test(m.body));
+  ok(own.some((m) => maxW(m.q) >= 1024 && !minW(m.q)),
+     "up to at least 1024px the pills take a row of their own from first paint");
+  const wide = media.find((m) => own.some((o) => minW(m.q) === maxW(o.q) + 1));
+  ok(wide && /\.deck-status\s*\{[^}]*flex:\s*1 1 0/.test(wide.body),
+     "above that, the status takes the space left of the pills (its text no longer places them)");
+  ok(wide && /#mo-pills\s*\{[^}]*align-self:\s*flex-start/.test(wide.body),
+     "and the pills sit at the top, whatever height the status grows to");
+
+  const deck = HTML.slice(HTML.indexOf('<section class="deck" id="deck">'), HTML.indexOf("</section>", HTML.indexOf('id="deck"')));
+  const status = deck.slice(deck.indexOf('class="deck-status"'), deck.indexOf('id="mo-pills"'));
+  ok(deck.indexOf('id="mo-cover"') > deck.indexOf('id="mo-pills"') && !/mo-cover/.test(status),
+     "the coverage sentence comes after the pills, so landing late cannot push them down");
+  const cover = (/\.mo-cover\s*\{([^}]*)\}/.exec(css) || [])[1] || "";
+  ok(/flex:\s*0 0 100%|flex-basis:\s*100%/.test(cover) && !/max-width/.test(cover),
+     "the coverage sentence is a full row (a 62ch item fits beside the pills on a PC and squeezes them)");
+}
+
+
 /* ── REFINE200 #183 / #50 / #174 / #175 (2026-10-14) ───────────────────────── */
 {
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);

@@ -42,21 +42,53 @@
   /* Hold the stamp's loaded width ("scanned Tue, 13 Oct, 5:20 pm Melb" is
      ~34 characters) and its line from first paint: it arrives with the data,
      and late text that wraps pushes the page down (CLS 0.24 at 390px when it
-     lived in the header). */
+     lived in the header). In the title row this decides whether the stamp
+     sits beside the title or under it, the same before and after the load.
+     It no longer decides where the pills go (the rules below do). */
   min-width: 35ch;
   min-height: 11px;
+}
+
+/* ---- where the filter pills sit ------------------------------------------ */
+/* UI100 review (2026-10-20): the pills paint where they end up. They used to
+   follow the status column, whose width is whatever its text is: narrow while
+   loading (the empty 35ch stamp put them at x=515 at 1024px), then wide once
+   the deck line and the coverage sentence landed -- and they jumped under it
+   (to x=38, ~100px down). Load CLS 0.35 at 1024x768, 0.29 at 844x390, 0.11
+   at 1440x900. Now the place is fixed by the width, never by the text: up to
+   1100px a row of their own under the status; wider, the status takes the
+   space left of them and they sit at its top right. The coverage sentence is
+   after them in the markup (momentum.html), a row of its own, so it can no
+   longer push them down when it arrives. Load CLS after, live data, ASX /
+   NASDAQ / crypto: 1024x768 0.016 / 0 / 0.016, 844x390 0.018 / 0 / 0.010,
+   390x844 0, 1440x900 0.025 / 0.002 / 0.012 -- what is left is the list
+   moving under a taller deck and, on a PC, the pills widening when a "no
+   edge" label arrives with the backtest. */
+@media (max-width: 1100px) {
+  #mo-pills { flex-basis: 100%; }
+}
+@media (min-width: 1101px) {
+  #deck > .deck-status { flex: 1 1 0; }
+  #mo-pills { align-self: flex-start; }
 }
 
 /* ---- partial coverage -------------------------------------------------- */
 /* One sentence under the deck line, only when the file screened fewer names
    than the market lists. UI100 #96 (2026-10-20): muted and a size down — the
-   deck's amber dot already flags a partial file; this is the detail. */
+   deck's amber dot already flags a partial file; this is the detail.
+   UI100 review (2026-10-20): the deck's last row (after the pills, see
+   above). A full row, never a 62ch item: at that width it would fit beside
+   the status and pills on a PC and squeeze them. The negative margin takes
+   back half of the deck's 16px row gap. */
 
 .mo-cover {
-  margin: 4px 0 0;
-  max-width: 62ch;
+  flex: 0 0 100%;
+  margin: -8px 0 0;
   font: 500 11.5px/1.45 var(--sans);
   color: var(--muted);
+}
+@media (max-width: 680px) {
+  .mo-cover { margin-top: 0; }   /* the deck's row gap is 8px here */
 }
 
 /* ---- a row ------------------------------------------------------------- */

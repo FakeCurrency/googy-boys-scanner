@@ -130,13 +130,51 @@
       load("data/vivek_backtest_longonly.json"),
       load("data/vivek_backtest.json"),
     ]).then(render).catch(() => {
-      host.innerHTML = `<p class="bt-none">The backtest reports could not be loaded.</p>`;
+      paint(`<p class="bt-none">The backtest reports could not be loaded.</p>`);
     });
+  }
+
+  /* UI100 review (2026-10-20): the reader's place survives the swap. The
+   * tables are ~1,700-2,400px taller than the "Loading…" line, and the
+   * browser's own scroll anchoring keeps the TOP of the viewport still --
+   * which, for a reader who came back UP into section 8 from section 9, is
+   * section 8's last paragraph, so section 9 (what they were reading) went
+   * ~2,000px down the page with scrollY unchanged (overflow-anchor on the
+   * host does not help; the host sat ~+195px down the screen). So when the
+   * "Loading…" line is above the top third of the screen -- or above the
+   * screen altogether -- most of what is being read is BELOW it: the element
+   * after it (the next section) is held where it was and the tables open
+   * above it. Lower down the screen (a reader scrolling down into section 8,
+   * or one who scrolled up past the line and is reading section 8's opening)
+   * and after a jump to #backtest, the plain behaviour stays: the tables
+   * grow below what is being read. The browser's anchoring is off for the
+   * one swap so the page is moved once, by us, not twice. */
+  const READ_LINE = 1 / 3;     // of the viewport's height, from its top
+  let keepBelow = false;       // false for a #backtest jump: its heading stays put
+  const nextAfter = (el) => {
+    while (el && !el.nextElementSibling) el = el.parentElement;
+    return el ? el.nextElementSibling : null;
+  };
+  function paint(html) {
+    const next = keepBelow ? nextAfter(host) : null;
+    let before = null;
+    if (next && host.getBoundingClientRect().top < window.innerHeight * READ_LINE) {
+      before = next.getBoundingClientRect().top;
+    }
+    const root = before == null ? null : (document.scrollingElement || document.documentElement);
+    const anchor = root ? root.style.overflowAnchor : "";
+    if (root) root.style.overflowAnchor = "none";
+    host.innerHTML = html;
+    if (root) {
+      const moved = next.getBoundingClientRect().top - before;
+      if (moved) window.scrollBy(0, moved);
+      root.style.overflowAnchor = anchor;
+    }
   }
 
   function render([lo, both]) {
     if (!lo && !both) {
-      host.innerHTML = `<p class="bt-none">No backtest report is published yet.</p>`;
+      paint(`<p class="bt-none">No backtest report is published yet.</p>`);
       return;
     }
     let html = "";
@@ -150,7 +188,7 @@
         "The canonical record, longs and shorts together. Kept because it is the " +
         "full picture, not because it is the one being traded.", false);
     }
-    host.innerHTML = html;
+    paint(html);
   }
 
   // UI100 #99 (2026-10-20): the two reports are ~1.8 MB together and sit in
@@ -161,15 +199,20 @@
   // and loading there would push the section the reader jumped to ~2,000px
   // down the page. A link straight to #backtest (or a jump to it) loads them
   // at once; no IntersectionObserver (old browser, the test sandbox) means
-  // load now, as before.
+  // load now, as before. UI100 review (2026-10-20): coming back UP into
+  // section 8 still loads them (the reader is reaching the section), and
+  // paint() above keeps the section they came from where it was.
   let started = false;
   const start = () => { if (!started) { started = true; show(); } };
   const atBacktest = () => typeof location !== "undefined" && location.hash === "#backtest";
   const IO = typeof window !== "undefined" ? window.IntersectionObserver : undefined;
   if (!IO || atBacktest()) { start(); return; }
+  keepBelow = true;
   const io = new IO((entries) => {
     if (entries.some((e) => e.isIntersecting)) { io.disconnect(); start(); }
   }, { rootMargin: "-150px 0px 1200px 0px" });
   io.observe(host);
-  window.addEventListener("hashchange", () => { if (atBacktest()) { io.disconnect(); start(); } });
+  window.addEventListener("hashchange", () => {
+    if (atBacktest()) { keepBelow = false; io.disconnect(); start(); }
+  });
 })();
