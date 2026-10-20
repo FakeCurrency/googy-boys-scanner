@@ -153,7 +153,7 @@ const VIEWS = [
 
 // Everything time-based, plus a freeze of all motion, so the shot is stable.
 const MASK = `
-  #microclock, #refresh-timer, .refresh-timer, .scan-fresh, [id^="clk-"],
+  #microclock, .scan-fresh, [id^="clk-"],
   #gbs-update-nudge, #gbs-offline-banner, .jr-pnl-sub, #bot-note, .side-note,
   #scan-sub, .deck-dot { visibility: hidden !important; }
   *, *::before, *::after { animation: none !important; transition: none !important;

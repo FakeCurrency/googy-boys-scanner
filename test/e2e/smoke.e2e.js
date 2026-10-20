@@ -91,7 +91,9 @@ const check = (ok, label) => {
       pills: document.querySelectorAll("#deck-pills .fpill").length,
     }));
     check(!/Loading latest scan/.test(deck.title), `deck paints a real title ("${deck.title.slice(0, 40)}…")`);
-    check(deck.pills >= 3, `deck filter pills render (${deck.pills})`);
+    // UI100 #18/#19 (2026-10-20): the A+ / A / ★ pills left the card; ⨂ and ◎
+    // always render (the fixtures carry no Ignition file, so no ⚡ pill).
+    check(deck.pills >= 2, `deck filter pills render (${deck.pills})`);
 
     // 2. pill filtering — ⨂ Multi-lens narrows (or at minimum activates)
     const before = await page.$$eval(".row-wrap", (n) => n.length);

@@ -587,7 +587,18 @@ jobs:
           # the baselines ONCE. Measured locally before the change: the new
           # fixtures drift index-desktop, index-390, journal-desktop and
           # journal-390 0.00% each.
-          key: screenshot-baselines-v24-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
+          #
+          # v24 -> v25 (2026-10-20): INTENTIONAL — UI100 (owner: "snappier,
+          # smoother, easier on the eye, not 10000 things on the screen").
+          # Measured against v24-equivalent baselines cut from the commit
+          # before the batch: index-desktop 5.28% (no BACK pill or China/London
+          # clocks or countdown, a one-line status card without the A+/A/★
+          # pills or SMA legend, slimmer rows, centred page width), index-390
+          # 7.20% (two-row header, grade edge instead of the grade block, two
+          # whole chips, the list starting ~250px higher), journal-desktop 3.81%
+          # and journal-390 6.29% (open positions first, the stalled table
+          # folded, two-line phone rows, the duplicate chips gone).
+          key: screenshot-baselines-v25-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: |

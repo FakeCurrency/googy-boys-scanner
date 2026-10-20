@@ -78,6 +78,9 @@
       if (p.sort)   state.sort   = p.sort;
       if (p.sortDir) state.sortDir = p.sortDir;
       state.dimFunds = p.dimFunds !== false;   // v2 #47: dim FUND/REIT rows, default ON
+      // UI100 #27 (2026-10-20): no saved side = LONGS (the book is long-only);
+      // a saved choice wins, "all" being both sides. Display default only.
+      state.vkDir = p.dir === "SHORT" ? "SHORT" : p.dir === "all" ? null : "LONG";
     } catch (_) {}
   }
   function savePrefs() {
@@ -85,7 +88,7 @@
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         market: state.market, mode: state.mode,
         tab: state.tab, sort: state.sort, sortDir: state.sortDir,
-        dimFunds: state.dimFunds !== false,
+        dimFunds: state.dimFunds !== false, dir: state.vkDir || "all",
       }));
     } catch (_) {}
   }
@@ -258,42 +261,32 @@
   // ---- measurement mode (?lite=1) -----------------------------------------
   // Lighthouse / perf-budget tooling loads the page with ?lite=1 so the trace
   // measures a DETERMINISTIC initial load: the idle cross-market prefetch, the
-  // 1-Hz auto-refresh countdown and the background polls are all deferred work
+  // auto-refresh timer and the background polls are all deferred work
   // that otherwise land inside the trace at random and swing total-byte-weight
-  // (~1.6MB when the prefetch fires) and CLS (countdown text reflow) run-to-
-  // run. Suppressing them makes the budget a stable tripwire, not a dice roll.
+  // (~1.6MB when the prefetch fires) and CLS (the old countdown's text
+  // reflow) run-to-run. Suppressing them makes the budget a stable tripwire, not a dice roll.
   // Real users never pass ?lite — this only gates what the measurement sees,
   // and an egregious regression (huge bundle, runaway payload) still shows up
   // in the initial load regardless.
   const MEASURE = new URLSearchParams(location.search).has("lite");
 
   // ---- auto-refresh -------------------------------------------------------
+  // UI100 #5 (2026-10-20): the "4:59" countdown left the header, and with it
+  // the 1 Hz tick that only existed to paint it. The re-read still runs every
+  // AUTO_REFRESH_S; the clock tooltip names the next one (_refreshAt).
   let _refreshTimer = null;
-  let _refreshRemaining = AUTO_REFRESH_S;
-  function _updateRefreshBadge() {
-    const el = document.getElementById("refresh-timer");
-    if (!el) return;
-    const m = Math.floor(_refreshRemaining / 60);
-    const s = String(_refreshRemaining % 60).padStart(2, "0");
-    el.textContent = `${m}:${s}`;
-    el.title = `Auto-refresh in ${m}m ${_refreshRemaining % 60}s`;
-  }
+  let _refreshAt = 0;
   function startAutoRefresh() {
     if (_refreshTimer) clearInterval(_refreshTimer);
-    _refreshRemaining = AUTO_REFRESH_S;
-    _updateRefreshBadge();
+    _refreshAt = Date.now() + AUTO_REFRESH_S * 1000;
     _refreshTimer = setInterval(() => {
-      _refreshRemaining -= 1;
-      _updateRefreshBadge();
-      if (_refreshRemaining <= 0) {
-        _refreshRemaining = AUTO_REFRESH_S;
-        const key = `${state.market}:${state.mode}`;
-        delete state.cache[key];
-        delete state.cacheAt[key];
-        localStorage.removeItem(CACHE_PREFIX + key);
-        load(true);
-      }
-    }, 1000);
+      _refreshAt = Date.now() + AUTO_REFRESH_S * 1000;
+      const key = `${state.market}:${state.mode}`;
+      delete state.cache[key];
+      delete state.cacheAt[key];
+      localStorage.removeItem(CACHE_PREFIX + key);
+      load(true);
+    }, AUTO_REFRESH_S * 1000);
   }
 
   const state = {
@@ -316,7 +309,7 @@
     vkEntry: new Set(), // VIVEK entry-type filter; empty = All
     vkRecent: false,    // VIVEK "triggered recently" filter toggle
     vkHighConv: false,  // VIVEK "high conviction" filter (A/A+ in a backtest-edge cell — see convictionCells)
-    vkDir: null,        // direction filter: null = both · "LONG" · "SHORT"
+    vkDir: "LONG",      // direction filter: null = both · "LONG" (default, UI100 #27) · "SHORT"
     vkConfl: false,     // deck pill (Wave 3): only rows with 2+ lens alignment
     vkAtLevel: false,   // deck pill (Wave 3): only rows sitting ON a 200-SMA now
   };
@@ -414,7 +407,7 @@
   })();
 
   const SMALLCAP = 750e6;   // sub-750M = small/spec bucket
-  const HOTCAP   = 500e6;   // sub-500M = 🔥 micro-cap spec sweet spot
+  const HOTCAP   = 500e6;   // sub-500M = micro-cap spec sweet spot (the red mcap badge)
 
   const $ = (s) => document.querySelector(s);
 
@@ -676,38 +669,23 @@
   window.addEventListener("online", () => _netBanner(false));
   if (navigator.onLine === false) _netBanner(true);
 
-  // ------------------------------------------------------- EMA / SMA legend
-  function renderLegend(d) {
-    let periods, colors, label;
-    if (d.setup_type === "vivek") {
-      // VIVEK lines: fast SMA 10 (white) / 20 (yellow), 43 (purple) for trend
-      // structure, and 200 (amber) — the level — matching the chart overlays.
-      periods = [10, 20, 43, 200];
-      colors = { 10: "#e5e9f0", 20: "#ffd23f", 43: "#a78bfa", 200: "#ffb020" };
-      label = "SMA";
-    } else {
-      const smaSetup = d.setup_type === "reversal" || d.setup_type === "spec" || d.setup_type === "googy";
-      periods = smaSetup ? (d.sma_periods || []) : (d.ema_periods || []);
-      colors = smaSetup ? SMA_COLOR : EMA_COLOR;
-      label = smaSetup ? "SMA" : "EMA";
-    }
-    $("#ema-legend").innerHTML = `<span class="legend-tag">${label}</span>` +
-      periods.map((p) => `<span class="ema-dot"><i style="background:${colors[p] || "#888"}"></i>${p}</span>`).join("");
-  }
+  // (UI100 #25, 2026-10-20: the SMA 10/20/43/200 colour legend left the deck —
+  //  the row sparklines draw no SMAs; the chart page keeps its own legend.)
 
   // ------------------------------------------------- deck pills (Wave 3)
-  // Replaces the 4 stat cards + at-level strip + confluence banner. A+/A are
-  // shortcuts to the grade tabs; Multi-lens and At-level are FILTER TOGGLES
-  // (the old banners' content, now one click away instead of two strips).
-  // Funds/REITs stay excluded from the A+/A counts and the top pick
-  // (deckCounts); the old "N tradeable" pill was retired 2026-08-16.
+  // Replaces the 4 stat cards + at-level strip + confluence banner.
+  // Multi-lens and At-level are FILTER TOGGLES (the old banners' content, one
+  // click away); Ignition opens its panel.
+  // UI100 #18/#19 (2026-10-20): the A+ / A pills and the ★ top-pick link left
+  // the card — the toolbar's grade tabs carry the same counts and the top pick
+  // is row 1 of the list. Funds/REITs stay out of every count (deckCounts),
+  // and the counts follow the Longs/Shorts choice (#26), so a grade tab, its
+  // section header and the list under it state ONE number.
   function renderDeckPills(d) {
     const box = $("#deck-pills");
     if (!box) return;
-    const res = (d && d.results) || [];
+    const res = ((d && d.results) || []).filter((r) => !state.vkDir || (r && r.dir === state.vkDir));
     const c = deckCounts(res, isFundReit);
-    const top = c.real.slice()
-      .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (b.score - a.score))[0];
     const nAplus = c.aplus, nA = c.a, nAt = c.atLevel;
     const nConf = state.confl ? state.confl.all().length : null;
     // #93: every filter pill carries aria-pressed so its on/off state is exposed
@@ -718,8 +696,9 @@
       `${label}${n == null ? "" : ` <b>${n}</b>`}${extra || ""}</button>`;
     // ⚡ IGNITION (2026-09-28): the report-only coil → ignition lens. Every rule
     // (which markets, the count, when it shows, staleness, the panel) lives in
-    // js/ignition.js; the deck only places the pill THIRD, straight after "A",
-    // so a 390px phone sees it without swiping the strip. While that market's
+    // js/ignition.js; the deck only places the pill FIRST (UI100 #18: the A+ / A
+    // pills it used to follow are gone), so a 390px phone sees it without
+    // swiping the strip. While that market's
     // file is first loading a placeholder pill holds the slot (no reflow when
     // it lands); an absent file simply never produces a pill.
     // A lens fault must never abort this function (Multi-lens and the counts
@@ -737,29 +716,21 @@
         : pill(`data-ignition="1" aria-controls="ignition-panel" aria-expanded="${ign.open ? "true" : "false"}"`,
             "ig", "⚡ Ignition", ign.n, ign.title, ign.open, ign.mark);
     box.innerHTML =
-      pill(`data-goto="aplus"`, "g", "A+", nAplus, "Show the A+ tab", state.tab === "aplus") +
-      pill(`data-goto="a"`, "", "A", nA, "Show the A tab", state.tab === "a") +
       ignPillHTML +
       pill(`data-pill="confl"`, "o", "⨂ Multi-lens", nConf ?? "…",
         "Names with 2+ lenses aligned right now — click to filter the list to them. " +
         ((window.PM && PM.CONFLUENCE_UNPROVEN) || ""), state.vkConfl) +
       pill(`data-pill="atlevel"`, "t", "◎ At level", nAt,
         "Sitting ON a 200-SMA right now — the moment before the reaction. Click to filter.", state.vkAtLevel) +
-      (top ? `<a class="fpill top" href="chart.html?m=${state.market}&s=${encodeURIComponent(top.symbol)}&mode=vivek" ` +
-        `title="Top tradeable pick (funds/REITs excluded) — open the chart">★ ${esc(top.symbol)} ${fmtPrice(top.price)}</a>` : "") +
-      // "N tradeable" retired (Lane A 2026-08-16): it was the arithmetic sum of
-      // the A+ and A pills sitting directly beside it, so it spent a slot in the
-      // busiest strip on the page restating two numbers already on screen.
-      // The counterweight to the corrected counts above: say out loud how many
+      // The counterweight to the products-free counts: say out loud how many
       // rows were set aside, so "96 A+" becoming "52 A+" reads as an
-      // explanation rather than as names going missing. Informational, not a
-      // filter — the rows are still in the list (dimmed by default; this ⊘
-      // chip is the toggle), and this only reports what the grade
-      // counts no longer include.
+      // explanation rather than as names going missing. Not a filter — the
+      // rows stay in the list (dimmed by default; this toggle shows them).
+      // UI100 #20: a quiet text toggle, not a pill.
       (c.products
         ? `<button class="deck-products" type="button" data-funddim aria-pressed="${state.dimFunds === false ? "false" : "true"}" title="${esc(c.products + " ETF / fund / REIT / LIC row(s) on this scan"
             + (c.aplusProducts ? ", " + c.aplusProducts + " of them graded A+" : "")
-            + ". They hug the 200-SMA so they over-produce reactions, the bot does not trade them, and most CFD brokers do not list them — so they are not counted as A+/A opportunity above, and they queue below real names of the same grade. Tap to dim or show them in the list.")}">⊘ ${c.products} products · ${state.dimFunds === false ? "shown" : "dimmed"}</button>`
+            + ". They hug the 200-SMA so they over-produce reactions, the bot does not trade them, and most CFD brokers do not list them — so the A+ / A / WATCH tab counts leave them out, and they queue below real names of the same grade. Tap to dim or show them in the list.")}">⊘ ${c.products} products · ${state.dimFunds === false ? "shown" : "dimmed"}</button>`
         : "");
     // The ⊘ chip IS the fund-dim control now — it names the count it dims,
     // which the bare toolbar chip never did. Wired per repaint because this
@@ -775,13 +746,6 @@
       dimChip.textContent = dimChip.textContent.replace(/·\s*(dimmed|shown)$/, "· " + (on ? "dimmed" : "shown"));
       renderRows();
     });
-    box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
-      state.tab = b.dataset.goto;
-      document.querySelectorAll("#tabs .seg-btn").forEach((x) => { const on = x.dataset.tab === state.tab; x.classList.toggle("is-active", on); x.setAttribute("aria-pressed", on ? "true" : "false"); });
-      savePrefs();
-      renderDeckPills(state.data);
-      renderRows();
-    }));
     box.querySelectorAll("[data-pill]").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.pill === "confl") state.vkConfl = !state.vkConfl;
       if (b.dataset.pill === "atlevel") state.vkAtLevel = !state.vkAtLevel;
@@ -799,7 +763,7 @@
       if (again) again.focus({ preventScroll: true });
     });
     if (window.Ignition) ignCall(() => window.Ignition.sync(state.market));
-    // Grade-tab counts + watch count live in the toolbar as before
+    // The grade-tab counts live in the toolbar's #tabs.
     $("#count-aplus").textContent = nAplus;
     $("#count-a").textContent = nA;
     $("#count-watch").textContent = c.watch;
@@ -926,9 +890,11 @@
       `${"🎯".repeat(Math.min(cells.length, 3))} High conviction</span>`;
   }
   // Compact, scannable badges for the VIVEK list — what moved + why it
-  // matters. Returns an ARRAY; rowChips caps the row at 3 chips + a "+N"
-  // overflow chip (UI Wave 1). The expanded VIVEK panel lists the scanner's
-  // own r.chips, not these client-side badges.
+  // matters. Returns an ARRAY; rowChips caps the row (3 on PC, ≤2 on a phone)
+  // and folds the rest into a "+N" chip. A `.rb-long` tail is the part of a
+  // label a phone drops (UI100 #32): "⚡ Triggered recently" reads
+  // "⚡ Triggered" there, the title still says it all.
+  const RB_LONG = (s) => `<span class="rb-long">${s}</span>`;
   function smaProxyChip(r) {
     if (!r || r.sma_proxy !== true) return "";
     const w = +r.sma_window;
@@ -939,16 +905,17 @@
     if (state.mode !== "vivek") return [];
     const out = [];
     // Multi-lens confluence (dog-balls mode): another lens has an ACTIVE
-    // aligned setup on this exact name right now
+    // aligned setup on this exact name right now. Its " · +PHASEMAP" tail is
+    // the phone's to drop; the title keeps the lenses and the unproven note.
     const ci = window.PM && state.confl ? state.confl.of(r.symbol) : null;
     if (ci && ci.side === (String(r.dir || "LONG").toUpperCase() === "SHORT" ? "short" : "long"))
-      out.push(PM.confluenceChipHTML(ci, "VIVEK"));
+      out.push(PM.confluenceChipHTML(ci, "VIVEK").replace(/( · \+[^<]*)<\/span>$/, (_, t) => RB_LONG(t) + "</span>"));
     if (isFundReit(r))
       out.push(`<span class="rbadge fundwarn" title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>`);
     const hcb = hiconvBadge(r);
     if (hcb) out.push(hcb);
     if (triggeredRecently(r))
-      out.push(`<span class="rbadge fresh" title="Trigger fired on/near the latest bar">⚡ Triggered recently</span>`);
+      out.push(`<span class="rbadge fresh" title="Triggered recently: the trigger fired on/near the latest bar">⚡ Triggered${RB_LONG(" recently")}</span>`);
     const trig = r.entry_trigger || (r.armed && (r.entry_types || [])[0]) || null;
     if (trig) out.push(`<span class="rbadge trig" title="Entry trigger">${esc(TRIG_LABEL[trig] || trig)}</span>`);
     // REFINE200 #51 (TOP100 #72's display half): the headline "200-SMA" was
@@ -963,10 +930,22 @@
     return out;
   }
 
-  // Row chip strip capped at 3 + "+N" (UI Wave 1): warnings (FUND/REIT,
-  // LOW R:R, WIDE STOP) always outrank decorative badges so the cap can never
-  // hide a risk flag. Badges past the cap are counted in the "+N" chip.
-  const CHIP_CAP = 3;
+  // Row chip strip capped + "+N" (UI Wave 1): warnings (FUND/REIT, LOW R:R,
+  // WIDE STOP, SMA proxy) always outrank decorative badges so the cap can
+  // never hide a risk flag. Badges past the cap are counted in the "+N" chip,
+  // whose title names them.
+  // UI100 #32 (2026-10-20): a phone row shows at most 2 chips and never cuts
+  // one mid-word ("High co…", "R…"): when the top two would not fit WHOLE
+  // beside a "+N" on a 360px row, it shows one. PHONE_CHIP_CHARS is that
+  // width in label characters (11px type ≈ 6.3px a character, an emoji ≈ 2).
+  // Each cap renders its own "+N" (.cm-pc / .cm-phone); CSS shows the one for
+  // the width, and .rc-pc marks the chips only a PC row has room for.
+  const CHIP_CAP = 3, CHIP_CAP_PHONE = 2, PHONE_CHIP_CHARS = 34;
+  const chipLabel = (h, phone) =>
+    (phone ? h.replace(/<span class="rb-long">[^<]*<\/span>/g, "") : h)
+      .replace(/<[^>]*>/g, "").replace(/&[#\w]+;/g, "x").trim();
+  const chipLen = (h) => [...chipLabel(h, true)]
+    .reduce((n, ch) => n + (ch.codePointAt(0) > 0x2000 ? 2 : 1), 0);
   // Day change % (backlog #7). Prefer a scan-provided field; fall back to the
   // spark's last two closes (≈ daily cadence) flagged as an estimate.
   function dayPct(r) {
@@ -985,11 +964,13 @@
     const all = [...vkBadges(r), ...extras].filter(Boolean);
     const isWarn = (h) => /fundwarn|proxywarn|chip warn/.test(h);
     const ordered = [...all.filter(isWarn), ...all.filter((h) => !isWarn(h))];
-    const shown = ordered.slice(0, CHIP_CAP);
-    const hidden = ordered.length - shown.length;
-    if (hidden > 0)
-      shown.push(`<span class="rbadge chip-more" title="${esc(hidden)} more — expand the row for every chip">+${esc(hidden)}</span>`);
-    return shown.join("");
+    const phoneN = ordered.length < 2 ? ordered.length
+      : chipLen(ordered[0]) + chipLen(ordered[1]) <= PHONE_CHIP_CHARS ? CHIP_CAP_PHONE : 1;
+    const more = (from, cls) => from >= ordered.length ? "" :
+      `<span class="rbadge chip-more ${cls}" title="${esc("Also: " + ordered.slice(from).map((h) => chipLabel(h)).join(" · "))}">+${ordered.length - from}</span>`;
+    return ordered.slice(0, CHIP_CAP)
+      .map((h, i) => (i < phoneN ? h : h.replace('class="', 'class="rc-pc ')))
+      .join("") + more(CHIP_CAP, "cm-pc") + more(phoneN, "cm-phone");
   }
 
   // ── UX-20 #1: "what changed since I last looked" ──────────────────────────
@@ -1113,7 +1094,8 @@
   {
     const reg = () => window.GBSPalette && window.GBSPalette.register([
       { label: "Toggle · compact rows", hint: "☰", run: toggleDensity },
-      { label: "Toggle · FUND / REIT dimming", hint: "⚠", run: () => { const b = document.getElementById("fund-dim"); if (b) b.click(); } },
+      // the deck's ⊘ products toggle (the old #fund-dim chip is gone from the page)
+      { label: "Toggle · FUND / REIT dimming", hint: "⚠", run: () => { const b = document.querySelector("#deck-pills [data-funddim]"); if (b) b.click(); } },
       { label: "Run · fresh cloud scan", hint: "📡", run: () => { const b = document.getElementById("reload-btn"); if (b) b.click(); } },
     ]);
     if (window.GBSPalette) reg();
@@ -1237,19 +1219,24 @@
       `</div>`;
   }
 
+  // UI100 #37 (2026-10-20): the entrance cascade plays on the list's FIRST
+  // paint only. Rows of that render carry .row-in (CSS animates nothing
+  // else); every later render — filter, sort, market switch, refresh, the
+  // lens / book marks landing — swaps instantly.
+  let _rowsPainted = false;
   function rowHtml(r, i) {
     // Stagger index drives the entrance animation delay (capped so long lists
     // don't trail off into a slow cascade).
+    const enter = _rowsPainted ? "" : " row-in";
     const stagger = Math.min(i || 0, 12);
     // Row chips: the critical warnings below plus vkBadges, capped by
-    // rowChips(). The VIVEK detail panel lists the scanner's r.chips.
+    // rowChips(). UI100 #40: a dimmed fund/REIT row shows none — the dim says it.
     const lowrr = r.low_rr ? `<span class="chip warn">LOW R:R (${esc(r.rr_text)})</span>` : "";
     const widestop = (r.stop_pct != null && r.stop_pct > 20)
       ? `<span class="chip warn">WIDE STOP (${r.stop_pct}%)</span>` : "";
     const t2r = r.target_2r
       ? `<span class="chip info">${(r.setup_type === "reversal" || r.setup_type === "spec") ? "MEASURED TARGET" : "TARGET = 2R FALLBACK"}</span>`
       : "";
-    const assetBadge = "";
     const rawMcap = mcapOf(r);
     const mcapTxt = fmtMcap(rawMcap);
     const mcapCls = rawMcap <= 0 ? "" : rawMcap < HOTCAP ? "mcap-hot"
@@ -1257,41 +1244,50 @@
     const capOld = mcapTxt ? capAge(r) : null;
     // Show the market-cap pill for EVERY ticker that has cap data (not just the
     // hot/small-cap buckets) — it rides on the same line as the ticker + name.
+    // UI100 #34: no 🔥 on a micro-cap; its colour class still says it.
     const mcapBadge = mcapTxt
-      ? `<span class="badge ${mcapCls || "mcap"}${capOld ? " mcap-old" : ""}" title="Market cap${capOld ? ` · cap as of ${esc(capOld.date)} (${capOld.days} days old)` : ""}">${rawMcap < HOTCAP ? "🔥" : ""}${mcapTxt}</span>`
+      ? `<span class="badge ${mcapCls || "mcap"}${capOld ? " mcap-old" : ""}" title="Market cap${capOld ? ` · cap as of ${esc(capOld.date)} (${capOld.days} days old)` : ""}">${mcapTxt}</span>`
       : "";
     const rrStar = r.target_2r ? "*" : "";
     const rrCls = r.low_rr ? "low" : "";
 
     // Day change (backlog #7): the price block shows today's % beneath the
     // price. Scan-provided fields win when the publisher ships them; until
-    // then it is derived from the spark's last two closes and marked ~.
+    // then it is derived from the spark's last two closes (.est + its title;
+    // UI100 #33 dropped the "~" prefix).
     const dp = dayPct(r);
     const isShort = r.dir === "SHORT";
     const dayHTML = dp == null ? "" :
       `<span class="rday ${dp.v >= 0 ? "up" : "down"}${dp.est ? " est" : ""}" ` +
       `title="${dp.est ? "≈ change vs the previous spark close (day-change isn't in the scan data yet)" : "Day change"}">` +
-      `${dp.est ? "~" : ""}${dp.v >= 0 ? "+" : ""}${dp.v.toFixed(1)}%</span>`;
+      `${dp.v >= 0 ? "+" : ""}${dp.v.toFixed(1)}%</span>`;
+    // UI100 #30: no ▲/▼ while the list shows one side only (the row's
+    // aria-label still names it).
+    const dirMark = state.vkDir ? "" :
+      `<span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>`;
+    const dimmed = state.dimFunds !== false && isFundReit(r);
 
     const chartHref = `chart.html?m=${state.market}&s=${encodeURIComponent(r.symbol)}${state.mode !== "pullback" ? `&mode=${state.mode}` : ""}`;
     // v2 #47: FUND/REIT rows dim (default on) — the bot never trades them and
     // they crowd the A+ list. Toggled by the deck's ⊘ products chip; hover/open restores.
-    const dimCls = (state.dimFunds !== false && isFundReit(r)) ? " row-dim" : "";
+    const dimCls = dimmed ? " row-dim" : "";
     // Sector-at-cap rows dim GENTLY (their own class, not the funds toggle —
     // a capped A+ is still a real setup, just not an available slot today).
     const capCls = sectorCapped(r) ? " row-capdim" : "";
-    return `<div class="row-wrap${dimCls}${capCls}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"};--row-i:${stagger}">
+    // The ° hysteresis mark rides the grade block; on a phone that block is a
+    // thin edge (UI100 #31), so the score carries the mark there (.rk-held).
+    const heldGrade = r.grade_raw && r.grade !== r.grade_raw;
+    return `<div class="row-wrap${dimCls}${capCls}${enter}" data-sym="${esc(r.symbol)}" tabindex="0" role="button" aria-expanded="false" aria-label="${esc(r.symbol)} ${esc(r.grade)} ${isShort ? "short" : "long"} — Enter for details" style="--grade-color:${GRADE_VAR[r.grade] || "var(--grade-c)"}${enter ? `;--row-i:${stagger}` : ""}">
      <div class="row">
       <div class="row-grade">${esc(r.grade)}${r.grade_raw && r.grade !== r.grade_raw ? `<span class="rg-held" title="Displayed grade is HELD by hysteresis (smoothing) — the grade this scan actually earned is ${esc(r.grade_raw)}, and the bot buys grade_raw, not the badge.">°</span>` : ""}</div>
       <div class="row-main">
         <div class="row-line1">
           <a class="tkr" href="${chartHref}" title="Open chart">${esc(r.symbol)}</a>
-          <span class="rdir ${isShort ? "short" : "long"}" title="${isShort ? "SHORT" : "LONG"} setup" aria-label="${isShort ? "SHORT" : "LONG"}">${isShort ? "▼" : "▲"}</span>
+          ${dirMark}
           ${tfDots(r)}${changeMark(r)}${heldChip(r)}${sectorCapChip(r)}${alertSyms.has(r.symbol) ? `<span class="row-alert" title="You have a price-alert line armed on this chart — manage it on the ALERTS page">⏰</span>` : ""}
-          ${mcapBadge}
-          <span class="cname">${esc(r.name || "")}</span>
+          <span class="rname">${mcapBadge}<span class="cname">${esc(r.name || "")}</span></span>
         </div>
-        <div class="row-chips">${rowChips(r, [assetBadge, lowrr, widestop, t2r])}</div>
+        <div class="row-chips">${dimmed ? "" : rowChips(r, [lowrr, widestop, t2r])}</div>
       </div>
       ${planCol(r)}
       <div class="row-price">
@@ -1303,8 +1299,8 @@
           ${spark(r.spark, 64, 28, COLOR[r.trend] || COLOR.blue)}
         </a>
         <div class="row-kpis">
-          <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span></span>
-          <span class="rk-rr ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(1) + rrStar}</span>
+          <span class="rk-score">${r.score}<span class="rk-max">/${r.score_max}</span>${heldGrade ? `<span class="rk-held" title="Grade held by hysteresis — this scan earned ${esc(r.grade_raw)}">°</span>` : ""}</span>
+          <span class="rk-rr ${rrCls}">${r.rr == null ? "—" : r.rr.toFixed(1) + "R" + rrStar}</span>
         </div>
         <button class="row-expand" title="Details" aria-label="Toggle details">
           <svg width="18" height="18" aria-hidden="true"><use href="#ic-chevron"/></svg>
@@ -1412,12 +1408,20 @@
         });
       return;
     }
-    // #51: copy-debug lives in the expanded panel now (off the row) — one
-    // clean tap target per row, the developer tool tucked where it belongs.
+    // #51: copy-debug lives in the expanded panel (off the row). UI100 #52
+    // (2026-10-20): it and the DEBUG field list render in debug mode only
+    // (?debug, or Ctrl+Shift+D, whose re-render refills open panels).
     const copyBtn = `<button class="dp-copy row-copy-debug" data-sym="${esc(r.symbol)}" title="Copy this setup's raw data">` +
       `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy raw data</button>`;
-    inner.innerHTML = detailHtml(r) + debugDetailHtml(r) + `<div class="dp-tools">${copyBtn}</div>`;
+    inner.innerHTML = detailHtml(r) +
+      (isDebug() ? debugDetailHtml(r) + `<div class="dp-tools">${copyBtn}</div>` : "");
     inner.dataset.filled = "1";
+    // UI100 #45: the narrative clamps to 3 lines; "more" shows only when the
+    // clamp actually cut something (measured once laid out).
+    requestAnimationFrame(() => {
+      const why = inner.querySelector(".vk-why"), more = inner.querySelector(".vk-more");
+      if (why && more && why.scrollHeight > why.clientHeight + 1) more.hidden = false;
+    });
   }
 
   function priceStrip(r) {
@@ -1526,7 +1530,6 @@
     const d = r.detail || {};
     const isLong = r.dir !== "SHORT";
     const scale = (r.scale || d.scale || [0.25, 0.50, 0.15]).map((x) => Math.round(x * 100));
-    const gColor = GRADE_VAR[r.grade] || "var(--grade-c)";
     const tfTxt = r.level_tf === "weekly" ? "Weekly 200 SMA" : r.level_tf === "3d" ? "3-Day 200 SMA" : "H4 200 SMA";
     const pctFrom = (v) => (r.entry ? ((v - r.entry) / r.entry) * 100 : 0);
     const sgn = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
@@ -1580,11 +1583,12 @@
     ];
 
     // UX top-10 #4: the plan at a glance — a PROPORTIONAL price axis. The cell
-    // ladder above reads in trade order but its cells are equidistant; this bar
+    // ladder below reads in trade order but its cells are equidistant; this bar
     // places SL / Entry / TPs at their TRUE relative prices with a live "now"
     // marker, so one glance answers "how far is the entry, and what's the
-    // shape of the trade?" Plus an R:R meter (risk vs reward to TP2, widths
-    // proportional). Pure CSS positioning — no canvas, no lib.
+    // shape of the trade?" Pure CSS positioning — no canvas, no lib.
+    // (UI100 #46, 2026-10-20: the mini R:R bar + "1 : 3.0 · entry +0.0% from
+    // here" line under it went — the hero's R:R and this axis say both.)
     const axisHTML = (() => {
       const lv = [r.stop, r.entry, r.tp1, r.tp2, r.tp3].filter((x) => x != null && isFinite(x));
       if (lv.length < 3 || r.entry == null || r.stop == null) return "";
@@ -1610,18 +1614,11 @@
       });
       const tick = (p, lbl, cls) => p == null ? "" :
         `<span class="vk-axis-tick ${cls}" style="left:${X(p).toFixed(1)}%" title="${esc(lbl)} ${esc(cur)}${num(p)}"><i></i>${quiet.has(lbl) ? "" : esc(lbl)}</span>`;
-      const nowPct = now != null && r.entry ? ((r.entry - now) / now * 100) : null;
-      const rr = r.rr || 0;
-      const rwW = Math.max(8, Math.min(88, (rr / (1 + rr)) * 100));
       return `<div class="vk-axis" aria-label="Plan levels relative to the current price">
         <div class="vk-axis-track">
           ${seg(r.stop, r.entry, "risk")}${seg(r.entry, r.tp3 != null ? r.tp3 : (r.tp2 != null ? r.tp2 : r.tp1), "reward")}
           ${tick(r.stop, "SL", "sl")}${tick(r.entry, "IN", "in")}${tick(r.tp1, "TP1", "tp")}${tick(r.tp2, "TP2", "tp")}${tick(r.tp3, "TP3", "tp")}
           ${now != null ? `<span class="vk-axis-now" style="left:${X(now).toFixed(1)}%" title="Now ${cur}${num(now)}"></span>` : ""}
-        </div>
-        <div class="vk-axis-meta">
-          <span class="vk-rrmeter" title="Risk vs reward to TP2"><i class="rm-risk" style="width:${(100 - rwW).toFixed(0)}%"></i><i class="rm-rw" style="width:${rwW.toFixed(0)}%"></i></span>
-          <span class="vk-axis-note">1 : ${(rr || 0).toFixed(1)}${nowPct != null ? ` · entry ${nowPct >= 0 ? "+" : ""}${nowPct.toFixed(1)}% from here` : ""}</span>
         </div>
       </div>`;
     })();
@@ -1630,6 +1627,7 @@
     // chart page's My-size box saves, so it's set once and appears on every
     // expanded row. Unset → a one-time inline mini-form (saved on input, the
     // delegated listener below computes live); set → units/notional/1R line.
+    // UI100 #48: one compact line under the ladder, no dashed box.
     const sizeHTML = (() => {
       if (r.entry == null || r.stop == null || !(Math.abs(r.entry - r.stop) > 0)) return "";
       const acct = +(localStorage.getItem("gbs:mysize-acct") || 0);
@@ -1637,50 +1635,48 @@
       const set = acct > 0 && riskP > 0;
       const inner = set
         ? `<span class="vk-size-out">${sizeCalcText(acct, riskP, Math.abs(r.entry - r.stop), r.entry, cur)}</span>`
-        : `<span class="vk-size-hint">size every setup — set once:</span>` +
+        : `<span class="vk-size-hint">Your size:</span>` +
           `<label>acct $<input class="vk-size-in" data-k="acct" type="number" inputmode="decimal" min="0" step="100" placeholder="10000"></label>` +
           `<label>risk <input class="vk-size-in" data-k="risk" type="number" inputmode="decimal" min="0.1" max="5" step="0.1" value="1">%</label>` +
           `<span class="vk-size-out"></span>`;
       return `<div class="vk-size" data-entry="${numAttr(r.entry)}" data-stop="${numAttr(r.stop)}" title="${set
         ? "Sized from the account + risk saved in the chart page's My-size box (gears the whole site) — edit it on any chart."
-        : "Saved on this device only; the chart page's My-size box shares the same values."}">💰 ${inner}</div>`;
+        : "Size every setup — set once. Saved on this device only; the chart page's My-size box shares the same values."}">💰 ${inner}</div>`;
     })();
 
+    // UI100 (2026-10-20): #43 the duplicate grade box left (the row right above
+    // shows grade + score), #44 the bottom tag row (it repeated the checklist)
+    // and #47 the boilerplate risk note went; #45 the narrative clamps to three
+    // lines with "more"; #49 View chart / Copy plan are one .vk-actions pair
+    // (full width on a phone).
     return `<div class="row-detail vk-detail">
-      <div class="vk-hero" style="--gc:${gColor}">
-        <div class="vk-grade-block">
-          <span class="vk-grade-lbl">GRADE</span>
-          <span class="vk-grade-val">${esc(r.grade)}</span>
-          <span class="vk-grade-score">${r.score}/${r.score_max}</span>
-        </div>
-        <div class="vk-hero-body">
-          <div class="vk-hero-top">
-            <span class="vk-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
-            <span class="vk-tf-chip">${tfTxt}${r.confluence ? " · W+H4 confluence" : ""}</span>
-            ${r.headline_tf && r.headline_tf !== "1D"
-              ? `<span class="vk-tf-chip" title="Entry/SL/TP and R:R shown are the ${esc(r.headline_tf)} plan — the timeframe the trigger armed on (and the one the bot trades)">${esc(r.headline_tf)} PLAN</span>` : ""}
-            ${tfDotsText(r) ? `<span class="vk-tf-chip vk-tf-states" title="Plan state on each timeframe (the row's three dots)">${esc(tfDotsText(r))}</span>` : ""}
-            <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
-            ${scanAge()}
+      <div class="vk-hero">
+        <div class="vk-hero-top">
+          <span class="vk-dir ${isLong ? "dir-long" : "dir-short"}">${isLong ? "LONG" : "SHORT"}</span>
+          <span class="vk-tf-chip">${tfTxt}${r.confluence ? " · W+H4 confluence" : ""}</span>
+          ${r.headline_tf && r.headline_tf !== "1D"
+            ? `<span class="vk-tf-chip" title="Entry/SL/TP and R:R shown are the ${esc(r.headline_tf)} plan — the timeframe the trigger armed on (and the one the bot trades)">${esc(r.headline_tf)} PLAN</span>` : ""}
+          ${tfDotsText(r) ? `<span class="vk-tf-chip vk-tf-states" title="Plan state on each timeframe (the row's three dots)">${esc(tfDotsText(r))}</span>` : ""}
+          <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
+          ${scanAge()}
+          <div class="vk-actions">
             <a class="vk-chart-btn" href="${chartHref}">View chart →</a>
             <button class="vk-chart-btn vk-copy-btn" type="button" data-copyplan="${esc(r.symbol)}"
               title="Copy this plan as one line of text — entry, SL, TPs, R:R">⧉ Copy plan</button>
           </div>
-          <p class="vk-why">${esc(r.analysis || "")}</p>
         </div>
+        ${r.analysis ? `<p class="vk-why">${esc(r.analysis)}</p>` +
+          `<button class="vk-more" type="button" aria-expanded="false" hidden>more</button>` : ""}
       </div>
 
       ${axisHTML}
-      ${sizeHTML}
       <div class="vk-ladder vk-ladder-h">${ladder.join("")}</div>
+      ${sizeHTML}
 
       <div class="vk-checklist-wrap">
         <div class="vk-section-lbl">5.0 checklist</div>
         <div class="vk-checks">${checklist}</div>
-        <div class="vk-plan-note">Risk 0.25–0.5% of equity · ≤3× leverage · SL → break-even at TP1, → below new support at TP2 · never moved against the trade.</div>
       </div>
-
-      <div class="vk-chips">${(r.chips || []).map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
     </div>`;
   }
 
@@ -2025,9 +2021,24 @@
   }
   const getJSON = (url) => fetchT(url, { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  // UI100 #100 (2026-10-20): the book and the rules come through nav.js's
+  // shared loader (window.VivekBook, REFINE200 #68), so a deck load reads each
+  // file ONCE (it read the book twice and the rules three times). nav.js is
+  // deferred, so it runs after this script: the first read waits for it. A
+  // page without the loader falls back to a plain timed fetch. `opts` is the
+  // loader's own ({fresh: true} = the strip's 3-minute re-read). Rejects on
+  // failure, like the loader.
+  const vbReady = new Promise((res) => {
+    if (window.VivekBook || document.readyState !== "loading") res(window.VivekBook || null);
+    else document.addEventListener("DOMContentLoaded", () => res(window.VivekBook || null), { once: true });
+  });
+  const readShared = (kind, opts) => vbReady.then((VB) => (VB
+    ? (kind === "book" ? VB.get(opts) : VB.rules(opts))
+    : fetchT(kind === "book" ? "data/vivek_bot_book.json" : "data/bot_rules.json", { cache: "no-cache" })
+        .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })));
   async function loadEntryQuality() {
     try {
-      const rules = await getJSON("data/bot_rules.json");
+      const rules = await readShared("rules").catch(() => null);
       let by = rules && rules.entry_quality && rules.entry_quality.by_entry_type;
       if (!by) {
         const bt = await getJSON("data/vivek_backtest_longonly.json");
@@ -2138,7 +2149,11 @@
     // ASX/NASDAQ scan is SUPPOSED to be a day or two old.
     if (fresh.weekendNote) bits.push("market closed (weekend)");
     if (behind) bits.push("rescan to enable latest features");
-    box.hidden = false;
+    // UI100 #15 (2026-10-20): the pill shows only when something is wrong
+    // (low coverage, an old or session-missed scan, an old build), amber. A
+    // healthy scan says its age in the title and its coverage in the
+    // subline's tooltip (applyPayload).
+    box.hidden = !warn;
     box.className = `scan-fresh${warn ? " warn" : ""}`;
     box.textContent = bits.join("  ·  ");
     // Relative age on screen → exact Melbourne time in the tooltip (UI Wave 1)
@@ -2194,8 +2209,10 @@
     const f = d && d.setup_type === "vivek" ? d.funnel : null;
     if (!f || typeof f.universe !== "number") { box.hidden = true; box.innerHTML = ""; return; }
     const n = (x) => (typeof x === "number" ? x : 0);
+    // UI100 #16 (2026-10-20): the disclosure reads "Pipeline ▸"; this
+    // counts line opens as the first line of its body.
     const summary =
-      `Pipeline: ${n(f.universe)} scanned → ${n(f.with_data)} with data → ` +
+      `${n(f.universe)} scanned → ${n(f.with_data)} with data → ` +
       `${n(f.setups)} setups (${n(f.no_setup)} no setup · ${n(f.illiquid_setup)} illiquid` +
       `${n(f.below_score) + n(f.no_plan) ? ` · ${n(f.below_score) + n(f.no_plan)} below bar` : ""}` +
       `${n(f.errors) ? ` · ${n(f.errors)} errored` : ""})` +
@@ -2213,8 +2230,8 @@
                 (n(f.arriving) ? "" : ` None cleared the stricter two-leg “arriving” gate — today's dollars alone over the floor on ≥3× average volume.`)
       : ` None of them show unusual volume today.`;
     box.innerHTML =
-      `<summary>${esc(summary)}</summary>` +
-      `<div class="sf-body">${
+      `<summary>Pipeline</summary>` +
+      `<div class="sf-body"><div class="sf-line">${esc(summary)}</div>${
         n(f.illiquid_setup)
           ? `${n(f.illiquid_setup)} name(s) had a setup but sit under the liquidity floor.${volNote}`
           : `Nothing was dropped for liquidity this scan.`
@@ -2341,6 +2358,8 @@
     box.querySelectorAll(".vkf-chip").forEach((b) => b.addEventListener("click", () => {
       if (b.dataset.dir) {
         state.vkDir = state.vkDir === b.dataset.dir ? null : b.dataset.dir;   // toggle; click again = both
+        savePrefs();                  // UI100 #27: the side is remembered
+        renderDeckPills(state.data);  // #26: the tab counts follow the side
       } else if (b.dataset.recent) {
         state.vkRecent = !state.vkRecent;
       } else if (b.dataset.high) {
@@ -2392,8 +2411,9 @@
     if (!line || line.scrollWidth <= line.clientWidth) return;
     // The default "All" chip is not a choice the user made: chasing it on
     // load scrolled the ☰ views button off the left edge of every phone.
-    // Only a real filter (or the grade tab) is brought into view.
-    const el = document.querySelector('#vk-filters .vkf-chip.is-active:not([data-type="all"])')
+    // Only a real filter (or the grade tab) is brought into view — and the
+    // default ▲ Longs (UI100 #27) is no more a choice than "All" is.
+    const el = document.querySelector('#vk-filters .vkf-chip.is-active:not([data-type="all"]):not([data-dir="LONG"])')
             || document.querySelector("#tabs .seg-btn.is-active");
     if (!el) return;
     const lr = line.getBoundingClientRect(), er = el.getBoundingClientRect();
@@ -2451,14 +2471,13 @@
         return `<div class="row-group row-group-sector" style="--grade-color:var(--blue)"><span>${esc(String(k).toUpperCase())}</span><span class="row-group-n">${inG.length}${ap ? ` · ${ap} A+` : ""}</span></div>`;
       }
       const count = list.reduce((n, r) => n + (r.grade === k ? 1 : 0), 0);
-      // Products are IN the list (dimmed) but are not opportunity, so a bare
-      // "67" under a pill that now reads "51 A+" is the same two-numbers-one-
-      // screen problem the pill fix exists to end. Says both, in the sector
-      // header's existing `count · qualifier` shape: the section is honest
-      // about what it contains AND about what is actually tradeable.
+      // Products are IN the list (dimmed) but are not opportunity.
+      // UI100 #26 (2026-10-20): the header states ONE number — the tradeable
+      // rows, as the grade tab counts them ("75 · 50 tradeable" → "50"); the
+      // set-aside products ride the title.
       const realN = list.reduce((n, r) => n + ((r.grade === k && !isFundReit(r)) ? 1 : 0), 0);
-      const qual = (realN !== count) ? ` · ${realN} tradeable` : "";
-      return `<div class="row-group" data-grade="${esc(k)}" style="--grade-color:${GRADE_VAR[k] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[k] || k)}</span><span class="row-group-n">${count}${qual}</span></div>`;
+      const tip = `${realN} tradeable` + (realN !== count ? ` · ${count - realN} fund/REIT/ETF row(s) below them not counted` : "");
+      return `<div class="row-group" data-grade="${esc(k)}" style="--grade-color:${GRADE_VAR[k] || "var(--grade-c)"}"><span>${esc(GROUP_NAME[k] || k)}</span><span class="row-group-n" title="${esc(tip)}">${realN}</span></div>`;
     };
     const rowOrGroup = (r, idx) => (groupAt[idx] ? groupHdr(groupAt[idx]) : "") + rowHtml(r, idx);
 
@@ -2480,9 +2499,9 @@
       ? `<div class="row-cap"><span>Showing the top ${WINDOW_CAP} of ${list.length} — refine filters to narrow, or</span> <button class="row-cap-all" type="button">show all ${list.length}</button></div>`
       : "";
     wrap.innerHTML = renderList.slice(0, FIRST).map((r, idx) => rowOrGroup(r, idx)).join("");
-    // Entrance cascade on the FIRST paint only — later renders (filters,
-    // sorts, pills) swap instantly, which reads as much snappier.
-    if (!wrap.dataset.painted) requestAnimationFrame(() => { wrap.dataset.painted = "1"; });
+    // Entrance cascade on the FIRST paint only (UI100 #37, see rowHtml) —
+    // later renders (filters, sorts, pills) swap instantly.
+    _rowsPainted = true;
     // (#55's other-lens strip went with the watch view, 2026-09-21; only the
     // #68 row-window notice — "Showing the top 300 of N … show all" — is
     // appended here now.)
@@ -2547,10 +2566,21 @@
     applySectorMap(d);    // Fix-10 #10: backfill sectors from the sidecar
     state.cur = d.currency_symbol || "$";
     updateScanTitle(d);
-    const dqNote = d.quality_skipped ? `  ·  ${d.quality_skipped} skipped (data quality)` : "";
-    const riskNote = d.risk_per_trade ? `  ·  $${d.risk_per_trade} risk/trade` : "";
+    // UI100 #17 (2026-10-20): the subline is two numbers — "202 setups · 2,051
+    // scanned" (the market is on the switch; the refresh cadence is the status
+    // lamp's). Coverage and the build ride its tooltip, since the pill now
+    // shows only when coverage is degraded (#15); a weekend says so here.
     const nSetups = d._head && d._full_count != null ? d._full_count : d.results.length;
-    $("#scan-sub").textContent = `${d.label} · ${d.universe_size ?? d.scanned} in universe · ${nSetups} setups${dqNote}${riskNote} · auto-refreshes hourly`;
+    const uniN = +(d.universe_size ?? d.scanned ?? 0);
+    const sub = $("#scan-sub");
+    sub.textContent = `${(+nSetups).toLocaleString("en-US")} setups · ${uniN.toLocaleString("en-US")} scanned` +
+      (scanStaleness(d.generated_at, state.market).weekendNote ? " · market closed (weekend)" : "");
+    sub.title = [
+      typeof d.coverage_pct === "number"
+        ? `${d.coverage_pct}% coverage` + (d.from_cache ? ` (${d.fresh ?? "?"} fresh · ${d.from_cache} cached)` : "") : "",
+      d.schema_version != null ? `schema v${d.schema_version}` : "",
+      d.code_sha ? `built from ${d.code_sha}` : "",
+    ].filter(Boolean).join(" · ");
     renderFreshness(d);
     renderFunnel(d);
     // Degraded-universe tripwire (2026-07-26): a flaky ticker-directory fetch
@@ -2577,7 +2607,6 @@
       }
     }
     renderEntryFilters(d);
-    renderLegend(d);
     renderDeckPills(d);
     renderRows();
     // Multi-lens confluence: fetch the other lenses' latest files, then
@@ -2711,13 +2740,15 @@
              maxOpen, free, atCap: maxOpen != null && open.length >= maxOpen };
   };
 
-  async function loadBotActivity() {
+  // `fresh` = the 3-minute re-read: it asks the shared loader for a new copy
+  // (UI100 #100); the boot call shares the page's one read.
+  async function loadBotActivity(fresh) {
     const box = $("#bot-activity");
     if (!box) return;
+    const opts = fresh ? { fresh: true } : undefined;
     try {
-      const res = await fetchT("data/vivek_bot_book.json", { cache: "no-cache" });
-      if (!res.ok) return;
-      const b = await res.json();
+      const b = await readShared("book", opts);
+      if (!b) return;
       // HELD marking (2026-08-15). The deck's job is picking the NEXT trade,
       // and with the book near its cap most A+ rows are names the bot already
       // holds — nothing on the row said so, and finding out cost a trip to the
@@ -2737,12 +2768,11 @@
         // once if the current market's held set actually changed size.
         if (before !== after && state.data) renderRows();
       } catch (_) { /* marking is best-effort; the strip below must not pay for it */ }
-      // The cap lives in bot_rules.json, not in the book. Fetched SECOND and
+      // The cap lives in bot_rules.json, not in the book. Read SECOND and
       // separately so it can fail without costing the strip: a missing or
       // unreadable rules file degrades capacity to "not shown", never to a
       // wrong free-slot count and never to a blank scoreboard.
-      const rules = await fetchT("data/bot_rules.json", { cache: "no-cache" })
-        .then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const rules = await readShared("rules", opts).catch(() => null);
       // SECTOR-CAP load (2026-08-20): per-market {bucket: open count} from the
       // SAME book, bucketed the way decide() buckets (sectorKeyOf mirrors
       // _sector_key; crypto majors come from the published rules). Missing
@@ -2781,29 +2811,24 @@
       evts.sort((a, b2) => b2.t - a.t);
       const recent = evts.slice(0, 4);
       if (!recent.length) { box.hidden = true; return; }
-      // One summary line: slots used / stalled / free, the market split,
-      // unrealized R and the rules-vs-you record. Click expands the event list
-      // (each event carries its own age); the 3-min
-      // re-render keeps an expanded list expanded. Journal → link stays put.
+      // UI100 #21/#22/#24 (2026-10-20): ONE short line — "Book 60/60 · 23
+      // stalled · +1.6R open ▾" — with Journal → inline beside it. The fold
+      // holds the rest: the Journal's slot wording, the market split, the
+      // record split by WHO closed it, then the recent events (each with its
+      // age). The amber stalled strip left the deck: its count is in the line,
+      // its list on the Journal (no hand closes since 2026-10-14). The 3-min
+      // re-render keeps an open fold open.
       const wasOpen = !!box.querySelector(".ba-events:not([hidden])");
-      // The scoreboard, made unavoidable (owner-ordered 2026-07-30): open
-      // count with the market split, live unrealized R across the book, the
-      // honest closed record, and — on its own line so it cannot be skimmed
-      // past — the positions the stall probe has flagged as sitting still.
       const facts = bookFacts(b, rules);
       const fmtR = (r) => (r == null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(1)}R`);
-      // CAPACITY FIRST (owner-ordered 2026-08-13). The deck is where names get
-      // hunted, and until now the only place that said whether there was
-      // anywhere to put one was the Journal page. The cap is global, so a full
+      // CAPACITY FIRST (owner-ordered 2026-08-13). The cap is global, so a full
       // book declines every new A+ before quality is even considered — "96 A+"
-      // and "0 free" is a different morning to "96 A+" and "8 free", and the
-      // deck could only ever tell you the first half. Journal's own wording
-      // ("N of <cap> A+ slots", "FULL") is reused verbatim so the two surfaces
-      // read as one system.
+      // and "0 free" is a different morning to "96 A+" and "8 free". The line
+      // says "60/60"; the fold reuses the Journal's own wording ("N of <cap>
+      // book slots", "FULL") verbatim so the two surfaces read as one system.
       const capTxt = facts.maxOpen == null
         ? `${facts.open} open`
         : `${facts.open} of ${facts.maxOpen} book slots · ` +
-          `${facts.stalled.length} stalled · ` +
           (facts.atCap ? "FULL" : `${facts.free} free`);
       // THE RECORD, UNBLENDED (Session B, 2026-08-19, owner-ordered). This
       // used to print one `record 16W-29L -6.9R`, which is two different
@@ -2821,23 +2846,19 @@
         : (facts.rules.n && facts.owner.n)
           ? `rules ${rec(facts.rules)} · you ${rec(facts.owner)}`
           : facts.rules.n ? `rules ${rec(facts.rules)}` : `you ${rec(facts.owner)}`;
-      const sumTxt =
-        `Paper book: ${capTxt} (${facts.mkts.asx} ASX · ${facts.mkts.nasdaq} NAS · ` +
-        `${facts.mkts.crypto} CRY) · unrealized ${fmtR(facts.unreal)} · ${recTxt}`;
-      const shown = facts.stalled.slice(0, 6);
-      const stallTxt = facts.stalled.length
-        ? `⏳ ${facts.stalled.length} stalled — probe-flagged: ${shown.join(", ")}` +
-          `${facts.stalled.length > shown.length ? ` +${facts.stalled.length - shown.length} more` : ""} · your call`
-        : "";
+      const lineTxt = `Book ${facts.maxOpen == null ? facts.open : `${facts.open}/${facts.maxOpen}`}` +
+        (facts.stalled.length ? ` · ${facts.stalled.length} stalled` : "") +
+        (facts.unreal != null ? ` · ${fmtR(facts.unreal)} open` : "");
+      const foldTxt = `${capTxt} · ${facts.mkts.asx} ASX · ${facts.mkts.nasdaq} NAS · ` +
+        `${facts.mkts.crypto} CRY · ${recTxt}`;
       box.hidden = false;
       box.innerHTML =
-        `<button class="ba-sum" type="button" aria-expanded="${wasOpen}" ` +
-          `title="The paper bot book — click for the recent events. The record is split by WHO closed the trade: the rules (stop / target / trail / time stop) and you (manual). They are different systems and pooling them hides both.">🤖 ${esc(sumTxt)}` +
+        `<button class="ba-sum" type="button" aria-expanded="${wasOpen}" aria-controls="ba-fold" ` +
+          `title="The paper bot book: open positions of the cap · how many the stall probe flagged (open ≥2 weeks with minimal movement — it never closes anything; the list is on the Journal) · unrealized R. Tap for the record and the recent events. The record is split by WHO closed the trade: the rules (stop / target / trail / time stop) and you (manual). They are different systems and pooling them hides both.">${esc(lineTxt)}` +
           `<span class="ba-chev" aria-hidden="true">▾</span></button>` +
         `<a class="ba-more" href="journal.html">Journal →</a>` +
-        (stallTxt ? `<a class="ba-stall" href="journal.html" ` +
-          `title="Open ≥2 weeks with minimal movement, flagged by the stall probe — it never closes anything; the decision is yours">${esc(stallTxt)}</a>` : "") +
-        `<div class="ba-events"${wasOpen ? "" : " hidden"}>` +
+        `<div class="ba-events" id="ba-fold"${wasOpen ? "" : " hidden"}>` +
+        `<div class="ba-facts">${esc(foldTxt)}</div>` +
         recent.map((e) =>
           `<a class="ba-item" href="journal.html" title="${esc(e.sub)}">` +
           `<span class="ba-kind-${e.kind}${e.kind === "close" ? (e.r >= 0 ? " pos" : " neg") : ""}">${esc(e.txt)}</span>` +
@@ -3447,11 +3468,20 @@
         return;
       }
       if (e.target.closest("a.tkr") || e.target.closest("a.row-spark")) return;  // -> chart page
-      // On touch, a tap on a titled element INSIDE the open panel only reads
-      // its tip (nav.js tipPop); collapsing the row under the reader would
-      // point the tip at a panel that just closed. The header still toggles.
-      if (window.matchMedia && matchMedia("(hover: none)").matches &&
-          e.target.closest(".row-detail [title]")) return;
+      // UI100 #45: "more" un-clamps the narrative (and "less" clamps it back).
+      const more = e.target.closest(".vk-more");
+      if (more) {
+        const why = more.previousElementSibling;
+        const expanded = !!(why && why.classList.toggle("is-open"));
+        more.textContent = expanded ? "less" : "more";
+        more.setAttribute("aria-expanded", String(expanded));
+        return;
+      }
+      // A click INSIDE the open panel never collapses the row — only its
+      // header does (2026-10-20: tapping the size inputs, the narrative or a
+      // tip used to fold the panel shut under the finger; on touch a titled
+      // element there only reads its tip, nav.js tipPop).
+      if (e.target.closest(".detail-anim")) return;
       // #49: the "+N" overflow chip expands the row directly (explicit — it
       // also fell through before, but now it's an obvious affordance).
       const wrap = e.target.closest(".row-wrap");
@@ -3463,6 +3493,9 @@
     $("#results").addEventListener("keydown", (e) => {
       const wrap = e.target.closest && e.target.closest(".row-wrap");
       if (!wrap) return;
+      // Keys inside the open panel are the panel's own (Copy plan, "more",
+      // the size inputs) — same rule as the click handler above.
+      if (e.target.closest(".detail-anim")) return;
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleRowOpen(wrap); }
     });
     document.addEventListener("keydown", (e) => {
@@ -3485,110 +3518,57 @@
     wrap.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
-  // ---- hourly rotating quote + live clocks -------------------------------
-  const TRADER_QUOTES = [
-    ["The big money is not in the individual fluctuations but in the main movements.", "Jesse Livermore"],
-    ["The market is never wrong — opinions often are.", "Jesse Livermore"],
-    ["There is only one side of the market, and it is not the bull side or the bear side, but the right side.", "Jesse Livermore"],
-    ["Profits always take care of themselves but losses never do.", "Jesse Livermore"],
-    ["There is a time to go long, a time to go short, and a time to go fishing.", "Jesse Livermore"],
-    ["I'm always thinking about losing money as opposed to making money.", "Paul Tudor Jones"],
-    ["The most important rule of trading is to play great defence, not great offence.", "Paul Tudor Jones"],
-    ["Every day I assume every position I have is wrong.", "Paul Tudor Jones"],
-    ["Be fearful when others are greedy, and greedy when others are fearful.", "Warren Buffett"],
-    ["Price is what you pay. Value is what you get.", "Warren Buffett"],
-    ["It's not whether you're right or wrong, but how much money you make when you're right.", "George Soros"],
-    ["Markets are constantly in a state of uncertainty. Money is made by discounting the obvious and betting on the unexpected.", "George Soros"],
-    ["The trend is your friend until the end when it bends.", "Ed Seykota"],
-    ["Win or lose, everybody gets what they want out of the market.", "Ed Seykota"],
-    ["If you can't take a small loss, sooner or later you will take the mother of all losses.", "Ed Seykota"],
-    ["Ride your winners and cut your losers.", "Ed Seykota"],
-    ["Know what you own and know why you own it.", "Peter Lynch"],
-    ["In this business, if you're good, you're right six times out of ten. You're never going to be right nine times out of ten.", "Peter Lynch"],
-    ["The key to trading success is emotional discipline. If intelligence were the key, there would be a lot more people making money trading.", "Victor Sperandeo"],
-    ["The whole secret to winning in the stock market is to lose the least amount possible when you're wrong.", "William O'Neil"],
-    ["I buy on the way up, not on the way down.", "Nicolas Darvas"],
-    ["Don't try to buy at the bottom and sell at the top. It can't be done except by liars.", "Bernard Baruch"],
-    ["Whenever I enter a position, I have a predetermined stop. That's the only way I can sleep.", "Bruce Kovner"],
-    ["I just wait until there is money lying in the corner, and all I have to do is go over there and pick it up.", "Jim Rogers"],
-    ["The time of maximum pessimism is the best time to buy, and the time of maximum optimism is the best time to sell.", "John Templeton"],
-    ["Preserve capital. You can't trade if you don't have any capital.", "Stan Druckenmiller"],
-    ["Risk comes from not knowing what you're doing.", "Warren Buffett"],
-    ["Markets can remain irrational longer than you can remain solvent.", "John Maynard Keynes"],
-    ["Trading is a waiting game. You sit, you wait, and you make a lot of money all at once.", "Jim Rogers"],
-    ["The goal of a successful trader is to make the best trades. Money is secondary.", "Alexander Elder"],
-    ["An investment in knowledge pays the best interest.", "Benjamin Franklin"],
-    ["The stock market is filled with individuals who know the price of everything, but the value of nothing.", "Philip Fisher"],
-    ["In the short run the market is a voting machine, but in the long run it is a weighing machine.", "Benjamin Graham"],
-    ["Compound interest is the eighth wonder of the world. He who understands it, earns it; he who doesn't, pays it.", "Albert Einstein"],
-    ["The four most dangerous words in investing are: 'This time it's different.'", "John Templeton"],
-    ["Successful investing is about managing risk, not avoiding it.", "Benjamin Graham"],
-  ];
-
-  function initDailyQuote() {
-    // Wave 3: the quote left the topbar (single-row deck header) — it now
-    // lives quietly in the footer.
-    const el = document.getElementById("footer-quote") || document.getElementById("topbar-quote");
-    if (!el) return;
-    const show = () => {
-      const idx = Math.floor(Date.now() / 3600000) % TRADER_QUOTES.length;   // rotates hourly
-      const [text, author] = TRADER_QUOTES[idx];
-      el.textContent = `"${text}" — ${author}`;
-      el.title = `"${text}" — ${author}`;
-    };
-    show();
-    setInterval(show, 60000);   // roll to the new quote the moment the hour ticks over
-  }
-
-  // City clocks: Melbourne · New York (left) and China · London (right).
-  const _clockFmt = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  // ---- live clocks ----------------------------------------------------------
+  // (UI100 #11, 2026-10-20: the hourly trader quote left the deck footer, and
+  //  its 40-quote table with it.)
+  // City clocks: Melbourne over New York. UI100 #3/#4 (2026-10-20): China and
+  // London went, and so did the seconds — HH:MM, painted once a minute on the
+  // minute; the weekday and date ride the tooltip.
+  const _clockFmt = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
   const _dateFmt  = (tz) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, day: "2-digit", month: "short", year: "numeric" });
   const CLOCKS = [
     { id: "mel",    fmt: _clockFmt("Australia/Melbourne"), date: _dateFmt("Australia/Melbourne") },
     { id: "ny",     fmt: _clockFmt("America/New_York"),    date: _dateFmt("America/New_York") },
-    { id: "china",  fmt: _clockFmt("Asia/Shanghai"),       date: _dateFmt("Asia/Shanghai") },
-    { id: "london", fmt: _clockFmt("Europe/London"),       date: _dateFmt("Europe/London") },
   ];
 
+  // → [weekday, "HH:MM", date]
   function _fmtClock(fmt, dateFmt, now) {
     const parts = fmt.formatToParts(now);
     const get = (t) => (parts.find((p) => p.type === t) || {}).value || "";
-    const time = `${get("weekday")} ${get("hour")}:${get("minute")}:${get("second")}`;
-    const date = dateFmt.format(now);
-    return [time, date];
+    return [get("weekday"), `${get("hour")}:${get("minute")}`, dateFmt.format(now)];
   }
 
   function updateClocks() {
-    // All FOUR cities visible (owner 2026-07-22: "I wanna be able to see
-    // london/china without hovering"). 2×2 grid: MEL/NY with seconds in the
-    // left column, China/London HH:MM in the right; dates ride the tooltip.
-    //
     // TOP100 #80 — an unguarded repeating timer. The bot-activity, freshness
-    // and status intervals return early on a hidden tab (the auto-refresh
-    // countdown and the hourly quote roll do not); this one ran four
-    // Intl.DateTimeFormat passes plus five DOM writes every second regardless,
-    // which in a backgrounded tab left open overnight is ~57,000 formatter runs
-    // painting text nobody can see. (Browsers throttle background intervals to
-    // ~1/minute, so it is wasteful rather than ruinous — but the work is
-    // strictly pointless, and the clock has to be repainted on return anyway.)
+    // and status intervals return early on a hidden tab; this one used to run
+    // its Intl.DateTimeFormat passes and DOM writes regardless, painting text
+    // nobody can see in a backgrounded tab left open overnight. (Browsers
+    // throttle background timers, so it was wasteful rather than ruinous —
+    // but the work is strictly pointless, and the clock has to be repainted
+    // on return anyway.)
     if (document.hidden) return;
     const now = new Date();
     const parts = {};
     for (const c of CLOCKS) parts[c.id] = _fmtClock(c.fmt, c.date, now);
-    const hms = (id) => (parts[id][0].split(" ")[1] || parts[id][0]);   // "13:33:53"
-    const hm  = (id) => hms(id).slice(0, 5);                            // "13:33"
     const put = (elId, txt) => { const el = document.getElementById(elId); if (el) el.textContent = txt; };
-    put("clk-mel-time", `MELBOURNE ${hms("mel")}`);
-    put("clk-ny-time",  `NEW YORK ${hms("ny")}`);
-    put("clk-china-time",  `CHINA ${hm("china")}`);
-    put("clk-london-time", `LONDON ${hm("london")}`);
+    put("clk-mel-time", `MELBOURNE ${parts.mel[1]}`);
+    put("clk-ny-time",  `NEW YORK ${parts.ny[1]}`);
     const box = document.getElementById("microclock");
-    if (box) box.title = `Melbourne ${parts.mel[0]} · ${parts.mel[1]}\nNew York ${parts.ny[0]} · ${parts.ny[1]}\nChina ${parts.china[0]} · ${parts.china[1]}\nLondon ${parts.london[0]} · ${parts.london[1]}`;
+    if (box) {
+      const line = (name, p) => `${name} ${p[0]} ${p[1]} · ${p[2]}`;
+      const next = _refreshAt > now.getTime()
+        ? `\nPage re-reads the scan at ${_fmtClock(CLOCKS[0].fmt, CLOCKS[0].date, new Date(_refreshAt))[1]} (Melbourne)` : "";
+      box.title = `${line("Melbourne", parts.mel)}\n${line("New York", parts.ny)}${next}`;
+    }
   }
 
-  initDailyQuote();
-  updateClocks();
-  setInterval(updateClocks, 1000);
+  // On the minute: each tick re-aims at the next :00 (+50ms, so the paint
+  // lands just after the minute turns), so the clock never drifts off it.
+  function tickClocks() {
+    updateClocks();
+    setTimeout(tickClocks, 60000 - (Date.now() % 60000) + 50);
+  }
+  tickClocks();
   // Repaint the instant the tab comes back rather than waiting out the next
   // tick. Without this the guard above would be a visible regression: return to
   // the tab and the first thing you see is a clock showing when you LEFT, which
@@ -3657,7 +3637,7 @@
     const p = (v) => (v == null || !isFinite(v)) ? "—" : cur + num(v);
     const txt = `${r.symbol} ${r.dir || "LONG"} — entry ${p(r.entry)} · SL ${p(r.stop)} · ` +
       `TP1 ${p(r.tp1)} / TP2 ${p(r.tp2)} / TP3 ${p(r.tp3)} · R:R ${(r.rr || 0).toFixed(1)} ` +
-      `(${r.headline_tf || "1D"} plan · ${r.grade || ""} · Vivek 5.0 — not advice)`;
+      `(${r.headline_tf || "1D"} plan · ${r.grade || ""} · Vivek 5.0)`;   // no "not advice" tail: owner, 2026-09-28
     const done = (ok) => {
       b.textContent = ok ? "✓ Copied" : "✗ Copy blocked";
       setTimeout(() => { b.textContent = "⧉ Copy plan"; }, 1600);
@@ -3778,7 +3758,7 @@
   initKeyboard();
   bind();
   loadBotActivity();
-  if (!MEASURE) setInterval(() => { if (!document.hidden) loadBotActivity(); }, 180000);
+  if (!MEASURE) setInterval(() => { if (!document.hidden) loadBotActivity(true); }, 180000);
   // Keep the relative "Last scanned" + freshness badge honest while the tab
   // sits open — a "4m ago" that silently ages to 40m would read as live.
   if (!MEASURE) setInterval(() => {
@@ -3794,7 +3774,7 @@
   const whenIdle = (fn) => (window.requestIdleCallback
     ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 400));
   load().then(() => {
-    // ?lite=1 (perf measurement): skip the countdown timer + idle cross-market
+    // ?lite=1 (perf measurement): skip the auto-refresh timer + idle cross-market
     // prefetch so the trace sees a stable payload, not a random ~1.6MB extra.
     if (!MEASURE) startAutoRefresh();
     if (!MEASURE) whenIdle(prefetchMarkets);

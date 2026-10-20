@@ -1,4 +1,4 @@
-/* MOMENTUM — the nav contract, the purple, and the page's honest failures.
+/* MOMENTUM — the nav contract, the plain pill, and the page's honest failures.
  *
  * Everything here reads the SHIPPED files. The nav arrays are EXECUTED out of
  * public/js/nav.js rather than re-declared, and the row/empty-state helpers are
@@ -51,7 +51,7 @@ ok(/\.site-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(6,\s*1fr\)/.test(CSS),
 
 ok(NAVL.PRIMARY.some((x) => x.key === "momentum"), "momentum is a desktop pill");
 {
-  // Position, not just presence: the purple pill sits straight after SPECS.
+  // Position, not just presence: the pill sits straight after SPECS.
   const keys = NAVL.PRIMARY.map((x) => x.key);
   eq(keys.indexOf("momentum"), keys.indexOf("specs") + 1, `momentum follows specs in PRIMARY (${keys.join(" · ")})`);
 }
@@ -106,29 +106,19 @@ ok(!/setBadge\(\s*["']momentum["']/.test(NAV),
 ok(!/momentum[^"']*\.json/.test(NAV),
    "nav.js must not load the lens's data on every page view");
 
-/* ── the purple ─────────────────────────────────────────────────────────── */
+/* ── the pill is a pill ─────────────────────────────────────────────────── */
 
-/* Three states, each needing its own specificity because the existing cascade
- * sets color:var(--green) on :hover at (0,3,0) and background:var(--blue) on
- * .is-here at (0,3,0). */
-ok(/\.nav-pills \.howto-link\[href="momentum\.html"\]\s*\{/.test(CSS), "rest state");
-ok(/\.nav-pills \.howto-link\[href="momentum\.html"\]:hover\s*\{/.test(CSS),
-   "hover must be overridden or the pill flickers green");
-ok(/\.nav-pills \.howto-link\[href="momentum\.html"\]\.is-here\s*\{/.test(CSS),
-   "is-here must be overridden or the pill illuminates blue");
-ok(/\.more-sheet-row\[href="momentum\.html"\]\.is-here/.test(CSS),
-   "the mobile MORE sheet row illuminates too");
-
-/* Every purple nav rule is momentum-scoped, so no other pill can be touched. */
-(() => {
-  const block = CSS.slice(CSS.indexOf("MOMENTUM — the one purple destination"));
-  const selectors = block.match(/^[.#][^{\n]*\{/gm) || [];
-  ok(selectors.length >= 4, "the purple block lost its rules");
-  selectors.forEach((sel) => {
-    ok(/momentum\.html/.test(sel),
-       `a rule in the momentum block is not momentum-scoped: ${sel.trim()}`);
-  });
-})();
+/* UI100 #7 (2026-10-20): the permanent purple pill (2026-09-22) went — every
+ * destination is styled alike and only the page you are on is lit. A rule
+ * keyed on one destination's href, in the pill row or the MORE sheet, is the
+ * old special case coming back. (The page's own accent in momentum.css and
+ * the sheet row's 🟣 glyph are not nav styling and stay.) */
+ok(!/\.howto-link\[href="momentum\.html"\]/.test(CSS),
+   "a momentum-only nav pill rule is back in styles.css");
+ok(!/\.more-sheet-row\[href="momentum\.html"\]/.test(CSS),
+   "a momentum-only MORE sheet rule is back in styles.css");
+ok(!/\.(howto-link|nav-pills|more-sheet-row|site-tab)\b[^{}]*\{/.test(MOCSS.replace(/\/\*[\s\S]*?\*\//g, "")),
+   "momentum.css must not style the shared nav either");
 
 /* --purple must not be REDEFINED: it is byte-identical to --ema-144 and is
  * already inside contrast.test.js's gate, so moving it would repaint a chart

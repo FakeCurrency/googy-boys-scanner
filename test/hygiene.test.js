@@ -375,6 +375,12 @@ ok(!/(?:const|let|var)\s+dark\s*=|function\s+dark\s*\(|\bdark\s*\(\s*\)/.test(co
        `css/sectors.css: .${c} styled a NEWS-page section removed 2026-09-27`);
 }
 
+// UI100 (2026-10-20) -- the deck's "Copy plan" text lost its "not advice"
+// tail: personal use, no disclaimers anywhere (owner, 2026-09-28). The chart's
+// copy is pinned the same way in chart_refine.test.js.
+ok(code("js/app.js").includes("data-copyplan"), "js/app.js: Copy plan moved -- pin would be vacuous");
+ok(!/not advice/.test(code("js/app.js")), "js/app.js: a disclaimer is back in the deck (owner ruled them out 2026-09-28)");
+
 // UI100 (2026-10-20) -- the journal's clutter, removed rather than hidden: the
 // "new positions" box (#62, it repeated the top of the open table), the
 // topbar account stamp (#58) and the hero's duplicate chip (#57); the market

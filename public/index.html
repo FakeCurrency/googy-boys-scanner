@@ -19,7 +19,7 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/inter-500.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
-  <link rel="stylesheet" href="css/styles.css?v=123" />
+  <link rel="stylesheet" href="css/styles.css?v=124" />
   <link rel="stylesheet" href="css/status.css?v=4" />
   <link rel="stylesheet" href="css/ignition.css?v=7" />
   <script>
@@ -47,7 +47,7 @@
     };
   } catch (_e) {}
   </script>
-  <script src="js/nav.js?v=30" defer></script>
+  <script src="js/nav.js?v=31" defer></script>
   <script src="js/status.js?v=11" defer></script>
   <script src="js/sw-register.js?v=4" defer></script>
 </head>
@@ -76,11 +76,11 @@
     <!-- shared site nav (js/nav.js) -->
     <div class="nav-pills" id="site-nav"></div>
     <div class="deck-top-right">
+      <!-- UI100 #3 (2026-10-20): Melbourne + New York only; China and London
+           left with the seconds (#4) and the 4:59 countdown (#5). -->
       <div class="microclock" id="microclock" title="">
         <span class="mc-major" id="clk-mel-time">—</span>
-        <span class="mc-minor" id="clk-china-time">—</span>
         <span class="mc-major" id="clk-ny-time">—</span>
-        <span class="mc-minor" id="clk-london-time">—</span>
       </div>
       <button class="search-trigger" id="search-trigger" title="Search results (press /)" aria-label="Search">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -90,7 +90,6 @@
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         <span class="reload-label">SCAN</span>
       </button>
-      <span class="refresh-timer" id="refresh-timer" title="Auto-refresh countdown"></span>
     </div>
   </header>
 
@@ -157,20 +156,20 @@
       </div>
     </section>
 
-    <!-- EMA legend -->
-    <section class="ema-legend" id="ema-legend"></section>
+    <!-- (UI100 #25, 2026-10-20: the SMA colour legend left the deck.) -->
 
     <!-- results -->
     <section class="rows" id="results" aria-live="polite"></section>
   </main>
 
+  <!-- UI100 #11/#12 (2026-10-20): the rotating trader quote is gone and the
+       credit is the one short line every page carries (nav.js appends the build). -->
   <footer class="site-footer">
-    <p class="footer-quote" id="footer-quote"></p>
-    <p class="credit">Vivek 5.0 · stocks via Yahoo Finance (~15&nbsp;min delayed) · crypto via exchange bars (Binance, Coinbase) · scanned hourly while each market trades, crypto around the clock</p>
+    <p class="credit">Vivek 5.0 · stocks ~15&nbsp;min delayed (Yahoo) · crypto from exchange bars</p>
   </footer>
   <script src="js/phasemap-shared.js?v=24"></script>
   <script src="js/cache.js?v=3"></script>
   <script src="js/ignition.js?v=9"></script>
-  <script src="js/app.js?v=145"></script>
+  <script src="js/app.js?v=146"></script>
 </body>
 </html>

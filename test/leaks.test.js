@@ -321,15 +321,21 @@ test("no beforeunload listener survives anywhere in public/js", () => {
   assert.deepStrictEqual(offenders, [], `beforeunload is back in: ${offenders.join(", ")}`);
 });
 
-test("the clock interval is guarded AND catches up — one without the other is worse", () => {
-  const fn = APP.slice(APP.indexOf("function updateClocks()"), APP.indexOf("setInterval(updateClocks"));
+test("the clock timer is guarded AND catches up — one without the other is worse", () => {
+  const fn = APP.slice(APP.indexOf("function updateClocks()"), APP.indexOf("function tickClocks()"));
+  assert.ok(fn.length > 0, "updateClocks / tickClocks moved — re-point this test");
   assert.ok(/if\s*\(document\.hidden\)\s*return;/.test(fn),
     "updateClocks must return early on a hidden tab");
   const body = fn.slice(fn.indexOf("if (document.hidden) return;"));
   assert.ok(/const now = new Date\(\)/.test(body),
     "the guard must sit ABOVE the work, not below it");
-  assert.ok(/setInterval\(updateClocks, 1000\)/.test(APP),
-    "the guard must not have been 'fixed' by deleting the timer");
+  // UI100 #4 (2026-10-20): HH:MM painted once a minute, re-aimed at the next
+  // minute boundary on every tick (was a 1 Hz interval painting seconds).
+  const tick = APP.slice(APP.indexOf("function tickClocks()"), APP.indexOf("tickClocks();", APP.indexOf("function tickClocks()")) + 13);
+  assert.ok(/updateClocks\(\);[\s\S]*setTimeout\(tickClocks,\s*60000 - \(Date\.now\(\) % 60000\)/.test(tick),
+    "the guard must not have been 'fixed' by deleting the timer, and the clock ticks on the minute");
+  assert.ok(!/setInterval\(updateClocks,\s*1000\)/.test(APP), "the 1 Hz clock is back");
+  assert.ok(/\n\s*tickClocks\(\);/.test(APP), "tickClocks is never started");
   assert.ok(/visibilitychange[\s\S]{0,160}updateClocks\(\)/.test(APP),
     "without a catch-up on return, the guard leaves a clock showing when you LEFT");
 });
