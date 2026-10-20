@@ -211,20 +211,32 @@ window.PM = (() => {
       : m.displacement_date ? 2
       : m.sweep_date ? 1 : 0;
     const terminal = onPath === -1 ? rec.state : null;   // STALLED | DEAD
-    const steps = PHASE_PATH.map((s, i) => {
-      const cls = i < reached ? "is-done" : i === reached && !terminal ? "is-now"
-        : i === reached ? "is-done" : "";
-      return `<span class="pm-step ${cls}" data-term="${esc(s.toLowerCase())}">` +
-        `<span class="pm-step-dot">${STATE_GLYPH[s]}</span>${esc(s.replace("_", " "))}</span>`;
-    });
+    const steps = PHASE_PATH.map((s, i) => ({
+      cls: i < reached ? "is-done" : i === reached && !terminal ? "is-now"
+        : i === reached ? "is-done" : "",
+      term: s, label: s.replace("_", " "),
+    }));
     if (terminal) {
       steps.splice(reached + 1, 0,
-        `<span class="pm-step is-now is-terminal pm-step-${esc(terminal)}" data-term="${esc(terminal.toLowerCase())}">` +
-        `<span class="pm-step-dot">${STATE_GLYPH[terminal]}</span>${esc(terminal)}</span>`);
+        { cls: `is-now is-terminal pm-step-${terminal}`, term: terminal, label: terminal });
       steps.length = reached + 2;   // the path beyond a terminal never happens
     }
+    // UI100 review (2026-10-20): a narrow phone shows the step before the
+    // current one, the current one and the next (the whole path ran past
+    // the card at 360-375px: "… RUNNING › COM…"). is-far / is-later mark the
+    // rest and a "…" end says steps are folded; phasemap.css hides them
+    // below 381px. Every step stays in the markup.
+    const cur = terminal ? reached + 1 : reached;
+    const fold = (i) => (i < cur - 1 ? " is-far" : i > cur + 1 ? " is-later" : "");
+    const html = steps.map((st, i) =>
+      // an arrow left of the current step goes with the step before it
+      (i ? `<span class="pm-step-arrow${fold(i < cur ? i - 1 : i)}">›</span>` : "") +
+      `<span class="pm-step ${esc(st.cls)}${fold(i)}" data-term="${esc(st.term.toLowerCase())}">` +
+      `<span class="pm-step-dot">${STATE_GLYPH[st.term]}</span>${esc(st.label)}</span>`).join("");
+    const lead = cur > 1 ? `<span class="pm-step-fold" aria-hidden="true">…<span class="pm-step-arrow">›</span></span>` : "";
+    const tail = steps.length - 1 > cur + 1 ? `<span class="pm-step-fold" aria-hidden="true"><span class="pm-step-arrow">›</span>…</span>` : "";
     return `<div class="pm-stepper" title="Where this name sits in the trap lifecycle">` +
-      steps.join(`<span class="pm-step-arrow">›</span>`) + `</div>`;
+      lead + html + tail + `</div>`;
   }
 
   /* ── "Why flagged" panel ─────────────────────────────────────────────────
