@@ -25,7 +25,15 @@ These tests pin the fix and, more usefully, pin the RELATIONSHIP the fix depends
 on: the frozen instant has to sit inside the window the fixtures are supposed to
 exercise. Refresh the fixtures without refreshing the clock (or the other way
 round) and the gate quietly starts photographing an empty panel; that is what
-`test_frozen_clock_keeps_the_new_positions_panel_populated` exists to catch.
+`test_frozen_clock_keeps_the_new_positions_panel_populated` existed to catch.
+
+UI100 #62 (2026-10-20): the "new positions" panel left the journal (it repeated
+the top of the open table), and NEW_POS_WINDOW_MS with it, so that test went
+too. The journal's remaining relative times -- the open table's "opened Xd",
+the week review, "marked Xm ago" -- have no window to fall out of; they only
+need a clock that is not before the fixtures, which
+`test_frozen_instant_is_not_before_the_fixtures_it_renders` pins. Bring the
+window test back if a windowed panel ever returns.
 """
 
 from __future__ import annotations
@@ -42,7 +50,6 @@ REPO = Path(__file__).resolve().parents[1]
 E2E = REPO / "test" / "e2e" / "screenshot-diff.e2e.js"
 FIXTURES = REPO / "test" / "e2e" / "fixtures" / "data"
 BOOK = FIXTURES / "vivek_bot_book.json"
-JOURNAL_JS = REPO / "public" / "js" / "journal.js"
 TEST_YML = REPO / ".github" / "workflows" / "test.yml"
 
 
@@ -156,59 +163,9 @@ def test_frozen_instant_is_not_before_the_fixtures_it_renders(book: dict) -> Non
     )
 
 
-def test_frozen_clock_keeps_the_new_positions_panel_populated(book: dict) -> None:
-    """The gate has to photograph the panel, not its empty state.
-
-    This is the assertion that would have caught the original defect two days
-    early. `renderNewPositions` only lists trades opened within
-    NEW_POS_WINDOW_MS; once the newest fixture position falls outside it, both
-    panels collapse to one line and the shot the gate compares stops containing
-    the thing it was built to watch. The window is read from journal.js so that
-    changing it there moves this test with it rather than against it.
-    """
-    window_src = re.search(
-        r"NEW_POS_WINDOW_MS\s*=\s*([0-9.]+)\s*\*\s*([0-9.]+)\s*\*\s*([0-9.e+]+)",
-        JOURNAL_JS.read_text(encoding="utf-8"),
-    )
-    assert window_src, "NEW_POS_WINDOW_MS is gone from journal.js -- this test needs re-pointing"
-    window_ms = float(window_src.group(1)) * float(window_src.group(2)) * float(window_src.group(3))
-
-    frozen = _frozen_instant(book)
-    trades = (book.get("open") or []) + (book.get("closed") or [])
-    stamped = [(t.get("symbol"), _parse(ts)) for t in trades if (ts := _opened_at(t))]
-    newest_sym, newest = max(stamped, key=lambda pair: pair[1])
-    age_ms = (frozen - newest).total_seconds() * 1000.0
-
-    assert age_ms < window_ms, (
-        f"at the frozen instant the newest fixture position ({newest_sym}, opened {newest.isoformat()}) "
-        f"is {age_ms / 3.6e6:.1f}h old, outside the {window_ms / 3.6e6:.0f}h 'new positions' window -- "
-        "both panels render empty and the screenshot gate is watching a blank box. Refresh "
-        "test/e2e/fixtures/data/ (which moves the clock with it) rather than widening this test."
-    )
-
-    # Not merely inside the window -- inside it with room. Once the clock is
-    # frozen nothing ages on its own, so the only way the panel degrades is a
-    # PARTIAL refresh: new fixtures against an old clock, or a moved clock
-    # against old positions. Both land the newest row near the edge of the
-    # window rather than outside it, which the bare `age_ms < window_ms` check
-    # above would wave through and the next refresh would then tip over.
-    # 75% is the line: at the instant this was written the newest position sat
-    # at 35% with 109 hours to spare, so a set cut anywhere near correctly clears
-    # it easily, and only a half-done refresh does not.
-    HEADROOM = 0.75
-    assert age_ms <= window_ms * HEADROOM, (
-        f"the newest fixture position ({newest_sym}) sits at {100 * age_ms / window_ms:.0f}% of the "
-        f"new-positions window -- inside it, but with under {100 * (1 - HEADROOM):.0f}% to spare. That is "
-        "the signature of a half-done refresh (fixtures moved but not the clock, or the reverse); "
-        "re-cut test/e2e/fixtures/data/ as one set."
-    )
-
-    inside = [s for s, ts in stamped if (frozen - ts).total_seconds() * 1000.0 < window_ms]
-    assert len(inside) >= 3, (
-        f"only {len(inside)} fixture position(s) fall inside the new-positions window at the frozen "
-        "instant -- the panel the gate exists to photograph is nearly empty, so a layout regression "
-        "inside it would no longer move enough pixels to fail. Fixtures need re-cutting."
-    )
+# (test_frozen_clock_keeps_the_new_positions_panel_populated was here: it read
+# NEW_POS_WINDOW_MS out of journal.js and kept the fixtures inside it. The panel
+# and the window were removed 2026-10-20, UI100 #62 -- see the module docstring.)
 
 
 def test_fixture_payloads_are_internally_dated_as_one_set(book: dict) -> None:

@@ -380,7 +380,10 @@
   // Full-word, dog-balls direction pill (owner 2026-07-10): a trade's
   // AT-ENTRY direction must be unmissable, because the scan's read can flip
   // after entry and the chart may show the opposite setup today.
-  const dirChip = (d) => `<span class="dir ${d === "short" ? "dir-s" : "dir-l"}">${d === "short" ? "▼ SHORT" : "▲ LONG"}</span>`;
+  // UI100 #59 (2026-10-20): the book is long-only (owner, 2026-09-21), so a
+  // green LONG pill on every row said nothing. Only a SHORT is marked now; a
+  // read that flipped after entry still gets flipChip below.
+  const dirChip = (d) => (d === "short" ? `<span class="dir dir-s">▼ SHORT</span>` : "");
   // Review chip — this position was flagged HEAVY when the bot took it
   // (server-side, scanner/broker/vivek_bot.review_flags; owner 2026-07-28:
   // "Flag this in the future so i can verify whether claude or I should take
@@ -397,6 +400,8 @@
   // Absent key = written before flags existed. Empty array = checked, clean.
   // Both render nothing, but they are not the same thing and the book keeps
   // them apart — do not collapse the two by defaulting the key server-side.
+  // UI100 #61 (2026-10-20): drawn as small muted text, not a boxed chip — a
+  // flag informs, it never gates (journal.css .jr-review).
   const reviewChip = (t) => {
     const f = (t.review || [])[0];
     if (!f) return "";
@@ -406,13 +411,15 @@
     return `<span class="jr-review" title="${esc(title)}">⚑ ${esc(share)}</span>`;
   };
   // Warn chip when the CURRENT scan reads the opposite way to an open trade.
+  // UI100 #60 (2026-10-20): "⚠ CHART NOW READS SHORT" (a pulsing 172px pill)
+  // became a small "⚠ chart short"; the tooltip still says what happened.
   const flipChip = (t) => {
     if (t.status === "closed") return "";
     const now = (scanMeta.get(symKey(t)) || {}).dir;
     if (!now) return "";
     const trade = String(t.direction || "long").toUpperCase() === "SHORT" ? "SHORT" : "LONG";
     if (String(now).toUpperCase() === trade) return "";
-    return `<span class="jr-flip" title="The scanner's read on this chart flipped AFTER entry — the position was taken as ${trade}">⚠ CHART NOW READS ${esc(String(now).toUpperCase())}</span>`;
+    return `<span class="jr-flip" title="The scanner's read on this chart flipped AFTER entry — the position was taken as ${trade}">⚠ chart ${esc(String(now).toLowerCase())}</span>`;
   };
   // Grade + setup type: the bot logs both on every row. For a row that lacks a
   // grade, fall back to the live scan's grade for the symbol so it isn't blank
@@ -422,9 +429,9 @@
   const gradeOf = (t) => t.grade || (scanMeta.get(symKey(t)) || {}).grade || null;
   const entryTypeOf = (t) => t.entry_type || null;
 
-  // Setup chip: the timeframe + entry trigger of the trade — e.g. "Weekly
-  // reclaim" — coloured by trigger (reclaim green / retest red / break amber).
-  const SETUP_CLS = { reclaim: "su-reclaim", retest: "su-retest", break: "su-break" };
+  // Setup tag: the timeframe + entry trigger of the trade — e.g. "Weekly
+  // reclaim". UI100 #65 (2026-10-20): muted text, no longer a box coloured by
+  // trigger — every open row carried one, so the colour separated nothing.
   const TF_NAME = { "1W": "Weekly", "1D": "Daily", "3D": "3-Day", "4H": "4-Hour" };
   function setupChip(t) {
     const et = String(entryTypeOf(t) || "").toLowerCase();
@@ -432,14 +439,14 @@
     if (!et && !tf) return "";
     const tfn = TF_NAME[tf] || tf;
     const label = et ? `${tfn} ${et}` : tfn;
-    return `<span class="jr-setup ${SETUP_CLS[et] || ""}" title="Setup">${esc(label)}</span>`;
+    return `<span class="jr-setup" title="Setup">${esc(label)}</span>`;
   }
-  // Market chip: which book the ticker belongs to — ASX / NASDAQ / Crypto —
-  // colour-coded to match the dashboard's market accents.
+  // Market tag: which book the ticker belongs to — ASX / NASDAQ / Crypto.
+  // UI100 #64 (2026-10-20): muted text, not a coloured box.
   const MKT_LABEL = { asx: "ASX", nasdaq: "NASDAQ", crypto: "CRYPTO" };
   function marketChip(t) {
     const m = marketOf(t);
-    return `<span class="jr-mkt jr-mkt-${m}" title="Market">${MKT_LABEL[m] || up(m)}</span>`;
+    return `<span class="jr-mkt" title="Market">${MKT_LABEL[m] || up(m)}</span>`;
   }
   // Held-plan passthrough (2026-08-20): the chart never recomputes a trade's
   // levels — it reads them from whatever it's given. Left to a bare s=/m=
@@ -461,10 +468,11 @@
     if (ht3 != null) qs += `&ht3=${ht3}`;
     return qs;
   }
-  // Symbol cell links to the chart for that ticker, with market + setup chips after it.
+  // Symbol cell links to the chart for that ticker, with the market + setup
+  // tags and any review / flip flag after it.
   const symCell = (t) =>
     `<td class="jr-sym" data-label="Position"><a class="jr-symlink" href="chart.html?s=${esc(t.symbol)}&m=${marketOf(t)}&src=journal${heldPlanQS(t)}" title="Open ${up(t.symbol)} chart">` +
-    `${dirChip(t.direction)} ${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${reviewChip(t)}${flipChip(t)}</td>`;
+    `${dirChip(t.direction)}${up(t.symbol)}</a>${marketChip(t)}${setupChip(t)}${reviewChip(t)}${flipChip(t)}</td>`;
   // Date + time stamp from a parsed epoch (opened_at is a real UTC instant).
   function stamp(ms) {
     if (ms == null) return "—";
@@ -654,7 +662,10 @@
   }
 
   // The book's open-positions table: the essentials per row (the comparison
-  // overview that showed the full detail went 2026-09-21).
+  // overview that showed the full detail went 2026-09-21). On a phone
+  // (journal.css, ≤680px) each row is two compact lines — symbol · market ·
+  // R · $, then entry → now · stop · opened — instead of an 8-cell card
+  // (UI100 #63); the Opened cell's stamp and age are separate spans for that.
   function openRows(list, side, nowMs) {
     if (!list.length) return `<div class="jr-empty">No open positions.</div>`;
     // Sortable columns carry data-osort and are picked up by the same delegated
@@ -676,9 +687,9 @@
         <td class="num" data-label="Entry">${px(t.entry)}</td>
         <td class="num" data-label="Stop">${px(t.stop)}</td>
         ${liveCells(t, side)}
-        <td class="num jr-stamp" data-label="Opened">${stamp(openedMs(t))}<span class="num-sub"> · ${durText(openedMs(t), nowMs)}</span></td></tr>`;
+        <td class="num jr-stamp" data-label="Opened"><span class="jr-at">${stamp(openedMs(t))}</span><span class="num-sub jr-age">${durText(openedMs(t), nowMs)}</span></td></tr>`;
     }).join("");
-    return `<table class="jr-table jr-cardable"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+    return `<table class="jr-table jr-cardable jr-open-tbl"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
   }
 
   // LEGACY SIZING marker (2026-08-20). The 2026-07-28 resize restated the OPEN
@@ -1327,43 +1338,10 @@
         ? `<span class="jr-ec-warn">⚠ leaking: ${esc(worst.key)} ${rfmt(worst.sumR / worst.n)} over ${worst.n}</span>` : "");
   }
 
-  // ── NEW POSITIONS RECENTLY TAKEN (owner 2026-07-05): one small box for the
-  // bot book at the top of the page — every position opened in the last 7 days,
-  // newest first, so the daily check-in is a single glance.
-  const NEW_POS_WINDOW_MS = 7 * 24 * 3.6e6;
-  function renderNewPositions() {
-    const now = Date.now();
-    const ago = (ms) => {
-      const h = (now - ms) / 3.6e6;
-      if (h < 1) return "just now";
-      if (h < 24) return Math.round(h) + "h ago";
-      const d = Math.floor(h / 24);
-      return d === 1 ? "1d ago" : d + "d ago";
-    };
-    const paint = (hostId, side, label) => {
-      const host = $("#" + hostId);
-      if (!host) return;
-      const recent = [...side.open, ...side.closed]
-        .map((t) => ({ t, ms: openedMs(t) }))
-        .filter((x) => x.ms != null && now - x.ms <= NEW_POS_WINDOW_MS)
-        .sort((a, b) => b.ms - a.ms)
-        .slice(0, 6);
-      const rows = recent.map(({ t, ms }) =>
-        `<a class="jr-new-row" href="chart.html?m=${marketOf(t)}&s=${encodeURIComponent(t.symbol)}&src=journal${heldPlanQS(t)}">
-          ${dirChip(t.direction)}
-          <b class="jr-new-sym">${esc(t.symbol)}</b>
-          <span class="jr-new-entry">@ ${px(t.entry)}</span>
-          ${setupChip(t)}
-          ${t.lens ? `<span class="jr-new-lens">${up(t.lens)}</span>` : ""}
-          ${t.status === "closed" ? `<span class="jr-new-closed">closed</span>` : ""}
-          ${flipChip(t)}
-          <span class="jr-new-ago">${ago(ms)}</span>
-        </a>`).join("");
-      host.innerHTML = `<div class="jr-new-hd">${label} <span class="jr-new-n">${recent.length}</span></div>` +
-        (rows || `<div class="jr-new-empty">No new positions in the last 7 days.</div>`);
-    };
-    paint("new-bot", state.bot, "🤖 Claude · new positions");
-  }
+  // UI100 #62 (2026-10-20): the "Claude · new positions" box (every position
+  // opened in the last 7 days, newest first) was removed — it repeated the top
+  // of the Open positions table, which now sits straight under the hero and
+  // opens newest first.
 
   // ── OPEN POSITIONS P&L headline (owner 2026-07-22): the total $ up/down on
   // current positions, before anything else on the page. Marked from the book
@@ -1395,15 +1373,19 @@
     // silence.
     const fossil = botOpen.filter(
       (t) => ageOf(marketOf(t) + ":" + String(t.symbol || "").toUpperCase()) > 0).length;
+    // A failed REFRESH over a good copy (TOP100 #29) is said here too: the open
+    // table sits straight under this line since UI100 #53, above the book
+    // card's own note, and its marks are as old as the last good load.
     $("#jr-pnl-sub").textContent =
       `${nOpen} open position${nOpen === 1 ? "" : "s"} · US$${age}` +
-      (fossil > 0 ? ` · ${fossil} priced off a stale close` : "");
-    $("#jr-pnl-split").innerHTML =
-      `<span class="jr-pnl-chip"><span class="ts-who">🤖 Claude</span> <b class="${pcls(total)}">${d2(total)}</b> <span class="ts-who">· ${botOpen.length} open</span></span>`;
+      (fossil > 0 ? ` · ${fossil} priced off a stale close` : "") +
+      (botLoadErr ? ` · ⚠ refresh failed (${botLoadErr}) — marks frozen` : "");
     // The realised mini-sparkline was retired from this header (UI pass
     // 2026-08-18) - see journal.html. drawEquity still draws the full
     // per-book equity curves, so nothing else changes; this block simply stops
-    // re-stating a number that appears three more times below.
+    // re-stating a number that appears three more times below. The
+    // "🤖 Claude · N open" chip beside the total went too (UI100 #57): it
+    // repeated the total and the count on the line above it.
   }
 
   // UX-20 #11 (supersedes #84's rolling bot digest): WEEK REVIEW — calendar
@@ -1657,13 +1639,12 @@
   }
 
   function renderAll() {
-    const sb = renderSide("bot");
+    renderSide("bot");
     renderPnlHeadline();
     renderWeeklyDigest();
     renderRDist();               // UX-20 #10
     renderExitQuality();         // Fix-10 #1
     renderEdgeCard();
-    renderNewPositions();
     const note = $("#bot-note");
     if (note) {
       if (botLoadErr) {
@@ -1687,14 +1668,8 @@
         note.textContent = "Autonomous bot is in dry-run — its trades appear here once enabled.";
       }
     }
-    // Always-visible account summary in the sticky topbar: who's where, at a glance.
-    const ts = $("#jr-topsum");
-    if (ts) {
-      const cell = (who, st, openN) =>
-        `<span class="ts-who">${who}</span><span class="${pcls(st.totalD)}">${money0(startCapital() + st.totalD)}</span>` +
-        `<span class="ts-who">· ${openN} open</span>`;
-      ts.innerHTML = cell("🤖", sb, state.bot.open.length);
-    }
+    // UI100 #58 (2026-10-20): the topbar's "$145,094 · 60 open" stamp is gone —
+    // the P&L hero and the Account value tile say both.
     paintLoadFailure();
     const fxn = $("#fx-note");
     if (fxn) fxn.textContent = ` · $ figures in US$ — ASX P&L converted at AUD/USD ${FX_AUDUSD.toFixed(4)}`;

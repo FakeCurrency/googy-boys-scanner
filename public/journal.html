@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="css/fonts.css?v=2" />
   <link rel="stylesheet" href="css/styles.css?v=123" />
   <link rel="stylesheet" href="css/status.css?v=4" />
-  <link rel="stylesheet" href="css/journal.css?v=48" />
-  <link rel="stylesheet" href="css/stalled.css?v=9" />
+  <link rel="stylesheet" href="css/journal.css?v=49" />
+  <link rel="stylesheet" href="css/stalled.css?v=10" />
   <script src="js/nav.js?v=30"></script>
   <script src="js/status.js?v=11"></script>
   <script src="js/sw-register.js?v=4" defer></script>
@@ -37,26 +37,17 @@
       <div class="brand-text"><h1>VIVEK 5.0</h1><span class="brand-sub">BETA SCANNER</span></div>
     </div>
     <nav class="nav-pills" id="site-nav"></nav>
-    <div class="deck-top-right">
-      <span class="jr-topsum" id="jr-topsum"></span>
-    </div>
+    <!-- UI100 #58 (2026-10-20): the "$145,094 · 60 open" stamp left the header —
+         the P&L hero says it. The group stays: the status lamp mounts here. -->
+    <div class="deck-top-right"></div>
   </header>
 
-  <main class="wrap">
-    <div class="jr-head">
-      <h2 class="jr-title">Claude's paper-trade journal</h2>
-      <details class="jr-fold jr-fold-quiet">
-        <summary>How this works</summary>
-        <p class="jr-sub">
-          <strong>Claude</strong> (the autonomous bot) trading the VIVEK rules on paper — $2,500 a position,
-          5× stocks · 3× crypto. Entries, stops, targets and scale-outs are all managed by the rules; nothing here
-          is chosen by hand and no real orders are placed. This is the one and only track record.
-        </p>
-        <p class="jr-config">Starting capital <strong>$150,000</strong> — one pool across ASX · NASDAQ · Crypto,
-          60 slots at $2,500 each. Because size is fixed, the $ risked per trade varies with the stop distance.
-          <span id="fx-note" class="muted"></span></p>
-      </details>
-    </div>
+  <!-- UI100 #53/#56 (2026-10-20): the page centres at the shared page width,
+       and the order is the one the owner reads in — P&L hero, the open
+       positions, the stalled list (folded), the performance fold, then the
+       record (stats, curve, closed trades). "How this works" sits at the end. -->
+  <main class="wrap jr-wrap">
+    <h2 class="jr-title">Claude's paper-trade journal</h2>
 
     <!-- ═══ OPEN POSITIONS P&L — the number that matters first (owner 2026-07-22) ═══ -->
     <section class="jr-pnl" id="jr-pnl" hidden>
@@ -65,18 +56,37 @@
         <span class="jr-pnl-total" id="jr-pnl-total">—</span>
         <span class="jr-pnl-sub" id="jr-pnl-sub"></span>
       </div>
-      <div class="jr-pnl-split" id="jr-pnl-split"></div>
       <!-- The mini realised sparkline retired here (UI pass 2026-08-18). This
            block is the UNREALISED headline; the realised figure it carried
            (-$1,358 · -6.88R) was already on screen three times - the TOTAL $
            tile, the TOTAL R tile, and the end labels of the full equity curve
            130px below, which is the same series drawn properly. One number
-           said once. The bot-side equity curve is unchanged. -->
+           said once. The bot-side equity curve is unchanged.
+           UI100 #57 (2026-10-20): the "🤖 Claude −$408.42 · 60 open" chip that
+           repeated the total beside it went the same way. -->
     </section>
 
-    <!-- ═══ STALLED — the position decision surface (2026-08-01) ═══
-         Read-only view of the rows the stale probe has flagged (stale_pinged).
-         Hidden until the book carries at least one mark. See js/stalled.js. -->
+    <!-- ═══ OPEN POSITIONS — straight under the hero (UI100 #53) ═══ -->
+    <section class="jr-open" id="sec-open">
+      <div class="jr-section-title">Open positions <span id="bot-open-n" class="muted"></span><span id="bot-open-sort"></span></div>
+      <div class="jr-table-wrap" id="bot-open"><div class="jr-empty">Loading…</div></div>
+      <!-- EMERGENCY CLOSE (2026-10-14, owner: "I'm no longer going to close
+           anything by hand"). The close-all button is folded here, shut by
+           default; the write path (/api/close -> close_position.yml) stays for
+           a genuine emergency. journal.js un-hides the fold while there is
+           anything open to close. -->
+      <details class="jr-emergency" id="bot-emergency" hidden>
+        <summary>Emergency close</summary>
+        <p class="jr-emergency-note">The rules manage every position — entries, stops, targets and the 28-day
+          time-stop. A hand close in the current cycle's sample measures your timing, not the rules', so use this only in
+          an emergency.</p>
+        <span id="bot-close-all"></span>
+      </details>
+    </section>
+
+    <!-- ═══ STALLED — read-only view of the rows the stale probe has flagged
+         (stale_pinged), folded to one line (UI100 #54). Hidden until the book
+         carries at least one stamp. See js/stalled.js. -->
     <section class="st-strip" id="stalled-strip" hidden></section>
 
     <!-- ═══ PERFORMANCE & ANALYTICS — folded (UI pass 2026-08-18) ═══
@@ -121,17 +131,17 @@
       <div class="jr-edge-card" id="jr-edge-card" hidden></div>
     </details>
 
-    <!-- ═══ 0 · NEW POSITIONS RECENTLY TAKEN — the daily glance ═══ -->
-    <section class="jr-new-wrap">
-      <div class="jr-new-card" id="new-bot"></div>
-    </section>
+    <!-- UI100 #62 (2026-10-20): the "Claude · New positions" block was removed —
+         it repeated the top of the Open positions table (newest first). -->
 
-    <!-- ═══ 1 · THE PAPER BOOK ═══
+    <!-- ═══ THE PAPER BOOK — the record ═══
          The manual "Me" side, the side-by-side comparison and the head-to-head
          table were removed 2026-09-21 (owner: "I no longer am wasting time
          taking trades on this scanner ... rip the guts out of the entire
          journal MY section"). One book left, so `.sides` is a single column
-         now rather than a two-up grid. -->
+         now rather than a two-up grid. The open table moved up under the
+         hero (UI100 #53); this card keeps the cycle strips, the stats, the
+         equity curve and the closed trades. -->
     <div class="sides sides-one">
     <section class="side side-bot" id="sec-bot">
       <div class="side-hd">
@@ -141,32 +151,32 @@
       <section class="stats" id="bot-stats"></section>
       <div class="jr-section-title">Equity curve <span class="muted">(cumulative R · $)</span></div>
       <div id="bot-equity" class="jr-equity-chart"></div>
-      <div class="jr-section-title">Open positions <span id="bot-open-n" class="muted"></span><span id="bot-open-sort"></span></div>
-      <div class="jr-table-wrap" id="bot-open"><div class="jr-empty">Loading…</div></div>
-      <!-- EMERGENCY CLOSE (2026-10-14, owner: "I'm no longer going to close
-           anything by hand"). The close-all button is folded here, shut by
-           default; the write path (/api/close -> close_position.yml) stays for
-           a genuine emergency. journal.js un-hides the fold while there is
-           anything open to close. -->
-      <details class="jr-emergency" id="bot-emergency" hidden>
-        <summary>Emergency close</summary>
-        <p class="jr-emergency-note">The rules manage every position — entries, stops, targets and the 28-day
-          time-stop. A hand close in the current cycle's sample measures your timing, not the rules', so use this only in
-          an emergency.</p>
-        <span id="bot-close-all"></span>
-      </details>
       <div class="jr-section-title">Closed trades <span id="bot-closed-n" class="muted"></span></div>
       <div class="jr-table-wrap" id="bot-closed"><div class="jr-empty">Loading…</div></div>
     </section>
 
     </div><!-- /.sides -->
+
+    <!-- UI100 #66 (2026-10-20): "How this works" moved from under the title to
+         the bottom of the page — read once, scrolled past every day. -->
+    <details class="jr-fold jr-fold-quiet jr-howto">
+      <summary>How this works</summary>
+      <p class="jr-sub">
+        <strong>Claude</strong> (the autonomous bot) trading the VIVEK rules on paper — $2,500 a position,
+        5× stocks · 3× crypto. Entries, stops, targets and scale-outs are all managed by the rules; nothing here
+        is chosen by hand and no real orders are placed. This is the one and only track record.
+      </p>
+      <p class="jr-config">Starting capital <strong>$150,000</strong> — one pool across ASX · NASDAQ · Crypto,
+        60 slots at $2,500 each. Because size is fixed, the $ risked per trade varies with the stop distance.
+        <span id="fx-note" class="muted"></span></p>
+    </details>
   </main>
 
   <footer class="site-footer">
     <p class="credit">Vivek 5.0 · stocks via Yahoo Finance (~15&nbsp;min delayed) · crypto via exchange bars (Binance, Coinbase) · scanned hourly while each market trades, crypto around the clock</p>
   </footer>
 
-  <script src="js/journal.js?v=93"></script>
-  <script src="js/stalled.js?v=10"></script>
+  <script src="js/journal.js?v=94"></script>
+  <script src="js/stalled.js?v=11"></script>
 </body>
 </html>

@@ -1,20 +1,31 @@
 /* STALLED — the position decision surface (2026-08-01). See public/js/stalled.js.
-   One compact strip at the top of journal.html: amber, because nothing is
-   broken — a decision is due, and it is the owner's. */
+   ONE LINE UNTIL TAPPED (UI100 #54, 2026-10-20): the strip is a <details>,
+   shut by default — "⏳ 23 stalled · +0.49R combined ▸" — under the open
+   positions. A thin amber edge says what it is; the loud amber tag and the
+   23-row table the journal used to open on are one tap away. */
 
 .st-strip {
-  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
-  border-left: 5px solid var(--orange);
-  padding: 14px 18px; margin: 0 0 18px;
+  background: var(--panel); border-radius: var(--radius-md); box-shadow: var(--shadow);
+  border-left: 3px solid var(--orange);
+  margin: 0 0 14px;
 }
-
-.st-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.st-tag {
-  font: 800 11px/1 var(--sans); letter-spacing: 0.08em; color: var(--orange);
-  background: var(--orange-soft); border-radius: var(--radius-sm); padding: 5px 9px;
-  white-space: nowrap;
+.st-strip[hidden] { display: none; }
+.st-fold > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  padding: 13px 16px; font: 600 13px/1.3 var(--sans); color: var(--text-2);
 }
-.st-sum { font: 500 13px/1.5 var(--sans); color: var(--muted); }
+.st-fold > summary::-webkit-details-marker { display: none; }
+.st-fold > summary::after { content: "▸"; color: var(--muted-2); margin-left: 2px; }
+.st-fold[open] > summary::after { content: "▾"; }
+.st-fold > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: var(--radius-md); }
+.st-fold > :not(summary) { margin-left: 16px; margin-right: 16px; }
+.st-fold[open] { padding-bottom: 12px; }
+.st-tag { white-space: nowrap; cursor: help; }
+.st-tag b, .st-head-r b { font-weight: 800; font-family: var(--mono, var(--sans)); }
+.st-tag b { color: var(--text); }
+.st-head-r { color: var(--muted); white-space: nowrap; }
+.st-sum { margin: 0; font: 500 13px/1.5 var(--sans); color: var(--muted); }
 .st-sum b { font-weight: 800; color: var(--text); font-family: var(--mono, var(--sans)); }
 
 .st-rows { margin-top: 10px; }
@@ -39,8 +50,8 @@
 .st-down { color: var(--red-ink); }
 .st-grade { font-weight: 800; color: var(--grade-aplus); text-align: center; }
 
-/* The call chip: quiet amber outline for a decision, red once the time-stop is
-   due — the row the automatic rule is about to take out of the owner's hands. */
+/* The Status chip (headed "Your call" until UI100 #55): quiet amber outline,
+   red once the time-stop is due — the row the rules are about to close. */
 .st-call {
   justify-self: start;
   font: 700 10.5px/1 var(--sans); letter-spacing: 0.03em;
@@ -58,10 +69,10 @@
   /* TWO LINES PER ROW ON A PHONE (UI review 2026-10-13). This used to keep a
      528px one-line row that scrolled sideways with the Close button pinned
      to the right edge — and the pinned button sat on top of exactly the two
-     columns the row exists for (Open R and Your call), so on a 390px phone
-     you saw the ticker, the stall and a Close button, never the R or the call.
-     Now nothing scrolls sideways: line 1 is ticker + stall, line 2 is R +
-     call. The header row goes (each value says what it is: "+0.05R",
+     columns the row exists for (Open R and the status), so on a 390px phone
+     you saw the ticker, the stall and a Close button, never the R or the
+     status. Now nothing scrolls sideways: line 1 is ticker + stall, line 2 is
+     R + status. The header row goes (each value says what it is: "+0.05R",
      "time-stop in 2d"); grade stays dropped, as before. (The Close buttons
      left the rows for the folded Emergency close section, 2026-10-14.) */
   .st-row {
@@ -75,11 +86,10 @@
   .st-r    { grid-area: r; text-align: left; }
   .st-call { grid-area: call; }
   .st-sym em { display: block; margin: 2px 0 0; }
-  /* 32 stalled rows at ~70px each pushed the book ~2,000px down the page
-     and reflowed it on load (CLS ~0.95 at 390). The list scrolls inside a
-     box of about half the screen instead; the summary line above still
-     states the totals for all of them. */
-  .st-rows { max-height: 45vh; overflow-y: auto; overscroll-behavior: contain; }
+  /* (The 45vh inner scroll box — 32 rows at ~70px pushed the book ~2,000px
+     down and reflowed it on load — went with UI100 #54: the list is folded
+     shut, so it only takes room once tapped open, and a scroll box inside the
+     page scroll was the worse of the two on a phone.) */
 
   /* A WRITE PATH (it closes real book positions), and it shipped at ~22px tall
      (2026-08-13). journal.css already fixed this class of miss for the SORT

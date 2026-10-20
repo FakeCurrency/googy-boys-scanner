@@ -375,6 +375,33 @@ ok(!/(?:const|let|var)\s+dark\s*=|function\s+dark\s*\(|\bdark\s*\(\s*\)/.test(co
        `css/sectors.css: .${c} styled a NEWS-page section removed 2026-09-27`);
 }
 
+// UI100 (2026-10-20) -- the journal's clutter, removed rather than hidden: the
+// "new positions" box (#62, it repeated the top of the open table), the
+// topbar account stamp (#58) and the hero's duplicate chip (#57); the market
+// and setup tags lost their coloured boxes (#64/#65), LONG its pill (#59) and
+// the flip chip its pulse (#60).
+{
+  const js = code("js/journal.js");
+  ok(js.includes("function renderPnlHeadline("), "js/journal.js moved -- pins would be vacuous");
+  for (const sym of ["renderNewPositions", "NEW_POS_WINDOW_MS", "SETUP_CLS"])
+    ok(!new RegExp(`\\b${sym}\\b`).test(js),
+       `js/journal.js: ${sym} was removed 2026-10-20 (UI100); re-adding it needs a reason`);
+  for (const id of ["jr-topsum", "jr-pnl-split", "new-bot"])
+    ok(!js.includes(id), `js/journal.js: #${id} was removed 2026-10-20 (UI100)`);
+  const html = fs.readFileSync(path.join(PUB, "journal.html"), "utf8");
+  ok(html.includes('id="jr-pnl"'), "journal.html moved -- pin would be vacuous");
+  ok(!/id="(?:jr-topsum|jr-pnl-split|new-bot)"/.test(html), "journal.html: a host removed 2026-10-20 (UI100) is back");
+  const css = code("css/journal.css");
+  ok(css.includes(".jr-close-all {"), "css/journal.css moved -- pin would be vacuous");
+  for (const c of ["jr-new-wrap", "jr-new-card", "jr-new-hd", "jr-new-n", "jr-new-row", "jr-new-sym", "jr-new-entry",
+                   "jr-new-lens", "jr-new-closed", "jr-new-ago", "jr-new-empty", "jr-pnl-split", "jr-pnl-chip",
+                   "jr-topsum", "dir-l", "dir-long", "dir-short", "su-reclaim", "su-retest", "su-break",
+                   "jr-mkt-asx", "jr-mkt-nasdaq", "jr-mkt-crypto", "jr-head"])
+    ok(!new RegExp(`\\.${c}(?![\\w-])`).test(css),
+       `css/journal.css: .${c} styled markup removed 2026-10-20 (UI100)`);
+  ok(!/jrFlipPulse/.test(css), "css/journal.css: the flip chip's pulse went with UI100 #60");
+}
+
 // `$$` cannot be pinned by name: the two characters legitimately occur in
 // `US$${...}` template text on the journal page. Pin the declaration instead.
 ok(!/(?:const|let|var)\s+\$\$\s*=|function\s+\$\$\s*\(/.test(code("js/journal.js")),

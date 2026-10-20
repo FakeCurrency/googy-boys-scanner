@@ -1,9 +1,15 @@
 /* STALLED — the position decision surface (2026-08-01).
 
    Renders the positions the stale probe has already flagged (`stale_pinged`,
-   stamped by scanner/broker/vivek_run._stale_probe) into #stalled-strip at the
-   top of journal.html, so the owner can see exactly what is locking capacity
-   and make an explicit call.
+   stamped by scanner/broker/vivek_run._stale_probe) into #stalled-strip on
+   journal.html, so the owner can see exactly what is locking capacity.
+
+   ONE LINE UNTIL TAPPED (UI100 #54/#55, 2026-10-20). The journal used to open
+   on this 23-row table. It is now a <details>, shut by default, whose summary
+   is the count and the combined R ("⏳ 23 stalled · +0.49R combined"); the
+   totals, the rows and the Emergency close fold sit inside. The "Your call"
+   column became "Status": nothing is closed by hand since 2026-10-14, so the
+   column states where each row stands with the rules.
 
    WHY IT EXISTS. The probe's push ping is a moment; this is the standing
    answer to "what is squatting my slots right now". The two automatic rules
@@ -112,11 +118,11 @@
     return new Date().toISOString().slice(0, 10);   // first-load fallback only
   };
 
-  // ── "your call" framing ────────────────────────────────────────────────────
-  // Three outcomes exist and all three are the owner's: keep it, let the 28d
-  // time-stop take it (pre-TP1 only), or close it in the book to free the
-  // slot. This function only says which of those apply to a row — it does
-  // nothing about any of them.
+  // ── the Status column ──────────────────────────────────────────────────────
+  // Three outcomes exist: keep it, let the 28d time-stop take it (pre-TP1
+  // only), or close it in the book to free the slot (an emergency only, since
+  // 2026-10-14). This function only says which of those apply to a row — it
+  // does nothing about any of them. (Headed "Your call" until UI100 #55.)
   const framing = (pos, held, maxHold) => {
     if (pos.tp1_hit) {
       return {
@@ -484,23 +490,26 @@
     const ordered = rows.slice().sort((a, b) =>
       (daysBetween(b.entry_date, day) || 0) - (daysBetween(a.entry_date, day) || 0));
     host.hidden = false;
+    // Folded to one line (UI100 #54): the summary is the count and the combined
+    // R, and everything else — the totals, the rows, the Emergency close fold —
+    // opens on a tap. Shut on every load; nothing is remembered.
     host.innerHTML = `
-      <div class="st-head">
-        <span class="st-tag" title="Flagged by the stale probe (≥2 weeks open, minimal movement). Routine: the rules manage these, and most are waiting on the 28-day time-stop. Tap a ticker for its chart. The only write is folded under Emergency close: pick rows there, then its bar's Close N now sends them as ONE run — one commit, one deploy, every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking, and a row only reads closed ✓ once it is actually gone from the published book. Nothing here closes anything on its own.">⏳ STALLED</span>
-        <span class="st-sum"><b>${s.n}</b> position${s.n === 1 ? "" : "s"} stalled
-          · <b>${fmtR(s.totalR)}</b> combined
+      <details class="st-fold">
+        <summary class="st-head"><span class="st-tag" title="Flagged by the stale probe (≥2 weeks open, minimal movement). Routine: the rules manage these, and most are waiting on the 28-day time-stop. Tap a ticker for its chart. The only write is folded under Emergency close: pick rows there, then its bar's Close N now sends them as ONE run — one commit, one deploy, every row booked at its own last mark (the price its Open R uses). Nothing is sent by picking, and a row only reads closed ✓ once it is actually gone from the published book. Nothing here closes anything on its own.">⏳ <b>${s.n}</b> stalled</span>
+          <span class="st-head-r">· <b class="${s.totalR >= 0 ? "st-up" : "st-down"}">${fmtR(s.totalR)}</b> combined</span></summary>
+        <p class="st-sum"><b>${s.n}</b> position${s.n === 1 ? "" : "s"} stalled
           · ${riskClause(s)}
-          · ${slotsClause(s)}</span>
-      </div>
-      <div class="st-rows">
-        <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Your call</span></div>
-        ${ordered.map((p) => rowHTML(p, day, maxHold)).join("")}
-      </div>
-      <details class="st-emerg">
-        <summary>Emergency close</summary>
-        <p class="st-emerg-note">The rules manage these positions; a stall is routine and nothing here needs a click. Use this only to take a position out of the book by hand in an emergency — a hand close in the current cycle's sample measures your timing, not the rules'.</p>
-        <div class="st-bar" hidden></div>
-        <div class="st-picks">${ordered.map(pickHTML).join("")}</div>
+          · ${slotsClause(s)}</p>
+        <div class="st-rows">
+          <div class="st-row st-cols"><span>Name</span><span>Stall</span><span>Open R</span><span>Grade</span><span>Status</span></div>
+          ${ordered.map((p) => rowHTML(p, day, maxHold)).join("")}
+        </div>
+        <details class="st-emerg">
+          <summary>Emergency close</summary>
+          <p class="st-emerg-note">The rules manage these positions; a stall is routine and nothing here needs a click. Use this only to take a position out of the book by hand in an emergency — a hand close in the current cycle's sample measures your timing, not the rules'.</p>
+          <div class="st-bar" hidden></div>
+          <div class="st-picks">${ordered.map(pickHTML).join("")}</div>
+        </details>
       </details>
       <!-- The explainer moved into the strip's own tooltip (UI pass
            2026-08-18): three permanent lines of teaching copy at full contrast,
