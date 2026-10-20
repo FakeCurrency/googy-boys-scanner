@@ -48,17 +48,21 @@ public/
 The dashboard is a "command deck": one dense control surface, then the list.
 Top to bottom:
 
-- **Deck header** (`.topbar.deck-top`) — brand · market switch · nav · clocks ·
-  actions. The SAME header structure is now on every page (backlog #87): brand,
+- **Deck header** (`.topbar.deck-top`) — brand · market switch · nav · clocks
+  (Melbourne + New York, HH:MM, repainted once a minute) · actions. Solid
+  background, no backdrop blur; on phones two rows (brand + actions, then the
+  market switch) (UI100, 2026-10-20). The SAME header structure is now on every page (backlog #87): brand,
   the nav-pills mount, and a right-aligned `.deck-top-right` group. `js/nav.js`
   injects the nav into `#site-nav` and appends the shared footer — it is the one
   shared header/footer include.
-- **Deck** (`.deck`) — status line (freshness) + click-to-filter **pills**
-  (`.fpill`: A+, A, ⚡ Ignition (third, on the crypto/ASX/NASDAQ decks),
-  ⨂ Multi-lens, ◎ At level, top pick). The pills replaced the
-  old stat cards / banner strips; each is a filter toggle carrying `aria-pressed`.
-- **Toolbar** (`.toolbar`) — one sticky line: grade tabs (A+/A/WATCH), the ⚠
-  FUNDS dimmer, VIVEK filter chips, and a cycling sort. Pins under the header
+- **Deck** (`.deck`) — status line (freshness; the coverage pill shows only
+  when degraded) + click-to-filter **pills** (`.fpill`: ⚡ Ignition (first, on
+  the crypto/ASX/NASDAQ decks), ⨂ Multi-lens, ◎ At level) + the quiet ⊘ products
+  toggle + the one-line book summary. The A+/A shortcut pills and the top pick
+  went with UI100 (the toolbar carries the grade counts); each pill is a filter
+  toggle carrying `aria-pressed`.
+- **Toolbar** (`.toolbar`) — one sticky line: grade tabs (A+/A/WATCH, counted
+  on the side showing — Longs by default), VIVEK filter chips, and a cycling sort. Pins under the header
   and slims on scroll.
 - **Rows** (`#results`) — one `.row-wrap` per result: grade group, ticker,
   direction arrow, sparkline, price, R:R, confluence chips, the SMA-proxy chip
@@ -71,7 +75,8 @@ Top to bottom:
 the deck pills, live clocks. The deck reads the entry-quality tints and the
 position cap from `data/bot_rules.json` (it no longer downloads a backtest file
 for three chips). On nav pages `nav.js`'s `window.VivekBook` is the one shared
-read of the bot book + rules (app.js, recs.js and chart.js keep their own).
+read of the bot book + rules: app.js and recs.js read through it with
+`{fresh:true}` on their own refresh; chart.js (no nav.js) keeps its own.
 
 ---
 
