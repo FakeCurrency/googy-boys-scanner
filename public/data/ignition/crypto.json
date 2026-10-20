@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-10-20T10:26:13+00:00",
+  "generated_at": "2026-10-20T15:51:53+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-19",
@@ -58,7 +58,7 @@
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 1,
-      "COILED": 5,
+      "COILED": 6,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -209,10 +209,10 @@
       "refused": 7
     },
     "mcap": {
-      "rows": 6,
-      "have": 6
+      "rows": 7,
+      "have": 7
     },
-    "elapsed_s": 130.1
+    "elapsed_s": 133.6
   },
   "results": [
     {
@@ -259,11 +259,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 0.05207,
-      "change_pct": -15.6,
-      "r_now": -1.43,
+      "price": 0.05386,
+      "change_pct": -12.7,
+      "r_now": -1.16,
       "trail": 0.05658667,
-      "mcap": 273599852.0,
+      "mcap": 282390240.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "coingecko"
     },
@@ -290,8 +290,8 @@
       "breakout_level": 2.18014312,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 1.86247194,
-      "mcap": 1304843908.0,
+      "price": 1.87118661,
+      "mcap": 1309766455.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "coingecko"
     },
@@ -318,8 +318,8 @@
       "breakout_level": 0.0748,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 0.0531,
-      "mcap": 1690928010.0,
+      "price": 0.0538,
+      "mcap": 1709376677.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "coingecko"
     },
@@ -346,8 +346,8 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 4.95e-06,
-      "mcap": 2923203046.0,
+      "price": 5.08e-06,
+      "mcap": 2984732216.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "coingecko"
     },
@@ -374,8 +374,8 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 0.07899,
-      "mcap": 12358929291.0,
+      "price": 0.08028,
+      "mcap": 12543038020.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "coingecko"
     },
@@ -402,8 +402,36 @@
       "breakout_level": 0.22344,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 0.1407,
-      "mcap": 140956684.0,
+      "price": 0.1447,
+      "mcap": 144429738.0,
+      "mcap_asof": "2026-10-20",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "RSR",
+      "name": "Reserve Rights",
+      "yf": "RSR-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 30.71,
+        "atr_pctl": 78.1,
+        "vol_pctl": 51.1,
+        "drawdown_pct": 93.1,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-11"
+      },
+      "base": {
+        "high": 0.002999,
+        "low": 0.00123,
+        "bars": 60
+      },
+      "breakout_level": 0.002999,
+      "provisional": false,
+      "last_bar": "2026-10-19",
+      "price": 0.001917,
+      "mcap": 120047813.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "coingecko"
     }
