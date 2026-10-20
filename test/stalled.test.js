@@ -228,7 +228,7 @@ test("a NaN or missing unreal_r contributes zero, not NaN, to the totals", () =>
 });
 
 // ── 3. the framing ───────────────────────────────────────────────────────────
-suite("your call — keep / time-stop / free capacity");
+suite("status — keep / time-stop / free capacity (headed \"Your call\" until UI100 #55)");
 
 test("a pre-TP1 stall names the time-stop and the days remaining", () => {
   const f = framing(row(), 23, 28);
@@ -453,6 +453,27 @@ test("the Close buttons live ONLY inside a folded 'Emergency close' section (REF
   const fold = CODE.slice(CODE.indexOf('<details class="st-emerg">'), CODE.indexOf("</details>"));
   assert.ok(/class="st-bar"/.test(fold), "the confirm bar must sit inside the fold with the picks");
   assert.ok(/ordered\.map\(pickHTML\)/.test(fold), "the picks must render inside the fold");
+});
+
+test("the strip folds to ONE line — count and combined R — and ships shut (UI100 #54)", () => {
+  // The journal used to open on a 23-row table. The summary is the line; the
+  // totals, the rows and the Emergency close fold open on a tap.
+  assert.ok(/<details class="st-fold">\s*<summary class="st-head">/.test(CODE),
+    "the strip is no longer a fold whose summary is the head line");
+  assert.ok(!/<details class="st-fold"[^>]*\bopen\b/.test(CODE), "the stalled fold must ship shut");
+  const summary = CODE.slice(CODE.indexOf('<summary class="st-head">'), CODE.indexOf("</summary>", CODE.indexOf('<summary class="st-head">')));
+  assert.ok(/\$\{s\.n\}<\/b> stalled/.test(summary), "the summary lost the count");
+  assert.ok(/fmtR\(s\.totalR\)\}<\/b> combined/.test(summary), "the summary lost the combined R");
+  // Everything else lives inside the fold, after the summary.
+  const inner = CODE.slice(CODE.indexOf("</summary>", CODE.indexOf('<summary class="st-head">')));
+  for (const part of ['class="st-sum"', 'class="st-rows"', '<details class="st-emerg">'])
+    assert.ok(inner.includes(part), `${part} is no longer inside the fold`);
+});
+
+test("the column is headed Status, not Your call (no hand closes from 2026-10-14)", () => {
+  const cols = (CODE.match(/<div class="st-row st-cols">[\s\S]*?<\/div>/) || [""])[0];
+  assert.ok(/<span>Status<\/span><\/div>$/.test(cols), "the Status header is missing: " + cols);
+  assert.ok(!/your call/i.test(cols), "'Your call' is back on the column header");
 });
 
 test("the host section starts hidden, so a missing file costs nothing", () => {
