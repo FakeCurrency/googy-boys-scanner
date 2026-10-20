@@ -13,6 +13,11 @@
  *   #196         FLASHED compared evidence dates with run_date (the Melbourne
  *                date the nightly published, a day after the bar) and fired
  *                0 times in 21 snapshots; it now keys off as_of.
+ *   UI100        (2026-10-20) a phone opens COMPACT unless a density is saved;
+ *                COMPACT builds the head line only; the engine's closing
+ *                "not financial advice" sentence never reaches the screen;
+ *                engine tags left the head for "Why flagged" while ILLIQUID
+ *                stays on it (spec: the tag can never be disabled).
  *
  * Sandboxed with `new Function(...)` (same realm), per the repo's JS-suite rule.
  */
@@ -23,6 +28,9 @@ const fs = require("fs");
 const path = require("path");
 
 const SRC = fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap.js"), "utf8");
+const SHARED_SRC = fs.readFileSync(path.join(__dirname, "..", "public", "js", "phasemap-shared.js"), "utf8");
+// the real shared helpers (window.PM), for the UI100 pins below
+const REAL = (() => { const w = {}; new Function("window", SHARED_SRC)(w); return w.PM; })();
 
 let checks = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); checks++; };
@@ -47,7 +55,7 @@ function stubEl(name) {
   return self;
 }
 
-function boot(initialMarket) {
+function boot(initialMarket, opts = {}) {
   const els = {};
   const el = (sel) => (els[sel] = els[sel] || stubEl(sel));
   const buttons = ["asx", "nasdaq", "crypto"].map((m) => {
@@ -55,7 +63,8 @@ function boot(initialMarket) {
     b.dataset.market = m;
     return b;
   });
-  const store = new Map(initialMarket ? [["pm-market", initialMarket]] : []);
+  const store = new Map([...(initialMarket ? [["pm-market", initialMarket]] : []),
+                         ...Object.entries(opts.store || {})]);
   const localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => store.set(k, String(v)),
@@ -80,8 +89,10 @@ function boot(initialMarket) {
     confluenceChipHTML: () => "", confluenceBannerHTML: () => "", headBadgesHTML: () => "",
     identityHTML: () => "", stepperHTML: () => "", ladderHTML: () => "", whyHTML: () => "",
     metricsHTML: () => "", glossaryHTML: () => "", toggleSpeak() {},
+    warnTagsHTML: () => "", confluenceMarkHTML: () => "", stripDisclaimer: REAL.stripDisclaimer,
   };
   const window = { location: { href: "" } };
+  if ("phone" in opts) window.matchMedia = (q) => ({ matches: !!opts.phone && /max-width: 680px/.test(q) });
   new Function("window", "document", "localStorage", "PM", SRC)(window, document, localStorage, PM);
   const click = (m) => buttons.find((b) => b.dataset.market === m).listeners.click[0]();
   return { els, store, pending, click };
@@ -185,6 +196,73 @@ async function deliver(app, market, body) {
     ok(line.includes("NASDAQ at 20: +1.0% vs +0.1%"), "NASDAQ too");
     const old = await run(stats(0.0086, 0.0189, null), null);
     ok(old.includes("20: +0.9% vs +1.9%"), "an older stats file without `matched` keeps working");
+  }
+
+  // 5. UI100 #67: a phone with no saved density opens COMPACT; a saved pick
+  //    wins; a PC (or no matchMedia) keeps FULL.
+  {
+    const dens = async (opts) => {
+      const app = boot("asx", opts);
+      await deliver(app, "asx", payload("asx", ["BHP"], { as_of: "2026-10-13" }));
+      return app.els["#pm-list"].className;
+    };
+    ok((await dens({ phone: true })).includes("pm-density-compact"), "a phone opens COMPACT");
+    ok((await dens({ phone: true, store: { "pm-density": "full" } })).includes("pm-density-full"),
+      "a saved density wins on a phone");
+    ok((await dens({ phone: false })).includes("pm-density-full"), "a PC keeps FULL");
+    ok((await dens({})).includes("pm-density-full"), "no matchMedia: FULL");
+  }
+
+  // 6. UI100 #68/#71: COMPACT builds the head line only; FULL shows the
+  //    narrative without the engine's closing disclaimer sentence.
+  {
+    const narr = "Displacement confirmed on 2026-10-13. Analysis only — not financial advice.";
+    const run = async (density) => {
+      const app = boot("asx", { store: { "pm-density": density } });
+      app.pending["data/phasemap/asx/latest.json"](payload("asx", ["BHP"], { as_of: "2026-10-13" }));
+      app.pending["data/phasemap/asx/narrations.json"]({ run_date: "2026-10-14", narrations: { "BHP|bullish": narr } });
+      await settle(); await settle();
+      return app.els["#pm-list"].innerHTML;
+    };
+    const compact = await run("compact");
+    ok(compact.includes("BHP") && compact.includes("pm-card-head"), "COMPACT renders the head line");
+    ok(!/pm-ladder|pm-narration|pm-metrics|pm-why/.test(compact), "COMPACT builds nothing under the head");
+    const full = await run("full");
+    ok(full.includes("Displacement confirmed on 2026-10-13.") && /pm-metrics/.test(full), "FULL shows the narrative and stats");
+    ok(!/financial advice/i.test(full), "the disclaimer sentence never reaches the screen");
+    ok(!/pm-metrics/.test(await run("cozy")), "COZY skips the stats line it never showed");
+  }
+
+  // 7. UI100 shared helpers: the head keeps side · state · grade; engine tags
+  //    and the regime moved into "Why flagged"; ILLIQUID keeps a head chip
+  //    outside the extras box that may drop a chip (spec: never disabled).
+  {
+    const rec = { ticker: "X", direction: "bullish", state: "RUNNING", tier: "A+", regime: "ROTATION",
+                  tags: ["FAST_FLIP", "ANCHOR_CONTEXT", "ILLIQUID", "SOME_NEW_TAG"], metrics: {}, zones: [] };
+    const head = REAL.headBadgesHTML(rec);
+    ok(/LONG/.test(head) && /RUNNING/.test(head) && /A\+/.test(head), "head: side, state, grade");
+    ok(!/FAST_FLIP|ANCHOR_CONTEXT|ROTATION|ILLIQUID/.test(head), "head: no engine tags, no regime");
+    const warn = REAL.warnTagsHTML(rec);
+    ok(/ILLIQUID/.test(warn) && !/FAST_FLIP|ANCHOR/.test(warn), "warnings: ILLIQUID only");
+    const why = REAL.whyListHTML(rec);
+    ["FAST_FLIP", "ANCHOR_CONTEXT", "ROTATION", "ILLIQUID", "SOME_NEW_TAG"].forEach((t) =>
+      ok(why.includes(t), `"Why flagged" carries ${t}`));
+    ok(!/<ul>/.test(REAL.whyHTML(rec, true)) && /<ul>/.test(REAL.whyHTML(rec)), "whyHTML(rec, true) is the summary only");
+    ok(/headBadgesHTML\(rec\)\}\$\{PM\.warnTagsHTML\(rec\)\}/.test(SRC) && !/pm-head-extra[^`]*warnTagsHTML/.test(SRC),
+      "phasemap.js puts the warnings beside the grade, outside the extras box");
+    eq(REAL.stripDisclaimer("A. B. Analysis only — not financial advice."), "A. B.", "the closing sentence goes");
+    eq(REAL.stripDisclaimer("No advice talk here."), "No advice talk here.", "other text is untouched");
+  }
+
+  // 8. UI100 #75: the strip and the compact mark keep the evidence note.
+  {
+    const rows = [{ ticker: "A", side: "long", lenses: ["VIVEK", "PHASEMAP"], count: 2 },
+                  { ticker: "B", side: "long", lenses: ["VIVEK", "PHASEMAP"], count: 2 }];
+    const strip = REAL.confluenceBannerHTML(rows, "asx", 1);
+    ok(strip.includes(REAL.CONFLUENCE_UNPROVEN), "the strip carries CONFLUENCE_UNPROVEN");
+    ok(/data-conf-more[^>]*>\+1 more</.test(strip), "+N more is a button");
+    ok(REAL.confluenceMarkHTML(rows[0], "PHASEMAP").includes(REAL.CONFLUENCE_UNPROVEN),
+      "the compact multi-lens mark carries CONFLUENCE_UNPROVEN");
   }
 
   console.log(`phasemap_page.test.js: ${checks} checks passed`);

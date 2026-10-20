@@ -85,7 +85,9 @@ window.PM = (() => {
       const done = z.status === "CONSUMED" ? " pm-band-consumed"
         : z.status === "VIOLATED" ? " pm-band-violated" : "";
       const conf = z.confluence > 1 ? ` ×${z.confluence}` : "";
-      return `<div class="pm-rung">
+      // UI100 #77 (2026-10-20): a spent zone fades as a whole rung (its
+      // prices too), so the live bands are what the eye lands on.
+      return `<div class="pm-rung${done ? " pm-rung-done" : ""}">
         <span class="pm-rung-prices">${fmtPrice(z.low)}–${fmtPrice(z.high)}</span>
         <span class="pm-band ${cls}${done}">
           <span class="pm-band-label">${esc(zoneLabel(z))}${conf}</span>
@@ -162,8 +164,9 @@ window.PM = (() => {
     STALLED: "⏸", COMPLETE: "✓", DEAD: "✕",
   };
 
-  /* Plain-English meaning of each scan tag (hover title on the card; the
-     same words are in the glossary drawer and the WHY FLAGGED list).
+  /* Plain-English meaning of each scan tag (hover title on the head's
+     warning chips; the same words are in the glossary drawer and the WHY
+     FLAGGED list).
      Restates phasemap/engine (scanner.py _tags / module0_tags,
      setup_engine.py) — explanation only, nothing here decides a tag. */
   const TAG_HELP = {
@@ -174,21 +177,24 @@ window.PM = (() => {
     HALT_RISK: "Somewhere in the last 60 bars there is a gap of more than 5 calendar days between bars (a possible trading halt).",
   };
 
+  // UI100 #72 (2026-10-20): the card head carries side · state · grade only.
+  // The regime and the engine tags (FAST_FLIP, ANCHOR_CONTEXT, ANCHOR_CAUTION)
+  // moved into "Why flagged"; the two WARNINGS keep a head chip (warnTagsHTML).
   function headBadgesHTML(rec) {
     const long = rec.direction === "bullish";
     const tier = rec.tier
       ? `<span class="pm-tier ${TIER_CLASS[rec.tier] || ""}">${esc(rec.tier)}</span>` : "";
-    const tags = rec.tags.map((t) => {
-      const extra = t === "ILLIQUID" ? " pm-tag-illiquid" : t === "HALT_RISK" ? " pm-tag-halt" : "";
-      const help = TAG_HELP[t] ? ` title="${esc(TAG_HELP[t])}"` : "";
-      return `<span class="pm-tag${extra}"${help}>${esc(t)}</span>`;
-    }).join("");
+    // The glyphs are spans so a phone's one-line COMPACT row can drop them
+    // (the words stay, so colour is still never the only signal).
     return `
-      <span class="pm-dir ${long ? "pm-dir-long" : "pm-dir-short"}">${long ? "▲ LONG" : "▼ SHORT"}</span>
-      <span class="pm-state pm-state-${esc(rec.state)}">${STATE_GLYPH[rec.state] || ""} ${esc(rec.state.replace("_", " "))}</span>
-      ${tier}
-      <span class="pm-regime">${esc(rec.regime)}</span>
-      ${tags}`;
+      <span class="pm-dir ${long ? "pm-dir-long" : "pm-dir-short"}"><span class="pm-glyph">${long ? "▲" : "▼"} </span>${long ? "LONG" : "SHORT"}</span>
+      <span class="pm-state pm-state-${esc(rec.state)}"><span class="pm-glyph">${STATE_GLYPH[rec.state] || ""} </span>${esc(rec.state.replace("_", " "))}</span>
+      ${tier}`;
+  }
+  const WARN_TAGS = { ILLIQUID: ["pm-tag-illiquid", "ILLIQUID"], HALT_RISK: ["pm-tag-halt", "HALT RISK"] };
+  function warnTagsHTML(rec) {
+    return (rec.tags || []).filter((t) => WARN_TAGS[t]).map((t) =>
+      `<span class="pm-tag ${WARN_TAGS[t][0]}" title="${esc(TAG_HELP[t])}">${WARN_TAGS[t][1]}</span>`).join("");
   }
 
   /* ── Phase stepper ───────────────────────────────────────────────────────
@@ -234,12 +240,20 @@ window.PM = (() => {
     COMPLETE: "The final target zone was reached — this setup has fully played out.",
     DEAD: "Price violated the hard invalidation zone — the idea is invalidated and the setup is finished.",
   };
-  function whyHTML(rec) {
+  // lazy: the summary only — the PhaseMap page fills the list from
+  // whyListHTML on the first open (UI100 #74, 2026-10-20: ~25 nodes a card
+  // that a closed panel never shows).
+  function whyHTML(rec, lazy) {
+    return `<details class="pm-why"><summary>WHY FLAGGED <span class="pm-why-chev">▾</span></summary>
+      ${lazy ? "" : whyListHTML(rec)}</details>`;
+  }
+  function whyListHTML(rec) {
     const m = rec.metrics || {};
     const rows = [];
     const term = (label, key) => `<button class="pm-term" data-term="${esc(key)}" ` +
       `title="What does '${esc(label)}' mean?">${esc(label)}<sup>?</sup></button>`;
     rows.push(STATE_WHY[rec.state] || "");
+    if (rec.regime) rows.push(`${term("Regime", "regime")}: <b>${esc(rec.regime)}</b>.`);
     if (m.sweep_date) rows.push(`${term("Sweep", "swept")} printed on <b>${esc(m.sweep_date)}</b>.`);
     if (m.displacement_date) rows.push(`${term("Displacement", "displaced")} printed on <b>${esc(m.displacement_date)}</b>.`);
     if (m.retrace_pct != null) rows.push(`Retrace so far: <b>${fmtPct(m.retrace_pct)}</b>.`);
@@ -252,8 +266,10 @@ window.PM = (() => {
     if (rec.tags.includes("FAST_FLIP")) rows.push(`${term("FAST_FLIP", "fast_flip")} — the sweep printed early in the week (Mon/Tue).`);
     if (rec.tags.includes("ANCHOR_CONTEXT")) rows.push(`${term("ANCHOR_CONTEXT", "anchor_context")} — the sweep ran past the yearly or quarterly open and price has closed back over it.`);
     if (rec.tags.includes("ANCHOR_CAUTION")) rows.push(`${term("ANCHOR_CAUTION", "anchor_caution")} — price is just short of an anchor open, with no sweep yet this quarter.`);
-    return `<details class="pm-why"><summary>WHY FLAGGED <span class="pm-why-chev">▾</span></summary>
-      <ul>${rows.filter(Boolean).map((r) => `<li>${r}</li>`).join("")}</ul></details>`;
+    // the head no longer prints tags (UI100 #72): a tag the engine adds later
+    // must still surface somewhere, so an unknown one is listed as-is
+    rec.tags.filter((t) => !TAG_HELP[t]).forEach((t) => rows.push(`Scan tag <b>${esc(t)}</b>.`));
+    return `<ul>${rows.filter(Boolean).map((r) => `<li>${r}</li>`).join("")}</ul>`;
   }
 
   /* ── Glossary (plain-language, mirrors the KEY & LEGEND page) ───────────── */
@@ -375,10 +391,12 @@ window.PM = (() => {
 
   /* Banner body for the PhaseMap page's multi-lens strip (its only caller):
      capped list of aligned names, triples as pulsing beacons, links to the
-     combined chart. */
+     combined chart. UI100 #75 (2026-10-20): the label carries the evidence
+     note, "ALIGNMENT" can drop on a phone, and "+N more" is a button the
+     page wires to show the rest. */
   function confluenceBannerHTML(rows, market, cap = 10) {
     if (!rows || !rows.length) return "";
-    return `<span class="conf-banner-label">⨂ MULTI-LENS ALIGNMENT</span>` +
+    return `<span class="conf-banner-label" title="${esc(CONFLUENCE_UNPROVEN)}">⨂ MULTI-LENS<span class="conf-banner-long"> ALIGNMENT</span></span>` +
       rows.slice(0, cap).map((x) => {
         const dir = x.side === "short" ? "&dir=bearish" : "&dir=bullish";
         const arrow = x.side === "short" ? "▼" : "▲";
@@ -388,7 +406,7 @@ window.PM = (() => {
           `href="chart.html?m=${market}&s=${encodeURIComponent(x.ticker)}&pm=1${dir}">` +
           `${tag}${esc(x.ticker)} ${arrow}${x.count >= 3 ? " ×3" : ""}</a>`;
       }).join("") +
-      (rows.length > cap ? `<span style="color:var(--muted)">+${rows.length - cap} more</span>` : "");
+      (rows.length > cap ? `<button type="button" class="conf-more" data-conf-more title="Show every aligned name">+${rows.length - cap} more</button>` : "");
   }
 
   /* ONE timestamp convention (2026-07-05): every scan stamp renders in
@@ -432,6 +450,30 @@ window.PM = (() => {
       `title="Multiple independent lenses have an ACTIVE ${info.side} setup on this ` +
       `name right now — review every view. ${CONFLUENCE_UNPROVEN}">` +
       `${triple ? "🎯 " : "⨂ "}${info.count}-LENS · +${others.join(" +")}</span>`;
+  }
+
+  /* UI100 #68 (2026-10-20): the same chip cut to its mark ("⨂ 2" / "🎯 3")
+     for the PhaseMap page's one-line COMPACT rows. The lenses and the
+     evidence note move into the title, so nothing is lost but width. */
+  function confluenceMarkHTML(info, currentLens) {
+    if (!info) return "";
+    const others = info.lenses.filter((l) => l !== currentLens);
+    if (!others.length) return "";
+    const triple = info.count >= 3;
+    return `<span class="pm-conf pm-conf-mark${triple ? " pm-conf-3" : ""}" ` +
+      `title="${esc(info.count)}-lens ${esc(info.side)} alignment: ${esc(info.lenses.join(" + "))} ` +
+      `each have an ACTIVE setup on this name right now. ${CONFLUENCE_UNPROVEN}">` +
+      `${triple ? "🎯" : "⨂"} ${esc(info.count)}</span>`;
+  }
+
+  /* UI100 #71 (2026-10-20): the owner's no-disclaimers ruling (2026-09-28)
+     on screen. The engine still ends every narration with "Analysis only —
+     not financial advice." (spec Section 6; dropping it at the source is the
+     owner's spec call), so the page drops that closing sentence at display
+     time. Only a LAST sentence naming "not financial advice" goes. */
+  const DISCLAIMER_TAIL_RE = /(^|[.!?])\s*[^.!?]*\bnot financial advice\b[.!?]?\s*$/i;
+  function stripDisclaimer(text) {
+    return String(text == null ? "" : text).replace(DISCLAIMER_TAIL_RE, "$1");
   }
 
 
@@ -485,11 +527,11 @@ window.PM = (() => {
   }
 
   return { fmtPrice, fmtTurnover, esc,
-           ladderHTML, metricsHTML, headBadgesHTML, identityHTML,
-           stepperHTML, whyHTML, glossaryHTML,
+           ladderHTML, metricsHTML, headBadgesHTML, warnTagsHTML, identityHTML,
+           stepperHTML, whyHTML, whyListHTML, glossaryHTML, stripDisclaimer,
            isFundReit, toggleSpeak,
            loadConfluence, loadPhaseMapRows, CONFLUENCE_UNPROVEN,
-           confluenceChipHTML, confluenceBannerHTML,
+           confluenceChipHTML, confluenceMarkHTML, confluenceBannerHTML,
            staleBadgeHTML, fmtMelb, loadFailKind, retryHTML,
            fetchTimeout, DATA_FETCH_TIMEOUT_MS };
 })();
