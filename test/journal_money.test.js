@@ -511,6 +511,127 @@ test("the control is reachable on a phone, where the column headers are not", ()
     "the mobile tap target is back to its unpadded 23x21px, which is a miss waiting to happen");
 });
 
+// ── FIRST LOAD (UI100 review, 2026-10-20) ────────────────────────────────────
+// UI100 #53 lifted the open table to sit straight under the hero. init's first
+// paint runs on the rules alone, so paintOpen wrote "No open positions." there
+// — a false empty state — and when the book landed 24+ rows shoved the stalled
+// fold, the performance fold and the record card off the first screen: CLS on
+// the e2e fixtures 0.38 -> 0.78 (390px), 0.22 -> 0.56 (1280px). journal.html
+// now ships <body class="jr-loading">, which init lifts once the first load
+// has settled; paintOpen leaves the "Loading…" placeholder alone until then.
+suite("first load — no false empty state, nothing on screen moves");
+
+function paintCtx({ tried, open }) {
+  const host = { innerHTML: '<div class="jr-empty">Loading…</div>' };
+  const els = { "#bot-open": host, "#bot-open-sort": { innerHTML: "" },
+                "#bot-close-all": { innerHTML: "" }, "#bot-emergency": { hidden: true } };
+  const pctx = vm.createContext({});
+  vm.runInContext(
+    `let botTried = ${tried}, closeAllBusy = false;\n`
+    + `const state = { bot: { open: ${JSON.stringify(open)}, closed: [] } };\n`
+    + "const $ = (s) => ELS[s] || null;\n"
+    + "const openRows = (list) => list.length ? '<table>ROWS</table>' : '<div class=\"jr-empty\">No open positions.</div>';\n"
+    + "const openSortControl = () => 'SORT';\n"
+    + "const closeAllControl = () => 'CLOSE';\n"
+    + slice("function paintOpen(side) {", "\n  }") + "\n"
+    + "this.paintOpen = paintOpen;",
+    Object.assign(pctx, { ELS: els }));
+  return { paintOpen: pctx.paintOpen, host };
+}
+
+test("before a load was tried, paintOpen keeps the Loading placeholder — never a false 'No open positions.'", () => {
+  const { paintOpen, host } = paintCtx({ tried: false, open: [] });
+  paintOpen("bot");
+  assert.ok(/Loading/.test(host.innerHTML), `the placeholder was replaced: ${host.innerHTML}`);
+  assert.ok(!/No open positions/.test(host.innerHTML), "a false empty state printed before the book was read");
+});
+
+test("once a load was tried, an empty book says so", () => {
+  const { paintOpen, host } = paintCtx({ tried: true, open: [] });
+  paintOpen("bot");
+  assert.ok(/No open positions/.test(host.innerHTML), host.innerHTML);
+});
+
+test("rows in hand always paint, tried or not", () => {
+  const { paintOpen, host } = paintCtx({ tried: false, open: [{ symbol: "ZS" }] });
+  paintOpen("bot");
+  assert.ok(/ROWS/.test(host.innerHTML), host.innerHTML);
+});
+
+test("journal.html ships the loading state, so it holds from the first paint", () => {
+  const html = fs.readFileSync(path.resolve(__dirname, "../public/journal.html"), "utf8");
+  assert.ok(/<body class="jr-loading">/.test(html), "the body no longer starts in .jr-loading");
+  assert.ok(/id="bot-open"><div class="jr-empty">Loading…<\/div>/.test(html),
+    "#bot-open lost the Loading placeholder paintOpen now keeps until the first load");
+});
+
+test("the loading state reserves the open section and keeps every block below it out of the layout", () => {
+  const css = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(/\.jr-loading #sec-open\s*\{[^}]*min-height:\s*100vh/.test(css),
+    "the open section no longer holds a screen's height while the book loads");
+  const hid = /((?:\.jr-loading [^{,]+,\s*)+\.jr-loading [^{,]+)\{\s*display:\s*none;?\s*\}/.exec(css);
+  assert.ok(hid, "no .jr-loading rule hides the blocks below the table");
+  for (const sel of ["#stalled-strip", ".jr-fold-perf", ".sides", ".jr-howto"]) {
+    assert.ok(hid[1].includes(".jr-loading " + sel), `${sel} paints (then moves) while the book loads`);
+  }
+  // The failed-first-load message lives in #bot-open; the loading state must
+  // never be able to hide it (init lifts the class on failure too — below).
+  assert.ok(!/\.jr-loading[^{]*(#bot-open\b|#sec-open\b|\.jr-load-err)[^{]*\{\s*display:\s*none/.test(css),
+    "the loading state hides the open section itself — a failed load could never say so");
+  assert.ok(/\.jr-loading #bot-open-sort::before\s*\{[^}]*content:[^}]*height:/.test(css),
+    "the title line no longer keeps the sort control's height while loading");
+});
+
+// ── PHONE TOUCH TARGETS, NOTES AND ROW HEIGHT (UI100 review, 2026-10-20) ────
+suite("journal rows — chart link hit area, the high-water note, the flip chip");
+
+const JCSS = fs.readFileSync(path.resolve(__dirname, "../public/css/journal.css"), "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "");
+// The body of every `@media <query> { … }` block whose query matches `q`.
+function mediaBodies(q) {
+  const out = [];
+  for (let i = JCSS.indexOf("@media"); i >= 0; i = JCSS.indexOf("@media", i + 1)) {
+    const open = JCSS.indexOf("{", i);
+    if (!q.test(JCSS.slice(i, open))) continue;
+    let depth = 1, j = open + 1;
+    for (; j < JCSS.length && depth; j++) depth += JCSS[j] === "{" ? 1 : JCSS[j] === "}" ? -1 : 0;
+    out.push(JCSS.slice(open + 1, j - 1));
+  }
+  return out.join("\n");
+}
+
+test("on a phone the chart link's hit area is at least 44px tall without moving the row", () => {
+  // Without the LONG pill (UI100 #59) the link is the bare ticker: 16x18px for
+  // "ZS". A transparent, absolutely-positioned ::before adds the height.
+  const phone = mediaBodies(/^@media \(max-width: 680px\)\s*$/);
+  assert.ok(/\.jr-symlink\s*\{[^}]*position:\s*relative/.test(phone), "the link is not the pseudo's containing block");
+  const m = /\.jr-symlink::before\s*\{([^}]*)\}/.exec(phone);
+  assert.ok(m, "no stretched hit area on the phone chart link");
+  assert.ok(/position:\s*absolute/.test(m[1]) && /content:\s*""/.test(m[1]), m[1]);
+  const px = (k) => { const v = new RegExp(`(?:^|;|\\s)${k}:\\s*(-?\\d+)px`).exec(m[1]); return v ? -Number(v[1]) : 0; };
+  // 18px is the ticker's own line box on a phone (14px type).
+  assert.ok(18 + px("top") + px("bottom") >= 44,
+    `hit area ${18 + px("top") + px("bottom")}px tall — under the 44px floor`);
+});
+
+test("a touch phone prints the open row's high-water under its R", () => {
+  // A touch screen has no tooltip; the high-water is a fact about the position
+  // (an open +0.1R that has been +1.2R is a different trade).
+  const touch = mediaBodies(/max-width: 680px\) and \(hover: none\)/);
+  assert.ok(/\.jr-open-tbl td\.jr-ur\[data-note\]::after\s*\{[^}]*content:\s*attr\(data-note\)/.test(touch),
+    "the high-water note is hidden on touch phones again");
+  assert.ok(/data-label="R"\$\{hw\}/.test(SRC) && /data-note="high-water /.test(SRC),
+    "the R cell no longer carries the high-water data-note");
+});
+
+test("the flip chip sits inside the line the muted tags make (no taller flagged rows)", () => {
+  const m = /\.jr-flip\s*\{([^}]*)\}/.exec(JCSS);
+  assert.ok(m, ".jr-flip is unstyled");
+  assert.ok(/font:[^;]*\/1\s/.test(m[1]), `the flip chip's line-height grew back: ${m[1]}`);
+  assert.ok(/padding:\s*0\s+\d+px/.test(m[1]), `the flip chip has vertical padding again: ${m[1]}`);
+});
+
 
 // ── WHO DECIDED THE EXIT (2026-08-13) ────────────────────────────────────────
 // The bot book is meant to be evidence about the FROZEN RULES. On the live book
@@ -1498,7 +1619,43 @@ vm.runInContext(
   + " cycle: LIVE_CYCLE, cells: JSON.stringify(ENTRY_CELLS) }; };",
   rctx);
 
+// init lifts .jr-loading (UI100 review, 2026-10-20): after the repaint that
+// follows the first book load, on failure too, and even if that repaint throws.
+function initCtx({ throwOn2nd = false } = {}) {
+  const classes = new Set(["jr-loading"]);
+  const log = { paints: [], wired: 0 };
+  const ictx = vm.createContext({
+    setTimeout, Promise,
+    document: { body: { classList: { remove: (c) => classes.delete(c), contains: (c) => classes.has(c) } } },
+    loadBotRules: async () => {}, loadScanMeta: async () => {}, loadFx: async () => {},
+    loadBot: async () => { log.loaded = true; },
+    renderAll: () => {
+      log.paints.push({ loading: classes.has("jr-loading"), loaded: !!log.loaded });
+      if (throwOn2nd && log.paints.length === 2) throw new Error("render fault");
+    },
+    wire: () => { log.wired++; },
+  });
+  vm.runInContext(slice("async function init() {", "\n  }") + "\nthis.init = init;", ictx);
+  return { init: ictx.init, classes, log };
+}
+
 (async () => {
+  suite("first load — init lifts the loading state");
+  await atest("the class goes only after the repaint that follows the book load", async () => {
+    const { init, classes, log } = initCtx();
+    await init();
+    assert.equal(log.paints.length, 2);
+    assert.deepEqual(log.paints[1], { loading: true, loaded: true },
+      "the rows must paint while the page is still held — then it is revealed");
+    assert.ok(!classes.has("jr-loading"), "the page is stuck on Loading after the first load");
+    assert.equal(log.wired, 1);
+  });
+  await atest("a render fault still reveals the page (and still surfaces)", async () => {
+    const { init, classes } = initCtx({ throwOn2nd: true });
+    await assert.rejects(init(), /render fault/);
+    assert.ok(!classes.has("jr-loading"), "a renderer fault left the page hidden behind Loading");
+  });
+
   suite("loadBotRules — the off-scale gate");
   await atest("a published notional EQUAL to the fallback still switches the gate on", async () => {
     const r = await rctx.load({ position_notional: 2500 });

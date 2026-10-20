@@ -640,7 +640,12 @@
   // equity SVG and the stat cards. A sort click changes neither.
   function paintOpen(side) {
     const host = $("#" + side + "-open");
-    if (host) host.innerHTML = openRows(state[side].open, side, Date.now());
+    // UI100 review (2026-10-20): until a book load has been TRIED the table
+    // keeps journal.html's "Loading…" placeholder. init's first paint runs on
+    // the rules alone, and an empty list there printed a false "No open
+    // positions." straight under the hero that the real rows then shoved
+    // down (CLS). A failed first load is paintLoadFailure's to say.
+    if (host && (botTried || state[side].open.length)) host.innerHTML = openRows(state[side].open, side, Date.now());
     // Guarded: journal.js can land one commit ahead of the journal.html that
     // adds this host, and the page must stay whole in between.
     const sortHost = $("#" + side + "-open-sort");
@@ -1917,9 +1922,20 @@
     // renderAll() below) — rather than holding a blank page on a flaky connection.
     const rules = loadBotRules();
     await Promise.race([rules, new Promise((r) => setTimeout(r, 1500))]);
-    renderAll();                 // paint with whatever constants are in hand
-    await Promise.all([loadBot(), loadScanMeta(), loadFx(), rules]);
-    renderAll();                 // repaint with the live rules + grade/setup fallback
+    // UI100 review (2026-10-20): journal.html ships <body class="jr-loading">,
+    // which keeps the open table on "Loading…", holds its section at a
+    // screen's height and keeps every block below it out of the layout
+    // (journal.css). Lifted once the first book load has SETTLED — success or
+    // failure, so a failed load still says so in plain words — and only after
+    // the repaint that follows it, so the rows land in space that was already
+    // theirs (the before/after CLS is noted at .jr-loading in journal.css).
+    try {
+      renderAll();               // paint with whatever constants are in hand
+      await Promise.all([loadBot(), loadScanMeta(), loadFx(), rules]);
+      renderAll();               // repaint with the live rules + grade/setup fallback
+    } finally {
+      document.body.classList.remove("jr-loading");
+    }
     wire();
   }
 
