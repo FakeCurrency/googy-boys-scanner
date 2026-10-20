@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-20T05:37:47+00:00",
+  "generated_at": "2026-10-20T11:56:54+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-20",
@@ -68,24 +68,24 @@
       "completed_last": "2026-10-20",
       "raw_last": "2026-10-20",
       "expected_completed": "2026-10-20",
-      "lagging": 755,
+      "lagging": 252,
       "screened": 1854,
       "completed_dist": {
-        "2026-10-20": 1099,
-        "2026-10-19": 754,
+        "2026-10-20": 1602,
+        "2026-10-19": 251,
         "2026-10-16": 1
       },
       "raw_dist": {
-        "2026-10-20": 1099,
-        "2026-10-19": 754,
+        "2026-10-20": 1602,
+        "2026-10-19": 251,
         "2026-10-16": 1
       },
-      "rows_lagging": 3
+      "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1375
+        "yahoo": 1588
       },
       "dead": {},
       "errors": {},
@@ -100,8 +100,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1375,
-      "reused": 479,
+      "fresh": 1588,
+      "reused": 266,
       "merged": 1854,
       "universe": 2051,
       "stale_dropped": 0,
@@ -111,7 +111,7 @@
       "rows": 11,
       "have": 11
     },
-    "elapsed_s": 325.7
+    "elapsed_s": 333.4
   },
   "results": [
     {
@@ -339,34 +339,6 @@
       "mcap_src": "previous"
     },
     {
-      "symbol": "TER",
-      "name": "Terracom Limited",
-      "yf": "TER.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 16.18,
-        "atr_pctl": 67.7,
-        "vol_pctl": 25.4,
-        "drawdown_pct": 85.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-07"
-      },
-      "base": {
-        "high": 0.088,
-        "low": 0.05,
-        "bars": 60
-      },
-      "breakout_level": 0.088,
-      "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 0.06,
-      "mcap": 105706336.0,
-      "mcap_asof": "2026-10-18",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "DMP",
       "name": "Domino'S Pizza Enterprises Limited",
       "yf": "DMP.AX",
@@ -386,7 +358,7 @@
         "low": 16.71544929,
         "bars": 60
       },
-      "breakout_level": 22.44000053,
+      "breakout_level": 22.45999908,
       "provisional": false,
       "last_bar": "2026-10-20",
       "price": 22.01000023,
@@ -395,16 +367,44 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "TER",
+      "name": "Terracom Limited",
+      "yf": "TER.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 20.3,
+        "atr_pctl": 71.6,
+        "vol_pctl": 26.0,
+        "drawdown_pct": 86.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-07"
+      },
+      "base": {
+        "high": 0.088,
+        "low": 0.05,
+        "bars": 60
+      },
+      "breakout_level": 0.088,
+      "provisional": false,
+      "last_bar": "2026-10-20",
+      "price": 0.057,
+      "mcap": 105706336.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "PMM",
       "name": "Pioneer Minerals Limited",
       "yf": "PMM.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 64.22,
-        "atr_pctl": 98.2,
+        "ribbon_pct": 71.33,
+        "atr_pctl": 100.0,
         "vol_pctl": 100.0,
-        "drawdown_pct": 17.9,
+        "drawdown_pct": 28.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-08"
@@ -416,8 +416,8 @@
       },
       "breakout_level": 0.41999999,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 0.345,
+      "last_bar": "2026-10-20",
+      "price": 0.30000001,
       "mcap": 25839128.0,
       "mcap_asof": "2026-10-19",
       "mcap_src": "previous"
