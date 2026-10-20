@@ -378,7 +378,7 @@
 
   // Held-plan passthrough (2026-08-20): he/hs/hd(+ht1/ht2/ht3) carry a real
   // journal position's own entry/stop/direction/targets, set by journal.js's
-  // symCell/jr-new-row links. When present they override whatever the live
+  // symCell links. When present they override whatever the live
   // scan or PhaseMap would otherwise guess for this ticker — see
   // heldPlanFallback() below. Entry+stop are the minimum bar for "usable".
   const heldPlan = (() => {
@@ -1256,6 +1256,16 @@
       .catch(() => []);
   }
 
+  // The PhaseMap engine ends every narration with "Analysis only — not
+  // financial advice." (spec Section 6). This site is personal use with no
+  // disclaimers anywhere (owner ruling 2026-09-28), so the sentence is cut at
+  // DISPLAY, as the PhaseMap page does (UI100 #85, 2026-10-20); the engine
+  // and its published files are untouched (the source is the owner's spec call).
+  function noDisclaimer(s) {
+    return String(s == null ? "" : s)
+      .replace(/\s*Analysis only\s*[\u2014\u2013-]+\s*not financial advice\.?\s*$/i, "");
+  }
+
   function pmOnlyFallback(SYM, meta, rec) {
     // rec may be NULL — tier-3 fallback: no VIVEK plan, no PhaseMap setup.
     // The chart still renders (candles + SMAs, D/3D/W) so a ticker link
@@ -1280,7 +1290,7 @@
       sector: m.sector || (rec && rec.sector) || "",
       currency_symbol: m.currency_symbol || (market === "asx" ? "A$" : "$"),
       is_product: m.is_product, dir: rec ? (bull ? "LONG" : "SHORT") : "",
-      analysis: (rec && rec.narration) ||
+      analysis: (rec && noDisclaimer(rec.narration)) ||
         "No live VIVEK or PhaseMap setup on this name right now — showing the raw chart (candles + SMAs) so every ticker always opens.",
       default_tf: "1D", level_lines: [], timeframes: {},
       _fallback: true, _vivek: false, _pm: true,
@@ -1972,7 +1982,11 @@
     const dirEl = $("#ct-dir");
     if (d.dir) {
       const isShort = d.dir.toUpperCase() === "SHORT";
-      dirEl.textContent = d.dir;
+      // UI100 #79 (2026-10-20): the word on a PC, the arrow alone on a phone
+      // (chart.css), where the header is one line.
+      dirEl.innerHTML = `<span class="ct-dir-g" aria-hidden="true">${isShort ? "▼" : "▲"}</span>` +
+        `<span class="ct-dir-w">${esc(d.dir)}</span>`;
+      dirEl.title = d.dir;
       dirEl.classList.toggle("short", isShort);
       dirEl.classList.toggle("long", !isShort);   // explicit colour both ways (LONG green / SHORT red)
     }
@@ -2265,14 +2279,49 @@
     onRenderTeardown(() => clearInterval(iv));
   }
 
-  // ── VIVEK "setups across timeframes" strip ──────────────────────────────────
+  // ── The setup line (UI100 #80, 2026-10-20) ─────────────────────────────────
+  // ONE slim line above the chart for what were two boxed banners stacked
+  // there: Claude's open position on this name (wireBotPosBanner) and the
+  // multi-timeframe read (renderTFSetups). Each writes its own part; the line
+  // exists only while a part has something to say. It sits OUTSIDE .chart-main,
+  // for the reason the banner did: .chart-main is the box the SMA legend is
+  // pinned to, so a first child there is overprinted.
+  function setLinePart(part, cls, html, first) {
+    const main = document.querySelector(".chart-main");
+    let line = document.getElementById("ct-setline");
+    if (!line && (!html || !main)) return;
+    if (!line) {
+      line = document.createElement("div");
+      line.id = "ct-setline";
+      line.className = "ct-setline";
+      main.parentNode.insertBefore(line, main);
+    }
+    let el = line.querySelector("." + part);
+    if (!html) {
+      if (el) el.remove();
+      if (!line.children.length) line.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement("span");
+      if (first) line.prepend(el); else line.append(el);
+    }
+    el.className = `${part} ${cls || ""}`.trim();
+    el.innerHTML = html;
+  }
+
+  // ── VIVEK "setups across timeframes" ────────────────────────────────────────
   // A read-only decision aid: for THIS ticker it surfaces which timeframes have a
   // live setup (armed / entry type / R:R) and flags multi-timeframe confluence —
   // so the chart actively suggests where the edge is, not just draws it. Reads the
-  // same per-TF plans the chart already holds; clicking a chip jumps to that TF.
+  // same per-TF plans the chart already holds.
+  // UI100 #80 (2026-10-20): the strip's boxes are gone. Its read is the "mtf"
+  // part of the setup line, and each chip's state rides on its own timeframe
+  // button ("3D rec 3.0R") -- the chips were a second row of D / 3D / W buttons
+  // directly under the first, doing the same job.
   const TFS_MIN_RR = 1.5;
   const TFS_NEAR_PCT = 1.5;   // price within 1.5% of the 200-SMA line = "approaching"
-  function renderTFSetups(tfs, pickTF, getCurTF) {
+  function renderTFSetups(tfs, toggle) {
     const order = ["4H", "1D", "3D", "1W"];
     const items = order.filter((k) => tfs[k] && tfs[k].levels).map((k) => {
       const lv = tfs[k].levels;
@@ -2286,7 +2335,9 @@
       return { k, approx: !!tfs[k].approx, armed: !!lv.armed, rr: +lv.rr || 0,
                trig: lv.entry_trigger, nearPct };
     });
-    if (!items.length) return null;
+    // A re-render starts clean: no read from the previous pass survives it.
+    onRenderTeardown(() => setLinePart("csl-mtf", "", ""));
+    if (!items.length) return;
     const fmtPct = (p) => (p < 0.1 ? "<0.1%" : p.toFixed(1) + "%");
     // Real-plan timeframes only (a 4H / old-3D reference borrows the Daily plan —
     // don't let it double-count toward confluence).
@@ -2297,56 +2348,73 @@
       .filter((i) => !i.armed && !i.approx && i.nearPct != null && i.nearPct <= TFS_NEAR_PCT)
       .sort((a, b) => a.nearPct - b.nearPct);
     const isNear = (i) => realNear.includes(i);
-    let cls, read;
+    // `read` is the PC line; `short` the phone's, where it shares one line
+    // with Claude's position (the timeframe buttons carry the per-TF detail).
+    let cls, read, short;
+    const tfs2 = (list) => list.map((i) => TF_LABEL[i.k]).join(" + ");
     if (realArmed.length >= 2) {
       cls = "strong";
-      read = `⚡ Multi-timeframe setup — armed on ${realArmed.map((i) => TF_LABEL[i.k]).join(" + ")}`;
+      read = `⚡ Multi-timeframe setup · armed on ${tfs2(realArmed)}`;
+      short = `⚡ ${tfs2(realArmed)} armed`;
     } else if (realArmed.length === 1) {
       const a = realArmed[0];
       cls = a.rr >= TFS_MIN_RR ? "armed" : "weak";
       read = `Armed on ${TF_LABEL[a.k]} · ${a.trig || "trigger"} · R:R ${a.rr.toFixed(1)}`;
+      short = `${TF_LABEL[a.k]} armed · R:R ${a.rr.toFixed(1)}`;
       // An armed TF with another TF also hugging the line = stacking confluence.
-      if (realNear.length) read += ` · ${TF_LABEL[realNear[0].k]} approaching (${fmtPct(realNear[0].nearPct)})`;
+      if (realNear.length) {
+        read += ` · ${TF_LABEL[realNear[0].k]} approaching (${fmtPct(realNear[0].nearPct)})`;
+        short += ` · ${TF_LABEL[realNear[0].k]} near`;
+      }
     } else if (realNear.length >= 2) {
       cls = "near";
-      read = `⚡ 200-SMA cluster forming — ${realNear.map((i) => TF_LABEL[i.k]).join(" + ")} ` +
+      read = `⚡ 200-SMA cluster forming · ${tfs2(realNear)} ` +
              `within ${fmtPct(realNear[realNear.length - 1].nearPct)} of the line`;
+      short = `⚡ ${tfs2(realNear)} near the line`;
     } else if (realNear.length === 1) {
       const a = realNear[0];
       cls = "near";
-      read = `⏳ Approaching a ${TF_LABEL[a.k]} setup — ${fmtPct(a.nearPct)} from the 200-SMA`;
+      read = `⏳ Approaching a ${TF_LABEL[a.k]} setup · ${fmtPct(a.nearPct)} from the 200-SMA`;
+      short = `⏳ ${TF_LABEL[a.k]} ${fmtPct(a.nearPct)} from the line`;
     } else {
       cls = "watch";
-      // Name the nearest real-plan TF so the strip still points somewhere useful.
+      // Name the nearest real-plan TF so the line still points somewhere useful.
       const nearest = items
         .filter((i) => !i.approx && i.nearPct != null)
         .sort((x, y) => x.nearPct - y.nearPct)[0];
       read = nearest
-        ? `Watching — nearest is ${TF_LABEL[nearest.k]}, ${fmtPct(nearest.nearPct)} from the line`
-        : "Watching — no timeframe has triggered yet";
+        ? `Watching · nearest is ${TF_LABEL[nearest.k]}, ${fmtPct(nearest.nearPct)} from the line`
+        : "Watching · no timeframe has triggered yet";
+      short = nearest ? `Watching · ${TF_LABEL[nearest.k]} ${fmtPct(nearest.nearPct)} away` : "Watching";
     }
-    const chip = (i) => {
+    setLinePart("csl-mtf", "s-" + cls, `<span class="csl-full">${esc(read)}</span>` +
+      `<span class="csl-short" title="${esc(read)}">${esc(short)}</span>`);
+    // Each timeframe button carries its own state: a coloured sub-label (the
+    // trigger and R:R when armed, the distance from the line when not) and the
+    // chip's tooltip after the button's own.
+    items.forEach((i) => {
+      const btn = toggle && toggle.querySelector(`.tf-btn[data-tf="${i.k}"]`);
+      if (!btn) return;
       const near = isNear(i);
       const state = i.armed ? (i.rr >= TFS_MIN_RR ? "armed" : "weak") : (near ? "near" : "watch");
-      const sub = i.armed ? `${(i.trig || "arm").slice(0, 3)} · ${i.rr.toFixed(1)}R`
-                : (i.nearPct != null && !i.approx ? fmtPct(i.nearPct) : "watch");
+      const sub = i.armed ? `${(i.trig || "arm").slice(0, 3)} ${i.rr.toFixed(1)}R`
+                : (i.nearPct != null && !i.approx ? fmtPct(i.nearPct) : "");
       const title = i.approx
         ? `${TF_LABEL[i.k]} — reference view (uses the Daily plan)`
         : `${TF_LABEL[i.k]} 200-SMA plan${i.armed ? " · ARMED" : (near ? " · approaching" : " · watching")}` +
           (i.nearPct != null ? ` · ${fmtPct(i.nearPct)} from the line` : "");
-      return `<button class="tfs-chip s-${state}${i.approx ? " ref" : ""}" data-tf="${esc(i.k)}" title="${esc(title)}">` +
-             `<b>${TF_LABEL[i.k]}</b><span>${esc(sub)}</span></button>`;
-    };
-    const host = document.createElement("div");
-    host.className = "tfs-strip s-" + cls;
-    host.innerHTML = `<span class="tfs-read">${esc(read)}</span><div class="tfs-chips">${items.map(chip).join("")}</div>`;
-    const toggle = $("#tf-toggle");
-    if (toggle && toggle.parentNode) toggle.parentNode.insertBefore(host, toggle.nextSibling);
-    host.querySelectorAll(".tfs-chip").forEach((b) => b.addEventListener("click", () => pickTF(b.dataset.tf)));
-    const markActive = (key) =>
-      host.querySelectorAll(".tfs-chip").forEach((b) => b.classList.toggle("is-active", b.dataset.tf === key));
-    markActive(getCurTF());
-    return { markActive };
+      btn.classList.add("s-" + state);
+      btn.title = [btn.title, title].filter(Boolean).join(" · ");
+      if (sub) btn.insertAdjacentHTML("beforeend", `<span class="tf-sub">${esc(sub)}</span>`);
+    });
+  }
+
+  // A note about where this chart's numbers came from ("live fallback",
+  // "Claude's position"): first in the header's ⋯ group (UI100 #79,
+  // 2026-10-20), so a phone's one header line does not grow a chip.
+  function headerNote(note) {
+    const extra = $("#ct-extra");
+    if (extra) extra.prepend(note);
   }
 
   function render(d) {
@@ -2379,8 +2447,7 @@
       note.className = "ct-fallback-note";
       note.textContent = "live fallback";
       note.title = "No saved scan chart for this ticker — showing recent history pulled live.";
-      const priceEl = $("#ct-price");
-      if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
+      headerNote(note);
     }
     if (d._heldPlan) {
       const note = document.createElement("span");
@@ -2388,14 +2455,12 @@
       note.textContent = "Claude's position";
       note.title = "Entry, the stop as taken and the target(s) are this trade's own numbers from Claude's " +
         "paper book (the journal), not a live scan read.";
-      const priceEl = $("#ct-price");
-      if (priceEl && priceEl.parentNode) priceEl.parentNode.insertBefore(note, priceEl.nextSibling);
+      headerNote(note);
     }
     let curTF = tfs[d.default_tf] ? d.default_tf : available[0];
     let drawClear = () => {};         // set by initDrawing; clears temp drawings on TF switch
     let drawRedraw = () => {};        // set by initDrawing; re-anchors drawings on pan/zoom/resize
     let drawRestore = () => {};       // set by initDrawing; reloads saved drawings for the current TF
-    let tfSetups = null;              // VIVEK multi-timeframe setup strip (set below)
     let rsApply = () => {};           // set by initCompare; re-maps the RS overlay per TF
     let rsTrim = () => {};            // set by initCompare; clips the overlay during replay
     const replayCtl = { active: false, abort() {} };   // set by initReplay
@@ -2740,6 +2805,13 @@
         if (!zHide[b.group]) b.pl = candle.createPriceLine(b.plOpts);
       }
 
+      // UI100 #82 (2026-10-20): NARROW CHARTS (phones, < 560px) keep the zone
+      // shading and its dotted midline but drop the midline's axis tag. "PM
+      // DEMAND" and "PM HARD INV" stacked into the plan's own ENTRY / 200 SMA /
+      // SL tags at the same prices and pushed them over the newest candles; the
+      // tooltip and the PhaseMap box under the chart still name every zone.
+      // (A price line's title only prints beside its axis label, so both go.)
+      const pmNarrow = el.clientWidth > 0 && el.clientWidth < NARROW_CHART_PX;
       (pmRec.zones || []).forEach((z) => {
         const cols = PM_COLS[z.type] || ["rgba(109,120,137,0.10)", "#6d7889"];
         const dead = z.status === "CONSUMED" || z.status === "VIOLATED";
@@ -2753,7 +2825,7 @@
         const label = z.type === "TARGET" ? z.id.toUpperCase() : (PM_LABEL[z.type] || z.type);
         const b = { series: s, z, group: PM_GROUP[z.type] || "trap", pl: null,
           plOpts: { price: (z.low + z.high) / 2, color: cols[1], lineWidth: 1,
-            lineStyle: LC.LineStyle.Dotted, axisLabelVisible: true,
+            lineStyle: LC.LineStyle.Dotted, axisLabelVisible: !pmNarrow,
             title: `PM ${label}${z.confluence > 1 ? ` ×${z.confluence}` : ""}${dead ? ` · ${z.status.toLowerCase()}` : ""}` } };
         pmBands.push(b);
         paintBand(b);
@@ -2772,7 +2844,7 @@
         `<span style="color:#8b96a9">${esc(pmRec.regime)}</span>` +
         (pmRec.next ? `<span style="flex:1 1 100%;color:#37d0c4;line-height:1.5">` +
           `<b>WANTED NEXT</b> · ${esc(pmRec.next)}</span>` : "") +
-        `<span style="flex:1 1 100%;color:#98a2b5;line-height:1.5">${esc(pmRec.narration || "")}</span>` +
+        `<span style="flex:1 1 100%;color:#98a2b5;line-height:1.5">${esc(noDisclaimer(pmRec.narration))}</span>` +
         `<span style="flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center">` +
           `<span style="color:var(--muted-2)">ZONES</span>` +
           groups.map((g) => `<button class="pm-zone-toggle" data-zg="${g}" style="cursor:pointer;` +
@@ -2901,11 +2973,17 @@
 
     // Non-VIVEK: static level lines drawn once. VIVEK draws its levels PER
     // timeframe (applyVivekLevels) so they update when you switch 4H / D / W.
+    // UI100 #82 (2026-10-20): NARROW CHARTS (< 560px) print the bare name here
+    // too, as applyVivekLevels does: a held position's "SL (as taken) -24.17% ·
+    // 1.0R" ran across a third of a phone's plot. The footer has the numbers.
+    const bareLines = el.clientWidth > 0 && el.clientWidth < NARROW_CHART_PX;
     if (!d._vivek) (d.level_lines || []).forEach((L) => {
       if (L.price == null) return;
       let title = L.title || "";
       const ep = d.entry;
-      if (ep && ep > 0 && L.price !== ep) {
+      if (bareLines) {
+        // no suffix: see NARROW CHARTS above
+      } else if (ep && ep > 0 && L.price !== ep) {
         const pct = ((L.price - ep) / ep * 100);
         title += ` ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
         const riskDist = d.stop && d.stop > 0 ? Math.abs(ep - d.stop) : 0;
@@ -2916,7 +2994,7 @@
       } else if (ep && L.price === ep && L.title !== "ENTRY") {
         title += " · at entry";            // e.g. a stop trailed to breakeven
       }
-      const isEntry = !!(ep && L.price === ep && L.title === "ENTRY");
+      const isEntry = !bareLines && !!(ep && L.price === ep && L.title === "ENTRY");
       // #74: ENTRY line shows its gap from the current price (trigger distance).
       const handle = candle.createPriceLine({ price: L.price, color: L.color, lineWidth: 1,
         lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: isEntry ? title + vsLive(L.price) : title });
@@ -3206,14 +3284,23 @@
     const entryEpoch = null;
 
     function legend(tf) {
+      // UI100 #83 (2026-10-20): the line values on ONE line -- "SMA 10 1.611
+      // 20 1.622 43 1.711 200 1.754" -- not a row per line stacked over the
+      // chart's corner. A first word every line shares (SMA / EMA) prints once,
+      // and the values drop the currency sign the price axis never shows; the
+      // full name stays on each toggle's title.
+      const word = (n) => String(n).split(" ")[0];
+      const lead = tf.lines.length > 1 && /^(SMA|EMA)$/.test(word(tf.lines[0].name)) &&
+        tf.lines.every((l) => word(l.name) === word(tf.lines[0].name)) ? word(tf.lines[0].name) : "";
       const smas = tf.lines.map((l) => {
         const last = l.data.length ? l.data[l.data.length - 1].value : null;
         const off = hiddenSmas.has(l.name);
+        const label = lead ? String(l.name).slice(lead.length + 1) : l.name;
         // #73: each SMA name is a toggle button — tap to hide/show its line.
         return `<span class="cl-item${off ? " is-off" : ""}"><button type="button" class="cl-name" ` +
           `data-sma="${esc(l.name)}" style="color:${l.color}" aria-pressed="${off ? "false" : "true"}" ` +
-          `title="Tap to ${off ? "show" : "hide"} the ${esc(l.name)} line">${esc(l.name)}</button>` +
-          ` ${last != null ? fmt(last, d.currency_symbol) : ""}</span>`;
+          `title="Tap to ${off ? "show" : "hide"} the ${esc(l.name)} line">${esc(label)}</button>` +
+          `${last != null ? fmt(last) : ""}</span>`;
       }).join("");
       // VIVEK: a small key so the reaction dot, the entry-trigger arrow and the
       // volume colours are self-explanatory.
@@ -3224,7 +3311,8 @@
           `<span style="color:#2fd07f">▮ rising</span><span style="color:#ff5b5b">▮ falling</span></span>`
         : "";
       const host = $("#chart-legend");
-      host.innerHTML = `<span id="cl-ohlc" class="cl-ohlc"></span>` + smas + key;
+      host.innerHTML = `<span id="cl-ohlc" class="cl-ohlc"></span>` +
+        `<span class="cl-lines">${lead ? `<span class="cl-lead">${lead}</span>` : ""}${smas}</span>` + key;
       // #73: (re)wire each name button to this render's toggle. onclick is
       // idempotent, so rebuilding the legend on every TF switch never stacks.
       host.querySelectorAll(".cl-name[data-sma]").forEach((btn) => {
@@ -3371,7 +3459,6 @@
           }
           tfNotice.hidden = !isRef;
         }
-        if (tfSetups) tfSetups.markActive(key);   // sync the multi-timeframe strip
       }
       if (d._momentum) {
         // SHIFT 3: HOW MUCH HISTORY IS ACTUALLY LOADED, per timeframe. The
@@ -3432,21 +3519,27 @@
     // P6: the caption lives in the HEADER strip, not as a chip floating over
     // the candles. On the plot it covered bars and read as chart furniture; in
     // the header it reads as what it is, a statement about the page.
+    // UI100 #79/#86 (2026-10-20): .ct-chips moved under the chart, so the
+    // caption is the header's own last item -- on a phone a short line of its
+    // own under the one-line header, never behind the ⋯ tap (saying whose plan
+    // this is is the claim the mode exists to make). The bars-loaded count is
+    // a quieter fact and joins the ⋯ group.
     if (d._momentum) {
-      const host = document.querySelector(".ct-chips") || document.querySelector(".chart-top");
+      const host = document.querySelector(".chart-top");
+      const extra = document.getElementById("ct-extra") || host;
       if (host && !host.querySelector(".mom-caption")) {
         const cap = document.createElement("span");
         cap.className = "mom-caption";
         cap.textContent = MOM_CAPTION;
         host.appendChild(cap);
       }
-      if (host && !host.querySelector(".mom-bars")) {
+      if (extra && !extra.querySelector(".mom-bars")) {
         const b = document.createElement("span");
         b.className = "mom-bars";
         b.title = "Bars loaded for this timeframe. The first paint crops to the " +
           "live move — pan left to reach all of them.";
         b.hidden = true;
-        host.appendChild(b);
+        extra.appendChild(b);
       }
     }
 
@@ -3487,16 +3580,15 @@
       toggle.innerHTML = available.map((k) =>
         `<button class="tf-btn${k === curTF ? " is-active" : ""}" data-tf="${k}"` +
         `${tfTitle(k, tfs[k], d._momentum) ? ` title="${esc(tfTitle(k, tfs[k], d._momentum))}"` : ""}>${TF_LABEL[k]}</button>`).join("");
-      // Switch timeframe from a button OR a setup-strip chip, keeping both in sync.
       const selectTF = (key) => {
         if (!tfs[key]) return;
         toggle.querySelectorAll(".tf-btn").forEach((x) => x.classList.toggle("is-active", x.dataset.tf === key));
         applyTF(key);
       };
-      // VIVEK: a read-only "setups across timeframes" decision strip that surfaces
-      // which TF(s) have a live setup for this ticker (armed / entry / R:R / MTF
-      // confluence) and lets you jump straight to one.
-      if (d._vivek) tfSetups = renderTFSetups(tfs, selectTF, () => curTF);
+      // VIVEK: a read-only "setups across timeframes" read that surfaces which
+      // TF(s) have a live setup for this ticker (armed / entry / R:R / MTF
+      // confluence) -- on the setup line and on each timeframe button.
+      if (d._vivek) renderTFSetups(tfs, toggle);
       toggle.querySelectorAll(".tf-btn").forEach((b) =>
         b.addEventListener("click", () => selectTF(b.dataset.tf)));
       applyTF(curTF);
@@ -3538,6 +3630,12 @@
     const alertsApi = initAlerts();   // UX-20 #4: tap-to-set price alert lines
     initReplay();                     // UX-20 #7: bar-by-bar setup replay
     initCompare();                    // UX-20 #8: relative-strength overlay
+    // UI100 #84 (2026-10-20): the phone's ✏ tools button docks at the end of
+    // the timeframe row. Fixed to the screen corner it sat on the text under
+    // the chart at every scroll position. Re-docked on every render, because
+    // the row's buttons are rebuilt above.
+    const fab = window.__ctSheet && window.__ctSheet.fab;
+    if (fab && toggle) toggle.appendChild(fab);
 
     const ro = new ResizeObserver(() => {
       chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
@@ -4494,20 +4592,17 @@
     return { start, switchTo };
   }
 
-  // 🤖 Claude's open positions get a DOG-BALLS banner pinned over the chart
-  // (owner 2026-07-10): the scanner's read can flip AFTER entry — a long
-  // reclaim at the 200-SMA can grade as a short reject hours later — so the
-  // chart must state loudly what direction the position was TAKEN as, and
-  // shout when the current read disagrees.
-  // Mounted from boot() just ABOVE the STATIC .chart-main container, so it
-  // shows on every render path (held position, Momentum, VIVEK, PhaseMap-only,
-  // live fallback). Outside it, not inside (2026-10-13): .chart-main is the
-  // positioned box the SMA legend is pinned to (top:20px), so a banner as its
-  // first child sat UNDER the legend and "CLAUDE IS LONG" was overprinted.
+  // 🤖 Claude's open position on this name, pinned over the chart (owner
+  // 2026-07-10): the scanner's read can flip AFTER entry — a long reclaim at
+  // the 200-SMA can grade as a short reject hours later — so the chart must
+  // state what direction the position was TAKEN as, and flag when the current
+  // read disagrees. Wired from boot(), so it shows on every render path (held
+  // position, Momentum, VIVEK, PhaseMap-only, live fallback), as the first part
+  // of the setup line above .chart-main (setLinePart). UI100 #80 (2026-10-20):
+  // one slim line with the MTF read, not a boxed banner of its own.
   async function wireBotPosBanner() {
     if (market === "scalp") return;
-    const host = document.querySelector(".chart-main");
-    if (!host) return;
+    if (!document.querySelector(".chart-main")) return;
     try {
       // The book first: only a HELD name needs the scan file (to say whether
       // the read flipped), so a chart of anything else never downloads it
@@ -4526,8 +4621,10 @@
         const row = (scan.results || []).find((r) => String(r.symbol).toUpperCase() === want);
         const nowDir = row ? String(row.dir || "").toUpperCase() : null;
         if (nowDir && nowDir !== dirUp) {
-          flip = `<div class="bpb-flip">⚠ THE CHART NOW READS ${esc(nowDir)} — this setup flipped AFTER entry. ` +
-            `It was a ${esc(pos.grade || "")} ${esc(dirUp)} ${esc(pos.entry_type || "")} when taken.</div>`;
+          // UI100 #80: a compact chip, the whole sentence on its title.
+          const was = [pos.grade, dirUp, pos.entry_type].filter(Boolean).join(" ");
+          flip = ` <span class="csl-flip" title="${esc(`The chart now reads ${nowDir} — this setup flipped ` +
+            `AFTER entry. It was a ${was} when taken.`)}">⚠ now reads ${esc(nowDir)} · was ${esc(was)}</span>`;
         }
       }
       const isLong = dirUp !== "SHORT";
@@ -4539,13 +4636,17 @@
       const taken = r1 != null ? (isLong ? pos.entry - r1 : pos.entry + r1) : null;
       const slTxt = taken != null && pos.stop != null && Math.abs(pos.stop - taken) > 1e-9 * Math.max(1, Math.abs(taken))
         ? `trail SL ${fp(pos.stop)} (${fp(taken)} as taken)` : `SL ${fp(pos.stop)}`;
-      const div = document.createElement("div");
-      div.className = "bot-pos-banner " + (isLong ? "long" : "short");
-      div.innerHTML =
-        `<div class="bpb-head">🤖 CLAUDE IS <b class="bpb-dir">${isLong ? "▲ LONG" : "▼ SHORT"}</b> ${esc(want)}` +
-        `<span class="bpb-sub">taken ${esc(pos.entry_date || "")} @ ${fp(pos.entry)} · ${slTxt} · TP1 ${fp(pos.tp1)}</span></div>` +
-        flip;
-      host.parentNode.insertBefore(div, host);
+      // The fill date as "16 Oct"; the full date is on the title.
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(String(pos.entry_date || ""))
+        ? new Date(pos.entry_date + "T00:00:00Z").toLocaleDateString("en-AU",
+            { day: "numeric", month: "short", timeZone: "UTC" })
+        : String(pos.entry_date || "");
+      // UI100 #80 (2026-10-20): the "pos" part of the setup line, where a boxed
+      // "🤖 CLAUDE IS ▲ LONG <SYM>" banner was. The symbol is the header's.
+      setLinePart("csl-pos", isLong ? "long" : "short",
+        `<span title="${esc(`Claude's paper book holds ${want} ${dirUp}, taken ${pos.entry_date || "?"} @ ${fp(pos.entry)}`)}">` +
+        `🤖 <b class="csl-dir">${isLong ? "▲ LONG" : "▼ SHORT"}</b><span class="csl-full"> held</span> · ${esc(day)} @ ${fp(pos.entry)} · ` +
+        `${slTxt} · TP1 ${fp(pos.tp1)}</span>` + flip, true);
     } catch (_) { /* banner is best-effort */ }
   }
 
@@ -4662,6 +4763,7 @@
 
         nav.hidden = false;
         posEl.textContent = `${idx + 1} / ${list.length}`;
+        nav.title = `Setup ${idx + 1} of ${list.length}`;   // the count, where a 360px phone hides it
         const go = (i) => { if (i >= 0 && i < list.length) location.href = hrefFor(list[i]); };
         prevB.disabled = idx === 0;
         nextB.disabled = idx === list.length - 1;
@@ -4782,6 +4884,7 @@
     fab.setAttribute("aria-haspopup", "dialog");
     fab.setAttribute("aria-expanded", "false");
     fab.title = "Chart tools — draw, share, export";
+    fab.setAttribute("aria-label", "Chart tools");
     fab.textContent = "✏";
     const scrim = document.createElement("div");
     scrim.id = "ct-sheet-scrim"; scrim.hidden = true;
@@ -4813,21 +4916,48 @@
       sheet.hidden = !open; scrim.hidden = !open;
       fab.setAttribute("aria-expanded", open ? "true" : "false");
     };
-    window.__ctSheet = { close: () => setOpen(false), analyzeRow: anRow };
+    window.__ctSheet = { close: () => setOpen(false), analyzeRow: anRow, fab };
     fab.addEventListener("click", () => setOpen(sheet.hidden));
     scrim.addEventListener("click", () => setOpen(false));
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !sheet.hidden) { setOpen(false); fab.focus(); }
     });
-    document.body.append(scrim, sheet, fab);
+    document.body.append(scrim, sheet);
+    // UI100 #84 (2026-10-20): the button lives in the timeframe row (render()
+    // re-docks it after rebuilding the row), not fixed over the page. Until
+    // the first paint it waits there, hidden with the rest of the row.
+    const tgl = document.getElementById("tf-toggle");
+    (tgl || document.body).appendChild(fab);
     // The FAB follows the sheet, not the viewport width (chart.css): rotate a
     // phone to landscape and the controls are still one tap away
     // (REFINE200 #113).
     document.body.classList.add("ct-has-sheet");
   }
 
+  // UI100 #79 (2026-10-20): on a phone the header is one line (chart.css) and
+  // ⋯ opens the rest -- market, sector, the quote's state, HIGH CONVICTION,
+  // the data-honesty chips. A warning chip in there lights a dot on the
+  // button, so a closed group never hides a "don't trust this blindly" note
+  // without a trace. Those chips are un-hidden by fetches that land at any
+  // time, so the dot follows their `hidden` attribute, not a call site.
+  function initHeaderMore() {
+    const btn = $("#ct-more"), extra = $("#ct-extra"), top = $(".chart-top");
+    if (!btn || !extra || !top) return;
+    btn.addEventListener("click", () => {
+      const open = top.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    const sync = () => btn.classList.toggle("has-warn",
+      [...extra.querySelectorAll(".ct-fundwarn")].some((w) => !w.hidden));
+    if (typeof MutationObserver === "function") {
+      new MutationObserver(sync).observe(extra, { subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    }
+    sync();
+  }
+
   function boot() {
     initOffline();
+    initHeaderMore();
     initMobileSheet();
     wireShare();
     if (!symbol) { emptyState(); return; }

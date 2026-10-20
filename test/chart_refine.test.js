@@ -810,6 +810,110 @@ test("the indicator file is pure: it runs with no DOM and no network", () => {
   assert.ok(Array.isArray(I.momentumCrosses(bars, null)));
 });
 
+/* ═══════════════ UI100 #79-#88 (2026-10-20): the chart page, calmer ═══════════ */
+suite("UI100 #79-#88 the chart page from a phone and a PC");
+
+const HTML = fs.readFileSync(path.join(ROOT, "public", "chart.html"), "utf8");
+const CSS_CODE = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+
+test("#79 the header is one line of identity, the rest behind ⋯ (display:contents on a PC)", () => {
+  const line = HTML.slice(HTML.indexOf('<div class="ct-line">'), HTML.indexOf('<div class="ct-extra"'));
+  const extra = HTML.slice(HTML.indexOf('<div class="ct-extra"'), HTML.indexOf("</header>"));
+  for (const id of ["ct-nav", "ct-sym", "ct-price", "ct-grade", "ct-dir", "ct-more"]) {
+    assert.ok(line.includes(`id="${id}"`), `${id} belongs on the one line`);
+  }
+  assert.ok(line.includes('class="back-link"'), "the back link is on the line");
+  for (const id of ["ct-market", "ct-sector", "ct-delayed", "ct-hiconv", "ct-fundwarn", "ct-datawarn", "ct-divadj"]) {
+    assert.ok(extra.includes(`id="${id}"`), `${id} goes behind the ⋯ tap`);
+  }
+  assert.match(CSS_CODE, /\.ct-line, \.ct-extra \{ display: contents; \}/, "a PC still reads one strip");
+  const phone = CSS_CODE.slice(CSS_CODE.indexOf("@media (max-width: 680px) {"));
+  assert.match(phone, /\.ct-extra \{ display: none;/);
+  assert.match(phone, /\.chart-top\.is-open \.ct-extra \{ display: flex; \}/);
+  const more = fnSrc("initHeaderMore");
+  assert.match(more, /aria-expanded/);
+  assert.match(more, /\.ct-fundwarn/, "a hidden warning chip lights the ⋯ dot");
+  assert.match(fnSrc("boot"), /initHeaderMore\(\);/);
+  assert.match(fnSrc("header"), /class="ct-dir-g" aria-hidden="true">\$\{isShort \? "▼" : "▲"\}/);
+});
+
+test("#80 one setup line: the MTF read and Claude's position, no boxed banners", () => {
+  assert.ok(!/bot-pos-banner|bpb-|tfs-strip|tfs-chip/.test(CODE + CSS_CODE), "the boxed banners are gone");
+  assert.match(fnSrc("wireBotPosBanner"), /setLinePart\("csl-pos", isLong \? "long" : "short",/);
+  const parts = [];
+  const btn = () => ({ cls: [], title: "", html: "",
+    classList: { add(c) { this._o.cls.push(c); } }, insertAdjacentHTML(_, h) { this.html += h; } });
+  const btns = {};
+  ["1D", "3D", "1W"].forEach((k) => { const b = btn(); b.classList._o = b; btns[k] = b; });
+  const toggle = { querySelector: (sel) => btns[(/data-tf="([^"]+)"/.exec(sel) || [])[1]] || null };
+  const run = new Function("setLinePart", "onRenderTeardown",
+    `${constSrc("TF_LABEL")} ${constSrc("esc")} ${constSrc("TFS_MIN_RR")} ${constSrc("TFS_NEAR_PCT")}
+     ${fnSrc("renderTFSetups")} return renderTFSetups;`)((...a) => parts.push(a), () => {});
+  const tf = (armed, trig, rr, close, level) => ({ levels: { armed, entry_trigger: trig, rr, level },
+    candles: [{ close }] });
+  run({ "1D": tf(false, null, 0, 1.745, 1.756), "3D": tf(true, "retest", 3, 1.745, 1.667),
+        "1W": tf(true, "reclaim", 3, 1.745, 1.724) }, toggle);
+  const mtf = parts.find((p) => p[0] === "csl-mtf");
+  assert.equal(mtf[1], "s-strong");
+  assert.match(mtf[2], /<span class="csl-full">⚡ Multi-timeframe setup · armed on 3D \+ W<\/span>/);
+  assert.match(mtf[2], /<span class="csl-short"[^>]*>⚡ 3D \+ W armed<\/span>/, "the phone's short form");
+  assert.deepEqual(btns["1W"].cls, ["s-armed"]);
+  assert.equal(btns["1W"].html, '<span class="tf-sub">rec 3.0R</span>', "the chip's state rides on its button");
+  assert.equal(btns["1D"].html, '<span class="tf-sub">0.6%</span>');
+  assert.match(btns["3D"].title, /3D 200-SMA plan · ARMED/);
+});
+
+test("#82 phones: PhaseMap zones keep their shading but lose their axis tags; held lines go bare", () => {
+  assert.match(CODE, /const pmNarrow = el\.clientWidth > 0 && el\.clientWidth < NARROW_CHART_PX;/);
+  assert.match(CODE, /lineStyle: LC\.LineStyle\.Dotted, axisLabelVisible: !pmNarrow,/);
+  assert.match(CODE, /const bareLines = el\.clientWidth > 0 && el\.clientWidth < NARROW_CHART_PX;/);
+  assert.match(CODE, /const isEntry = !bareLines && !!\(ep && L\.price === ep && L\.title === "ENTRY"\);/);
+});
+
+test("#83 the line values sit on ONE line, the shared SMA word once, no currency sign", () => {
+  const host = { innerHTML: "", querySelectorAll: () => [] };
+  const legend = new Function("$", "d", "hiddenSmas", "toggleSma",
+    `${constSrc("esc")} ${fnSrc("fmt")} ${fnSrc("legend")} return legend;`)(
+    () => host, { _vivek: false, currency_symbol: "A$" }, new Set(), () => {});
+  const ln = (name, v) => ({ name, color: "#fff", data: [{ value: v }] });
+  legend({ lines: [ln("SMA 10", 1.611), ln("SMA 20", 1.622), ln("SMA 200", 1.754)] });
+  const lines = host.innerHTML.match(/<span class="cl-lines">/g) || [];
+  assert.equal(lines.length, 1, "one row holds every line");
+  assert.match(host.innerHTML, /<span class="cl-lead">SMA<\/span>/);
+  assert.match(host.innerHTML, /title="Tap to hide the SMA 200 line">200<\/button>1\.754/);
+  assert.ok(!host.innerHTML.includes("A$"), "the axis shows no currency, nor does the legend");
+  legend({ lines: [ln("SMA 10", 1), ln("SuperTrend", 2)] });
+  assert.ok(!/cl-lead/.test(host.innerHTML) && />SuperTrend<\/button>/.test(host.innerHTML), "mixed lines keep full names");
+  assert.match(CSS_CODE, /\.chart-legend \.cl-lines \{ flex-wrap: wrap;/);
+});
+
+test("#84 the ✏ tools button docks in the timeframe row, never fixed over the text", () => {
+  const rule = /#ct-fab \{([^}]*)\}/.exec(CSS_CODE);
+  assert.ok(rule && !/position:\s*fixed/.test(rule[1]), "#ct-fab is not position:fixed");
+  assert.match(fnSrc("initMobileSheet"), /window\.__ctSheet = \{ close: \(\) => setOpen\(false\), analyzeRow: anRow, fab \};/);
+  assert.match(CODE, /initCompare\(\);[\s\S]{0,80}const fab = window\.__ctSheet && window\.__ctSheet\.fab;\s*if \(fab && toggle\) toggle\.appendChild\(fab\);/,
+    "re-docked after every render rebuilds the row");
+});
+
+test("#85 the PhaseMap narration's disclaimer is cut at display, in both places it shows", () => {
+  const nd = new Function(`${fnSrc("noDisclaimer")} return noDisclaimer;`)();
+  assert.equal(nd("No displacement, no setup. Analysis only — not financial advice."), "No displacement, no setup.");
+  assert.equal(nd("Text. Analysis only - not financial advice"), "Text.");
+  assert.equal(nd("Analysis only — the rest stays."), "Analysis only — the rest stays.", "only the trailing sentence");
+  assert.equal(nd(null), "");
+  assert.match(CODE, /\$\{esc\(noDisclaimer\(pmRec\.narration\)\)\}/, "the chart's PhaseMap box");
+  assert.match(fnSrc("pmOnlyFallback"), /analysis: \(rec && noDisclaimer\(rec\.narration\)\) \|\|/, "a PhaseMap-only chart's analysis");
+});
+
+test("#86-#88 rule chips in the plan block, a compact action row, a 3-column phone grid", () => {
+  const foot = HTML.slice(HTML.indexOf('<footer class="chart-foot">'));
+  assert.ok(foot.includes('id="ct-chips"') && !HTML.slice(0, HTML.indexOf("</header>")).includes("ct-chips"),
+    "the rule chips left the header");
+  assert.match(CSS_CODE, /\.cf-actions \.tv-btn \{ padding: 6px 11px; font-size: 12px; \}/);
+  const phone = CSS_CODE.slice(CSS_CODE.indexOf("@media (max-width: 560px) {"));
+  assert.match(phone, /\.cf-metrics \{ display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+});
+
 runQueue().then(() => {
   console.log(`\nchart_refine.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);

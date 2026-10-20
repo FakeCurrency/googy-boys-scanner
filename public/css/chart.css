@@ -79,7 +79,10 @@
 .ct-forecast[hidden] { display: none; }
 .ct-forecast .fc-date { display: block; font: 700 12.5px/1.2 var(--mono, ui-monospace, monospace); color: #eef2f7; white-space: nowrap; }
 .ct-forecast .fc-in   { display: block; font: 600 10px/1.3 var(--sans); color: #8fa6c4; margin-top: 2px; white-space: nowrap; }
-.ct-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: 4px; }
+/* UI100 #86 (2026-10-20): the rule chips sit in the plan block under the
+   chart (chart.html), between the numbers and the analysis. */
+.ct-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: -2px 0 14px; }
+.ct-chips:empty { display: none; }
 .ct-chips .chip { background: var(--blue-soft); color: var(--blue-ink); }
 .ct-chips .chip.weekly { background: var(--green-soft); color: var(--green); }
 
@@ -138,42 +141,34 @@
 }
 @media (max-width: 560px) { .tf-notice { font-size: 11.5px; padding: 7px 11px; } }
 
-/* ── "setups across timeframes" decision strip (read-only) ── */
-.tfs-strip {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
-  margin: 8px 16px 0; padding: 8px 12px; border-radius: 10px;
-  background: var(--fill); border: 1px solid var(--border);
-  font: 600 12.5px/1.2 var(--sans);
+/* ── UI100 #80 (2026-10-20): each timeframe button carries its own setup
+   state (the "setups across timeframes" chips that sat in a boxed strip of
+   their own under this row): the trigger and R:R when armed, the distance
+   from the 200-SMA line when not. ── */
+.tf-sub { margin-left: 5px; font: 600 10.5px/1 var(--mono); color: var(--muted); }
+.tf-btn.s-armed .tf-sub { color: var(--green); }
+.tf-btn.s-weak .tf-sub { color: #ffb020; }
+.tf-btn.s-near .tf-sub { color: var(--blue-ink); }
+
+/* ── The setup line (UI100 #80, 2026-10-20): Claude's position + the
+   multi-timeframe read, one slim unboxed line above the chart where two
+   boxed banners stacked (chart.js setLinePart). ── */
+.ct-setline {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 16px;
+  margin: 10px 18px 0; font: 600 12.5px/1.4 var(--sans); color: var(--text-2);
 }
-.tfs-strip.s-strong { border-color: var(--green); background: rgba(47,208,127,.08); }
-.tfs-strip.s-near   { border-color: var(--blue); background: rgba(10,132,255,.07); }
-.tfs-read { color: var(--text); }
-.tfs-strip.s-strong .tfs-read { color: var(--green); }
-.tfs-strip.s-near .tfs-read { color: var(--blue-ink); }
-.tfs-strip.s-watch .tfs-read { color: var(--muted); }
-.tfs-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
-.tfs-chip {
-  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--panel); color: var(--text-2);
-  padding: 5px 9px; border-radius: 999px; font: 600 11.5px/1 var(--sans);
-  transition: border-color .15s, box-shadow .15s;
+.ct-setline b { font-weight: 800; }
+.csl-pos.long .csl-dir { color: var(--green); }
+.csl-pos.short .csl-dir { color: var(--red-ink); }
+.csl-flip {
+  display: inline-block; margin-left: 4px; padding: 2px 8px; border-radius: 999px;
+  font: 800 11px/1.3 var(--sans); color: #1a1205; background: var(--orange);
 }
-.tfs-chip b { color: var(--text); font-weight: 800; }
-.tfs-chip span { font: 600 10.5px/1 var(--mono); opacity: .82; }
-.tfs-chip.s-armed { border-color: var(--green); color: var(--green); }
-.tfs-chip.s-armed b { color: var(--green); }
-.tfs-chip.s-weak { border-color: #ffb020; color: #ffb020; }
-.tfs-chip.s-weak b { color: #ffb020; }
-.tfs-chip.s-near { border-color: var(--blue); color: var(--blue-ink); }
-.tfs-chip.s-near b { color: var(--blue-ink); }
-.tfs-chip.s-watch { color: var(--muted); }
-.tfs-chip.ref { opacity: .68; }
-.tfs-chip:hover { border-color: var(--blue); }
-.tfs-chip.is-active { box-shadow: 0 0 0 2px var(--blue) inset; }
-@media (max-width: 560px) {
-  .tfs-read { width: 100%; }
-  .tfs-chips { margin-left: 0; }
-}
+.csl-short { display: none; }
+.csl-mtf { color: var(--muted); }
+.csl-mtf.s-strong, .csl-mtf.s-armed { color: var(--green); }
+.csl-mtf.s-weak { color: #ffb020; }
+.csl-mtf.s-near { color: var(--blue-ink); }
 
 .cf-tvnote { color: var(--muted); font-size: 11.5px; margin: 10px 0 0; max-width: 760px; }
 .chart-legend {
@@ -189,6 +184,10 @@
 .chart-legend:empty { display: none; }
 .chart-legend span { display: flex; gap: 7px; }
 .cl-name { color: var(--muted); }
+/* UI100 #83 (2026-10-20): every line's value on ONE row ("SMA 10 1.611
+   20 1.622 ..."), not a row per line; wraps only if a price is that long. */
+.chart-legend .cl-lines { flex-wrap: wrap; align-items: center; gap: 2px 11px; }
+.chart-legend .cl-lead { color: var(--muted); }
 /* Hovered-candle OHLC + day move readout */
 .cl-ohlc { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .cl-ohlc:empty { display: none; }
@@ -217,6 +216,12 @@
   padding: 9px 16px; border-radius: 8px; font: 600 13px/1 var(--sans);
 }
 .tv-btn:hover { background: color-mix(in srgb, var(--blue) 18%, transparent); }
+/* UI100 #87 (2026-10-20): Plan / Share / PNG / TradingView as one compact row
+   of small buttons. The phone sheet keeps its thumb-sized ones (the buttons
+   are moved out of .cf-actions there). */
+.cf-actions { gap: 6px; }
+.cf-actions .tv-btn { padding: 6px 11px; font-size: 12px; }
+#cf-lowrr:empty { display: none; }
 
 /* ── live badge ── */
 .ct-live {
@@ -317,30 +322,7 @@
 .draw-tools { background: rgba(18,22,30,0.82); border-radius: 11px; border-color: rgba(255,255,255,0.09); }
 .draw-btn { border-radius: 8px; }
 .tv-btn{ border-radius: 999px; font-weight: 700; }
-.tfs-strip { border-radius: var(--radius-md); }
 .cf-metric .cfm-label { font-weight: 700; }
-
-/* ═══ 🤖 CLAUDE-IS-IN-THIS banner (owner 2026-07-10) — pinned above the
-   chart when the bot holds an open position on this symbol. States the
-   AT-ENTRY direction unmissably; the .bpb-flip line fires when the scan's
-   current read disagrees with the position (the setup flipped after entry). */
-.bot-pos-banner {
-  margin: 10px 16px 0; padding: 12px 16px; border-radius: var(--radius-md);
-  font: 700 14px/1.4 var(--sans);
-}
-.bot-pos-banner.long  { background: rgba(48,209,88,.14);  border: 1.5px solid var(--green); }
-.bot-pos-banner.short { background: rgba(255,69,58,.14);  border: 1.5px solid var(--red); }
-.bpb-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--text); }
-.bpb-dir { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
-.bot-pos-banner.long  .bpb-dir { color: var(--green); }
-.bot-pos-banner.short .bpb-dir { color: var(--red-ink); }
-.bpb-sub { font: 600 12px/1.3 var(--sans); color: var(--muted); }
-.bpb-flip {
-  margin-top: 8px; padding: 8px 11px; border-radius: 999px; display: inline-block;
-  font: 800 11.5px/1.3 var(--sans); letter-spacing: 0.04em;
-  color: #1a1205; background: var(--orange);
-  animation: ctLivePulse 1.6s ease-in-out infinite;
-}
 
 /* PhaseMap zone hover tooltip (2026-07-21) — bounds · mid · status · sources */
 .pm-zone-tip {
@@ -394,7 +376,8 @@
    shift, one that appears in place is not. Measured at 360x740 (load CLS):
    WES 0.77 -> 0.12, a Momentum chart 0.58 -> 0.04, BTC 0.61 -> 0.05. The back
    link stays, so a slow load is never a dead end. */
-body:has(#chart-skeleton) .chart-top > :not(.back-link),
+body:has(#chart-skeleton) .ct-line > :not(.back-link),
+body:has(#chart-skeleton) .ct-extra,
 body:has(#chart-skeleton) #tf-toggle,
 body:has(#chart-skeleton) .chart-foot { visibility: hidden; }
 .chart-skeleton .sk-msg { font: 600 12px/1 var(--sans); letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
@@ -436,9 +419,8 @@ body:has(#chart-skeleton) .chart-foot { visibility: hidden; }
      wrapped chips took a quarter to two-fifths of the screen on every scroll
      of the plan and metrics below. Desktop keeps it sticky. */
   .chart-top { position: relative; }
-  /* ...and while the chart loads it holds roughly its loaded height (127-223px
-     measured at 390px), so the canvas is not shoved ~165px down on arrival. */
-  body:has(#chart-skeleton) .chart-top { min-height: 180px; align-content: flex-start; }
+  /* (The 180px it held while loading went with UI100 #79, 2026-10-20: the
+     header is one line of fixed height now, loaded or not.) */
   .chart-main { padding: 0; }
   .chart-canvas { height: 64vh; }
   .chart-skeleton { inset: 0; }
@@ -461,20 +443,31 @@ body:has(#chart-skeleton) .chart-foot { visibility: hidden; }
      placeMomTfBar). There it is a block child rather than a flex item of the
      body column, so it has to be a full-width flex row on its own. */
   .chart-main > .tf-toggle { display: flex; }
-  .chart-foot { order: 2; }
+  .chart-foot { order: 2; padding: 14px 14px 26px; }
   .draw-tools { top: 12px; right: 12px; }
+  /* UI100 #88 (2026-10-20): the plan's numbers as a 3-column grid, so GRADE
+     (the ninth) closes the third row instead of wrapping onto one alone. */
+  .cf-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+  .cf-metric .cfm-val { overflow-wrap: anywhere; line-height: 1.2; }
+  /* UI100 #80: the setup line's phone measure -- its short wording, so the
+     position and the MTF read share one line at 390px */
+  .ct-setline { margin: 7px 12px 4px; gap: 2px 10px; font-size: 11.5px; }
+  .ct-setline .csl-full { display: none; }
+  .ct-setline .csl-short { display: inline; }
 }
 
 /* ── UX top-10 #7: mobile control sheet (draw + share in thumb reach) ────── */
+/* UI100 #84 (2026-10-20): the ✏ button is the LAST button of the timeframe
+   row (chart.js docks it there), not a 48px circle fixed to the screen
+   corner, where it sat on the analysis text and the size line under the chart
+   at every scroll position. */
 #ct-fab {
-  display: none; position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0));
-  z-index: 60; width: 48px; height: 48px; border-radius: 50%;
+  display: none; flex: none; margin-left: auto; width: 44px; height: 34px; border-radius: 9px;
   border: 1px solid var(--border-2); background: var(--panel-2); color: var(--text);
-  font-size: 19px; cursor: pointer; box-shadow: 0 8px 26px rgba(0,0,0,.5);
+  font-size: 16px; cursor: pointer;
 }
-/* Replay's bar runs to the canvas edge, where the FAB sat on its exit ✕ (a tap
-   meant to leave replay opened the tools sheet). Replay already closes the
-   sheet, so the FAB has nothing to do until it ends. */
+/* Replay is driven from its own bar (its ✕ ends it) and already closes the
+   sheet, so the button has nothing to do until it ends. */
 body.is-replay #ct-fab { display: none; }
 #ct-sheet-scrim { position: fixed; inset: 0; z-index: 61; background: rgba(4,7,12,.55); }
 #ct-sheet-scrim[hidden] { display: none; }
@@ -643,6 +636,54 @@ body.ct-has-sheet:not(.is-replay) #ct-fab { display: grid; place-items: center; 
   color: #9fb0c9; font: 600 11px/1 var(--sans); padding: 4px 9px; border-radius: 999px;
 }
 .mom-bars[hidden] { display: none; }
+
+/* ── UI100 #79 (2026-10-20): the header's one line on a phone ───────────────
+   .ct-line (back · ‹ n/N › · symbol · price · grade · side · ⋯) and .ct-extra
+   (market, sector, the quote's state, HIGH CONVICTION, the data-honesty
+   chips) are display:contents on a PC, so the strip is the one row it always
+   was. At phone width it wrapped into four rows; now the line holds and ⋯
+   opens the rest beneath it, with a dot on ⋯ while a warning chip is in
+   there (chart.js initHeaderMore). */
+.ct-line, .ct-extra { display: contents; }
+.ct-more { display: none; }
+.ct-dir-g { display: none; }
+@media (max-width: 680px) {
+  .chart-top { gap: 8px; padding: 8px 12px; }
+  .ct-line { display: flex; align-items: center; gap: 6px; flex: 1 1 100%; min-width: 0; }
+  .ct-extra { display: none; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .chart-top.is-open .ct-extra { display: flex; }
+  /* The arrow alone, as a round button; the link's text (its destination) is
+     still its accessible name. (An error or empty page's header keeps the
+     words: there the link is the way on.) */
+  .ct-line .back-link { flex: none; width: 30px; height: 30px; padding: 0; justify-content: center; font-size: 0; }
+  .ct-line .back-link::before { content: "←"; font: 700 16px/1 var(--sans); }
+  /* The last resort on a narrow phone is a long ticker's tail, never the price */
+  .ct-sym { font-size: 17px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ct-price { flex: none; font-size: 15px; }
+  .ct-grade { flex: none; font-size: 13px; }
+  #ct-dir { flex: none; padding: 4px 6px; font-size: 11px; }
+  .ct-dir-g { display: inline; }
+  .ct-dir-w { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ct-more {
+    display: inline-flex; align-items: center; justify-content: center; position: relative; flex: none;
+    width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; cursor: pointer;
+    background: rgba(255,255,255,0.08); color: var(--text-2); font: 800 15px/1 var(--sans);
+  }
+  .chart-top.is-open .ct-more { background: var(--blue-soft); color: var(--blue-ink); }
+  .ct-more.has-warn::after {
+    content: ""; position: absolute; top: 2px; right: 2px; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 2px var(--panel);
+  }
+  /* prev / next at the line's far end */
+  .ct-nav { order: 1; margin-left: auto; flex: none; gap: 2px; }
+  .ct-nav-btn { width: 26px; height: 26px; }
+  .ct-nav-pos { min-width: 0; font-size: 10.5px; }
+}
+/* 360px phones: the "15 / 202" count goes before the symbol would (it is on
+   the arrows' title); the arrows and the swipe still step the list. */
+@media (max-width: 380px) {
+  .ct-nav-pos { display: none; }
+}
 
 /* Landscape phones (844x390, 932x430): a sticky header plus a 420px-minimum
    canvas made the chart taller than the screen with the header pinned over

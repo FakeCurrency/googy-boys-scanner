@@ -19,34 +19,42 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/jbmono-600.woff2" crossorigin />
   <link rel="stylesheet" href="css/fonts.css?v=2" />
   <link rel="stylesheet" href="css/styles.css?v=123" />
-  <link rel="stylesheet" href="css/chart.css?v=53" />
+  <link rel="stylesheet" href="css/chart.css?v=54" />
   <script src="vendor/lightweight-charts-4.1.3.js"></script>
   <script src="js/sw-register.js?v=4" defer></script>
 </head>
 <body class="chart-body">
   <header class="chart-top">
-    <a class="back-link" href="index.html">← Dashboard</a>
-    <span class="ct-nav" id="ct-nav" hidden>
-      <button class="ct-nav-btn" id="ct-prev" type="button" title="Previous setup (←)" aria-label="Previous setup">‹</button>
-      <span class="ct-nav-pos" id="ct-nav-pos"></span>
-      <button class="ct-nav-btn" id="ct-next" type="button" title="Next setup (→)" aria-label="Next setup">›</button>
-    </span>
-    <span class="ct-sym" id="ct-sym">—</span>
-    <span class="ct-market" id="ct-market" hidden title="Market this instrument is scanned in"></span>
-    <span class="badge sector" id="ct-sector" hidden></span>
-    <span class="ct-price" id="ct-price">—</span>
-    <span class="ct-live" id="ct-live" hidden>● LIVE</span>
-    <span class="ct-delayed" id="ct-delayed" hidden title="Yahoo Finance quotes are delayed ~15 minutes">~15m delayed</span>
-    <span class="ct-grade" id="ct-grade"></span>
-    <span class="badge dir" id="ct-dir" hidden>LONG</span>
-    <span class="ct-hiconv" id="ct-hiconv" hidden title="Armed A/A+ in a backtest-edge cell (1W reclaim/break, 3D reclaim, 1D break) — one 🎯 per cell">🎯 HIGH CONVICTION</span>
-    <span class="ct-fundwarn" id="ct-fundwarn" hidden title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>
-    <span class="ct-divadj" id="ct-divadj" hidden></span>
-    <!-- DATA HONESTY (2026-08-15): one chip, worst finding wins — degraded
-         interval / thin padded tape / raw-basis series. Reuses the fundwarn
-         look on purpose: it is the same class of "don't trust this blindly". -->
-    <span class="ct-fundwarn" id="ct-datawarn" hidden></span>
-    <span class="ct-chips" id="ct-chips"></span>
+    <!-- UI100 #79 (2026-10-20): .ct-line is the header's one line on a phone
+         (back, the prev/next arrows, symbol, price, grade, side); .ct-extra is
+         everything else, opened there by the ⋯ button. On a PC both wrappers
+         are display:contents, so the strip still reads as one row. -->
+    <div class="ct-line">
+      <a class="back-link" href="index.html">← Dashboard</a>
+      <span class="ct-nav" id="ct-nav" hidden>
+        <button class="ct-nav-btn" id="ct-prev" type="button" title="Previous setup (←)" aria-label="Previous setup">‹</button>
+        <span class="ct-nav-pos" id="ct-nav-pos"></span>
+        <button class="ct-nav-btn" id="ct-next" type="button" title="Next setup (→)" aria-label="Next setup">›</button>
+      </span>
+      <span class="ct-sym" id="ct-sym">—</span>
+      <span class="ct-price" id="ct-price">—</span>
+      <span class="ct-grade" id="ct-grade"></span>
+      <span class="badge dir" id="ct-dir" hidden>LONG</span>
+      <button class="ct-more" id="ct-more" type="button" aria-expanded="false" aria-controls="ct-extra" title="Market, sector, quote and chart notes">⋯</button>
+    </div>
+    <div class="ct-extra" id="ct-extra">
+      <span class="ct-market" id="ct-market" hidden title="Market this instrument is scanned in"></span>
+      <span class="badge sector" id="ct-sector" hidden></span>
+      <span class="ct-live" id="ct-live" hidden>● LIVE</span>
+      <span class="ct-delayed" id="ct-delayed" hidden title="Yahoo Finance quotes are delayed ~15 minutes">~15m delayed</span>
+      <span class="ct-hiconv" id="ct-hiconv" hidden title="Armed A/A+ in a backtest-edge cell (1W reclaim/break, 3D reclaim, 1D break) — one 🎯 per cell">🎯 HIGH CONVICTION</span>
+      <span class="ct-fundwarn" id="ct-fundwarn" hidden title="REIT / ETF / LIC / managed fund — the bot won't trade these and most CFD brokers (e.g. CMC) don't list them">⚠ FUND / REIT</span>
+      <span class="ct-divadj" id="ct-divadj" hidden></span>
+      <!-- DATA HONESTY (2026-08-15): one chip, worst finding wins — degraded
+           interval / thin padded tape / raw-basis series. Reuses the fundwarn
+           look on purpose: it is the same class of "don't trust this blindly". -->
+      <span class="ct-fundwarn" id="ct-datawarn" hidden></span>
+    </div>
   </header>
 
   <div class="offline-banner" id="offline-banner" hidden role="status">
@@ -82,19 +90,23 @@
 
   <footer class="chart-foot">
     <div class="cf-metrics" id="cf-metrics"></div>
+    <!-- UI100 #86 (2026-10-20): the scan's rule chips (WEEKLY 200 SMA / AT THE
+         LEVEL / …) left the header strip; they describe this plan, so they sit
+         with it. -->
+    <div class="ct-chips" id="ct-chips"></div>
     <p class="cf-analysis" id="cf-analysis"></p>
     <div class="cf-actions">
       <span id="cf-lowrr"></span>
       <button class="tv-btn" id="cf-plan" type="button" title="Copy this timeframe's plan as one line of text — entry, SL, TPs, R:R">⧉ Plan</button>
       <button class="tv-btn" id="cf-share" type="button" title="Copy a shareable link to this chart">⤴ Share</button>
       <button class="tv-btn" id="cf-png" type="button" title="Download this chart as a PNG image">⭳ PNG</button>
-      <a class="tv-btn" id="cf-tv" target="_blank" rel="noopener">Open in TradingView ↗</a>
+      <a class="tv-btn" id="cf-tv" target="_blank" rel="noopener" title="Open this symbol in TradingView">TradingView ↗</a>
     </div>
     <div class="cf-mysize" id="cf-mysize" hidden></div>
     <p class="cf-tvnote" id="cf-tvnote" hidden></p>
   </footer>
   <script src="js/phasemap-shared.js?v=23"></script>
   <script src="js/chart-indicators.js?v=1"></script>
-  <script src="js/chart.js?v=137"></script>
+  <script src="js/chart.js?v=138"></script>
 </body>
 </html>
