@@ -2239,7 +2239,7 @@ const pillTag = (html, attr) => {
   return html.slice(html.lastIndexOf("<button", at), html.indexOf("</button>", at) + 9);
 };
 
-test("crypto: a PLACEHOLDER pill in the third slot while loading, the real pill in the same slot after", async () => {
+test("crypto: a PLACEHOLDER pill in the first slot while loading, the real pill in the same slot after", async () => {
   const m = runModule(both(SAMPLE, BT));
   const d = deckHarness(m.Ig);
   d.render();
@@ -2249,17 +2249,17 @@ test("crypto: a PLACEHOLDER pill in the third slot while loading, the real pill 
   assert.match(ph, /class="fpill ig is-loading"/);
   assert.match(ph, /⚡ Ignition <b>…<\/b>/);
   assert.ok(!/\sdata-ignition=/.test(ph), "the placeholder is inert (no toggle bound to it)");
-  const order = (html, ig) => [html.indexOf('data-goto="aplus"'), html.indexOf('data-goto="a"'),
-    html.indexOf(ig), html.indexOf('data-pill="confl"'), html.indexOf('data-pill="atlevel"')];
+  const order = (html, ig) => [html.indexOf(ig), html.indexOf('data-pill="confl"'), html.indexOf('data-pill="atlevel"')];
   const o1 = order(d.box.html, "data-ignition-wait");
-  assert.deepEqual(o1.slice().sort((a, b) => a - b), o1, "placeholder must sit A+, A, ⚡, Multi-lens, At level");
+  assert.ok(o1.every((x) => x >= 0), "a pill went missing");
+  assert.deepEqual(o1.slice().sort((a, b) => a - b), o1, "placeholder must sit ⚡, Multi-lens, At level");
   await settle();                                        // the file lands -> onReady -> re-render
   const real = pillTag(d.box.html, 'data-ignition="1"');
   assert.ok(real, "the loaded file did not re-render the strip into the real pill");
   assert.ok(!/data-ignition-wait/.test(d.box.html), "the placeholder is replaced, not duplicated");
   const o2 = order(d.box.html, 'data-ignition="1"');
   assert.ok(o2.every((x) => x >= 0), "a pill went missing");
-  assert.deepEqual(o2.slice().sort((a, b) => a - b), o2, "the Ignition pill must be THIRD, straight after A");
+  assert.deepEqual(o2.slice().sort((a, b) => a - b), o2, "the Ignition pill must be FIRST, before Multi-lens");
   assert.match(real, /⚡ Ignition <b>1<\/b>/);
 });
 
@@ -2342,13 +2342,15 @@ test("a THROWING lens cannot abort renderDeckPills: the deck renders and the fau
 // ════════════════════════════════════════════════════════════════════════════
 suite("wiring + fences");
 
-test("app.js places the pill THIRD (straight after A) and routes it through pill()", () => {
+// UI100 #18 (2026-10-20): the A+ / A pills left the deck card (the toolbar's
+// grade tabs carry the counts), so Ignition is now the FIRST pill.
+test("app.js places the pill FIRST (the A+ / A pills are gone) and routes it through pill()", () => {
   const fn = APP.slice(APP.indexOf("function renderDeckPills("), APP.indexOf("// ----------------------------------------------------------- a row"));
   const inner = fn.indexOf("box.innerHTML =");
-  const a = fn.indexOf(`"A", nA,`, inner);
   const ig = fn.indexOf("ignPillHTML +", inner);
   const conf = fn.indexOf(`"⨂ Multi-lens"`, inner);
-  assert.ok(inner > 0 && a > inner && ig > a && conf > ig, "Ignition must sit after A and before Multi-lens");
+  assert.ok(inner > 0 && ig > inner && conf > ig, "Ignition must sit first, before Multi-lens");
+  assert.ok(!/data-goto=/.test(fn), "the A+ / A shortcut pills are back on the card");
   assert.match(fn, /pill\(`data-ignition="1" aria-controls="ignition-panel" aria-expanded="\$\{ign\.open \? "true" : "false"\}"`,\s*"ig", "⚡ Ignition", ign\.n, ign\.title, ign\.open, ign\.mark\)/);
   assert.match(fn, /pill\(`data-ignition-wait="1" aria-busy="true"[^`]*`, "ig is-loading", "⚡ Ignition", ign\.n, ign\.title, false, ""\)/);
   assert.match(fn, /window\.Ignition\.pill\(state\.market,/);

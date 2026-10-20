@@ -4,7 +4,7 @@
  * the dashboard) with a different link set on every page. This renders ONE
  * consistent nav into the `#site-nav` mount on each page:
  *
- *   • Desktop: pill row — VIVEK 5.0 · RECS · PHASEMAP · SPECS ⚡ · MOMENTUM ·
+ *   • Desktop: pill row — VIVEK 5.0 · RECS · PHASEMAP · SPECS · MOMENTUM ·
  *     ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
  *     SYSTEM / HOW IT WORKS — see the MORE list below; AI BOT was REMOVED
  *     2026-09-17 with its whole scalp-era bot; TRACK and
@@ -38,7 +38,8 @@
   // A failed FIRST read is not kept: the next caller tries again. A rejection
   // carries the HTTP status as err.status (absent = the network failed).
   // chart.html does not load nav.js and keeps its own fetch; app.js and
-  // recs.js keep theirs (their own refresh cadence).
+  // recs.js read through here too, with {fresh:true} on their own refresh
+  // cadence (UI100 #92/#100, 2026-10-20).
   const VivekBook = (() => {
     const URLS = { book: "data/vivek_bot_book.json", rules: "data/bot_rules.json" };
     const memo = { book: null, rules: null };
@@ -67,7 +68,9 @@
     { href: "index.html",           label: "SCAN",       tab: "📡", key: "index" },
     { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
     { href: "phasemap.html",        label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
-    { href: "specs.html",           label: "SPECS ⚡",   tab: "⚡", key: "specs" },
+    // UI100 #8 (2026-10-20): "SPECS ⚡" → "SPECS" — the ⚡ is Ignition's mark on
+    // the deck, and the tab/sheet/palette each had to strip it again.
+    { href: "specs.html",           label: "SPECS",      tab: "⚡", key: "specs" },
     { href: "momentum.html",        label: "MOMENTUM",   tab: "🟣", key: "momentum" },
     { href: "alerts.html",          label: "ALERTS",     tab: "🔔", key: "alerts" },
     { href: "journal.html",         label: "JOURNAL",    tab: "📒", key: "journal" },
@@ -141,12 +144,9 @@
           `${it.key === "alerts" && paN ? ` <span class="nav-count" title="${paN} active price-alert line${paN === 1 ? "" : "s"}">${paN}</span>` : ""}</a>`;
       };
       const moreActive = more.some((it) => it.key === here);
-      // BACK (owner 2026-07-22): one click to the previous page from anywhere
-      // but the dashboard. Falls back to SCAN when there's no in-site history.
-      const backPill = here === "index" ? "" :
-        `<button class="howto-link nav-back" type="button" title="Back to the previous page">← BACK</button>`;
+      // UI100 #6 (2026-10-20): the "← BACK" pill is gone — the browser's back
+      // does it, and it was one more pill in a strip that already overflowed.
       mount.innerHTML =
-        backPill +
         PRIMARY.map(pill).join("") +
         `<span class="nav-more">` +
           `<button class="howto-link nav-more-btn${moreActive ? " is-here" : ""}" type="button" aria-haspopup="true" aria-expanded="false">MORE ▾</button>` +
@@ -154,14 +154,6 @@
             more.map((it) => `<a class="nav-more-item${it.key === here ? " is-here" : ""}" href="${it.href}">${it.label}</a>`).join("") +
           `</span>` +
         `</span>`;
-
-      const backBtn = mount.querySelector(".nav-back");
-      if (backBtn) backBtn.addEventListener("click", () => {
-        let sameSite = false;
-        try { sameSite = document.referrer && new URL(document.referrer).origin === location.origin; } catch (_) {}
-        if (history.length > 1 && sameSite) history.back();
-        else location.href = "index.html";
-      });
 
       const btn = mount.querySelector(".nav-more-btn");
       const menu = mount.querySelector(".nav-more-menu");
@@ -213,7 +205,7 @@
         const tabLabel = it.key === "index" ? "VIVEK 5.0" : it.label;
         return `<a class="site-tab${it.key === here ? " is-here" : ""}" href="${it.href}" data-tabkey="${it.key}">` +
           `<span class="site-tab-ico" aria-hidden="true">${it.tab}<span class="site-tab-badge" data-badge="${it.key}" hidden></span></span>` +
-          `<span class="site-tab-lbl">${tabLabel.replace(" ⚡", "").replace("AI ", "")}</span></a>`;
+          `<span class="site-tab-lbl">${tabLabel}</span></a>`;
       }).join("");
       bar.innerHTML = tabHTML + moreTab;
       document.body.appendChild(bar);
@@ -369,7 +361,7 @@
           SHEET.map((it) =>
             `<a class="more-sheet-row${it.key === here ? " is-here" : ""}" href="${it.href}">` +
             `<span class="more-sheet-ico" aria-hidden="true">${it.tab || "•"}</span>` +
-            `<span class="more-sheet-lbl">${it.label.replace(" ⚡", "")}` +
+            `<span class="more-sheet-lbl">${it.label}` +
             `${it.key === "alerts" && paCount() ? ` <span class="nav-count">${paCount()}</span>` : ""}</span>` +
             `<span class="more-sheet-go" aria-hidden="true">›</span></a>`).join("") +
         `</div>` +
@@ -449,18 +441,19 @@
       .catch(() => {});
   }
 
-  // #91: one shared footer include — a consistent credit (data source +
-  // refresh cadence) and disclaimer on every nav page. Pages that already ship
-  // their own <footer class="site-footer"> (dashboard / journal / recs /
-  // system) keep it;
-  // the lens & utility pages get this appended so the data source and the
-  // disclaimer read identically everywhere.
+  // #91: one shared footer include — the same credit (where the data comes
+  // from) on every nav page. Pages that already ship their own
+  // <footer class="site-footer"> (dashboard / journal / recs / system) keep
+  // it, carrying this same line; the lens & utility pages get this appended.
+  // UI100 #12 (2026-10-20): one short line. The scan cadence and the venue
+  // list it used to spell out are on the system page; stampVersion() adds the
+  // build.
   function renderFooter() {
     if (document.querySelector("footer.site-footer")) return;   // page has its own
     const f = document.createElement("footer");
     f.className = "site-footer gbs-shared-foot";
     f.innerHTML =
-      '<p class="credit">Vivek 5.0 · three-lens scanner · stocks via Yahoo Finance (~15&nbsp;min delayed) · crypto via exchange bars (Binance, Coinbase) · scanned hourly while each market trades, crypto around the clock</p>';
+      '<p class="credit">Vivek 5.0 · stocks ~15&nbsp;min delayed (Yahoo) · crypto from exchange bars</p>';
     document.body.appendChild(f);
   }
 
@@ -502,7 +495,7 @@
   function cpCommands() {
     const go = (href) => () => { location.href = href; };
     const base = [...PRIMARY, ...MORE].map((it) => ({
-      label: `Go · ${it.label.replace(" ⚡", "")}`, hint: it.tab || "→", run: go(it.href),
+      label: `Go · ${it.label}`, hint: it.tab || "→", run: go(it.href),
     }));
     const mkts = ["asx", "nasdaq", "crypto"].map((m) => ({
       label: `Dashboard · ${MKT_LABEL[m]}`, hint: "📡", run: go(`index.html?m=${m}`),
@@ -669,7 +662,7 @@
         const sheet = document.querySelector(".more-sheet-list");
         if (sheet) sheet.appendChild(mk("more-sheet-version"));
         const foot = document.querySelector("footer.site-footer .credit");
-        if (foot) foot.append(` · ${ver}`);
+        if (foot) foot.append(` · build ${ver}`);
       })
       .catch(() => {});
   }

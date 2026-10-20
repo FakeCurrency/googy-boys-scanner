@@ -464,24 +464,28 @@ test("bookFacts: capacity is READ-ONLY — the caller's book is never touched", 
   assert.strictEqual(JSON.stringify(book), snapshot);
 });
 
-test("the strip renders the stall line only when the probe flagged something, escaped, to the journal", () => {
+// UI100 #21/#22 (2026-10-20): the deck's amber stalled strip (names + "your
+// call") left the deck — no hand closes since 2026-10-14, and the Journal
+// keeps the list. The COUNT stays in the one-line book summary.
+test("the book line carries the stall COUNT only when the probe flagged something; the strip is gone", () => {
   const APP3 = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js"), "utf8");
-  const body = APP3.slice(APP3.indexOf("async function loadBotActivity"), APP3.indexOf("function startClocks") > 0 ? APP3.indexOf("function startClocks") : undefined);
+  const body = APP3.slice(APP3.indexOf("async function loadBotActivity"), APP3.indexOf("async function sessFetch"));
   // Signature widened 2026-08-13 to carry the cap (bookFacts(b, rules)); the
   // INTENT of this pin is unchanged — the strip renders from the one tested
   // function, never from sums assembled inline where nothing can reach them.
   assert.ok(/const facts = bookFacts\(b, rules\)/.test(body),
     "the strip must render from bookFacts, not ad-hoc sums");
-  assert.ok(/data\/bot_rules\.json/.test(body),
-    "the strip no longer reads the cap, so it cannot show free slots");
+  assert.ok(/readShared\("rules"/.test(body),
+    "the strip no longer reads the cap (bot_rules.json, via the page's shared read), so it cannot show free slots");
   assert.ok(/facts\.atCap \? "FULL"/.test(body),
     "a full book must say FULL rather than quietly reading '0 free'");
-  assert.ok(/facts\.stalled\.length\s*\?/.test(body) || /stallTxt \?/.test(body),
-    "the stall line must be GATED on the probe having flagged something");
-  assert.ok(/esc\(stallTxt\)/.test(body), "the stall line text must go through esc()");
-  assert.ok(/class="ba-stall" href="journal\.html"/.test(body), "the stall line must link to the journal");
-  assert.ok(/never closes anything; the decision is yours/.test(body),
-    "the title must keep saying the probe is report-only");
+  assert.ok(/facts\.stalled\.length \? ` · \$\{facts\.stalled\.length\} stalled`/.test(body),
+    "the stall count must be GATED on the probe having flagged something");
+  assert.ok(/esc\(lineTxt\)/.test(body) && /esc\(foldTxt\)/.test(body), "the strip's text must go through esc()");
+  assert.ok(/class="ba-more" href="journal\.html"/.test(body), "the strip must still link to the journal");
+  assert.ok(/it never closes anything/.test(body), "the title must keep saying the probe is report-only");
+  const code = body.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/ba-stall|your call/.test(code), "the deck's stalled strip is back");
 });
 
 

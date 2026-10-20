@@ -76,8 +76,13 @@ function entryQualityHarness(responses) {
   };
   const sessionStorage = { setItem: (k) => sess.push(k), getItem: () => null };
   const state = { data: null };
-  const h = new Function("fetchT", "sessionStorage", "state", "renderEntryFilters", body)(
-    fetchT, sessionStorage, state, () => {});
+  // UI100 #100: the rules come through the page's shared read (nav.js's
+  // VivekBook via app.js's readShared), which rejects on a failed read —
+  // stood in for here by the same fetchT, so `asked` still logs the file.
+  const readShared = (kind) => fetchT(kind === "rules" ? "data/bot_rules.json" : "data/vivek_bot_book.json")
+    .then((r) => { if (!r.ok) throw new Error("HTTP 404"); return r.json(); });
+  const h = new Function("fetchT", "sessionStorage", "state", "renderEntryFilters", "readShared", body)(
+    fetchT, sessionStorage, state, () => {}, readShared);
   return { ...h, asked, sess };
 }
 const RULES_EQ = { entry_quality: { by_entry_type: {
@@ -310,7 +315,8 @@ test("#192 the sub-line says how far back the rolling log reaches", () => {
   // oldest in the MIDDLE: the window is the minimum, not whichever comes last
   const entries = [{ date: "2026-10-14T05:47:18+00:00" }, { date: "2026-09-25T20:05:20+00:00" },
                    { date: "junk" }, { date: "2026-10-01T00:00:00+00:00" }];
-  assert.ok(/^ · the log keeps the newest 4, back to 26 Sep/.test(windowNote(entries)), windowNote(entries));
+  // UI100 #95 (2026-10-20): shorter words, same window ("newest N kept").
+  assert.ok(/^ · newest 4 kept, back to 26 Sep/.test(windowNote(entries)), windowNote(entries));
   assert.equal(windowNote([]), "");
   const html = read("public/alerts.html");
   assert.ok(!/durable record|being rebuilt|queued for it|every multi-lens alignment/.test(html), "the old claims are back");

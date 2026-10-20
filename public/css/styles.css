@@ -92,6 +92,12 @@
           "Inter", "Inter-fallback", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", "JBMono-fallback", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
+  /* UI100 #10 (2026-10-20): ONE centred page width on PC. main.wrap reads it
+     (padding included); every page's own column follows it rather than
+     picking a fourth number (the deck, journal, alerts and PhaseMap all
+     differed). The topbar stays full-bleed. */
+  --page-max: 1320px;
+
   /* Aliases (UI review 2026-10-13, design-3). Twelve token names were read
      across the stylesheets but never defined here, so each fell back to its
      inline default — or to nothing (an invisible divider, a black band).
@@ -184,22 +190,16 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .scan-btn:not(.is-active):hover { color: var(--text-2); }
 
 /* ── VIVEK (5.0) detail — prominent trade-levels ladder ── */
-.vk-detail { padding: 4px 26px 40px; }
+.vk-detail { padding: 4px 26px 26px; }
+.row-detail.vk-detail > * + * { margin-top: 12px; }   /* tighter than .row-detail's 24px */
+/* UI100 #43 (2026-10-20): the hero lost its grade box (the row above shows
+   grade + score) — one card of chips, the narrative and the actions. */
 .vk-hero {
-  display: grid; grid-template-columns: 108px 1fr; gap: 0;
-  border-radius: var(--radius); overflow: hidden; margin: 22px 0 18px;
-  background: var(--panel); box-shadow: var(--shadow); border: 0.5px solid var(--border-soft);
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 18px; margin: 18px 0 14px;
+  border-radius: var(--radius); background: var(--panel);
+  box-shadow: var(--shadow); border: 0.5px solid var(--border-soft);
 }
-.vk-grade-block {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; padding: 22px 12px;
-  background: color-mix(in srgb, var(--gc) 10%, var(--panel));
-  border-right: 1px solid color-mix(in srgb, var(--gc) 35%, transparent);
-}
-.vk-grade-lbl { font: 700 9px/1 var(--mono); letter-spacing: 0.16em; color: var(--muted); }
-.vk-grade-val { font: 700 40px/0.9 var(--mono); letter-spacing: -0.02em; color: var(--gc); }
-.vk-grade-score { font: 600 11px/1 var(--mono); color: var(--gc); background: color-mix(in srgb, var(--gc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--gc) 40%, transparent); padding: 4px 8px; border-radius: 3px; font-variant-numeric: tabular-nums; }
-.vk-hero-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .vk-hero-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .vk-dir { font: 800 11px/1 var(--sans); letter-spacing: 0.05em; padding: 5px 9px; border-radius: 7px; }
 .vk-dir.dir-long  { background: var(--green-soft); color: var(--green); }
@@ -209,24 +209,32 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .vk-rr-sub { font: 600 10px/1 var(--sans); color: var(--muted); letter-spacing: 0.02em; }
 .vk-chart-btn { font: 700 11px/1 var(--sans); color: var(--blue-ink); text-decoration: none; padding: 6px 10px; border-radius: 8px; background: var(--blue-soft); }
 .vk-chart-btn:hover { filter: brightness(0.96); }
-.vk-why { margin: 0; font: 400 14.5px/1.65 var(--sans); color: var(--text-2); }
+/* #49: View chart + Copy plan as one pair (full width on a phone, below) */
+.vk-actions { display: flex; gap: 8px; }
+/* UI100 #45: the narrative clamps to three lines; "more" (shown by app.js
+   only when the clamp cut something) opens it. */
+.vk-why {
+  margin: 0; font: 400 14.5px/1.6 var(--sans); color: var(--text-2);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden;
+}
+.vk-why.is-open { display: block; -webkit-line-clamp: unset; line-clamp: none; }
+.vk-more {
+  align-self: flex-start; margin-top: -6px; padding: 4px 0; cursor: pointer;
+  appearance: none; border: 0; background: none;
+  font: 600 12.5px/1.2 var(--sans); color: var(--blue-ink);
+}
+.vk-more[hidden] { display: none; }
 
 /* the level ladder — SL · Entry · TP1/2/3, each a clear row */
-.vk-ladder { display: flex; flex-direction: column; gap: 1px; border-radius: var(--radius-md); overflow: hidden; background: var(--separator); margin-bottom: 18px; }
-.vk-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.vk-ladder { display: flex; flex-direction: column; gap: 1px; border-radius: var(--radius-md); overflow: hidden; background: var(--separator); margin-bottom: 12px; }
 
 /* freshness chip in the hero */
 .vk-fresh { font: 600 10px/1 var(--mono); letter-spacing: 0.04em; color: var(--muted); background: var(--fill-2); border: 1px solid var(--border); padding: 5px 8px; border-radius: 3px; }
 .vk-fresh.stale { color: var(--red-ink); background: var(--red-soft); }
 
-/* 5.0 trade checklist — mechanical criteria, pass/fail at a glance */
-.vk-checklist-wrap { margin-bottom: 18px; }
+/* 5.0 trade checklist — mechanical criteria, pass/fail at a glance.
+   (UI100 #47: the boilerplate risk note under it went, 2026-10-20.) */
 .vk-section-lbl { font: 700 10.5px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-.vk-plan-note { margin-top: 10px; font: 500 12px/1.5 var(--sans); color: var(--text-2); padding: 11px 13px; background: var(--fill); border-radius: var(--radius-sm); }
-@media (max-width: 560px) {
-  .vk-detail { padding: 4px 14px 32px; }
-  .vk-hero { grid-template-columns: 88px 1fr; }
-}
 
 .howto-link {
   display: inline-flex; align-items: center;
@@ -280,7 +288,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .scan-toast.warn { border-color: rgba(255,178,36,0.5); border-left-color: var(--orange); }
 .scan-toast.info { border-color: rgba(77,163,255,0.5); border-left-color: var(--blue); }
 
-.wrap { max-width: 1500px; margin: 0 auto; padding: 18px 20px 64px; }
+/* UI100 #10/#11 (2026-10-20): the shared page width; the bottom padding was
+   64px of blank before a footer that adds its own 16px. */
+.wrap { max-width: var(--page-max); margin-inline: auto; padding: 18px 20px 24px; }
 /* data freshness + schema badge: green when fresh, amber when stale/low coverage/old build */
 .scan-fresh {
   display: inline-flex; align-items: center; margin-top: 8px;
@@ -293,19 +303,24 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: var(--orange); background: var(--orange-soft);
   border-color: color-mix(in srgb, var(--orange) 30%, transparent);
 }
-/* Pipeline funnel disclosure (2026-07-29) — why names were excluded, on tap. */
-.scan-funnel { margin-top: 6px; }
+.scan-fresh[hidden] { display: none; }   /* UI100 #15: shown only when degraded */
+/* Pipeline funnel disclosure (2026-07-29) — why names were excluded, on tap.
+   UI100 #16 (2026-10-20): the summary is a small "Pipeline ▸"; the counts line
+   (.sf-line, mono) opens the body. */
+.scan-funnel { margin-top: 2px; }
 .scan-funnel > summary {
   cursor: pointer; list-style: none; display: inline-flex; align-items: center;
-  font: 600 11px/1 var(--mono); letter-spacing: 0.02em; color: var(--muted-2);
+  font: 600 11.5px/1 var(--sans); color: var(--muted-2);
   padding: 4px 0; -webkit-tap-highlight-color: transparent;
 }
+.scan-funnel > summary:hover { color: var(--text-2); }
 .scan-funnel > summary::-webkit-details-marker { display: none; }
-.scan-funnel > summary::before { content: "▸ "; color: var(--muted-2); }
-.scan-funnel[open] > summary::before { content: "▾ "; }
+.scan-funnel > summary::after { content: " ▸"; white-space: pre; }
+.scan-funnel[open] > summary::after { content: " ▾"; }
 .scan-funnel .sf-body {
   margin: 6px 0 2px; font: 500 12px/1.6 var(--sans); color: var(--muted);
 }
+.scan-funnel .sf-line { font: 600 11px/1.5 var(--mono); color: var(--muted); margin-bottom: 4px; }
 .scan-funnel .sf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .scan-funnel .sf-chip {
   display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
@@ -370,11 +385,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .seg-count { font: 600 9.5px/1 var(--mono); background: var(--fill-2); border: 1px solid var(--border); color: var(--muted); padding: 2px 5px; border-radius: 3px; }
 .seg-btn.is-active .seg-count { background: var(--green-soft); border-color: rgba(47,208,127,0.35); color: var(--green); }
 
-/* ================================================================ EMA legend */
-.ema-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: transparent; border-radius: 0; padding: 0 0 12px; margin-bottom: 12px; box-shadow: none; border-bottom: 1px solid var(--border); min-height: 24px; /* CLS #1: reserved pre-data */ }
-.legend-tag { font: 700 10px/1 var(--mono); letter-spacing: 0.12em; color: var(--muted); }
-.ema-dot { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--mono); color: var(--text-2); }
-.ema-dot i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+/* (UI100 #25, 2026-10-20: the deck's SMA colour legend and its rules went.) */
 
 /* VIVEK entry-type filter chips — "200 SMA interaction" */
 .vkf-label { font: 700 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
@@ -388,23 +399,21 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .vkf-chip b { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .vkf-chip.is-active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: var(--shadow-pill); }
 .vkf-chip.is-active b { color: rgba(255,255,255,0.85); }
-/* Backtest quality tint on the entry-type chips: a left dot + tinted border.
-   Active (blue) state still overrides these. */
+/* Backtest quality on the entry-type chips: a small left dot (the data).
+   UI100 #28 (2026-10-20): every chip is NEUTRAL until active — no tinted
+   borders or text (five colour families sat in one strip); a chip takes its
+   colour only when it is on. Active (blue) still overrides the dot. */
 .vkf-chip.q-green::before, .vkf-chip.q-amber::before, .vkf-chip.q-red::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
 }
-.vkf-chip.q-green { border-color: rgba(45,208,127,.55); }
 .vkf-chip.q-green::before { background: var(--green); }
-.vkf-chip.q-amber { border-color: rgba(255,176,32,.55); }
 .vkf-chip.q-amber::before { background: #ffb020; }
-.vkf-chip.q-red { border-color: rgba(255,91,91,.5); }
 .vkf-chip.q-red::before { background: var(--red); }
 .vkf-chip.is-active::before { background: #fff; }
 .vkf-legend { font: 600 11px/1 var(--sans); color: var(--muted); margin: 0 2px; white-space: nowrap; }
 /* thin divider between the entry-type chips and the toggles */
 .vkf-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 4px; }
 .vkf-recent.is-active { background: var(--green); border-color: var(--green); }
-.vkf-highconv { border-color: rgba(255,196,77,.6); color: #ffc44d; }
 .vkf-highconv.is-active { background: #ffb020; border-color: #ffb020; color: #1a1205; }
 .vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }
 @media (max-width: 560px) { .vkf-legend { display: none; } }
@@ -420,8 +429,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
      when the rows arrive — this was ~0.38 of the measured shift. */
   min-height: 72vh; }
 
-/* staggered entrance — replays on every list render (tab / sort / market
-   switch and on fresh data load) so content settles in rather than snapping. */
+/* staggered entrance so content settles in rather than snapping. The deck
+   plays it on its FIRST paint only (UI100 #37: rows of that render carry
+   .row-in; later filter / sort / market renders swap instantly). */
 @keyframes rowIn {
   from { opacity: 0; transform: translateY(9px) scale(0.992); }
   to   { opacity: 1; transform: none; }
@@ -432,20 +442,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
-  transition: box-shadow .22s ease, transform .22s ease;
-  will-change: transform;
-  /* backwards fill holds the start frame during the stagger delay, then
-     releases so :hover transforms keep working once the entrance finishes. */
+  /* backwards fill holds the start frame during the stagger delay. */
   animation: rowIn .2s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   animation-delay: calc(var(--row-i, 0) * 26ms);
 }
-.row-wrap:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-1px);
+#results .row-wrap:not(.row-in) { animation: none; }
+/* UI100 #41 (2026-10-20): hover is a plain highlight — no lift, no shadow
+   transition, and no will-change: transform, which gave every one of 200+
+   rows its own compositor layer. */
+@media (hover: hover) {
+  .row-wrap > .row:hover { background: var(--panel-2); }   /* the header only: an open panel stays put */
 }
 .row-wrap.open {
   box-shadow: var(--shadow-open);
-  transform: none;
 }
 
 /* 3-column grid: grade strip | main content | right actions */
@@ -515,6 +524,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
    tooltip carries the date. */
 .badge.mcap-old   { text-decoration: underline dotted; text-underline-offset: 2px; }
 .cname { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+/* mcap badge + name: one unit only on a phone (its own line, below); on a PC
+   both sit in the ticker line as before */
+.rname { display: contents; }
 .rprice { font: 600 17px/1 var(--mono); letter-spacing: -0.01em; color: var(--text); flex-shrink: 0; }
 
 .row-chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -534,9 +546,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* REFINE200 #51: the "200-SMA" was measured on fewer than 200 bars */
 .rbadge.proxywarn { color: var(--orange); background: var(--orange-soft);
   border-color: color-mix(in srgb, var(--orange) 40%, transparent); }
-/* Longs / Shorts direction filter chips */
-.vkf-long  { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
-.vkf-short { color: var(--red-ink);   border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+/* Longs / Shorts direction filter chips — neutral until on (UI100 #28) */
 .vkf-long.is-active  { background: var(--green); border-color: var(--green); color: #fff; }
 .vkf-short.is-active { background: var(--red);   border-color: var(--red);   color: #fff; }
 .vkf-long.is-active b, .vkf-short.is-active b { color: rgba(255,255,255,0.85); }
@@ -581,17 +591,17 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   letter-spacing: -0.01em;
 }
 .rk-max { font-size: 10.5px; font-weight: 500; color: var(--muted); }
+/* UI100 #35 (2026-10-20): R:R reads as plain "3.0R" text, no bordered box;
+   a low R:R keeps its red. */
 .rk-rr {
-  font: 600 10.5px/1 var(--mono);
-  padding: 4px 8px;
-  border-radius: 3px;
-  background: var(--green-soft);
-  border: 1px solid rgba(47,208,127,0.3);
-  color: var(--green);
+  font: 600 11.5px/1 var(--mono);
+  color: var(--text-2);
   white-space: nowrap;
 }
-.rk-rr.low { border-color: rgba(255,91,91,0.3); }
-.rk-rr.low { background: var(--red-soft); color: var(--red-ink); }
+.rk-rr.low { color: var(--red-ink); }
+/* the ° hysteresis mark beside the score — a phone's (UI100 #31: its grade
+   block is a thin edge there); a PC shows it on the grade block */
+.rk-held { display: none; font-size: 10px; vertical-align: super; opacity: .7; cursor: help; margin-left: 1px; }
 
 .row-copy-debug {
   appearance: none; border: 0; background: transparent; cursor: pointer;
@@ -604,17 +614,19 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 .row-expand {
   appearance: none; border: 0; background: transparent; cursor: pointer;
   color: var(--muted-2); padding: 7px; line-height: 0; border-radius: 8px;
-  transition: color .18s, transform .3s cubic-bezier(0.4,0,0.2,1), background .15s;
+  transition: color .18s, transform .16s cubic-bezier(0.4,0,0.2,1), background .15s;
   flex-shrink: 0;
 }
 .row-expand:hover { color: var(--text); background: var(--fill); }
 .row-wrap.open .row-expand { transform: rotate(180deg); color: var(--text); }
 
 /* ======================================================= detail animation */
+/* UI100 #51 (2026-10-20): open / close in 160ms, everything inside it done by
+   then too (was 200ms + a 40ms-delayed fade = 240ms). */
 .detail-anim {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.2s cubic-bezier(0.22, 1, 0.36, 1);   /* #56: <=200ms */
+  transition: grid-template-rows 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .row-wrap.open .detail-anim { grid-template-rows: 1fr; }
 .detail-inner { overflow: hidden; min-height: 0; }
@@ -623,16 +635,15 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
    takes them out; the delay keeps the content painted while the panel closes
    and the 0s on open makes it visible before the grow starts. Covers the
    deck rows and specs' .sp-row alike (both toggle .open on .row-wrap). */
-.detail-inner { visibility: hidden; transition: visibility 0s linear 0.2s; }
+.detail-inner { visibility: hidden; transition: visibility 0s linear 0.16s; }
 .row-wrap.open .detail-inner { visibility: visible; transition-delay: 0s; }
 
-/* ease the content in — a gentle lift + fade, timed to land just after the
-   panel has finished opening so it feels deliberate rather than abrupt. */
+/* ease the content in — a short lift + fade inside the same 160ms. */
 .detail-inner > .row-detail,
 .detail-inner > .debug-panel {
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.18s ease 0.04s, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1) 0.04s;   /* #56 */
+  transition: opacity 0.12s ease 0.03s, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .row-wrap.open .detail-inner > .row-detail,
 .row-wrap.open .detail-inner > .debug-panel { opacity: 1; transform: none; }
@@ -927,13 +938,6 @@ body.debug-mode .row-copy-debug { display: inline-flex; }
 }
 .search-trigger:hover { color: var(--text); background: var(--fill); }
 
-.refresh-timer {
-  font: 600 11px/1 var(--mono); letter-spacing: 0.04em;
-  color: var(--muted); background: var(--fill-2); border: 1px solid var(--border);
-  padding: 5px 9px; border-radius: 3px; white-space: nowrap;
-  min-width: 44px; text-align: center;
-}
-
 /* ========================================================== search overlay */
 .search-overlay {
   position: fixed; inset: 0; z-index: 200;
@@ -1024,7 +1028,8 @@ body.debug-mode .debug-panel {
 .dbg-v { font: 600 11.5px/1.4 monospace; color: var(--text-2); word-break: break-all; }
 
 /* ================================================================== footer */
-.site-footer { text-align: center; padding: 28px 20px 44px; }
+/* UI100 #11/#12 (2026-10-20): one short credit line, so a short footer. */
+.site-footer { text-align: center; padding: 16px 20px 28px; }
 .disclaimer { color: var(--muted); font-size: 13.5px; margin: 0 0 6px; }
 .credit { color: var(--muted-2); font-size: 12.5px; margin: 0; }
 
@@ -1080,7 +1085,7 @@ body.debug-mode .debug-panel {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .row-wrap, .placeholder, .search-overlay:not([hidden]),
+  .row-wrap, .row-wrap.row-in, .placeholder, .search-overlay:not([hidden]),
   .search-overlay:not([hidden]) .search-box { animation: none; }
   .detail-anim { transition: grid-template-rows .01ms; }
   .detail-inner > .row-detail, .detail-inner > .debug-panel { transition: none; transform: none; }
@@ -1100,12 +1105,11 @@ body.debug-mode .debug-panel {
      NASDAQ / CRYPTO stay visible (order:3 buried it off-screen right once the
      nav became a horizontal scroll strip on phones). */
   .market-switch { order: -1; flex-shrink: 0; }
-  .cname { max-width: 130px; }
+  /* (UI100 #42: the 130px cap on the company name went — it takes the row's room.) */
 }
 @media (max-width: 768px) {
   .topbar { padding: 10px 14px; gap: 8px; } /* legacy single-row pages */
   .brand h1 { font-size: 14px; }
-  .refresh-timer { display: none; }
   .howto-link { padding: 8px 6px; }            /* taller tap target */
   .market-btn { padding: 8px 14px; }           /* taller tap target */
   .scan-btn { padding: 8px 13px; }
@@ -1118,7 +1122,7 @@ body.debug-mode .debug-panel {
   .seg-btn { padding: 9px 13px; }
 }
 @media (max-width: 600px) {
-  .wrap { padding: 14px 12px 56px; }
+  .wrap { padding: 14px 12px 24px; }   /* UI100 #11: was 56px of blank before the footer */
   .row { grid-template-columns: 52px 1fr auto; min-height: 80px; }
   .row-main { padding: 15px 15px 13px; gap: 8px; }
   .row-right { padding: 12px 10px 12px 6px; gap: 6px; }
@@ -1134,8 +1138,6 @@ body.debug-mode .debug-panel {
   .controls { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 8px; }
   .controls::-webkit-scrollbar { display: none; }
   .control-group { flex: 0 0 auto; }
-  .ema-legend { gap: 10px; overflow-x: auto; scrollbar-width: none; }
-  .ema-legend::-webkit-scrollbar { display: none; }
   .row-detail { padding: 4px 16px 24px; }
   /* hero: keep grade block, stack metrics 2×2 */
   .detail-hero { grid-template-columns: 84px 1fr; }
@@ -1232,11 +1234,12 @@ body.debug-mode .debug-panel {
    Delete this block + restore the terminal :root values to revert.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ---- frosted, floating top bar (iOS navigation-bar material) ---- */
+/* ---- top bar ---- */
+/* UI100 #2 (2026-10-20): SOLID, not frosted. The 22px blur + saturate over a
+   78% bar let every row ghost through the header and re-blurred the page on
+   each scroll frame — the costliest paint on a phone. Page bg, no filter. */
 .topbar {
-  background: rgba(18,22,30,0.78);
-  -webkit-backdrop-filter: blur(22px) saturate(1.8);
-  backdrop-filter: blur(22px) saturate(1.8);
+  background: var(--bg);
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
@@ -1299,10 +1302,6 @@ body.debug-mode .debug-panel {
   color: var(--text-2);
 }
 .search-trigger:hover { background: rgba(255,255,255,0.14); color: var(--text); }
-.refresh-timer {
-  border-radius: 999px; border: 0; background: rgba(255,255,255,0.07);
-  padding: 7px 12px; font-family: var(--sans); font-weight: 700;
-}
 
 /* ---- stat cards: separate rounded widgets (iOS home-screen grid) ---- */
 .stats { gap: 12px; background: transparent; box-shadow: none; overflow: visible; }
@@ -1316,17 +1315,16 @@ body.debug-mode .debug-panel {
 
 /* ---- filter chips: rounded-full, SF-style ---- */
 .vkf-chip { border-radius: 999px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; }
-.vkf-label, .legend-tag { font-family: var(--sans); }
+.vkf-label { font-family: var(--sans); }
 
 /* ---- result rows: bolder Apple-Stocks-style type ---- */
 .tkr { font-family: var(--sans); font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
 .rprice { font-family: var(--sans); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
 .cname { font-family: var(--sans); font-weight: 500; }
 .row-grade { font-family: var(--sans); font-weight: 800; font-size: 15px; }
-.row-wrap:hover { transform: translateY(-2px); }
 
 /* ---- badges & chips: tinted rounded-full capsules ---- */
-.badge, .rbadge, .chip, .vk-tf-chip, .vk-fresh, .vk-grade-score {
+.badge, .rbadge, .chip, .vk-tf-chip, .vk-fresh {
   border-radius: 999px; font-family: var(--sans); letter-spacing: 0.03em;
 }
 .badge { font-size: 10px; font-weight: 700; padding: 4px 9px; }
@@ -1387,8 +1385,9 @@ body { letter-spacing: -0.012em; }
   .site-tabs {
     display: grid; grid-template-columns: repeat(6, 1fr);
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+    /* UI100 #2: opaque already, so the 22px backdrop blur painted nothing
+       you could see and still cost a blur pass on every scroll frame. */
     background: var(--nav);
-    -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
     border-top: 0.5px solid var(--separator);
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
@@ -1485,25 +1484,12 @@ body { letter-spacing: -0.012em; }
 .ba-kind-close.pos { color: var(--green); }
 .ba-kind-close.neg { color: var(--red-ink); }
 .ba-ago { font: 500 10.5px/1 var(--sans); color: var(--muted-2); }
-.ba-more { margin-left: auto; font: 700 11px/1 var(--sans); color: var(--blue-ink); text-decoration: none; white-space: nowrap; }
-/* Stall-probe line (2026-07-30): its own full-width row inside the strip so it
-   cannot be skimmed past — the probe's flags, the owner's call. */
-.ba-stall {
-  flex-basis: 100%; display: block; text-decoration: none;
-  font: 600 11px/1.5 var(--mono); color: var(--orange);
-  background: var(--orange-soft); border-radius: 7px; padding: 5px 9px;
-  border: 1px solid color-mix(in srgb, var(--orange) 26%, transparent);
-}
-.ba-stall:hover { color: var(--text); }
+/* UI100 #24 (2026-10-20): "Journal →" sits inline beside the book line. */
+.ba-more { font: 700 11.5px/1 var(--sans); color: var(--blue-ink); text-decoration: none; white-space: nowrap; }
+/* (UI100 #22: the deck's amber stalled strip went — the count is in the book
+   line, the list on the Journal.) */
 
-/* Journal — compact account summary living in the (sticky) topbar. */
-.jr-topsum {
-  display: inline-flex; align-items: center; gap: 12px; margin-left: auto;
-  font: 700 12px/1 var(--mono); color: var(--text-2); white-space: nowrap;
-}
-.jr-topsum .pos { color: var(--green); } .jr-topsum .neg { color: var(--red-ink); }
-.jr-topsum .ts-who { font: 700 10px/1 var(--sans); color: var(--muted); letter-spacing: .04em; }
-@media (max-width: 720px) { .jr-topsum { gap: 8px; font-size: 11px; } }
+/* (UI100 #58: the journal's topbar account stamp went — the P&L hero says it.) */
 
 /* ═══════════════════ UI WAVE 1 (2026-07-22) — speed + readability ═════════
    Appended overrides, same pattern as the iOS pass above. */
@@ -1535,9 +1521,7 @@ body { letter-spacing: -0.012em; }
   font: 700 12.5px/1 var(--sans); color: var(--text-2); text-align: left;
 }
 .ba-sum:hover { color: var(--text); }
-/* ~110 chars of capacity + stalled + free wraps to four lines at 390px, and
-   line-height 1 stacked those lines ascender-into-descender. 1.45 is the
-   same leading the row chips use; desktop (one line) is visually unchanged. */
+/* 1.45, the row chips' leading, in case a narrow phone wraps the line. */
 .ba-sum { line-height: 1.45; }
 .ba-chev { font-size: 10px; color: var(--muted-2); transition: transform .15s; }
 .ba-open .ba-chev { transform: rotate(180deg); }
@@ -1546,6 +1530,8 @@ body { letter-spacing: -0.012em; }
   width: 100%; padding-top: 4px;
 }
 .ba-events[hidden] { display: none; }
+/* the fold's first line: slots, the market split and the two records */
+.ba-facts { flex-basis: 100%; font: 600 12px/1.5 var(--sans); color: var(--muted); }
 
 /* ╔═══════════════════════════════════════════════════════════════════════╗
    ║  SHARED DECK COMPONENT — ONE SOURCE OF TRUTH (backlog #23)             ║
@@ -1588,25 +1574,21 @@ body { letter-spacing: -0.012em; }
 .deck-top .nav-pills::-webkit-scrollbar { display: none; }
 .deck-top-right { margin-left: auto; display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .microclock {
-  /* Owner 2026-07-22: bolder, larger, each city its OWN colour.
-     2×2 grid: MEL/NY (with seconds) left, CN/LDN right. Dates in tooltip. */
+  /* Owner 2026-07-22: bolder, larger, each city its OWN colour. UI100 #3/#4
+     (2026-10-20): Melbourne over New York, HH:MM — China and London went with
+     the seconds. Weekday + date in the tooltip. */
   font: 800 14px/1.5 var(--mono); cursor: default;
-  display: grid; grid-template-columns: auto auto; gap: 1px 16px;
+  display: grid; grid-template-columns: auto; gap: 1px;
   white-space: nowrap; font-variant-numeric: tabular-nums; text-align: left;
   letter-spacing: 0.01em;
 }
-/* CLS #1: the cells boot as "—" then become "MELBOURNE 18:51:09" — reserve widths
-   so the tick-over doesn't nudge the header's right group. */
-.microclock .mc-major { display: inline-block; min-width: 118px; }
-.microclock .mc-minor { display: inline-block; min-width: 92px; }
+/* CLS #1: the cells boot as "—" then become "MELBOURNE 18:51" — reserve the
+   width (15 mono chars) so the first paint doesn't nudge the right group. */
+.microclock .mc-major { display: inline-block; min-width: 15.5ch; }
 #clk-mel-time    { color: var(--blue-ink); }     /* Melbourne — blue */
 #clk-ny-time     { color: #ff5c8a; }         /* New York — pink */
-#clk-china-time  { color: var(--orange); }   /* China — orange */
-#clk-london-time { color: var(--teal); }     /* London — teal */
 
-/* BACK pill (owner 2026-07-22) — subtle outline so it never fights SCAN */
-.nav-pills .nav-back { color: var(--muted); background: transparent; cursor: pointer; }
-.nav-pills .nav-back:hover { color: var(--text); background: var(--fill); border-color: var(--border-2); }
+/* (UI100 #6, 2026-10-20: the "← BACK" pill and its rules are gone.) */
 
 /* ---- command deck bar ---- */
 /* CLS pass (UX top-10 #1, 2026-07-26): the deck used to paint as a thin
@@ -1625,9 +1607,11 @@ body { letter-spacing: -0.012em; }
 /* The CLS reservations below are the DASHBOARD deck's measured heights (its
    bot strip is what makes it tall), so they are scoped to the deck that HAS
    one (tablet-7, 2026-10-13). Applied to every .deck they left 118-230px of
-   empty card on the recs / specs / phasemap / momentum decks. Index's values
-   are unchanged. */
-.deck:has(> .deck-bot) { min-height: 118px; }
+   empty card on the recs / specs / phasemap / momentum decks.
+   UI100 (2026-10-20): re-measured after the card lost its A+/A/★ pills, the
+   coverage pill, the long subline and the stalled strip — loaded heights
+   102 / 154 (≤1150) / 206 (≤780) / 183 (phones, 320-600). */
+.deck:has(> .deck-bot) { min-height: 100px; }
 .deck-status { min-width: 0; }
 .deck-title { font: 800 19px/1.25 var(--sans); letter-spacing: -0.02em; color: var(--text); }
 .deck-sub {
@@ -1656,18 +1640,18 @@ body { letter-spacing: -0.012em; }
    wraps to two lines — so the loaded height climbs as the viewport narrows.
    Reservations are tiered from MEASURED loaded heights (always a few px UNDER
    actual, so an over-reserve can never leave a permanent gap). */
-@media (max-width: 1150px) { .deck:has(> .deck-bot) { min-height: 170px; } .deck { align-items: flex-start; } }
-@media (max-width: 1024px) { .deck:has(> .deck-bot) { min-height: 188px; } }
-@media (max-width: 860px) { .deck:has(> .deck-bot) { min-height: 198px; } .deck:has(> .deck-bot) .deck-status { min-height: 74px; } }
+@media (max-width: 1150px) { .deck:has(> .deck-bot) { min-height: 150px; } .deck { align-items: flex-start; } }
+@media (max-width: 860px) { .deck:has(> .deck-bot) .deck-status { min-height: 74px; } }
+@media (max-width: 780px) { .deck:has(> .deck-bot) { min-height: 200px; } }
 /* In the reserved band the deck is top-aligned (above) so the empty state
    paints children at their loaded positions — centering redistributed them
    when the content arrived, which was itself a shift. */
 /* Mobile: the deck stacks fully (title / pills wrap / full-width bot strip) so
    its loaded height is taller again — reserve the measured mobile heights. */
 @media (max-width: 600px) {
-  .deck:has(> .deck-bot) { min-height: 230px; }
+  .deck:has(> .deck-bot) { min-height: 180px; }
   .deck-pills { min-height: 38px; }
-  .deck .deck-bot[hidden] { min-height: 60px; }
+  .deck .deck-bot[hidden] { min-height: 34px; }   /* the book is one line now */
 }
 .fpill {
   appearance: none; cursor: pointer; text-decoration: none;
@@ -1681,20 +1665,18 @@ body { letter-spacing: -0.012em; }
 .fpill.g { color: var(--green); background: var(--green-soft); border-color: rgba(48,209,88,0.3); }
 .fpill.o { color: var(--orange); background: var(--orange-soft); border-color: rgba(255,159,10,0.3); }
 .fpill.t { color: var(--teal); background: rgba(100,210,255,0.12); border-color: rgba(100,210,255,0.3); }
-.fpill.top { color: var(--orange); }
 .fpill.is-active { outline: 2px solid currentColor; outline-offset: -1px; font-weight: 800; }
-/* Products set aside from the A+/A counts (2026-08-13). Quiet on
-   purpose: it explains a subtraction, it is not a target. */
+/* Products set aside from the grade counts (2026-08-13). Quiet on purpose:
+   it explains a subtraction, it is not a target. A real toggle (it dims /
+   shows the products). UI100 #20 (2026-10-20): a quiet TEXT button, not a
+   pill — --muted on the deck panel clears 4.5:1; the hit area stays 36px. */
 .deck-products {
-  font: 600 11.5px/1 var(--sans); color: var(--muted-2); white-space: nowrap;
-  /* A real toggle (it dims/shows the products) — it was rendering as the
-     browser's grey default button at 2.4:1. Now a quiet outlined pill:
-     muted text on --fill-2 clears 4.5:1, and it stays quieter than an .fpill. */
+  font: 600 12px/1 var(--sans); color: var(--muted); white-space: nowrap;
   appearance: none; -webkit-appearance: none; cursor: pointer;
-  background: var(--fill-2); border: 1px solid var(--border-soft);
-  border-radius: 999px; padding: 7px 11px;
+  background: none; border: 0; border-radius: 6px;
+  padding: 0 4px; min-height: 36px;
 }
-.deck-products:hover { color: var(--text-2); background: var(--fill); }
+.deck-products:hover { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
 /* The views menu's density toggle had the same browser-default look. */
 .views-menu .vm-density {
   appearance: none; -webkit-appearance: none; cursor: pointer; width: 100%;
@@ -1704,12 +1686,12 @@ body { letter-spacing: -0.012em; }
 .views-menu .vm-density:hover { background: var(--fill); color: var(--text); }
 
 /* bot chip lives inside the deck now */
-.deck-bot { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.deck-bot { margin-left: auto; display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
 .deck-bot .ba-sum {
   background: var(--fill-2); border: 1px solid var(--border-soft);
-  border-radius: 999px; padding: 9px 14px;
+  border-radius: 999px; padding: 8px 13px;
 }
-.deck-bot .ba-events { padding-top: 8px; }
+.deck-bot .ba-events { padding-top: 6px; }
 
 /* ---- RECOMMENDATIONS page (owner 2026-07-22) — deck-language cards ---- */
 .rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 14px; }
@@ -1736,13 +1718,21 @@ body { letter-spacing: -0.012em; }
   font: 700 8.5px/1 var(--mono); letter-spacing: 0.05em; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6);
 }
 .rec-line { margin: 0 0 12px; font: 400 13.5px/1.55 var(--sans); color: var(--text-2); }
-.rec-nums { display: flex; gap: 8px; flex-wrap: wrap; }
+/* UI100 #91 (2026-10-20): A+ · Bot · Book · ◎ · ⨂ on ONE row (short labels,
+   tighter chips; the names live in each chip's title). Still wraps, never
+   overflows, at any width. .rec-nums-x is the late-filled slot: no box. */
+.rec-nums { display: flex; gap: 5px; flex-wrap: wrap; }
 .rec-nums span {
   font: 600 11.5px/1 var(--sans); color: var(--muted); background: var(--fill-2);
-  border: 1px solid var(--border-soft); border-radius: 999px; padding: 7px 11px;
+  border: 1px solid var(--border-soft); border-radius: 999px; padding: 6px 7px; white-space: nowrap;
 }
+.rec-nums .rec-nums-x { display: contents; }
 .rec-nums b { font: 800 12px/1 var(--mono); color: var(--text); }
 .rec-nums b.pos { color: var(--green); } .rec-nums b.neg { color: var(--red-ink); }
+@media (max-width: 380px) {
+  .rec-nums span { font-size: 10.5px; padding: 5px 6px; }
+  .rec-nums b { font-size: 11px; }
+}
 .rec-age { margin-top: 10px; font: 500 10.5px/1.4 var(--sans); color: var(--muted-2); }
 .rec-note { border-left: 3px solid var(--blue); margin-bottom: 14px; }
 .rec-note-body { margin: 0; font: 400 14.5px/1.65 var(--sans); color: var(--text-2); }
@@ -1758,7 +1748,6 @@ body { letter-spacing: -0.012em; }
 .rec-mv-r { font: 800 12px/1 var(--mono); }
 .rec-mv-r.pos { color: var(--green); } .rec-mv-r.neg { color: var(--red-ink); }
 .rec-link { margin-left: auto; font: 700 12px/1 var(--sans); color: var(--blue-ink); text-decoration: none; }
-.rec-disclaimer { font: 500 11.5px/1.6 var(--sans); color: var(--muted-2); max-width: 760px; margin: 18px 0 0; }
 @media (max-width: 880px) { .rec-grid { grid-template-columns: 1fr; } }
 
 /* ── Wave R #18: degraded / stale states ────────────────────────────────── */
@@ -1810,12 +1799,6 @@ body { letter-spacing: -0.012em; }
 
 /* ── Wave R #13+#14: lazy card enrichment (at-level / multi-lens / sectors) ── */
 .rec-enrich:empty { display: none; }
-.rec-enrich-nums { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
-.rec-enrich-nums span {
-  font: 600 11px/1 var(--sans); color: var(--text-2);
-  background: var(--fill-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px;
-}
-.rec-enrich-nums b { font: 800 12px/1 var(--mono); color: var(--text); }
 .rec-sec-list { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .rec-sec-hd { font: 700 9.5px/1 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 7px; }
 .rec-sec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
@@ -1844,24 +1827,25 @@ body { letter-spacing: -0.012em; }
 .rec-arch-date { font: 700 10.5px/1 var(--mono); letter-spacing: 0.03em; color: var(--muted-2); }
 .rec-arch-item p { margin: 5px 0 0; font: 400 13px/1.55 var(--sans); color: var(--text-2); }
 
-/* snappy re-renders (backlog #48): the entrance cascade plays on FIRST paint
-   only — filter/sort/pill re-renders swap instantly instead of re-animating. */
-.rows[data-painted] .row-wrap { animation: none; }
+/* (snappy re-renders, backlog #48: the first-paint-only cascade is the
+   `#results .row-wrap:not(.row-in)` rule in the rows section — UI100 #37.) */
 
 /* responsive: the deck is the same app at thumb scale (backlog #19 seed) */
 @media (max-width: 880px) {
   .deck-top { flex-wrap: wrap; }
   .deck-top .market-switch { order: 0; }
-  .microclock { display: none; }
 }
 @media (max-width: 680px) {
-  .deck { padding: 12px 14px; gap: 10px; }
+  .deck { padding: 10px 12px; gap: 8px; }   /* UI100 #23: was 12px 14px / 10px */
   .deck-title { font-size: 16.5px; }
   .deck-pills { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
     width: 100%; padding-bottom: 2px; }
   .deck-pills::-webkit-scrollbar { display: none; }
   .fpill { flex-shrink: 0; min-height: 38px; }
-  .deck-bot { margin-left: 0; width: 100%; }
+  .deck-bot { margin-left: 0; width: 100%; gap: 4px 10px; }
+  /* UI100 #24: a 360px phone keeps "Journal →" on the book line too — the
+     line is plain text there (its ▾ says it opens), not a pill */
+  .deck-bot .ba-sum { background: none; border: 0; padding: 4px 0; min-height: 36px; font-size: 12px; }
 }
 
 /* ── Wave 3R (#1-3): ONE sticky filter toolbar ──────────────────────────────
@@ -1872,8 +1856,7 @@ body { letter-spacing: -0.012em; }
    their last producer, the specs stars path — REFINE200 WP16). */
 .toolbar {
   position: sticky; top: var(--topbar-h, 53px); z-index: 20;
-  background: var(--nav);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: var(--nav);   /* opaque: no backdrop blur (UI100 #2) */
   border-bottom: 1px solid var(--border);
   padding: 8px 0 9px; margin-bottom: 14px;
 }
@@ -1927,9 +1910,12 @@ body { letter-spacing: -0.012em; }
      load-bearing: the later toolbar-grouping rule `.tb-line > .tb-sort`
      (position: relative) has the same (0,2,0) weight and was silently
      un-pinning it — the sort sat ~900px off-screen on every phone. */
+  /* UI100 #29 (2026-10-20): the chips FADE into the pinned sort over ~24px
+     (a wide soft shadow in the bar's colour) instead of being sliced at its
+     edge. A shadow, not a ::before gradient — .tb-sort clips its overflow. */
   #toolbar .tb-line > .tb-sort {
     position: sticky; right: 0; margin-left: 6px; z-index: 2;
-    background: var(--nav); box-shadow: -10px 0 10px -6px var(--nav), 0 0 0 4px var(--nav);
+    background: var(--nav); box-shadow: -20px 0 14px -4px var(--nav), 0 0 0 4px var(--nav);
   }
 }
 /* Keep the merged line dense enough that the sort control never clips on a
@@ -1953,7 +1939,7 @@ body { letter-spacing: -0.012em; }
 .rday { font: 600 11.5px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 .rday.up { color: var(--green); }
 .rday.down { color: var(--red-ink); }
-.rday.est { opacity: 0.9; }   /* the leading ~ already marks it (contrast, 2026-10-13) */
+.rday.est { opacity: 0.9; }   /* an estimate (its title says so; UI100 #33 dropped the "~") */
 .skeleton { height: 76px; }
 @media (max-width: 680px) {
   .row-price { min-width: 68px; padding: 0 2px; }
@@ -2146,8 +2132,7 @@ body { letter-spacing: -0.012em; }
 .row-group {
   position: sticky; top: calc(var(--topbar-h, 53px) + 46px); z-index: 5;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 7px 16px; margin: 0; background: var(--nav);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  padding: 7px 16px; margin: 0; background: var(--nav);   /* opaque: no blur (UI100 #2) */
   border-bottom: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--grade-color, var(--grade-c));
   font: 800 11px/1 var(--sans); letter-spacing: 0.06em; color: var(--grade-color, var(--text-2));
 }
@@ -2170,8 +2155,12 @@ body { letter-spacing: -0.012em; }
    content-visibility:auto lets the browser skip layout+paint for rows outside
    the viewport (big win on 200-400 row NASDAQ lists); the intrinsic-size
    placeholder keeps the scrollbar honest. On-screen + expanded rows render
-   fully as normal. */
+   fully as normal. UI100 #38 (2026-10-20): the placeholder is the row's real
+   height at each width (76px PC, 84px phone — #39), and `auto` lets a row
+   that has rendered remember its own; focus and scrollIntoView render a
+   skipped row before they reach it. */
 .row-wrap { content-visibility: auto; contain-intrinsic-size: auto 76px; }
+@media (max-width: 680px) { .row-wrap { contain-intrinsic-size: auto 84px; } }
 .row-wrap.open { content-visibility: visible; }   /* never virtualize an open panel */
 
 /* ── Wave 6 #68: windowed-list "show all" notice ────────────────────────── */
@@ -2291,11 +2280,7 @@ body { letter-spacing: -0.012em; }
   background: var(--blue); border: 2px solid var(--bg); transform: translateX(-50%);
   box-shadow: 0 0 8px var(--blue); z-index: 2;
 }
-.vk-axis-meta { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
-.vk-rrmeter { display: inline-flex; width: 130px; height: 7px; border-radius: 4px; overflow: hidden; background: var(--fill); }
-.vk-rrmeter .rm-risk { background: var(--red); opacity: .75; }
-.vk-rrmeter .rm-rw { background: var(--green); opacity: .8; }
-.vk-axis-note { font: 600 11px/1.2 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+/* (UI100 #46, 2026-10-20: the R:R meter + note under the axis went.) */
 
 /* ── UX top-10 #5: toolbar density on wide screens — one line at ≥1500px ── */
 @media (min-width: 1200px) {
@@ -2304,6 +2289,15 @@ body { letter-spacing: -0.012em; }
   .tb-line { gap: 5px; }
   #toolbar #vk-filters { gap: 5px; }
   .tb-sort-label { min-width: 54px; }
+}
+/* UI100 (2026-10-20): the page is one 1320px column now (#10), so the toolbar
+   gets 1280px, not ~1460 — tighter chips and group gaps keep it ONE line on a
+   PC (it wrapped to a 90px sticky bar). */
+@media (min-width: 1320px) {
+  #toolbar .vkf-chip { padding: 6px 7px; gap: 5px; }
+  #toolbar #vk-filters { gap: 4px; }
+  #toolbar .vkf-sep { margin: 0 2px; }
+  .tb-line > .tb-chips, .tb-line > .tb-sort { margin-left: 6px; padding-left: 8px; }
 }
 
 /* ── UX top-10 #10: cross-document view transitions (progressive) ────────── */
@@ -2324,6 +2318,8 @@ body { letter-spacing: -0.012em; }
 .tfd.on   { background: var(--green); border-color: var(--green); box-shadow: 0 0 4px var(--green); }
 .tfd.near { background: transparent; border-color: var(--orange); }
 .tfd.off  { opacity: .55; }
+/* UI100 #36: no dots on a phone row — the expanded panel spells them out */
+@media (max-width: 680px) { .row-line1 .tfdots { display: none; } }
 
 /* ── UX-20 #2: views menu ────────────────────────────────────────────────── */
 .tb-views { min-width: 34px; }
@@ -2344,10 +2340,10 @@ body { letter-spacing: -0.012em; }
 .vm-save:hover { background: var(--blue-soft); }
 
 /* ── UX-20 #12: per-setup sizing line in the row detail ──────────────────── */
+/* UI100 #48 (2026-10-20): one compact line, no dashed box. */
 .vk-size {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-  margin: 2px 0 10px; padding: 8px 12px; border-radius: 10px;
-  border: 1px dashed var(--border-2); background: rgba(120,120,128,.07);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+  margin: 0; padding: 0;
   font: 600 12px/1.5 var(--sans); color: var(--muted);
 }
 .vk-size-out { color: var(--text); }
@@ -2579,6 +2575,29 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
 @media (max-width: 680px) {
   .nav-pills, .deck-top .nav-pills { display: none; }
 }
+/* UI100 #1 (2026-10-20): the phone header is TWO rows, not three. The actions
+   (status lamp, search, bell, SCAN) ride the brand row's right side and the
+   market switch takes row 2; in source order the switch sat between them and
+   pushed the actions onto a third row (155px of sticky header on the deck at
+   390px). The lamp still mounts in .deck-top-right — only the order moves. */
+@media (max-width: 680px) {
+  .deck-top { gap: 8px 10px; }
+  .deck-top-right { order: 1; gap: 6px; }
+  .deck-top .market-switch { order: 2; }
+}
+/* 360px phones: the brand row is ~16px short — a tighter brand and buttons
+   win it back. (At 320px the actions wrap to row 2; nothing overflows.) */
+@media (max-width: 400px) {
+  .deck-top .brand { gap: 8px; }
+  .deck-top .brand-sub { letter-spacing: 0.14em; }
+  .deck-top-right { gap: 4px; }
+}
+/* UI100 #9 (2026-10-20): on a phone only the header and the toolbar stay
+   pinned; the grade-group bar ("A+ SETUPS · 75") scrolls away with its rows.
+   Three stacked sticky bars took ~245px, 29% of a 844px screen. */
+@media (max-width: 680px), (max-height: 500px) {
+  .row-group { position: static; }
+}
 /* nav-1 (+ alsys-11 / pmi-4 / jdesk-4 / deck-2 / tablet-1): between the phone
    tab bar and a genuinely wide screen the strip only got the row's LEFTOVER
    width — 14px on index at 1024 (0 of 8 pills), 352px at 1440 (JOURNAL and
@@ -2591,6 +2610,11 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
    but again only from 1571 (the pills grow back above 1440px), momentum
    1630, index (clocks) 1890. Each cap leaves ~20-70px of slack for
    the data-driven bits (journal's P&L, momentum's stamp, the status lamp).
+   UI100 (2026-10-20): BACK, the ⚡, two clocks and the countdown went, so
+   every header is ~100px narrower; index now needs 1642 (two stacked clocks)
+   and wraps only to 1699 — its 1700-1919 band is gone. The other bands were
+   left as they were: wrapping a header that would just fit costs one row,
+   and the momentum/journal headers are still moving (UI100 #14/#58).
    CSS only, so nothing moves when nav.js injects the pills. If a header ever
    outgrows its cap the strip still scrolls; nav.js fades the cut edge and
    scrolls the current page's pill into view. */
@@ -2614,34 +2638,17 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
   .deck-top:is(:has(#mo-market), :has(.microclock)) .nav-pills { order: 10; flex: 1 0 100%; padding-left: 0; }
   .deck-top:is(:has(#mo-market), :has(.microclock)) .nav-pills::before { display: none; }
 }
-@media (min-width: 1700px) and (max-width: 1919px) {
-  .deck-top:has(.microclock) { flex-wrap: wrap; row-gap: 6px; }
-  .deck-top:has(.microclock) .nav-pills { order: 10; flex: 1 0 100%; padding-left: 0; }
-  .deck-top:has(.microclock) .nav-pills::before { display: none; }
-}
 @media (min-width: 681px) and (max-width: 800px) {
-  /* narrow tablets: taller for the thumb (taps-3: these were 26px tall) */
+  /* narrow tablets: taller for the thumb (taps-3: these were 26px tall).
+     (UI100 #6/#8: without BACK and the ⚡ the eight pills fit 681px at this
+     padding, so the tighter 681-760 step went.) */
   .deck-top .nav-pills .howto-link { padding: 9px 9px; }
 }
-@media (min-width: 681px) and (max-width: 760px) {
-  /* ...and tighter sideways, so all nine pills (BACK included) fit one row
-     at 681px: 704px of pills in a 641px strip at the 9px padding */
-  .deck-top .nav-pills { gap: 4px; }
-  .deck-top .nav-pills .howto-link { padding: 9px 6px; }
-}
-/* nav-2 / deck-3 / tablet-2: at 881-1100px the header's right group (four
-   clocks + search + bell + SCAN + timer) was wider than the row, so the whole
-   page scrolled sideways ~60-200px. Keep Melbourne + New York (owner-ruled
-   clocks), drop China/London to the tooltip's job at these widths only. */
-@media (min-width: 960px) and (max-width: 1100px) {
-  .microclock { grid-template-columns: auto; }
-  .microclock .mc-minor { display: none; }
-}
-/* Below 960px even the two-clock group (~475px with the actions) cannot share
-   the row with the brand and the market switch, and wrapping it made a
-   three-row, 137px sticky header — so the clocks stay out until 960px, as
-   they already did up to 880px (tablet-2, measured). */
-@media (min-width: 881px) and (max-width: 959px) {
+/* tablet-2 (measured): below 960px even the two-clock group cannot share the
+   row with the brand, the market switch and the actions, and wrapping it made
+   a three-row sticky header — so the clocks stay out under 960px. (UI100 #3,
+   2026-10-20: with China/London gone there is no 960-1100 middle step.) */
+@media (max-width: 959px) {
   .microclock { display: none; }
 }
 /* design-6 / chart-15: a strip that overflows says so — a fade on the cut
@@ -2663,21 +2670,16 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
   .nav-pills .howto-link { padding: 9px 10px; } /* legacy-header pages */
 }
 #notify-btn { line-height: 1; min-width: 33px; min-height: 33px; }  /* bell was 35x18 */
-.ba-more { padding: 8px 4px; margin: -8px -4px -8px auto; }  /* keep margin-left:auto (right-aligned) */                   /* 'Journal →' was 51x11 */
+.ba-more { padding: 8px 4px; margin: -8px -4px; }   /* 'Journal →' was 51x11; inline beside the book line (UI100 #24) */
 @media (max-width: 680px) {
   .site-tab-lbl { font: 700 10.5px/1 var(--sans); letter-spacing: 0.02em; }  /* was 9px */
   .seg-btn { min-height: 32px; }
 }
 
 /* ---- the deck, phones ---------------------------------------------------- */
-/* deckphone-2 / deck-5: the first setup row started BELOW the fold on a
-   360x740 phone. The SMA legend explains the row sparks, which are hidden
-   ≤480px; the stall line is one line with an ellipsis (its title has it all). */
-@media (max-width: 480px) {
-  #ema-legend { display: none; }
-}
+/* (deckphone-2 / deck-5's phone rules for the SMA legend and the stall line
+   went with both, UI100 #22/#25.) */
 @media (max-width: 680px) {
-  #bot-activity .ba-stall { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* the status line kept its dot alone on a line of its own */
   #scan-sub { flex: 1 1 calc(100% - 16px); min-width: 0; }
   /* deckphone-10: the pill strip scrolls but gave no hint it does */
@@ -2687,12 +2689,11 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
     mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
   }
 }
-/* states-9: on phones the dashboard's status column grows from 74px (before
-   data) to 101-149px (loaded), shoving everything under it down. Reserve
-   just UNDER the shortest loaded height measured at each width (101px at
-   600, 109 at 430, 127 at 360-390), so a loaded deck is never made taller. */
-@media (max-width: 600px) { .deck:has(> .deck-bot) .deck-status { min-height: 100px; } }
-@media (max-width: 400px) { .deck:has(> .deck-bot) .deck-status { min-height: 124px; } }
+/* states-9: on phones the dashboard's status column grew from its pre-data
+   height once loaded, shoving everything under it down. Reserve just UNDER
+   the loaded height, so a loaded deck is never made taller (71px at 320-600
+   since UI100 #15-#17 shortened the column, 2026-10-20). */
+@media (max-width: 600px) { .deck:has(> .deck-bot) .deck-status { min-height: 70px; } }
 /* an empty freshness pill (a failed load) drew as a bare green capsule */
 .deck-sub .scan-fresh:empty { display: none; }
 /* specrec-10 / states-5: the lens pages' status text, same orphan-dot fix */
@@ -2706,59 +2707,82 @@ body:has(.pm-retry) .deck-dot { background: var(--orange); box-shadow: 0 0 7px v
 }
 
 /* ---- row cards, phones --------------------------------------------------- */
-/* deckphone-4 / deck-1 / taps-2: the chip line sat in the ~80-110px main
-   column, so EVERY row chopped a chip mid-word and the "+N" chip was never
-   on screen. The chips now get their own full-width line under the
-   ticker/price/score cluster (row height unchanged, ~100px). The specs rows
-   share these classes but not this grid, so they are left alone. */
+/* deckphone-4 / deck-1 / taps-2: the chips get their own full-width line
+   under the ticker/price/score cluster. The specs rows share these classes
+   but not this grid, so they are left alone.
+   UI100 (2026-10-20): #31 the grade block is a 4px grade-coloured EDGE (the
+   list shows one grade at a time; the row's aria-label names it and the °
+   hysteresis mark moves beside the score) — ~40px more for the name. #32 at
+   most two chips and never one cut mid-word: rowChips picks how many fit
+   whole, and the strip is ONE wrapped line tall, so a chip that still would
+   not fit drops out whole instead of ending in "…". #39 the row trims from
+   ~105px to ~84px. */
 @media (max-width: 680px) {
+  .row-wrap:not(.sp-row) .row,
+  body.density-compact .row-wrap:not(.sp-row) .row {
+    grid-template-columns: 4px minmax(0, 1fr) auto auto; min-height: 0;
+  }
   .row-wrap:not(.sp-row) .row-main { display: contents; }
-  .row-wrap:not(.sp-row) .row-grade { grid-row: 1 / 3; }
-  .row-wrap:not(.sp-row) .row-line1 { grid-column: 2; grid-row: 1; padding: 9px 0 4px 12px; min-width: 0; }
+  .row-wrap:not(.sp-row) .row-grade {
+    grid-row: 1 / 3; font-size: 0; border-right: 0;
+    background: var(--grade-color, var(--grade-c));
+  }
+  .row-wrap:not(.sp-row) .row-grade .rg-held { display: none; }
+  .row-wrap:not(.sp-row) .rk-held { display: inline; }
+  .row-wrap:not(.sp-row) .row-line1 { grid-column: 2; grid-row: 1; padding: 8px 0 4px 12px; min-width: 0; }
+  /* line 2 = the mcap badge + the name (the badge used to wrap onto a line
+     of its own whenever HELD / SECTOR sat beside the ticker) */
+  .row-wrap:not(.sp-row) .rname {
+    display: flex; align-items: center; gap: 6px; flex-basis: 100%; order: 5; min-width: 0;
+  }
+  .row-wrap:not(.sp-row) .rname .cname { flex: 1 1 0; }
   .row-wrap:not(.sp-row) .row-price,
   .row-wrap:not(.sp-row) .row-right { grid-row: 1; }
-  .row-wrap:not(.sp-row) .row-chips { grid-column: 2 / -1; grid-row: 2; padding: 0 10px 9px 12px; min-width: 0; }
-  /* Earlier chips keep their full width; the LAST visible chip (the one before
-     "+N", or the last child) takes the squeeze and ends in "…". Equal shrink
-     cut every chip at once ("Ret…" "Strong struct…"), which reads worse than
-     one shortened chip. The 1000:1 weights make the last chip absorb the
-     overflow first; the others only shrink once it sits at its 3.2em floor
-     (weights summing below 1 would leave the overflow undistributed). */
-  .row-wrap:not(.sp-row) .row-chips > :not(.chip-more) {
-    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  .row-wrap:not(.sp-row) .row-right { padding-top: 4px; padding-bottom: 2px; }
+  .row-wrap:not(.sp-row) .row-chips {
+    grid-column: 2 / -1; grid-row: 2; margin: 0 10px 8px 12px; padding: 0; min-width: 0;
+    flex-wrap: wrap; row-gap: 12px; max-height: 22px; overflow: hidden;
   }
-  .row-wrap:not(.sp-row) .row-chips > :not(.chip-more):last-child,
-  .row-wrap:not(.sp-row) .row-chips > :has(+ .chip-more) { flex-shrink: 1000; min-width: 3.2em; }
+  .row-wrap:not(.sp-row) .row-chips > * { flex: 0 0 auto; }
+  .row-chips .rc-pc, .row-chips .cm-pc, .row-chips .rb-long { display: none; }
   /* deckphone-6 / deck-9: the row's secondary type ran 9-10.5px */
   .rbadge, .badge, .chip, .rk-rr, .rday { font-size: 11px; }
   .badge.dir { font-size: 11px; }
   .row-held, .row-secfull, .seg-count, .rk-max { font-size: 11px; }
   /* ... and the expanded panel's 8.5-10.5px labels */
-  .vk-grade-lbl, .vk-tf-chip, .vk-rr-sub, .vk-fresh, .vk-cell-key,
+  .vk-tf-chip, .vk-rr-sub, .vk-fresh, .vk-cell-key,
   .vk-cell-sub, .vk-section-lbl { font-size: 11px; }
   .vk-axis-tick { font-size: 10px; }
   /* deckphone-12: the ticker link was an 18px-tall target */
   .row-line1 .tkr { position: relative; }
   .row-line1 .tkr::after { content: ""; position: absolute; inset: -10px 0 0 -6px; }  /* up + left only: below/right sit HELD, the arrow, the mcap badge */
 }
-/* deckphone-8: the 88px grade rail squeezed the plan text on narrow phones;
-   the grade block becomes a one-line strip across the top of the hero. */
-@media (max-width: 560px) {
-  .vk-hero { grid-template-columns: 1fr; }
-  .vk-grade-block {
-    flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 14px;
-    border-right: 0; border-bottom: 1px solid color-mix(in srgb, var(--gc) 35%, transparent);
+/* a PC row has room for three chips: the phone's "+N" stays hidden there */
+@media (min-width: 681px) { .row-chips .cm-phone { display: none; } }
+/* 320px phones: a few px less padding keeps the "+N" on the line */
+@media (max-width: 340px) { .row-wrap:not(.sp-row) .row-chips > * { padding-left: 6px; padding-right: 6px; } }
+/* UI100 (2026-10-20), the expanded panel on a phone: #50 flattened — the
+   hero is no longer a card inside the row's card (row → panel → grade box
+   was three deep); #49 View chart / Copy plan are a full-width pair. */
+@media (max-width: 680px) {
+  .row-detail.vk-detail { padding: 2px 12px 14px; }
+  .vk-hero {
+    margin: 6px 0 12px; padding: 0; gap: 8px;
+    background: none; box-shadow: none; border: 0; border-radius: 0;
   }
-  .vk-grade-val { font-size: 30px; }
+  .vk-actions { flex: 1 0 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vk-actions .vk-chart-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; font-size: 13px;
+  }
+  .vk-rr { margin-left: 0; }
 }
 /* deckphone-5 / deck-7: the sticky grade-group header slid half under the
    toolbar (fully, on tablets where the toolbar wraps). app.js now publishes
    the toolbar's real height as --toolbar-h. */
 .row-group { top: calc(var(--topbar-h, 53px) + var(--toolbar-h, 46px)); }
-/* deck-12 (the cheap half): at 681-880px a company name was capped at 130px
-   with ~120px of empty row beside it. (The wide-desktop gap between the chips
-   and the price is a layout redesign, not a fix — left alone.) */
-@media (min-width: 681px) and (max-width: 880px) { .cname { max-width: 220px; } }
+/* (deck-12's 220px cap on the company name at 681-880px went with UI100 #42:
+   the name takes whatever the row's line leaves it.) */
 /* taps-7: a long sector badge was cut mid-word with no ellipsis */
 .row-line1 .badge.sector { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
@@ -2844,65 +2868,6 @@ body.has-site-tabs #gbs-update-nudge { bottom: calc(76px + env(safe-area-inset-b
 }
 @media (max-width: 680px) { .site-tab { position: relative; } }
 
-
-/* ── MOMENTUM — the one purple destination (2026-09-22) ───────────────────
- *
- * WHY THIS IS IN styles.css AND NOT momentum.css. The pill row renders on all
- * 13 pages that load nav.js, but a per-page stylesheet is fetched only by its
- * own page. Put this in momentum.css and the pill is purple on momentum.html
- * and default grey on the other twelve — i.e. the wayfinding colour is missing
- * from every page you would navigate FROM, which is the only place it works.
- * Every other piece of cross-page nav chrome already lives here (.nav-back,
- * .site-tab[data-tabkey=…]).
- *
- * WHY EVERY SELECTOR CARRIES [href="momentum.html"]. Two reasons. It keeps
- * nav.js's RENDER path byte-untouched — only its data arrays changed — so the
- * other twelve pills cannot be affected by construction and the whole block
- * reverts in one delete. And the existing cascade actively fights back, so
- * each state needs its own specificity:
- *
- *   .nav-pills .howto-link               (0,2,0)  the base pill
- *   .nav-pills .howto-link:hover         (0,3,0)  sets color: var(--green)
- *   .nav-pills .howto-link.is-here       (0,3,0)  sets background: var(--blue)
- * (each is defined more than once above; line numbers are left out because
- * they drift with every edit to this file)
- *
- * A rest-only rule at (0,3,0) would flicker GREEN on mouse-over, and an
- * is-here rule that does not exceed (0,3,0) would stay BLUE. Hence the
- * attribute selector on the rest rule (0,3,0) and attribute-plus-pseudo /
- * attribute-plus-class on the other two (0,4,0).
- *
- * --purple is NOT redefined. It is byte-identical to --ema-144 and already
- * sits inside test/contrast.test.js's 3.0:1 gate; changing its value would
- * repaint PhaseMap's fund tag, the journal's new-position lens chip, the
- * Momentum page's accent and the SPECS label in the insights diagram. The tint is a literal rgba at the house
- * strength (0.16, matching --blue-soft / --green-soft / --red-soft).
- *
- * KNOWN AND ACCEPTED: #fff on --purple measures 3.52:1, essentially the
- * shipped blue pill's 3.65:1 and below AA-normal at 12.5px/700. Parity with
- * the existing pill was chosen over a one-off dark foreground that would make
- * MOMENTUM the only pill in the row that reads differently. Nothing in CI
- * gates a foreground-on-accent pair either way, so this is a decision, not a
- * constraint.
- */
-.nav-pills .howto-link[href="momentum.html"] {
-  color: #e9c4ff;
-  border-color: rgba(191, 90, 242, 0.45);
-  background: rgba(191, 90, 242, 0.16);
-}
-.nav-pills .howto-link[href="momentum.html"]:hover {
-  color: var(--purple-ink);
-  border-color: rgba(191, 90, 242, 0.65);
-  background: rgba(191, 90, 242, 0.24);
-}
-/* ILLUMINATE: the destination you are standing on. */
-.nav-pills .howto-link[href="momentum.html"].is-here {
-  background: var(--purple);
-  border-color: var(--purple);
-  color: #fff;
-}
-/* Mobile reaches MOMENTUM through the MORE sheet rather than a bottom tab —
- * the tab grid is repeat(6, 1fr) and is full — so the sheet row carries the
- * same illuminate. (0,3,0) beats the key-agnostic .more-sheet-row.is-here in
- * the MORE-sheet block, which is (0,2,0) and blue. */
-.more-sheet-row[href="momentum.html"].is-here { color: var(--purple-ink); }
+/* UI100 #7 (2026-10-20): MOMENTUM is a pill like every other — the permanent
+   purple (2026-09-22) made one destination shout on every page. Only the page
+   you are on is lit, in the house blue, in the pill row and the MORE sheet. */

@@ -129,7 +129,8 @@ console.log("\n── wiring ──");
 test("the row template renders the chip and the gentle dim class", () => {
   assert.ok(SRC.includes("${heldChip(r)}${sectorCapChip(r)}"), "chip must ride beside HELD");
   assert.ok(/const capCls = sectorCapped\(r\) \? " row-capdim" : ""/.test(SRC));
-  assert.ok(SRC.includes('class="row-wrap${dimCls}${capCls}"'));
+  // (UI100 #37 appends the first-paint `row-in` class after these two.)
+  assert.ok(SRC.includes('class="row-wrap${dimCls}${capCls}'));
 });
 
 test("loadBotActivity builds the load from the book with the rules' majors and cap", () => {
