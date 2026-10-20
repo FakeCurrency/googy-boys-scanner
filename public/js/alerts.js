@@ -4,7 +4,8 @@
    keeps only the newest HISTORY_CAP entries, so the sub-line says how far back
    it reaches (REFINE200 #192) rather than implying it is every alignment.
    2026-07-10: market filter + collapsible day groups (the log grew fast —
-   ~27 alignments/day — so only the newest day starts expanded). */
+   ~27 alignments/day — so only the newest day starts expanded; since UI100
+   #94 a collapsed day is not rendered until it is opened). */
 (() => {
   "use strict";
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
@@ -24,6 +25,8 @@
   // carries the date. Compact on purpose ("now", "12m", "5h", "3d" -- no
   // "ago"): at 360px a 5-letter NASDAQ row's second line has no room for
   // "23h ago · 12:59 pm", and the time would drop onto a third line.
+  // UI100 #93 (2026-10-20): the row is one line now, and on a phone only the
+  // clock time shows (.al-rel hides the relative part at <= 560px).
   const relTime = (iso) => {
     const t = Date.parse(iso || ""); if (!isFinite(t)) return "";
     const s = Math.max(0, (Date.now() - t) / 1000);
@@ -33,34 +36,41 @@
     return Math.floor(h / 24) + "d";
   };
 
-  const state = { entries: [], market: "all", q: "", triplesOnly: false, failed: false };
+  // byDay: the filtered rows per Melbourne day from the last render, so a
+  // collapsed day can draw its rows when it is opened. toggled: the days the
+  // reader opened or closed against their default (kept across filter taps).
+  const state = { entries: [], market: "all", q: "", triplesOnly: false, failed: false,
+                  byDay: {}, toggled: {} };
 
-  // "Since you last looked": entries newer than the previous visit get a NEW
-  // dot. The watermark advances once per page load, not per render.
-  const SEEN_KEY = "gbs:alerts-seen";
-  let lastSeen = 0;
-  try { lastSeen = +(localStorage.getItem(SEEN_KEY) || 0); } catch (_) {}
-  const isNew = (e) => { const t = Date.parse(e.date || ""); return isFinite(t) && t > lastSeen; };
-
+  // UI100 #93 (2026-10-20): one line per alignment — ticker · side · lens
+  // count · market · time. 797 of 800 logged rows were PHASEMAP + VIVEK, so
+  // that pair is implied and named only in the tooltip; any other set of
+  // lenses (every 3-lens row, a SPECS pair) is still spelled out. The blue
+  // "new since your last visit" dot (and its localStorage watermark) went.
+  const IMPLIED_LENSES = "PHASEMAP + VIVEK";
   function rowHTML(e) {
     const triple = e.count >= 3;
     const arrow = e.side === "short" ? "▼" : "▲";
     const dir = e.side === "short" ? "&dir=bearish" : "&dir=bullish";
-    return `<a class="al-row${triple ? " al-row-triple" : ""}${isNew(e) ? " al-row-new" : ""}" ` +
-      `href="chart.html?m=${esc(e.market)}&s=${encodeURIComponent(e.ticker)}&src=alerts${dir}">` +
-      `${isNew(e) ? '<span class="al-new-dot" title="New since your last visit"></span>' : ""}` +
-      `<span class="pm-conf${triple ? " pm-conf-3" : ""}">${triple ? "🎯 " : "⨂ "}${e.count}-LENS</span>` +
+    const lenses = (e.lenses || []).join(" + ");
+    return `<a class="al-row${triple ? " al-row-triple" : ""}" ` +
+      `href="chart.html?m=${esc(e.market)}&s=${encodeURIComponent(e.ticker)}&src=alerts${dir}" ` +
+      `title="${esc(`${e.count}-lens alignment${lenses ? ": " + lenses : ""}`)}">` +
       `<span class="pm-ticker">${esc(e.ticker)}</span>` +
       `<span class="pm-dir ${e.side === "short" ? "pm-dir-short" : "pm-dir-long"}">${arrow} ${esc(String(e.side).toUpperCase())}</span>` +
+      `<span class="pm-conf${triple ? " pm-conf-3" : ""}">${triple ? "🎯" : "⨂"} ${esc(e.count)}</span>` +
       `<span class="pm-sector">${esc(String(e.market).toUpperCase())}</span>` +
-      `<span class="al-lenses">${(e.lenses || []).map(esc).join(" + ")}</span>` +
+      (lenses && lenses !== IMPLIED_LENSES ? `<span class="al-lenses">${esc(lenses)}</span>` : "") +
       `<span class="al-time" title="${esc(melbTime(e.date))} · UTC ${esc(String(e.date).slice(11, 16))}">` +
-        `${esc([relTime(e.date), melbClock(e.date)].filter(Boolean).join(" · "))}</span>` +
+        (relTime(e.date) && melbClock(e.date)
+          ? `<span class="al-rel">${esc(relTime(e.date))} · </span>${esc(melbClock(e.date))}`
+          : esc(relTime(e.date) || melbClock(e.date))) + `</span>` +
       `</a>`;
   }
 
-  // " · the log keeps the newest 800, back to 26 Sep": the oldest entry's
-  // Melbourne date, read off the file, so the window is stated, never assumed.
+  // " · newest 800 kept, back to 26 Sep": the oldest entry's Melbourne date,
+  // read off the file, so the window is stated, never assumed. UI100 #95
+  // (2026-10-20): worded short so the whole sub-line fits one phone line.
   const melbShort = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne",
     day: "numeric", month: "short" });
   function windowNote(entries) {
@@ -70,12 +80,41 @@
       if (isFinite(t) && t < oldest) oldest = t;
     }
     if (!isFinite(oldest)) return "";
-    return ` · the log keeps the newest ${entries.length}, back to ${melbShort.format(new Date(oldest))}`;
+    return ` · newest ${entries.length} kept, back to ${melbShort.format(new Date(oldest))}`;
+  }
+
+  // UI100 #94 (2026-10-20): only the newest day is open, and a collapsed day
+  // holds no rows until it is opened (800 rows were ~6,600 DOM nodes). A
+  // ticker search narrow enough to read opens every day it matches.
+  const OPEN_ALL_MAX = 150;
+  function dayGroupHTML(day, dayRows, byDefault) {
+    const open = Object.prototype.hasOwnProperty.call(state.toggled, day) ? state.toggled[day] : byDefault;
+    const triples = dayRows.filter((e) => e.count >= 3).length;
+    return `<details class="al-day-group" data-day="${esc(day)}" data-def="${byDefault ? 1 : 0}"${open ? " open" : ""}>
+        <summary class="al-day-summary">
+          <span class="al-day-date">${esc(day)}</span>
+          <span class="al-day-count">${dayRows.length} alignment${dayRows.length === 1 ? "" : "s"}${triples ? ` · 🎯 ${triples} triple${triples === 1 ? "" : "s"}` : ""}</span>
+          <span class="al-day-chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="al-day">${open ? dayRows.map(rowHTML).join("") : ""}</div>
+      </details>`;
+  }
+  // Draws a day's rows the first time it opens, and remembers a reader's
+  // open/close that differs from the default so a filter tap keeps it.
+  function onDayToggle(ev) {
+    const g = ev.target;
+    if (!g || !g.classList || !g.classList.contains("al-day-group")) return;
+    const day = g.dataset.day;
+    if (g.open === (g.dataset.def === "1")) delete state.toggled[day];
+    else state.toggled[day] = g.open;
+    const box = g.querySelector(".al-day");
+    if (g.open && box && !box.firstElementChild) box.innerHTML = (state.byDay[day] || []).map(rowHTML).join("");
   }
 
   function render() {
     const list = document.getElementById("al-list");
     const sub = document.getElementById("al-sub");
+    sub.title = "";
     if (state.failed) {
       // A failed load is not an empty log: say so, and offer a retry (a filter
       // tap must not repaint it as "No alignments logged yet").
@@ -98,27 +137,22 @@
       list.innerHTML = "";
       return;
     }
-    sub.textContent = `${rows.length} alignment event(s)` +
-      (state.market === "all" ? "" : ` · ${state.market.toUpperCase()}`) + " · newest first" +
-      windowNote(state.entries);
+    sub.textContent = `${rows.length}` +
+      (state.market === "all" ? "" : ` ${state.market.toUpperCase()}`) +
+      ` alignment${rows.length === 1 ? "" : "s"}` + windowNote(state.entries);
+    sub.title = sub.textContent;
     const byDay = {};
     rows.forEach((e) => {
       const day = melbDay(e.date || "");
       (byDay[day] = byDay[day] || []).push(e);
     });
-    list.innerHTML = Object.keys(byDay).sort().reverse().map((day, i) => {
-      const dayRows = byDay[day];
-      const triples = dayRows.filter((e) => e.count >= 3).length;
-      return `<details class="al-day-group"${i === 0 ? " open" : ""}>
-        <summary class="al-day-summary">
-          <span class="al-day-date">${esc(day)}</span>
-          <span class="al-day-count">${dayRows.length} alignment${dayRows.length === 1 ? "" : "s"}${triples ? ` · 🎯 ${triples} triple${triples === 1 ? "" : "s"}` : ""}</span>
-          <span class="al-day-chev" aria-hidden="true">▾</span>
-        </summary>
-        <div class="al-day">${dayRows.map(rowHTML).join("")}</div>
-      </details>`;
-    }).join("");
+    state.byDay = byDay;
+    const openAll = !!q && rows.length <= OPEN_ALL_MAX;
+    list.innerHTML = Object.keys(byDay).sort().reverse()
+      .map((day, i) => dayGroupHTML(day, byDay[day], i === 0 || openAll)).join("");
   }
+  // `toggle` does not bubble: listen in the capture phase.
+  document.getElementById("al-list").addEventListener("toggle", onDayToggle, true);
 
   document.querySelectorAll("#al-market .pm-chip").forEach((chip) =>
     chip.addEventListener("click", () => {
@@ -142,9 +176,6 @@
     .then((j) => {
       state.entries = (j && j.entries) || [];
       render();
-      // Advance the seen-watermark AFTER the first render so the NEW dots show
-      // this visit and clear on the next one.
-      try { localStorage.setItem(SEEN_KEY, String(Date.now())); } catch (_) {}
     })
     .catch(() => {
       state.failed = true;

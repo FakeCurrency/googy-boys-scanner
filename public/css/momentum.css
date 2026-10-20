@@ -1,18 +1,14 @@
 /* VIVEK MOMENTUM — the page's own styles.
  *
- * WHAT IS NOT HERE, DELIBERATELY: the purple NAV PILL. That lives in
- * styles.css, because the pill row renders on all 13 pages via nav.js while a
- * per-page stylesheet is fetched only by its own page — put the pill colour
- * here and MOMENTUM is purple on this page and default grey on every page you
- * would navigate FROM, which is the only place a wayfinding colour does any
- * work.
+ * The MOMENTUM nav pill is styled like every other pill (UI100 #7,
+ * 2026-10-20); nothing here touches the shared nav.
  *
  * PURPLE IS BORROWED, NOT INVENTED. --purple (#bf5af2) already exists in
  * styles.css's iOS system palette, is byte-identical to --ema-144, and is
  * already inside test/contrast.test.js's 3.0:1 gate. It is NOT redefined here:
  * changing its value would silently repaint PhaseMap's fund tag, the
- * journal's new-position lens chip, the MOMENTUM nav pill and the SPECS label
- * in the insights diagram. The soft
+ * journal's time-stop reason tag and the SPECS label in the insights
+ * diagram. The soft
  * tint is written as a literal rgba at the house strength (0.16, the same as
  * --blue-soft / --green-soft / --red-soft / --orange-soft) rather than added
  * to :root, which also keeps it invisible to that gate — whose regex requires
@@ -29,31 +25,38 @@
   --mo-text: #e9c4ff;          /* purple, lightened for body-size text on --panel */
 }
 
-/* ---- the deck stamp ---------------------------------------------------- */
+/* ---- the scan stamp ---------------------------------------------------- */
+/* UI100 #14 (2026-10-20): in the title card, beside the title on a PC and on
+   a short line of its own under it on a phone (it used to take a header row
+   there). */
 
+.mo-title-row {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  column-gap: 12px; row-gap: 3px;
+}
 .mo-stamp {
   font: 600 11px/1 var(--mono);
   color: var(--muted-2);
   letter-spacing: 0.02em;
   white-space: nowrap;
   /* Hold the stamp's loaded width ("scanned Tue, 13 Oct, 5:20 pm Melb" is
-     ~34 characters) from first paint. It arrives with the data, and on a
-     phone that late text re-wrapped the whole top bar and pushed the page
-     down (CLS 0.24 at 390px). */
-  display: inline-block;
+     ~34 characters) and its line from first paint: it arrives with the data,
+     and late text that wraps pushes the page down (CLS 0.24 at 390px when it
+     lived in the header). */
   min-width: 35ch;
+  min-height: 11px;
 }
 
 /* ---- partial coverage -------------------------------------------------- */
 /* One sentence under the deck line, only when the file screened fewer names
-   than the market lists. Amber like the deck's own .warn dot beside it, and
-   the same size as .deck-sub so it reads as part of the header, not a banner. */
+   than the market lists. UI100 #96 (2026-10-20): muted and a size down — the
+   deck's amber dot already flags a partial file; this is the detail. */
 
 .mo-cover {
   margin: 4px 0 0;
   max-width: 62ch;
-  font: 500 12px/1.45 var(--sans);
-  color: var(--orange);
+  font: 500 11.5px/1.45 var(--sans);
+  color: var(--muted);
 }
 
 /* ---- a row ------------------------------------------------------------- */
@@ -203,8 +206,20 @@
 }
 
 /* The explainer under the list takes styles.css's .pm-disclaimer look; here
-   it also gets a reading measure (it ran 1,400px wide at 1440). */
+   it also gets a reading measure (it ran 1,400px wide at 1440). UI100 #96
+   (2026-10-20): it sits folded under "How to read this". */
 .pm-disclaimer { max-width: 80ch; }
+.mo-howto { margin-top: 22px; }
+.mo-howto > summary {
+  display: inline-flex; align-items: center; min-height: 32px; cursor: pointer;
+  list-style: none; user-select: none;
+  font: 700 12.5px/1 var(--sans); color: var(--muted);
+}
+.mo-howto > summary::-webkit-details-marker { display: none; }
+.mo-howto > summary::before { content: "▸"; margin-right: 6px; color: var(--muted-2); }
+.mo-howto[open] > summary::before { content: "▾"; }
+.mo-howto > summary:hover { color: var(--text-2); }
+.mo-howto .pm-disclaimer { margin-top: 6px; }
 
 /* Phones: five filter pills wrap onto a second line instead of scrolling,
    which hid BEAR past the right edge with nothing to say it was there

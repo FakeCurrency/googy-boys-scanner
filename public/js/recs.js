@@ -74,8 +74,10 @@
     return null;   // no prior day yet
   }
   // "Breadth shifting" chip. >3pp move = a real shift; else steady.
+  // UI100 #89 (2026-10-20): no prior day = no chip (the "first read" chip
+  // said nothing the empty history strip does not).
   function deltaChip(delta) {
-    if (!delta) return `<span class="rec-delta flat" title="No prior day recorded yet — the trend fills in as you check back">first read</span>`;
+    if (!delta) return "";
     const { pp } = delta;
     if (pp >= 3) return `<span class="rec-delta up" title="Long breadth up ${pp}pp vs ${esc(delta.from)}">▲ shifting long +${pp}pp</span>`;
     if (pp <= -3) return `<span class="rec-delta down" title="Long breadth down ${Math.abs(pp)}pp vs ${esc(delta.from)}">▼ shifting short ${pp}pp</span>`;
@@ -158,10 +160,9 @@
         (botR < -0.15 ? " — and open longs are paying for it." :
          botR > 0.15 ? ", though the bot's book here is still green — mixed tape." : "."),
     };
-    return {
-      cls: "mixed", label: "◆ Two-sided",
-      line: `Setups split ${longs} long / ${shorts} short — pick names, not direction.`,
-    };
+    // UI100 #89 (2026-10-20): no sentence for a two-sided tape — it repeated
+    // the long/short counts already printed on the breadth bar above it.
+    return { cls: "mixed", label: "◆ Two-sided", line: "" };
   }
 
   const HOUR = 36e5;
@@ -206,13 +207,14 @@
         <i style="width:${pl}%"></i>
         <span class="rec-breadth-lbl">▲ ${longs} long · ${shorts} short ▼</span>
       </div>
-      ${n ? `<div class="rec-delta-row">${deltaChip(delta)}</div>` : ""}
-      <p class="rec-line">${esc(v.line)}</p>
+      ${delta ? `<div class="rec-delta-row">${deltaChip(delta)}</div>` : ""}
+      ${v.line ? `<p class="rec-line">${esc(v.line)}</p>` : ""}
       ${historyStrip(histArr)}
       <div class="rec-nums" data-nums="${esc(m.key)}">
         <span title="A+ setups in the latest scan">A+ <b>${aplus}</b></span>
-        <span title="Bot's open positions in this market">Bot open <b>${botPos.length}</b></span>
+        <span title="Bot's open positions in this market">Bot <b>${botPos.length}</b></span>
         <span title="Sum of unrealised R on the bot's open positions here">Book <b class="${rcls(botR)}">${rfmt(botR)}</b></span>
+        <span class="rec-nums-x" data-enrich-nums="${esc(m.key)}"></span>
       </div>
       <div class="rec-enrich" data-enrich="${esc(m.key)}"></div>
       <div class="rec-card-ft">
@@ -260,8 +262,14 @@
       .sort((a, b) => b.n - a.n)
       .slice(0, 3);
   }
-  function enrichBlock(results, multi) {
+  // UI100 #91 (2026-10-20): at-level and multi-lens join the card's count row
+  // (one row of chips, not two) once the full scan lands.
+  function enrichNums(results, multi) {
     const atLevel = results.filter((r) => r.at_level).length;
+    return `<span title="At level: setups sitting ON a 200-SMA right now — the moment before the reaction">◎ <b>${atLevel}</b></span>` +
+      `<span title="Multi-lens: names with 2+ lenses aligned right now">⨂ <b>${multi}</b></span>`;
+  }
+  function enrichBlock(results) {
     const secs = sectorBreadth(results);
     const secRows = secs.map((s) => {
       const lean = s.longs > s.shorts ? "up" : s.shorts > s.longs ? "down" : "flat";
@@ -271,11 +279,7 @@
         <span class="rec-sec-lean ${lean}">${arrow} ${s.longs}L·${s.shorts}S</span>
       </div>`;
     }).join("");
-    return `<div class="rec-enrich-nums">
-        <span title="Setups sitting ON a 200-SMA right now — the moment before the reaction">◎ At level <b>${atLevel}</b></span>
-        <span title="Names with 2+ lenses aligned right now">⨂ Multi-lens <b>${multi}</b></span>
-      </div>
-      ${secs.length ? `<div class="rec-sec-list"><div class="rec-sec-hd">Sectors in play</div>${secRows}</div>` : ""}`;
+    return secs.length ? `<div class="rec-sec-list"><div class="rec-sec-hd">Sectors in play</div>${secRows}</div>` : "";
   }
   // Same confluence engine the dashboard's ⨂ pill uses (PM.loadConfluence),
   // so "Multi-lens" is ONE number across the site. Falls back to the vivek
@@ -298,9 +302,11 @@
       if (!results) return;
       const multi = await multiLensCount(m.key, results);
       collected[m.key] = { results, multi };
+      const nums = document.querySelector(`.rec-nums-x[data-enrich-nums="${m.key}"]`);
       const slot = document.querySelector(`.rec-enrich[data-enrich="${m.key}"]`);
-      if (!slot) return;                       // card re-rendered underneath us
-      slot.innerHTML = enrichBlock(results, multi);
+      if (!slot || !nums) return;              // card re-rendered underneath us
+      nums.innerHTML = enrichNums(results, multi);
+      slot.innerHTML = enrichBlock(results);
     }));
     renderMorningRead(collected);              // UX top-10 #9
   }
@@ -458,6 +464,9 @@
     // Melbourne today means the note pipeline stalled — flag it, don't hide it.
     const staleH = note.updated_at ? hoursSince(note.updated_at) : null;
     const stale = staleH != null && staleH > 48;
+    // UI100 #90 (2026-10-20): the note's `basis` footnote ("Generated in CI …
+    // commentary only, never fed to the bot") is no longer shown: personal
+    // use, no disclaimers (owner, 2026-09-28).
     return `<article class="rec-card rec-note${stale ? " rec-stale-card" : ""}">
       <div class="rec-card-hd">
         <h3>${note.author === "Claude" ? "🤖 Claude's note" : "🤖 Daily note · auto"}</h3>
@@ -465,14 +474,23 @@
         <span class="rec-age">${esc(note.date || "")}${note.updated_at ? ` · ${agoText(note.updated_at)}` : ""}</span>
       </div>
       <p class="rec-note-body">${esc(note.note)}</p>
-      <div class="rec-age">${esc(note.basis || "")}</div>
     </article>`;
   }
 
-  async function load() {
+  // UI100 #92 (2026-10-20): the book comes through nav.js's shared read
+  // (window.VivekBook), so the page downloads it once, not once here and
+  // again for the status lamp. The 5-minute refresh asks for a fresh copy;
+  // a failed read is an empty book, as before.
+  function readBook(fresh) {
+    const VB = window.VivekBook;
+    if (!VB) return grab("data/vivek_bot_book.json");
+    return VB.get({ fresh }).catch(() => null);
+  }
+
+  async function load(fresh) {
     const [pa, pn, pc, book, note] = await Promise.all([
       grab("data/asx_prices.json"), grab("data/nasdaq_prices.json"), grab("data/crypto_prices.json"),
-      grab("data/vivek_bot_book.json"), grab("data/reco_note.json"),
+      readBook(fresh), grab("data/reco_note.json"),
     ]);
     const prices = { asx: pa, nasdaq: pn, crypto: pc };
     const open = (book && book.open) || [];
@@ -516,7 +534,7 @@
     enrichCards(prices).catch(() => {});
   }
 
-  load();
+  load(false);
   // Re-derive on the site's usual cadence while the tab stays open.
-  setInterval(() => { if (!document.hidden) load(); }, 5 * 60 * 1000);
+  setInterval(() => { if (!document.hidden) load(true); }, 5 * 60 * 1000);
 })();
