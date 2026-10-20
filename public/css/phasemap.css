@@ -77,7 +77,6 @@
 .pm-tier-aplus { color: #04110a; background: var(--grade-aplus); }
 .pm-tier-a     { color: #041020; background: var(--grade-a); }
 .pm-tier-watch { color: #140e02; background: var(--grade-b); }
-.pm-regime { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
 .pm-tag {
   font-family: var(--mono); font-size: 9.5px; color: var(--text-2);
   border: 1px solid var(--border-2); padding: 1px 6px; border-radius: 3px; letter-spacing: 0.05em;
@@ -121,7 +120,9 @@
 .pm-band-entry    { background: var(--pm-entry-soft);   border-left-color: var(--pm-entry);   color: var(--pm-entry); }
 .pm-band-kill     { background: var(--pm-kill-soft);    border-left-color: var(--pm-kill);    color: var(--pm-kill); }
 .pm-band-trap     { background: var(--pm-trap-soft);    border-left-color: var(--pm-trap);    color: var(--pm-trap); }
-.pm-band-consumed, .pm-band-violated { opacity: 0.45; }
+/* UI100 #77 (2026-10-20): a consumed / violated zone fades as a whole rung
+   (prices too) and further than the old 0.45, so the live bands lead */
+.pm-rung-done { opacity: 0.3; }
 .pm-band-consumed .pm-band-status, .pm-band-violated .pm-band-status { color: var(--text-2); }
 .pm-price-row { display: grid; grid-template-columns: 132px 1fr; gap: 8px; align-items: center; }
 .pm-price-label {
@@ -152,17 +153,22 @@
 }
 .pm-next-label { font-weight: 700; letter-spacing: 0.08em; margin-right: 6px; }
 
-/* --------------------------------------------------------------- narration */
-.pm-narration {
-  font-size: 15.5px; line-height: 1.65; color: var(--text-2);
-  background: var(--fill-2); border-radius: var(--radius-md);
+/* --------------------------------------------------------------- narration
+   UI100 #70 (2026-10-20): the panel is .pm-narr (the clamped text plus its
+   more / READ row); padding on the clamped box itself showed a sliver of
+   the next line under the clamp. */
+.pm-narr {
+  margin-top: 8px; background: var(--fill-2); border-radius: var(--radius-md);
   padding: 10px 12px; border: 1px solid var(--border-soft);
 }
+.pm-narration { margin: 0; font-size: 15.5px; line-height: 1.65; color: var(--text-2); }
+/* UI100 #76 (2026-10-20): the stats line is reference, not headline —
+   smaller and a step quieter (was 12.5px, muted / text-2) */
 .pm-metrics {
-  display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px;
-  font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  display: flex; gap: 2px 12px; flex-wrap: wrap; margin-top: 8px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.5; color: var(--muted-2);
 }
-.pm-metrics b { color: var(--text-2); font-weight: 600; }
+.pm-metrics b { color: var(--muted); font-weight: 600; }
 .pm-metric-warn b { color: var(--orange); }
 
 .pm-more-row { text-align: center; margin: 18px 0; }
@@ -205,10 +211,9 @@
 .al-row:hover { background: var(--panel-2, #1a2130); }
 .al-row-triple { border-left-color: var(--orange); }
 .al-lenses { font-family: var(--mono); font-size: 11px; color: var(--text-2); letter-spacing: 0.04em; }
-.al-time { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
-/* new since last visit */
-.al-new-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue);
-  box-shadow: 0 0 6px var(--blue); flex: 0 0 auto; }
+.al-time { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+/* UI100 #95 (2026-10-20): the count + window sub-line stays on one line */
+.al-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* ticker filter box on the ALERTS page */
 .al-search { font: 600 12px/1 var(--mono); color: var(--text);
   background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
@@ -257,7 +262,7 @@
 .pm-chip.is-active { background: var(--panel-3); border-color: transparent; box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
 .pm-search { font-family: var(--sans); border-radius: 999px; padding: 7px 13px; width: 130px; }
 .pm-ticker { font-family: var(--sans); font-weight: 800; font-size: 17px; letter-spacing: -0.015em; }
-.pm-dir, .pm-state, .pm-tier, .pm-tag, .pm-regime, .sp-spike,
+.pm-dir, .pm-state, .pm-tier, .pm-tag, .sp-spike,
 .pm-conf, .pm-stale-badge {
   border-radius: 999px; font-family: var(--sans); letter-spacing: 0.03em;
 }
@@ -287,21 +292,20 @@
    active-filter chips · density modes · skeletons · glossary drawer ·
    since-last-visit. Colours stay inside the spec Section 8 system above. ═══ */
 
-/* phase stepper */
+/* phase stepper — UI100 #73 (2026-10-20): one quiet line of text, no pill
+   borders (the pill row wrapped to two lines on a phone). Steps still
+   reached read brighter; the current one carries the weight. */
 .pm-stepper {
-  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
-  margin: 9px 0 2px; font-family: var(--sans); font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.05em; color: var(--muted-2);
+  margin: 7px 0 0; font: 700 10.5px/1.5 var(--sans); letter-spacing: 0.03em;
+  color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.pm-step { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
-  border-radius: 999px; border: 1px solid var(--border); }
-.pm-step-dot { font-size: 10px; }
-.pm-step.is-done { color: var(--text-2); border-color: var(--border-2); }
-.pm-step.is-now { color: var(--text); background: var(--panel-3); border-color: transparent;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.10); }
-.pm-step.is-terminal.pm-step-DEAD { color: var(--pm-kill); background: var(--pm-kill-soft); }
-.pm-step.is-terminal.pm-step-STALLED { color: var(--pm-neutral); background: var(--pm-neutral-soft); }
-.pm-step-arrow { color: var(--muted-2); }
+.pm-step { opacity: 0.6; }
+.pm-step-dot { margin-right: 3px; }
+.pm-step.is-done { color: var(--muted); opacity: 1; }
+.pm-step.is-now { color: var(--text); font-weight: 800; opacity: 1; }
+.pm-step.is-terminal.pm-step-DEAD { color: var(--pm-kill); }
+.pm-step.is-terminal.pm-step-STALLED { color: var(--pm-neutral); }
+.pm-step-arrow { margin: 0 4px; opacity: 0.6; }
 
 /* why-flagged panel */
 .pm-why { margin: 4px 0 8px; }
@@ -327,11 +331,12 @@
 .pm-term sup { font-size: 9px; }
 
 /* presets + active-filter chips */
-.pm-presets { display: flex; gap: 6px; flex-wrap: wrap; margin: -6px 0 10px; }
+.pm-presets { display: flex; gap: 6px; flex-wrap: wrap; }
 .pm-preset-x { margin-left: 6px; color: var(--muted-2); }
 .pm-preset-x:hover { color: var(--red-ink); }
 .pm-preset-save { color: var(--teal); border-style: dashed; }
-.pm-active { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0 0 10px; }
+.pm-active { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pm-active[hidden] { display: none; }   /* the class display beat [hidden]: an empty row showed */
 .pm-active-chip, .pm-active-clear {
   font-family: var(--sans); font-size: 11.5px; font-weight: 700; cursor: pointer;
   padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-2);
@@ -339,17 +344,30 @@
 }
 .pm-active-clear { color: var(--red-ink); border-color: rgba(255,69,58,0.4); background: transparent; }
 
-/* density modes — compact: head + stepper only · cozy: clamp the prose */
-.pm-density-compact .pm-ladder, .pm-density-compact .pm-narration,
-.pm-density-compact .pm-metrics, .pm-density-compact .pm-next,
-.pm-density-compact .pm-identity, .pm-density-compact .pm-why { display: none; }
-.pm-density-compact .pm-card { padding: 10px 14px; }
-.pm-density-compact.pm-list { gap: 8px; }
-.pm-density-cozy .pm-narration {
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+/* density modes. UI100 #68 (2026-10-20): COMPACT renders the head line
+   only (phasemap.js builds nothing else), one line that never wraps — the
+   extras box is one chip tall, so a chip that does not fit drops out of
+   sight instead of wrapping the row. COZY drops the zone sources; its stats
+   line is not rendered at all. Both clamp the prose (#70, below). */
+.pm-density-compact .pm-card { padding: 8px 14px; }
+.pm-density-compact.pm-list { gap: 6px; }
+.pm-density-compact .pm-card-head { flex-wrap: nowrap; min-width: 0; }
+.pm-density-compact .pm-ticker { font-size: 15px; min-width: 3.4em; }
+.pm-density-compact .pm-ticker, .pm-density-compact .pm-dir,
+.pm-density-compact .pm-state, .pm-density-compact .pm-tier,
+.pm-density-compact .pm-card-head > .pm-tag { flex: none; white-space: nowrap; }
+.pm-density-compact .pm-dir, .pm-density-compact .pm-state,
+.pm-density-compact .pm-tier { padding: 2px 8px; font-size: 10.5px; }
+/* row-gap > the box height: a wrapped line starts below the clip */
+.pm-density-compact .pm-head-extra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 24px 6px;
+  min-width: 0; height: 22px; overflow: hidden;
 }
+.pm-density-compact .pm-head-extra > * { white-space: nowrap; }
+/* a zero-width first item: without it the FIRST chip can never wrap away
+   and showed as a clipped sliver when even it did not fit */
+.pm-density-compact .pm-head-extra::before { content: ""; width: 0; margin-right: -6px; }
 .pm-density-cozy .pm-band-sources { display: none; }
-.pm-density-cozy .pm-metrics { display: none; }
 
 /* skeleton shimmer while the scan JSON loads */
 .pm-skel-line {
@@ -444,20 +462,27 @@ body.pm-gloss-open { overflow: hidden; }
    Report-only evidence strip on specs.html: names the discovery lens surfaced
    first that later crossed into the published VIVEK scan. Hidden only when
    the registry (data/spec_graduation.json) is absent or unreadable; a market
-   with nothing recorded shows an honest "0 · none yet". */
+   with nothing recorded shows an honest "0 · none yet". UI100 #97
+   (2026-10-20): folded to its one-line summary by default. */
 .spg {
-  margin: 10px 0 2px; padding: 10px 14px;
+  margin: 10px 0; padding: 0 14px;
   background: var(--panel); border: 1px solid var(--border-soft);
   border-radius: 14px;
 }
 .spg-head {
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: baseline; gap: 8px;
   font: 700 12px/1.3 var(--sans); letter-spacing: 0.04em; color: var(--muted);
+  padding: 10px 0; cursor: pointer; list-style: none; user-select: none;
 }
+.spg-head::-webkit-details-marker { display: none; }
+.spg-head::after { content: "▸"; margin-left: auto; color: var(--muted-2); }
+.spg-fold[open] > .spg-head::after { content: "▾"; }
+.spg-fold[open] { padding-bottom: 10px; }
 .spg-count {
   color: var(--green); font: 800 14px/1 var(--sans);
 }
-.spg-note { font: 500 11.5px/1.4 var(--sans); letter-spacing: 0.01em; color: var(--muted-2); }
+.spg-lbl { font-weight: 600; letter-spacing: 0.01em; }
+.spg-note { margin: 0; font: 500 11.5px/1.4 var(--sans); letter-spacing: 0.01em; color: var(--muted-2); }
 .spg-rows { margin-top: 8px; display: grid; gap: 4px; }
 .spg-row {
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
@@ -492,8 +517,10 @@ body.pm-gloss-open { overflow: hidden; }
 .pm-xlinks { display: none; }
 
 @media (max-width: 680px) {
-  /* "?" glossary button sat under the tab bar (z 80) — lift it above it */
-  .pm-gloss-btn { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); right: 14px; }
+  /* UI100 #13 (2026-10-20): the floating "?" sat on top of the cards; on a
+     phone KEY & LEGEND (under the title) and the "Why flagged" terms open
+     the same help */
+  .pm-gloss-btn { display: none; }
   /* multi-lens links: 35x17 targets 8px apart -> 32px tall */
   .pm-wrap .conf-banner { gap: 4px 10px; }
   .pm-wrap .conf-banner a {
@@ -504,8 +531,9 @@ body.pm-gloss-open { overflow: hidden; }
   .pm-chip { min-height: 34px; white-space: nowrap; }
   .pm-filter-group { gap: 6px; flex-wrap: wrap; }
   .pm-tab { min-height: 32px; }
-  /* 9.5-10.5px card text -> 11px */
-  .pm-chart-cue, .pm-tag, .pm-sector, .pm-stepper, .pm-band-status { font-size: 11px; }
+  /* 9.5-10.5px card text -> 11px (the stepper stays 10.5px: UI100 #73 keeps
+     it to one line at 360px) */
+  .pm-chart-cue, .pm-tag, .pm-sector, .pm-band-status { font-size: 11px; }
   .pm-lg-scroll svg { width: 820px; max-width: none; }
   /* say it scrolls: the right edge fades out */
   .pm-lg-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }
@@ -521,9 +549,10 @@ body.pm-gloss-open { overflow: hidden; }
   .pm-xlinks .howto-link { font-size: 12.5px; padding: 6px 0; min-height: 32px; }
 }
 
-/* ALERTS: line the row columns up (tablet / desktop) */
+/* ALERTS: line the row columns up (tablet / desktop). UI100 #93: ticker
+   first, the lens count is "⨂ 2" now (was "⨂ 2-LENS"). */
 @media (min-width: 561px) {
-  .al-row .pm-conf { min-width: 86px; text-align: center; }
+  .al-row .pm-conf { min-width: 46px; text-align: center; }
   .al-row .pm-ticker { min-width: 64px; }
   .al-row .pm-dir { min-width: 76px; text-align: center; }
   .al-row .pm-sector { min-width: 66px; text-align: center; }
@@ -532,6 +561,12 @@ body.pm-gloss-open { overflow: hidden; }
   .al-time { font-size: 12px; }
   .al-row .pm-conf, .al-row .pm-sector { font-size: 11px; }
   .al-row { column-gap: 7px; }   /* the 11px chips need the room on one line */
+  /* UI100 #93: one line from 375px. The relative "32m · " goes on a phone
+     (the day heading and the clock time say it); ticker and side line up. */
+  .al-rel { display: none; }
+  .al-sub { font-size: 13px; }
+  .al-row .pm-ticker { min-width: 50px; }
+  .al-row .pm-dir { min-width: 70px; padding: 3px 8px; text-align: center; }
   /* the ticker filter takes the rest of its row so the placeholder fits */
   .pm-filter-group:has(.al-search) { flex: 1 1 100%; min-width: 0; }
   .al-search { flex: 1 1 auto; width: auto; min-width: 0; }
@@ -539,6 +574,10 @@ body.pm-gloss-open { overflow: hidden; }
 }
 /* hold the page while the log loads (no footer jump) */
 #al-list:empty { min-height: 60vh; }
+/* UI100 #10 (2026-10-20): ALERTS takes the one site page width (it sat at
+   .pm-wrap's 980px while the rest of the site centred at --page-max) */
+.pm-wrap.al-page { max-width: var(--page-max, 1320px); }
+.al-page .pm-disclaimer { max-width: 80ch; }
 
 /* SPECS rows */
 .sp-row .row-chips { flex-wrap: wrap; }   /* specs has no "+N" chip: wrap, never clip */
@@ -562,6 +601,134 @@ body.pm-gloss-open { overflow: hidden; }
   /* the grade / sort / search strip scrolled sideways with the search box
      off-screen: wrap it instead */
   .controls:has(#sp-search) { flex-wrap: wrap; overflow-x: visible; }
+  /* UI100 #98 (2026-10-20): no sector chip on a phone row — it only ever
+     showed "TECHNOLOGY HARDWAR…" and pushed the name down a line */
+  .sp-row .badge.sector { display: none; }
+}
+
+/* ═══ UI100 (2026-10-20) — the PhaseMap pages (main.pm-page), calmer and
+   lighter on a phone and a PC. Layout and density only: nothing here
+   changes what the scan says, which records list, or a zone. ═══ */
+
+/* #10: the page column the other pages share. On a wide PC the cards go
+   two-up so the column never stretches the prose into 170-character lines;
+   KEY & LEGEND / INSIGHTS diagrams stop growing at a readable size. */
+.pm-wrap.pm-page { max-width: var(--page-max, 1320px); }
+.pm-page .pm-lg-figure svg { max-width: 900px; margin: 0 auto; }
+@media (min-width: 1100px) {
+  .pm-page .pm-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; }
+  .pm-page .pm-list > .pm-empty { grid-column: 1 / -1; }
+  .pm-page .pm-density-compact.pm-list { align-items: stretch; }   /* rows line up across the columns */
+}
+
+/* #74: off-screen cards skip layout and paint (60 cards ran 35,000px on a
+   PC). The sizes are each density's typical card; `auto` keeps a card's
+   real size once it has rendered, so scrolling back does not jump. */
+.pm-page .pm-card-link { content-visibility: auto; contain-intrinsic-size: auto 540px; }
+.pm-page .pm-density-cozy .pm-card-link { contain-intrinsic-size: auto 470px; }
+.pm-page .pm-density-compact .pm-card-link { contain-intrinsic-size: auto 38px; }
+
+/* #68/#72: the head line — ticker · side · state · grade · extras · CHART →
+   (READ moved down to the narrative it reads) */
+.pm-page .pm-card-head { gap: 6px 8px; }
+.pm-page .pm-chart-cue { margin-left: auto; flex: none; }
+.pm-head-extra { display: contents; }
+
+/* #70: the narrative clamps (COZY 2 lines, FULL 3); "more" opens it */
+.pm-page .pm-narration {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.pm-page .pm-density-cozy .pm-narration { -webkit-line-clamp: 2; }
+.pm-page .pm-narr.is-open .pm-narration { display: block; overflow: visible; }
+.pm-narr-acts { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pm-narr-more {
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+  font: 700 11.5px/1 var(--sans); letter-spacing: 0.04em; color: var(--teal);
+}
+.pm-narr-more[hidden] { display: none; }
+.pm-page .pm-narr-acts .pm-speak { font-size: 11px; padding: 4px 10px; }
+
+/* #69: filters. A PC keeps the rows in place, tighter (the panel is
+   display: contents, so its groups lay out in .pm-filters as before); a
+   phone folds them behind one FILTERS button, the ticker search beside it. */
+.pm-fbtn { display: none; }
+.pm-page .pm-fpanel { display: contents; }
+.pm-page .pm-filters { gap: 6px 8px; margin-bottom: 12px; }
+.pm-page .pm-filter-group { gap: 3px; }
+.pm-page .pm-chip { padding: 7px 11px; }
+.pm-page .pm-presets { order: 1; }
+.pm-page .pm-search { order: 2; }   /* closes the presets row, pushed right */
+.pm-page .pm-active { order: 3; flex-basis: 100%; }
+.pm-page .conf-more {
+  background: none; border: 0; padding: 0 2px; cursor: pointer;
+  font: inherit; color: var(--muted);
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.pm-page .conf-more:hover { color: var(--orange); }
+
+@media (max-width: 680px) {
+  .pm-fbtn {
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto;
+    min-width: 0; max-width: 62%; min-height: 36px; padding: 0 14px;
+    border-radius: 999px; cursor: pointer; white-space: nowrap;
+    font: 700 12px/1 var(--sans); letter-spacing: 0.04em; color: var(--muted);
+    background: var(--fill-2); border: 1px solid var(--border-soft);
+  }
+  .pm-fsum { color: var(--text); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .pm-fsum:empty { display: none; }
+  .pm-fbtn-chev { display: inline-block; transition: transform .15s; }
+  .pm-filters.is-open .pm-fbtn-chev { transform: rotate(180deg); }
+  .pm-page .pm-search { order: 0; }
+  .pm-page .pm-fpanel { display: none; }
+  .pm-page .pm-filters.is-open .pm-fpanel {
+    display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; padding: 10px;
+    background: var(--panel); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+  }
+
+  /* the view tabs fill the width (two even rows at 390px, never a strip
+     that hides ENDED / ALL off the edge) */
+  .pm-page .pm-tabs { display: flex; flex-wrap: wrap; }
+  .pm-page .pm-tab { flex: 1 1 auto; padding: 8px 9px; font-size: 12px; }
+  .pm-page .pm-count { margin-left: 3px; }
+  /* the whole card opens the chart: "→" alone says so and frees the room
+     the one-line COMPACT row needs for its multi-lens / ⚡ / NEW marks */
+  .pm-cue-word { display: none; }
+  /* the one-line row at 360px: the words carry side and state (the glyphs
+     repeat them), and the ILLIQUID / HALT RISK warnings always fit (every
+     ASX / NASDAQ / crypto record checked at 360px, 2026-10-20) */
+  .pm-page .pm-density-compact .pm-card-head { gap: 4px; }
+  .pm-density-compact .pm-glyph { display: none; }
+  .pm-density-compact .pm-ticker { min-width: 3em; font-size: 14px; }
+  /* COZY / FULL: the "→" pins to the card's top-right corner, so it never
+     wraps onto a line of its own under the badges */
+  .pm-page .pm-card-link { position: relative; }
+  .pm-page .pm-list:not(.pm-density-compact) .pm-chart-cue { position: absolute; top: 14px; right: 12px; }
+  .pm-page .pm-list:not(.pm-density-compact) .pm-card-head { padding-right: 14px; gap: 5px 6px; }
+  .pm-page .pm-density-cozy .pm-card-head > :is(.pm-dir, .pm-state, .pm-tier),
+  .pm-page .pm-density-full .pm-card-head > :is(.pm-dir, .pm-state, .pm-tier) { padding: 3px 8px; }
+  .pm-density-compact .pm-dir, .pm-density-compact .pm-state,
+  .pm-density-compact .pm-tier, .pm-density-compact .pm-card-head > .pm-tag { padding: 2px 6px; }
+
+  /* #75: the multi-lens strip is one line until "+N more" opens it */
+  .pm-page .conf-banner { margin: 8px 0; padding: 4px 10px; gap: 2px 8px; font-size: 11.5px; }
+  .pm-page .conf-banner:not(.is-open) { flex-wrap: nowrap; overflow: hidden; }
+  .pm-page .conf-banner:not(.is-open) > * { flex: none; white-space: nowrap; }
+  .pm-page .conf-banner-long { display: none; }
+  .pm-page .conf-more { margin-left: auto; min-height: 32px; }
+
+  /* #78: tighter cards */
+  .pm-page .pm-list { gap: 8px; }
+  .pm-page .pm-card { padding: 11px 12px; }
+  .pm-page .pm-density-compact .pm-card { padding: 8px 11px; }
+  .pm-page .pm-density-compact.pm-list { gap: 6px; }
+  .pm-page .pm-ladder { margin: 9px 0 8px; }
+  .pm-page .pm-next { padding: 6px 9px; font-size: 11.5px; }
+  .pm-page .pm-why { margin: 2px 0 6px; }
+  .pm-page .pm-narr { padding: 8px 10px; }
+  .pm-page .pm-narration { font-size: 14.5px; line-height: 1.55; }
+  /* #73: the glyph only on the current step, so the stepper fits one line */
+  .pm-step:not(.is-now) .pm-step-dot { display: none; }
+  .pm-step-arrow { margin: 0 3px; }
 }
 
 /* ONE phone rule for the ticker search box (PHASEMAP + SPECS). It has to sit

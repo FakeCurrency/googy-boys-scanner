@@ -24,13 +24,24 @@
   };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
 
+  // The phone breakpoint the page's CSS folds at (nav pills, filter drawer).
+  const isPhone = () => {
+    try { return !!(window.matchMedia && window.matchMedia("(max-width: 680px)").matches); }
+    catch (_) { return false; }
+  };
+  // On a phone the multi-lens strip is one line: this many names, then "+N more".
+  const CONF_CAP_PHONE = 3;
+
   const state = {
     data: null, q: "", shown: PAGE,
     view: lsGet("pm-view", "setups", (v) => v in VIEWS),
     tier: lsGet("pm-tier", "all"),
     dir:  lsGet("pm-dir", "all"),
     sort: lsGet("pm-sort", "default"),
-    density: lsGet("pm-density", "full", (v) => ["full", "cozy", "compact"].includes(v)),
+    // UI100 #67 (2026-10-20): a phone with no saved density opens COMPACT
+    // (one line per name); a saved pick always wins.
+    density: lsGet("pm-density", isPhone() ? "compact" : "full",
+      (v) => ["full", "cozy", "compact"].includes(v)),
     focusIdx: -1,   // keyboard-focused card
     market: (() => {
       try {
@@ -119,10 +130,15 @@
     lsSet(seenKey(), JSON.stringify(cur));
   }
 
+  // UI100 #68/#72 (2026-10-20): one head line for every density, in the
+  // order the eye wants it: ticker · side · state · grade · warnings, then
+  // the extras (multi-lens, FLASHED, NEW), then CHART →. COMPACT renders that
+  // line ALONE (the old compact hid ~105 nodes a card with CSS; it now never
+  // builds them), and its extras group is one line high so a chip that does
+  // not fit drops out of sight instead of wrapping the row. COZY skips the
+  // stats line it never showed.
   function cardHTML(rec, idx) {
-    const speak = window.speechSynthesis
-      ? `<button class="pm-speak" data-speak="${idx}" title="Read aloud" aria-label="Read analysis aloud">▶ READ</button>`
-      : "";
+    const compact = state.density === "compact";
     // FLASH cue: the event printed on the market's newest completed bar —
     // review the chart now. Keyed off as_of (the BAR date), not run_date:
     // the nightly lands after Melbourne midnight, so run_date is a day past
@@ -136,26 +152,65 @@
     const key = `${rec.ticker}|${rec.direction}`;
     const isNew = state.newKeys && state.newKeys.has(key);
     const was = state.changedFrom && state.changedFrom[key];
-    return `<article class="pm-card pm-card-link${aligned && ci.count >= 3 ? " pm-card-triple" : ""}" data-idx="${idx}" title="Open chart" tabindex="0">
+    const extra = [
+      aligned ? (compact ? PM.confluenceMarkHTML(ci, "PHASEMAP") : PM.confluenceChipHTML(ci, "PHASEMAP")) : "",
+      flashed ? `<span class="pm-tag sp-spike" title="The sweep or displacement printed on the newest completed session — fresh evidence, review the chart">${compact ? "⚡" : "⚡ FLASHED"}</span>` : "",
+      isNew ? '<span class="pm-tag pm-tag-new" title="Appeared since your last visit">NEW</span>' : "",
+      was ? `<span class="pm-tag pm-tag-new" title="State changed since your last visit">${PM.esc(was.replace("_", " "))} → ${PM.esc(rec.state.replace("_", " "))}</span>` : "",
+      rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : "",
+    ].join("");
+    // The warnings sit with side · state · grade, OUTSIDE the extras box
+    // that may drop a chip: the ILLIQUID tag can never be disabled (spec).
+    const head = `<article class="pm-card pm-card-link${aligned && ci.count >= 3 ? " pm-card-triple" : ""}" data-idx="${idx}" title="Open chart" tabindex="0">
       <div class="pm-card-head">
         <span class="pm-ticker">${PM.esc(rec.ticker)}</span>
-        ${isNew ? '<span class="pm-tag pm-tag-new" title="Appeared since your last visit">NEW</span>' : ""}
-        ${was ? `<span class="pm-tag pm-tag-new" title="State changed since your last visit">${PM.esc(was.replace("_", " "))} → ${PM.esc(rec.state.replace("_", " "))}</span>` : ""}
-        ${aligned ? PM.confluenceChipHTML(ci, "PHASEMAP") : ""}
-        ${flashed ? '<span class="pm-tag sp-spike" title="The sweep or displacement printed on the newest completed session — fresh evidence, review the chart">⚡ FLASHED</span>' : ""}
-        ${rec._stale ? `<span class="pm-tag pm-tag-stale" title="Starred while a setup was live — it has since left the scan, shown from its last snapshot so you can keep monitoring">NO ACTIVE SETUP · last seen ${PM.esc(rec._staleDate || "")}</span>` : ""}
-        ${PM.headBadgesHTML(rec)}
-        ${speak}
-        <span class="pm-chart-cue" aria-hidden="true">CHART →</span>
-      </div>
+        ${PM.headBadgesHTML(rec)}${PM.warnTagsHTML(rec)}
+        ${extra ? `<span class="pm-head-extra">${extra}</span>` : ""}
+        <span class="pm-chart-cue" aria-hidden="true"><span class="pm-cue-word">CHART </span>→</span>
+      </div>`;
+    if (compact) return head + "</article>";
+    // UI100 #71: the engine's closing "not financial advice" sentence is
+    // dropped on screen (and from read-aloud). #70: the narration clamps
+    // (COZY 2 lines, FULL 3) and "more" opens it; the button stays hidden
+    // until watchClamps() sees the clamp actually cut something.
+    const narr = PM.stripDisclaimer(rec.narration);
+    const speak = window.speechSynthesis
+      ? `<button type="button" class="pm-speak" data-speak="${idx}" title="Read aloud" aria-label="Read analysis aloud">▶ READ</button>`
+      : "";
+    return `${head}
       ${PM.identityHTML(rec)}
       ${PM.stepperHTML(rec)}
       <div class="pm-ladder">${PM.ladderHTML(rec)}</div>
       ${rec.next ? `<div class="pm-next"><span class="pm-next-label">WANTED NEXT</span> ${PM.esc(rec.next)}</div>` : ""}
-      ${PM.whyHTML(rec)}
-      <p class="pm-narration">${PM.esc(rec.narration)}</p>
-      <div class="pm-metrics">${PM.metricsHTML(rec)}</div>
+      ${PM.whyHTML(rec, true)}
+      ${narr ? `<div class="pm-narr"><p class="pm-narration" id="pm-narr-${idx}">${PM.esc(narr)}</p>
+        <div class="pm-narr-acts"><button type="button" class="pm-narr-more" data-more="${idx}" aria-expanded="false" aria-controls="pm-narr-${idx}" hidden>more ▾</button>${speak}</div></div>` : ""}
+      ${state.density === "full" ? `<div class="pm-metrics">${PM.metricsHTML(rec)}</div>` : ""}
     </article>`;
+  }
+
+  // UI100 #70: "more" shows only on a narration the clamp cut. Measured as
+  // each card nears the viewport, never all 60 at once (reading every
+  // card's height would force the layout #74 lets the browser skip).
+  let clampIO = null;
+  function watchClamps(list) {
+    if (clampIO) { clampIO.disconnect(); clampIO = null; }
+    const cards = $$(".pm-card-link", list).filter((c) => $(".pm-narr", c));
+    const measure = (card) => {
+      const box = $(".pm-narr", card);
+      const p = $(".pm-narration", box), btn = $(".pm-narr-more", box);
+      if (p && btn && !box.classList.contains("is-open")) btn.hidden = p.scrollHeight <= p.clientHeight + 1;
+    };
+    if (typeof window.IntersectionObserver !== "function") {
+      cards.forEach((c) => { const b = $(".pm-narr-more", c); if (b) b.hidden = false; });
+      return;
+    }
+    clampIO = new window.IntersectionObserver((entries) => entries.forEach((en) => {
+      if (!en.isIntersecting) return;
+      clampIO.unobserve(en.target);
+      measure(en.target);
+    }), { rootMargin: "400px 0px" });
+    cards.forEach((c) => clampIO.observe(c));
   }
 
   // Fuzzy ticker search: substring beats all, else the query chars must appear
@@ -216,28 +271,44 @@
 
     $$(".pm-card-link", list).forEach((card) => {
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".pm-speak")
+        if (e.target.closest(".pm-speak") || e.target.closest(".pm-narr-more")
           || e.target.closest(".pm-why") || e.target.closest(".pm-term")) return;
         const rec = shown[+card.dataset.idx];
         if (rec) window.location.href = chartURL(rec);
       });
-      // Enter opens the focused card (full keyboard path through the list)
+      // Enter opens the focused card (full keyboard path through the list).
+      // Only the card itself: Enter on a button inside it (READ, more, a
+      // glossary term) bubbled here and left for the chart as well.
       card.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter" || e.target.closest(".pm-why")) return;
+        if (e.key !== "Enter" || e.target !== card) return;
         const rec = shown[+card.dataset.idx];
         if (rec) window.location.href = chartURL(rec);
       });
     });
-    $$(".pm-term", list).forEach((btn) => {
-      btn.addEventListener("click", (e) => { e.stopPropagation(); openGlossary(btn.dataset.term); });
-    });
+    // "Why flagged" builds its list on the first open (UI100 #74); its
+    // glossary terms are caught by the one #pm-list listener in wire()
+    $$(".pm-why", list).forEach((d) => d.addEventListener("toggle", () => {
+      if (!d.open || $("ul", d)) return;
+      const rec = shown[+d.closest(".pm-card-link").dataset.idx];
+      if (rec) d.insertAdjacentHTML("beforeend", PM.whyListHTML(rec));
+    }));
     $$(".pm-speak", list).forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const rec = shown[+btn.dataset.speak];
-        if (rec) PM.toggleSpeak(btn, rec.narration);
+        if (rec) PM.toggleSpeak(btn, PM.stripDisclaimer(rec.narration));
       });
     });
+    $$(".pm-narr-more", list).forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const box = btn.closest(".pm-narr");
+        const open = box.classList.toggle("is-open");
+        btn.setAttribute("aria-expanded", String(open));
+        btn.textContent = open ? "less ▴" : "more ▾";
+      });
+    });
+    watchClamps(list);
   }
 
   function renderConfBanner() {
@@ -252,7 +323,13 @@
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(el, anchor);
       else return;
     }
-    el.innerHTML = PM.confluenceBannerHTML(rows, state.market);
+    // UI100 #75 (2026-10-20): one line on a phone (CONF_CAP_PHONE names);
+    // "+N more" opens the whole list, on a PC too, until the market changes.
+    const cap = state.confOpen ? rows.length : isPhone() ? CONF_CAP_PHONE : 10;
+    el.classList.toggle("is-open", !!state.confOpen);
+    el.innerHTML = PM.confluenceBannerHTML(rows, state.market, cap);
+    const more = el.querySelector("[data-conf-more]");
+    if (more) more.addEventListener("click", () => { state.confOpen = true; renderConfBanner(); });
   }
 
   function renderCounts() {
@@ -464,6 +541,31 @@
       render();
     });
     $("#pm-more").addEventListener("click", () => { state.shown += PAGE; render(); });
+    $("#pm-list").addEventListener("click", (e) => {
+      const term = e.target.closest && e.target.closest(".pm-term");
+      if (term) openGlossary(term.dataset.term);
+    });
+    // UI100 #69: the phone filter drawer (on a PC the button is hidden and
+    // the rows always show)
+    const fbtn = $("#pm-fbtn");
+    if (fbtn) fbtn.addEventListener("click", () => {
+      const open = $("#pm-filters").classList.toggle("is-open");
+      fbtn.setAttribute("aria-expanded", String(!!open));
+    });
+    // A rotate or resize moves the narration clamp and the strip's cap.
+    // Width only: a phone's URL bar showing/hiding fires resize too.
+    if (typeof window.addEventListener === "function") {
+      let lastW = window.innerWidth, t = 0;
+      window.addEventListener("resize", () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          if (window.innerWidth === lastW) return;
+          lastW = window.innerWidth;
+          renderConfBanner();
+          watchClamps($("#pm-list"));
+        }, 200);
+      });
+    }
     const glossBtn = $("#pm-gloss-btn");
     if (glossBtn) glossBtn.addEventListener("click", () => openGlossary());
     const glossX = $("#pm-gloss-x");
@@ -481,6 +583,8 @@
       b.setAttribute("aria-selected", String(on));
     });
   }
+
+  const SORT_LABEL = { fresh: "FRESH", turnover: "TURNOVER", zrr: "Z-R:R" };
 
   // Reflect restored/preset state into every control — the HTML's hardcoded
   // is-active defaults only match a first-ever visit.
@@ -508,6 +612,16 @@
       const p = b.dataset.b != null ? BUILTIN_PRESETS[+b.dataset.b] : customPresets()[+b.dataset.c];
       b.classList.toggle("is-active", presetMatches(p));
     });
+    // UI100 #69: the folded drawer's button names what is filtering
+    const fsum = $("#pm-fsum");
+    if (fsum) {
+      const bits = [];
+      if (state.tier !== "all") bits.push(state.tier === "Watch" ? "WATCH" : state.tier);
+      if (state.dir !== "all") bits.push(state.dir === "bullish" ? "LONG" : "SHORT");
+      if (state.hideIlliquid) bits.push("NO ILLIQUID");
+      if (state.sort !== "default") bits.push(SORT_LABEL[state.sort] || state.sort);
+      fsum.textContent = bits.join(" · ");
+    }
   }
 
   // The header line: what ran (scan = the Melbourne date it published),
@@ -574,6 +688,7 @@
       diffSinceLastVisit();
       // multi-lens confluence badges + banner (async — re-render when known)
       state.confl = null;
+      state.confOpen = false;
       renderConfBanner();
       PM.loadConfluence(market).then((c) => {
         if (stale()) return;

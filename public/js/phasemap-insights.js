@@ -120,7 +120,7 @@
         `buying the signal close returned ${spct(sp.all.fwd_5)} / ` +
         `${spct(sp.all.fwd_10)} / ${spct(sp.all.fwd_20)} at 5/10/20 sessions vs ` +
         `${spct(sp.baseline_random && sp.baseline_random.fwd_20)} for random entry ` +
-        `on the same cheap universe. Use SPECS ⚡ to find names waking up, then ` +
+        `on the same cheap universe. Use SPECS to find names waking up, then ` +
         `demand structure (a trap, a reclaim, a level) before anything else.`);
   });
 })();
