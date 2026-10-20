@@ -12,7 +12,7 @@
 # NOT in the `scan` concurrency group: it writes ONLY its own ledger, which no
 # other workflow touches, and queueing a daily job in the one-pending-slot
 # scan group is how the :47 backstop got evicted (2026-07-28). The commit step
-# is the reco_note.yml pattern verbatim: skip when the script printed
+# skips when the script printed
 # ALERT_RETURNS_UNCHANGED (a quiet day is a legitimate no-op — exactly where
 # a must-change gate would be wrong), surgical single-path staging with
 # assert_staged when a change WAS claimed, and the reset-and-retry push loop

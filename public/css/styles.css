@@ -11,7 +11,7 @@
    fresh ad-hoc value tuned to one element:
 
      320px  — narrowest supported phone. Nothing may overflow here (the e2e
-              smoke asserts it on index, recommendations, phasemap, specs
+              smoke asserts it on index, phasemap, specs
               and journal). Design floor.
      480px  — small phone → large phone / spark-drop boundary.
      680px  — THE phone⇄desktop line. Below it: bottom tab bar + MORE sheet,
@@ -1420,7 +1420,7 @@ body { letter-spacing: -0.012em; }
     border-radius: 999px; border: 1.5px solid var(--nav);
   }
   /* A CSS `display` overrides the HTML `hidden` attribute — restore it so the
-     count-less tabs (SCAN/RECS/PHASEMAP/SPECS) don't show an empty dot. */
+     count-less tabs (SCAN/PHASEMAP/SPECS/MOMENTUM) don't show an empty dot. */
   .site-tab-badge[hidden] { display: none; }
   .site-tab[data-tabkey="index"] .site-tab-badge { background: var(--green); }
   /* JOURNAL badge is INFORMATION, not an alarm (Lane A, 2026-08-16). It carries
@@ -1612,7 +1612,7 @@ body { letter-spacing: -0.012em; }
 /* The CLS reservations below are the DASHBOARD deck's measured heights (its
    bot strip is what makes it tall), so they are scoped to the deck that HAS
    one (tablet-7, 2026-10-13). Applied to every .deck they left 118-230px of
-   empty card on the recs / specs / phasemap / momentum decks.
+   empty card on the specs / phasemap / momentum decks.
    UI100 (2026-10-20): re-measured after the card lost its A+/A/★ pills, the
    coverage pill, the long subline and the stalled strip — loaded heights
    102 / 154 (≤1150) / 206 (≤780) / 183 (phones, 320-600).
@@ -1725,140 +1725,6 @@ body { letter-spacing: -0.012em; }
   .deck > .ba-events { justify-content: flex-end; }
   .deck > .ba-events .ba-facts { text-align: right; }
 }
-
-/* ---- RECOMMENDATIONS page (owner 2026-07-22) — deck-language cards ---- */
-.rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 0 14px; }
-.rec-card {
-  background: var(--panel); border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 16px 18px; margin: 0 0 2px; min-width: 0;
-}
-.rec-card-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.rec-card-hd h3 { margin: 0; font: 800 15px/1 var(--sans); letter-spacing: -0.01em; }
-.rec-verdict {
-  margin-left: auto; font: 800 11.5px/1 var(--sans); letter-spacing: 0.04em;
-  padding: 7px 11px; border-radius: 999px; white-space: nowrap;
-}
-.rec-verdict.up    { color: var(--green);  background: var(--green-soft); }
-.rec-verdict.down  { color: var(--red-ink);    background: var(--red-soft); }
-.rec-verdict.mixed { color: var(--orange); background: var(--orange-soft); }
-.rec-breadth {
-  position: relative; height: 10px; border-radius: 999px; background: var(--red-soft);
-  overflow: hidden; margin: 4px 0 18px;
-}
-.rec-breadth i { position: absolute; inset: 0 auto 0 0; background: var(--green); opacity: 0.75; border-radius: 999px 0 0 999px; }
-.rec-breadth-lbl {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  font: 700 8.5px/1 var(--mono); letter-spacing: 0.05em; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6);
-}
-.rec-line { margin: 0 0 12px; font: 400 13.5px/1.55 var(--sans); color: var(--text-2); }
-/* UI100 #91 (2026-10-20): A+ · Bot · Book · ◎ · ⨂ on ONE row (short labels,
-   tighter chips; the names live in each chip's title). Still wraps, never
-   overflows, at any width. .rec-nums-x is the late-filled slot: no box. */
-.rec-nums { display: flex; gap: 5px; flex-wrap: wrap; }
-.rec-nums span {
-  font: 600 11.5px/1 var(--sans); color: var(--muted); background: var(--fill-2);
-  border: 1px solid var(--border-soft); border-radius: 999px; padding: 6px 7px; white-space: nowrap;
-}
-.rec-nums .rec-nums-x { display: contents; }
-.rec-nums b { font: 800 12px/1 var(--mono); color: var(--text); }
-.rec-nums b.pos { color: var(--green); } .rec-nums b.neg { color: var(--red-ink); }
-@media (max-width: 380px) {
-  .rec-nums span { font-size: 10.5px; padding: 5px 6px; }
-  .rec-nums b { font-size: 11px; }
-}
-.rec-age { margin-top: 10px; font: 500 10.5px/1.4 var(--sans); color: var(--muted-2); }
-.rec-note { border-left: 3px solid var(--blue); margin-bottom: 14px; }
-.rec-note-body { margin: 0; font: 400 14.5px/1.65 var(--sans); color: var(--text-2); }
-.rec-movers .rec-mv-list { display: flex; gap: 8px; flex-wrap: wrap; }
-.rec-mv {
-  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
-  font: 700 12.5px/1 var(--sans); color: var(--text);
-  background: var(--fill-2); border: 1px solid var(--border-soft);
-  border-radius: 999px; padding: 9px 13px;
-}
-.rec-mv:hover { background: var(--fill); }
-.rec-mv-mkt { font: 700 9px/1 var(--mono); color: var(--muted-2); letter-spacing: 0.06em; }
-.rec-mv-r { font: 800 12px/1 var(--mono); }
-.rec-mv-r.pos { color: var(--green); } .rec-mv-r.neg { color: var(--red-ink); }
-.rec-link { margin-left: auto; font: 700 12px/1 var(--sans); color: var(--blue-ink); text-decoration: none; }
-@media (max-width: 880px) { .rec-grid { grid-template-columns: 1fr; } }
-
-/* ── Wave R #18: degraded / stale states ────────────────────────────────── */
-.rec-degraded { opacity: 0.92; border-style: dashed; }
-.rec-stale-card { box-shadow: inset 0 2px 0 var(--orange); }
-.rec-stale {
-  font: 800 10.5px/1 var(--mono); color: var(--orange);
-  background: var(--orange-soft); border: 1px solid rgba(255,159,10,0.30);
-  border-radius: 999px; padding: 3px 8px;
-}
-
-/* ── Wave R #17: recs mobile pass — movers h-scroll + thumb targets ──────── */
-@media (max-width: 680px) {
-  .rec-grid { gap: 10px; }
-  /* Movers become a swipeable horizontal strip instead of a wrapping block. */
-  .rec-movers .rec-mv-list {
-    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; padding-bottom: 4px; scroll-snap-type: x proximity;
-  }
-  .rec-movers .rec-mv-list::-webkit-scrollbar { display: none; }
-  .rec-mv { flex: 0 0 auto; min-height: 44px; scroll-snap-align: start; }
-  .rec-open { min-height: 44px; display: inline-flex; align-items: center; }
-  .rec-archive > summary { padding: 13px 0; }   /* ≥44px tap target */
-  .rec-sec { min-height: 32px; }
-}
-
-/* ── Wave R #10: day-over-day breadth delta chip ────────────────────────── */
-.rec-delta-row { margin: 0 0 10px; }
-.rec-delta {
-  display: inline-flex; align-items: center; gap: 4px;
-  font: 700 11px/1 var(--mono); letter-spacing: 0.01em;
-  padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border-2);
-}
-.rec-delta.up   { color: var(--green);  background: var(--green-soft);  border-color: rgba(47,208,127,0.30); }
-.rec-delta.down { color: var(--red-ink);    background: var(--red-soft);    border-color: rgba(255,92,92,0.28); }
-.rec-delta.flat { color: var(--muted);  background: var(--fill-2); }
-
-/* ── Wave R #11: N-day breadth history strip ────────────────────────────── */
-.rec-hist { margin: 0 0 12px; }
-.rec-hist-bars {
-  display: flex; align-items: flex-end; gap: 3px; height: 34px;
-  padding: 4px 6px; background: var(--fill-2); border-radius: var(--radius-sm);
-}
-.rec-hbar { flex: 1 1 0; min-width: 3px; border-radius: 2px 2px 0 0; opacity: 0.85; }
-.rec-hbar.up   { background: var(--green); }
-.rec-hbar.down { background: var(--red); }
-.rec-hbar.flat { background: var(--muted-2); }
-.rec-hist-lbl { display: block; margin-top: 4px; font: 600 9.5px/1 var(--sans); letter-spacing: 0.04em; color: var(--muted-2); text-transform: uppercase; }
-
-/* ── Wave R #13+#14: lazy card enrichment (at-level / multi-lens / sectors) ── */
-.rec-enrich:empty { display: none; }
-.rec-sec-list { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.rec-sec-hd { font: 700 9.5px/1 var(--sans); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 7px; }
-.rec-sec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
-.rec-sec-nm { font: 600 12px/1.2 var(--sans); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rec-sec-lean { font: 700 11px/1 var(--mono); white-space: nowrap; flex: 0 0 auto; }
-.rec-sec-lean.up { color: var(--green); } .rec-sec-lean.down { color: var(--red-ink); } .rec-sec-lean.flat { color: var(--muted); }
-.rec-card-hd .rec-verdict { margin-left: auto; }   /* verdict stays right when a ⚠ stale chip is present */
-.rec-card-ft { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
-.rec-card-ft .rec-age { margin-top: 0; }
-.rec-open { font: 700 12px/1 var(--sans); color: var(--blue-ink); text-decoration: none; white-space: nowrap; }
-.rec-open:hover { text-decoration: underline; }
-
-/* ── Wave R #12: note archive fold ──────────────────────────────────────── */
-.rec-archive {
-  margin: 0 0 14px; background: var(--panel-2); border: 1px solid var(--border);
-  border-radius: var(--radius-md); padding: 4px 14px;
-}
-.rec-archive > summary {
-  cursor: pointer; list-style: none; padding: 10px 0; user-select: none;
-  font: 700 12.5px/1 var(--sans); color: var(--text-2);
-}
-.rec-archive > summary::-webkit-details-marker { display: none; }
-.rec-archive > summary::before { content: "▸ "; color: var(--muted); }
-.rec-archive[open] > summary::before { content: "▾ "; }
-.rec-arch-item { padding: 10px 0; border-top: 1px solid var(--border); }
-.rec-arch-date { font: 700 10.5px/1 var(--mono); letter-spacing: 0.03em; color: var(--muted-2); }
-.rec-arch-item p { margin: 5px 0 0; font: 400 13px/1.55 var(--sans); color: var(--text-2); }
 
 /* (snappy re-renders, backlog #48: the first-paint-only cascade is the
    `#results .row-wrap:not(.row-in)` rule in the rows section — UI100 #37.) */
@@ -2262,34 +2128,6 @@ body { letter-spacing: -0.012em; }
 }
 .ob-next:hover { filter: brightness(1.08); }
 
-/* ── UX top-10 #9: recs morning-read strip ───────────────────────────────── */
-.mr-strip {
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md);
-  box-shadow: var(--shadow); padding: 13px 16px; margin: 0 0 14px;
-}
-.mr-strip[hidden] { display: none; }
-.mr-hd { font: 800 14px/1.3 var(--sans); color: var(--text); margin-bottom: 9px; }
-.mr-sub { font: 500 11px/1.3 var(--sans); color: var(--muted-2); margin-left: 6px; }
-.mr-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 10px; }
-.mr-stat { font: 600 12.5px/1.5 var(--sans); color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
-.mr-stat b { color: var(--text); font: 800 14px/1 var(--mono); font-variant-numeric: tabular-nums; }
-.mr-delta { font: 700 10.5px/1 var(--mono); padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
-.mr-delta.up   { color: var(--green); background: var(--green-soft); }
-.mr-delta.down { color: var(--red-ink); background: var(--red-soft); }
-.mr-delta.flat { color: var(--muted); background: var(--fill); }
-.mr-watch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
-.mr-watch-lbl { font: 600 11px/1 var(--sans); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.mr-pick {
-  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
-  font: 800 12.5px/1 var(--mono); color: var(--text);
-  background: var(--fill); border: 1px solid var(--border); border-radius: 999px; padding: 7px 12px;
-  transition: border-color .15s;
-}
-.mr-pick:hover { border-color: var(--green); color: var(--green); }
-.mr-pick-mkt { font: 700 9px/1 var(--sans); letter-spacing: .07em; color: var(--muted-2); }
-.mr-pick-dir.up { color: var(--green); }
-.mr-pick-dir.down { color: var(--red-ink); }
-
 /* ── UX top-10 #4: proportional plan axis + R:R meter (row detail) ───────── */
 .vk-axis { margin: 2px 0 12px; }
 .vk-axis-track {
@@ -2413,22 +2251,6 @@ body { letter-spacing: -0.012em; }
 }
 .vk-size input:focus { border-color: var(--blue); }   /* the ring is input:focus-visible's (#94) */
 .vk-size input[data-k="risk"] { width: 52px; }
-
-/* ── UX-20 #14: recs week-in-review strip ────────────────────────────────── */
-.rec-week {
-  margin: 0 0 14px; padding: 11px 16px; border-radius: var(--r-mid, 14px);
-  border: 1px solid var(--border); background: var(--panel);
-}
-.rw-hd { font: 700 12.5px/1 var(--sans); letter-spacing: .02em; margin-bottom: 8px; }
-.rw-sub { color: var(--muted); font-weight: 600; font-size: 11px; margin-left: 6px; }
-.rw-body { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; font: 600 12px/1.5 var(--sans); color: var(--muted); }
-.rw-lbl { text-transform: uppercase; font-size: 10px; letter-spacing: .07em; }
-.rw-arc b { color: var(--text); font-family: var(--mono); font-weight: 700; }
-.rw-arc i, .rw-bot b { font-style: normal; font-family: var(--mono); }
-.rw-arc .up, .rw-bot .up { color: var(--green); }
-.rw-arc .down, .rw-bot .down { color: var(--red-ink); }
-.rw-arc .flat { color: var(--muted); }
-.rw-bot { color: var(--text); }
 
 /* ── UX-20 #15+#16: ⌘K command palette (nav.js, every page) ──────────────── */
 .cp-overlay {
@@ -2685,7 +2507,7 @@ body.has-site-tabs .gbs-toast { bottom: calc(76px + env(safe-area-inset-bottom, 
    take their own full-width row; where they can, the header stays one row.
    How wide "fits" is depends on what else the header carries, so the cap is
    per header. Measured 2026-10-13 (narrowest one-row width with every pill
-   visible): sectors/recs/system/about/404 1030, alerts 1080, journal 1180,
+   visible): sectors/system/about/404 1030, alerts 1080, journal 1180,
    phasemap-legend 1220, specs 1240, phasemap-insights 1290, phasemap 1430
    but again only from 1571 (the pills grow back above 1440px), momentum
    1630, index (clocks) 1890. Each cap leaves ~20-70px of slack for
@@ -2929,11 +2751,6 @@ body.has-site-tabs #gbs-update-nudge { bottom: calc(76px + env(safe-area-inset-b
   /* fixed columns are ~73px at 601px: "profit factor" wraps, never spills */
   .bt-t th:nth-child(n+2) { white-space: normal; }
 }
-
-/* ---- recommendations (taps-9 / specrec-8) -------------------------------- */
-.rec-breadth { height: 16px; }
-.rec-breadth-lbl { font-size: 11px; }
-.mr-pick-mkt, .rec-mv-mkt, .rec-sec-hd, .rec-age { font-size: 11px; }
 
 /* ── Desktop plan column + tab-bar marker (UI refresh 2026-10-14) ──────────
  * .row-plan: IN / SL / TP1 in the empty middle of a wide row card (app.js

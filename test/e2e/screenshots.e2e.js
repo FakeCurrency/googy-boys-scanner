@@ -33,7 +33,7 @@ const WIDTHS = [360, 390, 430];
 // 2026-10-05 after it scrolled 109px sideways at 390px with nothing here to
 // notice. sectors.html stays out: its TradingView calendar is third-party
 // content, and this gate is about our layout.
-const PAGES = ["index.html", "recommendations.html", "journal.html", "phasemap.html", "specs.html", "chart.html",
+const PAGES = ["index.html", "journal.html", "phasemap.html", "specs.html", "chart.html",
   "system.html", "momentum.html", "alerts.html", "phasemap-insights.html", "about.html"];
 
 const waitPort = (port, tries = 50) => new Promise((res, rej) => {

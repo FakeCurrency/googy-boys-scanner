@@ -116,7 +116,7 @@ journal/              the books — vivek_bot_book.<market>.json is the track re
 data/                 sector map (feeds the sector cap), edge ledgers, research outputs
 tests/ · test/        Python suites · JS suites
 docs/                 decision pack, REFINE200 ledger, CLAUDE.md history, archived notes
-.github/workflows/    26 workflows; OPERATIONS.md has the schedule
+.github/workflows/    25 workflows; OPERATIONS.md has the schedule
 ```
 
 ## Operating it

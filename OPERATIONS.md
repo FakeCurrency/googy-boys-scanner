@@ -73,7 +73,6 @@ its closing scan). Each completed morning_plays run also wakes `momentum.yml`.
 | `morning_plays.yml` | dispatched by the cron-job.org ladders; backstop crons `58 5,6`, `50 7,8` (ASX) and `50 21,22` (US), Mon–Fri | the HIGH CONVICTION digest to Discord |
 | `alert_returns.yml` | `20 22` UTC + `50 23` backstop | the edge pipeline: forward returns, rosters, book stress, report, `edge_summary.json` |
 | `evidence_brief.yml` | `0 21` UTC | read-only evidence brief into the run's step summary |
-| `reco_note.yml` | `52 8` UTC | auto-written `public/data/reco_note.json` |
 | `backup_book.yml` | `35 21` UTC + `35 23` backstop | nightly `backups/<stamp>/` + 90-day artifact |
 | `lens_backtest.yml` | Sunday `0 8` UTC | PhaseMap/Specs/VIVEK replays → Insights (`vivek_backtest.json`) |
 | `vivek_backtest.yml` | 1st of the month `0 8` UTC | long-only evidence `vivek_backtest_longonly.json` |
@@ -112,7 +111,6 @@ through `/api/heartbeat` that dispatches `scan.yml`.
 | Confluence ping | `workflow_run` when PhaseMap completes | GitHub `45 8` UTC | no new nightly alignments on the ALERTS page; watchdog WARNING at 26h |
 | Edge pipeline | GitHub `alert_returns.yml` `20 22` UTC | `50 23` (skips when the ledgers are already updated) | `edge_summary.json` older than a day; watchdog WARNING at 26h |
 | Evidence brief | GitHub `evidence_brief.yml` `0 21` UTC | none | no brief in that day's run summary (nothing else depends on it) |
-| Reco note | GitHub `reco_note.yml` `52 8` UTC | none | the RECS page note dated yesterday; watchdog WARNING at 26h |
 | Nightly backup | GitHub `backup_book.yml` `35 21` UTC | `35 23` (skips when the newest snapshot is at/after the 21:00Z slot) | newest `backups/<stamp>` over 26h → watchdog CRITICAL → a red "Watchdog CRITICAL" run in kill_switch.yml |
 | Weekly lens backtest | GitHub `lens_backtest.yml` Sunday `0 8` UTC | none | Insights numbers a week stale; watchdog WARNING after 8 days |
 | Monthly long-only backtest | GitHub `vivek_backtest.yml` 1st `0 8` UTC | none | watchdog WARNING after 32 days |

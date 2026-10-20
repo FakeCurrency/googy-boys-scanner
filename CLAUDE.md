@@ -67,7 +67,9 @@ breakout on crypto, ASX and NASDAQ.
   list, indices cards and TradingView widget (2026-09-27; `sectors.html`
   stays); WHAT NEEDS MY EYES (2026-10-09); the Reversals/Fib engine (REFINE200);
   the 2026-07-09 "track-record journal" (every armed A+/A, uncapped) as a
-  headline number.
+  headline number; the RECS page + its daily `reco_note.yml` note (2026-10-20,
+  "It's a waste, I dont use it"; MOMENTUM took its phone tab;
+  `tests/test_recs_removed.py`).
 - **Discord carries only the morning-plays digest**, on its own secret
   `DISCORD_MORNING_WEBHOOK_URL`. The removed alert webhook's secret name must
   never appear in a workflow, even in a comment (`tests/test_alert_credentials.py`).
@@ -162,7 +164,7 @@ them.
 
 ---
 
-## Workflows (26)
+## Workflows (25)
 
 | Workflow | Trigger | Does |
 |---|---|---|
@@ -178,7 +180,6 @@ them.
 | `morning_plays.yml` | cron-job.org ladders via `/api/morning_plays`; backstops `58 5,6`, `50 7,8`, `50 21,22` Mon–Fri | HIGH CONVICTION digest to Discord |
 | `alert_returns.yml` | `20 22` + `50 23` backstop | the edge pipeline |
 | `evidence_brief.yml` | `0 21` | read-only brief → step summary |
-| `reco_note.yml` | `52 8` | auto `reco_note.json` (never over a same-day hand note) |
 | `backup_book.yml` | `35 21` + `35 23` backstop | `backups/<stamp>/` (keep 30) + 90-day artifact |
 | `lens_backtest.yml` | Sunday `0 8` | replays → `vivek_backtest.json` |
 | `vivek_backtest.yml` | 1st `0 8` | `vivek_backtest_longonly.json` |
@@ -221,7 +222,7 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   A commit renaming an output path keeps the old path written for one cycle.
 - **Must-change gate:** every committing workflow runs
   `scripts/assert_staged.sh` after staging (ANY-OF: list canonical files, never
-  only a derived view): scan, crypto_bot, phasemap, backup_book, reco_note,
+  only a derived view): scan, crypto_bot, phasemap, backup_book,
   alert_returns, momentum, the ignition twins (per path), close_position
   (`journal_type=bot`), resize_book (behind `--check` exit 3). `confluence.yml`
   gates on an unstaged tree instead (pinned decision). A new committing
@@ -578,7 +579,7 @@ counted exclusions).
   `.x[hidden] { display: none; }` (no global `[hidden]` rule).
 - Nav pills hidden ≤680px; every page uses `topbar deck-top`. `nav.js` owns nav,
   footer, `tipPop()` and `window.VivekBook` (the one shared book + rules read on
-  a nav page; app.js and recs.js read through it with `{fresh:true}` on their
+  a nav page; app.js reads through it with `{fresh:true}` on its
   own refresh — chart.js, which has no nav.js, keeps its own fetch). One page
   width: `--page-max` (1320px) in `:root`, centred; sticky bars are solid
   (no `backdrop-filter`; overlays may keep theirs).

@@ -447,7 +447,7 @@ VIVEK_SCHEMA_VERSION   = 5
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
-# recs.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# journal.js, phasemap-shared.js, confluence_alert.py,
 # marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
@@ -1424,7 +1424,6 @@ WATCHDOG_RUNS = {
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
-    "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
     # The evidence files (REFINE200 #79): a weekly cron (Sunday 08:00 UTC, up to
     # ~6h) gets a week plus a day; a monthly one (the 1st, 08:00 UTC; months

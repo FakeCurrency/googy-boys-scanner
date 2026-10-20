@@ -900,7 +900,7 @@ def test_the_runner_names_no_other_published_artefact():
     code = " ".join(strings)
     for forbidden in ("_vivek.json", "_spec.json", "latest.json", "vivek_bot_book",
                       "bot_rules.json", "alert_history.json", "funnel_history.json",
-                      "sector_map.json", "reco_note.json", "edge_summary.json",
+                      "sector_map.json", "edge_summary.json",
                       "journal/", "phasemap", "momentum", "backups/"):
         assert forbidden not in code, f"run.py names {forbidden}"
     for p in _py(LENS):

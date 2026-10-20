@@ -220,7 +220,7 @@ jobs:
           # single hardest thing to notice going missing — there is no cron
           # behind it and no freshness badge for "a position you closed by hand
           # is still showing as open". The `scan` mutex keeps SCANS out of the
-          # way, but phasemap, confluence, backup, reco-note and both backtests
+          # way, but phasemap, confluence, backup and both backtests
           # push to main without ever entering that group.
           #
           # Two changes, both matching the pattern the scan workflows already

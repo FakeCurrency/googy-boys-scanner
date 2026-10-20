@@ -1,5 +1,5 @@
 /* REFINE200 WP7 — the deck, the shared PhaseMap helper, the service worker and
- * the smaller pages (RECS, ALERTS, NEWS), as the SHIPPED files run them.
+ * the smaller pages (ALERTS, NEWS), as the SHIPPED files run them.
  *
  *   #69  the entry-trigger tints come out of bot_rules.json, never a 1MB fetch
  *        stashed in sessionStorage
@@ -12,7 +12,6 @@
  *   #74  the service worker keys data by path, caps it, evicts old ?v= copies
  *   #94  no glued `}@media`, no focus rule that kills the keyboard ring
  *   #169 the SCAN poll waits ~25 min, not 5
- *   #191 RECS picks are ranked totally, whatever order the fetches resolved
  *   #192 the ALERTS sub-line states how far back the rolling log reaches
  *   #142 the NEWS box says "Today so far" for a mid-session stamp
  *
@@ -29,7 +28,6 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8");
 const APP = read("public/js/app.js");
 const PMS = read("public/js/phasemap-shared.js");
 const SW = read("public/sw.js");
-const RECS = read("public/js/recs.js");
 const ALERTS = read("public/js/alerts.js");
 const SECTORS = read("public/js/sectors.js");
 
@@ -280,31 +278,6 @@ test("#74 a new ?v= copy evicts the old one; other assets are untouched", async 
   await h.put(req("/js/app.js?v=145"), { body: "b", clone() { return this; } });
   assert.deepEqual([...h.store.keys()].sort(), ["https://x.test/js/app.js?v=145", "https://x.test/js/nav.js?v=28"]);
   assert.ok(/const CACHE = "vivek5-v9"/.test(SW), "the CACHE name must move with the change");
-});
-
-// ---------------------------------------------------------------------------
-// #191 — RECS picks
-// ---------------------------------------------------------------------------
-const recs = new Function(constSrc(RECS, "MKT_ORDER") + constSrc(RECS, "num0") + fnSrc(RECS, "worthALook") +
-  "return worthALook;")();
-test("#191 the three picks are the same whatever order the markets arrived in", () => {
-  const rows = [
-    { symbol: "IDXX", _mkt: "nasdaq", grade: "A+", score: 10, rr: 2.1, dir: "SHORT" },
-    { symbol: "CAE", _mkt: "nasdaq", grade: "A+", score: 10, rr: 2.1, dir: "SHORT" },
-    { symbol: "BHP", _mkt: "asx", grade: "A+", score: 10, rr: 2.1, dir: "LONG" },
-    { symbol: "HLIT", _mkt: "nasdaq", grade: "A+", score: 10, rr: 3.0, dir: "LONG" },
-    { symbol: "FUND", _mkt: "asx", grade: "A+", score: 10, rr: 9, dir: "LONG", fund: true },
-    { symbol: "LOW", _mkt: "asx", grade: "A", score: 10, rr: 9, dir: "LONG" },
-  ];
-  const isFund = (r) => !!r.fund;
-  const want = ["HLIT", "BHP", "CAE"];
-  for (let k = 0; k < 6; k++) {
-    const shuffled = rows.slice(k).concat(rows.slice(0, k)).reverse();
-    assert.deepEqual(recs(shuffled, isFund).map((r) => r.symbol), want);
-  }
-  const render = fnSrc(RECS, "renderMorningRead");
-  assert.ok(/MARKETS\.map\(\(m\) => m\.key\)/.test(render), "markets must be walked in MARKETS order");
-  assert.ok(/mr-pick-dir/.test(render) && /▼/.test(render) && /▲/.test(render), "each pick names its direction");
 });
 
 // ---------------------------------------------------------------------------

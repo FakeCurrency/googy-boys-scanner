@@ -292,7 +292,6 @@ def _files(*, faults=False):
         "public/data/ignition/nasdaq.json": {"generated_at": "2026-10-07T21:40:00Z", "last_closed_bar": "2026-10-07"},
         "public/data/phasemap/asx/latest.json": {"run_date": "2026-10-08"},
         "data/alert_forward_returns.json": {"updated_at": "2026-10-08T02:03:00Z"},
-        "public/data/reco_note.json": {"generated_at": "2026-10-07T15:49:00Z"},
         "backups/2026-10-08T01-14-45/vivek_bot_book.json": {},
         "public/data/bot_rules.json": {"max_open_total": 4, "max_hold_days": 28},
         "journal/vivek_bot_book.asx.json": _book("asx", [aar, nic], [], "2026-10-08T05:46:08Z"),

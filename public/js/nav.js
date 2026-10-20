@@ -4,7 +4,7 @@
  * the dashboard) with a different link set on every page. This renders ONE
  * consistent nav into the `#site-nav` mount on each page:
  *
- *   • Desktop: pill row — VIVEK 5.0 · RECS · PHASEMAP · SPECS · MOMENTUM ·
+ *   • Desktop: pill row — VIVEK 5.0 · PHASEMAP · SPECS · MOMENTUM ·
  *     ALERTS · JOURNAL · MORE ▾ (the MORE menu holds NEWS /
  *     SYSTEM / HOW IT WORKS — see the MORE list below; AI BOT was REMOVED
  *     2026-09-17 with its whole scalp-era bot; TRACK and
@@ -37,8 +37,8 @@
   //                  cache layer (the stalled strip waiting for a close to land).
   // A failed FIRST read is not kept: the next caller tries again. A rejection
   // carries the HTTP status as err.status (absent = the network failed).
-  // chart.html does not load nav.js and keeps its own fetch; app.js and
-  // recs.js read through here too, with {fresh:true} on their own refresh
+  // chart.html does not load nav.js and keeps its own fetch; app.js
+  // reads through here too, with {fresh:true} on its own refresh
   // cadence (UI100 #92/#100, 2026-10-20).
   //
   // UI100 review (2026-10-20): every read carries a 20s abort, the deck's
@@ -83,7 +83,6 @@
 
   const PRIMARY = [
     { href: "index.html",           label: "SCAN",       tab: "📡", key: "index" },
-    { href: "recommendations.html", label: "RECS",       tab: "🧭", key: "recommendations" },
     { href: "phasemap.html",        label: "PHASEMAP",   tab: "🗺️", key: "phasemap" },
     // UI100 #8 (2026-10-20): "SPECS ⚡" → "SPECS" — the ⚡ is Ignition's mark on
     // the deck, and the tab/sheet/palette each had to strip it again.
@@ -95,8 +94,9 @@
   // THE BOTTOM TAB BAR FITS EXACTLY 5, and the constraint is CSS rather than
   // anything in this file: styles.css's `.site-tabs` is
   // `grid-template-columns: repeat(6, 1fr)` = 5 tabs + the MORE button. A 6th
-  // tab becomes a 7th grid child and overflows on every phone. (RECS took a
-  // slot, owner 2026-07-22.)
+  // tab becomes a 7th grid child and overflows on every phone. (RECS held a
+  // slot from 2026-07-22 until the owner removed the page, 2026-10-20 — "I
+  // don't use it"; MOMENTUM took its tab.)
   //
   // OFF_TAB is the SINGLE SOURCE for both derivations below. They used to be
   // two independent predicates each keyed on the literal "alerts", so adding a
@@ -104,7 +104,7 @@
   // and left the new key out of the sheet — which on a phone is a shipped page
   // with NO entry point at all, because the pill row is display:none under
   // 680px. A set cannot drift from itself.
-  const OFF_TAB = new Set(["alerts", "momentum"]);
+  const OFF_TAB = new Set(["alerts"]);
   const TABS = PRIMARY.filter((x) => !OFF_TAB.has(x.key));
   const MORE = [
     { href: "sectors.html", label: "NEWS",         key: "sectors", tab: "📰" },
@@ -460,7 +460,7 @@
 
   // #91: one shared footer include — the same credit (where the data comes
   // from) on every nav page. Pages that already ship their own
-  // <footer class="site-footer"> (dashboard / journal / recs / system) keep
+  // <footer class="site-footer"> (dashboard / journal / system) keep
   // it, carrying this same line; the lens & utility pages get this appended.
   // UI100 #12 (2026-10-20): one short line. The scan cadence and the venue
   // list it used to spell out are on the system page; stampVersion() adds the

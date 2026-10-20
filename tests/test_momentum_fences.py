@@ -500,7 +500,7 @@ def test_the_runner_names_no_other_published_artefact():
     for forbidden in ("_vivek.json", "_spec.json", "latest.json",
                       "vivek_bot_book", "bot_rules.json", "alert_history.json",
                       "funnel_history.json", "sector_map.json",
-                      "reco_note.json", "edge_summary.json"):
+                      "edge_summary.json"):
         assert forbidden not in src, (
             f"run.py names {forbidden} - the lens writes only its own files")
 

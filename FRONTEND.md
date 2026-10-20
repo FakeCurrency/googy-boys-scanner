@@ -1,7 +1,7 @@
 # Vivek 5.0 — FRONTEND.md
 
 How the static frontend (`public/`) is put together: the deck architecture,
-the breakpoint scale, the cache layers, the recs data flow, and the
+the breakpoint scale, the cache layers, and the
 conventions every page follows. Read this before touching the UI — it is the
 map that keeps the pages consistent. (Added 2026-07-24 as UI backlog #100;
 refreshed 2026-10-14, REFINE200 #100: the ★ My Names page, the stars, the AI BOT
@@ -28,7 +28,6 @@ public/
   phasemap*.html      PhaseMap lens + insights + key/legend
   specs.html          Specs lens
   momentum.html       MOMENTUM lens (report-only)
-  recommendations.html  RECS: deltas, Claude's note, confluence picks
   alerts.html         multi-lens alignment history (a rolling window)
   sectors.html        NEWS & markets (movers, calendar)
   system.html         SYSTEM: the bot's rulebook + backtest evidence
@@ -75,8 +74,8 @@ Top to bottom:
 the deck pills, live clocks. The deck reads the entry-quality tints and the
 position cap from `data/bot_rules.json` (it no longer downloads a backtest file
 for three chips). On nav pages `nav.js`'s `window.VivekBook` is the one shared
-read of the bot book + rules: app.js and recs.js read through it with
-`{fresh:true}` on their own refresh; chart.js (no nav.js) keeps its own.
+read of the bot book + rules: app.js reads through it with
+`{fresh:true}` on its own refresh; chart.js (no nav.js) keeps its own.
 
 ---
 
@@ -95,7 +94,7 @@ Above 680px the nav pills take their own header row (per-header width bands);
 at ≤680px they are hidden and the bottom tab bar owns navigation. Two hard test
 widths are gated in CI: **390px** (modern phone) and **320px**
 (the narrowest supported). `test/e2e/smoke.e2e.js` fails on any horizontal
-overflow at 320px across index/recs/phasemap/specs/journal; the screenshot
+overflow at 320px across index/phasemap/specs/journal; the screenshot
 matrix (`screenshots.e2e.js`) shoots 360/390/430. Any new component MUST hold
 320px with no page overflow — tables scroll inside `.jr-table-wrap`/equivalent,
 they don't stretch the page.
@@ -128,25 +127,6 @@ Four cooperating layers keep paint instant without ever serving stale trades:
 
 ---
 
-## Recs data flow (`recommendations.html` + `recs.js`)
-
-Three stacked sources, freshest-wins:
-
-1. **Deltas / breadth** — computed client-side from the committed `*_vivek.json`
-   scans (same files the dashboard reads); 14-day breadth history in
-   `gbs:reco:hist` (localStorage).
-2. **Claude's note** — a dated hand-written read at `data/reco_note.json`,
-   authored by the `reco_note.yml` CI job (a cloud Claude session can't reach the
-   push token, so CI owns the daily cadence). Read-state archived in
-   `gbs:reco:notes` so it survives the daily overwrite.
-3. **Confluence enrichment** — the SAME engine as the dashboard's ⨂ pill
-   (`PM.loadConfluence`), lazily pulled per market for at-level / multi-lens.
-
-Degraded/stale states are explicit — the page never pretends a missing source
-is empty.
-
----
-
 ## Conventions
 
 - **Versioning** — every edit to a `public/js/*.js` or `public/css/*.css` bumps
@@ -166,7 +146,7 @@ is empty.
 - **UX top-10 (2026-07-26)** — CLS pass (space reserved pre-data + metric-
   matched font fallbacks; lighthouse gate at <0.50), the status lamp
   (`status.js`, fed by `/api/health`), first-visit onboarding (`gbs:onboarded`),
-  recs morning read, proportional plan axis in row detail, intent prefetch +
+  proportional plan axis in row detail, intent prefetch +
   view transitions + scroll restore (nav.js/app.js), chart mobile control
   sheet. (The ★ arm/trigger notifications went with the stars, 2026-09-21.)
 - **Screenshot-diff fixtures** — `test/e2e/fixtures/data/` freezes all /data/
@@ -189,7 +169,7 @@ is empty.
   more; most slice the SHIPPED functions out of `public/js` and run them.
   `node --check` on every shipped script; Functions are checked as modules.
 - **E2E** (Playwright) — `smoke.e2e.js` walks the daily flows (deck paint, pill
-  filter, row expand, sort, recs, specs, phasemap) desktop + 390px + a 320px
+  filter, row expand, sort, specs, phasemap) desktop + 390px + a 320px
   overflow sweep on the fixture data set, failing on any uncaught page error;
   `screenshots.e2e.js` shoots the 360/390/430 matrix; `screenshot-diff.e2e.js`
   compares four views against cached baselines with the page clock frozen;

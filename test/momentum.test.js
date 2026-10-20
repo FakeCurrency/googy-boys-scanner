@@ -55,8 +55,9 @@ ok(NAVL.PRIMARY.some((x) => x.key === "momentum"), "momentum is a desktop pill")
   const keys = NAVL.PRIMARY.map((x) => x.key);
   eq(keys.indexOf("momentum"), keys.indexOf("specs") + 1, `momentum follows specs in PRIMARY (${keys.join(" · ")})`);
 }
-ok(NAVL.SHEET.some((x) => x.key === "momentum"), "momentum is in the mobile MORE sheet");
-ok(!NAVL.TABS.some((x) => x.key === "momentum"), "momentum is NOT a bottom tab");
+// 2026-10-20: RECS was removed and MOMENTUM took its bottom tab.
+ok(NAVL.TABS.some((x) => x.key === "momentum"), "momentum is a bottom tab");
+ok(!NAVL.SHEET.some((x) => x.key === "momentum"), "a bottom tab is not repeated in the MORE sheet");
 
 /* Every PRIMARY key must be reachable on a phone. The pill row is display:none
  * under 680px, so a key in neither TABS nor SHEET is a shipped page with no
@@ -70,7 +71,7 @@ NAVL.PRIMARY.forEach((it) => {
  * keyed on the literal "alerts", which is how adding a PRIMARY entry could
  * widen TABS to six AND drop the new key out of the sheet in the same edit. */
 ok(NAVL.OFF_TAB instanceof Set, "OFF_TAB must be the single source for TABS and SHEET");
-ok(NAVL.OFF_TAB.has("momentum") && NAVL.OFF_TAB.has("alerts"), "OFF_TAB holds both");
+ok(NAVL.OFF_TAB.has("alerts") && !NAVL.OFF_TAB.has("momentum"), "OFF_TAB holds alerts only");
 ok(/TABS = PRIMARY\.filter\(\(x\) => !OFF_TAB\.has\(x\.key\)\)/.test(NAV),
    "TABS must be derived from OFF_TAB");
 ok(/PRIMARY\.filter\(\(x\) => OFF_TAB\.has\(x\.key\)\)/.test(NAV),
