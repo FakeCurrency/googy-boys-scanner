@@ -707,8 +707,8 @@ test("deckCounts: the deck's fund test uses WORD BOUNDARIES, like PM's", () => {
     "app.js isFundReit no longer uses the word-boundary regex");
 });
 
-// PM.isFundReit is the OTHER half of the is_product contract (the PhaseMap,
-// Specs and Recs pages read it). Its behavioural pins lived in eyes.test.js
+// PM.isFundReit is the OTHER half of the is_product contract (the PhaseMap
+// and Specs pages read it). Its behavioural pins lived in eyes.test.js
 // until the Eyes strip was removed (2026-10-09); they run the shipped function.
 test("PM.isFundReit: a REIT, an ETF and a keyword-invisible LIC are products", () => {
   const f = SHARED_PM.isFundReit;

@@ -349,7 +349,7 @@
   loadPrefs();
   consumeViewApply();   // UX-20 #2: one-shot preset/URL view application
   // Deep link (backlog #16): ?m=asx|nasdaq|crypto opens the dashboard already
-  // switched to that market (e.g. the RECS cards' "Open scan →"). Overrides
+  // switched to that market (e.g. a shared link). Overrides
   // the saved pref and persists, so a refresh keeps you where the link put you.
   try {
     const qm = new URLSearchParams(location.search).get("m");

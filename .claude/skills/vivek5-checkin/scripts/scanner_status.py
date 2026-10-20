@@ -283,8 +283,7 @@ def lenses(now: dt.datetime) -> None:
         FLAGS.append(f"PhaseMap has not run since {rd} (nightly; usually lands midnight to ~4am Melbourne)")
     elif ran and now - ran > dt.timedelta(hours=PHASEMAP_MAX_AGE_H):
         FLAGS.append(f"PhaseMap last ran {ago(ran, now)} (nightly; usually lands midnight to ~4am Melbourne)")
-    for path, label, limit_h in (("data/alert_forward_returns.json", "edge ledgers", 30),
-                                 ("public/data/reco_note.json", "reco note", 30)):
+    for path, label, limit_h in (("data/alert_forward_returns.json", "edge ledgers", 30),):
         d = load(path) or {}
         stamp = d.get("updated_at") or d.get("generated_at")
         if stamp:

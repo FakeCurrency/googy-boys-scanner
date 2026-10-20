@@ -5,10 +5,9 @@
  *   2. pill filtering (⨂ Multi-lens click-to-filter narrows the list)
  *   3. row expand (horizontal SL→IN→TP1→TP2→TP3 ladder renders)
  *   4. sort control (label cycles, arrow flips)
- *   5. recommendations page (market cards render)
- *   6. 390px mobile: zero horizontal overflow, toolbar + price visible
- *   7. momentum chart: back link, header caption, no PhaseMap without ?pm=1
- *   8. momentum page: heading renders; rows + ?s=&src=momentum links whenever
+ *   5. 390px mobile: zero horizontal overflow, toolbar + price visible
+ *   6. momentum chart: back link, header caption, no PhaseMap without ?pm=1
+ *   7. momentum page: heading renders; rows + ?s=&src=momentum links whenever
  *      the fixture asx.json has results (no symbol is hard-coded)
  * Any uncaught page error on any page fails the run.
  *
@@ -138,14 +137,6 @@ const check = (ok, label) => {
       return performance.now() - t0;
     });
     check(sortMs < 80, `sort interaction paints fast on ${nRows} rows (${sortMs.toFixed(1)}ms sync, budget 80)`);
-    await page.context().close();
-
-    // ── Recommendations page ─────────────────────────────────────────────
-    page = await newPage({ width: 1500, height: 950 });
-    await page.goto(`${BASE}/recommendations.html`, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForSelector(".rec-card", { timeout: 30000 });
-    const recCards = await page.$$eval(".rec-card", (n) => n.length);
-    check(recCards >= 3, `recommendations market cards render (${recCards})`);
     await page.context().close();
 
     // Wait until a list's rendered count settles (async fetch + render) so the
@@ -280,7 +271,7 @@ const check = (ok, label) => {
     await page.context().close();
 
     // ── 320px (narrowest phone) zero-overflow guard across pages (#38) ───────
-    for (const path of ["index.html", "recommendations.html", "phasemap.html", "specs.html", "journal.html"]) {
+    for (const path of ["index.html", "phasemap.html", "specs.html", "journal.html"]) {
       const pg = await newPage({ width: 320, height: 720 });
       await pg.goto(`${BASE}/${path}`, { waitUntil: "domcontentloaded", timeout: 30000 });
       await pg.waitForTimeout(1200);   // let the app paint

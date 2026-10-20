@@ -215,7 +215,7 @@ CMDS
 ```
 
 Pages: `index.html` (the deck), `chart.html?s=<SYM>&m=<asx|nasdaq|crypto>`,
-`journal.html`, `recommendations.html`, `phasemap.html`, `specs.html`,
+`journal.html`, `phasemap.html`, `specs.html`,
 `momentum.html`, `alerts.html`, `sectors.html`, `system.html`.
 
 ## Run (human path)

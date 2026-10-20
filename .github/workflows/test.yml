@@ -47,7 +47,7 @@ on:
       # commit nothing checked.
       #
       #   scripts/**   several pytest files import it (resize_book_notional,
-      #                reco_note, morning_plays, the edge pipeline) — and
+      #                morning_plays, the edge pipeline) — and
       #                resize_book_notional is the one that RESTATES the track
       #                record, whose tests are almost entirely about what it
       #                refuses to do.
@@ -342,14 +342,14 @@ jobs:
         run: node test/hygiene.test.js
       # REFINE200 WP7 (2026-10-14): deck entry-quality from bot_rules, slim
       # PhaseMap confluence, row caps + age, SMA-proxy chip, SCAN poll window,
-      # service-worker cache bounds, RECS/ALERTS/NEWS honesty, CSS focus rings.
+      # service-worker cache bounds, ALERTS/NEWS honesty, CSS focus rings.
       - name: Deck + small pages (REFINE200 WP7)
         if: success() || failure()
         run: node test/refine_deck.test.js
 
   # Browser-level smoke (UI backlog #8, 2026-07-22): serves public/ and walks
   # the daily flows — deck paint, pill filtering, row expand + ladder, sort
-  # control, recs page, and a 390px overflow/price check — against the
+  # control, and a 390px overflow/price check — against the
   # committed scan data, failing on any uncaught page error.
   e2e:
     runs-on: ubuntu-latest
@@ -392,7 +392,7 @@ jobs:
       # count, the 80ms sort budget and every overflow check measured that day's
       # tape -- and since scan commits never trigger this workflow, a broad or a
       # quiet market went red on the next unrelated code push.
-      - name: E2E smoke (dashboard + recs · desktop + 390px)
+      - name: E2E smoke (dashboard · desktop + 390px)
         if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: node test/e2e/smoke.e2e.js
       # Hang-probe (owner-ruled, 2026-07-31): a data fetch that neither

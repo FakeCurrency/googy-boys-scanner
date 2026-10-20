@@ -37,7 +37,7 @@ Use a subagent for the run listing when the window is long; the raw listing is l
 - **The ASX close counts from 16:40 Sydney.** A scan at 16:15 is not the close.
 - **NASDAQ belongs to New York's date.** At a Melbourne afternoon check-in, its book is 9 to 10 hours old by design.
 - **Late by design:**
-  - PhaseMap and the reco note land overnight.
+  - PhaseMap lands overnight.
   - Ignition ASX's first screen lands about 17:30 to 18:15; Ignition NASDAQ's about 08:35 to 09:30 (its bar is final at 07:30). GitHub runs both, so either can slip hours.
   - On Sundays and Mondays crypto Momentum lands 5 to 6 hours late (about 17:00).
   - Hundreds of ASX names showing a day-old price intraday is thin trading, not a fault.

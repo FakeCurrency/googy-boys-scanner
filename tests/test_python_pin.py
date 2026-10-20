@@ -21,7 +21,7 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORKFLOWS = ("kill_switch.yml", "crypto_bot.yml", "scan.yml", "backup_book.yml",
-             "reco_note.yml", "morning_plays.yml", "lens_backtest.yml",
+             "morning_plays.yml", "lens_backtest.yml",
              "vivek_backtest.yml", "test_alerts.yml")
 # (workflow, job): stdlib-only gates that run before any setup/pip, by design.
 SYSTEM_PYTHON_GATES = {("scan.yml", "gate"), ("crypto_bot.yml", "gate")}

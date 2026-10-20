@@ -1,4 +1,4 @@
-/* PHASEMAP shared helpers (window.PM) — loaded by index, recommendations,
+/* PHASEMAP shared helpers (window.PM) — loaded by index,
    phasemap, specs, momentum and chart (the PhaseMap chart lives in chart.js).
    Everything rendered comes straight from the scan snapshot — nothing freestyle. */
 window.PM = (() => {
