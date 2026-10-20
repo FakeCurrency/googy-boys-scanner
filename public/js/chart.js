@@ -2022,6 +2022,10 @@
     // Trigger state — ARMED (a trigger fired) vs WATCHING (near the level only).
     const trig = lv.entry_trigger ? lv.entry_trigger.toUpperCase() : null;
     const setupVal = lv.armed ? `ARMED · ${trig || "trigger"}` : "WATCHING";
+    // UI100 review (2026-10-20): this nine-cell strip is the one a phone lays
+    // out as a 3-column grid (chart.css .cf-metrics-vk); every other footer
+    // drops the class and wraps.
+    $("#cf-metrics").classList.add("cf-metrics-vk");
     $("#cf-metrics").innerHTML = [
       metric("Setup", setupVal, lv.armed ? "green" : "amber"),
       metric(tfTxt, fmt(lv.level, cur), "amber"),
@@ -2066,6 +2070,7 @@
     const pl = plan !== undefined ? plan : tf.plan;
     const el = $("#cf-metrics");
     if (!el) return;
+    el.classList.remove("cf-metrics-vk");   // UI100 review: the grid is VIVEK's
     if (!pl) {
       el.innerHTML = metric("Plan", "—", "amber") +
         metric("", `No Auto box on this TF — no scored cross in ${TV_PLAN.autoMaxAge} bars.`, "") +
@@ -2123,6 +2128,7 @@
     // Only the fields this chart HAS (REFINE200 #108): a held position or a
     // PhaseMap plan carries no 5.0 score and no risk %, and "Score 0/0 ·
     // Risk —" read as a broken page rather than as fields that do not apply.
+    $("#cf-metrics").classList.remove("cf-metrics-vk");   // UI100 review: the grid is VIVEK's
     $("#cf-metrics").innerHTML = [
       metric("Entry", fmt(d.entry, cur)),
       metric(d.stop_label || "Stop", fmt(d.stop, cur), "red"),
@@ -2392,20 +2398,33 @@
     // Each timeframe button carries its own state: a coloured sub-label (the
     // trigger and R:R when armed, the distance from the line when not) and the
     // chip's tooltip after the button's own.
+    // UI100 review (2026-10-20): the trigger word is a span of its own, which
+    // a phone hides (chart.css), so 4H + D + 3D + W + ✏ hold ONE line at 360px
+    // ("3D 3.0R"); the whole read -- "3D 200-SMA plan · ARMED · retest · R:R
+    // 3.0" -- is on the title. A timeframe that BORROWS the Daily plan
+    // (`approx`) gets no state and no sub-label: the Daily plan's green
+    // "ret 3.0R" on a 4H button read as a 4H setup of its own (the old strip
+    // dimmed that chip as `.ref`). Its title says it is a reference view.
     items.forEach((i) => {
       const btn = toggle && toggle.querySelector(`.tf-btn[data-tf="${i.k}"]`);
       if (!btn) return;
+      if (i.approx) {
+        btn.title = [btn.title, `${TF_LABEL[i.k]} — reference view (uses the Daily plan)`]
+          .filter(Boolean).join(" · ");
+        return;
+      }
       const near = isNear(i);
       const state = i.armed ? (i.rr >= TFS_MIN_RR ? "armed" : "weak") : (near ? "near" : "watch");
-      const sub = i.armed ? `${(i.trig || "arm").slice(0, 3)} ${i.rr.toFixed(1)}R`
-                : (i.nearPct != null && !i.approx ? fmtPct(i.nearPct) : "");
-      const title = i.approx
-        ? `${TF_LABEL[i.k]} — reference view (uses the Daily plan)`
-        : `${TF_LABEL[i.k]} 200-SMA plan${i.armed ? " · ARMED" : (near ? " · approaching" : " · watching")}` +
-          (i.nearPct != null ? ` · ${fmtPct(i.nearPct)} from the line` : "");
+      const sub = i.armed
+        ? `<span class="tf-trig">${esc((i.trig || "arm").slice(0, 3))} </span>${i.rr.toFixed(1)}R`
+        : (i.nearPct != null ? esc(fmtPct(i.nearPct)) : "");
+      const title = `${TF_LABEL[i.k]} 200-SMA plan` +
+        (i.armed ? ` · ARMED · ${i.trig || "trigger"} · R:R ${i.rr.toFixed(1)}`
+                 : (near ? " · approaching" : " · watching")) +
+        (i.nearPct != null ? ` · ${fmtPct(i.nearPct)} from the line` : "");
       btn.classList.add("s-" + state);
       btn.title = [btn.title, title].filter(Boolean).join(" · ");
-      if (sub) btn.insertAdjacentHTML("beforeend", `<span class="tf-sub">${esc(sub)}</span>`);
+      if (sub) btn.insertAdjacentHTML("beforeend", `<span class="tf-sub">${sub}</span>`);
     });
   }
 
