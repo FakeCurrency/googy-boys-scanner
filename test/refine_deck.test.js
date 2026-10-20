@@ -323,6 +323,107 @@ test("#192 the sub-line says how far back the rolling log reaches", () => {
 });
 
 // ---------------------------------------------------------------------------
+// UI100 review (2026-10-20) — ALERTS day groups, sub-line, prior-use marker
+// ---------------------------------------------------------------------------
+/* The shipped render() + onDayToggle() against a list stub that parses the
+ * <details> tags render() writes and, like Chrome, fires `toggle` for every
+ * group inserted already open. `reader(day)` is a tap on that day's summary. */
+function alertsHarness(entries) {
+  let groups = [];
+  const dataset = (attrs) => {
+    const ds = {};
+    for (const m of attrs.matchAll(/data-([\w-]+)="([^"]*)"/g))
+      ds[m[1].replace(/-(\w)/g, (_, c) => c.toUpperCase())] = m[2];
+    return ds;
+  };
+  const list = {
+    set innerHTML(v) {
+      groups = [...v.matchAll(/<details\b([^>]*)>[\s\S]*?<div class="al-day">([\s\S]*?)<\/div>\s*<\/details>/g)]
+        .map(([, attrs, rows]) => {
+          const g = { open: /\sopen(\s|$)/.test(attrs), dataset: dataset(attrs), drawn: rows.trim() !== "",
+                      classList: { contains: (c) => c === "al-day-group" } };
+          g.querySelector = () => ({ get firstElementChild() { return g.drawn ? {} : null; },
+                                     set innerHTML(h) { g.drawn = h.trim() !== ""; } });
+          return g;
+        });
+      // Chrome: a <details open> inserted by the parser fires `toggle` too
+      for (const g of groups) if (g.open) h.onDayToggle({ target: g });
+    },
+    get innerHTML() { return ""; },
+  };
+  const sub = { textContent: "", title: "" };
+  const document = { getElementById: (id) => (id === "al-list" ? list : id === "al-sub" ? sub : null) };
+  const h = new Function("document", "location",
+    constSrc(ALERTS, "esc") + constSrc(ALERTS, "state") +
+    "const rowHTML = (e) => `<a class=\"al-row\">${e.ticker}</a>`;\n" +
+    constSrc(ALERTS, "melbFmtD") + constSrc(ALERTS, "melbDay") + constSrc(ALERTS, "melbShort") +
+    fnSrc(ALERTS, "windowNote") + constSrc(ALERTS, "OPEN_ALL_MAX") +
+    fnSrc(ALERTS, "dayGroupHTML") + fnSrc(ALERTS, "onDayToggle") + fnSrc(ALERTS, "render") +
+    "return { state, render, onDayToggle };")(document, {});
+  h.state.entries = entries;
+  h.render();
+  h.group = (day) => groups.find((g) => g.dataset.day === day);
+  h.reader = (day) => { const g = h.group(day); g.open = !g.open; h.onDayToggle({ target: g }); };
+  h.search = (q) => { h.state.q = q; h.render(); };
+  h.sub = sub;
+  return h;
+}
+// five Melbourne days, newest first, one distinct ticker each
+const ALERT_DAYS = ["2026-10-20", "2026-10-19", "2026-10-16", "2026-10-15", "2026-10-14"];
+const alertEntries = () => ALERT_DAYS.map((d, i) => ({ date: `${d}T03:00:00+00:00`, ticker: `TK${i}`,
+  market: i % 2 ? "nasdaq" : "asx", side: "long", count: 2, lenses: ["PHASEMAP", "VIVEK"] }));
+
+test("ALERTS: Chrome's own toggle for a rendered-open day is not mistaken for the reader's choice", () => {
+  const a = alertsHarness(alertEntries());
+  assert.deepEqual(a.state.toggled, {}, "the newest day's parser-fired toggle was recorded as a choice");
+  assert.ok(a.group(ALERT_DAYS[0]).open && !a.group(ALERT_DAYS[3]).open, "only the newest day starts open");
+  // the repro: open the 4th day, search a ticker in it, clear the search
+  a.reader(ALERT_DAYS[3]);
+  assert.ok(a.group(ALERT_DAYS[3]).drawn, "an opened day draws its rows");
+  assert.equal(a.state.toggled[ALERT_DAYS[3]], true);
+  a.search("TK3");
+  assert.ok(a.group(ALERT_DAYS[3]).open, "a narrow search opens the day it matches");
+  a.search("");
+  assert.ok(a.group(ALERT_DAYS[3]).open, "the day the reader opened closed itself after a search");
+  assert.ok(a.group(ALERT_DAYS[0]).open && !a.group(ALERT_DAYS[1]).open, "the other days keep their defaults");
+});
+
+test("ALERTS: a choice that matches the default is kept, and a narrow search opens every matching day", () => {
+  const a = alertsHarness(alertEntries());
+  // close the newest, open it again: the reader's explicit "open" is stored
+  a.reader(ALERT_DAYS[0]);
+  assert.equal(a.state.toggled[ALERT_DAYS[0]], false);
+  a.reader(ALERT_DAYS[0]);
+  assert.equal(a.state.toggled[ALERT_DAYS[0]], true, "a choice equal to the default must be stored, not deleted");
+  // a remembered close never hides a search match
+  a.reader(ALERT_DAYS[0]);
+  a.search("TK");
+  for (const d of ALERT_DAYS) assert.ok(a.group(d).open, `${d}: a narrow search must open every matching day`);
+  a.search("");
+  assert.ok(!a.group(ALERT_DAYS[0]).open, "the reader's close comes back once the search is cleared");
+});
+
+test("ALERTS: the sub-line keeps the window date in reach on a phone, whatever the filter", () => {
+  const a = alertsHarness(alertEntries());
+  a.state.market = "nasdaq";
+  a.render();
+  assert.ok(/^2 alignments · newest 5 kept, back to 14 Oct$/.test(a.sub.textContent), a.sub.textContent);
+  a.search("NOPE");
+  assert.ok(/match[\s\S]* · newest 5 kept, back to 14 Oct$/.test(a.sub.textContent),
+    "a search that finds nothing still says how far back the log reaches: " + a.sub.textContent);
+  const css = read("public/css/phasemap.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const m of css.matchAll(/([^{}]*\.al-sub[^{}]*)\{([^}]*)\}/g))
+    assert.ok(!/ellipsis|nowrap/.test(m[2]), `${m[1].trim()} clips the sub-line again: ${m[2].trim()}`);
+});
+
+test("ALERTS: the page still writes gbs:alerts-seen, the tour's prior-use marker", () => {
+  const keys = constSrc(APP, "PRIOR_USE_KEYS");
+  assert.ok(/"gbs:alerts-seen"/.test(keys), "app.js no longer reads it: drop this pin with the write");
+  assert.ok(/localStorage\.setItem\("gbs:alerts-seen"/.test(ALERTS),
+    "the alerts page must write the key app.js counts as prior use (the first-visit tour gate)");
+});
+
+// ---------------------------------------------------------------------------
 // #142 — NEWS session title
 // ---------------------------------------------------------------------------
 test("#142 a stamp inside the session reads 'Today so far'; after the close it does not", () => {

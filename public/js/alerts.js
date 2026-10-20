@@ -38,7 +38,8 @@
 
   // byDay: the filtered rows per Melbourne day from the last render, so a
   // collapsed day can draw its rows when it is opened. toggled: the days the
-  // reader opened or closed against their default (kept across filter taps).
+  // reader opened or closed by hand, as they left them (kept across filter
+  // taps and searches).
   const state = { entries: [], market: "all", q: "", triplesOnly: false, failed: false,
                   byDay: {}, toggled: {} };
 
@@ -46,7 +47,8 @@
   // count · market · time. 797 of 800 logged rows were PHASEMAP + VIVEK, so
   // that pair is implied and named only in the tooltip; any other set of
   // lenses (every 3-lens row, a SPECS pair) is still spelled out. The blue
-  // "new since your last visit" dot (and its localStorage watermark) went.
+  // "new since your last visit" dot went (its gbs:alerts-seen key is still
+  // written after a load, as a prior-use marker only -- see the fetch below).
   const IMPLIED_LENSES = "PHASEMAP + VIVEK";
   function rowHTML(e) {
     const triple = e.count >= 3;
@@ -85,12 +87,15 @@
 
   // UI100 #94 (2026-10-20): only the newest day is open, and a collapsed day
   // holds no rows until it is opened (800 rows were ~6,600 DOM nodes). A
-  // ticker search narrow enough to read opens every day it matches.
+  // ticker search narrow enough to read opens every day it matches, whatever
+  // the reader opened or closed before it (UI100 review: a remembered close
+  // used to hide a matching day).
   const OPEN_ALL_MAX = 150;
-  function dayGroupHTML(day, dayRows, byDefault) {
-    const open = Object.prototype.hasOwnProperty.call(state.toggled, day) ? state.toggled[day] : byDefault;
+  function dayGroupHTML(day, dayRows, byDefault, openAll) {
+    const open = openAll ||
+      (Object.prototype.hasOwnProperty.call(state.toggled, day) ? state.toggled[day] : byDefault);
     const triples = dayRows.filter((e) => e.count >= 3).length;
-    return `<details class="al-day-group" data-day="${esc(day)}" data-def="${byDefault ? 1 : 0}"${open ? " open" : ""}>
+    return `<details class="al-day-group" data-day="${esc(day)}" data-rendered-open="${open ? 1 : 0}"${open ? " open" : ""}>
         <summary class="al-day-summary">
           <span class="al-day-date">${esc(day)}</span>
           <span class="al-day-count">${dayRows.length} alignment${dayRows.length === 1 ? "" : "s"}${triples ? ` · 🎯 ${triples} triple${triples === 1 ? "" : "s"}` : ""}</span>
@@ -99,14 +104,24 @@
         <div class="al-day">${open ? dayRows.map(rowHTML).join("") : ""}</div>
       </details>`;
   }
-  // Draws a day's rows the first time it opens, and remembers a reader's
-  // open/close that differs from the default so a filter tap keeps it.
+  // Draws a day's rows the first time it opens, and remembers the reader's
+  // open/close so a filter tap or a search keeps it.
+  // UI100 review (2026-10-20): only a toggle the READER caused is a choice.
+  // Chrome also fires `toggle` for every <details open> that render() inserts;
+  // that one arrives with the open state render() stamped on the group
+  // (data-rendered-open), so it is not recorded -- it used to be read as the
+  // reader re-choosing the default, which deleted their real choice. A
+  // reader's toggle is stored as they left it (not deleted when it matches
+  // the default) and becomes the group's new stamp.
   function onDayToggle(ev) {
     const g = ev.target;
     if (!g || !g.classList || !g.classList.contains("al-day-group")) return;
     const day = g.dataset.day;
-    if (g.open === (g.dataset.def === "1")) delete state.toggled[day];
-    else state.toggled[day] = g.open;
+    const now = g.open ? "1" : "0";
+    if (g.dataset.renderedOpen !== now) {
+      state.toggled[day] = g.open;
+      g.dataset.renderedOpen = now;
+    }
     const box = g.querySelector(".al-day");
     if (g.open && box && !box.firstElementChild) box.innerHTML = (state.byDay[day] || []).map(rowHTML).join("");
   }
@@ -130,16 +145,19 @@
       (state.market === "all" || e.market === state.market) &&
       (!state.triplesOnly || e.count >= 3) &&
       (!q || String(e.ticker || "").toUpperCase().includes(q)));
+    // UI100 review (2026-10-20): the market's name is not repeated here (the
+    // active chip says it; "493 NASDAQ alignments" pushed the date off a
+    // 360px line), and a search that finds nothing still says how far back
+    // the log it searched reaches.
     if (!rows.length) {
       sub.textContent = state.entries.length
-        ? "No alignments match the current filters."
+        ? "No alignments match the current filters" + windowNote(state.entries)
         : "No alignments logged yet — the log fills as the scans run.";
       list.innerHTML = "";
       return;
     }
-    sub.textContent = `${rows.length}` +
-      (state.market === "all" ? "" : ` ${state.market.toUpperCase()}`) +
-      ` alignment${rows.length === 1 ? "" : "s"}` + windowNote(state.entries);
+    sub.textContent = `${rows.length} alignment${rows.length === 1 ? "" : "s"}` +
+      windowNote(state.entries);
     sub.title = sub.textContent;
     const byDay = {};
     rows.forEach((e) => {
@@ -149,7 +167,7 @@
     state.byDay = byDay;
     const openAll = !!q && rows.length <= OPEN_ALL_MAX;
     list.innerHTML = Object.keys(byDay).sort().reverse()
-      .map((day, i) => dayGroupHTML(day, byDay[day], i === 0 || openAll)).join("");
+      .map((day, i) => dayGroupHTML(day, byDay[day], i === 0, openAll)).join("");
   }
   // `toggle` does not bubble: listen in the capture phase.
   document.getElementById("al-list").addEventListener("toggle", onDayToggle, true);
@@ -176,6 +194,10 @@
     .then((j) => {
       state.entries = (j && j.entries) || [];
       render();
+      // UI100 review (2026-10-20): no NEW dot reads this any more (UI100 #93);
+      // it stays because app.js's PRIOR_USE_KEYS counts it as proof this
+      // browser has used the site before (it gates the first-visit tour).
+      try { localStorage.setItem("gbs:alerts-seen", String(Date.now())); } catch (_) {}
     })
     .catch(() => {
       state.failed = true;

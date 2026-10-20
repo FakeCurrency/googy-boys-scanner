@@ -147,7 +147,8 @@
     const m = rec.metrics || {};
     const asOf = state.data && (state.data.as_of || state.data.run_date);
     const flashed = asOf && (m.displacement_date === asOf || m.sweep_date === asOf);
-    const ci = state.confl ? state.confl.of(rec.ticker) : null;
+    const confl = conflNow();
+    const ci = confl ? confl.of(rec.ticker) : null;
     const aligned = ci && ci.side === (rec.direction === "bearish" ? "short" : "long");
     const key = `${rec.ticker}|${rec.direction}`;
     const isNew = state.newKeys && state.newKeys.has(key);
@@ -161,12 +162,17 @@
     ].join("");
     // The warnings sit with side · state · grade, OUTSIDE the extras box
     // that may drop a chip: the ILLIQUID tag can never be disabled (spec).
+    // UI100 review (2026-10-20): in COMPACT the CHART → cue is the extras
+    // box's LAST item, so it is the first thing a tight line drops — at
+    // 320px it pushed ILLIQUID past the card edge. The head line wraps
+    // rather than clip a warning (phasemap.css).
+    const cue = `<span class="pm-chart-cue" aria-hidden="true"><span class="pm-cue-word">CHART </span>→</span>`;
     const head = `<article class="pm-card pm-card-link${aligned && ci.count >= 3 ? " pm-card-triple" : ""}" data-idx="${idx}" title="Open chart" tabindex="0">
       <div class="pm-card-head">
         <span class="pm-ticker">${PM.esc(rec.ticker)}</span>
         ${PM.headBadgesHTML(rec)}${PM.warnTagsHTML(rec)}
-        ${extra ? `<span class="pm-head-extra">${extra}</span>` : ""}
-        <span class="pm-chart-cue" aria-hidden="true"><span class="pm-cue-word">CHART </span>→</span>
+        ${compact ? `<span class="pm-head-extra">${extra}${cue}</span>`
+          : `${extra ? `<span class="pm-head-extra">${extra}</span>` : ""}${cue}`}
       </div>`;
     if (compact) return head + "</article>";
     // UI100 #71: the engine's closing "not financial advice" sentence is
@@ -311,9 +317,18 @@
     watchClamps(list);
   }
 
+  // UI100 review (2026-10-20): the multi-lens read a card or the strip may
+  // use is the CURRENT market's only. state.confl outlives a failed market
+  // switch (it is cleared on the success path), so "+N more" or a rotate
+  // after ASX -> NASDAQ (NASDAQ's file failing) drew 39 ASX names linking
+  // to chart.html?m=nasdaq. A fetch result applies only to the market it
+  // was started for.
+  const conflNow = () => (state.confl && state.conflMarket === state.market ? state.confl : null);
+
   function renderConfBanner() {
     let el = document.getElementById("conf-banner");
-    const rows = state.confl ? state.confl.all() : [];
+    const confl = conflNow();
+    const rows = confl ? confl.all() : [];
     if (!rows.length) { if (el) el.remove(); return; }
     if (!el) {
       el = document.createElement("section");
@@ -328,6 +343,18 @@
     const cap = state.confOpen ? rows.length : isPhone() ? CONF_CAP_PHONE : 10;
     el.classList.toggle("is-open", !!state.confOpen);
     el.innerHTML = PM.confluenceBannerHTML(rows, state.market, cap);
+    // UI100 review (2026-10-20): the one-line phone strip drops WHOLE names
+    // until every item fits, so "+N more" is always on screen (at 320px it
+    // sat past the clip and NASDAQ's 75 other names were unreachable; a
+    // triple's "🎯 X ▲ ×3" pushed it off at 390-430px too).
+    if (!state.confOpen && isPhone()) {
+      const cut = () => el.scrollWidth > el.clientWidth + 1 ||
+        Array.from(el.children || []).some((c) => c.scrollWidth > c.clientWidth + 1);
+      for (let n = Math.min(cap, rows.length); n > 0 && cut();) {
+        n--;
+        el.innerHTML = PM.confluenceBannerHTML(rows, state.market, n);
+      }
+    }
     const more = el.querySelector("[data-conf-more]");
     if (more) more.addEventListener("click", () => { state.confOpen = true; renderConfBanner(); });
   }
@@ -647,6 +674,7 @@
     // wrote them into pm-seen:crypto. Each resume checks it is still wanted.
     const market = state.market;
     const stale = () => market !== state.market;
+    renderConfBanner();   // another market's strip goes now (conflNow), not on success
     $("#pm-sub").textContent = "Loading latest scan…";
     $("#pm-list").innerHTML = SKELETON.repeat(4);   // shimmer, not a blank page
     try {
@@ -693,6 +721,7 @@
       PM.loadConfluence(market).then((c) => {
         if (stale()) return;
         state.confl = c;
+        state.conflMarket = market;
         render();
         renderConfBanner();
       });

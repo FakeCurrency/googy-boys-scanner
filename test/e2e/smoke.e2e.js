@@ -206,6 +206,60 @@ const check = (ok, label) => {
     } else { check(false, "phasemap A+ tier filter present"); }
     await page.context().close();
 
+    // ── PhaseMap COMPACT on a small phone (UI100 review, 2026-10-20) ──────
+    // The spec: the ILLIQUID tag can never be hidden. The one-line rows ran
+    // ILLIQUID past the card edge at 320px (200 of 466 live ASX warning rows)
+    // and the strip's "+N more" sat past its clip. Every record in view ALL,
+    // plus worst cases (a 5-letter SHORT · DISPLACED · Watch carrying
+    // ILLIQUID and HALT RISK; VIVEK shorts made 2-lens so the strip folds
+    // names), must keep both warnings wholly inside its card.
+    for (const width of [320, 360]) {
+      page = await newPage({ width, height: 800 });
+      await page.route("**/data/phasemap/asx/latest.json", (route) => {
+        const body = JSON.parse(fs.readFileSync(fixture("phasemap/asx/latest.json"), "utf8"));
+        const have = new Set(body.results.map((r) => r.ticker));
+        const shorts = JSON.parse(fs.readFileSync(fixture("asx_vivek.json"), "utf8")).results
+          .filter((r) => String(r.dir).toUpperCase() === "SHORT" && !have.has(r.symbol)).slice(0, 6);
+        const worst = (ticker, tier) => ({ ...body.results[0], ticker, name: ticker, direction: "bearish",
+          state: "DISPLACED", tier, tags: ["ILLIQUID", "HALT_RISK"] });
+        body.results = [...body.results, worst("WWWWW", "Watch"), worst("MMMMM", "A+"),
+          ...shorts.map((r) => worst(r.symbol, "Watch"))];
+        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+      });
+      await page.addInitScript(() => {
+        try { localStorage.setItem("pm-density", "compact"); localStorage.setItem("pm-view", "all"); } catch (_) {}
+      });
+      await page.goto(`${BASE}/phasemap.html`, { waitUntil: "networkidle", timeout: 30000 });
+      await page.waitForSelector("#pm-list .pm-card-link", { timeout: 30000 });
+      await page.waitForSelector("#conf-banner .conf-more", { timeout: 30000 }).catch(() => null);
+      const pmPhone = await page.evaluate(() => {
+        let rows = 0;
+        const cut = [];
+        document.querySelectorAll("#pm-list .pm-card-link").forEach((card) => {
+          const warns = card.querySelectorAll(".pm-tag-illiquid, .pm-tag-halt");
+          if (!warns.length) return;
+          rows++;
+          const c = card.getBoundingClientRect(), cs = getComputedStyle(card);
+          const l = c.left + parseFloat(cs.paddingLeft) - 0.5, r = c.right - parseFloat(cs.paddingRight) + 0.5;
+          warns.forEach((w) => {
+            const b = w.getBoundingClientRect();
+            if (b.width < 20 || b.left < l || b.right > r || b.top < c.top || b.bottom > c.bottom)
+              cut.push(`${card.querySelector(".pm-ticker").textContent} ${w.textContent}`);
+          });
+        });
+        const strip = document.getElementById("conf-banner");
+        const more = strip && strip.querySelector(".conf-more");
+        const s = strip && strip.getBoundingClientRect(), m = more && more.getBoundingClientRect();
+        return { rows, cut, more: more ? more.textContent : null,
+          moreIn: !!more && m.left >= s.left && m.right <= s.right + 0.5 && more.scrollWidth <= more.clientWidth + 1 };
+      });
+      check(pmPhone.rows >= 4 && !pmPhone.cut.length,
+        `phasemap COMPACT ${width}px: ILLIQUID / HALT RISK wholly inside the card on all ${pmPhone.rows} warning rows` +
+        (pmPhone.cut.length ? ` -- cut: ${pmPhone.cut.slice(0, 6).join(", ")}` : ""));
+      check(pmPhone.moreIn, `phasemap ${width}px: the multi-lens strip's opener is on screen (${pmPhone.more})`);
+      await page.context().close();
+    }
+
     // ── 390px mobile dashboard ───────────────────────────────────────────
     page = await newPage({ width: 390, height: 844 });
     await page.goto(`${BASE}/index.html`, { waitUntil: "domcontentloaded", timeout: 30000 });

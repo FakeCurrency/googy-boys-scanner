@@ -55,9 +55,32 @@ function stubEl(name) {
   return self;
 }
 
+// The multi-lens strip is the one element phasemap.js creates, inserts and
+// removes itself: a live node that remembers every body it was given. Its
+// width (opts.strip.fit) is a function of the names drawn into it.
+function stripEl(byId, log, fit) {
+  const node = {
+    id: "", className: "", _html: "", more: null, children: [],
+    classList: { toggle() {}, add() {}, remove() {}, contains: () => false },
+    get innerHTML() { return this._html; },
+    set innerHTML(v) {
+      this._html = v; log.push(v);
+      this.more = /data-conf-more/.test(v) ? stubEl("conf-more") : null;
+    },
+    querySelector(sel) { return sel === "[data-conf-more]" ? this.more : null; },
+    remove() { if (byId[this.id] === this) delete byId[this.id]; },
+    get scrollWidth() { return fit ? fit((this._html.match(/<a /g) || []).length, !!this.more) : 0; },
+    get clientWidth() { return fit ? 266 : 0; },
+  };
+  return node;
+}
+
 function boot(initialMarket, opts = {}) {
   const els = {};
+  const byId = {};
+  const stripLog = [];
   const el = (sel) => (els[sel] = els[sel] || stubEl(sel));
+  if (opts.strip) el("#pm-tabs").parentNode = { insertBefore: (n) => { byId[n.id] = n; } };
   const buttons = ["asx", "nasdaq", "crypto"].map((m) => {
     const b = stubEl(`btn-${m}`);
     b.dataset.market = m;
@@ -72,30 +95,34 @@ function boot(initialMarket, opts = {}) {
   const document = {
     querySelector: (sel) => el(sel),
     querySelectorAll: (sel) => (sel === "#pm-market .market-btn" ? buttons : []),
-    getElementById: () => null,
-    createElement: (tag) => stubEl(tag),
+    getElementById: (id) => byId[id] || null,
+    createElement: (tag) => (opts.strip ? stripEl(byId, stripLog, opts.strip.fit) : stubEl(tag)),
     addEventListener() {},
     body: stubEl("body"),
     activeElement: null,
   };
-  // every data fetch parks until the test resolves it
+  // every data fetch parks until the test resolves it (a status other than
+  // 200 answers like a failed CDN request)
   const pending = {};
-  const json = (body) => ({ ok: true, status: 200, json: async () => body });
+  const json = (body, status = 200) => ({ ok: status === 200, status, json: async () => body });
   const PM = {
     esc: (s) => String(s == null ? "" : s),
-    fetchTimeout: (url) => new Promise((resolve) => { pending[url] = (body) => resolve(json(body)); }),
+    fetchTimeout: (url) => new Promise((resolve) => { pending[url] = (body, status) => resolve(json(body, status)); }),
     loadConfluence: () => Promise.resolve({ of: () => null, all: () => [] }),
     staleBadgeHTML: () => "", loadFailKind: () => "unreachable", retryHTML: () => "",
     confluenceChipHTML: () => "", confluenceBannerHTML: () => "", headBadgesHTML: () => "",
     identityHTML: () => "", stepperHTML: () => "", ladderHTML: () => "", whyHTML: () => "",
     metricsHTML: () => "", glossaryHTML: () => "", toggleSpeak() {},
     warnTagsHTML: () => "", confluenceMarkHTML: () => "", stripDisclaimer: REAL.stripDisclaimer,
+    ...(opts.PM || {}),
   };
-  const window = { location: { href: "" } };
+  const winListeners = {};
+  const window = { location: { href: "" }, innerWidth: 390,
+    addEventListener: (ev, fn) => { winListeners[ev] = fn; } };
   if ("phone" in opts) window.matchMedia = (q) => ({ matches: !!opts.phone && /max-width: 680px/.test(q) });
   new Function("window", "document", "localStorage", "PM", SRC)(window, document, localStorage, PM);
   const click = (m) => buttons.find((b) => b.dataset.market === m).listeners.click[0]();
-  return { els, store, pending, click };
+  return { els, store, pending, click, byId, stripLog, window, winListeners };
 }
 
 const settle = () => new Promise((r) => setImmediate(r));
@@ -264,6 +291,112 @@ async function deliver(app, market, body) {
     ok(REAL.confluenceMarkHTML(rows[0], "PHASEMAP").includes(REAL.CONFLUENCE_UNPROVEN),
       "the compact multi-lens mark carries CONFLUENCE_UNPROVEN");
   }
+
+  // ── UI100 review (2026-10-20): the defects two verifiers reproduced ─────
+  const conflFor = (m) => {
+    const rows = Array.from({ length: 12 }, (_, i) =>
+      ({ ticker: `${m.toUpperCase()}${i}`, side: "long", lenses: ["VIVEK", "PHASEMAP"], count: 2 }));
+    return { of: (t) => rows.find((r) => r.ticker === t) || null, all: () => rows };
+  };
+  const stripPM = { loadConfluence: (m) => Promise.resolve(conflFor(m)),
+                    confluenceBannerHTML: REAL.confluenceBannerHTML };
+
+  // 9. #3 (race guard): the multi-lens strip belongs to the market it was
+  //    read for. state.confl outlived a failed switch, so "+N more" or a
+  //    rotate after ASX -> NASDAQ (NASDAQ's file failing) redrew 39 ASX
+  //    names linking to chart.html?m=nasdaq&s=ADH.
+  {
+    const app = boot("asx", { strip: {}, PM: stripPM });
+    await deliver(app, "asx", payload("asx", ["BHP"], { as_of: "2026-10-13" }));
+    const strip = app.byId["conf-banner"];
+    ok(strip && strip.innerHTML.includes("m=asx&s=ASX0") && strip.more, "the ASX strip draws, with its +N more");
+    const tapMore = strip.more.listeners.click[0];
+    app.click("nasdaq");
+    ok(!app.byId["conf-banner"], "a market switch takes the other market's strip down at once");
+    app.pending["data/phasemap/nasdaq/latest.json"](null, 503);
+    app.pending["data/phasemap/nasdaq/narrations.json"](null, 503);
+    await settle(); await settle();
+    ok(/Couldn't load the NASDAQ/.test(app.els["#pm-sub"].textContent), "NASDAQ's load failed");
+    tapMore();
+    ok(!app.byId["conf-banner"], '"+N more" after the failed load draws no strip');
+    app.window.innerWidth = 360;
+    app.winListeners.resize();
+    await new Promise((r) => setTimeout(r, 260));
+    ok(!app.byId["conf-banner"], "nor does a rotate");
+    ok(!app.stripLog.some((h) => /m=nasdaq[^"]*s=ASX/.test(h)), "an ASX name never links to the NASDAQ chart");
+  }
+
+  // 10. #2: the one-line phone strip drops whole names until "+N more"
+  //     fits (at 320px it sat past the clip: 75 NASDAQ names unreachable).
+  //     Here a name is 80px, the label 70, the opener 60, the strip 266.
+  {
+    const fit = (names, more) => 70 + 80 * names + (more ? 60 : 0);
+    const app = boot("asx", { phone: true, strip: { fit }, store: { "pm-density": "compact" }, PM: stripPM });
+    await deliver(app, "asx", payload("asx", ["BHP"], { as_of: "2026-10-13" }));
+    const html = app.byId["conf-banner"].innerHTML;
+    eq((html.match(/<a /g) || []).length, 1, "the strip keeps the names that fit beside the opener");
+    ok(/data-conf-more[^>]*>\+11 more</.test(html), "and the opener counts every name it folded");
+    ok(html.includes(REAL.CONFLUENCE_UNPROVEN), "the strip keeps CONFLUENCE_UNPROVEN");
+  }
+
+  // CSS rules as {sel, body}, comments out, @media bodies flattened
+  const CSS = fs.readFileSync(path.join(__dirname, "..", "public", "css", "phasemap.css"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const RULES = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .map((m) => ({ sel: m[1].trim(), body: m[2] }));
+  const targets = (re) => RULES.filter((r) => r.sel.split(",").some((s) => re.test(s.trim())));
+
+  // 11. #1 (spec: the ILLIQUID tag can never be hidden): the COMPACT head
+  //     wraps rather than run a warning past the card edge (the nowrap line
+  //     clipped it on 200 of 466 ASX warning rows at 320px), nothing hides
+  //     or clips a warning chip, and the extras box -- the only place a chip
+  //     may drop -- holds CHART → but never a warning.
+  {
+    const head = targets(/\.pm-density-compact\b.*\.pm-card-head$/);
+    ok(head.some((r) => /flex-wrap:\s*wrap\b/.test(r.body)), "the COMPACT head line wraps");
+    ok(!head.some((r) => /nowrap/.test(r.body)), "no rule pins the COMPACT head to one line");
+    const warn = targets(/(\.pm-tag-illiquid|\.pm-tag-halt|\.pm-card-head\s*>\s*\.pm-tag)$/);
+    ok(warn.length >= 3, `the warning chip rules are found (${warn.length})`);
+    ok(!warn.some((r) => /display:\s*none|visibility:\s*hidden|overflow:|max-width|text-overflow/.test(r.body)),
+      "no rule hides, clips or shortens a warning chip");
+    ok(/pm-head-extra">\$\{extra\}\$\{cue\}/.test(SRC), "COMPACT puts CHART → last in the extras box");
+    const extra = targets(/\.pm-density-compact \.pm-head-extra$/);
+    ok(extra.some((r) => /flex:\s*1 1 0\b/.test(r.body)), "the extras box never opens a line of its own (basis 0)");
+  }
+
+  // 12. #4: below 381px the stepper keeps the step before the current one,
+  //     the current one and the next (the whole path ran past the card at
+  //     360-375px: "… RUNNING › COM…"); the rest stay in the markup, marked.
+  {
+    const rec = (state, metrics = {}) => ({ state, metrics });
+    const cases = [rec("TRAP_SET"), rec("SWEPT"), rec("DISPLACED"), rec("RUNNING"), rec("COMPLETE"),
+      rec("STALLED", { sweep_date: "x", displacement_date: "y" }), rec("DEAD", { sweep_date: "x" }), rec("STALLED")];
+    for (const r of cases) {
+      const html = REAL.stepperHTML(r);
+      const steps = html.match(/class="pm-step [^"]*"/g);
+      const shown = steps.filter((c) => !/\bis-(far|later)\b/.test(c));
+      ok(shown.length <= 3 && shown.some((c) => /\bis-now\b/.test(c)),
+        `${r.state}: at most 3 steps on a narrow phone, the current one among them (${shown.length})`);
+      const folds = (html.match(/pm-step-fold/g) || []).length;
+      const arrows = (html.match(/class="pm-step-arrow"/g) || []).length;
+      eq(arrows, shown.length - 1 + folds, `${r.state}: one arrow between each shown step (and in each "…")`);
+    }
+    eq(REAL.stepperHTML(rec("RUNNING")).match(/class="pm-step /g).length, 5, "every step stays in the markup");
+    ok(/@media \(max-width: 380px\)\s*\{[^@]*\.pm-step\.is-far[^}]*display:\s*none/.test(CSS),
+      "phasemap.css folds is-far / is-later steps below 381px");
+  }
+
+  // 13. #7: the stepper dims by colour, never opacity (muted-2 at 0.6 read
+  //     3.8:1 on the card, under the 4.5:1 the contrast gate holds text to).
+  {
+    const step = targets(/\.pm-step(per|-arrow|-fold)?\b/);
+    ok(step.length >= 6, `the stepper rules are found (${step.length})`);
+    ok(!step.some((r) => /opacity/.test(r.body)), "no stepper text carries an opacity");
+  }
+
+  // 14. #5: two-up, the loading skeletons take a whole row each.
+  ok(/@media \(min-width: 1100px\)\s*\{[^@]*\.pm-list > \.pm-skel\s*\{\s*grid-column:\s*1 \/ -1/.test(CSS),
+    "the loading skeletons span the 2-up grid");
 
   console.log(`phasemap_page.test.js: ${checks} checks passed`);
 })().catch((e) => { console.error(e); process.exit(1); });

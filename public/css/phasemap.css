@@ -212,8 +212,13 @@
 .al-row-triple { border-left-color: var(--orange); }
 .al-lenses { font-family: var(--mono); font-size: 11px; color: var(--text-2); letter-spacing: 0.04em; }
 .al-time { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
-/* UI100 #95 (2026-10-20): the count + window sub-line stays on one line */
-.al-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* UI100 #95 (2026-10-20): the count + window sub-line is one line from 360px.
+   UI100 review (2026-10-20): never clipped -- "back to 3 Oct" is the point of
+   the line (REFINE200 #192), and the ellipsis cut it off under the NASDAQ /
+   CRYPTO chips at 360-375px. The words are shorter now (the active chip names
+   the market); on a narrower phone, or for a longer message, it wraps,
+   balanced so the date never sits alone on the second line. */
+.al-sub { text-wrap: balance; }
 /* ticker filter box on the ALERTS page */
 .al-search { font: 600 12px/1 var(--mono); color: var(--text);
   background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
@@ -294,18 +299,25 @@
 
 /* phase stepper — UI100 #73 (2026-10-20): one quiet line of text, no pill
    borders (the pill row wrapped to two lines on a phone). Steps still
-   reached read brighter; the current one carries the weight. */
+   reached read brighter; the current one carries the weight.
+   UI100 review (2026-10-20): the steps still to come (and the arrows) step
+   down by COLOUR and weight, never opacity — muted-2 at 0.6 read 3.8:1 on
+   the card, under the 4.5:1 text bar. The mix reads 5.7:1 on --panel
+   (muted-2 alone, 8:1, where color-mix is unsupported). */
 .pm-stepper {
   margin: 7px 0 0; font: 700 10.5px/1.5 var(--sans); letter-spacing: 0.03em;
-  color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--muted-2); color: color-mix(in srgb, var(--muted-2) 80%, var(--panel));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.pm-step { opacity: 0.6; }
+.pm-step { font-weight: 600; }
 .pm-step-dot { margin-right: 3px; }
-.pm-step.is-done { color: var(--muted); opacity: 1; }
-.pm-step.is-now { color: var(--text); font-weight: 800; opacity: 1; }
+.pm-step.is-done { color: var(--muted); font-weight: 700; }
+.pm-step.is-now { color: var(--text); font-weight: 800; }
 .pm-step.is-terminal.pm-step-DEAD { color: var(--pm-kill); }
 .pm-step.is-terminal.pm-step-STALLED { color: var(--pm-neutral); }
-.pm-step-arrow { margin: 0 4px; opacity: 0.6; }
+.pm-step-arrow { margin: 0 4px; }
+/* the "…" ends of a folded stepper (phones under 381px, below) */
+.pm-step-fold { display: none; }
 
 /* why-flagged panel */
 .pm-why { margin: 4px 0 8px; }
@@ -348,10 +360,21 @@
    only (phasemap.js builds nothing else), one line that never wraps — the
    extras box is one chip tall, so a chip that does not fit drops out of
    sight instead of wrapping the row. COZY drops the zone sources; its stats
-   line is not rendered at all. Both clamp the prose (#70, below). */
+   line is not rendered at all. Both clamp the prose (#70, below).
+   UI100 review (2026-10-20): the line WRAPS when its fixed part — ticker ·
+   side · state · grade · ILLIQUID / HALT RISK — does not fit. The nowrap
+   line ran the warning chip past the card edge at 320px (200 of 466 ASX
+   warning rows; the spec says the ILLIQUID tag can never be hidden). Only
+   the extras box (multi-lens, ⚡, NEW, then CHART →) may drop a chip: its
+   flex basis is 0, so it never opens a line of its own, it takes what is
+   left. The spacing is a left margin (pulled back by the head's own), not
+   a gap: a gap before a zero-width box would wrap it onto a second line. */
 .pm-density-compact .pm-card { padding: 8px 14px; }
 .pm-density-compact.pm-list { gap: 6px; }
-.pm-density-compact .pm-card-head { flex-wrap: nowrap; min-width: 0; }
+.pm-page .pm-density-compact .pm-card-head {
+  flex-wrap: wrap; min-width: 0; column-gap: 0; row-gap: 4px; margin-left: calc(-1 * var(--pm-hgap, 8px));
+}
+.pm-density-compact .pm-card-head > * { margin-left: var(--pm-hgap, 8px); }
 .pm-density-compact .pm-ticker { font-size: 15px; min-width: 3.4em; }
 .pm-density-compact .pm-ticker, .pm-density-compact .pm-dir,
 .pm-density-compact .pm-state, .pm-density-compact .pm-tier,
@@ -361,12 +384,14 @@
 /* row-gap > the box height: a wrapped line starts below the clip */
 .pm-density-compact .pm-head-extra {
   display: flex; flex-wrap: wrap; align-items: center; gap: 24px 6px;
-  min-width: 0; height: 22px; overflow: hidden;
+  flex: 1 1 0; min-width: 0; height: 22px; overflow: hidden;
 }
+.pm-density-compact .pm-card-head > .pm-head-extra { margin-left: 0; }
 .pm-density-compact .pm-head-extra > * { white-space: nowrap; }
 /* a zero-width first item: without it the FIRST chip can never wrap away
-   and showed as a clipped sliver when even it did not fit */
-.pm-density-compact .pm-head-extra::before { content: ""; width: 0; margin-right: -6px; }
+   and showed as a clipped sliver when even it did not fit. The gap after
+   it is the space between the warnings and the extras. */
+.pm-density-compact .pm-head-extra::before { content: ""; width: 0; margin-right: calc(var(--pm-hgap, 8px) - 6px); }
 .pm-density-cozy .pm-band-sources { display: none; }
 
 /* skeleton shimmer while the scan JSON loads */
@@ -567,10 +592,25 @@ body.pm-gloss-open { overflow: hidden; }
   .al-sub { font-size: 13px; }
   .al-row .pm-ticker { min-width: 50px; }
   .al-row .pm-dir { min-width: 70px; padding: 3px 8px; text-align: center; }
+  /* UI100 review (2026-10-20): a row that names its lenses (SPECS pairs, every
+     triple) cannot fit one phone line; the lens list takes a second line of
+     its own so the time stays on the first, in the same column as the rest. */
+  .al-lenses { order: 1; flex-basis: 100%; }
   /* the ticker filter takes the rest of its row so the placeholder fits */
   .pm-filter-group:has(.al-search) { flex: 1 1 100%; min-width: 0; }
   .al-search { flex: 1 1 auto; width: auto; min-width: 0; }
   #al-triples { flex: none; white-space: nowrap; }
+}
+/* UI100 review (2026-10-20): at 360px 61 of 800 rows (a 4-5 letter NASDAQ or
+   crypto ticker) ran ~9px past one line and dropped the time to a second.
+   ~20px back at <= 380px: a 15.5px ticker, the side pill's padding (LONG and
+   SHORT stay one width), a 6px gap, and no space before am/pm ("4:16pm";
+   -1ch is one mono space). Measured: 0 of 800 wrap at 360, 13px to spare. */
+@media (max-width: 380px) {
+  .al-row { column-gap: 6px; }
+  .al-row .pm-ticker { font-size: 15.5px; min-width: 46px; }
+  .al-row .pm-dir { min-width: 65px; padding: 3px 5px; }
+  .al-time { word-spacing: -1ch; }
 }
 /* hold the page while the log loads (no footer jump) */
 #al-list:empty { min-height: 60vh; }
@@ -618,15 +658,25 @@ body.pm-gloss-open { overflow: hidden; }
 @media (min-width: 1100px) {
   .pm-page .pm-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; }
   .pm-page .pm-list > .pm-empty { grid-column: 1 / -1; }
+  /* UI100 review (2026-10-20): the loading shimmer keeps one card a row —
+     two-up, the four skeletons stood half as tall as the list they stand
+     in for and the footer jumped down on load (1440x900, latest.json 1.5s
+     late: load CLS 0.12 -> 0.03) */
+  .pm-page .pm-list > .pm-skel { grid-column: 1 / -1; }
   .pm-page .pm-density-compact.pm-list { align-items: stretch; }   /* rows line up across the columns */
 }
 
 /* #74: off-screen cards skip layout and paint (60 cards ran 35,000px on a
    PC). The sizes are each density's typical card; `auto` keeps a card's
-   real size once it has rendered, so scrolling back does not jump. */
+   real size once it has rendered, so scrolling back does not jump.
+   UI100 review (2026-10-20): the size is the CONTENT box (padding comes on
+   top): COMPACT's line is 22px (the extras box, always drawn), so a skipped
+   row counts 38px like a drawn one. 38px here made it 54px and the page
+   shrank as it scrolled (60 rows at 390: 2,815px estimated vs 2,469px
+   drawn; now 2,634 and 2,634). */
 .pm-page .pm-card-link { content-visibility: auto; contain-intrinsic-size: auto 540px; }
 .pm-page .pm-density-cozy .pm-card-link { contain-intrinsic-size: auto 470px; }
-.pm-page .pm-density-compact .pm-card-link { contain-intrinsic-size: auto 38px; }
+.pm-page .pm-density-compact .pm-card-link { contain-intrinsic-size: auto 22px; }
 
 /* #68/#72: the head line — ticker · side · state · grade · extras · CHART →
    (READ moved down to the narrative it reads) */
@@ -694,9 +744,11 @@ body.pm-gloss-open { overflow: hidden; }
      the one-line COMPACT row needs for its multi-lens / ⚡ / NEW marks */
   .pm-cue-word { display: none; }
   /* the one-line row at 360px: the words carry side and state (the glyphs
-     repeat them), and the ILLIQUID / HALT RISK warnings always fit (every
-     ASX / NASDAQ / crypto record checked at 360px, 2026-10-20) */
-  .pm-page .pm-density-compact .pm-card-head { gap: 4px; }
+     repeat them). UI100 review (2026-10-20): ILLIQUID / HALT RISK did NOT
+     always fit (320px); a row whose warnings do not fit (a long ticker,
+     both warnings) wraps them onto a second line (the head rule above),
+     never past the card edge. */
+  .pm-page .pm-density-compact .pm-card-head { --pm-hgap: 4px; }
   .pm-density-compact .pm-glyph { display: none; }
   .pm-density-compact .pm-ticker { min-width: 3em; font-size: 14px; }
   /* COZY / FULL: the "→" pins to the card's top-right corner, so it never
@@ -713,6 +765,13 @@ body.pm-gloss-open { overflow: hidden; }
   .pm-page .conf-banner { margin: 8px 0; padding: 4px 10px; gap: 2px 8px; font-size: 11.5px; }
   .pm-page .conf-banner:not(.is-open) { flex-wrap: nowrap; overflow: hidden; }
   .pm-page .conf-banner:not(.is-open) > * { flex: none; white-space: nowrap; }
+  /* UI100 review (2026-10-20): "+N more" never leaves the line. phasemap.js
+     drops whole names until everything fits; should a font land after that
+     measure, a name ellipsises first — the label and the opener never shrink. */
+  .pm-page .conf-banner:not(.is-open) > a {
+    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    display: inline-block; line-height: 30px;   /* ellipsis needs a block box */
+  }
   .pm-page .conf-banner-long { display: none; }
   .pm-page .conf-more { margin-left: auto; min-height: 32px; }
 
@@ -729,6 +788,24 @@ body.pm-gloss-open { overflow: hidden; }
   /* #73: the glyph only on the current step, so the stepper fits one line */
   .pm-step:not(.is-now) .pm-step-dot { display: none; }
   .pm-step-arrow { margin: 0 3px; }
+}
+/* UI100 review (2026-10-20): the whole path is 326px; at 360-375px it ran
+   past the card ("… RUNNING › COM…" on every on-path card). Below 381px
+   the stepper keeps the step before the current one, the current one and
+   the next, and "…" says where steps are folded (PM.stepperHTML marks them). */
+@media (max-width: 380px) {
+  .pm-step.is-far, .pm-step.is-later,
+  .pm-step-arrow.is-far, .pm-step-arrow.is-later { display: none; }
+  .pm-step-fold { display: inline; }
+}
+/* UI100 review (2026-10-20): at 320px the COMPACT chips give back ~25px
+   (padding, letter-spacing, gaps), so the warning rows stay one line (all
+   466 live ASX ones, 2026-10-20); a longer row wraps (the head rule
+   above), never clips. */
+@media (max-width: 340px) {
+  .pm-page .pm-density-compact .pm-card-head { --pm-hgap: 3px; }
+  .pm-density-compact .pm-dir, .pm-density-compact .pm-state,
+  .pm-density-compact .pm-tier, .pm-density-compact .pm-card-head > .pm-tag { padding: 2px 4px; letter-spacing: 0; }
 }
 
 /* ONE phone rule for the ticker search box (PHASEMAP + SPECS). It has to sit
