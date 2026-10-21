@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-10-21T10:35:59+00:00",
+  "generated_at": "2026-10-21T16:07:24+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-20",
@@ -50,15 +50,15 @@
   "summary": {
     "universe": 201,
     "downloaded": 172,
-    "screened": 142,
+    "screened": 141,
     "skipped": {
-      "short history": 30
+      "short history": 31
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 1,
-      "COILED": 6,
+      "COILED": 5,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -79,8 +79,8 @@
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 124,
-        "yahoo": 29,
+        "binance_vision": 123,
+        "yahoo": 30,
         "coinbase": 19
       },
       "dead": {
@@ -117,6 +117,7 @@
         "KAS",
         "KAU",
         "KCS",
+        "KNTQ",
         "KOGE",
         "LEO",
         "LIT",
@@ -148,7 +149,7 @@
         "XMR",
         "ZBCN"
       ],
-      "yahoo_fallback": 29,
+      "yahoo_fallback": 30,
       "identity_rejected": {
         "BR": [
           "yahoo"
@@ -207,10 +208,10 @@
       "refused": 7
     },
     "mcap": {
-      "rows": 7,
-      "have": 7
+      "rows": 6,
+      "have": 6
     },
-    "elapsed_s": 120.4
+    "elapsed_s": 117.8
   },
   "results": [
     {
@@ -257,11 +258,11 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-20",
-      "price": 0.05517,
-      "change_pct": -10.5,
-      "r_now": -0.97,
+      "price": 0.05579,
+      "change_pct": -9.5,
+      "r_now": -0.88,
       "trail": 0.05521556,
-      "mcap": 288915860.0,
+      "mcap": 292810153.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "coingecko"
     },
@@ -288,8 +289,8 @@
       "breakout_level": 2.18014312,
       "provisional": false,
       "last_bar": "2026-10-20",
-      "price": 1.91921556,
-      "mcap": 1345792289.0,
+      "price": 1.93097174,
+      "mcap": 1352231332.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "coingecko"
     },
@@ -316,8 +317,8 @@
       "breakout_level": 0.0748,
       "provisional": false,
       "last_bar": "2026-10-20",
-      "price": 0.056,
-      "mcap": 1779713192.0,
+      "price": 0.0564,
+      "mcap": 1788862846.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "coingecko"
     },
@@ -344,8 +345,8 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-10-20",
-      "price": 5.18e-06,
-      "mcap": 3046643824.0,
+      "price": 5.24e-06,
+      "mcap": 3086304821.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "coingecko"
     },
@@ -372,8 +373,8 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-10-20",
-      "price": 0.08191,
-      "mcap": 12775960312.0,
+      "price": 0.08329,
+      "mcap": 13027400274.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "coingecko"
     },
@@ -400,36 +401,8 @@
       "breakout_level": 0.22344,
       "provisional": false,
       "last_bar": "2026-10-20",
-      "price": 0.14942,
-      "mcap": 148540044.0,
-      "mcap_asof": "2026-10-21",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "RSR",
-      "name": "Reserve Rights",
-      "yf": "RSR-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 32.34,
-        "atr_pctl": 74.1,
-        "vol_pctl": 51.9,
-        "drawdown_pct": 92.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-11"
-      },
-      "base": {
-        "high": 0.002999,
-        "low": 0.001293,
-        "bars": 60
-      },
-      "breakout_level": 0.002999,
-      "provisional": false,
-      "last_bar": "2026-10-20",
-      "price": 0.001936,
-      "mcap": 120945234.0,
+      "price": 0.15382,
+      "mcap": 153515508.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "coingecko"
     }
