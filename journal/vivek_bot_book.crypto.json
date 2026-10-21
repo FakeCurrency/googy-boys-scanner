@@ -38,9 +38,9 @@
       "cost_r": 0.0087,
       "exits": [],
       "mae": 0.36859331,
-      "mfe": 0.37921596,
+      "mfe": 0.3797406,
       "mae_r": -0.138,
-      "mfe_r": 0.038,
+      "mfe_r": 0.046,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 6678.49204992,
       "notional": 2500.0,
@@ -66,7 +66,7 @@
       "level_tf": "3d",
       "signal_entry": 0.374336,
       "fill_slip_bps": 69.7,
-      "last_mark": 0.37921596,
+      "last_mark": 0.3797406,
       "last_mark_day": "2026-10-21",
       "data_source": "yahoo",
       "anchor": [
@@ -79,8 +79,8 @@
         "2026-10-20": 0.37678036,
         "2026-10-21": 0.3690877
       },
-      "unreal_r": 0.038,
-      "unreal_usd": 15.16
+      "unreal_r": 0.046,
+      "unreal_usd": 18.67
     },
     {
       "id": "BNB:long:3D:2026-10-21",
@@ -112,14 +112,14 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0128,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0128,
       "exits": [],
       "mae": 748.7,
-      "mfe": 748.7,
+      "mfe": 749.99,
       "mae_r": 0.0,
-      "mfe_r": 0.0,
+      "mfe_r": 0.016,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 3.37068047,
       "notional": 2500.0,
@@ -136,13 +136,18 @@
       "level_tf": "3d",
       "signal_entry": 741.69,
       "fill_slip_bps": 94.5,
-      "last_mark": 748.7,
+      "last_mark": 749.99,
       "last_mark_day": "2026-10-21",
       "data_source": "binance_vision",
       "anchor": [
         "2026-10-20",
         741.69
-      ]
+      ],
+      "day_marks": {
+        "2026-10-21": 748.7
+      },
+      "unreal_r": 0.016,
+      "unreal_usd": 4.35
     }
   ],
   "closed": [
@@ -816,28 +821,28 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -23.12,
+      "week_usd": -18.79,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_measured": true,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 67.64,
-      "worst_week_usd": -23.12,
+      "worst_session_usd": 71.97,
+      "worst_week_usd": -18.79,
       "realised_usd": 0.0,
-      "open_realised_usd": 0.0,
-      "unrealised_usd": 67.64,
-      "session_usd": 67.64,
+      "open_realised_usd": -3.52,
+      "unrealised_usd": 75.49,
+      "session_usd": 71.97,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 1,
-      "open_total_usd": 11.65,
+      "open": 2,
+      "open_total_usd": 15.98,
       "notified": ""
     }
   },
   "summary": {
     "open": 2,
-    "unreal_usd": 15.16,
+    "unreal_usd": 23.02,
     "updated_day": "2026-10-21"
   },
-  "updated_at": "2026-10-21T15:25:49+00:00"
+  "updated_at": "2026-10-21T16:25:22+00:00"
 }
