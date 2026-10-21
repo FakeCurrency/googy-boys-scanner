@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-21T00:52:30+00:00",
+  "generated_at": "2026-10-21T19:04:24+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-19",
+  "last_closed_bar": "2026-10-20",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -60,28 +60,27 @@
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
-      "CLOSED": 2,
+      "CLOSED": 1,
       "COILED": 10,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
       "completed_last": "2026-10-20",
-      "raw_last": "2026-10-20",
+      "raw_last": "2026-10-21",
       "expected_completed": "2026-10-20",
-      "lagging": 1304,
+      "lagging": 0,
       "screened": 1425,
       "completed_dist": {
-        "2026-10-20": 121,
-        "2026-10-19": 1304,
+        "2026-10-20": 1425,
         "2026-10-14": 1
       },
       "raw_dist": {
-        "2026-10-20": 121,
-        "2026-10-19": 1304,
+        "2026-10-21": 1416,
+        "2026-10-20": 9,
         "2026-10-14": 1
       },
-      "rows_lagging": 12
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
@@ -101,18 +100,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1426,
-      "reused": 0,
+      "fresh": 1413,
+      "reused": 13,
       "merged": 1426,
       "universe": 1426,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 12,
-      "have": 12
+      "rows": 11,
+      "have": 11
     },
-    "elapsed_s": 191.8
+    "elapsed_s": 214.4
   },
   "results": [
     {
@@ -125,7 +124,7 @@
       "entry": 73.34999847,
       "entry_basis": "next_open",
       "entry_date": "2026-10-06",
-      "bars_since": 10,
+      "bars_since": 11,
       "rvol": 9.98,
       "ext_pct": 25.9,
       "turnover_trigger": 1101689675.0,
@@ -158,94 +157,14 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 63.68000031,
-      "change_pct": -13.2,
-      "r_now": -0.84,
-      "trail": 66.76944436,
+      "last_bar": "2026-10-20",
+      "price": 64.16999817,
+      "change_pct": -12.5,
+      "r_now": -0.8,
+      "trail": 66.68833372,
       "mcap": 10013129728.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
-    },
-    {
-      "symbol": "CTKB",
-      "name": "Cytek Biosciences, Inc. - Common Stock",
-      "yf": "CTKB",
-      "source": "yahoo",
-      "trigger_date": "2026-09-22",
-      "trigger_close": 5.71000004,
-      "entry": 5.73000002,
-      "entry_basis": "next_open",
-      "entry_date": "2026-09-23",
-      "bars_since": 19,
-      "rvol": 3.64,
-      "ext_pct": 13.5,
-      "turnover_trigger": 21576948.0,
-      "turnover_base": 5018354.0,
-      "base": {
-        "high": 5.32000017,
-        "low": 4.04500008,
-        "bars": 60,
-        "range_pct": 31.5
-      },
-      "stop": 5.09730824,
-      "risk_pct": 11.0,
-      "wide_stop": false,
-      "mm_target": 6.59500027,
-      "mm_passed": false,
-      "mm_r": 1.37,
-      "coil": {
-        "ribbon_pct": 7.58,
-        "atr_pctl": 1.4,
-        "vol_pctl": 72.8,
-        "drawdown_pct": 46.5,
-        "coiled": false,
-        "coiled_bars": 0
-      },
-      "mfe_r": 0.76,
-      "exit_reason": "trail",
-      "exit_date": "2026-10-07",
-      "exit_price": 5.21000004,
-      "exit_r": -0.82,
-      "exit_pending": false,
-      "state": "CLOSED",
-      "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 5.25,
-      "change_pct": -8.4,
-      "r_now": -0.76,
-      "trail": 5.34388887,
-      "mcap": 682412096.0,
-      "mcap_asof": "2026-10-20",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "PTON",
-      "name": "Peloton Interactive, Inc. - Common Stock",
-      "yf": "PTON",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 5.85,
-        "atr_pctl": 3.6,
-        "vol_pctl": 18.3,
-        "drawdown_pct": 52.0,
-        "coiled": true,
-        "coiled_bars": 19,
-        "last_coiled": "2026-10-19"
-      },
-      "base": {
-        "high": 6.73000002,
-        "low": 4.69000006,
-        "bars": 60
-      },
-      "breakout_level": 6.73000002,
-      "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 5.23000002,
-      "mcap": 2391851264.0,
-      "mcap_asof": "2026-10-20",
-      "mcap_src": "cache"
     },
     {
       "symbol": "GPRE",
@@ -254,13 +173,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 2.33,
-        "atr_pctl": 4.0,
-        "vol_pctl": 23.2,
-        "drawdown_pct": 55.7,
+        "ribbon_pct": 3.36,
+        "atr_pctl": 3.4,
+        "vol_pctl": 24.2,
+        "drawdown_pct": 55.5,
         "coiled": true,
-        "coiled_bars": 11,
-        "last_coiled": "2026-10-19"
+        "coiled_bars": 12,
+        "last_coiled": "2026-10-20"
       },
       "base": {
         "high": 17.65999985,
@@ -269,8 +188,8 @@
       },
       "breakout_level": 17.65999985,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 14.14999962,
+      "last_bar": "2026-10-20",
+      "price": 14.23999977,
       "mcap": 1014279424.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -282,13 +201,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.72,
-        "atr_pctl": 2.0,
-        "vol_pctl": 18.8,
-        "drawdown_pct": 67.2,
+        "ribbon_pct": 10.32,
+        "atr_pctl": 2.6,
+        "vol_pctl": 21.0,
+        "drawdown_pct": 67.7,
         "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-10-19"
+        "coiled_bars": 4,
+        "last_coiled": "2026-10-20"
       },
       "base": {
         "high": 9.58500004,
@@ -297,8 +216,8 @@
       },
       "breakout_level": 9.58500004,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 9.02000046,
+      "last_bar": "2026-10-20",
+      "price": 8.94999981,
       "mcap": 403906208.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "cache"
@@ -310,13 +229,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.89,
-        "atr_pctl": 7.5,
-        "vol_pctl": 32.1,
-        "drawdown_pct": 77.3,
+        "ribbon_pct": 9.82,
+        "atr_pctl": 6.3,
+        "vol_pctl": 31.0,
+        "drawdown_pct": 76.9,
         "coiled": true,
-        "coiled_bars": 2,
-        "last_coiled": "2026-10-19"
+        "coiled_bars": 3,
+        "last_coiled": "2026-10-20"
       },
       "base": {
         "high": 4.5999999,
@@ -325,8 +244,8 @@
       },
       "breakout_level": 4.5999999,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 3.55999994,
+      "last_bar": "2026-10-20",
+      "price": 3.54500008,
       "mcap": 578339840.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -338,13 +257,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.05,
-        "atr_pctl": 23.4,
-        "vol_pctl": 8.1,
-        "drawdown_pct": 73.3,
+        "ribbon_pct": 6.1,
+        "atr_pctl": 17.7,
+        "vol_pctl": 5.4,
+        "drawdown_pct": 73.0,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-10-19"
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-20"
       },
       "base": {
         "high": 10.14999962,
@@ -353,39 +272,67 @@
       },
       "breakout_level": 10.14999962,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 8.80000019,
+      "last_bar": "2026-10-20",
+      "price": 8.77999973,
       "mcap": 360987232.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
     },
     {
-      "symbol": "ICFI",
-      "name": "ICF International, Inc. - Common Stock",
-      "yf": "ICFI",
+      "symbol": "AVNW",
+      "name": "Aviat Networks, Inc. - Common Stock",
+      "yf": "AVNW",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.25,
-        "atr_pctl": 5.4,
-        "vol_pctl": 27.0,
+        "ribbon_pct": 6.95,
+        "atr_pctl": 22.4,
+        "vol_pctl": 29.5,
         "drawdown_pct": 50.1,
         "coiled": true,
         "coiled_bars": 1,
-        "last_coiled": "2026-10-19"
+        "last_coiled": "2026-10-20"
       },
       "base": {
-        "high": 95.53116113,
-        "low": 76.32109808,
+        "high": 24.0,
+        "low": 18.55999947,
         "bars": 60
       },
-      "breakout_level": 95.53116113,
+      "breakout_level": 24.0,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 88.45999908,
-      "mcap": 1610104064.0,
-      "mcap_asof": "2026-10-21",
+      "last_bar": "2026-10-20",
+      "price": 19.64999962,
+      "mcap": 243542480.0,
+      "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
+    },
+    {
+      "symbol": "CHA",
+      "name": "Chagee Holdings Limited - American Depositary Shares, each representing 1 Class A ordinary share",
+      "yf": "CHA",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.51,
+        "atr_pctl": 0.3,
+        "vol_pctl": 33.9,
+        "drawdown_pct": 68.1,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-20"
+      },
+      "base": {
+        "high": 12.69999981,
+        "low": 9.84000015,
+        "bars": 60
+      },
+      "breakout_level": 12.69999981,
+      "provisional": false,
+      "last_bar": "2026-10-20",
+      "price": 12.85000038,
+      "mcap": 2146087424.0,
+      "mcap_asof": "2026-10-10",
+      "mcap_src": "cache"
     },
     {
       "symbol": "INMD",
@@ -394,10 +341,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 2.43,
-        "atr_pctl": 1.2,
-        "vol_pctl": 1.2,
-        "drawdown_pct": 47.5,
+        "ribbon_pct": 2.18,
+        "atr_pctl": 0.6,
+        "vol_pctl": 1.4,
+        "drawdown_pct": 47.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-15"
@@ -409,39 +356,39 @@
       },
       "breakout_level": 15.60000038,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 14.06999969,
+      "last_bar": "2026-10-20",
+      "price": 13.98499966,
       "mcap": 814825472.0,
       "mcap_asof": "2026-10-17",
       "mcap_src": "cache"
     },
     {
-      "symbol": "AVNW",
-      "name": "Aviat Networks, Inc. - Common Stock",
-      "yf": "AVNW",
+      "symbol": "PTON",
+      "name": "Peloton Interactive, Inc. - Common Stock",
+      "yf": "PTON",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.14,
-        "atr_pctl": 20.8,
-        "vol_pctl": 32.1,
-        "drawdown_pct": 49.2,
+        "ribbon_pct": 5.37,
+        "atr_pctl": 1.8,
+        "vol_pctl": 10.9,
+        "drawdown_pct": 50.0,
         "coiled": false,
         "coiled_bars": 0,
-        "last_coiled": "2026-10-16"
+        "last_coiled": "2026-10-19"
       },
       "base": {
-        "high": 24.0,
-        "low": 18.55999947,
+        "high": 6.73000002,
+        "low": 4.69000006,
         "bars": 60
       },
-      "breakout_level": 24.0,
+      "breakout_level": 6.73000002,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 19.73999977,
-      "mcap": 243542480.0,
-      "mcap_asof": "2026-10-18",
-      "mcap_src": "previous"
+      "last_bar": "2026-10-20",
+      "price": 5.26999998,
+      "mcap": 2391851264.0,
+      "mcap_asof": "2026-10-20",
+      "mcap_src": "cache"
     },
     {
       "symbol": "VFS",
@@ -450,53 +397,53 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.1,
-        "atr_pctl": 46.2,
-        "vol_pctl": 28.6,
-        "drawdown_pct": 68.8,
+        "ribbon_pct": 10.66,
+        "atr_pctl": 48.6,
+        "vol_pctl": 29.4,
+        "drawdown_pct": 69.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-15"
       },
       "base": {
         "high": 3.47000003,
-        "low": 2.8499999,
+        "low": 2.83299994,
         "bars": 60
       },
       "breakout_level": 3.47000003,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 2.9000001,
+      "last_bar": "2026-10-20",
+      "price": 2.96499991,
       "mcap": 6784654848.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "previous"
     },
     {
-      "symbol": "GLXY",
-      "name": "Galaxy Digital Inc. - Class A common stock",
-      "yf": "GLXY",
+      "symbol": "ICFI",
+      "name": "ICF International, Inc. - Common Stock",
+      "yf": "ICFI",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 30.94,
-        "atr_pctl": 81.6,
-        "vol_pctl": 24.5,
-        "drawdown_pct": 65.8,
+        "ribbon_pct": 12.2,
+        "atr_pctl": 4.0,
+        "vol_pctl": 21.0,
+        "drawdown_pct": 49.4,
         "coiled": false,
         "coiled_bars": 0,
-        "last_coiled": "2026-10-06"
+        "last_coiled": "2026-10-19"
       },
       "base": {
-        "high": 27.6760006,
-        "low": 15.85999966,
+        "high": 95.53116113,
+        "low": 79.0668162,
         "bars": 60
       },
-      "breakout_level": 27.6760006,
+      "breakout_level": 95.53116113,
       "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 15.72000027,
-      "mcap": 9511259136.0,
-      "mcap_asof": "2026-10-18",
+      "last_bar": "2026-10-20",
+      "price": 88.66000366,
+      "mcap": 1610104064.0,
+      "mcap_asof": "2026-10-21",
       "mcap_src": "previous"
     }
   ],
