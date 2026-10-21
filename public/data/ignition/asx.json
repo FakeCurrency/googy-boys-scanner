@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-21T05:37:25+00:00",
+  "generated_at": "2026-10-21T12:07:58+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-21",
@@ -52,9 +52,9 @@
   "summary": {
     "universe": 2051,
     "downloaded": 1854,
-    "screened": 1774,
+    "screened": 1775,
     "skipped": {
-      "short history": 80
+      "short history": 79
     },
     "counts": {
       "IGNITING": 0,
@@ -68,26 +68,20 @@
       "completed_last": "2026-10-21",
       "raw_last": "2026-10-21",
       "expected_completed": "2026-10-21",
-      "lagging": 728,
+      "lagging": 0,
       "screened": 1854,
       "completed_dist": {
-        "2026-10-21": 1126,
-        "2026-10-20": 536,
-        "2026-10-19": 191,
-        "2026-10-16": 1
+        "2026-10-21": 1854
       },
       "raw_dist": {
-        "2026-10-21": 1126,
-        "2026-10-20": 536,
-        "2026-10-19": 191,
-        "2026-10-16": 1
+        "2026-10-21": 1854
       },
-      "rows_lagging": 3
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1390
+        "yahoo": 1854
       },
       "dead": {},
       "errors": {},
@@ -102,8 +96,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1390,
-      "reused": 464,
+      "fresh": 1854,
+      "reused": 0,
       "merged": 1854,
       "universe": 2051,
       "stale_dropped": 0,
@@ -111,9 +105,9 @@
     },
     "mcap": {
       "rows": 11,
-      "have": 10
+      "have": 11
     },
-    "elapsed_s": 327.7
+    "elapsed_s": 335.3
   },
   "results": [
     {
@@ -148,26 +142,26 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.96,
-        "atr_pctl": 10.7,
+        "ribbon_pct": 8.03,
+        "atr_pctl": 9.5,
         "vol_pctl": 0.2,
-        "drawdown_pct": 67.4,
+        "drawdown_pct": 67.6,
         "coiled": true,
-        "coiled_bars": 15,
-        "last_coiled": "2026-10-20"
+        "coiled_bars": 16,
+        "last_coiled": "2026-10-21"
       },
       "base": {
         "high": 1.16999996,
-        "low": 0.81,
+        "low": 0.84500003,
         "bars": 60
       },
       "breakout_level": 1.16999996,
       "provisional": false,
-      "last_bar": "2026-10-20",
-      "price": 0.90499997,
+      "last_bar": "2026-10-21",
+      "price": 0.89999998,
       "mcap": 639028864.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -252,37 +246,9 @@
       "provisional": false,
       "last_bar": "2026-10-21",
       "price": 0.51999998,
-      "mcap": null,
-      "mcap_asof": null,
-      "mcap_src": null
-    },
-    {
-      "symbol": "WEB",
-      "name": "Webbeds Group Limited",
-      "yf": "WEB.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.4,
-        "atr_pctl": 27.8,
-        "vol_pctl": 1.6,
-        "drawdown_pct": 64.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-16"
-      },
-      "base": {
-        "high": 3.92000008,
-        "low": 2.6400001,
-        "bars": 60
-      },
-      "breakout_level": 3.92000008,
-      "provisional": false,
-      "last_bar": "2026-10-19",
-      "price": 3.5,
-      "mcap": 1246845056.0,
-      "mcap_asof": "2026-10-18",
-      "mcap_src": "previous"
+      "mcap": 106643352.0,
+      "mcap_asof": "2026-10-21",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "HMC",
@@ -309,6 +275,34 @@
       "last_bar": "2026-10-21",
       "price": 2.61999989,
       "mcap": 1126440960.0,
+      "mcap_asof": "2026-10-18",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "WEB",
+      "name": "Webbeds Group Limited",
+      "yf": "WEB.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.73,
+        "atr_pctl": 34.7,
+        "vol_pctl": 2.4,
+        "drawdown_pct": 64.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-16"
+      },
+      "base": {
+        "high": 3.92000008,
+        "low": 3.22000003,
+        "bars": 60
+      },
+      "breakout_level": 3.92000008,
+      "provisional": false,
+      "last_bar": "2026-10-21",
+      "price": 3.48000002,
+      "mcap": 1246845056.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
     },
@@ -400,13 +394,13 @@
       "symbol": "PMM",
       "name": "Pioneer Minerals Limited",
       "yf": "PMM.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 71.33,
+        "ribbon_pct": 77.28,
         "atr_pctl": 100.0,
         "vol_pctl": 100.0,
-        "drawdown_pct": 28.6,
+        "drawdown_pct": 33.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-08"
@@ -418,8 +412,8 @@
       },
       "breakout_level": 0.41999999,
       "provisional": false,
-      "last_bar": "2026-10-20",
-      "price": 0.30000001,
+      "last_bar": "2026-10-21",
+      "price": 0.28,
       "mcap": 25839128.0,
       "mcap_asof": "2026-10-19",
       "mcap_src": "previous"
