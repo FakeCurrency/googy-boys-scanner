@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-20T18:51:38+00:00",
+  "generated_at": "2026-10-21T00:03:16+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-19",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 26430.89,
-    "sma200": 24935.35,
+    "close": 26424.82,
+    "sma200": 24951.29,
     "above_200": true,
-    "vs_200_pct": 6.0,
-    "as_of": "2026-10-19"
+    "vs_200_pct": 5.9,
+    "as_of": "2026-10-20"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -66,21 +66,22 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-19",
+      "completed_last": "2026-10-20",
       "raw_last": "2026-10-20",
-      "expected_completed": "2026-10-19",
-      "lagging": 0,
+      "expected_completed": "2026-10-20",
+      "lagging": 1305,
       "screened": 1425,
       "completed_dist": {
-        "2026-10-19": 1425,
+        "2026-10-20": 120,
+        "2026-10-19": 1305,
         "2026-10-14": 1
       },
       "raw_dist": {
-        "2026-10-20": 1415,
-        "2026-10-19": 10,
+        "2026-10-20": 120,
+        "2026-10-19": 1305,
         "2026-10-14": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 12
     },
     "sources": {
       "mode": "yahoo",
@@ -100,8 +101,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1413,
-      "reused": 13,
+      "fresh": 1426,
+      "reused": 0,
       "merged": 1426,
       "universe": 1426,
       "stale_dropped": 0,
@@ -111,7 +112,7 @@
       "rows": 12,
       "have": 12
     },
-    "elapsed_s": 163.5
+    "elapsed_s": 183.6
   },
   "results": [
     {
@@ -158,9 +159,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 66.65000153,
-      "change_pct": -9.1,
-      "r_now": -0.58,
+      "price": 63.68000031,
+      "change_pct": -13.2,
+      "r_now": -0.84,
       "trail": 66.76944436,
       "mcap": 10013129728.0,
       "mcap_asof": "2026-10-18",
@@ -210,9 +211,9 @@
       "state": "CLOSED",
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 5.46500015,
-      "change_pct": -4.6,
-      "r_now": -0.42,
+      "price": 5.25,
+      "change_pct": -8.4,
+      "r_now": -0.76,
       "trail": 5.34388887,
       "mcap": 682412096.0,
       "mcap_asof": "2026-10-20",
@@ -241,9 +242,9 @@
       "breakout_level": 6.73000002,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 5.40500021,
-      "mcap": 2290910720.0,
-      "mcap_asof": "2026-10-16",
+      "price": 5.23000002,
+      "mcap": 2391851264.0,
+      "mcap_asof": "2026-10-20",
       "mcap_src": "cache"
     },
     {
@@ -269,7 +270,7 @@
       "breakout_level": 17.65999985,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 14.26000023,
+      "price": 14.14999962,
       "mcap": 1014279424.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -297,7 +298,7 @@
       "breakout_level": 9.58500004,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 9.07999992,
+      "price": 9.02000046,
       "mcap": 403906208.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "cache"
@@ -325,7 +326,7 @@
       "breakout_level": 4.5999999,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 3.5999999,
+      "price": 3.55999994,
       "mcap": 578339840.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -353,7 +354,7 @@
       "breakout_level": 10.14999962,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 8.90999985,
+      "price": 8.80000019,
       "mcap": 360987232.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -381,10 +382,10 @@
       "breakout_level": 95.53116113,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 89.65000153,
-      "mcap": 1485822208.0,
-      "mcap_asof": "2026-10-08",
-      "mcap_src": "cache"
+      "price": 88.45999908,
+      "mcap": 1610104064.0,
+      "mcap_asof": "2026-10-21",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "INMD",
@@ -409,7 +410,7 @@
       "breakout_level": 15.60000038,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 14.11999989,
+      "price": 14.06999969,
       "mcap": 814825472.0,
       "mcap_asof": "2026-10-17",
       "mcap_src": "cache"
@@ -437,7 +438,7 @@
       "breakout_level": 24.0,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 19.55999947,
+      "price": 19.73999977,
       "mcap": 243542480.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
@@ -465,7 +466,7 @@
       "breakout_level": 3.47000003,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 2.875,
+      "price": 2.9000001,
       "mcap": 6784654848.0,
       "mcap_asof": "2026-10-20",
       "mcap_src": "previous"
@@ -493,7 +494,7 @@
       "breakout_level": 27.6760006,
       "provisional": false,
       "last_bar": "2026-10-19",
-      "price": 15.78499985,
+      "price": 15.72000027,
       "mcap": 9511259136.0,
       "mcap_asof": "2026-10-18",
       "mcap_src": "previous"
