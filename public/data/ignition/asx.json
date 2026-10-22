@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-22T05:40:12+00:00",
+  "generated_at": "2026-10-22T12:10:05+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-22",
@@ -52,9 +52,9 @@
   "summary": {
     "universe": 2051,
     "downloaded": 1856,
-    "screened": 1775,
+    "screened": 1777,
     "skipped": {
-      "short history": 81
+      "short history": 79
     },
     "counts": {
       "IGNITING": 0,
@@ -68,22 +68,22 @@
       "completed_last": "2026-10-22",
       "raw_last": "2026-10-22",
       "expected_completed": "2026-10-22",
-      "lagging": 745,
+      "lagging": 437,
       "screened": 1856,
       "completed_dist": {
-        "2026-10-22": 1111,
-        "2026-10-21": 745
+        "2026-10-22": 1419,
+        "2026-10-21": 437
       },
       "raw_dist": {
-        "2026-10-22": 1111,
-        "2026-10-21": 745
+        "2026-10-22": 1419,
+        "2026-10-21": 437
       },
       "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1388
+        "yahoo": 1363
       },
       "dead": {},
       "errors": {},
@@ -98,8 +98,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1388,
-      "reused": 468,
+      "fresh": 1363,
+      "reused": 493,
       "merged": 1856,
       "universe": 2051,
       "stale_dropped": 0,
@@ -109,7 +109,7 @@
       "rows": 11,
       "have": 11
     },
-    "elapsed_s": 279.9
+    "elapsed_s": 270.0
   },
   "results": [
     {
@@ -256,7 +256,7 @@
       "symbol": "WEB",
       "name": "Webbeds Group Limited",
       "yf": "WEB.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 10.85,
@@ -317,7 +317,7 @@
       "coil": {
         "ribbon_pct": 12.9,
         "atr_pctl": 65.9,
-        "vol_pctl": 11.5,
+        "vol_pctl": 11.3,
         "drawdown_pct": 65.0,
         "coiled": false,
         "coiled_bars": 0,
@@ -334,7 +334,7 @@
       "price": 0.28,
       "mcap": 490021440.0,
       "mcap_asof": "2026-10-22",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "MYX",
