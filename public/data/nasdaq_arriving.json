@@ -1,11 +1,38 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-10-23T15:58:52-04:00",
+  "generated_at": "2026-10-23T19:08:43-04:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "METCZ",
+      "name": "Ramaco Resources, Inc. - 8.375% Senior Notes due 2029",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 24.70000076,
+      "turnover_avg20": 218971,
+      "turnover_today": 2293642,
+      "rvol": 10.6,
+      "adv_usd": 218971.79,
+      "fund": false,
+      "is_product": true
+    },
+    {
+      "symbol": "DHCNI",
+      "name": "Diversified Healthcare Trust  - 5.625% Senior Notes due 2042",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 16.95000076,
+      "turnover_avg20": 400967,
+      "turnover_today": 1215145,
+      "rvol": 3.0,
+      "adv_usd": 400967.29,
+      "fund": true,
+      "is_product": true
+    }
+  ]
 }
