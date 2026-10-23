@@ -1,11 +1,25 @@
 {
   "schema_version": 1,
   "market": "crypto",
-  "generated_at": "2026-10-23T15:25:05+00:00",
+  "generated_at": "2026-10-23T16:25:21+00:00",
   "rule": {
     "floor": 3000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "IRYS",
+      "name": "Irys",
+      "sector": "",
+      "dir": "LONG",
+      "price": 0.02062,
+      "turnover_avg20": 309181,
+      "turnover_today": 3183264,
+      "rvol": 10.3,
+      "adv_usd": 309181.78,
+      "fund": false,
+      "is_product": false
+    }
+  ]
 }
