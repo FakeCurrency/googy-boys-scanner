@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-23T18:50:39+00:00",
+  "generated_at": "2026-10-23T23:56:23+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-22",
+  "last_closed_bar": "2026-10-23",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 26008.86,
-    "sma200": 24980.14,
+    "close": 25955.34,
+    "sma200": 24991.99,
     "above_200": true,
-    "vs_200_pct": 4.1,
-    "as_of": "2026-10-22"
+    "vs_200_pct": 3.9,
+    "as_of": "2026-10-23"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -51,8 +51,8 @@
   },
   "summary": {
     "universe": 1425,
-    "downloaded": 1424,
-    "screened": 1325,
+    "downloaded": 1425,
+    "screened": 1326,
     "skipped": {
       "short history": 99
     },
@@ -65,18 +65,18 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-22",
+      "completed_last": "2026-10-23",
       "raw_last": "2026-10-23",
-      "expected_completed": "2026-10-22",
-      "lagging": 1,
-      "screened": 1424,
+      "expected_completed": "2026-10-23",
+      "lagging": 8,
+      "screened": 1425,
       "completed_dist": {
-        "2026-10-22": 1423,
-        "2026-10-21": 1
+        "2026-10-23": 1417,
+        "2026-10-22": 8
       },
       "raw_dist": {
-        "2026-10-23": 1406,
-        "2026-10-22": 18
+        "2026-10-23": 1417,
+        "2026-10-22": 8
       },
       "rows_lagging": 0
     },
@@ -98,9 +98,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1411,
-      "reused": 13,
-      "merged": 1424,
+      "fresh": 1425,
+      "reused": 0,
+      "merged": 1425,
       "universe": 1425,
       "stale_dropped": 0,
       "refused": 0
@@ -109,7 +109,7 @@
       "rows": 12,
       "have": 12
     },
-    "elapsed_s": 214.9
+    "elapsed_s": 168.3
   },
   "results": [
     {
@@ -122,7 +122,7 @@
       "entry": 73.34999847,
       "entry_basis": "next_open",
       "entry_date": "2026-10-06",
-      "bars_since": 13,
+      "bars_since": 14,
       "rvol": 9.98,
       "ext_pct": 25.9,
       "turnover_trigger": 1101689675.0,
@@ -155,14 +155,14 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 61.29999924,
-      "change_pct": -16.4,
-      "r_now": -1.05,
-      "trail": 65.54222276,
-      "mcap": 9891939328.0,
+      "last_bar": "2026-10-23",
+      "price": 60.43000031,
+      "change_pct": -17.6,
+      "r_now": -1.12,
+      "trail": 64.40666707,
+      "mcap": 9511056384.0,
       "mcap_asof": "2026-10-23",
-      "mcap_src": "previous"
+      "mcap_src": "cache"
     },
     {
       "symbol": "GPRE",
@@ -171,23 +171,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.71,
-        "atr_pctl": 3.4,
-        "vol_pctl": 21.2,
-        "drawdown_pct": 56.4,
+        "ribbon_pct": 5.36,
+        "atr_pctl": 2.4,
+        "vol_pctl": 17.3,
+        "drawdown_pct": 56.2,
         "coiled": true,
-        "coiled_bars": 14,
-        "last_coiled": "2026-10-22"
+        "coiled_bars": 15,
+        "last_coiled": "2026-10-23"
       },
       "base": {
         "high": 17.65999985,
         "low": 13.43000031,
         "bars": 60
       },
-      "breakout_level": 17.65999985,
+      "breakout_level": 17.57999992,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 14.05000019,
+      "last_bar": "2026-10-23",
+      "price": 13.97999954,
       "mcap": 975025984.0,
       "mcap_asof": "2026-10-23",
       "mcap_src": "previous"
@@ -199,13 +199,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.5,
-        "atr_pctl": 2.6,
-        "vol_pctl": 21.8,
-        "drawdown_pct": 68.5,
+        "ribbon_pct": 9.03,
+        "atr_pctl": 3.4,
+        "vol_pctl": 20.8,
+        "drawdown_pct": 69.7,
         "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-10-22"
+        "coiled_bars": 7,
+        "last_coiled": "2026-10-23"
       },
       "base": {
         "high": 9.58500004,
@@ -214,8 +214,8 @@
       },
       "breakout_level": 9.58500004,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 8.38500023,
+      "last_bar": "2026-10-23",
+      "price": 8.34000015,
       "mcap": 404358464.0,
       "mcap_asof": "2026-10-22",
       "mcap_src": "cache"
@@ -227,13 +227,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.91,
-        "atr_pctl": 5.2,
-        "vol_pctl": 30.0,
-        "drawdown_pct": 77.3,
+        "ribbon_pct": 11.84,
+        "atr_pctl": 7.3,
+        "vol_pctl": 29.6,
+        "drawdown_pct": 78.0,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-22"
+        "coiled_bars": 6,
+        "last_coiled": "2026-10-23"
       },
       "base": {
         "high": 4.5999999,
@@ -242,8 +242,8 @@
       },
       "breakout_level": 4.5999999,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 3.43499994,
+      "last_bar": "2026-10-23",
+      "price": 3.46000004,
       "mcap": 589906624.0,
       "mcap_asof": "2026-10-23",
       "mcap_src": "previous"
@@ -255,13 +255,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.13,
-        "atr_pctl": 11.9,
-        "vol_pctl": 1.8,
-        "drawdown_pct": 73.5,
+        "ribbon_pct": 6.16,
+        "atr_pctl": 10.3,
+        "vol_pctl": 1.2,
+        "drawdown_pct": 73.7,
         "coiled": true,
-        "coiled_bars": 4,
-        "last_coiled": "2026-10-22"
+        "coiled_bars": 5,
+        "last_coiled": "2026-10-23"
       },
       "base": {
         "high": 10.14999962,
@@ -270,10 +270,66 @@
       },
       "breakout_level": 10.14999962,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 8.68000031,
+      "last_bar": "2026-10-23",
+      "price": 8.65999985,
       "mcap": 361400256.0,
       "mcap_asof": "2026-10-23",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "PTON",
+      "name": "Peloton Interactive, Inc. - Common Stock",
+      "yf": "PTON",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 4.4,
+        "atr_pctl": 5.8,
+        "vol_pctl": 9.3,
+        "drawdown_pct": 50.7,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-23"
+      },
+      "base": {
+        "high": 6.69000006,
+        "low": 4.69000006,
+        "bars": 60
+      },
+      "breakout_level": 6.69000006,
+      "provisional": false,
+      "last_bar": "2026-10-23",
+      "price": 5.36999989,
+      "mcap": 2391851264.0,
+      "mcap_asof": "2026-10-20",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "CHA",
+      "name": "Chagee Holdings Limited - American Depositary Shares, each representing 1 Class A ordinary share",
+      "yf": "CHA",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.78,
+        "atr_pctl": 1.6,
+        "vol_pctl": 34.4,
+        "drawdown_pct": 68.4,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-23"
+      },
+      "base": {
+        "high": 13.13000011,
+        "low": 9.84000015,
+        "bars": 60
+      },
+      "breakout_level": 13.13000011,
+      "provisional": false,
+      "last_bar": "2026-10-23",
+      "price": 12.35999966,
+      "mcap": 2470385152.0,
+      "mcap_asof": "2026-10-22",
       "mcap_src": "previous"
     },
     {
@@ -283,53 +339,25 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 2.04,
+        "ribbon_pct": 2.12,
         "atr_pctl": 0.2,
-        "vol_pctl": 3.4,
-        "drawdown_pct": 47.6,
+        "vol_pctl": 3.6,
+        "drawdown_pct": 47.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-15"
       },
       "base": {
-        "high": 15.51000023,
+        "high": 15.39500046,
         "low": 13.86100006,
         "bars": 60
       },
       "breakout_level": 15.39500046,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 14.01000023,
+      "last_bar": "2026-10-23",
+      "price": 13.97000027,
       "mcap": 807344704.0,
       "mcap_asof": "2026-10-21",
-      "mcap_src": "cache"
-    },
-    {
-      "symbol": "PTON",
-      "name": "Peloton Interactive, Inc. - Common Stock",
-      "yf": "PTON",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 4.35,
-        "atr_pctl": 3.6,
-        "vol_pctl": 9.3,
-        "drawdown_pct": 49.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-21"
-      },
-      "base": {
-        "high": 6.73000002,
-        "low": 4.69000006,
-        "bars": 60
-      },
-      "breakout_level": 6.69000006,
-      "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 5.36499977,
-      "mcap": 2391851264.0,
-      "mcap_asof": "2026-10-20",
       "mcap_src": "cache"
     },
     {
@@ -339,10 +367,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.54,
-        "atr_pctl": 36.9,
+        "ribbon_pct": 9.17,
+        "atr_pctl": 35.1,
         "vol_pctl": 31.5,
-        "drawdown_pct": 51.8,
+        "drawdown_pct": 50.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-20"
@@ -354,8 +382,8 @@
       },
       "breakout_level": 24.0,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 19.20000076,
+      "last_bar": "2026-10-23",
+      "price": 19.17000008,
       "mcap": 240842160.0,
       "mcap_asof": "2026-10-23",
       "mcap_src": "previous"
@@ -367,10 +395,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.14,
-        "atr_pctl": 26.4,
-        "vol_pctl": 30.0,
-        "drawdown_pct": 55.0,
+        "ribbon_pct": 10.59,
+        "atr_pctl": 28.6,
+        "vol_pctl": 36.5,
+        "drawdown_pct": 51.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-21"
@@ -382,8 +410,8 @@
       },
       "breakout_level": 4.23999977,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 4.11999989,
+      "last_bar": "2026-10-23",
+      "price": 4.13000011,
       "mcap": 262080768.0,
       "mcap_asof": "2026-10-23",
       "mcap_src": "previous"
@@ -395,10 +423,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.22,
-        "atr_pctl": 45.2,
-        "vol_pctl": 30.4,
-        "drawdown_pct": 68.2,
+        "ribbon_pct": 11.08,
+        "atr_pctl": 41.3,
+        "vol_pctl": 31.5,
+        "drawdown_pct": 67.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-15"
@@ -410,38 +438,10 @@
       },
       "breakout_level": 3.47000003,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 3.04999995,
+      "last_bar": "2026-10-23",
+      "price": 3.06999993,
       "mcap": 6784654848.0,
       "mcap_asof": "2026-10-20",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "CHA",
-      "name": "Chagee Holdings Limited - American Depositary Shares, each representing 1 Class A ordinary share",
-      "yf": "CHA",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.34,
-        "atr_pctl": 4.5,
-        "vol_pctl": 35.9,
-        "drawdown_pct": 68.2,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-20"
-      },
-      "base": {
-        "high": 13.13000011,
-        "low": 9.84000015,
-        "bars": 60
-      },
-      "breakout_level": 13.13000011,
-      "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 12.28009987,
-      "mcap": 2470385152.0,
-      "mcap_asof": "2026-10-22",
       "mcap_src": "previous"
     },
     {
@@ -451,10 +451,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.41,
+        "ribbon_pct": 14.3,
         "atr_pctl": 3.2,
-        "vol_pctl": 26.4,
-        "drawdown_pct": 47.4,
+        "vol_pctl": 21.0,
+        "drawdown_pct": 46.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-19"
@@ -466,8 +466,8 @@
       },
       "breakout_level": 95.53116113,
       "provisional": false,
-      "last_bar": "2026-10-22",
-      "price": 94.18499756,
+      "last_bar": "2026-10-23",
+      "price": 94.40000153,
       "mcap": 1610104064.0,
       "mcap_asof": "2026-10-21",
       "mcap_src": "previous"
