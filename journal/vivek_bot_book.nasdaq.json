@@ -78,7 +78,7 @@
       "level_tf": "weekly",
       "signal_entry": 5.57000017,
       "fill_slip_bps": -206.5,
-      "last_mark": 6.86499977,
+      "last_mark": 6.92500019,
       "day_marks": {
         "2026-10-13": 7.73999977,
         "2026-10-14": 7.44999981,
@@ -90,8 +90,8 @@
         "2026-10-22": 7.07000017,
         "2026-10-23": 6.73999977
       },
-      "unreal_r": 0.352,
-      "unreal_usd": 176.38,
+      "unreal_r": 0.367,
+      "unreal_usd": 183.88,
       "review_before": [
         {
           "code": "heavy_risk",
@@ -169,7 +169,7 @@
       "level_tf": "3d",
       "signal_entry": 107.44000244,
       "fill_slip_bps": 161.5,
-      "last_mark": 120.01999664,
+      "last_mark": 119.50499725,
       "day_marks": {
         "2026-10-13": 113.08000183,
         "2026-10-14": 112.27999878,
@@ -181,8 +181,8 @@
         "2026-10-22": 117.80000305,
         "2026-10-23": 121.12000275
       },
-      "unreal_r": 0.779,
-      "unreal_usd": 157.82,
+      "unreal_r": 0.742,
+      "unreal_usd": 150.33,
       "review_before": [],
       "notional_before": 5000.0,
       "units_before": 46.53760133,
@@ -252,7 +252,7 @@
       "level_tf": "weekly",
       "signal_entry": 13.86999989,
       "fill_slip_bps": -313.6,
-      "last_mark": 12.00829983,
+      "last_mark": 11.95009995,
       "day_marks": {
         "2026-10-13": 12.61999989,
         "2026-10-14": 12.5,
@@ -264,8 +264,8 @@
         "2026-10-22": 12.23499966,
         "2026-10-23": 12.60000038
       },
-      "unreal_r": -0.652,
-      "unreal_usd": -308.3,
+      "unreal_r": -0.679,
+      "unreal_usd": -320.88,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -310,9 +310,9 @@
         }
       ],
       "mae": 196.86500549,
-      "mfe": 249.50999451,
+      "mfe": 250.39500427,
       "mae_r": -0.048,
-      "mfe_r": 1.033,
+      "mfe_r": 1.051,
       "entry_type_label": "Break of small structure near the 200 SMA",
       "units": 13.12542649,
       "notional": 2500.0,
@@ -337,7 +337,7 @@
       "level_tf": "weekly",
       "signal_entry": 190.47000122,
       "fill_slip_bps": 457.8,
-      "last_mark": 249.50999451,
+      "last_mark": 250.39500427,
       "day_marks": {
         "2026-10-13": 225.77999878,
         "2026-10-14": 228.66000366,
@@ -349,8 +349,8 @@
         "2026-10-22": 231.33000183,
         "2026-10-23": 237.75999451
       },
-      "unreal_r": 0.775,
-      "unreal_usd": 406.71,
+      "unreal_r": 0.788,
+      "unreal_usd": 413.86,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -406,7 +406,7 @@
       "level_tf": "weekly",
       "signal_entry": 114.06999969,
       "fill_slip_bps": 171.8,
-      "last_mark": 124.05000305,
+      "last_mark": 123.72000122,
       "day_marks": {
         "2026-10-13": 117.61000061,
         "2026-10-14": 116.27999878,
@@ -418,86 +418,8 @@
         "2026-10-22": 125.48000336,
         "2026-10-23": 131.03999329
       },
-      "unreal_r": 0.539,
-      "unreal_usd": 152.61,
-      "last_mark_day": "2026-10-23"
-    },
-    {
-      "id": "BHF:long:1W:2026-09-28",
-      "symbol": "BHF",
-      "name": "Brighthouse Financial, Inc. - Common Stock",
-      "sector": "Financial Services",
-      "market": "nasdaq",
-      "direction": "long",
-      "grade": "A+",
-      "entry_type": "reclaim",
-      "timeframe": "1W",
-      "entry": 53.20000076,
-      "stop": 45.53414141,
-      "tp1": 60.74000168,
-      "tp2": 66.33000183,
-      "tp3": 91.769303,
-      "scale": [
-        0.25,
-        0.5,
-        0.15
-      ],
-      "risk": 7.66585935,
-      "rr": 1.71,
-      "trigger_bar": null,
-      "entry_date": "2026-09-28",
-      "opened_at": "2026-09-28T13:59:30+00:00",
-      "status": "open",
-      "tp1_hit": false,
-      "tp2_hit": false,
-      "tp3_hit": false,
-      "booked_pct": 0.0,
-      "realized_r": -0.0035,
-      "gross_r": 0.0,
-      "cost_r": 0.0035,
-      "exits": [],
-      "mae": 45.66999817,
-      "mfe": 53.20000076,
-      "mae_r": -0.982,
-      "mfe_r": 0.0,
-      "entry_type_label": "Close back above the 200 SMA after rejection",
-      "units": 46.95717357,
-      "notional": 2500.0,
-      "leverage": 0.02,
-      "leverage_target": 5.0,
-      "risk_pct": 0.2412,
-      "risk_usd": 361.85,
-      "sizing_mode": "fixed_notional",
-      "cycle": "hc4-1",
-      "review": [
-        {
-          "code": "heavy_risk",
-          "share_pct": 8.0,
-          "stop_pct": 14.5,
-          "risk_usd": 361.85,
-          "limit_usd": 4500.0,
-          "note": "a 1R loss here is $362 - 8% of the $4,500 daily loss guard, on a 14% stop"
-        }
-      ],
-      "source": "vivek_bot",
-      "lens": "vivek",
-      "level_tf": "weekly",
-      "signal_entry": 53.24000168,
-      "fill_slip_bps": -7.5,
-      "last_mark": 45.84500122,
-      "day_marks": {
-        "2026-10-13": 48.36000061,
-        "2026-10-14": 47.91500092,
-        "2026-10-15": 47.79999924,
-        "2026-10-16": 48.70000076,
-        "2026-10-19": 47.77000046,
-        "2026-10-20": 47.59999847,
-        "2026-10-21": 47.63999939,
-        "2026-10-22": 46.95999908,
-        "2026-10-23": 46.34999847
-      },
-      "unreal_r": -0.959,
-      "unreal_usd": -347.18,
+      "unreal_r": 0.517,
+      "unreal_usd": 146.33,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -553,7 +475,7 @@
       "level_tf": "3d",
       "signal_entry": 59.50999832,
       "fill_slip_bps": -73.9,
-      "last_mark": 58.88499832,
+      "last_mark": 58.77999878,
       "day_marks": {
         "2026-10-13": 57.24000168,
         "2026-10-14": 56.86999893,
@@ -565,8 +487,8 @@
         "2026-10-22": 58.02000046,
         "2026-10-23": 59.38000107
       },
-      "unreal_r": -0.069,
-      "unreal_usd": -9.04,
+      "unreal_r": -0.107,
+      "unreal_usd": -14.17,
       "last_mark_day": "2026-10-23",
       "stale_pinged": "2026-10-20"
     },
@@ -623,7 +545,7 @@
       "level_tf": "3d",
       "signal_entry": 101.55000305,
       "fill_slip_bps": 0.0,
-      "last_mark": 102.0,
+      "last_mark": 102.01000214,
       "day_marks": {
         "2026-10-13": 101.80000305,
         "2026-10-14": 101.91000366,
@@ -635,8 +557,8 @@
         "2026-10-22": 101.93000031,
         "2026-10-23": 101.94000244
       },
-      "unreal_r": 0.046,
-      "unreal_usd": 11.08,
+      "unreal_r": 0.047,
+      "unreal_usd": 11.32,
       "stale_pinged": "2026-10-19",
       "last_mark_day": "2026-10-23"
     },
@@ -693,7 +615,7 @@
       "level_tf": "3d",
       "signal_entry": 113.23000336,
       "fill_slip_bps": 1.8,
-      "last_mark": 116.875,
+      "last_mark": 116.44999695,
       "day_marks": {
         "2026-10-13": 112.87999725,
         "2026-10-14": 114.63999939,
@@ -705,8 +627,8 @@
         "2026-10-22": 114.26999664,
         "2026-10-23": 116.80999756
       },
-      "unreal_r": 0.45,
-      "unreal_usd": 79.84,
+      "unreal_r": 0.397,
+      "unreal_usd": 70.48,
       "stale_pinged": "2026-10-19",
       "last_mark_day": "2026-10-23"
     },
@@ -772,7 +694,7 @@
       "level_tf": "weekly",
       "signal_entry": 98.72000122,
       "fill_slip_bps": 77.5,
-      "last_mark": 98.31999969,
+      "last_mark": 97.88500214,
       "day_marks": {
         "2026-10-13": 95.66000366,
         "2026-10-14": 97.43000031,
@@ -784,8 +706,8 @@
         "2026-10-22": 99.63999939,
         "2026-10-23": 98.66999817
       },
-      "unreal_r": -0.047,
-      "unreal_usd": -28.58,
+      "unreal_r": -0.065,
+      "unreal_usd": -39.26,
       "stale_pinged": "2026-10-19",
       "last_mark_day": "2026-10-23"
     },
@@ -851,7 +773,7 @@
       "level_tf": "weekly",
       "signal_entry": 117.93000031,
       "fill_slip_bps": -94.1,
-      "last_mark": 115.30999756,
+      "last_mark": 114.43000031,
       "day_marks": {
         "2026-10-13": 112.33000183,
         "2026-10-14": 114.05999756,
@@ -863,8 +785,8 @@
         "2026-10-22": 113.19999695,
         "2026-10-23": 116.06999969
       },
-      "unreal_r": -0.09,
-      "unreal_usd": -34.14,
+      "unreal_r": -0.143,
+      "unreal_usd": -54.03,
       "stale_pinged": "2026-10-19",
       "last_mark_day": "2026-10-23"
     },
@@ -928,7 +850,7 @@
       "level_tf": "3d",
       "signal_entry": 118.34999847,
       "fill_slip_bps": -27.9,
-      "last_mark": 129.46000671,
+      "last_mark": 128.91999817,
       "day_marks": {
         "2026-10-13": 124.23000336,
         "2026-10-14": 125.65000153,
@@ -940,8 +862,8 @@
         "2026-10-22": 127.38999939,
         "2026-10-23": 130.63999939
       },
-      "unreal_r": 1.979,
-      "unreal_usd": 195.05,
+      "unreal_r": 1.886,
+      "unreal_usd": 185.84,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -1006,7 +928,7 @@
       "level_tf": "weekly",
       "signal_entry": 58.27000046,
       "fill_slip_bps": -98.7,
-      "last_mark": 61.29000092,
+      "last_mark": 61.38999939,
       "day_marks": {
         "2026-10-13": 70.65000153,
         "2026-10-14": 66.80000305,
@@ -1018,8 +940,8 @@
         "2026-10-22": 63.22999954,
         "2026-10-23": 62.84999847
       },
-      "unreal_r": 0.359,
-      "unreal_usd": 163.11,
+      "unreal_r": 0.369,
+      "unreal_usd": 167.64,
       "last_mark_day": "2026-10-23",
       "stale_pinged": "2026-10-23"
     },
@@ -1076,7 +998,7 @@
       "level_tf": "weekly",
       "signal_entry": 12.81000042,
       "fill_slip_bps": 19.4,
-      "last_mark": 12.57999992,
+      "last_mark": 12.52999973,
       "day_marks": {
         "2026-10-13": 12.57999992,
         "2026-10-14": 12.65999985,
@@ -1088,8 +1010,8 @@
         "2026-10-22": 12.68000031,
         "2026-10-23": 12.80000019
       },
-      "unreal_r": -0.178,
-      "unreal_usd": -48.88,
+      "unreal_r": -0.213,
+      "unreal_usd": -58.47,
       "stale_pinged": "2026-10-20",
       "last_mark_day": "2026-10-23"
     },
@@ -1146,7 +1068,7 @@
       "level_tf": "weekly",
       "signal_entry": 529.05999756,
       "fill_slip_bps": -60.7,
-      "last_mark": 562.0,
+      "last_mark": 563.25,
       "day_marks": {
         "2026-10-13": 523.94000244,
         "2026-10-14": 520.30999756,
@@ -1158,8 +1080,8 @@
         "2026-10-22": 553.47998047,
         "2026-10-23": 566.76000977
       },
-      "unreal_r": 0.616,
-      "unreal_usd": 180.17,
+      "unreal_r": 0.638,
+      "unreal_usd": 186.4,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -1215,7 +1137,7 @@
       "level_tf": "3d",
       "signal_entry": 606.23999023,
       "fill_slip_bps": -26.0,
-      "last_mark": 703.14001465,
+      "last_mark": 692.75,
       "day_marks": {
         "2026-10-13": 645.7199707,
         "2026-10-14": 641.73999023,
@@ -1227,8 +1149,8 @@
         "2026-10-22": 695.19000244,
         "2026-10-23": 713.65002441
       },
-      "unreal_r": 1.441,
-      "unreal_usd": 415.45,
+      "unreal_r": 1.289,
+      "unreal_usd": 371.61,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -1284,7 +1206,7 @@
       "level_tf": "3d",
       "signal_entry": 176.8500061,
       "fill_slip_bps": 113.7,
-      "last_mark": 182.61999512,
+      "last_mark": 181.72999573,
       "day_marks": {
         "2026-10-13": 181.91000366,
         "2026-10-14": 183.16999817,
@@ -1296,8 +1218,8 @@
         "2026-10-22": 188.8999939,
         "2026-10-23": 189.88999939
       },
-      "unreal_r": 0.215,
-      "unreal_usd": 47.05,
+      "unreal_r": 0.164,
+      "unreal_usd": 35.91,
       "last_mark_day": "2026-10-23",
       "stale_pinged": "2026-10-23"
     },
@@ -1363,7 +1285,7 @@
       "level_tf": "3d",
       "signal_entry": 4.01000023,
       "fill_slip_bps": -62.3,
-      "last_mark": 3.68000007,
+      "last_mark": 3.70000005,
       "day_marks": {
         "2026-10-13": 3.96000004,
         "2026-10-14": 3.82999992,
@@ -1375,8 +1297,8 @@
         "2026-10-22": 3.8599999,
         "2026-10-23": 3.80999994
       },
-      "unreal_r": -0.394,
-      "unreal_usd": -196.29,
+      "unreal_r": -0.368,
+      "unreal_usd": -183.42,
       "last_mark_day": "2026-10-23",
       "stale_pinged": "2026-10-19"
     },
@@ -1442,7 +1364,7 @@
       "level_tf": "weekly",
       "signal_entry": 40.74000168,
       "fill_slip_bps": 148.5,
-      "last_mark": 38.86999893,
+      "last_mark": 38.65000153,
       "day_marks": {
         "2026-10-13": 40.86000061,
         "2026-10-14": 40.84000015,
@@ -1454,8 +1376,8 @@
         "2026-10-22": 38.91999817,
         "2026-10-23": 39.58000183
       },
-      "unreal_r": -0.277,
-      "unreal_usd": -141.59,
+      "unreal_r": -0.302,
+      "unreal_usd": -154.17,
       "last_mark_day": "2026-10-23",
       "stale_pinged": "2026-10-21"
     },
@@ -1512,7 +1434,7 @@
       "level_tf": "weekly",
       "signal_entry": 168.41999817,
       "fill_slip_bps": 16.0,
-      "last_mark": 164.29510498,
+      "last_mark": 164.2749939,
       "day_marks": {
         "2026-10-13": 168.77000427,
         "2026-10-14": 167.02999878,
@@ -1524,8 +1446,8 @@
         "2026-10-22": 171.27999878,
         "2026-10-23": 169.38999939
       },
-      "unreal_r": -0.23,
-      "unreal_usd": -64.31,
+      "unreal_r": -0.231,
+      "unreal_usd": -64.61,
       "last_mark_day": "2026-10-23",
       "stale_pinged": "2026-10-21"
     },
@@ -1595,7 +1517,7 @@
       "level_tf": "3d",
       "signal_entry": 262.35998535,
       "fill_slip_bps": 29.0,
-      "last_mark": 305.41000366,
+      "last_mark": 305.1499939,
       "day_marks": {
         "2026-10-13": 273.80999756,
         "2026-10-14": 275.8999939,
@@ -1607,8 +1529,8 @@
         "2026-10-22": 294.5,
         "2026-10-23": 307.94000244
       },
-      "unreal_r": 0.673,
-      "unreal_usd": 95.87,
+      "unreal_r": 0.669,
+      "unreal_usd": 95.28,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -1653,9 +1575,9 @@
         }
       ],
       "mae": 56.06999969,
-      "mfe": 63.08000183,
+      "mfe": 63.28499985,
       "mae_r": 0.0,
-      "mfe_r": 1.008,
+      "mfe_r": 1.037,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 44.69873031,
       "notional": 2500.0,
@@ -1671,7 +1593,7 @@
       "level_tf": "weekly",
       "signal_entry": 55.93000031,
       "fill_slip_bps": 25.0,
-      "last_mark": 63.08000183,
+      "last_mark": 63.28499985,
       "day_marks": {
         "2026-10-13": 56.06999969,
         "2026-10-14": 56.29000092,
@@ -1683,8 +1605,8 @@
         "2026-10-22": 59.54000092,
         "2026-10-23": 62.49000168
       },
-      "unreal_r": 0.756,
-      "unreal_usd": 230.27,
+      "unreal_r": 0.778,
+      "unreal_usd": 237.0,
       "last_mark_day": "2026-10-23"
     },
     {
@@ -1750,7 +1672,7 @@
       "level_tf": "weekly",
       "signal_entry": 108.40000153,
       "fill_slip_bps": 119.0,
-      "last_mark": 111.37999725,
+      "last_mark": 111.05000305,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-16": 109.69000244,
@@ -1760,8 +1682,8 @@
         "2026-10-22": 110.63999939,
         "2026-10-23": 110.48999786
       },
-      "unreal_r": 0.114,
-      "unreal_usd": 38.98
+      "unreal_r": 0.092,
+      "unreal_usd": 31.37
     },
     {
       "id": "FFIN:long:1W:2026-10-16",
@@ -1817,7 +1739,7 @@
       "level_tf": "weekly",
       "signal_entry": 31.59000015,
       "fill_slip_bps": -289.6,
-      "last_mark": 30.35000038,
+      "last_mark": 30.22999954,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-16": 30.67499924,
@@ -1827,8 +1749,8 @@
         "2026-10-22": 29.77000046,
         "2026-10-23": 30.32999992
       },
-      "unreal_r": -0.17,
-      "unreal_usd": -25.72
+      "unreal_r": -0.232,
+      "unreal_usd": -35.22
     },
     {
       "id": "MDLZ:long:1W:2026-10-16",
@@ -1893,7 +1815,7 @@
       "level_tf": "weekly",
       "signal_entry": 63.02999878,
       "fill_slip_bps": 126.9,
-      "last_mark": 63.63499832,
+      "last_mark": 63.41999817,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-16": 63.83000183,
@@ -1903,8 +1825,8 @@
         "2026-10-22": 62.74000168,
         "2026-10-23": 65.19000244
       },
-      "unreal_r": -0.02,
-      "unreal_usd": -7.73
+      "unreal_r": -0.043,
+      "unreal_usd": -16.26
     },
     {
       "id": "TPG:long:1W:2026-10-20",
@@ -1969,7 +1891,7 @@
       "level_tf": "weekly",
       "signal_entry": 43.09999847,
       "fill_slip_bps": 380.5,
-      "last_mark": 45.18500137,
+      "last_mark": 44.70000076,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-20": 44.74000168,
@@ -1977,8 +1899,8 @@
         "2026-10-22": 44.08000183,
         "2026-10-23": 46.16999817
       },
-      "unreal_r": 0.061,
-      "unreal_usd": 25.81
+      "unreal_r": -0.006,
+      "unreal_usd": -2.32
     },
     {
       "id": "NOVT:long:3D:2026-10-20",
@@ -2034,7 +1956,7 @@
       "level_tf": "3d",
       "signal_entry": 131.52000427,
       "fill_slip_bps": 438.0,
-      "last_mark": 139.16999817,
+      "last_mark": 139.34500122,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-20": 137.27999878,
@@ -2042,8 +1964,8 @@
         "2026-10-22": 139.94000244,
         "2026-10-23": 136.66000366
       },
-      "unreal_r": 0.108,
-      "unreal_usd": 35.93
+      "unreal_r": 0.118,
+      "unreal_usd": 39.25
     },
     {
       "id": "TRMB:long:1W:2026-10-21",
@@ -2108,15 +2030,15 @@
       "level_tf": "weekly",
       "signal_entry": 62.11999893,
       "fill_slip_bps": 80.5,
-      "last_mark": 63.65000153,
+      "last_mark": 63.56999969,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-21": 62.61999893,
         "2026-10-22": 62.59000015,
         "2026-10-23": 64.01000214
       },
-      "unreal_r": 0.087,
-      "unreal_usd": 41.45
+      "unreal_r": 0.08,
+      "unreal_usd": 38.23
     },
     {
       "id": "ISRG:long:1D:2026-10-21",
@@ -2160,9 +2082,9 @@
         }
       ],
       "mae": 424.04049683,
-      "mfe": 456.89001465,
+      "mfe": 457.2250061,
       "mae_r": 0.0,
-      "mfe_r": 0.72,
+      "mfe_r": 0.727,
       "entry_type_label": "Break of small structure near the 200 SMA",
       "units": 6.00225671,
       "notional": 2500.0,
@@ -2179,15 +2101,15 @@
       "level_tf": "weekly",
       "signal_entry": 416.51000977,
       "fill_slip_bps": 180.8,
-      "last_mark": 456.89001465,
+      "last_mark": 457.2250061,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-21": 424.04049683,
         "2026-10-22": 428.11999512,
         "2026-10-23": 443.8500061
       },
-      "unreal_r": 0.54,
-      "unreal_usd": 147.88
+      "unreal_r": 0.545,
+      "unreal_usd": 149.39
     },
     {
       "id": "TW:long:3D:2026-10-21",
@@ -2224,9 +2146,9 @@
       "cost_r": 0.0025,
       "exits": [],
       "mae": 119.51000214,
-      "mfe": 122.38999939,
+      "mfe": 122.55999756,
       "mae_r": -0.003,
-      "mfe_r": 0.116,
+      "mfe_r": 0.123,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 20.9432851,
       "notional": 2500.0,
@@ -2252,15 +2174,15 @@
       "level_tf": "3d",
       "signal_entry": 119.37000275,
       "fill_slip_bps": 17.6,
-      "last_mark": 122.36000061,
+      "last_mark": 122.55999756,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-21": 119.58000183,
         "2026-10-22": 120.01000214,
         "2026-10-23": 121.88999939
       },
-      "unreal_r": 0.114,
-      "unreal_usd": 58.22
+      "unreal_r": 0.123,
+      "unreal_usd": 62.41
     },
     {
       "id": "BEAM:long:3D:2026-10-21",
@@ -2325,15 +2247,15 @@
       "level_tf": "3d",
       "signal_entry": 24.93000031,
       "fill_slip_bps": -8.0,
-      "last_mark": 23.69499969,
+      "last_mark": 23.76000023,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-21": 24.90999985,
         "2026-10-22": 24.84000015,
         "2026-10-23": 24.55999947
       },
-      "unreal_r": -0.279,
-      "unreal_usd": -121.84
+      "unreal_r": -0.264,
+      "unreal_usd": -115.32
     },
     {
       "id": "OMCL:long:3D:2026-10-21",
@@ -2398,15 +2320,15 @@
       "level_tf": "3d",
       "signal_entry": 36.49000168,
       "fill_slip_bps": 60.3,
-      "last_mark": 37.10509872,
+      "last_mark": 36.91999817,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-21": 36.70999908,
         "2026-10-22": 36.34000015,
         "2026-10-23": 37.09999847
       },
-      "unreal_r": 0.061,
-      "unreal_usd": 27.07
+      "unreal_r": 0.032,
+      "unreal_usd": 14.39
     },
     {
       "id": "KELYA:long:1W:2026-10-21",
@@ -2471,15 +2393,15 @@
       "level_tf": "weekly",
       "signal_entry": 15.81999969,
       "fill_slip_bps": 227.6,
-      "last_mark": 16.91500092,
+      "last_mark": 16.89999962,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-21": 16.18000031,
         "2026-10-22": 16.38999939,
         "2026-10-23": 16.61000061
       },
-      "unreal_r": 0.296,
-      "unreal_usd": 116.15
+      "unreal_r": 0.29,
+      "unreal_usd": 113.78
     },
     {
       "id": "ULCC:long:3D:2026-10-22",
@@ -2515,9 +2437,9 @@
       "gross_r": 0.0,
       "cost_r": 0.0021,
       "exits": [],
-      "mae": 4.88999987,
+      "mae": 4.88500023,
       "mfe": 5.30499983,
-      "mae_r": -0.252,
+      "mae_r": -0.256,
       "mfe_r": 0.085,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 496.03174997,
@@ -2544,14 +2466,71 @@
       "level_tf": "3d",
       "signal_entry": 5.03999996,
       "fill_slip_bps": 317.5,
-      "last_mark": 4.9131999,
+      "last_mark": 4.88500023,
       "last_mark_day": "2026-10-23",
       "day_marks": {
         "2026-10-22": 5.19999981,
         "2026-10-23": 5.30000019
       },
-      "unreal_r": -0.233,
-      "unreal_usd": -142.26
+      "unreal_r": -0.256,
+      "unreal_usd": -156.25
+    },
+    {
+      "id": "WAFD:long:1W:2026-10-23",
+      "symbol": "WAFD",
+      "name": "WaFd, Inc. - Common Stock",
+      "sector": "Financial Services",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 29.37000084,
+      "stop": 26.37132758,
+      "tp1": 33.50901258,
+      "tp2": 36.39601826,
+      "tp3": 39.19907641,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 2.99867326,
+      "rr": 2.34,
+      "trigger_bar": null,
+      "entry_date": "2026-10-23",
+      "opened_at": "2026-10-23T17:14:27+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 29.37000084,
+      "mfe": 29.37000084,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 84.91847673,
+      "notional": 2500.0,
+      "leverage": 0.02,
+      "leverage_target": 5.0,
+      "risk_pct": 0.1697,
+      "risk_usd": 254.64,
+      "risk_usd_basis": "fill",
+      "sizing_mode": "fixed_notional",
+      "cycle": "hc4-1",
+      "review": [],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "weekly",
+      "signal_entry": 29.44000053,
+      "fill_slip_bps": -23.8,
+      "last_mark": 29.37000084,
+      "last_mark_day": "2026-10-23"
     }
   ],
   "closed": [
@@ -8400,6 +8379,94 @@
       "exit_reason": "stop",
       "hold_days": 24,
       "stop_slip_r": 0.1
+    },
+    {
+      "id": "BHF:long:1W:2026-09-28",
+      "symbol": "BHF",
+      "name": "Brighthouse Financial, Inc. - Common Stock",
+      "sector": "Financial Services",
+      "market": "nasdaq",
+      "direction": "long",
+      "grade": "A+",
+      "entry_type": "reclaim",
+      "timeframe": "1W",
+      "entry": 53.20000076,
+      "stop": 45.53414141,
+      "tp1": 60.74000168,
+      "tp2": 66.33000183,
+      "tp3": 91.769303,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 7.66585935,
+      "rr": 1.71,
+      "trigger_bar": null,
+      "entry_date": "2026-09-28",
+      "opened_at": "2026-09-28T13:59:30+00:00",
+      "status": "closed",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 1.0,
+      "realized_r": -1.0396,
+      "gross_r": -1.0332,
+      "cost_r": 0.0064,
+      "exits": [
+        {
+          "reason": "stop",
+          "price": 45.27999878,
+          "pct": 1.0,
+          "date": "2026-10-23"
+        }
+      ],
+      "mae": 45.27999878,
+      "mfe": 53.20000076,
+      "mae_r": -1.033,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 46.95717357,
+      "notional": 2500.0,
+      "leverage": 0.02,
+      "leverage_target": 5.0,
+      "risk_pct": 0.2412,
+      "risk_usd": 361.85,
+      "sizing_mode": "fixed_notional",
+      "cycle": "hc4-1",
+      "review": [
+        {
+          "code": "heavy_risk",
+          "share_pct": 8.0,
+          "stop_pct": 14.5,
+          "risk_usd": 361.85,
+          "limit_usd": 4500.0,
+          "note": "a 1R loss here is $362 - 8% of the $4,500 daily loss guard, on a 14% stop"
+        }
+      ],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "weekly",
+      "signal_entry": 53.24000168,
+      "fill_slip_bps": -7.5,
+      "last_mark": 45.27999878,
+      "day_marks": {
+        "2026-10-13": 48.36000061,
+        "2026-10-14": 47.91500092,
+        "2026-10-15": 47.79999924,
+        "2026-10-16": 48.70000076,
+        "2026-10-19": 47.77000046,
+        "2026-10-20": 47.59999847,
+        "2026-10-21": 47.63999939,
+        "2026-10-22": 46.95999908,
+        "2026-10-23": 46.34999847
+      },
+      "last_mark_day": "2026-10-23",
+      "exit_price": 45.27999878,
+      "exit_date": "2026-10-23",
+      "exit_reason": "stop",
+      "hold_days": 25,
+      "stop_slip_r": 0.0332
     }
   ],
   "guard": {
@@ -8410,28 +8477,28 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 1597.14,
+      "week_usd": 1385.47,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_measured": true,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -930.85,
-      "worst_week_usd": 1597.14,
-      "realised_usd": 0.0,
+      "worst_session_usd": -1142.53,
+      "worst_week_usd": 1385.47,
+      "realised_usd": -51.66,
       "open_realised_usd": 8.61,
-      "unrealised_usd": -939.46,
-      "session_usd": -930.85,
+      "unrealised_usd": -1099.48,
+      "session_usd": -1142.53,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 34,
-      "open_total_usd": 2425.86,
+      "open": 33,
+      "open_total_usd": 2590.46,
       "notified": ""
     }
   },
   "summary": {
     "open": 34,
-    "unreal_usd": 1327.04,
+    "unreal_usd": 1490.32,
     "updated_day": "2026-10-23"
   },
-  "updated_at": "2026-10-23T16:14:40+00:00"
+  "updated_at": "2026-10-23T17:14:27+00:00"
 }
