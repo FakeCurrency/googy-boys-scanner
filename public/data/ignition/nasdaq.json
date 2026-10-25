@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-23T23:56:23+00:00",
+  "generated_at": "2026-10-25T09:28:20+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-23",
@@ -68,15 +68,15 @@
       "completed_last": "2026-10-23",
       "raw_last": "2026-10-23",
       "expected_completed": "2026-10-23",
-      "lagging": 8,
+      "lagging": 1,
       "screened": 1425,
       "completed_dist": {
-        "2026-10-23": 1417,
-        "2026-10-22": 8
+        "2026-10-23": 1424,
+        "2026-10-22": 1
       },
       "raw_dist": {
-        "2026-10-23": 1417,
-        "2026-10-22": 8
+        "2026-10-23": 1424,
+        "2026-10-22": 1
       },
       "rows_lagging": 0
     },
@@ -109,7 +109,7 @@
       "rows": 12,
       "have": 12
     },
-    "elapsed_s": 168.3
+    "elapsed_s": 160.7
   },
   "results": [
     {
@@ -229,7 +229,7 @@
       "coil": {
         "ribbon_pct": 11.84,
         "atr_pctl": 7.3,
-        "vol_pctl": 29.6,
+        "vol_pctl": 29.8,
         "drawdown_pct": 78.0,
         "coiled": true,
         "coiled_bars": 6,
@@ -256,7 +256,7 @@
       "state": "COILED",
       "coil": {
         "ribbon_pct": 6.16,
-        "atr_pctl": 10.3,
+        "atr_pctl": 10.5,
         "vol_pctl": 1.2,
         "drawdown_pct": 73.7,
         "coiled": true,
@@ -284,7 +284,7 @@
       "state": "COILED",
       "coil": {
         "ribbon_pct": 4.4,
-        "atr_pctl": 5.8,
+        "atr_pctl": 5.6,
         "vol_pctl": 9.3,
         "drawdown_pct": 50.7,
         "coiled": true,
@@ -300,8 +300,8 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 5.36999989,
-      "mcap": 2391851264.0,
-      "mcap_asof": "2026-10-20",
+      "mcap": 2356741632.0,
+      "mcap_asof": "2026-10-24",
       "mcap_src": "cache"
     },
     {
@@ -396,7 +396,7 @@
       "state": "COILED",
       "coil": {
         "ribbon_pct": 10.59,
-        "atr_pctl": 28.6,
+        "atr_pctl": 29.2,
         "vol_pctl": 36.5,
         "drawdown_pct": 51.1,
         "coiled": false,
@@ -440,9 +440,9 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 3.06999993,
-      "mcap": 6784654848.0,
-      "mcap_asof": "2026-10-20",
-      "mcap_src": "previous"
+      "mcap": 7182375936.0,
+      "mcap_asof": "2026-10-25",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "ICFI",
@@ -453,7 +453,7 @@
       "coil": {
         "ribbon_pct": 14.3,
         "atr_pctl": 3.2,
-        "vol_pctl": 21.0,
+        "vol_pctl": 23.8,
         "drawdown_pct": 46.8,
         "coiled": false,
         "coiled_bars": 0,
