@@ -1,6 +1,6 @@
 # Specs backtest — NASDAQ
 
-Generated 2026-10-18 · engine scanner/spec.py (restored 2026-07-02) · universe 1429 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
+Generated 2026-10-25 · engine scanner/spec.py (restored 2026-07-02) · universe 1425 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** yfinance has no delisted history. Sub-$0.50 specs delist *constantly* — this cohort is missing its casualties and every number below is optimistic. Directional use only.
 
@@ -8,9 +8,9 @@ A **signal** = the first day a fire-streak passes every mandatory gate (3× volu
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | target first | stopped | still open | MAE |
 |---|---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 10 | -6.5% | -9.4% | -1.6% | 20.0% | 30.0% | 50.0% | -35.8% |
-| grade A+ | 4 | -4.5% | +2.5% | +22.6% | 25.0% | 0.0% | 75.0% | -23.0% |
-| grade B | 6 | -7.8% | -17.4% | -17.8% | 16.7% | 50.0% | 33.3% | -44.4% |
+| ALL SIGNALS | 5 | +4.7% | +1.3% | +11.3% | 40.0% | 20.0% | 40.0% | -17.8% |
+| grade A+ | 3 | +5.2% | +11.4% | +32.8% | 33.3% | 0.0% | 66.7% | -12.0% |
+| grade B | 2 | +3.9% | -13.8% | -21.0% | 50.0% | 50.0% | 0.0% | -26.6% |
 
 ## R model — what trading the signals earned
 
@@ -18,12 +18,12 @@ Entry at the signal close, the engine's stop, its one target booked in full (res
 
 | cohort | trades | win | R won | R lost | net R | per trade | net $ |
 |---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 10 | 40.0% | +4.7R | -4.5R | **+0.2R** | +0.022R | $-684 |
-| ALL SIGNALS, stop at the worst print | 10 | 40.0% | +4.7R | -4.9R | **-0.2R** | -0.025R | $-886 |
-| grade A+ | 4 | 75.0% | +3.9R | -0.3R | **+3.6R** | +0.890R | $+944 |
-| grade B | 6 | 16.7% | +0.8R | -4.1R | **-3.3R** | -0.557R | $-1,629 |
+| ALL SIGNALS | 5 | 80.0% | +4.7R | -1.0R | **+3.7R** | +0.734R | $+1,134 |
+| ALL SIGNALS, stop at the worst print | 5 | 80.0% | +4.7R | -1.1R | **+3.6R** | +0.714R | $+1,114 |
+| grade A+ | 3 | 100.0% | +3.9R | 0.0R | **+3.9R** | +1.305R | $+1,158 |
+| grade B | 2 | 50.0% | +0.8R | -1.0R | **-0.2R** | -0.122R | $-24 |
 
 ## Baseline
-- Random entry on the same sub-$0.50 universe (200 samples, seeded): fwd 5: +1.2% · fwd 10: +0.9% · fwd 20: +72.0%
+- Random entry on the same sub-$0.50 universe (200 samples, seeded): fwd 5: +56.7% · fwd 10: +29.8% · fwd 20: +32.1%
 
 Analysis only — not financial advice.
