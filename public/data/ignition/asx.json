@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-23T11:54:36+00:00",
+  "generated_at": "2026-10-25T07:43:53+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-23",
@@ -50,9 +50,9 @@
     }
   },
   "summary": {
-    "universe": 2050,
-    "downloaded": 1855,
-    "screened": 1775,
+    "universe": 2049,
+    "downloaded": 1854,
+    "screened": 1774,
     "skipped": {
       "short history": 80
     },
@@ -68,16 +68,16 @@
       "completed_last": "2026-10-23",
       "raw_last": "2026-10-23",
       "expected_completed": "2026-10-23",
-      "lagging": 87,
-      "screened": 1855,
+      "lagging": 61,
+      "screened": 1854,
       "completed_dist": {
-        "2026-10-23": 1768,
-        "2026-10-22": 86,
+        "2026-10-23": 1793,
+        "2026-10-22": 60,
         "2026-10-21": 1
       },
       "raw_dist": {
-        "2026-10-23": 1768,
-        "2026-10-22": 86,
+        "2026-10-23": 1793,
+        "2026-10-22": 60,
         "2026-10-21": 1
       },
       "rows_lagging": 0
@@ -85,7 +85,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1367
+        "yahoo": 1435
       },
       "dead": {},
       "errors": {},
@@ -100,10 +100,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1367,
-      "reused": 488,
-      "merged": 1855,
-      "universe": 2050,
+      "fresh": 1435,
+      "reused": 419,
+      "merged": 1854,
+      "universe": 2049,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -111,7 +111,7 @@
       "rows": 7,
       "have": 7
     },
-    "elapsed_s": 282.1
+    "elapsed_s": 319.5
   },
   "results": [
     {
@@ -146,7 +146,7 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.13,
@@ -222,8 +222,8 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 1.34000003,
-      "mcap": 240680432.0,
-      "mcap_asof": "2026-10-20",
+      "mcap": 241581856.0,
+      "mcap_asof": "2026-10-24",
       "mcap_src": "cache"
     },
     {
