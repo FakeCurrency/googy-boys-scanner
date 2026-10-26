@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-26T05:39:17+00:00",
+  "generated_at": "2026-10-26T13:23:08+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-26",
@@ -52,9 +52,10 @@
   "summary": {
     "universe": 2049,
     "downloaded": 1854,
-    "screened": 1775,
+    "screened": 1773,
     "skipped": {
-      "short history": 79
+      "short history": 80,
+      "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
@@ -68,18 +69,18 @@
       "completed_last": "2026-10-26",
       "raw_last": "2026-10-26",
       "expected_completed": "2026-10-26",
-      "lagging": 747,
-      "screened": 1854,
+      "lagging": 380,
+      "screened": 1853,
       "completed_dist": {
-        "2026-10-26": 1107,
-        "2026-10-23": 704,
-        "2026-10-22": 42,
+        "2026-10-26": 1473,
+        "2026-10-23": 345,
+        "2026-10-22": 35,
         "2026-10-21": 1
       },
       "raw_dist": {
-        "2026-10-26": 1107,
-        "2026-10-23": 704,
-        "2026-10-22": 42,
+        "2026-10-26": 1473,
+        "2026-10-23": 345,
+        "2026-10-22": 35,
         "2026-10-21": 1
       },
       "rows_lagging": 2
@@ -87,7 +88,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1365
+        "yahoo": 1355
       },
       "dead": {},
       "errors": {},
@@ -102,8 +103,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1365,
-      "reused": 489,
+      "fresh": 1355,
+      "reused": 499,
       "merged": 1854,
       "universe": 2049,
       "stale_dropped": 0,
@@ -113,7 +114,7 @@
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 258.3
+    "elapsed_s": 270.4
   },
   "results": [
     {
@@ -282,7 +283,7 @@
       "price": 0.47,
       "mcap": 96389184.0,
       "mcap_asof": "2026-10-26",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "WEB",
@@ -321,7 +322,7 @@
       "coil": {
         "ribbon_pct": 16.48,
         "atr_pctl": 66.7,
-        "vol_pctl": 15.5,
+        "vol_pctl": 15.7,
         "drawdown_pct": 66.2,
         "coiled": false,
         "coiled_bars": 0,
