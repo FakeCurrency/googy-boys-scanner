@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-25T09:28:20+00:00",
+  "generated_at": "2026-10-27T00:43:51+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-23",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25955.34,
-    "sma200": 24991.99,
+    "close": 26169.38,
+    "sma200": 25005.44,
     "above_200": true,
-    "vs_200_pct": 3.9,
-    "as_of": "2026-10-23"
+    "vs_200_pct": 4.7,
+    "as_of": "2026-10-26"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,9 +52,9 @@
   "summary": {
     "universe": 1425,
     "downloaded": 1425,
-    "screened": 1326,
+    "screened": 1325,
     "skipped": {
-      "short history": 99
+      "short history": 100
     },
     "counts": {
       "IGNITING": 0,
@@ -65,20 +65,22 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-23",
-      "raw_last": "2026-10-23",
-      "expected_completed": "2026-10-23",
-      "lagging": 1,
+      "completed_last": "2026-10-26",
+      "raw_last": "2026-10-26",
+      "expected_completed": "2026-10-26",
+      "lagging": 1303,
       "screened": 1425,
       "completed_dist": {
-        "2026-10-23": 1424,
+        "2026-10-26": 122,
+        "2026-10-23": 1302,
         "2026-10-22": 1
       },
       "raw_dist": {
-        "2026-10-23": 1424,
+        "2026-10-26": 122,
+        "2026-10-23": 1302,
         "2026-10-22": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 12
     },
     "sources": {
       "mode": "yahoo",
@@ -109,7 +111,7 @@
       "rows": 12,
       "have": 12
     },
-    "elapsed_s": 160.7
+    "elapsed_s": 249.5
   },
   "results": [
     {
@@ -216,9 +218,9 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 8.34000015,
-      "mcap": 404358464.0,
-      "mcap_asof": "2026-10-22",
-      "mcap_src": "cache"
+      "mcap": 376315712.0,
+      "mcap_asof": "2026-10-27",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "IRWD",
@@ -328,9 +330,9 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 12.35999966,
-      "mcap": 2470385152.0,
-      "mcap_asof": "2026-10-22",
-      "mcap_src": "previous"
+      "mcap": 2367372800.0,
+      "mcap_asof": "2026-10-27",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "INMD",
@@ -356,8 +358,8 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 13.97000027,
-      "mcap": 807344704.0,
-      "mcap_asof": "2026-10-21",
+      "mcap": 803892096.0,
+      "mcap_asof": "2026-10-25",
       "mcap_src": "cache"
     },
     {
@@ -442,7 +444,7 @@
       "price": 3.06999993,
       "mcap": 7182375936.0,
       "mcap_asof": "2026-10-25",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ICFI",
@@ -468,9 +470,9 @@
       "provisional": false,
       "last_bar": "2026-10-23",
       "price": 94.40000153,
-      "mcap": 1610104064.0,
-      "mcap_asof": "2026-10-21",
-      "mcap_src": "previous"
+      "mcap": 1713403264.0,
+      "mcap_asof": "2026-10-27",
+      "mcap_src": "yahoo"
     }
   ],
   "errors": []
