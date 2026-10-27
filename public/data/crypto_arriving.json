@@ -1,38 +1,11 @@
 {
   "schema_version": 1,
   "market": "crypto",
-  "generated_at": "2026-10-26T23:25:16+00:00",
+  "generated_at": "2026-10-27T00:25:10+00:00",
   "rule": {
     "floor": 3000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "XEC",
-      "name": "eCash",
-      "sector": "",
-      "dir": "SHORT",
-      "price": 6.7e-06,
-      "turnover_avg20": 534635,
-      "turnover_today": 5695417,
-      "rvol": 10.7,
-      "adv_usd": 534635.9,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "XCN",
-      "name": "Onyxcoin",
-      "sector": "",
-      "dir": "SHORT",
-      "price": 0.004088,
-      "turnover_avg20": 918686,
-      "turnover_today": 3514765,
-      "rvol": 3.8,
-      "adv_usd": 918686.82,
-      "fund": false,
-      "is_product": false
-    }
-  ]
+  "results": []
 }
