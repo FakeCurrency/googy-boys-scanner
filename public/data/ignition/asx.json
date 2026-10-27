@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-27T05:52:04+00:00",
+  "generated_at": "2026-10-27T12:33:18+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-27",
@@ -51,17 +51,17 @@
   },
   "summary": {
     "universe": 2054,
-    "downloaded": 1853,
-    "screened": 1772,
+    "downloaded": 1854,
+    "screened": 1771,
     "skipped": {
-      "short history": 80,
+      "short history": 82,
       "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 0,
-      "COILED": 8,
+      "COILED": 9,
       "provisional": 0,
       "igniting_confirmed": 0
     },
@@ -69,20 +69,20 @@
       "completed_last": "2026-10-27",
       "raw_last": "2026-10-27",
       "expected_completed": "2026-10-27",
-      "lagging": 763,
-      "screened": 1852,
+      "lagging": 360,
+      "screened": 1853,
       "completed_dist": {
-        "2026-10-27": 1089,
-        "2026-10-26": 445,
-        "2026-10-23": 287,
-        "2026-10-22": 31,
+        "2026-10-27": 1493,
+        "2026-10-26": 123,
+        "2026-10-23": 212,
+        "2026-10-22": 25,
         "2026-10-21": 1
       },
       "raw_dist": {
-        "2026-10-27": 1089,
-        "2026-10-26": 445,
-        "2026-10-23": 287,
-        "2026-10-22": 31,
+        "2026-10-27": 1493,
+        "2026-10-26": 123,
+        "2026-10-23": 212,
+        "2026-10-22": 25,
         "2026-10-21": 1
       },
       "rows_lagging": 1
@@ -90,7 +90,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1358
+        "yahoo": 1463
       },
       "dead": {},
       "errors": {},
@@ -105,18 +105,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1358,
-      "reused": 495,
-      "merged": 1853,
+      "fresh": 1463,
+      "reused": 391,
+      "merged": 1854,
       "universe": 2054,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 8,
-      "have": 8
+      "rows": 9,
+      "have": 9
     },
-    "elapsed_s": 252.5
+    "elapsed_s": 387.0
   },
   "results": [
     {
@@ -128,7 +128,7 @@
       "coil": {
         "ribbon_pct": 9.9,
         "atr_pctl": 0.2,
-        "vol_pctl": 1.0,
+        "vol_pctl": 0.8,
         "drawdown_pct": 73.2,
         "coiled": true,
         "coiled_bars": 22,
@@ -201,6 +201,34 @@
       "price": 3.75,
       "mcap": 357306624.0,
       "mcap_asof": "2026-10-27",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "STX",
+      "name": "Strike Energy Limited",
+      "yf": "STX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.19,
+        "atr_pctl": 19.2,
+        "vol_pctl": 4.4,
+        "drawdown_pct": 80.4,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-27"
+      },
+      "base": {
+        "high": 0.12,
+        "low": 0.093,
+        "bars": 60
+      },
+      "breakout_level": 0.12,
+      "provisional": false,
+      "last_bar": "2026-10-27",
+      "price": 0.099,
+      "mcap": 360624512.0,
+      "mcap_asof": "2026-10-20",
       "mcap_src": "cache"
     },
     {
@@ -291,7 +319,7 @@
       "symbol": "WEB",
       "name": "Webbeds Group Limited",
       "yf": "WEB.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 10.84,
@@ -341,7 +369,7 @@
       "price": 0.27000001,
       "mcap": 472520672.0,
       "mcap_asof": "2026-10-27",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
