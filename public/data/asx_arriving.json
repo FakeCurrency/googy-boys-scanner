@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-28T16:16:20+11:00",
+  "generated_at": "2026-10-28T16:32:37+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "KSC",
+      "name": "K & S Corporation Limited",
+      "sector": "Transportation",
+      "dir": "SHORT",
+      "price": 3.0,
+      "turnover_avg20": 25418,
+      "turnover_today": 128484,
+      "rvol": 5.2,
+      "adv_usd": 25418.4,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "VMC",
       "name": "Venus Metals Corporation Limited",
