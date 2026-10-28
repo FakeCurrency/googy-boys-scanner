@@ -3921,7 +3921,7 @@
       "level_tf": "3d",
       "signal_entry": 0.374336,
       "fill_slip_bps": 69.7,
-      "last_mark": 0.38877848,
+      "last_mark": 0.38773715,
       "last_mark_day": "2026-10-28",
       "data_source": "yahoo",
       "anchor": [
@@ -3939,8 +3939,8 @@
         "2026-10-27": 0.36608058,
         "2026-10-28": 0.37346885
       },
-      "unreal_r": 0.196,
-      "unreal_usd": 79.03
+      "unreal_r": 0.178,
+      "unreal_usd": 72.07
     },
     {
       "id": "BNB:long:3D:2026-10-21",
@@ -3996,7 +3996,7 @@
       "level_tf": "3d",
       "signal_entry": 741.69,
       "fill_slip_bps": 94.5,
-      "last_mark": 747.68,
+      "last_mark": 749.77,
       "last_mark_day": "2026-10-28",
       "data_source": "binance_vision",
       "anchor": [
@@ -4013,8 +4013,70 @@
         "2026-10-27": 741.24,
         "2026-10-28": 745.12
       },
-      "unreal_r": -0.012,
-      "unreal_usd": -3.44
+      "unreal_r": 0.013,
+      "unreal_usd": 3.61
+    },
+    {
+      "id": "PAXG:long:3D:2026-10-28",
+      "symbol": "PAXG",
+      "name": "PAX Gold",
+      "sector": "",
+      "market": "crypto",
+      "direction": "long",
+      "grade": "A",
+      "entry_type": "reclaim",
+      "timeframe": "3D",
+      "entry": 4048.52,
+      "stop": 3876.00000965,
+      "tp1": 4237.72,
+      "tp2": 4577.99,
+      "tp3": 4762.5,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 172.51999035,
+      "rr": 3.07,
+      "trigger_bar": null,
+      "entry_date": "2026-10-28",
+      "opened_at": "2026-10-28T15:25:57+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 4048.52,
+      "mfe": 4048.52,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 0.61441063,
+      "notional": 2500.0,
+      "leverage": 0.02,
+      "leverage_target": 3.0,
+      "risk_pct": 0.0706,
+      "risk_usd": 106.0,
+      "risk_usd_basis": "fill",
+      "sizing_mode": "fixed_notional",
+      "cycle": "hc4-1",
+      "review": [],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 4068.94,
+      "fill_slip_bps": -50.2,
+      "last_mark": 4048.52,
+      "last_mark_day": "2026-10-28",
+      "data_source": "binance_vision",
+      "anchor": [
+        "2026-10-27",
+        4068.94
+      ]
     }
   ],
   "closed": [
@@ -17164,28 +17226,28 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -4.97,
+      "week_usd": -4.88,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_measured": true,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 110.88,
-      "worst_week_usd": -4.97,
+      "worst_session_usd": 110.97,
+      "worst_week_usd": -4.88,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 110.88,
-      "session_usd": 110.88,
+      "unrealised_usd": 110.97,
+      "session_usd": 110.97,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 2,
-      "open_total_usd": 68.55,
+      "open_total_usd": 68.64,
       "notified": ""
     }
   },
   "summary": {
-    "open": 54,
-    "unreal_usd": 1850.13,
+    "open": 55,
+    "unreal_usd": 1850.22,
     "updated_day": "2026-10-28"
   },
-  "updated_at": "2026-10-28T15:14:31+00:00"
+  "updated_at": "2026-10-28T15:26:03+00:00"
 }
