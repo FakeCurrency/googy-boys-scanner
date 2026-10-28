@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-10-28T16:32:37+11:00",
+  "generated_at": "2026-10-28T17:26:39+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "BUS",
+      "name": "Bubalus Resources Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.085,
+      "turnover_avg20": 11197,
+      "turnover_today": 156828,
+      "rvol": 13.8,
+      "adv_usd": 11197.84,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "KSC",
       "name": "K & S Corporation Limited",
@@ -18,19 +31,6 @@
       "turnover_today": 128484,
       "rvol": 5.2,
       "adv_usd": 25418.4,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "VMC",
-      "name": "Venus Metals Corporation Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.09,
-      "turnover_avg20": 36101,
-      "turnover_today": 117907,
-      "rvol": 3.5,
-      "adv_usd": 36101.65,
       "fund": false,
       "is_product": false
     }
