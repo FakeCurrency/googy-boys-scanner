@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-29T06:41:34+00:00",
+  "generated_at": "2026-10-29T13:26:09+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-29",
@@ -52,9 +52,9 @@
   "summary": {
     "universe": 2057,
     "downloaded": 1853,
-    "screened": 1770,
+    "screened": 1772,
     "skipped": {
-      "short history": 82,
+      "short history": 80,
       "stale frame": 1
     },
     "counts": {
@@ -69,24 +69,22 @@
       "completed_last": "2026-10-29",
       "raw_last": "2026-10-29",
       "expected_completed": "2026-10-29",
-      "lagging": 797,
+      "lagging": 0,
       "screened": 1852,
       "completed_dist": {
-        "2026-10-29": 1055,
-        "2026-10-28": 797,
+        "2026-10-29": 1852,
         "2026-10-21": 1
       },
       "raw_dist": {
-        "2026-10-29": 1055,
-        "2026-10-28": 797,
+        "2026-10-29": 1852,
         "2026-10-21": 1
       },
-      "rows_lagging": 3
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1371
+        "yahoo": 1852
       },
       "dead": {},
       "errors": {},
@@ -101,8 +99,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1371,
-      "reused": 482,
+      "fresh": 1852,
+      "reused": 1,
       "merged": 1853,
       "universe": 2057,
       "stale_dropped": 0,
@@ -112,7 +110,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 281.1
+    "elapsed_s": 315.2
   },
   "results": [
     {
@@ -147,16 +145,16 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.39,
-        "atr_pctl": 13.1,
-        "vol_pctl": 18.3,
-        "drawdown_pct": 68.9,
+        "ribbon_pct": 10.83,
+        "atr_pctl": 13.9,
+        "vol_pctl": 18.1,
+        "drawdown_pct": 68.3,
         "coiled": true,
-        "coiled_bars": 21,
-        "last_coiled": "2026-10-28"
+        "coiled_bars": 22,
+        "last_coiled": "2026-10-29"
       },
       "base": {
         "high": 1.16999996,
@@ -165,8 +163,8 @@
       },
       "breakout_level": 1.16999996,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 0.86500001,
+      "last_bar": "2026-10-29",
+      "price": 0.88,
       "mcap": 597578304.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -228,34 +226,6 @@
       "mcap_src": "cache"
     },
     {
-      "symbol": "STX",
-      "name": "Strike Energy Limited",
-      "yf": "STX.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 8.58,
-        "atr_pctl": 17.5,
-        "vol_pctl": 8.5,
-        "drawdown_pct": 79.2,
-        "coiled": true,
-        "coiled_bars": 2,
-        "last_coiled": "2026-10-28"
-      },
-      "base": {
-        "high": 0.12,
-        "low": 0.093,
-        "bars": 60
-      },
-      "breakout_level": 0.12,
-      "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 0.105,
-      "mcap": 378655712.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "cache"
-    },
-    {
       "symbol": "CAT",
       "name": "Catapult Sports Ltd",
       "yf": "CAT.AX",
@@ -284,16 +254,44 @@
       "mcap_src": "cache"
     },
     {
+      "symbol": "STX",
+      "name": "Strike Energy Limited",
+      "yf": "STX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.24,
+        "atr_pctl": 26.4,
+        "vol_pctl": 1.0,
+        "drawdown_pct": 80.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-28"
+      },
+      "base": {
+        "high": 0.12,
+        "low": 0.093,
+        "bars": 60
+      },
+      "breakout_level": 0.12,
+      "provisional": false,
+      "last_bar": "2026-10-29",
+      "price": 0.1,
+      "mcap": 378655712.0,
+      "mcap_asof": "2026-10-28",
+      "mcap_src": "cache"
+    },
+    {
       "symbol": "WEB",
       "name": "Webbeds Group Limited",
       "yf": "WEB.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.9,
-        "atr_pctl": 39.9,
-        "vol_pctl": 0.6,
-        "drawdown_pct": 62.6,
+        "ribbon_pct": 11.42,
+        "atr_pctl": 42.9,
+        "vol_pctl": 1.8,
+        "drawdown_pct": 62.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-16"
@@ -305,8 +303,8 @@
       },
       "breakout_level": 3.92000008,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 3.6400001,
+      "last_bar": "2026-10-29",
+      "price": 3.61999989,
       "mcap": 1307929728.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
