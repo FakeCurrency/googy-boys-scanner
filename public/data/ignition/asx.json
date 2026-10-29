@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-28T13:20:08+00:00",
+  "generated_at": "2026-10-29T06:41:34+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-28",
+  "last_closed_bar": "2026-10-29",
   "report_only": true,
   "regime": {
     "index": "^AXJO",
     "label": "ASX 200",
-    "close": 8847.3,
-    "sma200": 8829.99,
+    "close": 8891.8,
+    "sma200": 8829.93,
     "above_200": true,
-    "vs_200_pct": 0.2,
-    "as_of": "2026-10-28"
+    "vs_200_pct": 0.7,
+    "as_of": "2026-10-29"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 2056,
-    "downloaded": 1854,
-    "screened": 1772,
+    "universe": 2057,
+    "downloaded": 1853,
+    "screened": 1770,
     "skipped": {
-      "short history": 81,
+      "short history": 82,
       "stale frame": 1
     },
     "counts": {
@@ -66,27 +66,27 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-28",
-      "raw_last": "2026-10-28",
-      "expected_completed": "2026-10-28",
-      "lagging": 1,
-      "screened": 1853,
+      "completed_last": "2026-10-29",
+      "raw_last": "2026-10-29",
+      "expected_completed": "2026-10-29",
+      "lagging": 797,
+      "screened": 1852,
       "completed_dist": {
-        "2026-10-28": 1852,
-        "2026-10-27": 1,
+        "2026-10-29": 1055,
+        "2026-10-28": 797,
         "2026-10-21": 1
       },
       "raw_dist": {
-        "2026-10-28": 1852,
-        "2026-10-27": 1,
+        "2026-10-29": 1055,
+        "2026-10-28": 797,
         "2026-10-21": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 3
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1853
+        "yahoo": 1371
       },
       "dead": {},
       "errors": {},
@@ -101,10 +101,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1853,
-      "reused": 1,
-      "merged": 1854,
-      "universe": 2056,
+      "fresh": 1371,
+      "reused": 482,
+      "merged": 1853,
+      "universe": 2057,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -112,7 +112,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 382.7
+    "elapsed_s": 281.1
   },
   "results": [
     {
@@ -122,13 +122,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.71,
+        "ribbon_pct": 9.44,
         "atr_pctl": 0.2,
-        "vol_pctl": 0.2,
-        "drawdown_pct": 73.4,
+        "vol_pctl": 2.4,
+        "drawdown_pct": 73.2,
         "coiled": true,
-        "coiled_bars": 23,
-        "last_coiled": "2026-10-28"
+        "coiled_bars": 24,
+        "last_coiled": "2026-10-29"
       },
       "base": {
         "high": 0.78138701,
@@ -137,8 +137,8 @@
       },
       "breakout_level": 0.78138701,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 0.64999998,
+      "last_bar": "2026-10-29",
+      "price": 0.65499997,
       "mcap": 390770656.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -147,7 +147,7 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 10.39,
@@ -178,13 +178,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.44,
-        "atr_pctl": 14.9,
-        "vol_pctl": 6.9,
-        "drawdown_pct": 51.9,
+        "ribbon_pct": 11.25,
+        "atr_pctl": 12.1,
+        "vol_pctl": 7.7,
+        "drawdown_pct": 51.4,
         "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-10-28"
+        "coiled_bars": 4,
+        "last_coiled": "2026-10-29"
       },
       "base": {
         "high": 4.68292712,
@@ -193,17 +193,45 @@
       },
       "breakout_level": 4.68292712,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 3.77999997,
+      "last_bar": "2026-10-29",
+      "price": 3.81999993,
       "mcap": 357306624.0,
       "mcap_asof": "2026-10-27",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "ADH",
+      "name": "Adairs Limited",
+      "yf": "ADH.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 6.86,
+        "atr_pctl": 10.1,
+        "vol_pctl": 22.2,
+        "drawdown_pct": 50.6,
+        "coiled": true,
+        "coiled_bars": 2,
+        "last_coiled": "2026-10-29"
+      },
+      "base": {
+        "high": 1.50149093,
+        "low": 1.20500004,
+        "bars": 60
+      },
+      "breakout_level": 1.50149093,
+      "provisional": false,
+      "last_bar": "2026-10-29",
+      "price": 1.31500006,
+      "mcap": 239779008.0,
+      "mcap_asof": "2026-10-28",
       "mcap_src": "cache"
     },
     {
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.58,
@@ -228,47 +256,19 @@
       "mcap_src": "cache"
     },
     {
-      "symbol": "ADH",
-      "name": "Adairs Limited",
-      "yf": "ADH.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.82,
-        "atr_pctl": 12.7,
-        "vol_pctl": 23.2,
-        "drawdown_pct": 50.2,
-        "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-10-28"
-      },
-      "base": {
-        "high": 1.50149093,
-        "low": 1.20500004,
-        "bars": 60
-      },
-      "breakout_level": 1.50149093,
-      "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 1.32500005,
-      "mcap": 239779008.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "cache"
-    },
-    {
       "symbol": "CAT",
       "name": "Catapult Sports Ltd",
       "yf": "CAT.AX",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.62,
-        "atr_pctl": 28.2,
+        "ribbon_pct": 6.43,
+        "atr_pctl": 23.8,
         "vol_pctl": 1.2,
-        "drawdown_pct": 57.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-22"
+        "drawdown_pct": 56.9,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-29"
       },
       "base": {
         "high": 3.79999995,
@@ -277,8 +277,8 @@
       },
       "breakout_level": 3.79999995,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 3.25,
+      "last_bar": "2026-10-29",
+      "price": 3.32999992,
       "mcap": 1026920448.0,
       "mcap_asof": "2026-10-26",
       "mcap_src": "cache"
@@ -287,7 +287,7 @@
       "symbol": "WEB",
       "name": "Webbeds Group Limited",
       "yf": "WEB.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 10.9,
@@ -318,10 +318,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.17,
-        "atr_pctl": 48.2,
-        "vol_pctl": 83.9,
-        "drawdown_pct": 38.8,
+        "ribbon_pct": 13.56,
+        "atr_pctl": 47.2,
+        "vol_pctl": 84.6,
+        "drawdown_pct": 39.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-20"
@@ -333,8 +333,8 @@
       },
       "breakout_level": 0.58499998,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 0.465,
+      "last_bar": "2026-10-29",
+      "price": 0.46000001,
       "mcap": 96389184.0,
       "mcap_asof": "2026-10-26",
       "mcap_src": "previous"
@@ -346,10 +346,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 19.07,
-        "atr_pctl": 55.0,
-        "vol_pctl": 22.2,
-        "drawdown_pct": 65.6,
+        "ribbon_pct": 20.27,
+        "atr_pctl": 54.6,
+        "vol_pctl": 22.0,
+        "drawdown_pct": 66.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-16"
@@ -361,8 +361,8 @@
       },
       "breakout_level": 0.41749999,
       "provisional": false,
-      "last_bar": "2026-10-28",
-      "price": 0.27500001,
+      "last_bar": "2026-10-29",
+      "price": 0.27000001,
       "mcap": 472520672.0,
       "mcap_asof": "2026-10-27",
       "mcap_src": "previous"
