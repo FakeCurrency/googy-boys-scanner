@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-29T01:57:37+00:00",
+  "generated_at": "2026-10-30T01:16:44+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-28",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 26549.85,
-    "sma200": 25033.55,
+    "close": 26184.72,
+    "sma200": 25045.93,
     "above_200": true,
-    "vs_200_pct": 6.1,
-    "as_of": "2026-10-28"
+    "vs_200_pct": 4.5,
+    "as_of": "2026-10-29"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -65,20 +65,20 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-28",
-      "raw_last": "2026-10-28",
-      "expected_completed": "2026-10-28",
-      "lagging": 1,
+      "completed_last": "2026-10-29",
+      "raw_last": "2026-10-29",
+      "expected_completed": "2026-10-29",
+      "lagging": 1302,
       "screened": 1424,
       "completed_dist": {
-        "2026-10-28": 1423,
-        "2026-10-27": 1
+        "2026-10-29": 122,
+        "2026-10-28": 1302
       },
       "raw_dist": {
-        "2026-10-28": 1423,
-        "2026-10-27": 1
+        "2026-10-29": 122,
+        "2026-10-28": 1302
       },
-      "rows_lagging": 0
+      "rows_lagging": 14
     },
     "sources": {
       "mode": "yahoo",
@@ -109,7 +109,7 @@
       "rows": 14,
       "have": 14
     },
-    "elapsed_s": 191.7
+    "elapsed_s": 167.5
   },
   "results": [
     {
@@ -328,9 +328,9 @@
       "provisional": false,
       "last_bar": "2026-10-28",
       "price": 52.09999847,
-      "mcap": 810142144.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "previous"
+      "mcap": 832452416.0,
+      "mcap_asof": "2026-10-29",
+      "mcap_src": "cache"
     },
     {
       "symbol": "INMD",
@@ -356,9 +356,9 @@
       "provisional": false,
       "last_bar": "2026-10-28",
       "price": 13.36999989,
-      "mcap": 803892096.0,
-      "mcap_asof": "2026-10-25",
-      "mcap_src": "cache"
+      "mcap": 777421760.0,
+      "mcap_asof": "2026-10-30",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "OTLY",
@@ -384,9 +384,9 @@
       "provisional": false,
       "last_bar": "2026-10-28",
       "price": 8.56000042,
-      "mcap": 382506240.0,
-      "mcap_asof": "2026-09-16",
-      "mcap_src": "cache"
+      "mcap": 255300608.0,
+      "mcap_asof": "2026-10-30",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "AVNW",
