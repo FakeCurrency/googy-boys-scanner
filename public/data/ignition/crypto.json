@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-10-30T21:43:58+00:00",
+  "generated_at": "2026-10-31T01:05:01+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-29",
+  "last_closed_bar": "2026-10-30",
   "report_only": true,
   "regime": {
-    "btc_close": 77991.89,
-    "btc_sma200": 73147.08,
+    "btc_close": 77368.77,
+    "btc_sma200": 73161.83,
     "btc_above_200": true,
-    "btc_vs_200_pct": 6.6,
-    "as_of": "2026-10-29"
+    "btc_vs_200_pct": 5.8,
+    "as_of": "2026-10-30"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -49,8 +49,8 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 175,
-    "screened": 139,
+    "downloaded": 176,
+    "screened": 140,
     "skipped": {
       "short history": 29,
       "stale frame": 7
@@ -58,31 +58,32 @@
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
-      "CLOSED": 1,
+      "CLOSED": 0,
       "COILED": 11,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-10-29",
-      "raw_last": "2026-10-30",
-      "expected_completed": "2026-10-29",
-      "lagging": 0,
-      "screened": 168,
+      "completed_last": "2026-10-30",
+      "raw_last": "2026-10-31",
+      "expected_completed": "2026-10-30",
+      "lagging": 32,
+      "screened": 169,
       "completed_dist": {
-        "2026-10-29": 168,
+        "2026-10-30": 137,
+        "2026-10-29": 32,
         "2026-10-25": 7
       },
       "raw_dist": {
-        "2026-10-30": 168,
+        "2026-10-31": 169,
         "2026-10-25": 7
       },
-      "rows_lagging": 0
+      "rows_lagging": 2
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 117,
+        "binance_vision": 118,
         "yahoo": 32,
         "coinbase": 19
       },
@@ -140,7 +141,6 @@
         "OZO",
         "PC0000023",
         "PC0000033",
-        "PC0000085",
         "PC0000097",
         "PEARL",
         "PI",
@@ -151,7 +151,8 @@
         "RLB",
         "SHFL",
         "SN51",
-        "UB"
+        "UB",
+        "VSN"
       ],
       "yahoo_fallback": 32,
       "identity_rejected": {
@@ -205,72 +206,20 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 168,
+      "fresh": 169,
       "reused": 7,
-      "merged": 175,
+      "merged": 176,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 2
     },
     "mcap": {
-      "rows": 12,
-      "have": 12
+      "rows": 11,
+      "have": 11
     },
-    "elapsed_s": 123.8
+    "elapsed_s": 117.6
   },
   "results": [
-    {
-      "symbol": "CFX",
-      "name": "Conflux",
-      "yf": "CFX-USD",
-      "source": "binance_vision",
-      "trigger_date": "2026-10-10",
-      "trigger_close": 0.06168,
-      "entry": 0.06167,
-      "entry_basis": "next_open",
-      "entry_date": "2026-10-11",
-      "bars_since": 19,
-      "rvol": 17.06,
-      "ext_pct": 14.4,
-      "turnover_trigger": 26458844.0,
-      "turnover_base": 1551022.0,
-      "base": {
-        "high": 0.05784,
-        "low": 0.04037,
-        "bars": 60,
-        "range_pct": 43.3
-      },
-      "stop": 0.05495519,
-      "risk_pct": 10.9,
-      "wide_stop": false,
-      "mm_target": 0.07531,
-      "mm_passed": false,
-      "mm_r": 2.03,
-      "coil": {
-        "ribbon_pct": 5.27,
-        "atr_pctl": 11.5,
-        "vol_pctl": 17.0,
-        "drawdown_pct": 90.8,
-        "coiled": true,
-        "coiled_bars": 23
-      },
-      "mfe_r": 1.66,
-      "exit_reason": "stop",
-      "exit_date": "2026-10-15",
-      "exit_price": 0.05495519,
-      "exit_r": -1.0,
-      "exit_pending": false,
-      "state": "CLOSED",
-      "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.04615,
-      "change_pct": -25.2,
-      "r_now": -2.31,
-      "trail": 0.04922,
-      "mcap": 242844789.0,
-      "mcap_asof": "2026-10-30",
-      "mcap_src": "coingecko"
-    },
     {
       "symbol": "DOGE",
       "name": "Dogecoin",
@@ -278,25 +227,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.92,
-        "atr_pctl": 17.8,
-        "vol_pctl": 7.8,
-        "drawdown_pct": 84.5,
+        "ribbon_pct": 11.7,
+        "atr_pctl": 18.2,
+        "vol_pctl": 8.2,
+        "drawdown_pct": 84.3,
         "coiled": true,
-        "coiled_bars": 11,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 12,
+        "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 0.10589,
-        "low": 0.07478,
+        "low": 0.07433,
         "bars": 60
       },
       "breakout_level": 0.10589,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.07551,
-      "mcap": 11815918992.0,
-      "mcap_asof": "2026-10-30",
+      "last_bar": "2026-10-30",
+      "price": 0.07632,
+      "mcap": 11926741911.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -322,65 +271,9 @@
       "breakout_level": 2.18014312,
       "provisional": false,
       "last_bar": "2026-10-29",
-      "price": 1.78587389,
-      "mcap": 1251778971.0,
-      "mcap_asof": "2026-10-30",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "SHIB",
-      "name": "Shiba Inu",
-      "yf": "SHIB-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.79,
-        "atr_pctl": 25.2,
-        "vol_pctl": 3.6,
-        "drawdown_pct": 89.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-28"
-      },
-      "base": {
-        "high": 6.27e-06,
-        "low": 4.74e-06,
-        "bars": 60
-      },
-      "breakout_level": 6.27e-06,
-      "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 4.77e-06,
-      "mcap": 2804711521.0,
-      "mcap_asof": "2026-10-30",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "ETC",
-      "name": "Ethereum Classic",
-      "yf": "ETC-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.8,
-        "atr_pctl": 44.5,
-        "vol_pctl": 12.3,
-        "drawdown_pct": 82.3,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-28"
-      },
-      "base": {
-        "high": 10.42,
-        "low": 7.08,
-        "bars": 60
-      },
-      "breakout_level": 10.42,
-      "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 7.2,
-      "mcap": 1143061277.0,
-      "mcap_asof": "2026-10-30",
+      "price": 1.79405808,
+      "mcap": 1256523097.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -390,53 +283,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.94,
-        "atr_pctl": 30.1,
-        "vol_pctl": 10.8,
-        "drawdown_pct": 66.2,
+        "ribbon_pct": 9.92,
+        "atr_pctl": 30.5,
+        "vol_pctl": 11.5,
+        "drawdown_pct": 65.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-28"
       },
       "base": {
         "high": 1.6581,
-        "low": 1.2468,
+        "low": 1.2233,
         "bars": 60
       },
       "breakout_level": 1.6581,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 1.2513,
-      "mcap": 79160265631.0,
-      "mcap_asof": "2026-10-30",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "PENGU",
-      "name": "Pudgy Penguins",
-      "yf": "PENGU-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.21,
-        "atr_pctl": 32.7,
-        "vol_pctl": 9.0,
-        "drawdown_pct": 89.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-28"
-      },
-      "base": {
-        "high": 0.011163,
-        "low": 0.006672,
-        "bars": 60
-      },
-      "breakout_level": 0.011163,
-      "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.007418,
-      "mcap": 466395276.0,
-      "mcap_asof": "2026-10-30",
+      "last_bar": "2026-10-30",
+      "price": 1.2611,
+      "mcap": 79723583652.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -462,9 +327,93 @@
       "breakout_level": 0.002912,
       "provisional": false,
       "last_bar": "2026-10-29",
-      "price": 0.00201011,
-      "mcap": 201651176.0,
-      "mcap_asof": "2026-10-30",
+      "price": 0.002033,
+      "mcap": 203083854.0,
+      "mcap_asof": "2026-10-31",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "SHIB",
+      "name": "Shiba Inu",
+      "yf": "SHIB-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.5,
+        "atr_pctl": 25.3,
+        "vol_pctl": 4.7,
+        "drawdown_pct": 89.5,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-28"
+      },
+      "base": {
+        "high": 6.27e-06,
+        "low": 4.6e-06,
+        "bars": 60
+      },
+      "breakout_level": 6.27e-06,
+      "provisional": false,
+      "last_bar": "2026-10-30",
+      "price": 4.81e-06,
+      "mcap": 2833944928.0,
+      "mcap_asof": "2026-10-31",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "ETC",
+      "name": "Ethereum Classic",
+      "yf": "ETC-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.09,
+        "atr_pctl": 43.6,
+        "vol_pctl": 11.1,
+        "drawdown_pct": 81.9,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-28"
+      },
+      "base": {
+        "high": 10.42,
+        "low": 7.0,
+        "bars": 60
+      },
+      "breakout_level": 10.42,
+      "provisional": false,
+      "last_bar": "2026-10-30",
+      "price": 7.24,
+      "mcap": 1148141168.0,
+      "mcap_asof": "2026-10-31",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "PENGU",
+      "name": "Pudgy Penguins",
+      "yf": "PENGU-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.25,
+        "atr_pctl": 30.7,
+        "vol_pctl": 9.8,
+        "drawdown_pct": 89.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-28"
+      },
+      "base": {
+        "high": 0.011163,
+        "low": 0.006672,
+        "bars": 60
+      },
+      "breakout_level": 0.011163,
+      "provisional": false,
+      "last_bar": "2026-10-30",
+      "price": 0.00749,
+      "mcap": 470476324.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -474,25 +423,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.47,
-        "atr_pctl": 32.9,
-        "vol_pctl": 5.9,
-        "drawdown_pct": 93.6,
+        "ribbon_pct": 11.62,
+        "atr_pctl": 31.4,
+        "vol_pctl": 6.7,
+        "drawdown_pct": 93.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-28"
       },
       "base": {
         "high": 3.092e-05,
-        "low": 2.224e-05,
+        "low": 2.2e-05,
         "bars": 60
       },
       "breakout_level": 3.092e-05,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 2.366e-05,
-      "mcap": 228719367.0,
-      "mcap_asof": "2026-10-30",
+      "last_bar": "2026-10-30",
+      "price": 2.426e-05,
+      "mcap": 233302116.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -502,10 +451,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.23,
-        "atr_pctl": 2.4,
-        "vol_pctl": 3.2,
-        "drawdown_pct": 89.4,
+        "ribbon_pct": 13.43,
+        "atr_pctl": 4.9,
+        "vol_pctl": 4.7,
+        "drawdown_pct": 89.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-28"
@@ -517,10 +466,10 @@
       },
       "breakout_level": 0.0614,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.05,
-      "mcap": 1588673354.0,
-      "mcap_asof": "2026-10-30",
+      "last_bar": "2026-10-30",
+      "price": 0.0502,
+      "mcap": 1594857167.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -530,25 +479,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.02,
-        "atr_pctl": 28.9,
-        "vol_pctl": 4.2,
-        "drawdown_pct": 78.1,
+        "ribbon_pct": 14.75,
+        "atr_pctl": 25.5,
+        "vol_pctl": 4.0,
+        "drawdown_pct": 76.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-28"
       },
       "base": {
         "high": 0.8861,
-        "low": 0.5748,
+        "low": 0.5583,
         "bars": 60
       },
       "breakout_level": 0.8861,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.601,
-      "mcap": 395466183.0,
-      "mcap_asof": "2026-10-30",
+      "last_bar": "2026-10-30",
+      "price": 0.5983,
+      "mcap": 393343560.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     },
     {
@@ -558,25 +507,25 @@
       "source": "coinbase",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 21.86,
-        "atr_pctl": 42.2,
-        "vol_pctl": 2.7,
-        "drawdown_pct": 93.0,
+        "ribbon_pct": 24.74,
+        "atr_pctl": 38.1,
+        "vol_pctl": 3.3,
+        "drawdown_pct": 92.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-21"
       },
       "base": {
         "high": 0.22,
-        "low": 0.11932,
+        "low": 0.11712,
         "bars": 60
       },
       "breakout_level": 0.22,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.12013,
-      "mcap": 120059015.0,
-      "mcap_asof": "2026-10-30",
+      "last_bar": "2026-10-30",
+      "price": 0.12298,
+      "mcap": 122751038.0,
+      "mcap_asof": "2026-10-31",
       "mcap_src": "coingecko"
     }
   ],
