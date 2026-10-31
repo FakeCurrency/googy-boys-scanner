@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-10-31T00:59:10+00:00",
+  "generated_at": "2026-10-31T01:47:30+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-29",
+  "last_closed_bar": "2026-10-30",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -68,19 +68,19 @@
       "completed_last": "2026-10-30",
       "raw_last": "2026-10-30",
       "expected_completed": "2026-10-30",
-      "lagging": 1304,
+      "lagging": 2,
       "screened": 1427,
       "completed_dist": {
-        "2026-10-30": 123,
-        "2026-10-29": 1303,
+        "2026-10-30": 1425,
+        "2026-10-29": 1,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-10-30": 123,
-        "2026-10-29": 1303,
+        "2026-10-30": 1425,
+        "2026-10-29": 1,
         "2026-10-28": 1
       },
-      "rows_lagging": 13
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
@@ -111,7 +111,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 207.4
+    "elapsed_s": 170.5
   },
   "results": [
     {
@@ -124,7 +124,7 @@
       "entry": 73.34999847,
       "entry_basis": "next_open",
       "entry_date": "2026-10-06",
-      "bars_since": 18,
+      "bars_since": 19,
       "rvol": 9.98,
       "ext_pct": 25.9,
       "turnover_trigger": 1101689675.0,
@@ -157,11 +157,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 62.61000061,
-      "change_pct": -14.6,
-      "r_now": -0.93,
-      "trail": 62.3477779,
+      "last_bar": "2026-10-30",
+      "price": 62.02999878,
+      "change_pct": -15.4,
+      "r_now": -0.98,
+      "trail": 62.16444439,
       "mcap": 9548829696.0,
       "mcap_asof": "2026-10-27",
       "mcap_src": "cache"
@@ -173,23 +173,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.49,
-        "atr_pctl": 4.4,
-        "vol_pctl": 14.7,
-        "drawdown_pct": 57.3,
+        "ribbon_pct": 9.64,
+        "atr_pctl": 3.8,
+        "vol_pctl": 14.5,
+        "drawdown_pct": 55.8,
         "coiled": true,
-        "coiled_bars": 19,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 20,
+        "last_coiled": "2026-10-30"
       },
       "base": {
-        "high": 17.15999985,
+        "high": 16.57999992,
         "low": 13.35999966,
         "bars": 60
       },
       "breakout_level": 16.57999992,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 13.61999989,
+      "last_bar": "2026-10-30",
+      "price": 14.10000038,
       "mcap": 945585984.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -201,23 +201,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.93,
-        "atr_pctl": 3.0,
-        "vol_pctl": 20.2,
-        "drawdown_pct": 70.2,
+        "ribbon_pct": 7.78,
+        "atr_pctl": 3.8,
+        "vol_pctl": 20.4,
+        "drawdown_pct": 70.6,
         "coiled": true,
-        "coiled_bars": 11,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 12,
+        "last_coiled": "2026-10-30"
       },
       "base": {
-        "high": 9.58500004,
+        "high": 9.34000015,
         "low": 7.51999998,
         "bars": 60
       },
       "breakout_level": 9.34000015,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 8.18999958,
+      "last_bar": "2026-10-30",
+      "price": 8.09000015,
       "mcap": 376315712.0,
       "mcap_asof": "2026-10-27",
       "mcap_src": "previous"
@@ -229,13 +229,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.0,
-        "atr_pctl": 5.2,
+        "ribbon_pct": 5.96,
+        "atr_pctl": 6.3,
         "vol_pctl": 0.2,
-        "drawdown_pct": 73.2,
+        "drawdown_pct": 73.6,
         "coiled": true,
-        "coiled_bars": 9,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 10,
+        "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 10.14999962,
@@ -244,8 +244,8 @@
       },
       "breakout_level": 10.14999962,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 8.84000015,
+      "last_bar": "2026-10-30",
+      "price": 8.69999981,
       "mcap": 358096032.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -257,23 +257,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.48,
-        "atr_pctl": 0.2,
-        "vol_pctl": 4.8,
-        "drawdown_pct": 51.5,
+        "ribbon_pct": 4.35,
+        "atr_pctl": 1.6,
+        "vol_pctl": 4.0,
+        "drawdown_pct": 53.0,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 6,
+        "last_coiled": "2026-10-30"
       },
       "base": {
-        "high": 6.63000011,
+        "high": 6.0,
         "low": 4.69000006,
         "bars": 60
       },
-      "breakout_level": 6.0,
+      "breakout_level": 5.7750001,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 5.28000021,
+      "last_bar": "2026-10-30",
+      "price": 5.11999989,
       "mcap": 2312854528.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "cache"
@@ -285,13 +285,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.72,
-        "atr_pctl": 5.4,
-        "vol_pctl": 30.5,
-        "drawdown_pct": 69.3,
+        "ribbon_pct": 10.42,
+        "atr_pctl": 2.8,
+        "vol_pctl": 31.8,
+        "drawdown_pct": 69.2,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 6,
+        "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 13.13000011,
@@ -300,8 +300,8 @@
       },
       "breakout_level": 13.13000011,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 12.02000046,
+      "last_bar": "2026-10-30",
+      "price": 12.05000019,
       "mcap": 2367372800.0,
       "mcap_asof": "2026-10-27",
       "mcap_src": "previous"
@@ -313,23 +313,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.74,
-        "atr_pctl": 0.2,
-        "vol_pctl": 0.2,
-        "drawdown_pct": 70.3,
+        "ribbon_pct": 9.19,
+        "atr_pctl": 2.0,
+        "vol_pctl": 0.4,
+        "drawdown_pct": 71.4,
         "coiled": true,
-        "coiled_bars": 4,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 5,
+        "last_coiled": "2026-10-30"
       },
       "base": {
-        "high": 61.47000122,
+        "high": 58.84000015,
         "low": 45.04000092,
         "bars": 60
       },
       "breakout_level": 58.84000015,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 53.72999954,
+      "last_bar": "2026-10-30",
+      "price": 51.75999832,
       "mcap": 832452416.0,
       "mcap_asof": "2026-10-29",
       "mcap_src": "cache"
@@ -341,13 +341,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.66,
-        "atr_pctl": 6.0,
-        "vol_pctl": 5.6,
-        "drawdown_pct": 49.6,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-28"
+        "ribbon_pct": 4.34,
+        "atr_pctl": 9.5,
+        "vol_pctl": 4.6,
+        "drawdown_pct": 50.7,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 15.38000011,
@@ -356,8 +356,8 @@
       },
       "breakout_level": 15.38000011,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 13.51000023,
+      "last_bar": "2026-10-30",
+      "price": 13.22000027,
       "mcap": 777421760.0,
       "mcap_asof": "2026-10-30",
       "mcap_src": "previous"
@@ -369,10 +369,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.11,
-        "atr_pctl": 27.0,
-        "vol_pctl": 38.9,
-        "drawdown_pct": 46.7,
+        "ribbon_pct": 6.82,
+        "atr_pctl": 40.3,
+        "vol_pctl": 41.9,
+        "drawdown_pct": 48.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-20"
@@ -384,8 +384,8 @@
       },
       "breakout_level": 24.0,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 20.70999908,
+      "last_bar": "2026-10-30",
+      "price": 20.17000008,
       "mcap": 263087584.0,
       "mcap_asof": "2026-10-27",
       "mcap_src": "cache"
@@ -397,23 +397,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.33,
+        "ribbon_pct": 8.86,
         "atr_pctl": 95.0,
-        "vol_pctl": 75.0,
-        "drawdown_pct": 71.4,
+        "vol_pctl": 80.8,
+        "drawdown_pct": 72.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-23"
       },
       "base": {
         "high": 16.20000076,
-        "low": 8.02000046,
+        "low": 8.0,
         "bars": 60
       },
       "breakout_level": 16.20000076,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 8.0,
+      "last_bar": "2026-10-30",
+      "price": 7.75,
       "mcap": 255300608.0,
       "mcap_asof": "2026-10-30",
       "mcap_src": "previous"
@@ -425,10 +425,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.2,
-        "atr_pctl": 1.8,
-        "vol_pctl": 25.2,
-        "drawdown_pct": 76.9,
+        "ribbon_pct": 12.27,
+        "atr_pctl": 2.4,
+        "vol_pctl": 22.0,
+        "drawdown_pct": 77.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-23"
@@ -440,8 +440,8 @@
       },
       "breakout_level": 4.5999999,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 3.61999989,
+      "last_bar": "2026-10-30",
+      "price": 3.5,
       "mcap": 579992256.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -453,10 +453,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.16,
-        "atr_pctl": 50.6,
-        "vol_pctl": 47.8,
-        "drawdown_pct": 51.7,
+        "ribbon_pct": 13.78,
+        "atr_pctl": 57.5,
+        "vol_pctl": 49.2,
+        "drawdown_pct": 53.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-21"
@@ -468,8 +468,8 @@
       },
       "breakout_level": 4.38000011,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 4.07999992,
+      "last_bar": "2026-10-30",
+      "price": 3.94000006,
       "mcap": 286909472.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -481,10 +481,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 18.34,
-        "atr_pctl": 1.6,
-        "vol_pctl": 14.1,
-        "drawdown_pct": 45.9,
+        "ribbon_pct": 19.32,
+        "atr_pctl": 4.6,
+        "vol_pctl": 17.1,
+        "drawdown_pct": 46.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-19"
@@ -494,10 +494,10 @@
         "low": 81.01000214,
         "bars": 60
       },
-      "breakout_level": 97.06999969,
+      "breakout_level": 97.97000122,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 95.83999634,
+      "last_bar": "2026-10-30",
+      "price": 95.48000336,
       "mcap": 1713403264.0,
       "mcap_asof": "2026-10-27",
       "mcap_src": "previous"
