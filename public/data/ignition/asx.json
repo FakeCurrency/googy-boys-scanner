@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-10-30T13:16:56+00:00",
+  "generated_at": "2026-11-01T09:27:44+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-30",
@@ -50,12 +50,11 @@
     }
   },
   "summary": {
-    "universe": 2058,
-    "downloaded": 1853,
-    "screened": 1773,
+    "universe": 2060,
+    "downloaded": 1851,
+    "screened": 1771,
     "skipped": {
-      "short history": 79,
-      "stale frame": 1
+      "short history": 80
     },
     "counts": {
       "IGNITING": 0,
@@ -69,24 +68,22 @@
       "completed_last": "2026-10-30",
       "raw_last": "2026-10-30",
       "expected_completed": "2026-10-30",
-      "lagging": 374,
-      "screened": 1852,
+      "lagging": 234,
+      "screened": 1851,
       "completed_dist": {
-        "2026-10-30": 1478,
-        "2026-10-29": 374,
-        "2026-10-21": 1
+        "2026-10-30": 1617,
+        "2026-10-29": 234
       },
       "raw_dist": {
-        "2026-10-30": 1478,
-        "2026-10-29": 374,
-        "2026-10-21": 1
+        "2026-10-30": 1617,
+        "2026-10-29": 234
       },
-      "rows_lagging": 3
+      "rows_lagging": 2
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1396
+        "yahoo": 1533
       },
       "dead": {},
       "errors": {},
@@ -101,18 +98,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1396,
-      "reused": 457,
-      "merged": 1853,
-      "universe": 2058,
-      "stale_dropped": 0,
+      "fresh": 1533,
+      "reused": 318,
+      "merged": 1851,
+      "universe": 2060,
+      "stale_dropped": 1,
       "refused": 0
     },
     "mcap": {
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 321.0
+    "elapsed_s": 427.2
   },
   "results": [
     {
@@ -147,16 +144,16 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.83,
-        "atr_pctl": 13.9,
-        "vol_pctl": 18.1,
-        "drawdown_pct": 68.3,
+        "ribbon_pct": 10.87,
+        "atr_pctl": 14.7,
+        "vol_pctl": 19.2,
+        "drawdown_pct": 67.4,
         "coiled": true,
-        "coiled_bars": 22,
-        "last_coiled": "2026-10-29"
+        "coiled_bars": 23,
+        "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 1.16999996,
@@ -165,8 +162,8 @@
       },
       "breakout_level": 1.16999996,
       "provisional": false,
-      "last_bar": "2026-10-29",
-      "price": 0.88,
+      "last_bar": "2026-10-30",
+      "price": 0.90499997,
       "mcap": 597578304.0,
       "mcap_asof": "2026-10-28",
       "mcap_src": "previous"
@@ -224,7 +221,7 @@
       "last_bar": "2026-10-30",
       "price": 1.33000004,
       "mcap": 239779008.0,
-      "mcap_asof": "2026-10-28",
+      "mcap_asof": "2026-11-01",
       "mcap_src": "cache"
     },
     {
@@ -279,9 +276,9 @@
       "provisional": false,
       "last_bar": "2026-10-30",
       "price": 3.94000006,
-      "mcap": 357306624.0,
-      "mcap_asof": "2026-10-27",
-      "mcap_src": "cache"
+      "mcap": 376413920.0,
+      "mcap_asof": "2026-11-01",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "WEB",
@@ -335,9 +332,9 @@
       "provisional": false,
       "last_bar": "2026-10-30",
       "price": 0.55500001,
-      "mcap": 96389184.0,
-      "mcap_asof": "2026-10-26",
-      "mcap_src": "previous"
+      "mcap": 113821272.0,
+      "mcap_asof": "2026-11-01",
+      "mcap_src": "yahoo"
     }
   ],
   "errors": []
