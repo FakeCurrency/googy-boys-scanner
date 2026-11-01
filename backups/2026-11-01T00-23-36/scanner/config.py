@@ -1,23 +1,47 @@
 """Central configuration for the scanner.
 
-Everything tunable lives here: the EMA ladder, signal thresholds, the point
-weights that make up a grade, the grade cut-offs, and per-market settings.
-Reconstructed from the original app's "How it works" methodology — tune freely.
+Every threshold and constant the engines, the bot, the lenses and the
+workflows read lives here (project rule: config first, never a magic number
+twice), along with the per-market settings (MARKETS). PhaseMap keeps its own
+in phasemap/config.py.
+
+NOT "tune freely": many values here are OWNER-RULED (the bot's grades, cells,
+sizing, slots, sector cap and loss guards; the $3M crypto liquidity floor),
+and changing one changes which trades the paper bot takes. Change those only
+on the owner's say-so.
 """
 
 from dataclasses import dataclass
 
+
 # ---------------------------------------------------------------------------
-# Signal point weights — the grade is simply the sum of the points scored.
+# Helpers — the one function in this module; it has no dependencies, so it
+# lives above every constant. Callers import it as `config.clean_secret`.
 # ---------------------------------------------------------------------------
 
-# Grade cut-offs on total points (checked high -> low). Max possible = 13.
-GRADE_CUTOFFS = [
-    ("A+", 10),
-    ("A", 8),
-    ("B", 5),
-    ("C", 3),
-]
+def clean_secret(value) -> str:
+    """Strip the invisible baggage a hand-pasted secret can carry.
+
+    Found live 2026-08-01: the stored DISCORD_WEBHOOK_URL began with U+FEFF —
+    a byte-order mark, invisible in the GitHub secrets box — which urllib
+    rejects as `unknown url type: \\ufeffhttps`. Every sender wraps its post
+    in try/log-warning, so the entire Discord channel (stale probes, trade
+    reviews, sector alarms, kill-switch notices) failed SILENTLY for as long
+    as that paste was in place; the evidence brief's first delivery was
+    simply the first caller that let the exception fail a run out loud.
+
+    Every consumer of a pasted credential routes through here, so the next
+    stray BOM, zero-width character or trailing newline dies at the boundary
+    instead of inside a swallowed exception. Interior characters are never
+    touched — this trims ends only.
+    """
+    return str(value or "").strip(
+        " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+
+
+# ---------------------------------------------------------------------------
+# Grades
+# ---------------------------------------------------------------------------
 
 # Grades considered "tradeable" vs "watch only" (drives counters / tabs)
 TRADEABLE_GRADES = {"A+", "A"}
@@ -33,21 +57,16 @@ LOW_RR_THRESHOLD = 1.5
 DEMOTE_LOW_RR = True
 MIN_TRADEABLE_RR = 1.5
 
-# Average daily turnover (local currency) at/above which a name is tagged
-# "LIQUID" rather than just "OK".
-LIQUID_TIER = {"asx": 1_000_000, "nasdaq": 20_000_000, "crypto": 100_000_000}
-
 # ---------------------------------------------------------------------------
 # Signal thresholds
 # ---------------------------------------------------------------------------
-VOLUME_MULT = 1.4              # latest volume >= 1.4x its recent average
 LIQUIDITY_LOOKBACK = 20        # bars used for the average-turnover liquidity test
 
 
 # ---------------------------------------------------------------------------
-# Entry / stop / target levels
+# Entry / stop / target levels (Specs' compute_levels / detail; ATR_PERIOD and
+# SUPERTREND_MULT also drive the legacy swing journal's trailing stop)
 # ---------------------------------------------------------------------------
-SWING_LOOKBACK = 20            # bars to find the recent swing low (for the stop)
 STOP_BUFFER = 0.01            # place stop 1% below the swing low
 RESIST_LOOKBACK = 120         # bars to search for the nearest resistance above
 PIVOT_WINDOW = 3              # bars each side that define a pivot high
@@ -57,6 +76,16 @@ SUPERTREND_MULT = 3.0         # ATR multiplier for the Phase-2 trailing stop
 
 # Per-row sparkline: how many recent daily closes to send to the UI
 SPARK_BARS = 30
+# Significant figures each sparkline close is published at (REFINE200 #66).
+# Yahoo serves float32-derived closes (23.55999947); 5 figures is far finer
+# than a 30-point thumbnail can draw and keeps a sub-cent coin's shape.
+SPARK_SIG_FIGS = 5
+# Most market caps scanner/marketcaps.py refreshes per run (REFINE200 #157):
+# every published ASX/NASDAQ row whose cached cap is missing or older than
+# marketcaps.MAX_AGE_DAYS, best grades first. 300 = three 100-symbol bulk
+# quote requests in one batched fetch -- the deck's ~600 rows refresh within
+# a day of scans without widening Yahoo's per-run call budget much.
+MARKETCAP_REFRESH_MAX = 300
 
 # ---------------------------------------------------------------------------
 # Position sizing
@@ -69,38 +98,14 @@ MAX_POSITIONS_SHORT = 10     # maximum concurrent open short positions across al
 # PULSE constant removed 2026-07-20 — the module was deleted (feature retired
 # 2026-07-03/09); payloads keep an empty "pulse" key for cached-JS back-compat.
 
-# ---------------------------------------------------------------------------
-# REVERSALS scanner — early trend-reversal / base-breakout setups.
-# Uses the user's own indicators: SMA 9/26/43/200, RSI 14 (+ its MA), Vol 20.
-# ---------------------------------------------------------------------------
-REV_RSI_PERIOD = 14
-REV_RSI_MA = 14                # SMA of RSI (the yellow RSI line on the charts)
-REV_VOL_LOOKBACK = 20          # Vol-20 average
-
-# Signal points (grade = sum). Order reflects importance (see chat).
-REV_POINTS = {
-    "reclaim": 4,     # price reclaimed + 9 crossed up over 26 (the trigger)
-    "base": 3,        # beaten-down / basing (room to run)
-    "volume": 3,      # volume expansion confirms the move
-    "breakout": 2,    # closing above the base high / descending resistance
-    "rsi": 2,         # RSI turning up through its MA
-}
-REV_GRADE_CUTOFFS = [("A+", 11), ("A", 9), ("B", 6), ("C", 4)]
-
-# Thresholds
-REV_CROSS_LOOKBACK = 15        # 9-over-26 cross must be this fresh (bars)
-REV_SLOPE_BARS = 5             # bars used to judge an MA is curling up
-REV_BASE_OFF_HIGH = 0.20       # >=20% below the 1-year high => beaten down
-REV_BASE_HIGH_LOOKBACK = 252   # window for the "1-year high"
-REV_BELOW200_LOOKBACK = 45     # recently traded below the 200 SMA => recovering
-REV_VOL_MULT = 1.4             # 5-day avg volume >= 1.4x Vol-20
-REV_VOL_SPIKE = 2.0            # or a single day >= 2.0x Vol-20
-REV_BREAKOUT_BASE = (45, 5)    # base = highs from bar -45 to -5; break = close above it
-REV_RSI_BAND = (48, 72)        # RSI turned up but not yet overbought
-REV_STOP_LOOKBACK = 12         # recent swing low for the stop
-REV_MIN_HISTORY = 230          # need warm-up for SMA200 + base lookbacks
-REV_BREAKOUT_TOL = 0.999       # price >= base_high * this => breakout (0.1% tolerance)
-REV_STOP_FALLBACK_PCT = 0.95   # fallback stop = entry * this when swing low is above entry
+# The REVERSALS and Fib-pullback scanners were retired long ago; their engine
+# code and the constants only it read (GRADE_CUTOFFS, REV_POINTS,
+# REV_GRADE_CUTOFFS, 11 more REV_* thresholds, VOLUME_MULT, SWING_LOOKBACK) were
+# deleted 2026-10-14 (REFINE200 #119). The five REV_* values Specs still read
+# moved into the SPECS block below, unchanged: REV_RSI_PERIOD, REV_RSI_MA,
+# REV_BREAKOUT_TOL, REV_STOP_LOOKBACK and REV_STOP_FALLBACK_PCT are now
+# SPEC_RSI_PERIOD, SPEC_RSI_MA, SPEC_BREAKOUT_TOL, SPEC_STOP_LOOKBACK and
+# SPEC_STOP_FALLBACK_PCT.
 
 # ---------------------------------------------------------------------------
 # SPECS scanner — speculative volume-spike breakouts from a base (ASX-style).
@@ -119,15 +124,32 @@ SPEC_BREAKOUT_BASE = (40, 3)  # base = highs from bar -40 to -3; breakout = clos
 SPEC_NEWHIGH_LONG = 63        # bonus if it's also a fresh ~3-month high
 SPEC_CROSS_LOOKBACK = 12      # fresh 9-over-26 cross within this many bars (bonus)
 SPEC_SLOPE_BARS = 5           # bars used to judge the 9-SMA is curling up
-SPEC_RSI_BAND = (45, 85)      # specs can run hot — wider band than reversals
+SPEC_RSI_PERIOD = 14
+SPEC_RSI_MA = 14              # SMA of RSI (the yellow RSI line on the charts)
+SPEC_RSI_BAND = (45, 85)      # specs can run hot — a wide band
+SPEC_BREAKOUT_TOL = 0.999     # price >= base_high * this => breakout (0.1% tolerance)
 SPEC_MAX_EXT = 0.60           # skip if already >60% above the 9-SMA (too late / chased)
 SPEC_MIN_HISTORY = 230        # warm-up for SMA200 + base lookbacks
+SPEC_STOP_LOOKBACK = 12       # recent swing low for the stop
+SPEC_STOP_FALLBACK_PCT = 0.95 # fallback stop = entry * this when swing low is above entry
 
 SPEC_GRADE_CUTOFFS = [("A+", 8), ("A", 6), ("B", 4), ("C", 2)]
 SPEC_SCORE_MAX = 11           # see spec.score_and_grade for the breakdown
 
 SPEC_MAX_PRICE = 0.50         # specs only: skip anything pricier than this (market currency;
                               # disabled for crypto, where per-coin price is meaningless)
+# The Specs nightly's data floors (scanner/spec_run.py, REFINE200 #179/#180).
+# A frame whose last bar is older than this many calendar days (market
+# calendar) is skipped, not screened: a suspended name whose last five bars
+# hold the spike stayed a "fresh" setup every night. 5 = Ignition's stock
+# ceiling (a long weekend; Easter's Thu -> Tue).
+SPEC_MAX_DATA_AGE_DAYS = 5
+# A market whose download covers less than this share of its universe keeps
+# its LAST GOOD file (exit 3) instead of publishing a partial list over it:
+# on a Yahoo blackout the nightly wrote `"results": []` and deleted every spec
+# chart, so the page said "the gates are strict" when the truth was "we could
+# not look". A normal night covers 90-100%.
+SPEC_MIN_COVERAGE = 0.5
 
 # ---------------------------------------------------------------------------
 # EXCHANGE KLINES -- scanner/exchange_data.py (2026-09-28)
@@ -164,11 +186,17 @@ CRYPTO_IDENTITY_TOL = 0.40
 # HISTORY ANCHORS. When no fresh CoinGecko price exists -- the universe is the
 # snapshot, or the caller prices HELD positions (kill switch, off-universe
 # fetch) -- a venue's frame must reproduce a price the system already RECORDED
-# for this coin on a past date (the last identity-checked cached frame, or the
-# position's own day_marks): its close on that date within this band. A real
-# move since cannot fail it; a same-ticker stranger does; a venue outage falls
-# through to the next venue. 0.15: day_marks[D] is the last mark taken BEFORE
-# day D's first run, which can sit a few hours before the D-1 close.
+# for this coin on a past date: its close on that date within this band. The
+# recorded price is a real COMPLETED close -- for the universe, the last
+# identity-checked cached frame's (data.identity_kwargs); for a held position,
+# its stored `anchor` [date, close] (data.held_price_kwargs, stamped by
+# vivek_run._stamp_identity). A real move since cannot fail it; a same-ticker
+# stranger does; a venue outage falls through to the next venue. 0.15 covers
+# two venues disagreeing on one completed close (the measured median gap is
+# 0.07%, 90th pct 1.27%) with wide headroom while staying far inside every
+# collision (MET, -43%). It was first sized for the LEGACY fallback still used
+# by rows stamped before `anchor` existed: day_marks[D], the last mark taken
+# before day D's first run, which can sit a few hours before the D-1 close.
 CRYPTO_ANCHOR_TOL = 0.15
 # A venue whose newest daily bar is older than this does NOT list the coin any
 # more (Binance's market-data mirror keeps serving a delisted pair's frozen
@@ -183,6 +211,20 @@ EXCHANGE_HTTP_TIMEOUT = 20       # seconds per request
 EXCHANGE_MAX_PAGES = 6           # 6 x 1000 daily bars (Coinbase: x4 of 300) -- a hard stop
 EXCHANGE_THREADS = 4             # polite: well under every venue's public rate limit
 EXCHANGE_DEAD_AFTER_ERRORS = 8   # a venue erroring this often is dropped for the run
+# PRECISION CHECK (REFINE200 #135). Yahoo stores crypto at 6 decimals, so a
+# coin under a millionth of a dollar (BTT, HTX) arrives as one or two repeated
+# ticks with a full-precision newest close that passes the identity check, and
+# every plan built on it is nonsense (zero risk, negative stop). data.fetch
+# refuses a crypto Yahoo frame whose last CRYPTO_QUANTISED_BARS closes before
+# the newest take CRYPTO_QUANTISED_MAX_DISTINCT or fewer values -- like a
+# stranger: not scanned, not refilled from the cache. Only removes coins.
+CRYPTO_QUANTISED_BARS = 30
+CRYPTO_QUANTISED_MAX_DISTINCT = 2
+# The pair every fetch probes first, serially, to learn which venues are dead
+# before fanning out: listed on every venue, so an error on it is the venue,
+# never the coin (REFINE200 #21 -- the probe used to be whichever coin was
+# asked for first, i.e. the first HELD coin in the kill switch).
+EXCHANGE_PROBE_SYMBOL = "BTC"
 EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
 
 # ---------------------------------------------------------------------------
@@ -206,7 +248,7 @@ EXCHANGE_COINBASE_PAUSE_S = 0.15 # Coinbase public limit is ~10 req/s
 # NOT TRADED, NOT CONFLUENCE: nothing under scanner/broker/ can import the
 # lens and the lens cannot import the bot (tests/test_ignition_fences.py).
 IGNITION_RULESET_VERSION = "1.0.0"
-IGNITION_MARKETS = ("crypto", "asx")   # ASX added 2026-09-29 (owner: "Yes"), see below.
+IGNITION_MARKETS = ("crypto", "asx", "nasdaq")   # ASX 2026-09-29, NASDAQ 2026-10-08; see below.
 IGNITION_DATA_PERIOD = "5y"      # live screen: enough for a 3y drawdown window + warm-up
 IGNITION_MIN_BARS = 400          # 200-SMA + a year of percentile warm-up (+ margin)
 IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, not screened:
@@ -235,8 +277,20 @@ IGNITION_MAX_DATA_AGE_DAYS = 3   # a frame whose last bar is older is SKIPPED, n
 #     through to the scalar).
 # DTR (Dateline Resources, +100% 28-29 Sep 2026) prompted the port and is a
 # DESIGN CASE: never scored, reported as a case study (see below).
-IGNITION_BARS_PER_YEAR = {"crypto": 365, "asx": 252}
-IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET = {"asx": 5}   # Easter: Thu bar read on Tue
+#
+# NASDAQ (2026-10-08, owner: "build both"). PRE-REGISTERED BEFORE THE FIRST
+# NASDAQ REPLAY RAN, by the ASX port's recipe: the same rule, ~252 trading
+# days a year, so every calendar window is the ASX's exactly (504/252/756/
+# 252/276/124/126). Universe = NASDAQ Global Select (~1,430 names, the VIVEK
+# scan's own list); widening to the smaller tiers is the owner's call. No
+# chart informed this port, so it has NO design case. EVERY non-crypto market
+# has an explicit key in every per-market dict below: a missing key would
+# silently fall through to crypto's values (QNT as a design case, 0.30 cost,
+# a 3-day age, a BTC regime), so tests/test_ignition_fences.py fails on one.
+IGNITION_BARS_PER_YEAR = {"crypto": 365, "asx": 252, "nasdaq": 252}
+IGNITION_MAX_DATA_AGE_DAYS_BY_MARKET = {"asx": 5,    # Easter: Thu bar read on Tue
+                                        "nasdaq": 5}  # Good Friday / a Monday holiday peak
+                                        # at 4; 5 also clears a 2-day closure (Sandy, 2012)
 
 # THE COIL -- all four at once, on one bar. Measured on the bar, causally.
 IGNITION_RIBBON_SMAS = (9, 26, 43, 200)   # the owner's own chart set
@@ -268,11 +322,16 @@ IGNITION_RVOL_LEN = 20
 IGNITION_RVOL_MIN = 3.0          # trigger-day volume >= 3x its prior 20-day average
 IGNITION_EXT_SMA = 9
 IGNITION_MAX_EXT = 0.60          # not already >60% over the 9-SMA (Specs' latecomer cap)
-IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000, "asx": 100_000}      # 20d avg $ before the trigger
-IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000, "asx": 300_000}   # trigger-day $ (= crypto floor)
+IGNITION_MIN_BASE_TURNOVER = {"crypto": 1_000_000, "asx": 100_000,      # 20d avg $ before the trigger
+                              "nasdaq": 1_000_000}
+IGNITION_MIN_TRIGGER_TURNOVER = {"crypto": 3_000_000, "asx": 300_000,   # trigger-day $ (= crypto floor)
+                                 "nasdaq": 3_000_000}
 # ASX (A$, Close x Volume): a crypto-sized $1M/$3M would drop nearly every
 # small cap, which is where these bases live. A$100k is config.MARKETS["asx"]
 # .liquidity_min (the VIVEK scan's own floor); the trigger day asks 3x that.
+# NASDAQ (US$, Close x Volume): the same recipe -- US$1M is MARKETS["nasdaq"]
+# .liquidity_min, the trigger day 3x it. Equal to crypto's numbers by
+# coincidence; explicit because the fallback would make the trigger $1M.
 IGNITION_REARM_BARS = 20         # one trigger per move, not one per day of it
 
 # THE PLAN -- what the page shows and the backtest trades.
@@ -286,20 +345,35 @@ IGNITION_FRESH_BARS = 2          # IGNITING = fired on one of the last 2 complet
 IGNITION_KEEP_BARS = 20          # then RUNNING / CLOSED stays visible for 20 bars --
                                  # a setup that works must not vanish (QNT's A row
                                  # left the deck the day it started to run)
+# THE PAGE'S MINI CHARTS -- display only; nothing the rule or the replay reads.
+IGNITION_CHART_BARS = 120        # completed bars per row (+ the forming bar): a CLOSED trigger up
+                                 # to KEEP_BARS-1 back + its 60-bar base + ~40 bars before it. A
+                                 # chart convention in BARS like the base, never rescaled by
+                                 # engine.bars(): ~6 months on the ASX, ~4 on crypto
+IGNITION_CHART_SMAS = IGNITION_RIBBON_SMAS   # the lines drawn (the coil reads RIBBON_SMAS);
+                                 # chart.html draws 10/20/43/200 -- one line to match it
+IGNITION_CHART_SIG_FIGS = 5      # significant figures on chart prices, never fixed decimals
+                                 # (round(4.08e-06, 4) == 0.0); lossless for ASX ticks under $1,000
+IGNITION_CHART_VOL_SCALE = 100   # volume as 0..100 of the window's loudest bar. 100, not 99/999:
+                                 # the engine's retyped-number fence exempts exactly 100, and
+                                 # engine.py already uses a bare 99
 
 # THE BACKTEST (scanner/ignition/backtest.py, dispatched via ignition.yml)
 IGNITION_BT_PERIOD = "max"       # every bar Yahoo has; the regimes are the point
 IGNITION_BT_COST_PCT = 0.30      # round trip: 2 x 0.10% taker + slippage on thin alts
-IGNITION_BT_COST_PCT_BY_MARKET = {"asx": 1.0}   # ASX small caps: retail brokerage
+IGNITION_BT_COST_PCT_BY_MARKET = {"asx": 1.0,   # ASX small caps: retail brokerage
                                  # both ways + the spread -- under 10c a tick is 0.1c,
                                  # ~1% of a 9c price (DTR), so 0.30 would flatter it
+                                  "nasdaq": 0.5}  # a flat fee each way (~0.05-0.2% of a
+                                 # ~US$2,500 ticket) + the spread: a 1c tick is 0.1-0.5%
+                                 # of the $2-10 prices beaten-down names trade at
 IGNITION_BT_MAX_HOLD = 180       # bars; open trades past it exit at the close
 IGNITION_BT_SPLIT_DATE = "2024-01-01"   # in-sample before, out-of-sample from
 IGNITION_BT_RANDOM_DRAWS = 5     # random-timing baseline: draws per real trade
 IGNITION_BT_SEED = 20260928      # every random choice is seeded -> reproducible
 IGNITION_BT_BOOTSTRAP = 2000     # resamples for the expectancy confidence band
 IGNITION_BT_CASES = ("QNT",)     # named case studies, reported trade by trade
-IGNITION_BT_CASES_BY_MARKET = {"asx": ("DTR",)}
+IGNITION_BT_CASES_BY_MARKET = {"asx": ("DTR",), "nasdaq": ()}
 # THE DESIGN CASES ARE NEVER SCORED. QNT's Sep-2026 chart is the one piece of
 # market data that informed the thresholds above (the ribbon, drawdown and
 # coil-lookback comments quote it), so its triggers from this date on are
@@ -311,13 +385,32 @@ IGNITION_BT_DESIGN_CASES = {"QNT": "2026-09-01"}
 # DTR's Sep-2026 move is why the ASX port exists (no threshold was drawn from
 # it, but "the lens would have caught the stock that prompted it" is exactly
 # the claim that must not score itself), so it is excluded the same way.
-IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}}
+# NASDAQ has none: no chart informed its port, so every trigger is scored.
+IGNITION_BT_DESIGN_CASES_BY_MARKET = {"asx": {"DTR": "2026-09-01"}, "nasdaq": {}}
 IGNITION_BT_REGISTERED_DATE = "2026-09-28"   # triggers from here are the FORWARD bucket
-IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29"}
+IGNITION_BT_REGISTERED_DATE_BY_MARKET = {"asx": "2026-09-29", "nasdaq": "2026-10-08"}
+# THE FORWARD EXIT COMPARISON, pre-registered 2026-10-14 (REFINE200 #49).
+# The replay's exit table had the 26-SMA trail ahead of the primary 9-SMA
+# trail on the ASX (+0.37R vs +0.24R) and NASDAQ (+0.15R vs -0.02R), and
+# behind on crypto (+1.12R vs +1.19R) -- an in-sample read, which is exactly
+# why it is NOT adopted. Registered instead: the backtest reports this exit
+# beside the primary over the FORWARD bucket only (entries from the later of
+# the market's registration date and IGNITION_FORWARD_COMPARE_FROM), on the
+# primary's own entries, as `forward_compare`. The primary exit does not move;
+# a switch, if the forward data ever supports one, is the owner's call. A
+# backtest.EXIT_SPECS name (pinned).
+IGNITION_FORWARD_COMPARE_EXIT = "trail26"
+IGNITION_FORWARD_COMPARE_FROM = "2026-10-14"
 # The regime line (CONTEXT, never a filter): the market's own benchmark vs its
-# 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200,
-# fetched beside the universe and never screened.
-IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200")}
+# 200-SMA. Crypto's is BTC (in the universe); the ASX's is the S&P/ASX 200 and
+# NASDAQ's the NASDAQ Composite (every NASDAQ-listed common stock, history to
+# 1971 -- ^NDX is 100 mega-caps, where coils do not live), each fetched beside
+# the universe and never screened.
+IGNITION_REGIME_INDEX = {"crypto": ("BTC-USD", "BTC"), "asx": ("^AXJO", "ASX 200"),
+                         "nasdaq": ("^IXIC", "NASDAQ Composite")}
+# The time a session market's daily bar is FINAL for the backstop gate
+# (scripts/ignition_due.py) is IGNITION_BAR_FINAL (= BAR_FINAL), defined
+# beside MORNING_PLAYS_SLOT_GATE.
 IGNITION_BT_RANDOM_WINDOW = 182  # random-timing draws: within +/- this many bars of the
                                  # real trigger -- same coin, same SEASON, random day.
                                  # Crypto regime is the biggest driver of a long's R;
@@ -354,7 +447,7 @@ VIVEK_SCHEMA_VERSION   = 5
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
-# recs.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# journal.js, phasemap-shared.js, confluence_alert.py,
 # marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
@@ -369,12 +462,14 @@ VIVEK_AT_LEVEL_TOL     = 0.02      # within 2% of the 200 SMA = "at the level"
 VIVEK_NEAR_TOL         = 0.04      # within 4% = "in play" (tightened from 6% for selectivity)
 # How many tradeable coins the crypto universe holds, by market-cap rank
 # (owner, 2026-09-21: "see if you can branch into the top 200 coins rather
-# than the current selection"). Honest expectation, measured at 100: of 101
-# names in the universe only 69 had Yahoo data under "<SYM>-USD", and the
-# $100M crypto liquidity floor (LIQUID_TIER) cuts more of the tail. Doubling
-# the rank depth should scan ~110-130, not 200 — the bottom of the top 200 is
-# thin alt territory where a paper fill is the most fictional, and the
-# liquidity gate is what keeps it honest.
+# than the current selection"). Expect far fewer than 200 scanned rows: the
+# real floor is MARKETS["crypto"].liquidity_min ($3,000,000 of 20-day dollar
+# volume, owner-ruled "Keep"), read on single-venue exchange volume since
+# 2026-09-28 (63 of the top 100 cleared it at the switch), and the identity
+# check drops a coin no venue can confirm. The bottom of the top 200 is thin
+# alt territory where a paper fill is the most fictional, and the liquidity
+# gate is what keeps it honest. (The old "$100M floor" named here was
+# LIQUID_TIER, a display tag no reader used, removed 2026-10-14, REFINE200 #123.)
 # NOT DELIVERED UNTIL 2026-09-28: the one-page CoinGecko request asked for
 # per_page=260, above CoinGecko's 250 cap, which silently serves its default
 # 100 -- the universe SHRANK 101 -> 86. universe._fetch_crypto now pages at
@@ -385,6 +480,14 @@ CRYPTO_UNIVERSE_SIZE   = 200
 # every scanner). Add symbols here to guarantee coverage; Yahoo-less coins
 # drop out at scan time harmlessly.
 CRYPTO_EXTRA_SYMBOLS   = ["XMR", "FLASH"]
+# BEHAVIOURAL peg check (REFINE200 #136), the net under universe._is_stable's
+# ticker/name rules: a coin whose last CRYPTO_PEG_BARS completed daily closes
+# all sat within CRYPTO_PEG_BAND of $1.00 is a dollar peg whatever it is
+# called, and the VIVEK scan skips it (counted as no_setup). Only ever
+# REMOVES a name -- the owner's peg rule; no free-floating coin holds +-2% of
+# a dollar for 90 days.
+CRYPTO_PEG_BARS        = 90
+CRYPTO_PEG_BAND        = 0.02
 
 VIVEK_INCLUDE_3D_LEVEL = True      # 2026-07-02: also treat the 3-Day 200 SMA as an in-play
                                    # level (W > 3D > D). Found via XMR: price sat AT the 3D-200
@@ -457,7 +560,9 @@ VIVEK_MIN_TF_BARS      = 30        # min bars to build a per-timeframe plan (e.g
 VIVEK_H4_PLANS         = True      # build a real 4H plan for published rows
 VIVEK_H4_PERIOD        = "2y"      # Yahoo's intraday ceiling is ~730 days
 VIVEK_H4_INTERVAL      = "1h"      # bucketed to 4H locally (Yahoo has no 4h)
-VIVEK_H4_BUCKET_HOURS  = 4
+# (The 4-hour bucket itself is NOT a setting: vivek._resample_4h_ohlc must cut
+# exactly where chart.js bucketBars(intraday, 4*3600) does. The unread
+# VIVEK_H4_BUCKET_HOURS that suggested otherwise went 2026-10-14, REFINE200 #91.)
 # Cap the extra download so a huge result set cannot stretch a scheduled scan.
 # Rows beyond this simply keep today's behaviour (the chart falls back to the
 # Daily plan and labels it), which is a degrade, never a failure.
@@ -670,26 +775,33 @@ VIVEK_BOT_RISK_PCT       = 0.35    # % equity risked per trade — ONLY used whe
 # block pathological entries the paper model can't price honestly:
 #  • MIN_PRICE: sub-5c ASX names (e.g. a $0.021 micro-cap) trade with spreads
 #    worth multiple R — a paper fill at "the price" is fiction. Per-market floor.
-#  • MAX_STOP_PCT: a structural stop >50% from entry (seen: −95% on a weekly
-#    crypto plan) makes R sizing meaningless — risk-based units go microscopic
-#    and the position is a lottery ticket, not a managed trade.
+#  • MAX_STOP_PCT: a very wide structural stop (seen: −95% on a weekly crypto
+#    plan) is a lottery ticket, not a managed trade. Under FIXED NOTIONAL
+#    (since 2026-07-28) the units never shrink with the stop -- the dollar loss
+#    grows with it instead: at 25% a 1R loss is $625 of a $2,500 position,
+#    already 13.9% of the daily loss guard. (Written for risk-% sizing, where
+#    the units went microscopic; the cap itself did not move.)
 VIVEK_BOT_MIN_PRICE      = {"asx": 0.05, "nasdaq": 1.0, "crypto": 0.0, "default": 0.0}
 VIVEK_BOT_MAX_STOP_PCT   = 25.0    # skip if |entry−stop| > this % of entry (0 = off).
                                    # Was 50 — which waved through 1D tickets whose stop
                                    # anchored to a distant higher-frame SMA (AXON: a 37%
                                    # stop, TP1 +62%, on a "daily" trade).
 #  • MIN_STOP_PCT: the inverse pathology — a stop <1% from entry usually means a
-#    dead/pegged instrument (stablecoin-likes, defensives glued to the SMA).
-#    Risk sizing then buys a leverage-capped MAX position in something that
-#    doesn't move, squatting in a scarce slot for months. 0 = off.
+#    dead/pegged instrument (stablecoin-likes, defensives glued to the SMA). A
+#    fixed $2,500 then sits in something that doesn't move, squatting in a
+#    scarce slot for months. (Under the old risk-% path such a stop also
+#    bought a leverage-capped MAX position.) 0 = off.
 VIVEK_BOT_MIN_STOP_PCT   = 1.0
 #  • MIN_ADV / MAX_NOTIONAL_PCT_ADV: liquidity honesty. Values are 20-day average
 #    dollar volume in the market's QUOTE currency (A$ for ASX, US$ elsewhere).
 #    Below MIN_ADV a real fill would eat multiple R in spread/impact, so the
 #    paper edge is fiction exactly where it looks best. On top of the floor the
-#    position's notional may not exceed MAX_NOTIONAL_PCT_ADV % of ADV. Crypto
-#    top-100 is deep enough that the floor is off there. Unknown ADV = exempt
-#    (fail-open, same as unknown sectors). 0 = off.
+#    position's notional may not exceed MAX_NOTIONAL_PCT_ADV % of ADV. The
+#    crypto floor is 0 here because the scan already drops any coin under
+#    MARKETS["crypto"].liquidity_min ($3M of 20-day single-venue dollar volume)
+#    before the bot sees it (the % of ADV cap -- $125k ADV for a $2,500
+#    position -- sits far below that). Unknown ADV = exempt (fail-open, same
+#    as unknown sectors). 0 = off.
 VIVEK_BOT_MIN_ADV        = {"asx": 250_000, "nasdaq": 2_000_000, "crypto": 0, "default": 0}
 VIVEK_BOT_MAX_NOTIONAL_PCT_ADV = 2.0
 # Slot hygiene — positions are capital even when flat:
@@ -707,7 +819,12 @@ VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
 # instead of scattering magic numbers through vivek_backtest / vivek_parity.
 # Changing them does NOT change the live bot — vivek_bot.py / vivek_run.py never
 # import the VIVEK_PARITY_* names. The live time-stop remains VIVEK_BOT_MAX_HOLD_DAYS.
-VIVEK_PARITY_OUT_FILE = "public/data/vivek_backtest_parity.json"
+# Research output, NOT a site file (REFINE200 #63): nothing on the site reads
+# the parity report, so it lives in data/research/ beside the earlier studies
+# (OOS / C3 samples, fill sensitivity, confluence study) and never ships to
+# Cloudflare. Its FX rate still comes from the scan's public/data/fx.json.
+VIVEK_PARITY_OUT_FILE = "data/research/vivek_backtest_parity.json"
+VIVEK_PARITY_OOS_OUT_FILE = "data/research/vivek_backtest_parity_oos.json"
 VIVEK_PARITY_DEFAULT_PERIOD = "5y"
 # MFE checkpoints stamped on every parity trade (calendar days from entry).
 # Used by the V2 early-momentum variants and the decision pack.
@@ -772,6 +889,14 @@ VIVEK_BOT_MAX_MARK_AGE_H = 2.0
 # per run, not the universe) and any lookup failure lets the trade through.
 VIVEK_BOT_EARNINGS_BUFFER_DAYS = 3
 VIVEK_BOT_EARNINGS_MARKETS     = ("nasdaq",)   # ASX earnings data on yfinance is too patchy to trust
+# Capacity release (REFINE200 #6): decide() reserves a slot / notional / sector
+# place for every plan it returns, and a plan the FILL then refuses (stale
+# frame, no price, earnings, don't-chase, stop too wide at the fill) used to
+# hold that place empty for the run. The runner re-asks decide() over the rows
+# it has not refused, against the book as filled -- same rows, order and caps
+# -- at most this many extra times per run, and only when a cap turned a row
+# away. 0 = off (the old single pass).
+VIVEK_BOT_REFILL_PASSES = 2
 # Crypto correlation: coins have no GICS sector, so the per-sector cap never
 # bound them — 4 alts are usually ONE beta-to-BTC bet. Synthetic sectors:
 # majors below get "crypto-major", everything else "crypto-alt", then the
@@ -805,6 +930,11 @@ VIVEK_BOT_MAX_DAILY_LOSS_PCT = 3.0
 # the trailing 7 calendar days + open unrealised falls to -this% of equity,
 # new entries halt until the window rolls off. 0 = off.
 VIVEK_BOT_MAX_WEEKLY_LOSS_PCT = 6.0
+# ...and "trailing 7 calendar days" means [day-6 .. day], today included
+# (vivek_guard.week_pnl; it was day-7, an 8-day window, until 2026-10-14 --
+# REFINE200 #18). The definition the weekly limit is written against, not a
+# dial: vivek_run._DAY_MARK_KEEP (9) must keep covering it.
+VIVEK_BOT_WEEKLY_WINDOW_DAYS = 7
 # REVIEW threshold (2026-07-28, owner's instruction; 15.0 -> 7.5 with the
 # notional on 2026-09-27, owner). NOT a gate — nothing is ever skipped for
 # crossing it. When a plan the bot has already decided to take would risk this %
@@ -891,7 +1021,9 @@ VIVEK_KILL_SWITCH_BROKERS = {
 # you can read big-money rotation (mega) AND discovery (small caps) separately.
 # ---------------------------------------------------------------------------
 MOVER_PER_TIER = 5            # up to this many MEGA + this many SMALL per side
-MOVER_MEGA_CAP_USD = 10e9     # market cap >= $10B counts as a "mega" company
+MOVER_MEGA_CAP_USD = 10e9     # market cap >= 10B counts as a "mega" company. Compared
+                              # with marketcaps' cache in the market's OWN currency, so
+                              # despite the name the ASX line is A$10B (~US$7B).
 # Fallback when a name's market cap isn't cached: tier by 20-day average dollar
 # volume (mega names trade vastly more $ than small caps). Per-market floors.
 MOVER_MEGA_DVOL = {"asx": 30_000_000, "us": 300_000_000}
@@ -947,33 +1079,34 @@ SCALP_CORRELATION_GROUPS = {
 # Phase 5: Risk Management — portfolio-level limits
 # ---------------------------------------------------------------------------
 
+# NOT ENFORCED (REFINE200 #121): no trade path reads either of these two; the
+# browser risk engine that mirrored them went 2026-09-17. bot_rules.json
+# publishes them under "not_enforced", never as rules. Enforcing = owner call.
 PORTFOLIO_HEAT_LIMIT      = 0.07    # max 7% of account at risk at any time across all open positions
 
 # Phase 5: Circuit Breakers
-CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades (matches JS engine)
+CONSEC_LOSS_PAUSE         = 3       # pause after 3 consecutive losing trades
 
 
 # ---------------------------------------------------------------------------
-# Phase 7: Advanced Monitoring & Alerting
+# Alert routing (scanner/broker/alert_router.py, alert_dispatch.py)
 # ---------------------------------------------------------------------------
 
-# Map event_type → severity level (CRITICAL / WARNING / INFO)
+# Map event_type → severity level (CRITICAL / WARNING / NOTICE / INFO).
+# EVERY key here has an emitter (tests/test_alert_blackout.py fails on an
+# orphan): the scalp-era types with none -- daily_loss, order_failed,
+# order_rejected, circuit_breaker, daily_report, weekly_report, health,
+# orphan_position, info -- were dropped 2026-10-14 (REFINE200 #90). An unknown
+# type still routes as WARNING (alert_router.get_severity).
 ALERT_SEVERITY = {
     "kill_switch":     "CRITICAL",
-    "daily_loss":      "CRITICAL",
-    "order_failed":    "CRITICAL",
     "scan_error":      "CRITICAL",
     "order_placed":    "INFO",
-    "order_rejected":  "WARNING",
     "anomaly":         "WARNING",
-    "circuit_breaker": "WARNING",
-    "daily_report":    "INFO",
-    "health":          "WARNING",
-    "info":            "INFO",
     # A position was opened carrying a review flag (2026-07-28, owner: "Flag
     # this in the future so i can verify whether claude or I should take the
-    # position or not"). Same tier and the same reason: the trade passed every
-    # rule and was taken correctly, so nothing is broken -- but it is heavy
+    # position or not"). NOTICE, because the trade passed every rule and was
+    # taken correctly, so nothing is broken -- but it is heavy
     # enough that the owner may want it as HIS position rather than the bot's,
     # and that decision has a shelf life measured in hours.
     "trade_review":    "NOTICE",
@@ -992,23 +1125,20 @@ ALERT_SEVERITY = {
     "scan_dry":        "NOTICE",
     # The paper book's daily/weekly loss guard tripped and new entries are
     # halted for the session (2026-07-28, scanner/broker/vivek_run). CRITICAL
-    # alongside `daily_loss` because it is the same event seen from the book
-    # rather than from the broker: a real risk limit was hit and the system has
-    # changed what it will do. It used to fire through alert_dispatch.send
-    # directly, which meant no severity at all.
+    # beside `kill_switch` because it is the same kind of event: a real risk
+    # limit was hit and the system has changed what it will do. It used to
+    # fire through alert_dispatch.send directly, which meant no severity at all.
     "vivek_guard":     "CRITICAL",
-    # Bybit holds a position the journal has never heard of (2026-07-28,
-    # broker/bybit_reconcile._sweep_orphans). CRITICAL and not negotiable: it is
-    # REAL exposure that no stop-watcher, no loss guard and no kill-switch is
-    # counting, because every one of those reads the journal and the journal
-    # does not know the position exists. The severity is the point -- it used to
-    # go out through alert_dispatch.send, which has no tier at all, so this
-    # could not be routed, deduped or acknowledged like anything else.
-    "orphan_position": "CRITICAL",
 }
 
-# Set False to silence all Telegram sends without touching secrets.
-# Flip back to True when the bot is ready to go live again.
+# Telegram mute (2026-07 scalp era; kept OFF in REFINE200, 2026-10-14). This
+# flag is a deliberate mute set when the scalp bot was paused ("flip back to
+# True when the bot is ready to go live again"). REFINE200 #127 found it acts
+# as a hidden second off-switch: setting the TELEGRAM_* secrets alone delivers
+# nothing. Flipping it would start pushing CRITICAL/WARNING alerts to whatever
+# chat the secrets name, so that is left to the owner. What changed instead:
+# the watchdog's self-test and alert summary now NAME this mute as the reason
+# Telegram did not deliver (watchdog.channel_problem), so it is no longer hidden.
 TELEGRAM_ENABLED = False
 
 # Map severity → alert channels (telegram / email; discord REMOVED 2026-08-27
@@ -1032,16 +1162,9 @@ ALERT_CHANNELS = {
 # Per-event-type rate limit in seconds (0 = no limit; prevents alert storms)
 ALERT_RATE_LIMITS = {
     "kill_switch":     0,        # always send — life-safety critical
-    "daily_loss":      0,        # always send
-    "order_failed":    0,        # always send
     "scan_error":      0,        # always send
     "order_placed":    300,      # max 1 per 5 min
-    "order_rejected":  300,
     "anomaly":         1800,     # max 1 per 30 min (prevents storm on recurring anomaly)
-    "circuit_breaker": 1800,
-    "daily_report":    82800,    # max 1 per 23h
-    "weekly_report":   518400,   # max 1 per 6 days
-    "health":          3600,     # max 1 per hour
     # 0 = the router never suppresses this one (per-EVENT-TYPE limits would let
     # the first market to fire silence the second — scan.yml runs the markets
     # sequentially inside a single job). Plus a sharper reason: this fires only
@@ -1069,13 +1192,6 @@ ALERT_RATE_LIMITS = {
     # differs, and it cannot disagree with itself about what day it is because
     # the same commit writes both.
     "vivek_guard":     0,
-    # 0, and the dedupe is on the SET OF ORPHAN SYMBOLS rather than on a clock
-    # (bybit_reconcile._sweep_orphans). A time window is the wrong tool here:
-    # an orphan persists until a human adopts or closes it, so a window long
-    # enough to stop the alert becoming wallpaper is also long enough to
-    # swallow a genuinely NEW orphan appearing inside it -- and the new one is
-    # the entire reason the probe runs.
-    "orphan_position": 0,
     "DEFAULT":         300,
 }
 
@@ -1089,11 +1205,36 @@ ALERT_RATE_LIMITS = {
 # room (real 40%+ days happen).
 VIVEK_MARK_SANITY_PCT = {"asx": 0.35, "nasdaq": 0.35, "crypto": 0.60}
 VIVEK_MARK_SANITY_ACCEPT_RUNS = 3
+# SPLITS (REFINE200 #8). When a suspect price is accepted on that Nth run,
+# vivek_run first asks whether the vendor REWROTE the price history by a clean
+# split ratio: the frame's close for the session of the last accepted mark is
+# compared with that mark. A split (auto_adjust back-adjusts the whole series)
+# puts the two a clean ratio apart; a crash leaves history alone, so they agree
+# (ratio ~1). On a match the position is restated into the new basis (prices
+# / ratio, units x ratio, R and notional unchanged) instead of being stopped
+# out against a stop in the old basis. Ratio = old price / new price (2 = a
+# 2-for-1 split, 1/10 = a 1-for-10 consolidation); only moves past the sanity
+# band above are ever challenged, so a 3-for-2 split (-33%) never reaches this.
+VIVEK_SPLIT_RATIOS = (2, 3, 4, 5, 8, 10, 15, 20, 25, 50, 100, 3 / 2,
+                      1 / 2, 1 / 3, 1 / 4, 1 / 5, 1 / 8, 1 / 10, 1 / 15,
+                      1 / 20, 1 / 25, 1 / 50, 1 / 100, 2 / 3)
+# How close (fraction) the mark-vs-history ratio must sit to a clean ratio.
+# Both numbers describe the SAME session close, so a real split lands within
+# rounding of the ratio; 3% leaves room for a mark taken shortly before that
+# close, and stays far from a crash's ~1.0.
+VIVEK_SPLIT_RATIO_TOL = 0.03
 
 # ── Freshness watchdog (2026-07-20, Phase 5 — scanner/watchdog.py) ────────────
-# Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). Thresholds
-# are >= 2x the worst GitHub cron drift ever observed in this repo (48 min) so
-# scheduler jitter can never page anyone. CRITICAL routes per ALERT_CHANNELS
+# Runs inside kill_switch.yml (:15/:45) + crypto_bot.yml (hourly). The
+# thresholds were set at >= 2x a 48-minute cron drift, the worst seen when they
+# were written (2026-07). GitHub has since run crons 2-5 HOURS late and dropped
+# most scheduled scans outright (week to 2026-10-05: 5/35 ASX, 8/35 NASDAQ,
+# 41/~168 crypto), which is why cron-job.org's heartbeat pings are the primary
+# scan clock since 2026-10-06. So the WATCHDOG_RUNS entries below that measure
+# a GitHub-cron workflow's own runs (crypto_bot.yml) can fire on a scheduler
+# drop rather than an outage; the content probes (book, crypto
+# scan, backups) measure the outcome. Harmless only while no alert channel is
+# live. CRITICAL routes per ALERT_CHANNELS
 # (incl. email); WARNING skips email. One alert on first detection, one
 # reminder every WATCHDOG_RENOTIFY_HOURS, one recovery notice — never more.
 WATCHDOG_RENOTIFY_HOURS = 6.0
@@ -1110,6 +1251,8 @@ WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
 # and would then take three days to notice anything. 40 weekday-hours lets one
 # fully missed session pass in silence and fires on the second.
 WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
+# Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
+WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 
 # ── Confluence forward-return ledger (scripts/alert_returns.py, 2026-08-20) ──
 # Research artefact only: measures whether multi-lens alignment predicts
@@ -1126,39 +1269,149 @@ ALERT_RETURNS_HORIZONS = (1, 5, 10, 20)   # 1-session added 2026-08-20: the
 # entry would silently un-measure the feature). ~57 alignments/day today, so
 # 20,000 is roughly a year of memory.
 ALERT_RETURNS_CAP = 20000
+# FORWARD-RETURN BAR FINALITY (2026-10-05). A return is FROZEN at first
+# measurement, so stamp() may only read a daily bar whose close is final.
+# Yahoo's daily series carries the session's still-forming bar while it trades,
+# and the ledger runs land late (00:00-03:00 UTC), inside the ASX session in
+# AEST and AEDT alike, so ASX horizons were frozen at a late-morning price.
+# Market-local (hour, minute) from which TODAY's bar counts as final: the
+# closing print (ASX auction ~16:10-16:12, the NASDAQ closing cross by 16:00:xx)
+# plus the ~15-20 min delayed feed, rounded up. Read in MARKETS[m].timezone, so
+# DST on either side needs no handling. A market with no entry trades 24/7
+# (crypto, UTC daily bars): its today's bar is NEVER final. Later is always
+# safe; the only cost is a stamp waiting for the next daily run.
+#
+# BAR_FINAL (REFINE200 #128, 2026-10-14) is THE "today's daily bar is final in
+# the free feed" table, {market: (timezone, hour, minute)}, read in the
+# market's own calendar. ASX 16:40 Sydney is MEASURED (a 2026-10-05 scan whose
+# download began 16:28:52 still held pre-auction prices on 19% of names; see
+# MORNING_PLAYS_SLOT_GATE's asx note); NASDAQ 16:30 New York is the closing
+# cross plus the delayed feed. IGNITION_BAR_FINAL and the digest's ASX close
+# gate are DERIVED from it. Two deliberate exceptions, each beside its own
+# table: the ledger's ASX 16:45 just below, and the NASDAQ digest's 16:05.
+# tests/test_bar_final.py pins every derivation and both exceptions.
+BAR_FINAL = {"asx": ("Australia/Sydney", 16, 40),
+             "nasdaq": ("America/New_York", 16, 30)}
+# The ledger's ASX 16:45 is five minutes PAST BAR_FINAL on purpose, not a stale
+# copy: a ledger return is FROZEN at its first stamp (no later run corrects a
+# pre-auction read), and stamp() compares the clock when its fetch STARTS,
+# where BAR_FINAL is compared with a scan's generated_at, stamped after a ~4-5
+# min download. The runs land hours after the close, so the margin costs
+# nothing in practice. Never EARLIER than BAR_FINAL (pinned).
+ALERT_RETURNS_BAR_FINAL = {"asx": (16, 45), "nasdaq": BAR_FINAL["nasdaq"][1:]}
+# EXCESS RETURNS (REFINE200 #28, 2026-10-14): every NEW forward-return stamp in
+# both edge ledgers also stamps this benchmark's return between the SAME two
+# bar dates (`bench`), so the edge summary publishes signal minus market beside the
+# raw move. Fetch keys, spelled as IGNITION_REGIME_INDEX spells them (crypto
+# prices through data.fetch like every crypto path). Going forward only.
+ALERT_RETURNS_BENCHMARK = {"asx": "^AXJO", "nasdaq": "^IXIC", "crypto": "BTC-USD"}
+# A row's base bar must sit within this many CALENDAR days of its base_day
+# (REFINE200, 2026-10-14). A weekend alert waits 2 days for Monday's bar, Easter
+# 4; anything longer is a suspension, or a download that did not reach back to
+# base_day, and stamp() used to take the window's FIRST bar as the base and
+# freeze every horizon off it. Such a row stays unstamped and is retried.
+ALERT_RETURNS_BASE_MAX_GAP_DAYS = 5
+# The frames alert_returns.py hands edge_rosters.py in the same job (one Yahoo
+# walk for both ledgers) are refused once older than this: a stale hand-off is
+# a fresh download, never a stale price.
+ALERT_RETURNS_FRAMES_MAX_AGE_H = 3.0
 # Daily A+ roster ledger (scripts/edge_rosters.py, batch-100 WS-B): the
 # single-lens BASELINE cohort, stamped with the same forward returns on the
-# same Yahoo plumbing as the alerts — so "does alignment beat plain A+" keeps
-# answering itself without git archaeology. ~160 A+ rows/day -> 20k is ~4
-# months of memory; trim only ever drops fully-stamped rows.
-ALERT_ROSTER_CAP = 20000
+# same plumbing as the alerts — so "does alignment beat plain A+" keeps
+# answering itself without git archaeology. NO CAP since 2026-10-14
+# (REFINE200 #62): the 20k cap would have started deleting MEASURED rows in
+# ~December, so the ledger is sharded by base_day month under
+# data/edge_rosters/<YYYY-MM>.json and nothing is ever trimmed.
+# Each session's roster is the scan in force at its CLOSE (stocks: the newest
+# scan stamped at/after MORNING_PLAYS_SLOT_GATE, the digest's own "post-close"
+# line; crypto: the last scan of the finished UTC day), read from git history
+# that alert_returns.yml fetches for this many calendar days back. A missed
+# session inside the window is backfilled the same way.
+ALERT_ROSTER_LOOKBACK_DAYS = 5
+# ANALYSIS ONLY (REFINE200 #40): sector label variants folded to the 11 GICS
+# sectors for the edge report/summary splits. The scan rows carry GICS
+# industry groups and Yahoo labels side by side ("Financial Services",
+# "Banks", "Insurance" are one sector). NEVER read by scanner/ or broker/ --
+# the bot's sector cap keeps its own labels (REFINEMENTS #112 is the owner's);
+# the edge-report tests pin the fence.
+EDGE_SECTOR_ALIASES = {
+    "Technology": "Information Technology",
+    "Software & Services": "Information Technology",
+    "Technology Hardware & Equipment": "Information Technology",
+    "Semiconductors & Semiconductor Equipment": "Information Technology",
+    "Healthcare": "Health Care",
+    "Health Care Equipment & Services": "Health Care",
+    "Pharmaceuticals, Biotechnology & Life Sciences": "Health Care",
+    "Financial Services": "Financials",
+    "Banks": "Financials",
+    "Insurance": "Financials",
+    "Diversified Financials": "Financials",
+    "Consumer Cyclical": "Consumer Discretionary",
+    "Consumer Discretionary Distribution & Retail": "Consumer Discretionary",
+    "Consumer Services": "Consumer Discretionary",
+    "Consumer Durables & Apparel": "Consumer Discretionary",
+    "Automobiles & Components": "Consumer Discretionary",
+    "Retailing": "Consumer Discretionary",
+    "Consumer Defensive": "Consumer Staples",
+    "Consumer Staples Distribution & Retail": "Consumer Staples",
+    "Food, Beverage & Tobacco": "Consumer Staples",
+    "Food & Staples Retailing": "Consumer Staples",
+    "Household & Personal Products": "Consumer Staples",
+    "Basic Materials": "Materials",
+    "Capital Goods": "Industrials",
+    "Commercial & Professional Services": "Industrials",
+    "Transportation": "Industrials",
+    "Telecommunication Services": "Communication Services",
+    "Media & Entertainment": "Communication Services",
+    "Equity Real Estate Investment Trusts (REITs)": "Real Estate",
+    "Real Estate Management & Development": "Real Estate",
+    "Unclassified": "(no sector)",
+    "Not Applic": "(no sector)",
+    "Class Pend": "(no sector)",
+}
+# ANALYSIS ONLY: a legacy crypto ledger row (stamped from Yahoo <SYM>-USD
+# before the edge ledgers priced crypto through data.fetch, so no
+# `price_source`) whose base_close is more than this factor away from the
+# coin's current scan price is a different token (JUP: 0.000327 vs 0.335) and
+# is left out of summary statistics, counted. The rows stay in the ledger.
+EDGE_CRYPTO_WRONG_TOKEN_FACTOR = 20.0
 # Book tide-stress shocks (scripts/book_stress.py, batch-100 WS-D): uniform
 # beta-1 mark drawdowns tested against every long's REAL stop. -3% is roughly
 # a reversion of breadth to its 6-month mean as measured 2026-08-20; -10% is
 # the February trough revisited.
 BOOK_STRESS_SHOCKS = (0.03, 0.05, 0.08, 0.10)
-# Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
-WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
-# Run-history probes (GitHub Actions API): workflow file -> threshold on the
-# LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
-# GitHub already emails failures; the watchdog only covers SILENT problems.
 # MARKET SCAN WINDOWS (owner, 2026-09-21) — the canonical session table.
 # (market -> (tz, first-scan minute-of-day, last-scan minute-of-day), market-local,
 # weekdays only.) First scan is one hour after the open; the tail runs past the
 # close so the closing auction is captured and the Discord plays digest has a
 # post-close scan to gate on.
 #
-# THE MIRROR: scan.yml's gate job checks out nothing (contents: read, by
-# design), so it cannot import this — it carries the same numbers inline and
-# tests/test_scan_windows.py parses them back out and fails if the two drift.
+# ONE TABLE, NO MIRROR: scan.yml's gate job sparse-checks out scanner/config.py
+# beside scripts/scan_gate.py, which imports this table directly (stdlib only).
+# tests/test_scan_windows.py fails if an inline copy of the windows ever comes
+# back to the workflow.
 MARKET_SCAN_WINDOWS = {
     "asx":    ("Australia/Sydney",  11 * 60,      16 * 60 + 45),
     "nasdaq": ("America/New_York",  10 * 60 + 30, 16 * 60 + 45),
 }
 
+# Run-history probes (GitHub Actions API): workflow file -> threshold on the
+# LAST SUCCESSFUL run. A latest-run FAILURE is deliberately not alerted here —
+# GitHub already emails failures; the watchdog only covers SILENT problems.
+# `job` (REFINE200 #80, 2026-10-14): judge a run by THAT job's conclusion, not
+# the run's. scan.yml's gate skips most superset crons (the `scan` job is
+# skipped, the run still concludes success), and crypto_bot.yml's :52 backstop
+# skips when fresh, so "last successful run" was satisfied by runs that scanned
+# nothing. A run whose job was skipped is passed over; a jobs-API error falls
+# back to the run's own conclusion (fail-quiet, as for the runs API).
+# kill_switch.yml is NOT watched (owner, 2026-10-14: "drop it"). GitHub runs
+# its :15/:45 cron every 4-7 hours, so a 2h limit raised a CRITICAL -- and a
+# red "Kill-switch check" email -- on nearly every run, from the kill switch's
+# own run, about a scheduler drop and not an outage. Paper only, no broker
+# keys: a late kill switch flattens nothing either way. The content probes
+# (book, crypto scan, backups) still catch a real stall.
 WATCHDOG_RUNS = {
-    "kill_switch.yml": {"max_age_h": 2.0,  "severity": "CRITICAL"},
-    "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING"},
+    "crypto_bot.yml":  {"max_age_h": 3.0,  "severity": "WARNING", "job": "crypto"},
     # SESSION-AWARE (2026-09-21). scan.yml stopped running outside market
     # hours, so wall-clock age alarms every weekend: Friday's last scan to
     # Monday's first is ~52h, and a long weekend is ~75h. Raising the limit
@@ -1166,13 +1419,25 @@ WATCHDOG_RUNS = {
     # `session_aware` measures only the hours a market was actually OPEN, which
     # accrue at ~11h/day on weekdays and not at all at the weekend — so 12h is
     # about one missed session, and a quiet Sunday is correctly silent.
-    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True},
+    "scan.yml":        {"max_age_h": 12.0, "severity": "WARNING", "session_aware": True,
+                        "job": "scan"},
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
-    "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
+    # The evidence files (REFINE200 #79): a weekly cron (Sunday 08:00 UTC, up to
+    # ~6h) gets a week plus a day; a monthly one (the 1st, 08:00 UTC; months
+    # run 28-31 days) gets 32 days. Either alarms about a day after a dropped run.
+    "lens_backtest.yml":  {"max_age_h": 8 * 24.0,  "severity": "WARNING"},
+    "vivek_backtest.yml": {"max_age_h": 32 * 24.0, "severity": "WARNING"},
 }
+# How far back a `job`-judged probe looks: one page of this many runs, reading
+# the jobs of at most WATCHDOG_JOB_LOOKUPS of them (newest first, stopping at
+# the first that did the work). scan.yml fires ~20 times a weekday and its gate
+# skips about half, so 30 runs is more than a day. Past the window with no real
+# run, the probe can still alarm on the window's OWN age (a lower bound).
+WATCHDOG_JOB_RUNS_PAGE = 30
+WATCHDOG_JOB_LOOKUPS = 12
 
 # THE CLOUD STOP/TARGET WATCHER IS GONE (2026-09-21). functions/api/tick.js
 # and stop_watcher.yml existed solely to close MANUAL paper positions inside
@@ -1181,42 +1446,9 @@ WATCHDOG_RUNS = {
 # — it is marked and stop-checked by the scan and by kill_switch.yml.
 
 
-# ---------------------------------------------------------------------------
-# Phase 8: Enhanced Monitoring & Alerting
-# ---------------------------------------------------------------------------
-
-
-# Weekly report rate-limit bucket (separate from daily_report so each has its own cadence)
-ALERT_RATE_LIMITS_EXTRA: dict = {
-    "weekly_report": 518_400,  # max 1 per 6 days (604800 = 7d; 518400 = 6d allows a little slack)
-}
-
-# ---------------------------------------------------------------------------
-# Alert credentials — the boundary every pasted secret crosses
-# ---------------------------------------------------------------------------
-# (The Discord digest that used to live under this heading was removed with
-# the whole Discord channel on 2026-08-27; clean_secret stays because it
-# guards EVERY pasted credential, not one channel's.)
-
-
-def clean_secret(value) -> str:
-    """Strip the invisible baggage a hand-pasted secret can carry.
-
-    Found live 2026-08-01: the stored DISCORD_WEBHOOK_URL began with U+FEFF —
-    a byte-order mark, invisible in the GitHub secrets box — which urllib
-    rejects as `unknown url type: \\ufeffhttps`. Every sender wraps its post
-    in try/log-warning, so the entire Discord channel (stale probes, trade
-    reviews, sector alarms, kill-switch notices) failed SILENTLY for as long
-    as that paste was in place; the evidence brief's first delivery was
-    simply the first caller that let the exception fail a run out loud.
-
-    Every consumer of a pasted credential routes through here, so the next
-    stray BOM, zero-width character or trailing newline dies at the boundary
-    instead of inside a swallowed exception. Interior characters are never
-    touched — this trims ends only.
-    """
-    return str(value or "").strip(
-        " \t\r\n\ufeff\u200b\u200c\u200d\u200e\u200f")
+# Confluence push policy (scanner/confluence_alert.py) and the site URL alerts
+# link to. (config.clean_secret, which used to sit here, is at the top of the
+# module.)
 CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this many lenses
                                      # (3 = triples only — owner's call 2026-07-02; the site
                                      # still shows every 2-lens alignment visually. Channel-
@@ -1224,15 +1456,20 @@ CONF_ALERT_MIN_LENSES  = 3           # only PUSH alignments with at least this m
                                      # removal: confluence_alert still computes what deserves a
                                      # push and records it as undelivered, so the next channel
                                      # pings everything current on its first run.)
-SITE_URL               = "https://googy-boys-scanner.pages.dev"   # chart links in alerts
+# THE site's address (REFINE200 #129): chart links in alerts, the digest's app
+# link and ops.py's site-probe all read this one constant. Two copies cannot
+# import it: crypto_bot.yml's freshness curl (commented to point here) and the
+# example URLs in functions/api/morning_plays.js's header comment.
+SITE_URL               = "https://googy-boys-scanner.pages.dev"
 
 # ---------------------------------------------------------------------------
 # Data quality
 # ---------------------------------------------------------------------------
-DATA_PERIOD = "1y"            # history pulled per ticker (~252 bars; enough for EMA144 + all lookbacks)
+DATA_PERIOD = "1y"            # default history window for data.download/fetch when the caller
+                              # names none (VIVEK passes VIVEK_DATA_PERIOD, 5y)
 DATA_DAILY_BARS = 252         # bars the daily scanners see (tail-slice of VIVEK's deep download = 1y, unchanged behaviour)
-DATA_STALENESS_HOURS = 4      # flag data as stale if last bar is older than this many hours
-SCALP_DATA_MIN_BARS  = 65     # minimum 1h bars required for scalp evaluate() (matches SCALP_MIN_BARS)
+SCALP_DATA_MIN_BARS  = 65     # INERT (kept by the SCALP_* ruling): its one reader, data.validate_bars,
+                              # went 2026-10-14 with DATA_STALENESS_HOURS (REFINE200 #120)
 # HOW OLD A CACHED FRAME MAY BE AND STILL COUNT AS DATA (2026-07-28, TOP100 #24).
 # `data.merge_with_cache` back-fills tickers Yahoo dropped this run from the
 # last-good cache, which is exactly right for the ordinary case: a name misses
@@ -1280,6 +1517,7 @@ SCAN_ERROR_SAMPLE_MAX    = 12   # error rows published per market (0 = count onl
 SCAN_ERROR_MSG_MAX       = 160  # chars kept per error message before truncation
 SCAN_ERROR_KINDS_MAX     = 4    # distinct exception types named in the summary line
 SCAN_ERROR_LOUD_PCT      = 5.0  # >= this % of names failing prints the '!!' marker
+                                # (0 = never loud)
 
 # ---------------------------------------------------------------------------
 # Deliberate-skip marker (TOP100 #67 follow-up, 2026-07-28 incident)
@@ -1343,7 +1581,6 @@ SCAN_FUNNEL_ILLIQUID_SAMPLE_MAX = 12
 SCAN_ARRIVING_MIN_RVOL = 3.0
 SCAN_ARRIVING_MAX      = 12    # cap, sorted by today's turnover (participation,
                                # not multiple — the multiple is the pump smell)
-                                # (0 = never loud)
 
 # Funnel history (2026-07-30, owner-ruled Task 2) — an APPEND-ONLY record of
 # each scan's funnel counts (scanned / with-data / published / floor-killed /
@@ -1353,8 +1590,9 @@ SCAN_ARRIVING_MAX      = 12    # cap, sorted by today's turnover (participation,
 # back (test-pinned, same fence as the arriving list). Columnar per market to
 # keep the committed artefact small.
 SCAN_FUNNEL_HISTORY_FILE = "funnel_history.json"   # under the publish root
-SCAN_FUNNEL_HISTORY_MAX  = 2000   # rows kept PER MARKET (crypto ~40 days at
-                                  # 48 scans/day, ASX ~8 months at 8/day —
+SCAN_FUNNEL_HISTORY_MAX  = 2000   # rows kept PER MARKET (measured 2026-10:
+                                  # crypto ~80 days at ~25 scans/day, ASX and
+                                  # NASDAQ ~a year of weekdays at ~7-8/day --
                                   # uneven on purpose: the cap is a size
                                   # guard, the chart buckets by day anyway)
 
@@ -1380,29 +1618,32 @@ class MarketConfig:
     suffix: str            # yfinance ticker suffix (".AX" ASX, "" NASDAQ, "-USD" crypto)
     currency: str
     currency_symbol: str
-    timezone: str          # IANA tz for the "scanned at" timestamp
-    tz_label: str          # short label shown in the UI
+    timezone: str          # IANA tz for the "scanned at" timestamp. The scan
+                           # publishes its abbreviation AT THAT INSTANT as
+                           # tz_label (AEDT/AEST, EDT/EST, UTC) -- never a
+                           # fixed string: "AEST" was wrong half the year.
     liquidity_min: float   # minimum average daily turnover, in local currency
-    volume_is_usd: bool = False   # crypto: Yahoo volume is already USD dollar-volume
+    volume_is_usd: bool = False   # crypto: Volume is already US$ dollar-volume (exchange quote
+                                  # volume since 2026-09-28; Yahoo's USD volume for fallback coins)
 
 
 MARKETS = {
     "asx": MarketConfig(
         key="asx", label="ASX", suffix=".AX",
         currency="AUD", currency_symbol="A$",
-        timezone="Australia/Sydney", tz_label="AEST",
+        timezone="Australia/Sydney",
         liquidity_min=100_000,
     ),
     "nasdaq": MarketConfig(
         key="nasdaq", label="NASDAQ", suffix="",
         currency="USD", currency_symbol="$",
-        timezone="America/New_York", tz_label="ET",
+        timezone="America/New_York",
         liquidity_min=1_000_000,
     ),
     "crypto": MarketConfig(
         key="crypto", label="CRYPTO", suffix="-USD",
         currency="USD", currency_symbol="$",
-        timezone="UTC", tz_label="UTC",
+        timezone="UTC",
         # $3M/20d turnover. Since the exchange-klines switch (2026-09-28) this
         # reads ONE venue's volume, not Yahoo's aggregate, so fewer thin alts
         # clear it (65/108 vs 91/108 measured). Put to the owner the same day:
@@ -1452,11 +1693,6 @@ SECTOR_MOVER_MIN_DVOL = {"asx": 1_000_000, "us": 10_000_000}
 SECTOR_MOVER_MIN_DVOL_DEFAULT = 1_000_000
 
 # ---------------------------------------------------------------------------
-# Feeds — YouTube channels + AI narrative (feeds.py / feeds_run.py)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # MORNING PLAYS — the daily Discord digest of HIGH-CONVICTION VIVEK 5.0 setups
 # (owner ask, 2026-09-08; scheduling reworked 2026-09-09). scripts/morning_plays
 # reads the COMMITTED scan JSON (no scan, no Yahoo, no scan mutex) and posts to
@@ -1492,8 +1728,9 @@ MORNING_PLAYS_TZ = "Australia/Melbourne"
 # miss: the run sends its slot as long as Melbourne is AT OR PAST the slot's
 # target time today and the slot has not already gone out today (a per-day marker
 # in the sent-list). "at or past" (not "==") is the whole delay fix; the marker
-# is what stops the slot's OTHER DST superset cron from double-sending. `minute`
-# is only the intended send time shown in the message; the gate keys on `hour`.
+# is what stops the slot's OTHER DST superset cron from double-sending. The
+# floor is `hour`:`minute` together (morning_plays._slot_floor), so 16:30 and
+# 06:30 Melbourne are the real floors; no message prints the time.
 MORNING_PLAYS_SLOTS = {
     "asx": {"hour": 16, "minute": 30, "markets": ("asx",)},           # FLOOR: never before 16:30 Melbourne
     "us":  {"hour": 6,  "minute": 30, "markets": ("nasdaq", "crypto")},  # FLOOR: never before 06:30 Melbourne
@@ -1504,27 +1741,102 @@ MORNING_PLAYS_SLOTS = {
 # close -- the 2026-09-11 06:35 US digest ran on time and read a 1:43pm New York
 # MID-SESSION scan (the post-close scan committed at 07:06 Melbourne), so it
 # missed the three names that set up in the last hours of trade and posted
-# "nothing new". Keyed on the payload's own `generated_at` in the market's own
-# zone, so DST on either side is irrelevant. Before the gate passes the run is a
+# "nothing new". Keyed on the payload's own `generated_at` and the clock, both
+# read in the market's own zone (never a fixed UTC offset -- the two sides
+# change DST on different dates). Before the gate passes the run is a
 # silent no-op that MARKS NOTHING, so the next trigger attempt retries -- the
 # cron-job.org jobs are a ladder of attempts every 30 min after the close, and
 # the first post-close one sends (the per-day marker silences the rest).
-#   asx    16:12 Sydney   -- the closing auction prints ~16:10-16:12; a 16:09 scan
-#                            is pre-close. scan.yml's 05:07 UTC cron generates
-#                            ~16:0x-16:28 AEST; its 06:37 UTC closing cron ~17:4x.
+#   asx    16:40 Sydney   -- NOT the auction time. The closing auction prints
+#                            ~16:10-16:12, but Yahoo's ASX feed runs ~20 min
+#                            behind and `generated_at` is stamped AFTER a ~4-5
+#                            min download. Measured 2026-10-05: the scan stamped
+#                            16:32 (download from 16:28:52) still held the
+#                            pre-auction price on 332 of 1,739 names (19%) and
+#                            one digest name changed; 25 Sep (download from
+#                            16:31) was final; 21 Sep (stamp 16:36) still had
+#                            ~11% pre-final. Until 2026-10-06 this was 16:12,
+#                            harmless only while evening heals rescanned the
+#                            ASX; since scan_gate.py (2026-10-05) the first scan
+#                            past this time IS the day's close and nothing
+#                            rescans it, so it must mean "the data is final".
+#                            16:40 = download from ~16:35, still inside the
+#                            16:45 scan window. The on-time closing scan is
+#                            cron-job.org's 16:40 Sydney 'scan ASX close' ping
+#                            of /api/heartbeat (GitHub has not delivered
+#                            scan.yml's closing crons since 18 Sep), backed by a
+#                            17:20 Sydney heal probe, scan.yml's "41 5,6" and
+#                            "57 5,6" crons and heals.
 #   nasdaq 16:05 New York -- the bell is 16:00 and the closing cross is done by
-#                            16:00:xx. NOT 16:15: scan.yml's LAST NASDAQ cron is
-#                            21:07 UTC, which is 16:07 New York under EST, so a
-#                            later gate would refuse every winter session's only
-#                            post-close scan and the US digest would never send
-#                            Nov-Mar. Under EDT the 20:07 UTC hourly (16:07 NY)
-#                            passes too and the digest lands an hour earlier.
+#                            16:00:xx. NOT 16:15: scan.yml's only post-close
+#                            NASDAQ scan is its hourly at 16:07 New York (20:07
+#                            UTC under EDT, 21:07 UTC under EST -- the 16:45
+#                            window shuts the next hourly out), so a later gate
+#                            would refuse every session's one post-close scan
+#                            and the US digest would never send.
+# SESSION IN PROGRESS (2026-10-05). Before today's close the "latest close" is
+# YESTERDAY's, so any scan from earlier in today's session used to pass. Under
+# AEDT+EST the US slot's 06:30 Melbourne floor is 14:30 New York and the
+# ladder's 20:15/20:45 UTC rungs are 15:15/15:45 New York -- the digest went out
+# mid-session and marked itself done. So the gate also refuses while the session
+# the slot OWES is running: a weekday between the gated market's OPEN
+# (VIVEK_JOURNAL_SESSION, the canonical session table: ASX 10:00 Sydney, NASDAQ
+# 09:30 New York) and the close above, for a session that opened at/before the
+# slot's floor on that Melbourne date. One that opened after the floor is the
+# NEXT slot's: under AEST+EDT, 23:30-23:59 Melbourne is 09:30-09:59 New York on
+# the same date, and that evening's US slot still owes the previous session.
+# The ASX slot's 16:30 floor sits before the 16:40 Sydney close (Melbourne and
+# Sydney share their DST dates), so a rung between 16:30 and 16:40 is refused
+# as "session running" and the next rung retries -- harmless.
 # crypto trades 24/7 and rides the US slot ungated. `market` is the payload the
-# gate reads (`<market>_vivek.json`'s generated_at).
+# gate reads (`<market>_vivek.json`'s generated_at) and the session it waits on.
+# The ASX gate IS BAR_FINAL["asx"] (derived, REFINE200 #128); the US gate's
+# 16:05 is the one deliberate exception to BAR_FINAL (reason above).
 MORNING_PLAYS_SLOT_GATE = {
-    "asx": {"market": "asx",    "tz": "Australia/Sydney", "hour": 16, "minute": 12},
+    "asx": {"market": "asx", "tz": BAR_FINAL["asx"][0],
+            "hour": BAR_FINAL["asx"][1], "minute": BAR_FINAL["asx"][2]},
     "us":  {"market": "nasdaq", "tz": "America/New_York", "hour": 16, "minute": 5},
 }
+# IGNITION's backstop gate (scripts/ignition_due.py, stdlib only): {market:
+# (timezone, hour, minute)} at which that market's daily bar is FINAL in the
+# free feed, read in the market's own calendar so DST cannot move it. A
+# backstop cron is skipped once the file on the branch was generated at/after
+# the latest weekday instance of it. DERIVED, never retyped: it IS BAR_FINAL
+# (ASX 16:40 Sydney, NASDAQ 16:30 New York). Crypto has no entry: its bar is
+# final at 00:00 UTC and ignition.yml gates on the UTC date instead.
+IGNITION_BAR_FINAL = dict(BAR_FINAL)
+# The same table under a lens-neutral name, for readers that are fenced off
+# the Ignition lens's own tokens (tests/test_ignition_fences.py): the MOMENTUM
+# due gate and forming-bar drop and the Specs nightly's forming-bar drop
+# (REFINE200 #133/#173/#180). It is BAR_FINAL -- one table, never retyped.
+DAILY_BAR_FINAL = BAR_FINAL
+# The IGNITION markets whose screen calls today's stock bar FORMING until its
+# IGNITION_BAR_FINAL above, not until the VIVEK_JOURNAL_SESSION close: the
+# closing cross and the delayed feed's volume land after the bell, so a run
+# reading its clock between 16:00 and 16:30 New York (a GitHub cron hours late,
+# a manual dispatch, a kick) would otherwise screen a not-final bar as
+# COMPLETED -- a break on partial volume published as confirmed. NASDAQ only:
+# moving the ASX to its 16:40 moves pinned ASX tests and its 06:24 UTC primary
+# (16:24 AEST precedes that close) -- a separate change.
+IGNITION_FORMING_UNTIL_BAR_FINAL = ("nasdaq",)
+# A STALE TAPE (REFINE200 #134): a stock market's screen stamped after the
+# close is still not "done" for scripts/ignition_due.py when more than this
+# share of its screened names sit a bar behind the newest one any name has
+# (`summary.bars.lagging` / `screened`), so its backstop crons re-screen. The
+# page flags the same file STALE at the same share (ignition.js
+# LAG_STALE_SHARE, pinned to this). Measured: a 20:30 New York NASDAQ screen
+# had 1,302 of 1,427 names (91%) on the previous session's bar and read as
+# done. Below the share, lagging names are context (Yahoo serves thin names
+# late), not a re-run.
+IGNITION_LAG_RERUN_SHARE = 0.5
+# THE EVIDENCE VERDICT the panel prints beside the decision number (REFINE200
+# #46), read off the replay's own versus.random_timing: P(no edge) over this,
+# or a difference at or under zero, reads "no edge shown"; a 90% band that
+# still reaches zero reads "not proven". DISPLAY ONLY -- nothing filters on it;
+# ignition.js NO_EDGE_P mirrors it (pinned by tests/test_ignition_frontend.py).
+# At the 2026-10 replays: NASDAQ P 0.236 -> no edge shown; crypto P 0.062 with
+# a band from -0.06R -> not proven; the ASX P 0.009, band above zero -> neither.
+IGNITION_NO_EDGE_P = 0.2
 # {Melbourne local HOUR -> markets} for the legacy hour-gate fallback used only
 # by a bare local run (no --slot, no --force); the scheduled path uses --slot.
 MORNING_PLAYS_SCHEDULE = {v["hour"]: v["markets"] for v in MORNING_PLAYS_SLOTS.values()}
@@ -1555,6 +1867,8 @@ MORNING_PLAYS_UA = "vivek5-morning/1.0"   # named UA — Discord 403s Python's d
 # whose newest scan is older than this many hours.
 MORNING_PLAYS_STALE_H = 20.0
 # Absolute URL of the deployed app, for a "open the SCAN page" link in the
-# digest. Empty = omit the link (a dead link is worse than none). The owner
-# can set their Cloudflare Pages URL here.
-MORNING_PLAYS_APP_URL = ""
+# digest. Empty = omit the link (a dead link is worse than none). It IS
+# SITE_URL (REFINE200 #129): it sat empty for a month while SITE_URL held the
+# address, so the digest never carried its link. A custom domain is then a
+# one-line change to SITE_URL.
+MORNING_PLAYS_APP_URL = SITE_URL
