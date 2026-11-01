@@ -1,26 +1,26 @@
 # PhaseMap backtest — NASDAQ
 
-Generated 2026-10-25 · ruleset v1.3.1 · universe 1425 tickers · history period 5y · zero-lookahead replay through the production SetupEngine.
+Generated 2026-11-01 · ruleset v1.3.1 · universe 1427 tickers · history period 5y · zero-lookahead replay through the production SetupEngine.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** this run used the yfinance prototype feed, which has NO delisted-stock history. Every statistic below is computed on survivors only and is therefore optimistic. Do not publish these numbers; re-run on a provider with delisted data (Norgate/EODHD) first.
 
 A **signal** is a displacement confirmation (state DISPLACED). Forward returns are measured from the FILL, counted from the session it filled: the entry-zone midpoint when price traded back through it within 20 sessions, otherwise the signal-bar close (a gapper nobody could buy at the mid). "T1 hit" means the first target zone was CONSUMED within 20 sessions before any hard invalidation.
 
-Tier = the tier a card wears from its first RUNNING session. Anchor context (the A+ condition) is evaluated from the bar after displacement, so the displacement-day card shows A or Watch: 0 of 1455 A+ signals showed A+ on that day's card.
+Tier = the tier a card wears from its first RUNNING session. Anchor context (the A+ condition) is evaluated from the bar after displacement, so the displacement-day card shows A or Watch: 0 of 1461 A+ signals showed A+ on that day's card.
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | T1 hit | bars→T1 | MAE |
 |---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 12499 | +0.7% | +1.6% | +2.0% | 40.7% | 9.6 | -8.6% |
-| tier A+ | 1455 | +0.4% | +1.1% | +1.0% | 39.3% | 9.6 | -8.4% |
-| tier A | 6978 | +0.7% | +1.5% | +2.0% | 40.3% | 9.9 | -8.7% |
-| long | 5846 | +1.1% | +2.4% | +3.8% | 43.0% | 9.3 | -7.9% |
-| short | 6653 | +0.4% | +0.8% | +0.4% | 38.6% | 9.9 | -9.2% |
-| liquid | 11523 | +0.7% | +1.6% | +2.0% | 41.4% | 9.6 | -8.7% |
-| illiquid | 976 | +0.5% | +0.8% | +1.4% | 31.6% | 9.7 | -7.6% |
-| price >= $1 | 12453 | +0.7% | +1.5% | +2.0% | 40.6% | 9.6 | -8.5% |
+| ALL SIGNALS | 12552 | +0.7% | +1.5% | +2.0% | 40.7% | 9.6 | -8.6% |
+| tier A+ | 1461 | +0.4% | +1.0% | +1.1% | 39.9% | 9.7 | -8.5% |
+| tier A | 6987 | +0.6% | +1.5% | +1.9% | 40.3% | 9.9 | -8.8% |
+| long | 5872 | +1.0% | +2.4% | +3.8% | 43.1% | 9.2 | -7.9% |
+| short | 6680 | +0.4% | +0.8% | +0.4% | 38.6% | 9.9 | -9.2% |
+| liquid | 11581 | +0.7% | +1.6% | +2.0% | 41.5% | 9.6 | -8.7% |
+| illiquid | 971 | +0.5% | +0.8% | +1.5% | 31.1% | 9.5 | -7.6% |
+| price >= $1 | 12506 | +0.7% | +1.5% | +2.0% | 40.7% | 9.6 | -8.6% |
 | cents (<$1) | 46 | +5.4% | +3.7% | +8.4% | 45.7% | 7.0 | -21.2% |
-| in-sample | 9008 | +0.9% | +1.9% | +2.4% | 41.8% | 9.7 | -8.3% |
-| out-of-sample | 3491 | +0.4% | +0.7% | +0.9% | 37.6% | 9.3 | -9.2% |
+| in-sample | 9000 | +0.9% | +1.9% | +2.4% | 41.8% | 9.7 | -8.3% |
+| out-of-sample | 3552 | +0.3% | +0.7% | +0.9% | 38.0% | 9.2 | -9.3% |
 
 ## R model — what trading the signals earned
 
@@ -28,34 +28,34 @@ Entry = signal close; risk = entry to the INVALIDATION_HARD floor; house fill: t
 
 | cohort | trades | win | R won | R lost | net R | per trade | PF | net $ |
 |---|---|---|---|---|---|---|---|---|
-| **long A+/A (headline)** | 4002 | 54.0% | +1680.1R | -1597.0R | **+83.1R** | +0.021R | 1.05 | $+19,118 |
-| long A+/A, stop at the worst print | 4002 | 54.0% | +1680.1R | -1893.9R | **-213.8R** | -0.053R | 0.89 | $-7,154 |
-| long A+/A, engine-native close exits | 4002 | 56.7% | +1780.8R | -1637.7R | **+143.1R** | +0.036R | 1.09 | $+25,499 |
-| long A+/A, liquid only | 3675 | 54.8% | +1539.5R | -1439.8R | **+99.7R** | +0.027R | 1.07 | $+20,134 |
-| short A+/A | 4388 | 49.2% | +1671.9R | -2067.1R | **-395.2R** | -0.090R | 0.81 | $-40,831 |
-| bullish A+ | 682 | 50.4% | +267.7R | -295.6R | **-27.9R** | -0.041R | 0.91 | $-621 |
-| bullish A | 3320 | 54.8% | +1412.4R | -1301.4R | **+111.0R** | +0.033R | 1.09 | $+19,739 |
-| bullish Watch | 1826 | 56.2% | +790.2R | -716.7R | **+73.5R** | +0.040R | 1.1 | $+13,562 |
-| bearish A+ | 772 | 46.1% | +256.2R | -368.4R | **-112.2R** | -0.145R | 0.7 | $-8,742 |
-| bearish A | 3616 | 49.8% | +1415.7R | -1698.7R | **-283.0R** | -0.078R | 0.83 | $-32,088 |
-| bearish Watch | 2217 | 49.2% | +847.6R | -1012.7R | **-165.1R** | -0.074R | 0.84 | $-15,396 |
-| exit: t1 | 5300 | 100.0% | +4421.9R | 0.0R | **+4421.9R** | +0.834R | — | $+483,034 |
-| exit: stop | 4452 | 0.0% | +0.0R | -4795.9R | **-4795.9R** | -1.077R | 0.0 | $-484,514 |
-| exit: engine_end | 2549 | 42.6% | +549.8R | -563.7R | **-13.9R** | -0.005R | 0.98 | $-20,661 |
-| exit: eod | 132 | 38.6% | +18.1R | -34.0R | **-15.8R** | -0.120R | 0.53 | $-1,405 |
+| **long A+/A (headline)** | 4020 | 53.9% | +1687.6R | -1604.4R | **+83.2R** | +0.021R | 1.05 | $+19,278 |
+| long A+/A, stop at the worst print | 4020 | 53.9% | +1687.6R | -1903.2R | **-215.6R** | -0.054R | 0.89 | $-7,068 |
+| long A+/A, engine-native close exits | 4020 | 56.4% | +1787.7R | -1648.5R | **+139.2R** | +0.035R | 1.08 | $+25,448 |
+| long A+/A, liquid only | 3695 | 54.7% | +1556.7R | -1443.1R | **+113.7R** | +0.031R | 1.08 | $+20,949 |
+| short A+/A | 4385 | 49.2% | +1665.0R | -2072.5R | **-407.5R** | -0.093R | 0.8 | $-42,283 |
+| bullish A+ | 681 | 50.7% | +269.8R | -292.6R | **-22.8R** | -0.033R | 0.92 | $-320 |
+| bullish A | 3339 | 54.5% | +1417.8R | -1311.8R | **+105.9R** | +0.032R | 1.08 | $+19,598 |
+| bullish Watch | 1839 | 56.4% | +796.2R | -720.8R | **+75.4R** | +0.041R | 1.1 | $+13,583 |
+| bearish A+ | 779 | 46.7% | +266.1R | -375.6R | **-109.5R** | -0.141R | 0.71 | $-8,539 |
+| bearish A | 3606 | 49.7% | +1398.9R | -1696.9R | **-298.0R** | -0.083R | 0.82 | $-33,744 |
+| bearish Watch | 2244 | 48.8% | +849.4R | -1031.6R | **-182.2R** | -0.081R | 0.82 | $-16,005 |
+| exit: t1 | 5326 | 100.0% | +4431.2R | 0.0R | **+4431.2R** | +0.832R | — | $+485,085 |
+| exit: stop | 4479 | 0.0% | +0.0R | -4831.9R | **-4831.9R** | -1.079R | 0.0 | $-488,598 |
+| exit: engine_end | 2553 | 42.4% | +550.7R | -568.8R | **-18.1R** | -0.007R | 0.97 | $-20,436 |
+| exit: eod | 130 | 36.2% | +16.3R | -28.7R | **-12.4R** | -0.095R | 0.57 | $-1,478 |
 
-Not traded: signal on the last bar 14, stop_too_tight 52
+Not traded: signal on the last bar 13, stop_too_tight 51
 
 ## Baselines (same tickers, same window)
-- Random entry, LONG only (11597 samples, seeded) — compare with the **long** cohort: fwd 5: +0.6% · fwd 10: +1.1% · fwd 20: +2.0%
-- Random entry, signed to the signals' own mix (4944 long / 6653 short) — compare with **ALL SIGNALS**, which pools longs with direction-signed shorts: fwd 5: -0.1% · fwd 10: -0.1% · fwd 20: -0.5%
-- Buy & hold (1328 tickers): +86.0% mean total return over the replay window
+- Random entry, LONG only (11649 samples, seeded) — compare with the **long** cohort: fwd 5: +0.8% · fwd 10: +1.1% · fwd 20: +2.5%
+- Random entry, signed to the signals' own mix (4969 long / 6680 short) — compare with **ALL SIGNALS**, which pools longs with direction-signed shorts: fwd 5: -0.5% · fwd 10: -0.6% · fwd 20: -1.1%
+- Buy & hold (1328 tickers): +78.2% mean total return over the replay window
 
 ## The 50% rule, measured
-- Signals that stalled (momentum zone touched): 11275
-- Saved capital (hard floor broke first after the stall): 3419
-- Cut a winner (T1 was still consumed first): 4626
-- Neither within the tracking window: 3230
+- Signals that stalled (momentum zone touched): 11343
+- Saved capital (hard floor broke first after the stall): 3439
+- Cut a winner (T1 was still consumed first): 4661
+- Neither within the tracking window: 3243
 
 In-sample = signals before 2025-07-01; out-of-sample = after. If a cohort doesn't beat the baselines out-of-sample, the spec says cut it and note it here.
 
