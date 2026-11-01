@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-01T14:25:42Z",
+  "generated_at": "2026-11-01T15:25:27Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -86,25 +86,25 @@
   "closed_total": 160,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
-    "generated_at": "2026-10-01T15:15:04Z",
+    "generated_at": "2026-11-01T14:52:45Z",
     "by_entry_type": {
       "reclaim": {
-        "n": 1031,
-        "expectancy_r": -0.027,
-        "win_rate": 47.5,
-        "profit_factor": 0.95
+        "n": 983,
+        "expectancy_r": 0.116,
+        "win_rate": 49.8,
+        "profit_factor": 1.21
       },
       "retest": {
-        "n": 648,
-        "expectancy_r": -0.035,
-        "win_rate": 45.7,
-        "profit_factor": 0.93
+        "n": 662,
+        "expectancy_r": -0.169,
+        "win_rate": 44.9,
+        "profit_factor": 0.72
       },
       "break": {
-        "n": 217,
-        "expectancy_r": 0.057,
-        "win_rate": 53.0,
-        "profit_factor": 1.16
+        "n": 231,
+        "expectancy_r": 0.012,
+        "win_rate": 51.9,
+        "profit_factor": 1.03
       }
     }
   },
