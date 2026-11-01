@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-01T05:57:20+00:00",
+  "generated_at": "2026-11-01T10:48:47+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-10-31",
@@ -49,8 +49,8 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 174,
-    "screened": 139,
+    "downloaded": 175,
+    "screened": 140,
     "skipped": {
       "short history": 28,
       "stale frame": 7
@@ -67,23 +67,22 @@
       "completed_last": "2026-10-31",
       "raw_last": "2026-11-01",
       "expected_completed": "2026-10-31",
-      "lagging": 30,
-      "screened": 167,
+      "lagging": 0,
+      "screened": 168,
       "completed_dist": {
-        "2026-10-31": 137,
-        "2026-10-30": 30,
+        "2026-10-31": 168,
         "2026-10-25": 7
       },
       "raw_dist": {
-        "2026-11-01": 167,
+        "2026-11-01": 168,
         "2026-10-25": 7
       },
-      "rows_lagging": 2
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 118,
+        "binance_vision": 119,
         "yahoo": 30,
         "coinbase": 19
       },
@@ -140,7 +139,6 @@
         "OZO",
         "PC0000023",
         "PC0000033",
-        "PC0000085",
         "PC0000097",
         "PEARL",
         "PI",
@@ -152,7 +150,8 @@
         "SHFL",
         "SN51",
         "UB",
-        "VSN"
+        "VSN",
+        "WBT"
       ],
       "yahoo_fallback": 30,
       "identity_rejected": {
@@ -210,9 +209,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 167,
+      "fresh": 168,
       "reused": 7,
-      "merged": 174,
+      "merged": 175,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 3
@@ -221,7 +220,7 @@
       "rows": 10,
       "have": 10
     },
-    "elapsed_s": 138.0
+    "elapsed_s": 123.2
   },
   "results": [
     {
@@ -247,8 +246,8 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 0.07584,
-      "mcap": 11864355653.0,
+      "price": 0.07582,
+      "mcap": 11858684648.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -275,8 +274,8 @@
       "breakout_level": 1.6581,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 1.2555,
-      "mcap": 79445128627.0,
+      "price": 1.2575,
+      "mcap": 79573635198.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -287,24 +286,24 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.75,
-        "atr_pctl": 41.4,
+        "ribbon_pct": 5.08,
+        "atr_pctl": 36.3,
         "vol_pctl": 11.5,
-        "drawdown_pct": 78.8,
+        "drawdown_pct": 79.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-24"
       },
       "base": {
         "high": 2.18014312,
-        "low": 1.83178103,
+        "low": 1.693174,
         "bars": 60
       },
       "breakout_level": 2.18014312,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 1.78272557,
-      "mcap": 1248756293.0,
+      "last_bar": "2026-10-31",
+      "price": 1.78541028,
+      "mcap": 1250825346.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -331,8 +330,8 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 4.71e-06,
-      "mcap": 2771095665.0,
+      "price": 4.7e-06,
+      "mcap": 2771811168.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -359,36 +358,8 @@
       "breakout_level": 3.092e-05,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 2.343e-05,
-      "mcap": 225503116.0,
-      "mcap_asof": "2026-11-01",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "ZBCN",
-      "name": "Zebec Network",
-      "yf": "ZBCN-USD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.53,
-        "atr_pctl": 26.7,
-        "vol_pctl": 30.1,
-        "drawdown_pct": 94.5,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-25"
-      },
-      "base": {
-        "high": 0.002912,
-        "low": 0.001678,
-        "bars": 60
-      },
-      "breakout_level": 0.002912,
-      "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 0.00199897,
-      "mcap": 199802877.0,
+      "price": 2.335e-05,
+      "mcap": 224873125.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -415,8 +386,8 @@
       "breakout_level": 10.42,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 7.16,
-      "mcap": 1137755238.0,
+      "price": 7.18,
+      "mcap": 1139259467.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -443,8 +414,36 @@
       "breakout_level": 0.011163,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 0.0073,
-      "mcap": 458653456.0,
+      "price": 0.007318,
+      "mcap": 458950033.0,
+      "mcap_asof": "2026-11-01",
+      "mcap_src": "coingecko"
+    },
+    {
+      "symbol": "ZBCN",
+      "name": "Zebec Network",
+      "yf": "ZBCN-USD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 12.7,
+        "atr_pctl": 25.3,
+        "vol_pctl": 30.4,
+        "drawdown_pct": 94.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-25"
+      },
+      "base": {
+        "high": 0.002912,
+        "low": 0.001678,
+        "bars": 60
+      },
+      "breakout_level": 0.002912,
+      "provisional": false,
+      "last_bar": "2026-10-31",
+      "price": 0.00202637,
+      "mcap": 202441282.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -472,7 +471,7 @@
       "provisional": false,
       "last_bar": "2026-10-31",
       "price": 0.0502,
-      "mcap": 1595958052.0,
+      "mcap": 1592826075.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     },
@@ -499,8 +498,8 @@
       "breakout_level": 0.8861,
       "provisional": false,
       "last_bar": "2026-10-31",
-      "price": 0.5973,
-      "mcap": 392833180.0,
+      "price": 0.5972,
+      "mcap": 392939114.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "coingecko"
     }
