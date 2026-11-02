@@ -59,11 +59,29 @@ HC41 = {
     "hands_off": "2026-10-14",
 }
 
+# The hc4-2 cycle (owner approved items 2, 3, 4, 6 and 7 of the hc4-2
+# proposal on 2026-11-02). Same grades, cells, levels and time stop as hc4-1;
+# the changes are in how a row is graded and filled (see the doc). Frozen here
+# for the same reason HC41 is; the test pins it to config while it runs.
+# d14_*: the day-14 what-if (PR-16) -- the stamp day and the best-R floor.
+HC42 = {
+    "tag": "hc4-2",
+    "grades": ("A+", "A"),
+    "cells": {"1W": ("reclaim", "break"), "3D": ("reclaim",), "1D": ("break",)},
+    "levels": ("weekly", "3d"),
+    "max_hold_days": 28,
+    "start": "2026-11-02",
+    "d14_days": 14,
+    "d14_mfe_floor": 0.5,
+}
+
 # FROZEN 2026-10-14. kind:
 #   "live"    -- judged on hc4-1 rows closed by the rules
 #   "replay"  -- judged on the decision_replay output (not committed yet)
 #   "rosters" -- judged on data/edge_rosters.json forward returns
 #   "forward" -- judged on an Ignition backtest file's forward bucket
+#   "shadow"  -- judged on the book's day-14 stamps (hc4-2 on): the what-if
+#                cut set beside the rules' own result, per market
 # A live line is read once, on the day the cohort's min_n-th rules close
 # lands, over every close up to that day. It trips when the average R is <=
 # line (and, where `versus` is set, also <= the versus cohort's average over
@@ -102,6 +120,43 @@ PREREG = (
     {"id": "PR-8", "item": "#47", "kind": "forward", "min_n": 30,
      "action": "drop Ignition's 3x volume rule if, on >= 30 forward trades "
                "in a market, the no-volume-rule variant does at least as well"},
+    # -- hc4-2, FROZEN 2026-11-02 (owner approved item 7: the draft in the
+    # hc4-2 proposal, written before the cycle's first entry). An entry with
+    # no "cycle" key judges hc4-1; these judge hc4-2's rules closes. "shadow"
+    # is judged on the day-14 stamps (`d14`) the book writes from hc4-2 on.
+    {"id": "PR-9", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "all",
+     "min_n": 40, "line": -0.25, "pass": 0.00,
+     "then": {"min_n": 80, "line": -0.25},
+     "action": "owner review of the whole rule set before any further change"},
+    {"id": "PR-10", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W reclaim",
+     "min_n": 20, "line": -0.30, "pass": 0.00,
+     "then": {"min_n": 40, "line": -0.15},
+     "action": "drop 1W reclaim from the entry cells for new entries"},
+    {"id": "PR-11", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W break",
+     "min_n": 20, "line": -0.30, "pass": 0.00,
+     "then": {"min_n": 40, "line": -0.15},
+     "action": "drop 1W break from the entry cells for new entries"},
+    {"id": "PR-12", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:3D reclaim",
+     "min_n": 20, "line": -0.30, "pass": 0.00,
+     "then": {"min_n": 40, "line": -0.15},
+     "action": "drop 3D reclaim from the entry cells for new entries"},
+    {"id": "PR-13", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1D break",
+     "min_n": 20, "line": -0.30, "pass": 0.00,
+     "then": {"min_n": 40, "line": -0.15},
+     "action": "drop 1D break from the entry cells for new entries"},
+    {"id": "PR-14", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "market:asx",
+     "versus": "market:nasdaq", "gap": 0.30, "min_n": 15, "line": -0.30,
+     "then": {"min_n": 30, "line": -0.30},
+     "action": "stop NEW ASX entries; open ASX positions run to their exits"},
+    {"id": "PR-15", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "grade:A",
+     "versus": "grade:A+", "gap": 0.30, "min_n": 15, "line": -0.30,
+     "then": {"min_n": 30, "line": -0.30},
+     "action": "bot back to A+ only"},
+    {"id": "PR-16", "item": "#4", "cycle": "hc4-2", "kind": "shadow", "min_n": 40,
+     "min_gain": 0.05, "day": 14, "floor": 0.5,
+     "action": "propose a day-14 cut for the next cycle (exit a pre-TP1 trade whose "
+               "best R by day 14 is under +0.5R), if it beats the rules by >= "
+               "+0.05R/trade in ASX and NASDAQ separately"},
 )
 
 
@@ -190,8 +245,17 @@ def group(rows, key):
     return dict(out)
 
 
+def cycle_rules_closes(closed, tag):
+    return [r for r in closed if r.get("cycle") == tag and is_rules(r)]
+
+
 def hc41_rules_closes(closed):
-    return [r for r in closed if r.get("cycle") == HC41["tag"] and is_rules(r)]
+    return cycle_rules_closes(closed, HC41["tag"])
+
+
+def cycle_of(pr):
+    """The cycle a register entry judges: hc4-1 unless it names one."""
+    return pr.get("cycle", HC41["tag"])
 
 
 def select(rows, spec):
@@ -247,7 +311,7 @@ def _trips(pr, pool, rows, cutoff, line):
 def evaluate(pr, closed):
     """Verdict for one live PREREG entry: NOT DUE, TRIPPED, CLEAR or HOLD
     (between the lines at the first read, waiting for the second)."""
-    pool = hc41_rules_closes(closed)
+    pool = cycle_rules_closes(closed, cycle_of(pr))
     rows = select(pool, pr["cohort"])
     now = stats(rows)
     out = {"id": pr["id"], "n": now["n"], "avg": now["avg"], "min_n": pr["min_n"]}
@@ -277,6 +341,51 @@ def evaluate(pr, closed):
         out.update(read_on=cutoff2, read_n=s2["n"], read_avg=s2["avg"],
                    versus_avg=vs2["avg"] if vs2 else None)
         out["verdict"] = "TRIPPED" if tripped2 else "CLEAR"
+    return out
+
+
+SHADOW_MARKETS = ("asx", "nasdaq")
+
+
+def whatif_d14(row, floor):
+    """The day-14 cut's R for one closed row (hc4-2 item 4). The cut applies
+    when the book stamped the row at day 14 (`d14`), TP1 had not been hit by
+    then, and the best R so far was under `floor`: it exits at the stamp's R
+    less the row's own round-trip cost (`cost_r`). Every other row keeps the
+    rules' result -- a trade stopped before day 14 is not a trade the cut
+    would have touched."""
+    d = row.get("d14")
+    if (isinstance(d, dict) and not d.get("tp1_hit")
+            and isinstance(d.get("mfe_r"), (int, float)) and d["mfe_r"] < floor
+            and isinstance(d.get("r"), (int, float))):
+        return round(d["r"] - float(row.get("cost_r") or 0), 4)
+    return r_of(row)
+
+
+def evaluate_shadow(pr, closed):
+    """Verdict for a "shadow" entry (PR-16): read ONCE on the day the cycle's
+    min_n-th rules close lands, over every rules close up to that day. It
+    trips -- the cut is proposed -- when the cut's average beats the rules'
+    by min_gain or more in the ASX and NASDAQ separately; otherwise CLEAR."""
+    pool = cycle_rules_closes(closed, cycle_of(pr))
+    out = {"id": pr["id"], "n": len(pool), "min_n": pr["min_n"]}
+    first = _read(pool, pr["min_n"])
+    if first is None:
+        out["verdict"] = "NOT DUE"
+        return out
+    read, cutoff = first
+    by = {}
+    for m in SHADOW_MARKETS:
+        rows = [r for r in read if r.get("market") == m]
+        rules = stats(rows)
+        cut = stats(rows, value=lambda r: whatif_d14(r, pr["floor"]))
+        gain = (round(cut["avg"] - rules["avg"], 3)
+                if rules["avg"] is not None and cut["avg"] is not None else None)
+        by[m] = {"n": rules["n"], "rules_avg": rules["avg"], "cut_avg": cut["avg"], "gain": gain}
+    passed = all(by[m]["gain"] is not None and by[m]["gain"] >= pr["min_gain"]
+                 for m in SHADOW_MARKETS)
+    out.update(read_on=cutoff, read_n=len(read), by_market=by,
+               verdict="TRIPPED" if passed else "CLEAR")
     return out
 
 
@@ -624,8 +733,25 @@ def main(argv=None, root=ROOT, out=sys.stdout):
         w(f"  {d} {n:2}  -> {cum} hc4-1 closes if nothing stops out first")
 
     w("")
-    w("## Pre-registered checkpoints (frozen 2026-10-14)")
+    w(f"## hc4-2 (rules closes only; the cycle since {HC42['start']})")
+    h2 = [r for r in closed + opn if r.get("cycle") == HC42["tag"]]
+    h2c = cycle_rules_closes(closed, HC42["tag"])
+    w(f"rows {len(h2)}: closed {sum(1 for r in h2 if r.get('status') == 'closed')} "
+      f"(rules {len(h2c)}), open {sum(1 for r in h2 if r.get('status') == 'open')}")
+    for label, key in (("cell", cell), ("market", lambda r: r.get("market"))):
+        g = group(h2, key)
+        for k in sorted(g, key=str):
+            o = [r for r in g[k] if r.get("status") == "open"]
+            c = [r for r in g[k] if r.get("status") == "closed" and is_rules(r)]
+            w(f"  {label:6} {str(k):12} open {len(o):2} | closed {fmt(stats(c))}")
+    stamped = [r for r in h2 if isinstance(r.get("d14"), dict)]
+    w(f"day-14 stamps (#4, report only): {len(stamped)} rows; on closed rules closes the "
+      f"cut would apply to {sum(1 for r in h2c if whatif_d14(r, HC42['d14_mfe_floor']) != r_of(r))}")
+
+    w("")
+    w("## Pre-registered checkpoints (hc4-1 frozen 2026-10-14, hc4-2 frozen 2026-11-02)")
     for pr in PREREG:
+        tag = cycle_of(pr)
         if pr["kind"] == "live":
             v = evaluate(pr, closed)
             avg = f"{v['avg']:+.3f}R" if v["avg"] is not None else "-"
@@ -633,14 +759,24 @@ def main(argv=None, root=ROOT, out=sys.stdout):
             if v.get("read_on"):
                 vs = f" vs {v['versus_avg']:+.3f}R" if v.get("versus_avg") is not None else ""
                 read = f"  read {v['read_on']}: n={v['read_n']} avg {v['read_avg']:+.3f}R{vs}"
-            w(f"  {pr['id']} {pr['item']:5} {pr['cohort']:16} n={v['n']}/{v['min_n']} "
+            w(f"  {pr['id']:5} {tag} {pr['item']:5} {pr['cohort']:16} n={v['n']}/{v['min_n']} "
               f"avg {avg}  line {pr['line']:+.2f}R{read}  -> {v['verdict']}")
+        elif pr["kind"] == "shadow":
+            v = evaluate_shadow(pr, closed)
+            read = ""
+            if v.get("read_on"):
+                read = "  read " + v["read_on"] + ": " + "; ".join(
+                    f"{m} n={b['n']} rules {b['rules_avg'] if b['rules_avg'] is not None else '-'}"
+                    f" cut {b['cut_avg'] if b['cut_avg'] is not None else '-'}"
+                    for m, b in v["by_market"].items())
+            w(f"  {pr['id']:5} {tag} {pr['item']:5} day-14 cut (shadow) n={v['n']}/{v['min_n']}"
+              f"{read}  -> {v['verdict']}")
         else:
-            w(f"  {pr['id']} {pr['item']:9} {pr['kind']}: {pr['action']}")
-    w("  what-if (open rows close at today's marks on their time-stop day):")
+            w(f"  {pr['id']:5} {tag} {pr['item']:9} {pr['kind']}: {pr['action']}")
+    w("  what-if, hc4-1 (open rows close at today's marks on their time-stop day):")
     proj = closed + projected_closes(opn)
     for pr in PREREG:
-        if pr["kind"] == "live":
+        if pr["kind"] == "live" and cycle_of(pr) == HC41["tag"]:
             v = evaluate(pr, proj)
             read = (f"read {v['read_on']}: n={v['read_n']} avg {v['read_avg']:+.3f}R"
                     if v.get("read_on") else f"n={v['n']}/{v['min_n']}")

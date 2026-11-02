@@ -40,8 +40,9 @@
 .ct-sym { font: 700 18px/1 var(--mono); letter-spacing: 0.02em; color: var(--text); }
 .ct-price { font: 600 16px/1 var(--mono); color: var(--text); }
 .ct-grade { font: 700 14px/1 var(--mono); }
-.ct-hiconv { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: #1a1205;
-  background: #ffb020; padding: 5px 9px; border-radius: 6px; white-space: nowrap; }
+/* PR-6 (owner, 2026-11-02): a plain tag, no longer a gold badge. */
+.ct-hiconv { font: 700 11px/1 var(--sans); letter-spacing: .04em; color: var(--text-2);
+  background: var(--fill); border: 1px solid var(--border); padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
 .ct-fundwarn { font: 800 11px/1 var(--sans); letter-spacing: .04em; color: var(--red-ink);
   background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
   padding: 4px 9px; border-radius: 6px; white-space: nowrap; }

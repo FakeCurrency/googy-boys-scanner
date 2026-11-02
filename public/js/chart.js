@@ -1997,8 +1997,10 @@
       const cells = convictionCells(d);
       hc.hidden = !cells.length;
       if (cells.length) {
-        hc.textContent = `${"🎯".repeat(Math.min(cells.length, 3))} HIGH CONVICTION`;
-        hc.title = `High conviction: ${cells.join(" + ")} — armed A/A+ in the backtest's best cells; one 🎯 per cell`;
+        // PR-6 (owner, 2026-11-02): a plain tag, no longer a gold badge -- see
+        // app.js hiconvBadge for the read that demoted it.
+        hc.textContent = `BOT CELL${cells.length > 1 ? ` ×${cells.length}` : ""}`;
+        hc.title = `Bot cell: ${cells.join(" + ")} — armed A/A+ in one of the bot's four entry cells`;
       }
     }
     $("#ct-chips").innerHTML = (d.chips || [])

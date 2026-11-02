@@ -55,7 +55,11 @@ vm.runInContext(
   + slice("function prSelect(rows, spec) {", "\n  }") + "\n"
   + slice("function prRead(rows, n) {", "\n  }") + "\n"
   + slice("function prTrips(pr, pool, rows, cutoff, line) {", "\n  }") + "\n"
+  + slice("const prCycle = ", ";\n") + "\n"
   + slice("function prEvaluate(pr, closed) {", "\n  }") + "\n"
+  + slice("const SHADOW_MARKETS = ", ";\n") + "\n"
+  + slice("function prWhatifD14(r, floor) {", "\n  }") + "\n"
+  + slice("function prEvaluateShadow(pr, closed) {", "\n  }") + "\n"
   // items 8/9 + the chart's series
   + "let MAX_HOLD_DAYS = 28;\n"
   + slice("const MARKET_TZ =", ";\n") + "\n"
@@ -76,15 +80,19 @@ vm.runInContext(
   + slice("function rulesHandSeries(closed) {", "\n  }") + "\n"
   + slice("function cycleStarts(d) {", "\n  }") + "\n"
   + slice("function rulesHandByCycle(closed) {", "\n  }") + "\n"
-  + "this.api = { PREREG, PREREG_COHORT, pyRound, prEvaluate, markOf, roomOf, timeStopOf, marketDay,"
+  + "this.api = { PREREG, PREREG_COHORT, pyRound, prEvaluate, prEvaluateShadow, markOf, roomOf, timeStopOf, marketDay,"
   + " rulesHandSeries, cycleStarts, rulesHandByCycle, setHold: (n) => { MAX_HOLD_DAYS = n; } };",
   ctx);
 const J = ctx.api;
 
-// Python's keys only: the mirror may add `second` (which read it was) for the
-// strip's wording, nothing else.
-const PY_KEYS = ["id", "n", "avg", "min_n", "verdict", "read_on", "read_n", "read_avg", "versus_avg"];
+// Every key decision_pack returns must match; the mirror may add `second`
+// (which read it was) for the strip's wording, nothing else.
 const same = (a, b) => (a === b) || (a == null && b == null);   // 0 === -0 on purpose
+const deepSame = (a, b) => (a && typeof a === "object" && b && typeof b === "object")
+  ? Object.keys(b).every((k) => deepSame(a[k], b[k])) && Object.keys(a).every((k) => k in b)
+  : same(a, b);
+const judgedEntries = () => J.PREREG.filter((p) => p.kind === "live" || p.kind === "shadow");
+const runJs = (pr, closed) => (pr.kind === "shadow" ? J.prEvaluateShadow(pr, closed) : J.prEvaluate(pr, closed));
 
 // ── 6. the checkpoints ───────────────────────────────────────────────────────
 suite("6 · prEvaluate == decision_pack.evaluate on every shared case");
@@ -95,23 +103,24 @@ test("pyRound is Python's round() on every rounding case", () => {
   }
 });
 
-test("the shared cases are all present and every live checkpoint is covered", () => {
-  assert.ok(CASES.cases.length >= 10, "the shared case file shrank");
-  const live = J.PREREG.filter((p) => p.kind === "live").map((p) => p.id);
-  assert.equal(live.join(","), "PR-0,PR-1,PR-2,PR-3");
-  for (const c of CASES.cases) for (const id of live) assert.ok(c.expect[id], `${c.name}: no ${id}`);
+test("the shared cases are all present and every judged checkpoint is covered", () => {
+  assert.ok(CASES.cases.length >= 20, "the shared case file shrank");
+  const ids = judgedEntries().map((p) => p.id);
+  assert.equal(ids.join(","), "PR-0,PR-1,PR-2,PR-3,PR-9,PR-10,PR-11,PR-12,PR-13,PR-14,PR-15,PR-16");
+  for (const c of CASES.cases) for (const id of ids) assert.ok(c.expect[id], `${c.name}: no ${id}`);
+  assert.ok(CASES.cases.some((c) => c.expect["PR-16"].verdict === "TRIPPED"), "no case trips the day-14 shadow");
 });
 
 for (const c of CASES.cases) {
   test(`case: ${c.name}`, () => {
-    for (const pr of J.PREREG.filter((p) => p.kind === "live")) {
-      const got = J.prEvaluate(pr, c.closed);
+    for (const pr of judgedEntries()) {
+      const got = runJs(pr, c.closed);
       const want = c.expect[pr.id];
-      for (const k of PY_KEYS) {
-        assert.ok(same(got[k], want[k]), `${pr.id}.${k}: JS ${JSON.stringify(got[k])} vs decision_pack ${JSON.stringify(want[k])}`);
+      for (const k of Object.keys(want)) {
+        assert.ok(deepSame(got[k], want[k]), `${pr.id}.${k}: JS ${JSON.stringify(got[k])} vs decision_pack ${JSON.stringify(want[k])}`);
       }
       for (const k of Object.keys(got)) {
-        assert.ok(PY_KEYS.includes(k) || k === "second", `${pr.id}: the mirror grew a key decision_pack does not have: ${k}`);
+        assert.ok(k in want || k === "second", `${pr.id}: the mirror grew a key decision_pack does not have: ${k}`);
       }
     }
   });
@@ -125,10 +134,10 @@ test("the checkpoints judge hc4-1 whatever cycle is current", () => {
 });
 
 test("the strip is inert: no button, link or handler in checkpointLine", () => {
-  const body = slice("function checkpointLine(d) {", "\n  }");
+  const body = slice("function checkpointLine(d) {", "\n  }") + slice("function checkpointFold(d, tag) {", "\n  }");
   assert.ok(!/<button|<a\s|onclick|data-osort|data-closeall|addEventListener/.test(body),
     "a control appeared in the checkpoint strip — it must stay a record, never a prompt");
-  assert.ok(/<details class="jr-pr-fold">/.test(body) && !/<details[^>]*\bopen\b/.test(body), "the fold must ship shut");
+  assert.ok(/<details class="jr-pr-fold" data-cycle=/.test(body) && !/<details[^>]*\bopen\b/.test(body), "the fold must ship shut");
 });
 
 test("renderSide draws it beside the cycle board and keeps the fold's state over a repaint", () => {
@@ -136,8 +145,8 @@ test("renderSide draws it beside the cycle board and keeps the fold's state over
   assert.ok(/host\.insertAdjacentHTML\("beforebegin", checkpointLine\(d\)\)/.test(body), "renderSide no longer draws the strip");
   assert.ok(/document\.querySelectorAll\("#bot-pr"\)\.forEach\(\(el\) => el\.remove\(\)\)/.test(body),
     "no remove-before-insert for #bot-pr — every 3-minute refresh would stack another strip");
-  assert.ok(/const prOpen = !!document\.querySelector\("#bot-pr details\[open\]"\)/.test(body),
-    "the open fold would snap shut on every repaint");
+  assert.ok(/const prOpen = \[\.\.\.document\.querySelectorAll\("#bot-pr details\[open\]"\)\]\.map\(\(f\) => f\.dataset\.cycle\)/.test(body),
+    "an open fold would snap shut on every repaint");
 });
 
 test("the dead n/30 review line is gone, host and all", () => {
@@ -316,7 +325,13 @@ test("app.js cellRecord counts exactly what journal.js cycleCells counts, cell b
 test("the record rides the High-conviction badge's title and the expanded panel, not the chip strip", () => {
   const badge = sliceFrom(APP, "function hiconvBadge(r) {", "\n  }");
   assert.ok(/cellRecordNote\(cell\)/.test(badge), "the badge title no longer carries the live record");
-  assert.ok(/High conviction<\/span>`;/.test(badge), "the badge's visible label changed — the phone's two-chip fit (UI100 #32) rides on it");
+  // PR-6 (owner, 2026-11-02): the badge is a plain "Bot cell" tag -- no gold,
+  // no stacked marks -- and it is SHORTER than the old label, so the phone's
+  // two-whole-chip fit (UI100 #32) only gets easier.
+  assert.ok(/`Bot cell\$\{cells\.length > 1 \? ` ×\$\{cells\.length\}` : ""\}<\/span>`;/.test(badge),
+    "the bot-cell tag's visible label changed");
+  assert.ok(!/🎯|High conviction<\/span>/.test(badge.replace(/\/\/[^\n]*/g, "")),
+    "the demoted badge is gold again");
   const detail = sliceFrom(APP, "function detailHtmlVivek(r) {", "\n  }");
   assert.ok(/cellRecordNote\(cell, true\)/.test(detail) && /vk-cellrec/.test(detail),
     "the expanded panel lost its per-cell record chip");

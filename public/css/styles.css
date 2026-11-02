@@ -414,8 +414,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 /* thin divider between the entry-type chips and the toggles */
 .vkf-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 4px; }
 .vkf-recent.is-active { background: var(--green); border-color: var(--green); }
-.vkf-highconv.is-active { background: #ffb020; border-color: #ffb020; color: #1a1205; }
-.vkf-highconv.is-active b { color: rgba(0,0,0,0.6); }
+/* (.vkf-highconv's gold active state went with PR-6, 2026-11-02: the "Bot
+   cells" filter is on like any other chip -- the default blue .is-active.) */
 @media (max-width: 560px) { .vkf-legend { display: none; } }
 @media (max-width: 560px) {
   .vkf-label { display: none; }
@@ -539,8 +539,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .rbadge.trig   { color: var(--blue-ink);   background: var(--blue-soft); }
 .rbadge.wk     { color: var(--orange); background: var(--orange-soft); }
 .rbadge.struct { color: var(--text-2); background: var(--fill); }
-.rbadge.hiconv { color: #1a1205; background: #ffb020; font-weight: 800;
-  border-color: color-mix(in srgb, #ffb020 60%, transparent); }
+/* PR-6 (owner, 2026-11-02): the bot-cell tag is plain -- it was a gold
+   "High conviction" badge until its 27 Oct read came in below the other A+. */
+.rbadge.hiconv { color: var(--text-2); background: var(--fill); font-weight: 700; }
 .rbadge.fundwarn { color: var(--red-ink); background: var(--red-soft); font-weight: 800;
   border-color: color-mix(in srgb, var(--red) 40%, transparent); }
 /* REFINE200 #51: the "200-SMA" was measured on fewer than 200 bars */

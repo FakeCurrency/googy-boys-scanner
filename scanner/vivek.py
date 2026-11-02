@@ -167,7 +167,12 @@ def evaluate(df: pd.DataFrame, h4_sma: float | None = None,
         return None
 
     # Confluence bonus: both the Weekly AND Daily 200 SMA near price together.
-    confluence = bool(weekly_sma) and abs((daily_sma - weekly_sma) / price) <= config.VIVEK_NEAR_TOL
+    # #148 (hc4-2, owner-approved 2026-11-02): this used to test only that the
+    # two averages sat within VIVEK_NEAR_TOL of EACH OTHER, so both could be
+    # far from the price and still score the point (29 of 49 rows on 14 Oct
+    # had one average more than 4% away, 9 had both). Each must now be within
+    # VIVEK_NEAR_TOL of the price, which is what the point says it means.
+    confluence = w_h4_confluence(price, weekly_sma, daily_sma)
 
     return {
         "close": price,
@@ -187,6 +192,21 @@ def evaluate(df: pd.DataFrame, h4_sma: float | None = None,
         "confluence": confluence,
         "uptrend": best["direction"] == "long",   # for frontend filters that read `uptrend`
     }
+
+
+def w_h4_confluence(price: float, weekly_sma: float | None, daily_sma: float | None) -> bool:
+    """The W+H4 scoring point (#148, hc4-2): the Weekly AND the Daily 200 SMA
+    both within VIVEK_NEAR_TOL of the price. (It once tested only that the two
+    averages were near EACH OTHER.) NaN-safe: a missing or non-finite average
+    scores nothing."""
+    tol = config.VIVEK_NEAR_TOL
+    try:
+        p, w, d = float(price), float(weekly_sma or 0), float(daily_sma or 0)
+    except (TypeError, ValueError):
+        return False
+    if not (p > 0 and w > 0 and d > 0):
+        return False
+    return abs(p - w) / p <= tol and abs(p - d) / p <= tol
 
 
 def score_and_grade(sig: dict) -> tuple[int, str | None, list[str]]:
@@ -675,6 +695,27 @@ def build_markers(plans: dict) -> dict:
                 ms[-1]["ts"] = p["trigger_ts"]
         out[tf] = ms
     return out
+
+
+_CELL_LEVEL_KEYS = ("entry", "stop", "tp1", "tp2", "tp3")
+
+
+def first_cell_tf(plans: dict, cells: dict | None) -> str | None:
+    """The timeframe of the plan the bot walks to (#7, hc4-2, owner-approved
+    2026-11-02): the FIRST plan, in the cell table's order (1W, 3D, 1D), that
+    is armed, carries a complete level set and whose trigger the cell lists --
+    exactly the walk vivek_bot._pick_plan makes. None when no plan qualifies.
+
+    scan.py and vivek_backtest.py grade a row on THIS plan when there is one,
+    so a 1W retest (no cell) with a poor R:R no longer marks the row down
+    while the bot would trade the armed 3D reclaim underneath it; without
+    one, they fall back to the first armed plan of any trigger, as before."""
+    for tf, triggers in (cells or {}).items():
+        p = (plans or {}).get(tf) or {}
+        if (p.get("armed") and all(p.get(k) is not None for k in _CELL_LEVEL_KEYS)
+                and p.get("entry_trigger") in set(triggers or ())):
+            return tf
+    return None
 
 
 def gate_grade(grade: str | None, sig: dict, rr: float, armed: bool = True) -> tuple[str | None, list[str]]:

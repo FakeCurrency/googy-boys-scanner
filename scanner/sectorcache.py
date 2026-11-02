@@ -33,6 +33,8 @@ import os
 import pathlib
 import time
 
+from . import config
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CACHE_FILE = ROOT / "data" / "sector_map.json"
 PUBLIC_FILE = ROOT / "public" / "data" / "sector_map.json"
@@ -175,13 +177,18 @@ def global_sector_load(positions, cap: int = 0) -> list[str]:
     """
     if not positions or cap <= 0:
         return []
+    # hc4-2 (#13 / #143): bucket on the 11 GICS sectors the cap now counts
+    # (config.VIVEK_BOT_SECTOR_GICS, the table vivek_bot._sector_key reads),
+    # so an ASX "Banks" and a NASDAQ "Financial Services" are one real sector
+    # here too. A label mapped to blank is skipped like any blank.
+    gics = config.VIVEK_BOT_SECTOR_GICS or {}
     buckets: dict = {}
     for pos in positions:
-        sector = str((pos or {}).get("sector") or "").strip()
+        raw = str((pos or {}).get("sector") or "").strip()
+        sector = gics.get(raw.lower(), raw.lower())
         if not sector:
             continue
-        entry = buckets.setdefault(sector.lower(), {"n": 0, "markets": set(),
-                                                    "label": sector})
+        entry = buckets.setdefault(sector, {"n": 0, "markets": set(), "label": sector})
         entry["n"] += 1
         entry["markets"].add(str(pos.get("market") or "?"))
     out = [(e["n"], e["label"], sorted(e["markets"]))

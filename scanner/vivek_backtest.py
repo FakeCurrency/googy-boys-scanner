@@ -236,8 +236,10 @@ def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector
         return None, None, None
     plans = vivek.build_plans(df_slice, sig)
     lv = plans.get("1D")
-    gate_tf = next((tf for tf in ("1W", "3D", "1D")
-                    if (plans.get(tf) or {}).get("armed")), None)
+    # #7 (hc4-2): the same gate as scan.py -- the bot's cell plan first.
+    gate_tf = (vivek.first_cell_tf(plans, config.VIVEK_BOT_ENTRY_CELLS)
+               or next((tf for tf in ("1W", "3D", "1D")
+                        if (plans.get(tf) or {}).get("armed")), None))
     gate_plan = plans.get(gate_tf) if gate_tf else None
     armed = gate_plan is not None
     hp = gate_plan or lv

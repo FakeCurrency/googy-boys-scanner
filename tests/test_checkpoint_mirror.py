@@ -77,11 +77,13 @@ def _cases():
 
 def test_decision_pack_produces_every_shared_expectation():
     doc = _cases()
-    assert len(doc["cases"]) >= 10
-    live = [p for p in dp.PREREG if p["kind"] == "live"]
+    assert len(doc["cases"]) >= 20
+    judged = [p for p in dp.PREREG if p["kind"] in ("live", "shadow")]
+    assert any(p["kind"] == "shadow" for p in judged), "the day-14 shadow left the register"
     for case in doc["cases"]:
-        for pr in live:
-            got = dp.evaluate(pr, case["closed"])
+        for pr in judged:
+            fn = dp.evaluate_shadow if pr["kind"] == "shadow" else dp.evaluate
+            got = fn(pr, case["closed"])
             assert got == case["expect"][pr["id"]], (case["name"], pr["id"], got)
 
 

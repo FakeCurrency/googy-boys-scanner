@@ -1188,6 +1188,63 @@ becomes hc4-2 and `bot_rules.json` publishes the new cells. hc4-1's open
 positions run to their exits. The journal's checkpoint strip keeps showing
 hc4-1's reads.
 
+## Approved, Mon 2 Nov: hc4-2 starts
+
+You approved **2, 3, 4, 6 and 7** ("approve 2, 3, 4, 6, 7").
+
+- **Item 1 is not approved.** The bot keeps all four cells, 3D reclaim
+  included. The replay-veto figure is still unread (the 14 Oct replay's
+  Summary page; the report expires Fri 13 Nov). hc4-2's own 3D-reclaim
+  checkpoint (PR-12) now watches the cell.
+- **Item 5 is not approved.** No crypto slots are kept free and no refusal
+  count was added.
+
+**What changed for new entries** (hc4-2 tag from the first scan after the
+merge):
+
+- **2, #152:** a break's R:R is measured again from its actual fill, and the
+  entry is skipped when it is under 1.5 (skip code `fill_rr`). A fill at or
+  past TP1 was already refused for every trigger by the journal's don't-chase
+  guard. A refused fill frees its slot for the next row.
+- **3a, #7:** a row is graded and headlined on the first armed plan in an
+  entry cell, the one the bot walks to. Without one it falls back to the
+  first armed plan, as before. The 10-year backtest grades the same way.
+- **3b, #12:** one position per company. The issuer is the listing name
+  before " - "; crypto is exempt. New skip code `dup_company`.
+- **3c, #13 / #143:** the 6-per-sector cap counts the 11 GICS sectors in both
+  markets (`VIVEK_BOT_SECTOR_GICS`). "Not Applic" and "Class Pend" are exempt
+  from the cap, and the bot still excludes the funds behind them. The deck's
+  SECTOR n/6 marker buckets the same way.
+- **3d, #148:** the W+H4 point needs both the weekly and the daily 200-SMA
+  within 4% of the price.
+- **4:** each open position records its best R and its R on the first scan
+  at or after day 14 (`d14`). This is report only. The decision pack prints
+  the cut's what-if beside the rules' result.
+- **6, PR-6:** the gold "🎯 High conviction" badge is now a plain "Bot cell"
+  tag (deck row, deck filter and chart page). The Discord digest's wording is
+  unchanged.
+- **7:** the register below, frozen before hc4-2's first entry.
+
+### hc4-2 register (frozen 2 Nov 2026)
+
+Each live line is read once, on the day its n-th hc4-2 rules close lands. The
+replay veto applies as it does for hc4-1. PR-16 is read once at 40 closes.
+
+| ID | Item | Measure | Read when | Line | If it trips |
+|---|---|---|---|---|---|
+| PR-9 | hc4-2 | avg R of all hc4-2 rules closes | n >= 40 | trips at -0.25R or worse; passes at 0.00R or better; in between, read again at n >= 80 at -0.25R | owner review of the whole rule set before anything else changes |
+| PR-10 | hc4-2 | avg R of hc4-2 1W-reclaim rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1W reclaim from the entry cells (new entries only) |
+| PR-11 | hc4-2 | avg R of hc4-2 1W-break rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1W break from the entry cells (new entries only) |
+| PR-12 | hc4-2 | avg R of hc4-2 3D-reclaim rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 3D reclaim from the entry cells (new entries only) |
+| PR-13 | hc4-2 | avg R of hc4-2 1D-break rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1D break from the entry cells (new entries only) |
+| PR-14 | hc4-2 | avg R of hc4-2 ASX rules closes vs NASDAQ over the same days | n >= 15 ASX closes; if it doesn't trip, second read at n >= 30 | ASX at -0.30R or worse AND at least 0.30R below NASDAQ (same line at both reads) | stop new ASX entries; open ASX positions run to their exits |
+| PR-15 | hc4-2 | avg R of hc4-2 A vs A+ rules closes | n >= 15 A closes; if it doesn't trip, second read at n >= 30 | A at -0.30R or worse AND at least 0.30R below A+ (same line at both reads) | bot back to A+ only |
+| PR-16 | #4 | day-14 what-if vs the rules, per market, on hc4-2 rules closes | n >= 40 | the cut (exit a pre-TP1 trade whose best R by day 14 is under +0.5R, at its day-14 R less costs) beats the rules by +0.05R/trade or more in the ASX and NASDAQ separately | propose the day-14 cut for the next cycle |
+
+`scripts/decision_pack.py` (`PREREG`, `HC42`) and the journal's strip carry the
+same lines, and `tests/test_decision_pack.py` /
+`tests/test_checkpoint_mirror.py` pin all three together.
+
 ---
 
 *Regenerate the live-book figures with `python scripts/decision_pack.py`. It

@@ -255,7 +255,7 @@ def test_global_sector_load_sees_what_the_per_market_cap_cannot():
             + [{"symbol": f"N{i}", "market": "nasdaq", "sector": "Financials"}
                for i in range(3)]
             + [{"symbol": "AIA", "market": "asx", "sector": "Industrials"}])
-    assert sectorcache.global_sector_load(book, 3) == ["Financials=6(asx+nasdaq)"]
+    assert sectorcache.global_sector_load(book, 3) == ["financials=6(asx+nasdaq)"]
     # At the cap is not over it — the report must not cry wolf on a legal book.
     assert sectorcache.global_sector_load(book[:3] + book[6:], 3) == []
 
@@ -286,7 +286,7 @@ def test_global_sector_load_folds_case_like_the_cap_does():
     book = ([{"symbol": "A", "market": "asx", "sector": "Financials"}] * 2
             + [{"symbol": "N", "market": "nasdaq", "sector": "financials"}] * 2)
     out = sectorcache.global_sector_load(book, 3)
-    assert len(out) == 1 and out[0].startswith("Financials=4(")
+    assert len(out) == 1 and out[0].startswith("financials=4(")
 
 
 def test_global_sector_load_reports_worst_first():
@@ -294,7 +294,19 @@ def test_global_sector_load_reports_worst_first():
             + [{"symbol": "N", "market": "nasdaq", "sector": "Technology"}] * 5
             + [{"symbol": "E", "market": "asx", "sector": "Energy"}] * 2)
     out = sectorcache.global_sector_load(book, 3)
-    assert [s.split("=")[0] for s in out] == ["Materials", "Technology"]
+    assert [s.split("=")[0] for s in out] == ["materials", "information technology"]
+
+
+def test_global_sector_load_counts_gics_sectors_across_both_label_sets():
+    """hc4-2 (#13 / #143): the ASX labels a name by its GICS industry group and
+    NASDAQ by Yahoo's sector name, so 'Banks' + 'Insurance' + 'Financial
+    Services' are ONE real sector -- the report buckets them as the cap now
+    does (config.VIVEK_BOT_SECTOR_GICS), and 'Not Applic' stays out."""
+    book = ([{"symbol": "NAB", "market": "asx", "sector": "Banks"}]
+            + [{"symbol": "AUB", "market": "asx", "sector": "Insurance"}]
+            + [{"symbol": "HBAN", "market": "nasdaq", "sector": "Financial Services"}] * 2
+            + [{"symbol": "ETF", "market": "asx", "sector": "Not Applic"}] * 9)
+    assert sectorcache.global_sector_load(book, 3) == ["financials=4(asx+nasdaq)"]
 
 
 def test_yf_symbol_suffix():

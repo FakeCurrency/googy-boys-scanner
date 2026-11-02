@@ -182,6 +182,12 @@ def bot_rules_payload() -> dict:
         # (2026-08-20) so the deck's sector-cap badge can reproduce the SAME
         # bucketing the bot blocks on, instead of guessing at it.
         "crypto_majors": list(config.VIVEK_BOT_CRYPTO_MAJORS),
+        # hc4-2 (#13 / #143): the label -> GICS sector table _sector_key reads,
+        # so the deck's SECTOR n/6 marker buckets exactly as decide() does.
+        "sector_gics": dict(config.VIVEK_BOT_SECTOR_GICS),
+        # hc4-2 entry rules (#12, #152), published with the rest of the rulebook.
+        "one_per_company": config.VIVEK_BOT_ONE_PER_COMPANY,
+        "fill_recheck_triggers": list(config.VIVEK_BOT_FILL_RECHECK_TRIGGERS),
         "min_adv": dict(config.VIVEK_BOT_MIN_ADV),
         "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
         "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,

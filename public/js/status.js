@@ -77,7 +77,7 @@
   // from bot_rules.json's cycle_tag (REFINE200 #125) so the next cycle cannot
   // keep counting the dead cohort under the old heading; this literal is the
   // offline fallback only, pinned to config by tests/test_close_ceiling_parity.py.
-  const CYCLE_TAG = "hc4-1";
+  const CYCLE_TAG = "hc4-2";
   const CYCLE_TARGET = 30;     // the pre-registered close count for the cohort
   const REPO = "FakeCurrency/googy-boys-scanner";
   // Mirrors journal.js MECHANICAL_EXITS. test/status.test.js parses BOTH files

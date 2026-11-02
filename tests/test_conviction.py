@@ -150,15 +150,24 @@ def test_app_js_still_defines_isHighConviction_over_the_cells():
     assert "convictionCells(r).length > 0" in src[i:i + 200]
 
 
-def test_the_badge_stacks_one_mark_per_cell():
+def test_the_badge_is_a_plain_bot_cell_tag_since_pr6():
+    """PR-6 (owner, 2026-11-02): the gold, stacked-🎯 "High conviction"
+    badge (one mark per cell, the 2026-09-20 display) was demoted to a plain
+    tag after its 27 Oct read put these names 4.1 points BELOW the other A+
+    longs. Same rows, same place, still one count per cell -- no gold, no
+    marks, and it says what it is."""
     src = (PUB / "app.js").read_text(encoding="utf-8")
     i = src.index("function hiconvBadge(")
     body = src[i:src.index("\n  }", i)]
-    assert '"\U0001F3AF".repeat(Math.min(cells.length, 3))' in body
+    code = "\n".join(l for l in body.splitlines() if not l.strip().startswith("//"))
+    assert "Bot cell" in code and "\U0001F3AF" not in code, "the bot-cell tag is gold again"
+    assert "cells.length > 1" in code, "a row firing two cells no longer says so"
     j = src.index("function vkBadges(")
-    assert "hiconvBadge(r)" in src[j:j + 2500], "vkBadges stopped using the stacking badge"
+    assert "hiconvBadge(r)" in src[j:j + 2500], "vkBadges stopped using the tag"
     chart = (PUB / "chart.js").read_text(encoding="utf-8")
-    assert '"\U0001F3AF".repeat(Math.min(cells.length, 3))' in chart, "chart chip does not stack"
+    k = chart.index('const hc = $("#ct-hiconv")')
+    chip = "\n".join(l for l in chart[k:k + 900].splitlines() if not l.strip().startswith("//"))
+    assert "BOT CELL" in chip and "\U0001F3AF" not in chip, "the chart's chip is gold again"
 
 
 # ── the Python readers IMPORT the rule rather than re-typing it ──────────────
