@@ -850,6 +850,26 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
             log.info("SKIP  %-8s [wide_stop_at_fill] stop %.2f%% from the fill %g > max %g%%",
                      plan["symbol"], fill_pct, fill, cap)
             return None
+    # THE FILL RE-CHECK (#152, hc4-2, owner-approved 2026-11-02). A break
+    # plan's entry is the level that was broken; the trigger bar has already
+    # closed above it, so the book fills higher (median 3.96% above the plan
+    # entry live; WBC filled 0.03R short of its own TP1). The plan's R:R was
+    # measured from the plan entry; for the triggers config names it must also
+    # hold from the FILL. _snapshot above already measured it there -- the
+    # same R:R to TP2, rounded the same way as the plan's -- and its don't-
+    # chase guard already refused a fill at or past TP1, so this is the one
+    # check left: the fill's R:R against the same VIVEK_BOT_MIN_RR floor. It
+    # can only refuse an entry, and a refusal frees the slot for the next-
+    # ranked row (the refill in run_market). ENTRY ONLY.
+    if plan.get("entry_type") in tuple(config.VIVEK_BOT_FILL_RECHECK_TRIGGERS or ()):
+        fill_rr = float(snap.get("rr") or 0)
+        min_rr = float(config.VIVEK_BOT_MIN_RR or 0)
+        if fill_rr < min_rr:
+            log.info("SKIP  %-8s [fill_rr] %s R:R %.2f from the fill %g < min %.1f "
+                     "(plan entry %g gave %.2f)", plan["symbol"], plan["entry_type"],
+                     fill_rr, fill, min_rr, float(plan.get("entry") or 0),
+                     float(plan.get("rr") or 0))
+            return None
     # Bolt the bot-specific sizing + the auditable entry-type label onto the
     # position so the book records exactly what the bot decided.
     snap["entry_type_label"] = plan["entry_type_label"]
@@ -1143,6 +1163,39 @@ def _held_days(pos: dict, day: str) -> int | None:
         return None
 
 
+def _stamp_d14(pos: dict, price: float, day: str) -> None:
+    """THE DAY-14 STAMP (hc4-2 item 4, owner-approved 2026-11-02). REPORT ONLY.
+
+    The 14 Oct replay's best variant cut a trade at day 14 if it had never
+    reached +0.5R (0.0535R per slot-month against 0.0318R; it failed the
+    robustness gate). Rather than trade it, the book now records what that
+    cut would have seen: on the first in-session run at or past
+    VIVEK_BOT_D14_STAMP_DAYS held, `d14` = the day, days held, the best R so
+    far (mfe_r, already folded with this mark), the R of this mark (per unit
+    of the original risk, before costs and before any partial booking) and
+    whether TP1 had been hit. Written once; nothing reads it to decide
+    anything -- scripts/decision_pack.py prints the what-if beside the rules'
+    own result. It survives the close (it is not an open-only field).
+    """
+    days = int(config.VIVEK_BOT_D14_STAMP_DAYS or 0)
+    if days <= 0 or pos.get("d14") or pos.get("status") != "open":
+        return
+    held = _held_days(pos, day)
+    if held is None or held < days:
+        return
+    entry, risk = pos.get("entry"), pos.get("risk") or 0.0
+    if entry is None or not (risk > 0):
+        return
+    is_long = pos.get("direction", "long") == "long"
+    r_now = ((price - entry) if is_long else (entry - price)) / risk
+    if r_now != r_now:            # NaN-safe: a bad mark stamps nothing
+        return
+    pos["d14"] = {"day": day, "held": held,
+                  "mfe_r": pos.get("mfe_r"),
+                  "r": round(r_now, 3),
+                  "tp1_hit": bool(pos.get("tp1_hit"))}
+
+
 def close_bot_position(symbol: str, market: str, price: float,
                        direction: str | None = None, day: str | None = None,
                        reason: str = "manual") -> dict | None:
@@ -1380,10 +1433,13 @@ _CAPACITY_SKIPS = frozenset({"book_full", "global_cap", "notional_cap",
 
 
 def _open_book_view(book: dict, market: str) -> list[dict]:
-    """The projection of this market's open rows that decide() counts caps from."""
+    """The projection of this market's open rows that decide() counts caps from.
+    `name` rides along for one-position-per-company (#12, hc4-2): the issuer
+    key is read off it (vivek_bot._company_key)."""
     return [{"symbol": p["symbol"], "direction": p.get("direction"),
              "sector": p.get("sector", ""),
-             "notional": p.get("notional", 0)}
+             "notional": p.get("notional", 0),
+             "name": p.get("name", "")}
             for p in book["open"] if p.get("market") == market]
 
 
@@ -1556,6 +1612,8 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             _stamp_identity(pos, frames.get(yf_map.get(pos["symbol"])), src, anchor_of)
         if is_open and price is not None:
             _mark(pos, price, day, costs)
+            # Day-14 stamp (hc4-2 item 4) -- REPORT ONLY, before any exit below.
+            _stamp_d14(pos, price, day)
             # Time stop: hasn't reached TP1 after MAX_HOLD_DAYS → it's going
             # nowhere and squatting in a scarce slot. Runners past TP1 are
             # exempt (already risk-free). Session-only, like every other fill.

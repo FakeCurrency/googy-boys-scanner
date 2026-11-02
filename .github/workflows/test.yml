@@ -617,7 +617,13 @@ jobs:
           # journal-desktop 1.47% (three new columns), journal-390 4.20% (the
           # sort control on its own line, line 2 of each row carrying the room
           # and the countdown).
-          key: screenshot-baselines-v26-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
+          #
+          # v26 -> v27 (2026-11-02): INTENTIONAL — hc4-2 item 6 (PR-6): the
+          # gold "High conviction" badge, filter and chart chip became a
+          # plain "Bot cell" tag. Measured against baselines cut from the
+          # commit before: index-desktop 3.40% (the filter pill, plain), and
+          # index-390, journal-desktop, journal-390 0.00% each.
+          key: screenshot-baselines-v27-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: |

@@ -1429,6 +1429,9 @@ test("a stamped row outside every cell lands in 'other', never vanishes", () => 
 });
 
 test("the board renders per cell with avg R, and is INERT", () => {
+  // The fixture is an hc4-1 book; the offline fallback names the live cycle
+  // (hc4-2 since 2026-11-02), so the board is pointed at hc4-1 explicitly.
+  hcctx.setLive("hc4-1");
   const h = hcctx.cycleLine(HC_BOOK);
   assert.ok(/hc4-1 · current cycle · <b>3<\/b> open · <b>4<\/b> closed · <b>3<\/b> by the rules · <b>1<\/b> by hand/.test(h), h);
   assert.ok(/3-Day reclaim<\/td><td class="num">1<\/td><td class="num">3<\/td>/.test(h), h);

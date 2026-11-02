@@ -1510,7 +1510,7 @@
   // entry_cells); the constants are the offline fallback. Same restraint as
   // the w3-1 strip: INERT — no control, no link, no call to act. Silent until
   // a row carries the tag.
-  const CYCLE_TAG = "hc4-1";   // = config VIVEK_BOT_CYCLE_TAG — offline fallback only
+  const CYCLE_TAG = "hc4-2";   // = config VIVEK_BOT_CYCLE_TAG — offline fallback only
   let LIVE_CYCLE = CYCLE_TAG;
   // = config VIVEK_BOT_ENTRY_CELLS, in the order the bot walks them.
   let ENTRY_CELLS = [["1W", "reclaim"], ["1W", "break"], ["3D", "reclaim"], ["1D", "break"]];
@@ -1598,7 +1598,15 @@
     {"id": "PR-5", "item": "#137/#153", "kind": "replay", "min_gain": 0.1, "min_n": 200, "action": "arm 1W/3D on completed candles only, if completed beats forming by >= +0.10R/trade with >= 200 trades in each arm", "label": "completed candles"},
     {"id": "PR-6", "item": "#36", "kind": "rosters", "since": "2026-09-21", "read_on": "2026-10-27", "min_n": 40, "gap_pp": 1.0, "horizon": "20", "action": "demote the High-conviction badge to a plain tag (display only)", "label": "High-conviction badge"},
     {"id": "PR-7", "item": "#32", "kind": "replay", "min_gain": 0.03, "action": "change the 28-day time stop, only if 21/42/off beats 28 by >= +0.03R/trade in ASX and NASDAQ separately", "label": "time stop length"},
-    {"id": "PR-8", "item": "#47", "kind": "forward", "min_n": 30, "action": "drop Ignition's 3x volume rule if, on >= 30 forward trades in a market, the no-volume-rule variant does at least as well", "label": "Ignition volume rule"}
+    {"id": "PR-8", "item": "#47", "kind": "forward", "min_n": 30, "action": "drop Ignition's 3x volume rule if, on >= 30 forward trades in a market, the no-volume-rule variant does at least as well", "label": "Ignition volume rule"},
+    {"id": "PR-9", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "all", "min_n": 40, "line": -0.25, "pass": 0.0, "then": {"min_n": 80, "line": -0.25}, "action": "owner review of the whole rule set before any further change", "label": "whole cycle"},
+    {"id": "PR-10", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1W reclaim from the entry cells for new entries", "label": "1W reclaim"},
+    {"id": "PR-11", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W break", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1W break from the entry cells for new entries", "label": "1W break"},
+    {"id": "PR-12", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:3D reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 3D reclaim from the entry cells for new entries", "label": "3D reclaim"},
+    {"id": "PR-13", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1D break", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1D break from the entry cells for new entries", "label": "1D break"},
+    {"id": "PR-14", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "market:asx", "versus": "market:nasdaq", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "stop NEW ASX entries; open ASX positions run to their exits", "label": "ASX vs NASDAQ"},
+    {"id": "PR-15", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "grade:A", "versus": "grade:A+", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "bot back to A+ only", "label": "A vs A+"},
+    {"id": "PR-16", "item": "#4", "cycle": "hc4-2", "kind": "shadow", "min_n": 40, "min_gain": 0.05, "day": 14, "floor": 0.5, "action": "propose a day-14 cut for the next cycle (exit a pre-TP1 trade whose best R by day 14 is under +0.5R), if it beats the rules by >= +0.05R/trade in ASX and NASDAQ separately", "label": "day-14 cut"}
   ];
   /* PREREG-END */
   // decision_pack.HC41's tag and grade-label date (pinned with PREREG). The
@@ -1667,9 +1675,11 @@
     const vs = prStats(prSelect(pool, pr.versus).filter((r) => prDay(r) <= cutoff));
     return { tripped: vs.avg != null && s.avg <= vs.avg - pr.gap, s, vs };
   }
+  // decision_pack.cycle_of: an entry judges hc4-1 unless it names a cycle.
+  const prCycle = (pr) => pr.cycle || PREREG_COHORT.tag;
   // decision_pack.evaluate: NOT DUE, TRIPPED, CLEAR or HOLD.
   function prEvaluate(pr, closed) {
-    const pool = (closed || []).filter((r) => r && r.cycle === PREREG_COHORT.tag && prIsRules(r));
+    const pool = (closed || []).filter((r) => r && r.cycle === prCycle(pr) && prIsRules(r));
     const rows = prSelect(pool, pr.cohort);
     const now = prStats(rows);
     const out = { id: pr.id, n: now.n, avg: now.avg, min_n: pr.min_n };
@@ -1693,26 +1703,75 @@
     return out;
   }
 
+  // decision_pack.whatif_d14 / evaluate_shadow (PR-16, hc4-2): the day-14
+  // cut's R for a closed row, and the once-only read of cut vs rules per
+  // market. Same rounding as Python: round(x, 4) per row, round(gain, 3).
+  const SHADOW_MARKETS = ["asx", "nasdaq"];
+  function prWhatifD14(r, floor) {
+    const d = r.d14;
+    if (d && typeof d === "object" && !d.tp1_hit && typeof d.mfe_r === "number" && d.mfe_r < floor
+        && typeof d.r === "number") {
+      return pyRound(d.r - (Number(r.cost_r) || 0), 4);
+    }
+    return prR(r);
+  }
+  function prEvaluateShadow(pr, closed) {
+    const pool = (closed || []).filter((r) => r && r.cycle === prCycle(pr) && prIsRules(r));
+    const out = { id: pr.id, n: pool.length, min_n: pr.min_n };
+    const first = prRead(pool, pr.min_n);
+    if (!first) { out.verdict = "NOT DUE"; return out; }
+    const by = {};
+    for (const m of SHADOW_MARKETS) {
+      const rows = first.rows.filter((r) => r.market === m);
+      const rules = prStats(rows);
+      const cut = prStats(rows.map((r) => ({ realized_r: prWhatifD14(r, pr.floor) })));
+      const gain = rules.avg != null && cut.avg != null ? pyRound(cut.avg - rules.avg, 3) : null;
+      by[m] = { n: rules.n, rules_avg: rules.avg, cut_avg: cut.avg, gain };
+    }
+    const passed = SHADOW_MARKETS.every((m) => by[m].gain != null && by[m].gain >= pr.min_gain);
+    Object.assign(out, { read_on: first.cutoff, read_n: first.rows.length, by_market: by,
+                         verdict: passed ? "TRIPPED" : "CLEAR" });
+    return out;
+  }
+
   const OFF_BOOK = { replay: "the decision replay", rosters: "the A+ rosters", forward: "Ignition's forward test" };
   const prDate = (iso) => (iso ? new Date(iso + "T00:00:00Z").toLocaleDateString(undefined,
     { day: "numeric", month: "short", timeZone: "UTC" }) : "");
+  // When each cycle's register was frozen (display only; decision_pack's own
+  // comments carry the dates).
+  const PREREG_FROZEN = { "hc4-1": "14 Oct", "hc4-2": "2 Nov" };
+  // One fold per cycle, newest first; a cycle's fold appears once a row
+  // carries its tag (hc4-1's keeps reading as its open rows close).
   function checkpointLine(d) {
-    const tag = PREREG_COHORT.tag;
+    const cycles = [];
+    for (const p of PREREG) if (!cycles.includes(prCycle(p))) cycles.push(prCycle(p));
+    const folds = cycles.slice().reverse().map((tag) => checkpointFold(d, tag)).join("");
+    return folds ? `<div class="jr-pr" id="bot-pr">${folds}</div>` : "";
+  }
+  function checkpointFold(d, tag) {
     const tagged = (r) => r && r.cycle === tag;
     if (!((d && d.open) || []).some(tagged) && !((d && d.closed) || []).some(tagged)) return "";
     const fmt = (x) => (x == null ? "—" : `${x >= 0 ? "+" : ""}${x.toFixed(2)}R`);
     const vCls = { "TRIPPED": "pr-trip", "HOLD": "pr-hold", "CLEAR": "pr-clear", "NOT DUE": "pr-wait" };
-    const live = PREREG.filter((p) => p.kind === "live").map((p) => [p, prEvaluate(p, d.closed)]);
-    const off = PREREG.filter((p) => p.kind !== "live");
+    const mine = PREREG.filter((p) => prCycle(p) === tag);
+    const judged = mine.filter((p) => p.kind === "live" || p.kind === "shadow")
+      .map((p) => [p, p.kind === "shadow" ? prEvaluateShadow(p, d.closed) : prEvaluate(p, d.closed)]);
+    const off = mine.filter((p) => p.kind !== "live" && p.kind !== "shadow");
     const vsName = (p) => String(p.versus || "").split(":").pop().toUpperCase();
     const status = (p, v) => (v.verdict === "NOT DUE" ? `${v.n}/${p.min_n}`
       : v.verdict === "HOLD" && p.then ? `2nd read ${v.n}/${p.then.min_n}` : "");
-    const summary = live.map(([p, v]) =>
+    const summary = judged.map(([p, v]) =>
       `<span class="pr-cell">${esc(p.id)} <b class="${vCls[v.verdict]}">${esc(v.verdict)}</b>` +
       `${status(p, v) ? ` <span class="pr-n">${esc(status(p, v))}</span>` : ""}</span>`).join("") +
-      `<span class="pr-cell pr-offbook">${esc(off.map((p) => p.id).join(" · "))} off the book</span>`;
+      (off.length ? `<span class="pr-cell pr-offbook">${esc(off.map((p) => p.id).join(" · "))} off the book</span>` : "");
     const readText = (p, v) => {
       if (v.verdict === "NOT DUE") return `${v.n} of ${p.min_n} rules closes so far`;
+      if (p.kind === "shadow") {
+        return `read ${prDate(v.read_on)} over ${v.read_n} closes: ` + SHADOW_MARKETS.map((m) => {
+          const b = v.by_market[m];
+          return `${m.toUpperCase()} rules ${fmt(b.rules_avg)} vs cut ${fmt(b.cut_avg)}`;
+        }).join(" · ") + ` · the cut must win by +${p.min_gain.toFixed(2)}R in each`;
+      }
       let s = `read ${prDate(v.read_on)}: ${fmt(v.read_avg)} over ${v.read_n} closes`;
       if (v.versus_avg != null) s += ` vs ${vsName(p)} ${fmt(v.versus_avg)}`;
       const line = v.second ? p.then.line : p.line;
@@ -1720,7 +1779,7 @@
       if (v.verdict === "HOLD" && p.then) s += ` · second read at ${p.then.min_n} closes (${v.n} now)`;
       return s;
     };
-    const liveItems = live.map(([p, v]) =>
+    const judgedItems = judged.map(([p, v]) =>
       `<li><span class="pr-id">${esc(p.id)}</span><span class="pr-what">${esc(p.label)}</span>` +
       `<b class="pr-v ${vCls[v.verdict]}">${esc(v.verdict)}</b>` +
       `<span class="pr-read">${esc(readText(p, v))}</span>` +
@@ -1730,13 +1789,13 @@
       `<span class="pr-v pr-wait">off the book</span>` +
       `<span class="pr-read">decided by ${esc(OFF_BOOK[p.kind] || p.kind)}, not by closes</span>` +
       `<span class="pr-act">${esc(p.action)}</span></li>`).join("");
-    return `<div class="jr-pr" id="bot-pr">` +
-      `<details class="jr-pr-fold"><summary title="The checkpoints the owner's decision pack froze on 14 Oct (docs/DECISIONS_2026-10-14.md). Each live one is read once, on the day its n-th ${esc(tag)} rules close lands - never as a rolling number. Mirrors scripts/decision_pack.py.">` +
-        `📋 ${esc(tag)} checkpoints <span class="pr-frozen">frozen 14 Oct</span>${summary}</summary>` +
-        `<ul class="jr-pr-list">${liveItems}${offItems}</ul>` +
+    const frozen = PREREG_FROZEN[tag] || "";
+    return `<details class="jr-pr-fold" data-cycle="${esc(tag)}"><summary title="The checkpoints the owner's decision pack froze${frozen ? ` on ${esc(frozen)}` : ""} (docs/DECISIONS_2026-10-14.md). Each is read once, on the day its n-th ${esc(tag)} rules close lands - never as a rolling number. Mirrors scripts/decision_pack.py.">` +
+        `📋 ${esc(tag)} checkpoints${frozen ? ` <span class="pr-frozen">frozen ${esc(frozen)}</span>` : ""}${summary}</summary>` +
+        `<ul class="jr-pr-list">${judgedItems}${offItems}</ul>` +
         `<p class="jr-pr-note">A verdict is the frozen line's. Before acting on a trip the register's replay veto is read: ` +
         `if the decision replay shows the same cohort at +0.05R a trade or better (stocks, with the time stop), it holds for a second read at twice the closes.</p>` +
-      `</details></div>`;
+      `</details>`;
   }
 
   function renderSide(side) {
@@ -1748,13 +1807,13 @@
       document.querySelectorAll("#bot-w3, #bot-hc").forEach((el) => el.remove());
       // The checkpoint fold keeps its open/shut state across the 3-minute
       // repaint: a re-render must not snap shut what the owner is reading.
-      const prOpen = !!document.querySelector("#bot-pr details[open]");
+      const prOpen = [...document.querySelectorAll("#bot-pr details[open]")].map((f) => f.dataset.cycle);
       document.querySelectorAll("#bot-pr").forEach((el) => el.remove());
       // The current cycle first, its checkpoints, then the ended cycle
       // (REFINE200 #37/#194; owner item 6).
       if (host) host.insertAdjacentHTML("beforebegin", cycleLine(d));
       if (host) host.insertAdjacentHTML("beforebegin", checkpointLine(d));
-      if (prOpen) { const f = document.querySelector("#bot-pr details"); if (f) f.open = true; }
+      for (const f of document.querySelectorAll("#bot-pr details")) if (prOpen.includes(f.dataset.cycle)) f.open = true;
       if (host) host.insertAdjacentHTML("beforebegin", w3Line(d));
       renderTide();
     }

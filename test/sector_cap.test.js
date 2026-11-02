@@ -44,7 +44,7 @@ const ctx = vm.createContext({ console });
 vm.runInContext(
   "const esc = (s) => String(s);\n"
   + "let state = { market: 'asx', sectorCap: 0, sectorLoad: null, heldSyms: null, cryptoMajors: new Set() };\n"
-  + slice("const sectorKeyOf = (symbol, sector, market, majors)", "\n  };") + "\n"
+  + slice("const sectorKeyOf = (symbol, sector, market, majors, gics)", "\n  };") + "\n"
   + slice("function sectorCapChip(r) {", "\n  }") + "\n"
   + slice("const sectorCapped = (r)", ";\n") + "\n"
   + "this.sectorKeyOf = sectorKeyOf; this.sectorCapChip = sectorCapChip;\n"
@@ -71,6 +71,37 @@ test("crypto with no sector buckets to major/alt off the published majors", () =
 test("a sector-less stock row is EXEMPT — empty key, never a bucket", () => {
   assert.equal(sectorKeyOf("XYZ", "", "nasdaq", new Set()), "");
   assert.equal(sectorKeyOf("XYZ", null, "asx", new Set()), "");
+});
+
+// hc4-2 (#13 / #143): the GICS table bot_rules.json publishes
+// (config.VIVEK_BOT_SECTOR_GICS) is applied exactly as Python's
+// dict.get(s, s): a mapped label takes its sector, a label mapped to blank is
+// EXEMPT (and a crypto row then falls to its synthetic bucket), an unmapped
+// label is kept. A slice of the real table, so the cases mean what they say.
+const GICS = { "banks": "financials", "insurance": "financials", "financial services": "financials",
+  "technology": "information technology", "not applic": "", "class pend": "" };
+
+test("hc4-2: labels map through the published GICS table, like _sector_key", () => {
+  assert.equal(sectorKeyOf("NAB", "Banks", "asx", new Set(), GICS), "financials");
+  assert.equal(sectorKeyOf("AUB", " Insurance ", "asx", new Set(), GICS), "financials");
+  assert.equal(sectorKeyOf("HBAN", "Financial Services", "nasdaq", new Set(), GICS), "financials");
+  assert.equal(sectorKeyOf("AAPL", "Technology", "nasdaq", new Set(), GICS), "information technology");
+  assert.equal(sectorKeyOf("BHP", "Materials", "asx", new Set(), GICS), "materials", "unmapped = kept");
+});
+
+test("hc4-2: a label mapped to blank is exempt; crypto falls to its bucket", () => {
+  assert.equal(sectorKeyOf("ETF", "Not Applic", "asx", new Set(), GICS), "");
+  assert.equal(sectorKeyOf("NEW", "Class Pend", "asx", new Set(), GICS), "");
+  assert.equal(sectorKeyOf("BTC", "not applic", "crypto", new Set(["BTC"]), GICS), "crypto-major");
+});
+
+test("hc4-2: the table reaches the mirror from the published rules", () => {
+  assert.ok(/rules\.sector_gics/.test(SRC), "the deck no longer reads bot_rules.json's sector_gics");
+  assert.ok(/sectorKeyOf\(r\.symbol, r\.sector, state\.market, state\.cryptoMajors, state\.sectorGics\)/.test(SRC),
+    "the row chip buckets without the table");
+  assert.ok(/sectorKeyOf\(p\.symbol, p\.sector, p\.market, majors, gics\)/.test(SRC),
+    "the book's load buckets without the table");
+  assert.ok(BOTPY.includes("(_cfg.VIVEK_BOT_SECTOR_GICS or {}).get(s, s)"), "the python side moved");
 });
 
 test("the python _sector_key still has the shape this mirrors", () => {

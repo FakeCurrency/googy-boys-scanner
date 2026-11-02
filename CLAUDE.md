@@ -56,9 +56,11 @@ breakout on crypto, ASX and NASDAQ.
 - **Sizing: $2,500 × 60 open, 6 per sector PER MARKET** (2026-09-27), in each
   market's own currency (A$ on the ASX; KEPT 2026-07-29).
 - **No hand closes from 2026-10-14** ("I'm no longer going to close anything by
-  hand"): hc4-1 is the first clean test of the rules alone. No rule changes
-  mid-cycle; trade-affecting proposals go in `docs/DECISIONS_2026-10-14.md` and
-  land together as cycle hc4-2. Which trades get taken is always his call.
+  hand"): hc4-1 was the first clean test of the rules alone; **hc4-2** (live
+  from 2 Nov, items 2, 3, 4, 6, 7 approved; 1 and 5 not) is the second. No rule
+  changes mid-cycle; trade-affecting proposals go in
+  `docs/DECISIONS_2026-10-14.md` and land together as the next cycle. Which
+  trades get taken is always his call.
 - **Removed features stay removed** (write-ups in `docs/claude-history.md`):
   the Discord ALERT router (2026-08-27); the AI BOT page + scalp-era Bybit
   execution and risk stack (2026-09-17); TURTLE (2026-09-17); HORIZON + REGIME
@@ -80,7 +82,10 @@ breakout on crypto, ASX and NASDAQ.
   real clock. **The ASX close is 16:40 Sydney** ("Fix it properly").
 - **Crypto prices come from exchange klines** (2026-09-28).
 - **HIGH CONVICTION = the four cells** (2026-09-20, "Drop it" to the structure
-  branch), one 🎯 per cell; the bot trades them at A/A+ (2026-09-21).
+  branch); the bot trades them at A/A+ (2026-09-21). Since hc4-2 (PR-6 tripped,
+  approved 2 Nov) the deck and chart show them as a plain **"Bot cell"** tag
+  (`×n` for several cells), not a gold 🎯 badge; the Discord digest's wording
+  is unchanged.
 - **Review flags inform, never gate.**
 - **Findings, not bugs — do not "fix"**: grade hysteresis never demoting an
   oscillating A+/A (TOP100 #70: each 8 re-earns A+); caching a blank sector
@@ -255,7 +260,8 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   DERIVED view (`python -m scanner.broker.vivek_run --rebuild-combined`;
   `--verify` is a failing gate in the scan/close workflows). An unreadable book
   aborts the runner. **Never hand-edit rows; never edit a closed row.**
-- **What it takes** (cycle `hc4-1`, since 2026-09-21): `grade_raw` A/A+, LONG,
+- **What it takes** (cycle `hc4-2`, since 2026-11-02; hc4-1 ran 2026-09-21 →
+  2026-11-02): `grade_raw` A/A+, LONG,
   the first armed complete plan walking `VIVEK_BOT_ENTRY_CELLS` 1W (reclaim,
   break) → 3D (reclaim) → 1D (break), on a row reacting at a weekly/3d level
   (`VIVEK_BOT_LEVEL_TF_ALLOW`). Funds/REITs out (the bot's own ringfenced
@@ -264,10 +270,26 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   market's date, 7-day re-entry cooldown, data ≤3 days old; a fill off a reused
   cache frame is skipped and retried. Cells pinned equal to
   `conviction.HC_CELLS` (`tests/test_bot_alignment.py`).
+- **hc4-2 added** (owner-approved 2 Nov; `tests/test_hc42_rules.py`): the row
+  is GRADED on the plan the bot walks to (`vivek.first_cell_tf`, used by
+  scan.py and the backtest; no cell plan = the first armed plan, as before,
+  #7); the W+H4 point needs BOTH 200-SMAs within `VIVEK_NEAR_TOL` of the PRICE
+  (`vivek.w_h4_confluence`, #148); a BREAK's R:R is re-measured from the fill
+  and refused under `VIVEK_BOT_MIN_RR` (`VIVEK_BOT_FILL_RECHECK_TRIGGERS`,
+  skip `fill_rr`, #152 — a fill at/past TP1 was already refused by
+  `vivek_journal._snapshot`'s don't-chase guard); **one position per company**
+  (`VIVEK_BOT_ONE_PER_COMPANY`: the issuer before " - " in the name, crypto
+  exempt, drop `dup_company`, #12); a `d14` stamp at held ≥
+  `VIVEK_BOT_D14_STAMP_DAYS` (14) records r / mfe_r / tp1_hit — REPORT ONLY,
+  it never closes anything (PR-16 reads it).
 - **Capacity:** 60 open across ALL markets (`VIVEK_BOT_MAX_OPEN_TOTAL`),
   $150,000 notional, one per symbol cross-market, **6 per sector PER MARKET**
   (`sectorcache.global_sector_load` warns when one real sector exceeds it summed
-  across markets). Sibling books are read fail-closed. A plan refused at the
+  across markets). Since hc4-2 a sector is its **GICS-11 bucket**
+  (`VIVEK_BOT_SECTOR_GICS` folds Yahoo's and the ASX's labels — "banks" and
+  "financial services" are one "financials"; vivek_bot `_sector_key`,
+  sectorcache and app.js `sectorKeyOf` via `bot_rules.json` `sector_gics`;
+  #13/#143). Sibling books are read fail-closed. A plan refused at the
   fill releases its slot to the next-ranked row (`VIVEK_BOT_REFILL_PASSES` 2).
 - **Sizing:** fixed $2,500 (`VIVEK_BOT_POSITION_NOTIONAL`; 0 = old risk-% path),
   units = notional / entry, market currency. Dollars at risk vary with the stop
@@ -344,20 +366,25 @@ fields frozen and verified; CLOSED rows never touched; sized off
 
 **Cycles and the decision pack.** **w3-1** (2026-08-02 → 2026-09-21, the
 weekly/3d gate) ENDED; its n=30 read is a KILL (−0.192R/trade). **hc4-1**
-(`VIVEK_BOT_CYCLE_TAG`) is live; the journal's per-cell board reads
-`cycle_tag` + `entry_cells` from `bot_rules.json`. `docs/DECISIONS_2026-10-14.md`
-holds the OWNER items and a frozen register PR-0..PR-8, pinned to `PREREG` in
-`scripts/decision_pack.py` (`tests/test_decision_pack.py`; moving a line means
-editing both). Each checkpoint is read ONCE on the day its n-th hc4-1 rules
-close lands (+ one second read), never rolling; `python scripts/decision_pack.py`
-prints verdicts. The journal's checkpoint strip is its JS mirror
-(`journal.js` `PREREG` + `prEvaluate`): the register literal is pinned key for
-key and both evaluators run `tests/fixtures/checkpoint_cases.json`
+(2026-09-21 → 2026-11-02) ENDED with PR-0, PR-1 and PR-6 TRIPPED (27-28 Oct).
+**hc4-2** (`VIVEK_BOT_CYCLE_TAG`) is live from 2 Nov; the journal's per-cell
+board reads `cycle_tag` + `entry_cells` from `bot_rules.json`.
+`docs/DECISIONS_2026-10-14.md` holds the OWNER items and a frozen register
+PR-0..PR-16, pinned to `PREREG` in `scripts/decision_pack.py`
+(`tests/test_decision_pack.py`; moving a line means editing both). Every line
+carries its `cycle`: PR-0..PR-8 read hc4-1's rules closes (all read), PR-9..PR-16
+read hc4-2's. PR-16 is a SHADOW line (`kind: "shadow"`): the day-14 what-if
+against the rules' own result, per market — it reads the `d14` stamp and never
+closes anything. Each checkpoint is read ONCE on the day its n-th rules close
+of its cycle lands (+ one second read), never rolling;
+`python scripts/decision_pack.py` prints verdicts. The journal's checkpoint
+strip is its JS mirror (`journal.js` `PREREG` + `prEvaluate` +
+`prEvaluateShadow`), one fold per cycle, newest first: the register literal is
+pinned key for key and both evaluators run `tests/fixtures/checkpoint_cases.json`
 (`tests/test_checkpoint_mirror.py`, `test/journal_checkpoints.test.js`), so a
-register change edits the doc, the script and the JS together. PR-0, PR-1 and
-PR-6 TRIPPED (27-28 Oct); the **hc4-2 proposal** (2 Nov) is the last section of
-the decision pack, and nothing in it is live until the owner approves items by
-number. Approved changes land together as **hc4-2**. **Rules vs owner:** an absent `exit_reason` is a human
+register change edits the doc, the script and the JS together. Items 1 (drop
+the 3D reclaim; needs the replay-veto figure first) and 5 (crypto slots) were
+NOT approved. **Rules vs owner:** an absent `exit_reason` is a human
 act; `MECHANICAL_EXITS` (app.js, journal.js, status.js) is parity-pinned; the
 two records print separately, never pooled; evidence strips stay INERT (no
 controls or calls-to-action).
@@ -407,7 +434,8 @@ controls or calls-to-action).
   absent falls back to it. Fenced both ways (`tests/test_product_flag.py`).
 - **HIGH CONVICTION**: `scanner/conviction.py` is the one definition; Python
   readers import it, app.js/chart.js carry it as a JSON literal pinned by
-  `tests/test_conviction.py`. The badge's title and the expanded row carry each
+  `tests/test_conviction.py`. On screen it is the plain "Bot cell" tag (hc4-2,
+  PR-6). The tag's title and the expanded row carry each
   cell's live rules record for the current cycle (app.js `cellRecord`, held to
   the journal's `cycleCells` by `test/journal_checkpoints.test.js`; 2 Nov).
 - **Universe:** crypto pages CoinGecko at its 250 cap. The peg rule only ever
@@ -626,7 +654,7 @@ counted exclusions).
   `public/js/*.js` (`new Function(body)()`, one realm; `fnSrc()` lets the parser
   find a function's end). Mutation-verify new pins.
 - **Screenshot gate**: clock frozen to the fixtures' `FROZEN_MS`; the key
-  digests the fixtures + Playwright version (`screenshot-baselines-v26`); a
+  digests the fixtures + Playwright version (`screenshot-baselines-v27`); a
   `.clock` sentinel discards (never fails) a foreign baseline; NO
   `restore-keys`; > 2% drift on a deliberate change → bump the key, record it.
 - **Lighthouse gate** serves a STAGED root on the fixtures: 1.7 MB transfer,

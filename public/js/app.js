@@ -891,10 +891,15 @@
     // have actually done in the bot's current cycle -- so a grade is never
     // read in isolation. A plain fact, like the multi-lens pill's note.
     const live = cells.map((cell) => cellRecordNote(cell)).filter(Boolean);
-    return `<span class="rbadge hiconv" title="High conviction: ${esc(cells.join(" + "))} — ` +
-      `armed A/A+ in the backtest's best cells (1W reclaim/break, 3D reclaim, 1D break); one 🎯 per cell` +
+    // PR-6 (owner, 2026-11-02): demoted from the gold "🎯 High conviction"
+    // badge to a plain tag. Its 27 Oct read had these names 4.1 points WORSE
+    // than the other A+ longs over 20 sessions, so the label promised what the
+    // evidence did not show. Same rows, same place; it now says what it is --
+    // a setup in one of the bot's entry cells -- and keeps the live record.
+    return `<span class="rbadge hiconv" title="Bot cell: ${esc(cells.join(" + "))} — ` +
+      `armed A/A+ in one of the bot's four entry cells (1W reclaim/break, 3D reclaim, 1D break)` +
       `${live.length ? esc(". Live, the bot's rules closes: " + live.join("; ")) : ""}">` +
-      `${"🎯".repeat(Math.min(cells.length, 3))} High conviction</span>`;
+      `Bot cell${cells.length > 1 ? ` ×${cells.length}` : ""}</span>`;
   }
   // ── THE LIVE CYCLE'S RECORD PER CELL (owner item 10, 2026-11-02) ─────────
   // What each of the bot's entry cells has made in the CURRENT cycle
@@ -1224,8 +1229,13 @@
   // Display-only, same posture as HELD: it marks rows, filters nothing, and
   // the bot never sees it. A held row is skipped — it IS one of the counted
   // positions, and HELD already says everything.
-  const sectorKeyOf = (symbol, sector, market, majors) => {
-    const s = String(sector || "").trim().toLowerCase();
+  // hc4-2 (#13 / #143): `gics` is bot_rules.json's sector_gics table, the one
+  // _sector_key reads, so an ASX "Banks" and a NASDAQ "Financial Services"
+  // both bucket as "financials" here too. No table (an older rules file) =
+  // the raw lower-cased label, which is what the bot did before hc4-2.
+  const sectorKeyOf = (symbol, sector, market, majors, gics) => {
+    let s = String(sector || "").trim().toLowerCase();
+    if (gics && Object.prototype.hasOwnProperty.call(gics, s)) s = String(gics[s] || "");
     if (s) return s;
     if (market === "crypto") {
       return majors && majors.has(String(symbol || "").toUpperCase())
@@ -1239,7 +1249,7 @@
     if (!cap || !load) return "";
     const held = state.heldSyms && state.heldSyms[state.market];
     if (held && held.has(String(r.symbol).toUpperCase())) return "";
-    const k = sectorKeyOf(r.symbol, r.sector, state.market, state.cryptoMajors);
+    const k = sectorKeyOf(r.symbol, r.sector, state.market, state.cryptoMajors, state.sectorGics);
     const n = k ? (load[k] || 0) : 0;
     if (!k || n < cap) return "";
     return `<span class="row-secfull" title="The paper book already holds ${n} of ${cap} allowed positions in this sector (${esc(k)}) for ${state.market.toUpperCase()} — the bot would skip this entry with 'sector_cap' until one closes">SECTOR ${n}/${cap}</span>`;
@@ -2422,7 +2432,7 @@
       `<span class="vkf-legend" title="Chip colour = backtest edge (avg R)">🟢 best · 🟠 ok · 🔴 weak</span>` +
       `<span class="vkf-sep"></span>` +
       `<button class="vkf-chip vkf-highconv${state.vkHighConv ? " is-active" : ""}" data-high="1" ` +
-        `title="The backtest's best cells: 1W reclaim/break, 3D reclaim or 1D break, armed and graded A/A+ — one 🎯 per cell a name fires on">🎯 High conviction <b>${nHigh}</b></button>` +
+        `title="Rows the bot could take: armed A/A+ in one of its four entry cells (1W reclaim/break, 3D reclaim, 1D break). Plain since PR-6 (2026-11-02)">Bot cells <b>${nHigh}</b></button>` +
       `<button class="vkf-chip vkf-recent${state.vkRecent ? " is-active" : ""}" data-recent="1" ` +
         `title="Triggered recently — setups whose trigger fired on or near the latest scanned bar">⚡ Triggered <b>${nRecent}</b></button>` +
       `<span class="vkf-sep"></span>` +
@@ -2510,7 +2520,7 @@
       const activeFilters = [
         state.vkConfl && "⨂ Multi-lens",
         state.vkAtLevel && "◎ At level",
-        state.vkHighConv && "High conviction",
+        state.vkHighConv && "Bot cells",
         state.vkRecent && "Triggered recently",
         state.vkDir && (state.vkDir === "LONG" ? "Longs only" : "Shorts only"),
         state.vkEntry && state.vkEntry.size ? [...state.vkEntry].join("/") : null,
@@ -2854,18 +2864,21 @@
       try {
         const majors = new Set(((rules && rules.crypto_majors) || []).map((s) => String(s).toUpperCase()));
         const cap = rules ? (+rules.max_per_sector || 0) : 0;
+        const gics = rules && rules.sector_gics && typeof rules.sector_gics === "object" ? rules.sector_gics : null;
         const load = {};
         for (const p of (b.open || [])) {
           if (!p || !p.market) continue;
-          const k = sectorKeyOf(p.symbol, p.sector, p.market, majors);
+          const k = sectorKeyOf(p.symbol, p.sector, p.market, majors, gics);
           if (!k) continue;
           (load[p.market] = load[p.market] || {})[k] = (load[p.market][k] || 0) + 1;
         }
         const changed = cap !== state.sectorCap
-          || JSON.stringify(load) !== JSON.stringify(state.sectorLoad || {});
+          || JSON.stringify(load) !== JSON.stringify(state.sectorLoad || {})
+          || JSON.stringify(gics) !== JSON.stringify(state.sectorGics || null);
         state.cryptoMajors = majors;
         state.sectorCap = cap;
         state.sectorLoad = load;
+        state.sectorGics = gics;
         // The live cycle's record per cell (owner item 10): the same book,
         // the cycle named by the rules. No rules file = no note, never a
         // guessed cycle.

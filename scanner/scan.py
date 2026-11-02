@@ -414,8 +414,12 @@ def scan_vivek_market(market_key: str, limit: int | None = None, full: bool = Tr
                 funnel["no_plan"] += 1
                 continue
             lv = plans.get("1D")
-            gate_tf = next((tf for tf in ("1W", "3D", "1D")
-                            if (plans.get(tf) or {}).get("armed")), None)
+            # #7 (hc4-2): grade and headline the plan the BOT walks to -- the
+            # first armed, complete plan in an entry cell -- when the row has
+            # one; otherwise the first armed plan of any trigger, as before.
+            gate_tf = (vivek.first_cell_tf(plans, config.VIVEK_BOT_ENTRY_CELLS)
+                       or next((tf for tf in ("1W", "3D", "1D")
+                                if (plans.get(tf) or {}).get("armed")), None))
             gate_plan = plans.get(gate_tf) if gate_tf else None
             armed = gate_plan is not None
             # H1 (2026-07-20): the row HEADLINE is the plan the system actually

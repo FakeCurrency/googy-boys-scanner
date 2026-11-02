@@ -220,6 +220,8 @@
 .jr-pr-list .pr-read { color: var(--muted); }
 .jr-pr-list .pr-act { grid-column: 2 / -1; color: var(--muted-2); }
 .jr-pr-note { margin: 6px 0 0; max-width: 820px; font: 500 11px/1.5 var(--sans); color: var(--muted-2); }
+/* one fold per cycle since hc4-2 (2026-11-02), newest first */
+.jr-pr-fold + .jr-pr-fold { margin-top: 6px; }
 @media (max-width: 680px) {
   .jr-pr-list li { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .jr-pr-list .pr-read, .jr-pr-list .pr-act { grid-column: 2 / -1; }

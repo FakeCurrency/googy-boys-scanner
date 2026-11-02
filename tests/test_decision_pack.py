@@ -78,6 +78,44 @@ def test_the_frozen_hc41_definition_matches_config_while_the_cycle_runs():
     assert config.VIVEK_BOT_MAX_HOLD_DAYS == dp.HC41["max_hold_days"]
 
 
+def test_the_frozen_hc42_definition_matches_config_while_the_cycle_runs():
+    """hc4-2 (2026-11-02) is frozen in the pack beside its register (PR-9 ..
+    PR-16) for the reason HC41 is: a later rule change must not silently
+    redefine the cohort its checkpoints judge."""
+    sys.path.insert(0, str(ROOT))
+    from scanner import config
+    if config.VIVEK_BOT_CYCLE_TAG != dp.HC42["tag"]:
+        return  # hc4-2 has ended: the frozen definition is history now
+    assert dict(config.VIVEK_BOT_ENTRY_CELLS) == dp.HC42["cells"]
+    assert tuple(config.VIVEK_BOT_GRADES) == dp.HC42["grades"]
+    assert tuple(config.VIVEK_BOT_LEVEL_TF_ALLOW) == dp.HC42["levels"]
+    assert config.VIVEK_BOT_MAX_HOLD_DAYS == dp.HC42["max_hold_days"]
+    assert config.VIVEK_BOT_D14_STAMP_DAYS == dp.HC42["d14_days"]
+    shadow = next(p for p in dp.PREREG if p["kind"] == "shadow")
+    assert (shadow["day"], shadow["floor"]) == (dp.HC42["d14_days"], dp.HC42["d14_mfe_floor"])
+
+
+def test_every_hc42_checkpoint_judges_hc42_and_the_old_ones_stay_hc41():
+    ids = {p["id"]: dp.cycle_of(p) for p in dp.PREREG}
+    assert all(ids[f"PR-{i}"] == "hc4-1" for i in range(9))
+    assert all(ids[f"PR-{i}"] == "hc4-2" for i in range(9, 17))
+    # an hc4-1 close never reaches an hc4-2 checkpoint, and the reverse
+    pr10 = next(p for p in dp.PREREG if p["id"] == "PR-10")
+    old = [_row(f"S{i}", -1.0, "stop", tf="1W") for i in range(25)]
+    assert dp.evaluate(pr10, old)["n"] == 0
+    new = [_row(f"S{i}", -1.0, "stop", tf="3D", cycle="hc4-2") for i in range(25)]
+    assert dp.evaluate(_pr("PR-1"), new)["n"] == 0
+
+
+def test_the_day14_whatif_cuts_only_a_pre_tp1_row_still_under_the_floor():
+    base = _row("A", -0.9, "time", cycle="hc4-2", cost_r=0.02,
+                d14={"day": "2026-11-17", "held": 14, "mfe_r": 0.3, "r": 0.1, "tp1_hit": False})
+    assert dp.whatif_d14(base, 0.5) == 0.08                      # the stamp's R less costs
+    assert dp.whatif_d14(dict(base, d14=dict(base["d14"], tp1_hit=True)), 0.5) == -0.9
+    assert dp.whatif_d14(dict(base, d14=dict(base["d14"], mfe_r=0.5)), 0.5) == -0.9
+    assert dp.whatif_d14({k: v for k, v in base.items() if k != "d14"}, 0.5) == -0.9
+
+
 def test_rules_vs_hand_split_and_a_missing_reason_is_a_hand_close(tmp_path):
     closed = [_row("A", -1.0, "stop"), _row("B", 0.5, "time"),
               _row("C", 0.3, "manual"), _row("D", 0.2, None),

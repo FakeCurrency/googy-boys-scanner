@@ -27,8 +27,9 @@ The rules it enforces (locked-in, audited on every decision):
      actually are. decide() only ever sees one market, so the runner passes
      the other markets' count in as `open_elsewhere`; the per-market cap is
      set equal to the global one and is no longer what binds. One position
-     per symbol, at most config.VIVEK_BOT_MAX_PER_SECTOR (6 since 2026-09-27,
-     was 3 — the same $15,000 a sector) per sector — the correlation control
+     per symbol -- and since hc4-2 one per company (#12) -- at most
+     config.VIVEK_BOT_MAX_PER_SECTOR (6 since 2026-09-27, was 3 — the same
+     $15,000 a sector) per GICS sector (#13 / #143) — the correlation control
      that stops the book becoming one macro bet. If VIVEK_BOT_MIN_SHORTS is
      non-zero the bot also reserves that many short slots and caps longs
      accordingly (it is 0 today: long-only).
@@ -512,14 +513,40 @@ def _side(direction) -> str | None:
 def _sector_key(symbol: str, sector: str | None, market: str | None) -> str:
     """Sector bucket for the correlation cap. Crypto has no GICS sector, so
     coins get synthetic buckets: the configured majors are 'crypto-major',
-    everything else is 'crypto-alt' — 4 alts are usually ONE beta-to-BTC bet."""
+    everything else is 'crypto-alt' — 4 alts are usually ONE beta-to-BTC bet.
+
+    hc4-2 (#13 / #143, owner-approved 2026-11-02): a stock's label is read
+    through config.VIVEK_BOT_SECTOR_GICS, so the ASX's GICS industry groups
+    and NASDAQ's Yahoo names both land on the 11 GICS sectors -- Banks,
+    Insurance and Financial Services are one 'financials' bucket. A label
+    the table maps to blank ('not applic', 'class pend') is exempt, like any
+    blank; an unmapped label is kept as it is."""
     s = str(sector or "").strip().lower()
+    s = (_cfg.VIVEK_BOT_SECTOR_GICS or {}).get(s, s)
     if s:
         return s
     if market == "crypto":
         majors = {m.upper() for m in _cfg.VIVEK_BOT_CRYPTO_MAJORS or ()}
         return "crypto-major" if str(symbol or "").upper() in majors else "crypto-alt"
     return ""
+
+
+def _company_key(name: str | None, symbol: str | None, market: str | None) -> str:
+    """The issuer behind a listed line, for one-position-per-company (#12,
+    hc4-2, owner-approved 2026-11-02). NASDAQ names read "Issuer - Class X
+    Stock" ("Liberty Media Corporation - Series A Common Stock" is FWONA,
+    "... - Series C ..." is FWONK), so the issuer is the part before " - ",
+    case- and punctuation-folded. A name without that separator is used whole.
+    Blank for crypto (no issuer), and blank when the row carries no name of
+    its own (a book row whose `name` is just its symbol cannot collide with
+    another line, so it never blocks one) -- this can only ever refuse more."""
+    if market == "crypto":
+        return ""
+    raw = str(name or "").strip()
+    if not raw or raw.upper() == str(symbol or "").strip().upper():
+        return ""
+    issuer = raw.split(" - ", 1)[0]
+    return " ".join("".join(ch if ch.isalnum() else " " for ch in issuer.lower()).split())
 
 
 def decide(rows: list[dict], equity: float, market: str | None = None,
@@ -653,6 +680,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
     # from the closed book) are untouchable — no churning the same level.
     cooldown_syms = {str(s).upper() for s in (kw.get("cooldown_syms") or ())}
 
+    # One position per company (#12, hc4-2): the issuers already held in this
+    # market, seeded from the open book like the symbol set. Off when the
+    # flag is off; a row with no issuer key never collides.
+    one_per_company = bool(_cfg.VIVEK_BOT_ONE_PER_COMPANY)
+    open_companies: set[str] = (
+        {_company_key(p.get("name"), p.get("symbol"), market) for p in book} - {""}
+        if one_per_company else set())
+
     def drop(out, code, reason):
         log.info("SKIP  %-8s [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
         reasons[code] += 1
@@ -668,8 +703,12 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         sym = str(row.get("symbol") or "").upper()
         direction = out["direction"]
         sector = _sector_key(sym, row.get("sector"), market)
+        company = _company_key(row.get("name"), sym, market) if one_per_company else ""
         if sym in open_syms:
             drop(out, "dup_symbol", f"already holding {sym}")
+        elif company and company in open_companies:
+            drop(out, "dup_company",
+                 f"already holding another listed line of '{company}' - one position per company")
         elif sym in cooldown_syms:
             drop(out, "cooldown", f"{sym} stopped out recently — re-entry cooldown active")
         elif open_count >= max_pos:                     # existing + taken so far
@@ -698,6 +737,8 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         else:
             plans.append(out)
             open_syms.add(sym)
+            if company:
+                open_companies.add(company)
             open_count += 1
             open_notional += float(out["plan"].get("notional") or 0)
             if sector:

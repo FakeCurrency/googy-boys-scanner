@@ -693,7 +693,35 @@ VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
 # entry rules were aligned to the four conviction cells; rows it opened keep
 # their tag (the journal's w3-1 evidence strip still reads them). New rows
 # carry "hc4-1": grades A/A+, VIVEK_BOT_ENTRY_CELLS, same level gate.
-VIVEK_BOT_CYCLE_TAG = "hc4-1"
+# 2026-11-02: cycle "hc4-1" ENDED (PR-0 / PR-1 / PR-6 tripped; the owner
+# approved hc4-2 items 2, 3, 4, 6 and 7 -- docs/DECISIONS_2026-10-14.md,
+# "hc4-2 proposal"). Its open rows keep their tag and run to their exits
+# under the rules they were opened with. New rows carry "hc4-2": the same
+# grades, cells and level gate, plus the fill re-check (#152), one position
+# per company (#12), GICS sector buckets (#13/#143), grading on the bot's own
+# plan (#7) and the W+H4 point fix (#148).
+VIVEK_BOT_CYCLE_TAG = "hc4-2"
+# THE FILL RE-CHECK (#152, hc4-2). A break plan's entry is the level that was
+# broken, but the trigger bar has already closed above it, so the book fills
+# higher (median 3.96% above the plan entry live; WBC filled 0.03R below its
+# own TP1). For a plan whose trigger is listed here, R:R is measured again
+# from the ACTUAL fill (to TP2, the plan convention) and the entry is skipped
+# below VIVEK_BOT_MIN_RR (`fill_rr`). A fill at or past TP1 was already
+# refused for every trigger by the journal's don't-chase guard. It only ever
+# refuses entries; the refused slot goes to the next-ranked row (the refill).
+# Empty = off.
+VIVEK_BOT_FILL_RECHECK_TRIGGERS = ("break",)
+# ONE POSITION PER COMPANY (#12, hc4-2). Two listed lines of one issuer
+# (FWONA + FWONK, GOOG + GOOGL, FOX + FOXA) are one bet. The company is the
+# issuer part of the listing name -- NASDAQ names read "Issuer - Class X
+# Stock" -- compared within a market; crypto is exempt. Only tightens.
+VIVEK_BOT_ONE_PER_COMPANY = True
+# THE DAY-14 STAMP (hc4-2 item 4, REPORT ONLY). On the first in-session run at
+# or past this many days held, each open row records its best R so far, its R
+# at that mark and whether TP1 had been hit (`d14`), so the decision pack can
+# set "cut at day 14 if it never reached +0.5R" beside what the rules did.
+# Nothing reads it to decide anything. 0 = off.
+VIVEK_BOT_D14_STAMP_DAYS = 14
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # LONG-ONLY: the walk-forward backtest showed the short side loses ~0.5R per
@@ -909,6 +937,58 @@ VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # market. Empty/unknown stock sectors are exempt (crypto is bucketed above).
 # 0 = off.
 VIVEK_BOT_MAX_PER_SECTOR = 6
+# THE SECTOR BUCKETS ARE THE 11 GICS SECTORS (#13 / #143, hc4-2). The ASX
+# universe labels a name by its GICS INDUSTRY GROUP (27 labels: Banks,
+# Insurance and Financial Services are one sector split three ways), NASDAQ by
+# Yahoo's sector names ("Financial Services", "Healthcare"), so the cap above
+# meant different things in each market. Every known label maps to its GICS
+# sector here (lower-case keys, as the cap compares); "not applic" and "class
+# pend" carry no operating sector and map to blank, which the cap exempts (the
+# bot's fund test still reads the RAW label, so a "Not Applic" ETF stays
+# excluded). A label missing from the table is kept as it is. Published in
+# bot_rules.json so the deck's SECTOR n/6 marker buckets the same way.
+VIVEK_BOT_SECTOR_GICS = {
+    # ASX GICS industry groups
+    "energy": "energy",
+    "materials": "materials",
+    "capital goods": "industrials",
+    "commercial & professional services": "industrials",
+    "transportation": "industrials",
+    "automobiles & components": "consumer discretionary",
+    "consumer durables & apparel": "consumer discretionary",
+    "consumer services": "consumer discretionary",
+    "consumer discretionary distribution & retail": "consumer discretionary",
+    "retailing": "consumer discretionary",
+    "consumer staples distribution & retail": "consumer staples",
+    "food & staples retailing": "consumer staples",
+    "food, beverage & tobacco": "consumer staples",
+    "household & personal products": "consumer staples",
+    "health care equipment & services": "health care",
+    "pharmaceuticals, biotechnology & life sciences": "health care",
+    "banks": "financials",
+    "financial services": "financials",
+    "diversified financials": "financials",
+    "insurance": "financials",
+    "software & services": "information technology",
+    "technology hardware & equipment": "information technology",
+    "semiconductors & semiconductor equipment": "information technology",
+    "telecommunication services": "communication services",
+    "media & entertainment": "communication services",
+    "utilities": "utilities",
+    "equity real estate investment trusts (reits)": "real estate",
+    "real estate management & development": "real estate",
+    "not applic": "",
+    "class pend": "",
+    # Yahoo sector names (NASDAQ, and the cache's fallback for ASX names)
+    "basic materials": "materials",
+    "industrials": "industrials",
+    "consumer cyclical": "consumer discretionary",
+    "consumer defensive": "consumer staples",
+    "healthcare": "health care",
+    "technology": "information technology",
+    "communication services": "communication services",
+    "real estate": "real estate",
+}
 
 # HORIZON (sector breadth) and REGIME (relative strength) were REMOVED ENTIRELY
 # on 2026-09-20 (owner: "get rid of it entirely, rip out the guts of it"). The
