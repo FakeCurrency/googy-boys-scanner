@@ -1,5 +1,11 @@
 # Decisions for Viv - 14 Oct 2026
 
+> **Update, Mon 2 Nov.** PR-0 (the whole cycle) and PR-1 (3D reclaim) have been
+> read and both tripped, and PR-6 (the High-conviction badge) tripped at its
+> 27 Oct read. The **hc4-2 proposal** that answers them is the last section of
+> this pack ("hc4-2 proposal (2 Nov 2026)"). Everything above it is the 14 Oct
+> record, left as written.
+
 REFINE200 found 200 things to fix, and most of them are fixed in this batch.
 The 20 below would change which trades the paper bot takes, how big they are, or when
 they close, or they touch the PhaseMap spec. Those are yours to decide. This
@@ -918,6 +924,269 @@ each).
 **Verdict: close P15.** If you want it back, the minimum is a single number
 per market per scan (the share above the 200-SMA), recorded on new book rows,
 with no page.
+
+---
+
+# hc4-2 proposal (2 Nov 2026)
+
+## Why now
+
+Two of the live checkpoints frozen on 14 Oct have been read, and both
+tripped:
+
+- **PR-0, the whole cycle.** Read Wed 28 Oct at 41 rules closes: **-0.271R**
+  a trade, against a line of -0.25R. The response written down on 14 Oct is
+  that you review the whole rule set before anything else changes. This
+  section is that review.
+- **PR-1, 3D reclaim.** Read Tue 27 Oct at 21 closes: **-0.433R** a trade,
+  against a line of -0.30R. The response is to drop 3D reclaim from the entry
+  cells, for new entries only.
+
+The other two live checkpoints have not tripped. **PR-2** (ASX vs NASDAQ) was
+read on Fri 30 Oct: the ASX averaged -0.399R against NASDAQ's -0.215R. That
+gap of 0.18R is short of the 0.30R the line needs, so PR-2 holds for its
+second read at 30 ASX closes (17 so far). **PR-3** (A vs A+) is not due yet:
+12 of 15 A closes.
+
+Of the checkpoints decided off the book, one has been read. **PR-6** (the
+High-conviction badge) was due Tue 27 Oct. Over 20 sessions, High-conviction
+names averaged **-6.58%** (83 names) and the other A+ longs **-2.49%** (186).
+High conviction did 4.1 points worse, past the 1.0-point line, so the register
+says demote the badge to a plain tag. The rest are still waiting:
+
+- **PR-8:** Ignition's forward test has 2 trades of the 30 it needs (both in
+  crypto).
+- **PR-5:** the "trigger candle complete?" label it needs has not been built.
+- **PR-4 and PR-7:** the 14 Oct replay passed neither (weekly-only and the
+  42 / 56-day / no time stops all did worse than the live rules; 21 days was
+  not run).
+
+The journal now shows the live checkpoints on a strip in Claude's book card,
+worked out the same way as `scripts/decision_pack.py`. (The 27 Oct PR-6
+figures above count only 20-session returns stamped by 27 Oct. The decision
+pack prints today's numbers, which are 116 against 252 names and a 1.7-point
+gap, still past the line.)
+
+**How to answer.** Reply with the numbers you approve, for example "approve 1,
+2, 3, 4, 6, 7; reject 5". Everything approved lands on one day as the new
+cycle **hc4-2**, with its own tag. Open positions keep their hc4-1 tag and run
+to their exits under the rules they were opened with, and PR-2 and PR-3 keep
+reading hc4-1's closes as they come in. Nothing below is live until you
+approve it.
+
+## The review PR-0 asks for
+
+hc4-1's rules closes (48 of them; there have been no hand closes since 14 Oct):
+
+| Cut | Closes | Avg R | Total R | Won |
+|---|---|---|---|---|
+| All of hc4-1 | 48 | -0.279R | -13.41R | 35% |
+| 3D reclaim | 30 | -0.359R | -10.78R | 30% |
+| 1W reclaim | 17 | -0.163R | -2.78R | 41% |
+| 1D break | 1 | +0.144R | +0.14R | 100% |
+| 1W break | 0 | - | - | - |
+| ASX | 17 | -0.398R | -6.76R | 35% |
+| NASDAQ | 31 | -0.215R | -6.65R | 35% |
+| Crypto | 0 | - | - | - |
+| Graded A | 12 | -0.075R | -0.90R | 42% |
+| Graded A+ | 36 | -0.348R | -12.51R | 33% |
+
+The 60 open positions are **+10.3R** unrealised (ASX +4.04R, NASDAQ +7.00R,
+crypto -0.70R). 40 of them are 3D reclaims, at +8.23R between them.
+
+What the review finds:
+
+1. **Most of the loss is one cell.** 3D reclaim is 30 of the 48 closes and
+   -10.78R of the -13.41R. The other 18 closes average -0.15R.
+2. **The stops carry the loss, not the time stop.** Across every cycle, the
+   rules' 28 stop exits total -32.64R. The 57 time stops total +1.67R and the
+   5 trail exits +1.15R. Of the 54 closes that ever went to -0.5R or worse,
+   3 ended as winners. Most of these trades were wrong from entry. They did
+   not give back profits.
+3. **Some of the loss is the market, not the rules.** Every A+ long did badly
+   in this window, taken or not. Over 20 sessions the A+ long rosters averaged
+   -4.5% on the ASX (367 names) and -3.8% on NASDAQ (404). Almost every hc4-1
+   row was opened in the same few weeks, so this sample can't separate the
+   rules from the period.
+4. **The edge was always going to be thin.** The 14 Oct replay of these exact
+   rules made +0.058R a trade (+0.104R with stops filled at the stop), with
+   51.6% winners. An edge that size has losing months even when it is real.
+5. **The High-conviction label is not earning its name** (PR-6 above). The
+   bot's cells are the High-conviction cells, so this is the same warning
+   from a second source.
+
+**Recommendation.** Make the targeted changes below rather than pause the
+bot. A pause would stop the measurement as well, and nothing here says the 1W
+cells are broken: 1W reclaim is -0.16R on 17 closes, which is within noise of
+zero. Then write hc4-2's own checkpoints before it starts (item 7).
+
+## The changes
+
+| # | Change | Trades affected | Recommendation |
+|---|---|---|---|
+| 1 | Stop opening 3D reclaims (PR-1) | yes: 3D reclaims were 70 of hc4-1's 108 entries | Approve, unless the replay veto applies |
+| 2 | Re-check R:R and TP1 at a break's actual fill (#152) | a few; only tightens | Approve |
+| 3 | The 14 Oct pack's other hc4-2 fixes (#7, #12, #13/#143, #148) | a few | Approve |
+| 4 | Record every position's best R at day 14 (report only) | none | Approve |
+| 5 | Keep slots free for crypto | some, in future | Not yet: count first |
+| 6 | Demote the High-conviction badge (PR-6) | none (display) | Approve |
+| 7 | Write hc4-2's checkpoints before it starts | none | Approve |
+
+### 1. Stop opening 3D reclaims (PR-1)
+
+**What changes.** `VIVEK_BOT_ENTRY_CELLS` loses 3D reclaim, so new entries
+walk 1W reclaim, 1W break and 1D break. The 40 open 3D reclaims run to their
+exits.
+
+**Evidence.**
+
+- **Live:** read on 27 Oct at -0.433R over 21 closes; -0.359R over 30 today.
+- **The 14 Oct replay:** hc4-1 without 3D reclaim made 0.0390R per
+  slot-month, against the live rules' 0.0318R. That is better, but it failed
+  the robustness gate, which needs it better in the ASX and NASDAQ separately
+  and in both halves of the sample.
+- **The older research replays** (A+ only, the w3-era cells, with the time
+  stop; `data/research/`): stock 3D reclaims averaged -0.01R, -0.10R and
+  -0.05R on trades that closed. Counting the trades still open when the data
+  ran out (a few large runners), they averaged +0.11R, +0.12R and +0.08R.
+
+**The replay veto decides this one.** Under the frozen rules, a live trip is
+overruled when the decision replay shows the same cohort at +0.05R a trade or
+better (stocks, with the time stop). That figure is in the 14 Oct replay's
+report, which this session could not download. You can read it on the run's
+Summary page: Actions, then Decision replay, then run #5 (14 Oct, 09:55 UTC),
+the by-cell table, the 3D reclaim row for stocks. The report expires on Fri
+13 Nov.
+
+- **Below +0.05R:** drop the cell at hc4-2.
+- **+0.05R or better:** the register says hold and read again at twice the
+  closes, 40. If nothing stops out first, the 40th 3D-reclaim close lands
+  around Thu 19 Nov. The register doesn't say which line that read uses, so
+  you would need to choose before the read:
+  - at PR-1's second-read line (-0.15R), the next 10 closes must average
+    +0.48R or better to clear it;
+  - at the line that tripped (-0.30R), they must average -0.12R or better.
+
+  The 40 open 3D reclaims average +0.21R unrealised today, and the 10 oldest
+  average +0.50R.
+
+**The badge question this raises.** The four High-conviction cells are your
+20 Sep ruling, and the bot trades the same four (21 Sep;
+`tests/test_bot_alignment.py` pins the two lists equal). Dropping 3D reclaim
+from the bot needs one more answer:
+
+- (a) drop it from the badge as well, so the badge keeps meaning "the cells
+  the bot trades"; or
+- (b) keep the badge at four cells and let the bot trade three. The
+  alignment test would then pin the bot's cells as a subset of the badge's.
+
+Recommendation: (a). It also overlaps with item 6.
+
+**Recommendation: approve, unless the replay's stock 3D-reclaim figure is
++0.05R or better.** If it is, the frozen rules hold the drop until the second
+read.
+
+### 2. Re-check R:R and TP1 at a break's actual fill (#152)
+
+This is unchanged from the 14 Oct pack, where #152 was already recommended for
+hc4-2. Re-measure R:R and TP1 from the actual fill price, and skip the trade
+if R:R is below 1.5 or the fill is already past TP1. Live break fills have
+landed a median 3.96% above the plan entry. With 3D reclaim gone (item 1), two
+of the three remaining cells are breaks. The pack named a larger break share
+as the thing that would make this more urgent. **Recommendation: approve.** It
+only ever tightens.
+
+### 3. The 14 Oct pack's other hc4-2 fixes
+
+These were recommended for hc4-2 on 14 Oct and are unchanged. You can
+approve them one at a time as 3a to 3d:
+
+- **3a, #7:** grade the row on the plan the bot will actually trade. This can
+  only add takes, and rarely.
+- **3b, #12:** allow one position per company (FWONA and FWONK are the same
+  company). This only tightens.
+- **3c, #13 / #143:** map the ASX industry groups and NASDAQ's Yahoo sector
+  names onto the 11 GICS sectors, and keep 6 per sector per market. Mostly
+  this tightens.
+- **3d, #148:** the "W+H4 confluence" scoring point must check both averages
+  against the price. It is a bug, and it affected 0 bot trades on 14 Oct.
+
+**Recommendation: approve all four.**
+
+### 4. Record every position's best R at day 14 (report only)
+
+**What it is.** The 14 Oct replay's best variant cut a trade at day 14 if it
+had never reached +0.5R. That made 0.0535R per slot-month against 0.0318R,
+the biggest gain of any variant, but it failed the robustness gate. In the
+live book, 54 closes went to -0.5R or worse at some point and only 3 won. The
+older research replays, measured per trade rather than per slot, move both
+ways (-0.087R to -0.062R in one sample, +0.002R to -0.010R in the other).
+
+**What changes.** Nothing about trading. On the first scan at or after day 14,
+each open position records its best R so far and its R at that moment. The
+decision pack then prints what the cut would have done to each closed hc4-2
+trade beside what the rules actually did. This touches the paper book's
+writer (`scanner/broker/vivek_run.py`), not the rules (`vivek_bot.py`).
+
+**Recommendation: approve.** It turns the replay's best idea into live
+evidence without changing a single trade. Actually cutting trades would be a
+later decision, with its own checkpoint.
+
+### 5. Keep slots free for crypto
+
+**What it is.** The book has been full (60 of 60) since at least 14 Oct, with
+3 crypto positions, because stock setups take the slots first.
+
+**Evidence, both ways.**
+
+- **For:** the 10-year long-only backtest of these cells (no time stop) has
+  crypto at +0.63R a trade over 115 trades. Live crypto closes are +0.75R a
+  trade over 8 closes, but only 6 of those were closed by the rules, at -0.02R.
+- **Against:** the 5-year replay had crypto at -0.13R (58 trades). Supply is
+  also thin. After the $3M liquidity floor (your ruling: "Keep"), today's
+  crypto scan has 20 rows and 2 setups the bot could take (BAT, a 3D reclaim,
+  and GT, a 1W reclaim). With 3D reclaim gone that would be one.
+
+**Options.** (a) Keep a few of the 60 slots (say 5) for crypto. (b) Leave it.
+(c) Count first: record every crypto setup refused because the book was full,
+report only, and decide at hc4-2's first checkpoint.
+
+**Recommendation: (c).** The case rests on one backtest and 6 live rules
+closes, and the floor already keeps supply small. A count shows whether the
+cap is really what keeps crypto out.
+
+### 6. Demote the High-conviction badge (PR-6)
+
+PR-6 tripped at its 27 Oct read (see "Why now"). The register's response is
+to demote the gold "🎯 High conviction" badge to a plain tag, for example
+"Bot cell", in the same place. This is a display change only. Since 2 Nov the
+badge and the expanded row also show each cell's live record ("3D reclaim ·
+hc4-1 -0.36R · n=30"), and that would stay on the plain tag. **Recommendation:
+approve.**
+
+### 7. Write hc4-2's checkpoints before it starts
+
+hc4-2 gets its own frozen register, written before its first entry, the way
+PR-0 to PR-8 were. A first draft:
+
+- the whole cycle, read at 40 rules closes; trips at -0.25R or worse;
+- each cell, read at 20 rules closes; trips at -0.30R or worse;
+- ASX vs NASDAQ and A vs A+, carried over from PR-2 and PR-3;
+- the day-14 what-if from item 4, read at 40 closes. A cut is proposed only if
+  it beats the rules by +0.05R a trade or more, in the ASX and NASDAQ
+  separately.
+
+The lines go into `scripts/decision_pack.py` and this doc together, pinned by
+the same test. **Recommendation: approve.** The exact lines come to you for
+sign-off with the hc4-2 change itself.
+
+## When you approve
+
+Everything you approve goes into one pull request, merged on a weekday before
+the ASX session opens, so no rule changes mid-session. `VIVEK_BOT_CYCLE_TAG`
+becomes hc4-2 and `bot_rules.json` publishes the new cells. hc4-1's open
+positions run to their exits. The journal's checkpoint strip keeps showing
+hc4-1's reads.
 
 ---
 
