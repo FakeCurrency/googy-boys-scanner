@@ -534,7 +534,13 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   eq(T.minScore, 1, "minimum score 1"); eq(T.useRsi, false, "RSI is OFF in the score");
   eq(T.r.join(","), "1,2,3", "TP ladder at 1R/2R/3R");
 
-  const hist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  // Every ELS read in this file uses the FROZEN copy (bars to 2026-10-13,
+  // tests/fixtures/history/, the snapshot tests/test_momentum_backtest.py
+  // replays). They read the live data/history file, which every ASX scan
+  // rewrites: once the 1 Nov 2026 scan pushed the ELS signal past the plan's
+  // 60-bar freshness window, this failed on an untouched tree -- the delayed
+  // fuse CLAUDE.md warns of ("gate on fixtures").
+  const hist = path.join(__dirname, "..", "tests", "fixtures", "history", "asx", "ELS.json");
   if (fs.existsSync(hist)) {
     const raw = JSON.parse(fs.readFileSync(hist, "utf8"));
     const bars = raw.bars.map((r) => ({
@@ -639,7 +645,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   const viewStart = new Function("MOM_VIEW_MONTHS", "MOM_REGIME_MULT", "MOM_VIEW_MIN_BARS",
     "return (" + slc2("momentumViewStart") + ");")(MONTHS, MULT, MIN);
 
-  const hist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  const hist = path.join(__dirname, "..", "tests", "fixtures", "history", "asx", "ELS.json");
   if (fs.existsSync(hist)) {
     const raw = JSON.parse(fs.readFileSync(hist, "utf8"));
     const bars = raw.bars.map((r) => ({
@@ -729,7 +735,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
     ${slc("momentumDivs")} ${slc("momentumCrosses")}
     return { momentumPlan, pivotIdx, momentumDivs, momentumCrosses, rsiPine };`)();
 
-  const hist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  const hist = path.join(__dirname, "..", "tests", "fixtures", "history", "asx", "ELS.json");
   const bars = fs.existsSync(hist)
     ? JSON.parse(fs.readFileSync(hist, "utf8")).bars.map((r) => ({
         time: Math.floor(Date.parse(r[0] + "T00:00:00Z") / 1000),
@@ -1337,7 +1343,7 @@ ok(/src=momentum/.test(MOM), "the row asks for the momentum chart");
   ok(Math.abs(old4.entry - 6.46) > 0.02, `the UTC build misses TV (entry ${old4.entry.toFixed(4)})`);
 
   // ── 4H is its OWN plan, never the Daily one ──
-  const dhist = path.join(__dirname, "..", "data", "history", "asx", "ELS.json");
+  const dhist = path.join(__dirname, "..", "tests", "fixtures", "history", "asx", "ELS.json");
   if (fs.existsSync(dhist)) {
     const daily = JSON.parse(fs.readFileSync(dhist, "utf8")).bars.map((r) => ({
       time: Math.floor(Date.parse(r[0] + "T00:00:00Z") / 1000), open: r[1], high: r[2], low: r[3], close: r[4], volume: r[5] }));
