@@ -38,9 +38,9 @@
       "cost_r": 0.0087,
       "exits": [],
       "mae": 0.36442417,
-      "mfe": 0.41138822,
+      "mfe": 0.41208923,
       "mae_r": -0.207,
-      "mfe_r": 0.57,
+      "mfe_r": 0.581,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 6678.49204992,
       "notional": 2500.0,
@@ -66,15 +66,14 @@
       "level_tf": "3d",
       "signal_entry": 0.374336,
       "fill_slip_bps": 69.7,
-      "last_mark": 0.41138822,
-      "last_mark_day": "2026-11-01",
+      "last_mark": 0.41208923,
+      "last_mark_day": "2026-11-02",
       "data_source": "yahoo",
       "anchor": [
         "2026-10-31",
         0.4042080045
       ],
       "day_marks": {
-        "2026-10-24": 0.37097213,
         "2026-10-25": 0.3652052,
         "2026-10-26": 0.37286732,
         "2026-10-27": 0.36608058,
@@ -82,10 +81,11 @@
         "2026-10-29": 0.38796893,
         "2026-10-30": 0.37412429,
         "2026-10-31": 0.37591636,
-        "2026-11-01": 0.39453387
+        "2026-11-01": 0.39453387,
+        "2026-11-02": 0.41138822
       },
-      "unreal_r": 0.57,
-      "unreal_usd": 230.03
+      "unreal_r": 0.581,
+      "unreal_usd": 234.71
     },
     {
       "id": "BNB:long:3D:2026-10-21",
@@ -141,15 +141,14 @@
       "level_tf": "3d",
       "signal_entry": 741.69,
       "fill_slip_bps": 94.5,
-      "last_mark": 709.81,
-      "last_mark_day": "2026-11-01",
+      "last_mark": 710.13,
+      "last_mark_day": "2026-11-02",
       "data_source": "binance_vision",
       "anchor": [
-        "2026-10-31",
-        703.95
+        "2026-11-01",
+        712.69
       ],
       "day_marks": {
-        "2026-10-24": 737.57,
         "2026-10-25": 735.88,
         "2026-10-26": 740.28,
         "2026-10-27": 741.24,
@@ -157,10 +156,11 @@
         "2026-10-29": 758.72,
         "2026-10-30": 703.51,
         "2026-10-31": 703.0,
-        "2026-11-01": 703.79
+        "2026-11-01": 703.79,
+        "2026-11-02": 709.81
       },
-      "unreal_r": -0.476,
-      "unreal_usd": -131.09
+      "unreal_r": -0.473,
+      "unreal_usd": -130.01
     },
     {
       "id": "PAXG:long:3D:2026-10-28",
@@ -216,22 +216,23 @@
       "level_tf": "3d",
       "signal_entry": 4068.94,
       "fill_slip_bps": -50.2,
-      "last_mark": 3907.87,
-      "last_mark_day": "2026-11-01",
+      "last_mark": 3910.83,
+      "last_mark_day": "2026-11-02",
       "data_source": "binance_vision",
       "anchor": [
-        "2026-10-31",
-        3899.27
+        "2026-11-01",
+        3910.91
       ],
       "day_marks": {
         "2026-10-28": 4048.52,
         "2026-10-29": 4054.37,
         "2026-10-30": 4022.1,
         "2026-10-31": 3901.22,
-        "2026-11-01": 3898.03
+        "2026-11-01": 3898.03,
+        "2026-11-02": 3907.87
       },
-      "unreal_r": -0.815,
-      "unreal_usd": -86.42
+      "unreal_r": -0.798,
+      "unreal_usd": -84.6
     }
   ],
   "closed": [
@@ -900,33 +901,33 @@
   "guard": {
     "crypto": {
       "market": "crypto",
-      "day": "2026-11-01",
+      "day": "2026-11-02",
       "breached": false,
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 64.65,
+      "week_usd": 114.32,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_measured": true,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": 138.9,
-      "worst_week_usd": 64.65,
+      "worst_session_usd": 7.58,
+      "worst_week_usd": 114.32,
       "realised_usd": 0.0,
       "open_realised_usd": 0.0,
-      "unrealised_usd": 138.9,
-      "session_usd": 138.9,
+      "unrealised_usd": 7.58,
+      "session_usd": 7.58,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 3,
-      "open_total_usd": 2.0,
+      "open_total_usd": 9.58,
       "notified": ""
     }
   },
   "summary": {
     "open": 3,
-    "unreal_usd": 12.52,
-    "updated_day": "2026-11-01"
+    "unreal_usd": 20.1,
+    "updated_day": "2026-11-02"
   },
-  "updated_at": "2026-11-01T23:25:36+00:00"
+  "updated_at": "2026-11-02T00:25:51+00:00"
 }
