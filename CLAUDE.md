@@ -277,7 +277,9 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
 - **Compare R, not dollars**: $ P&L is not like-for-like across the 2026-07-28
   resize or the SIZING 2 resize commit (restated rows carry `resized_at`);
   split any hc4-1 read there, not at a calendar date.
-- **Management:** TP ladder + trail, 28-day time stop, mark-sanity
+- **Management:** TP ladder + trail, 28-day time stop (pre-TP1, fires on the
+  first in-session run with held > 28 market days: day 29; the journal's
+  countdown and the stalled strip count to that day), mark-sanity
   (`VIVEK_MARK_SANITY_PCT` 35%/60%; pauses on a suspect mark, alerts on the 2nd
   hit, accepts on the 3rd; only while the market is open). A split accepted by
   mark-sanity is restated (prices ÷ ratio, units × ratio, R unchanged, audited
@@ -348,8 +350,14 @@ holds the OWNER items and a frozen register PR-0..PR-8, pinned to `PREREG` in
 `scripts/decision_pack.py` (`tests/test_decision_pack.py`; moving a line means
 editing both). Each checkpoint is read ONCE on the day its n-th hc4-1 rules
 close lands (+ one second read), never rolling; `python scripts/decision_pack.py`
-prints verdicts. Approved changes land together as **hc4-2** (earliest: the
-PR-0 read, ~27 Oct). **Rules vs owner:** an absent `exit_reason` is a human
+prints verdicts. The journal's checkpoint strip is its JS mirror
+(`journal.js` `PREREG` + `prEvaluate`): the register literal is pinned key for
+key and both evaluators run `tests/fixtures/checkpoint_cases.json`
+(`tests/test_checkpoint_mirror.py`, `test/journal_checkpoints.test.js`), so a
+register change edits the doc, the script and the JS together. PR-0, PR-1 and
+PR-6 TRIPPED (27-28 Oct); the **hc4-2 proposal** (2 Nov) is the last section of
+the decision pack, and nothing in it is live until the owner approves items by
+number. Approved changes land together as **hc4-2**. **Rules vs owner:** an absent `exit_reason` is a human
 act; `MECHANICAL_EXITS` (app.js, journal.js, status.js) is parity-pinned; the
 two records print separately, never pooled; evidence strips stay INERT (no
 controls or calls-to-action).
@@ -399,7 +407,9 @@ controls or calls-to-action).
   absent falls back to it. Fenced both ways (`tests/test_product_flag.py`).
 - **HIGH CONVICTION**: `scanner/conviction.py` is the one definition; Python
   readers import it, app.js/chart.js carry it as a JSON literal pinned by
-  `tests/test_conviction.py`.
+  `tests/test_conviction.py`. The badge's title and the expanded row carry each
+  cell's live rules record for the current cycle (app.js `cellRecord`, held to
+  the journal's `cycleCells` by `test/journal_checkpoints.test.js`; 2 Nov).
 - **Universe:** crypto pages CoinGecko at its 250 cap. The peg rule only ever
   REMOVES names (ticker shapes, an explicit list, name words, a behavioural
   dollar-peg net); gold/silver tokens stay. Re-run `crypto_source_check` after
@@ -616,7 +626,7 @@ counted exclusions).
   `public/js/*.js` (`new Function(body)()`, one realm; `fnSrc()` lets the parser
   find a function's end). Mutation-verify new pins.
 - **Screenshot gate**: clock frozen to the fixtures' `FROZEN_MS`; the key
-  digests the fixtures + Playwright version (`screenshot-baselines-v25`); a
+  digests the fixtures + Playwright version (`screenshot-baselines-v26`); a
   `.clock` sentinel discards (never fails) a foreign baseline; NO
   `restore-keys`; > 2% drift on a deliberate change → bump the key, record it.
 - **Lighthouse gate** serves a STAGED root on the fixtures: 1.7 MB transfer,

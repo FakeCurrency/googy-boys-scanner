@@ -231,11 +231,22 @@ test("a NaN or missing unreal_r contributes zero, not NaN, to the totals", () =>
 suite("status — keep / time-stop / free capacity (headed \"Your call\" until UI100 #55)");
 
 test("a pre-TP1 stall names the time-stop and the days remaining", () => {
+  // Day 29 is the first the engine closes on (vivek_run: held > max_hold),
+  // so 23 days held is 6 days out, not 5 (2026-11-02).
   const f = framing(row(), 23, 28);
   assert.equal(f.kind, "timed");
-  assert.ok(f.label.includes("time-stop in 5d"), f.label);
+  assert.ok(f.label.includes("time-stop in 6d"), f.label);
   assert.ok(f.detail.includes("Keep it"), f.detail);
   assert.ok(f.detail.includes("free the slot"), f.detail);
+});
+
+test("day 28 is the last day held, not the time-stop day", () => {
+  // held == max_hold does not close (the engine needs MORE than 28 days);
+  // the strip used to say "due" here, a day early.
+  const f = framing(row(), 28, 28);
+  assert.equal(f.kind, "timed");
+  assert.ok(f.label.includes("time-stop in 1d"), f.label);
+  assert.equal(framing(row(), 29, 28).kind, "due");
 });
 
 test("a pre-TP1 stall past the hold limit reads due", () => {

@@ -70,6 +70,8 @@ def _num_eq(js, py):
                        "short": config.VIVEK_TP_SCALE_SHORT}),
     ("COMMISSION_BPS", lambda: config.VIVEK_COMMISSION_BPS),
     ("SLIPPAGE_BPS", lambda: config.VIVEK_SLIPPAGE_BPS),
+    # the open table's time-stop countdown (owner item 8, 2026-11-02)
+    ("MAX_HOLD_DAYS", lambda: config.VIVEK_BOT_MAX_HOLD_DAYS),
 ])
 def test_journal_fallbacks_match_config(name, value):
     js = _decl(_src("journal.js"), name, "journal.js")
@@ -77,6 +79,18 @@ def test_journal_fallbacks_match_config(name, value):
     assert _num_eq(js, py), (
         f"journal.js {name} = {js} but scanner/config.py says {py} -- the journal "
         "prices every trade with this whenever bot_rules.json fails to load")
+
+
+def test_journal_market_calendars_match_config():
+    """The time-stop countdown counts days held in each market's OWN calendar,
+    as vivek_run does (`now` in config.MARKETS[m].timezone). A wrong zone
+    moves the countdown a day around every market's midnight."""
+    src = _src("journal.js")
+    found = re.findall(r"const MARKET_TZ = (\{[^}]*\});", src)
+    assert len(found) == 1, f"journal.js: expected one MARKET_TZ, got {found}"
+    js = _js_value(found[0])
+    py = {m: config.MARKETS[m].timezone for m in config.MARKETS}
+    assert js == py, f"journal.js MARKET_TZ {js} but config.MARKETS timezones are {py}"
 
 
 # chart.js's per-leg cost model (COMMISSION_BPS / SLIPPAGE_BPS / legCost) had

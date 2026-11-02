@@ -312,6 +312,7 @@
     vkDir: "LONG",      // direction filter: null = both · "LONG" (default, UI100 #27) · "SHORT"
     vkConfl: false,     // deck pill (Wave 3): only rows with 2+ lens alignment
     vkAtLevel: false,   // deck pill (Wave 3): only rows sitting ON a 200-SMA now
+    cellRec: null,      // {tag, cells} the live cycle's rules record per cell (owner item 10)
   };
 
   // Sort direction. Each sort has a natural default (numeric -> descending,
@@ -885,9 +886,49 @@
   function hiconvBadge(r) {
     const cells = convictionCells(r);
     if (!cells.length) return "";
+    // The LIVE record rides the title (owner item 10): the badge says "the
+    // backtest's best cells", and the line after it says how those cells
+    // have actually done in the bot's current cycle -- so a grade is never
+    // read in isolation. A plain fact, like the multi-lens pill's note.
+    const live = cells.map((cell) => cellRecordNote(cell)).filter(Boolean);
     return `<span class="rbadge hiconv" title="High conviction: ${esc(cells.join(" + "))} — ` +
-      `armed A/A+ in the backtest's best cells (1W reclaim/break, 3D reclaim, 1D break); one 🎯 per cell">` +
+      `armed A/A+ in the backtest's best cells (1W reclaim/break, 3D reclaim, 1D break); one 🎯 per cell` +
+      `${live.length ? esc(". Live, the bot's rules closes: " + live.join("; ")) : ""}">` +
       `${"🎯".repeat(Math.min(cells.length, 3))} High conviction</span>`;
+  }
+  // ── THE LIVE CYCLE'S RECORD PER CELL (owner item 10, 2026-11-02) ─────────
+  // What each of the bot's entry cells has made in the CURRENT cycle
+  // (bot_rules.json cycle_tag), counted the way the journal's cycle board
+  // counts it (journal.js cycleCells): rows stamped with the tag, closed by
+  // the RULES (a hand close measures timing, not the cell), keyed by
+  // timeframe x entry type. Dependency-free on purpose: the board and this
+  // are held to one answer by test/journal_checkpoints.test.js. Display
+  // only: nothing the bot reads.
+  const cellRecord = (b, tag) => {
+    const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
+    const out = {};
+    for (const r of (b && Array.isArray(b.closed)) ? b.closed : []) {
+      if (!r || r.cycle !== tag) continue;
+      if (!MECHANICAL_EXITS.includes(String(r.exit_reason || "").toLowerCase())) continue;
+      const k = `${String(r.timeframe || "").toUpperCase()} ${String(r.entry_type || "").toLowerCase()}`;
+      const c = out[k] = out[k] || { n: 0, r: 0 };
+      c.n += 1;
+      c.r += typeof r.realized_r === "number" ? r.realized_r : 0;
+    }
+    return out;
+  };
+  // "3D reclaim · hc4-1 -0.36R avg over 30 rules closes", or null before the
+  // book and the rules have loaded. A cell with no close yet says so.
+  // `short` is the expanded panel's chip: "3D reclaim · hc4-1 -0.36R · n=30".
+  function cellRecordNote(cell, short) {
+    const rec = state.cellRec;
+    if (!rec || !rec.tag) return null;
+    const c = rec.cells[cell];
+    if (!c || !c.n) return `${cell} · no ${rec.tag} rules closes yet`;
+    const avg = c.r / c.n;
+    const r = `${avg >= 0 ? "+" : ""}${avg.toFixed(2)}R`;
+    return short ? `${cell} · ${rec.tag} ${r} · n=${c.n}`
+      : `${cell} · ${rec.tag} ${r} avg over ${c.n} rules close${c.n === 1 ? "" : "s"}`;
   }
   // Compact, scannable badges for the VIVEK list — what moved + why it
   // matters. Returns an ARRAY; rowChips caps the row (3 on PC, ≤2 on a phone)
@@ -1683,6 +1724,12 @@
           ${r.headline_tf && r.headline_tf !== "1D"
             ? `<span class="vk-tf-chip" title="Entry/SL/TP and R:R shown are the ${esc(r.headline_tf)} plan — the timeframe the trigger armed on (and the one the bot trades)">${esc(r.headline_tf)} PLAN</span>` : ""}
           ${tfDotsText(r) ? `<span class="vk-tf-chip vk-tf-states" title="Plan state on each timeframe (the row's three dots)">${esc(tfDotsText(r))}</span>` : ""}
+          ${convictionCells(r).map((cell) => {
+            // Owner item 10 (2026-11-02): each bot cell this row fires, with
+            // the cell's own live record -- where a phone (no hover) reads it.
+            const note = cellRecordNote(cell, true);
+            return note ? `<span class="vk-tf-chip vk-cellrec" title="The bot's own record in this cell, this cycle: rules closes only (stop, time stop, trail, target) - hand closes are left out">${esc(note)}</span>` : "";
+          }).join("")}
           <span class="vk-rr">${r.rr_text || (r.rr + ":1")} <span class="vk-rr-sub">to TP2</span></span>
           ${scanAge()}
           <div class="vk-actions">
@@ -2819,7 +2866,14 @@
         state.cryptoMajors = majors;
         state.sectorCap = cap;
         state.sectorLoad = load;
-        if (changed && state.data) renderRows();
+        // The live cycle's record per cell (owner item 10): the same book,
+        // the cycle named by the rules. No rules file = no note, never a
+        // guessed cycle.
+        const tag = rules && typeof rules.cycle_tag === "string" ? rules.cycle_tag.trim() : "";
+        const rec = tag ? { tag, cells: cellRecord(b, tag) } : null;
+        const recChanged = JSON.stringify(rec) !== JSON.stringify(state.cellRec || null);
+        state.cellRec = rec;
+        if ((changed || recChanged) && state.data) renderRows();
       } catch (_) { /* marking is best-effort, same as HELD above */ }
       const evts = [];
       for (const p2 of b.open || []) {
