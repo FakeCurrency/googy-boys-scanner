@@ -104,6 +104,14 @@
   const SCALE = { long: [0.25, 0.50, 0.15], short: [0.50, 0.25, 0.15] };
   const COMMISSION_BPS = { asx: 2, nasdaq: 1, crypto: 6, default: 2 };  // fallback
   const SLIPPAGE_BPS   = { asx: 5, nasdaq: 4, crypto: 8, default: 5 };  // fallback
+  // The 28-day time stop (config VIVEK_BOT_MAX_HOLD_DAYS; 0 = off). FALLBACK
+  // ONLY: loadBotRules adopts bot_rules.max_hold_days. The open table's
+  // countdown reads it (2026-11-02).
+  let MAX_HOLD_DAYS = 28;
+  // Each market's own calendar (config MARKETS[m].timezone). The engine
+  // counts a position's days held against the MARKET's date, not the
+  // viewer's, so the countdown does too (pinned by test_js_config_mirrors).
+  const MARKET_TZ = { asx: "Australia/Sydney", nasdaq: "America/New_York", crypto: "UTC" };
 
   // The page's ONE read of the book and the rules (nav.js window.VivekBook,
   // REFINE200 #68): stalled.js and the status sheet read the same promise, so
@@ -142,6 +150,9 @@
       // Outside the drift loop on purpose: that loop only fires when live and
       // fallback DIFFER, and since 2026-09-27 they agree (2500 === 2500).
       if (typeof j.position_notional === "number") NOTIONAL_LIVE = true;
+      // The time stop the countdown counts to. 0 is a real value (off), so
+      // the test is the type, never truthiness.
+      if (typeof j.max_hold_days === "number" && isFinite(j.max_hold_days)) MAX_HOLD_DAYS = j.max_hold_days;
       // The current cycle and the cells it trades (REFINE200 #37/#125): read,
       // never hard-coded, so the next cycle's scoreboard needs no edit here.
       if (typeof j.cycle_tag === "string" && j.cycle_tag.trim()) LIVE_CYCLE = j.cycle_tag.trim();
@@ -209,6 +220,70 @@
   // Deleted with their test slices, REFINE200 #94.)
 
   const rOf = (price, entry, risk, isLong) => (isLong ? (price - entry) : (entry - price)) / risk;
+
+  // ── an open row's PRICE, its room to the stop and the next target, and its
+  //    time stop (2026-11-02, owner items 8/9) ────────────────────────────────
+  const finiteOr = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+  // The price the server last marked this row at. `last_mark` is the mark
+  // itself. The old Now cell rebuilt a price from unreal_r instead, and
+  // unreal_r is scaled to the share still OPEN (vivek_guard._unreal_r): once
+  // TP1 has booked 25%, entry + unreal_r x risk sits a quarter of the way
+  // short of the real price. The fallback below undoes that scaling (1 -
+  // booked_pct is vivek_guard._remaining) for a row that carries no mark.
+  function markOf(t) {
+    const m = finiteOr(t.last_mark);
+    if (m != null && m > 0) return m;
+    const ur = finiteOr(t.unreal_r), risk = finiteOr(t.risk), entry = finiteOr(t.entry);
+    const rem = Math.min(1, Math.max(0, 1 - (finiteOr(t.booked_pct) || 0)));
+    if (ur == null || !(risk > 0) || entry == null || !(rem > 0)) return null;
+    const perUnit = ur / rem;
+    return String(t.direction || "long").toLowerCase() === "short" ? entry - perUnit * risk : entry + perUnit * risk;
+  }
+  // Distance from the current mark to the stop, and to the next target the
+  // ladder has not booked, in R of the ORIGINAL risk (the row's `risk`, 1R at
+  // entry) -- price distance, not P&L, so a part-booked runner reads the same
+  // as a fresh row. Past TP1 the stop sits at breakeven, so "to stop" is then
+  // the cushion above entry. Past TP3 there is no target left (null).
+  function roomOf(t) {
+    const risk = finiteOr(t.risk), mark = markOf(t), stop = finiteOr(t.stop);
+    if (!(risk > 0) || mark == null) return { stop: null, target: null, tp: null };
+    const short = String(t.direction || "long").toLowerCase() === "short";
+    const next = !t.tp1_hit ? ["TP1", t.tp1] : !t.tp2_hit ? ["TP2", t.tp2] : !t.tp3_hit ? ["TP3", t.tp3] : [null, null];
+    const tpPx = finiteOr(next[1]);
+    const toStop = stop == null ? null : (short ? stop - mark : mark - stop) / risk;
+    const toTarget = tpPx == null ? null : (short ? mark - tpPx : tpPx - mark) / risk;
+    return { stop: finiteOr(toStop), target: finiteOr(toTarget), tp: tpPx == null ? null : next[0] };
+  }
+  // A market's calendar date ("YYYY-MM-DD") at an instant.
+  function marketDay(mkt, ms) {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: MARKET_TZ[mkt] || "UTC",
+        year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+    } catch (_) { return new Date(ms).toISOString().slice(0, 10); }
+  }
+  // THE TIME STOP, as the engine applies it (vivek_run.run_market): a row that
+  // has not reached TP1 closes at the first IN-SESSION run whose market date
+  // is MORE than max_hold_days calendar days after entry_date -- so day
+  // max_hold + 1 (29), never day 28. Every time-stop close in the live book
+  // landed on day 29, or on the Monday after when 29 fell on a weekend.
+  // Stock holidays are not modelled, hence "on or after". null = no time
+  // stop applies: past TP1 (a runner is exempt), the rule switched off, or no
+  // entry date.
+  function timeStopOf(t, ms) {
+    if (!(MAX_HOLD_DAYS > 0) || t.tp1_hit) return null;
+    const e = Date.parse(String(t.entry_date || "").slice(0, 10));
+    if (!isFinite(e)) return null;
+    const mkt = marketOf(t);
+    let due = e + (MAX_HOLD_DAYS + 1) * 864e5;
+    if (mkt !== "crypto") {
+      const wd = new Date(due).getUTCDay();
+      if (wd === 6) due += 2 * 864e5; else if (wd === 0) due += 864e5;
+    }
+    const cur = Date.parse(marketDay(mkt, ms));
+    if (!isFinite(cur)) return null;
+    return { left: Math.round((due - cur) / 864e5), held: Math.round((cur - e) / 864e5),
+             due: new Date(due).toISOString().slice(0, 10) };
+  }
 
   // ── rules generation stamp ──
   //
@@ -375,6 +450,174 @@
     <div class="jr-eqtags"><span class="${pcls(endD)}">${dfmt(endD)}</span><span class="lg-r">${rfmt(endR)}</span></div>`;
   }
 
+  // ── CUMULATIVE R · RULES vs BY HAND (owner item 7, 2026-11-02) ───────────
+  // The curve above pools every close. This one splits them the way the
+  // decider line under "Closed trades" does (MECHANICAL_EXITS = the rules;
+  // anything else, an absent reason included, is a hand close) and draws each
+  // as its own cumulative-R step line on ONE R axis, by exit date, with a
+  // marker where each cycle's first entry landed (cycles read off the rows'
+  // own `cycle` tags, so a new cycle needs no edit here). R, not dollars:
+  // R is comparable across the 2026-07-28 and 2026-09-27 resizes; $ is not.
+  // Hover or arrow keys read both lines on any date; the fold under the
+  // chart is the same numbers as a table. Display only.
+  // RH_TOP: a band above the plotted range where the cycle labels sit, so a
+  // label never prints over a line.
+  const RH_W = 1000, RH_H = 150, RH_PAD = 10, RH_TOP = 26;
+  let rhModel = null;          // the drawn chart, read by the crosshair handlers
+  let rhTableOpen = false;     // the table fold survives the 3-minute repaint
+  const isMechanical = (t) => MECHANICAL_EXITS.includes(String(t.exit_reason || "").toLowerCase());
+  // One point per exit DAY: both running totals after every close that day.
+  function rulesHandSeries(closed) {
+    const rows = byExit((closed || []).filter((t) => t && typeof t.realized_r === "number"
+      && isFinite(t.realized_r) && exitDay(t)));
+    const pts = [];
+    let rules = 0, hand = 0, rn = 0, hn = 0;
+    for (const t of rows) {
+      if (isMechanical(t)) { rules += t.realized_r; rn += 1; } else { hand += t.realized_r; hn += 1; }
+      const day = exitDay(t);
+      const p = { day, rules: round(rules, 3), hand: round(hand, 3), rn, hn };
+      if (pts.length && pts[pts.length - 1].day === day) pts[pts.length - 1] = p; else pts.push(p);
+    }
+    return pts;
+  }
+  // Each cycle tag and the first entry date carrying it.
+  function cycleStarts(d) {
+    const first = new Map();
+    for (const r of [...((d && d.open) || []), ...((d && d.closed) || [])]) {
+      const tag = r && r.cycle ? String(r.cycle) : "";
+      const day = String((r && r.entry_date) || "").slice(0, 10);
+      if (!tag || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+      if (!first.has(tag) || day < first.get(tag)) first.set(tag, day);
+    }
+    return [...first.entries()].map(([tag, day]) => ({ tag, day })).sort((a, b) => a.day.localeCompare(b.day));
+  }
+  // Per cycle (untagged rows = before the cycles): the table view.
+  function rulesHandByCycle(closed) {
+    const by = new Map();
+    for (const t of closed || []) {
+      if (!t || typeof t.realized_r !== "number" || !isFinite(t.realized_r)) continue;
+      const k = t.cycle ? String(t.cycle) : "";
+      const b = by.get(k) || { cycle: k, rn: 0, rr: 0, hn: 0, hr: 0 };
+      if (isMechanical(t)) { b.rn += 1; b.rr += t.realized_r; } else { b.hn += 1; b.hr += t.realized_r; }
+      by.set(k, b);
+    }
+    return [...by.values()];
+  }
+  function drawRulesHand(elId, d) {
+    const el = $("#" + elId);
+    if (!el) return;
+    const prior = el.querySelector(".rh-table");
+    if (prior) rhTableOpen = prior.open;
+    const pts = rulesHandSeries(d.closed);
+    if (pts.length < 2) {
+      rhModel = null;
+      el.innerHTML = `<div class="jr-empty">Not enough closed trades yet - the rules and by-hand curves appear here.</div>`;
+      return;
+    }
+    const DAY = 864e5;
+    const starts = cycleStarts(d);
+    const t0 = Math.min(Date.parse(pts[0].day), ...starts.map((s) => Date.parse(s.day)).filter(isFinite));
+    const t1 = Date.parse(pts[pts.length - 1].day);
+    const span = Math.max(DAY, t1 - t0);
+    const X = (day) => RH_PAD + ((Date.parse(day) - t0) / span) * (RH_W - 2 * RH_PAD);
+    const vals = pts.flatMap((p) => [p.rules, p.hand]);
+    const mn = Math.min(0, ...vals), mx = Math.max(0, ...vals), rng = (mx - mn) || 1;
+    const Y = (v) => RH_H - RH_PAD - ((v - mn) / rng) * (RH_H - RH_PAD - RH_TOP);
+    // Step-after: a running total holds its value until the next close.
+    const path = (k) => `M${RH_PAD.toFixed(1)},${Y(0).toFixed(1)}` +
+      pts.map((p) => ` H${X(p.day).toFixed(1)} V${Y(p[k]).toFixed(1)}`).join("") +
+      ` H${(RH_W - RH_PAD).toFixed(1)}`;
+    const pct = (x) => `${((x / RH_W) * 100).toFixed(2)}%`;
+    const last = pts[pts.length - 1];
+    const fmt = (x) => `${x >= 0 ? "+" : ""}${x.toFixed(2)}R`;
+    const dl = (day) => new Date(day + "T00:00:00Z").toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" });
+    const marks = starts.filter((s) => Date.parse(s.day) >= t0 && Date.parse(s.day) <= t1);
+    rhModel = { pts, X, pct, fmt, dl, idx: null, el };
+    const cycles = rulesHandByCycle(d.closed);
+    const order = ["", ...starts.map((s) => s.tag)];
+    const cycRows = order.map((k) => cycles.find((c) => c.cycle === k)).filter(Boolean).map((c) =>
+      `<tr><td>${c.cycle ? esc(c.cycle) : "before the cycles"}</td>` +
+      `<td class="num">${c.rn}</td><td class="num">${c.rn ? fmt(c.rr) : "—"}</td>` +
+      `<td class="num">${c.hn}</td><td class="num">${c.hn ? fmt(c.hr) : "—"}</td></tr>`).join("");
+    el.innerHTML =
+      `<div class="rh-legend">` +
+        `<span class="rh-item"><i class="rh-key rh-key-rules"></i>rules <b>${fmt(last.rules)}</b> <span class="rh-n">${last.rn} closes</span></span>` +
+        `<span class="rh-item"><i class="rh-key rh-key-hand"></i>by hand <b>${fmt(last.hand)}</b> <span class="rh-n">${last.hn} closes</span></span>` +
+      `</div>` +
+      `<div class="rh-plot" tabindex="0" role="img" aria-label="${esc(`Cumulative R by exit date. Rules ${fmt(last.rules)} over ${last.rn} closes; by hand ${fmt(last.hand)} over ${last.hn}. Arrow keys step through the dates.`)}">` +
+        `<svg viewBox="0 0 ${RH_W} ${RH_H}" preserveAspectRatio="none" class="rh-svg" aria-hidden="true">` +
+          `<line class="rh-zero" x1="0" x2="${RH_W}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" vector-effect="non-scaling-stroke"/>` +
+          marks.map((s) => `<line class="rh-cyc" x1="${X(s.day).toFixed(1)}" x2="${X(s.day).toFixed(1)}" y1="0" y2="${RH_H}" vector-effect="non-scaling-stroke"/>`).join("") +
+          `<path class="rh-line rh-hand" d="${path("hand")}" vector-effect="non-scaling-stroke"/>` +
+          `<path class="rh-line rh-rules" d="${path("rules")}" vector-effect="non-scaling-stroke"/>` +
+        `</svg>` +
+        marks.map((s) => `<span class="rh-cyc-lbl" style="left:${pct(X(s.day))}" title="${esc(`${s.tag}: first entry ${dl(s.day)}`)}">${esc(s.tag)}</span>`).join("") +
+        `<span class="rh-zero-lbl" style="top:${((Y(0) / RH_H) * 100).toFixed(2)}%">0R</span>` +
+        `<span class="rh-cross" hidden></span><div class="rh-tip" hidden></div>` +
+      `</div>` +
+      `<div class="jr-eqaxis"><span>${esc(dl(new Date(t0).toISOString().slice(0, 10)))}</span><span>${esc(dl(last.day))}</span></div>` +
+      `<details class="rh-table"${rhTableOpen ? " open" : ""}><summary>As a table, by cycle</summary>` +
+        `<div class="jr-hc-scroll"><table class="jr-hc-tbl"><thead><tr><th>Cycle</th><th class="num">Rules</th><th class="num">Rules R</th>` +
+        `<th class="num">By hand</th><th class="num">Hand R</th></tr></thead><tbody>${cycRows}</tbody></table></div></details>`;
+    wireRulesHand(el);
+  }
+  // The crosshair: snaps to the nearest exit day and reads BOTH lines there.
+  // Bound once to the host, which survives every repaint (the repaint swaps
+  // its innerHTML), and reads whatever rhModel the last paint left.
+  function rhShow(i) {
+    const m = rhModel;
+    if (!m) return;
+    const plot = m.el.querySelector(".rh-plot");
+    const cross = plot && plot.querySelector(".rh-cross"), tip = plot && plot.querySelector(".rh-tip");
+    if (!cross || !tip) return;
+    if (i == null) { cross.hidden = true; tip.hidden = true; m.idx = null; return; }
+    const p = m.pts[Math.max(0, Math.min(m.pts.length - 1, i))];
+    m.idx = m.pts.indexOf(p);
+    const x = m.X(p.day);
+    cross.hidden = false; cross.style.left = m.pct(x);
+    tip.hidden = false;
+    tip.textContent = "";
+    const head = document.createElement("div"); head.className = "rh-tip-d"; head.textContent = m.dl(p.day);
+    tip.appendChild(head);
+    for (const [k, name, n] of [["rules", "rules", p.rn], ["hand", "by hand", p.hn]]) {
+      const row = document.createElement("div"); row.className = "rh-tip-row";
+      const key = document.createElement("i"); key.className = `rh-key rh-key-${k}`;
+      const v = document.createElement("b"); v.textContent = m.fmt(p[k]);
+      const lbl = document.createElement("span"); lbl.textContent = ` ${name} · ${n}`;
+      row.append(key, v, lbl); tip.appendChild(row);
+    }
+    // keep the tip inside the plot: flip to the left of the line past midway
+    const left = x / RH_W > 0.6;
+    tip.style.left = left ? "" : m.pct(x);
+    tip.style.right = left ? `${(100 - (x / RH_W) * 100).toFixed(2)}%` : "";
+  }
+  function wireRulesHand(el) {
+    if (el.dataset.rhWired) return;
+    el.dataset.rhWired = "1";
+    const plotOf = (e) => e.target && e.target.closest ? e.target.closest(".rh-plot") : null;
+    el.addEventListener("pointermove", (e) => {
+      const plot = plotOf(e), m = rhModel;
+      if (!plot || !m) return;
+      const box = plot.getBoundingClientRect();
+      if (!(box.width > 0)) return;
+      const x = ((e.clientX - box.left) / box.width) * RH_W;
+      let best = 0, gap = Infinity;
+      m.pts.forEach((p, i) => { const g = Math.abs(m.X(p.day) - x); if (g < gap) { gap = g; best = i; } });
+      rhShow(best);
+    });
+    el.addEventListener("pointerleave", () => rhShow(null));
+    el.addEventListener("keydown", (e) => {
+      const m = rhModel;
+      if (!m || !plotOf(e)) return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const step = e.key === "ArrowLeft" ? -1 : 1;
+        rhShow(m.idx == null ? (step < 0 ? m.pts.length - 1 : 0) : m.idx + step);
+      } else if (e.key === "Escape") rhShow(null);
+    });
+    el.addEventListener("focusout", (e) => { if (plotOf(e)) rhShow(null); });
+  }
+
   // ── tables ────────────────────────────────────────────────────────────────
   const gradeChip = (g) => g ? `<span class="g ${GRADE_CLS[g] || "g-c"}">${esc(g)}</span>` : "—";
   // Full-word, dog-balls direction pill (owner 2026-07-10): a trade's
@@ -494,9 +737,9 @@
   function liveCellParts(t, side) {
     const isLong = t.direction !== "short";
     if (side === "bot") {
-      const risk = t.risk != null ? t.risk : Math.abs(t.entry - (t.stop ?? t.entry));
-      const now = (t.unreal_r != null && risk > 0)
-        ? (isLong ? t.entry + t.unreal_r * risk : t.entry - t.unreal_r * risk) : null;
+      // The row's own last mark (markOf, 2026-11-02): rebuilding a price from
+      // unreal_r understated every part-booked runner -- see markOf.
+      const now = markOf(t);
       const ur = t.unreal_r, ud = t.unreal_usd != null ? t.unreal_usd * fxOf(t) : null;
       // The bot side is marked SERVER-SIDE, but off the same merged frames the
       // price map comes from — so it inherits the same fossil risk and earns the
@@ -508,7 +751,7 @@
       // "how much tide can this survive" per row (the -3% stress line above
       // is the book-level twin). Wins the title only when the cell is not
       // already explaining a stale mark; stale beats distance.
-      const mark = t.last_mark != null ? t.last_mark : now;
+      const mark = now;
       const dist = (mark != null && t.stop != null && mark > 0)
         ? (isLong ? (mark - t.stop) / mark : (t.stop - mark) / mark) : null;
       const tip = d > 0
@@ -557,13 +800,20 @@
   // opened most recently, which is the one most likely to still need a
   // decision — under a sort you chose weeks ago and no longer remember.
   //
-  const OPEN_SORT_KEYS = ["opened", "r", "usd"];
-  const OPEN_SORT_LABELS = { opened: "Newest", r: "R", usd: "$" };
+  const OPEN_SORT_KEYS = ["opened", "r", "usd", "stop", "target", "time"];
+  const OPEN_SORT_LABELS = { opened: "Newest", r: "R", usd: "$", stop: "Stop", target: "Target", time: "Time" };
   const OPEN_SORT_TIPS = {
     opened: "Most recently opened first",
     r: "Biggest unrealised R first",
     usd: "Biggest unrealised $ first",
+    stop: "Closest to its stop first (R from the last mark)",
+    target: "Closest to its next target first (R from the last mark)",
+    time: "Soonest 28-day time stop first (runners past TP1 have none and sit last)",
   };
+  // The direction a column opens in (2026-11-02). The first three ask "what
+  // is my best" (descending); the room and time-stop columns ask "what is
+  // nearest" (ascending). Either way the first click puts the answer on top.
+  const OPEN_SORT_FIRST = { opened: -1, r: -1, usd: -1, stop: 1, target: 1, time: 1 };
   let openSort = { key: "opened", dir: -1 };   // dir -1 = best/newest at the top
 
   // The two numbers a row can be sorted by — ONE resolver, so the order can
@@ -591,7 +841,10 @@
   }
 
   const openSortValue = (t, side, key) =>
-    (key === "opened" ? openedMs(t) : openMetric(t, side)[key]);
+    (key === "opened" ? openedMs(t)
+      : key === "stop" || key === "target" ? roomOf(t)[key]
+      : key === "time" ? ((timeStopOf(t, Date.now()) || {}).left ?? null)
+      : openMetric(t, side)[key]);
 
   // House rule (see byExit above): never sort the caller's array in place.
   // `state.bot.open` is the live book, and reordering it
@@ -629,10 +882,11 @@
 
   function setOpenSort(key) {
     if (!OPEN_SORT_KEYS.includes(key)) return;
-    // Re-clicking the live column reverses it; a NEW column always opens
-    // best-first, because "show me the best" is the question being asked.
+    // Re-clicking the live column reverses it; a NEW column always opens with
+    // the answer to its question on top: best-first for R / $ / newest,
+    // nearest-first for the stop, the target and the time stop.
     if (openSort.key === key) openSort = { key, dir: -openSort.dir };
-    else openSort = { key, dir: -1 };
+    else openSort = { key, dir: OPEN_SORT_FIRST[key] || -1 };
     paintOpen("bot");
   }
 
@@ -666,6 +920,36 @@
     if (fold) fold.hidden = !state[side].open.length;
   }
 
+  // ROOM + TIME STOP (owner items 8/9, 2026-11-02). Three cells per open row:
+  // R from the last mark to the stop, R to the next unbooked target, and the
+  // 28-day time stop's countdown -- each sortable, so "which positions are
+  // near either end" and "what is due this week" are one tap. Display only:
+  // nothing here changes a stop, a target or the time stop.
+  const fmtRoom = (x) => `${x.toFixed(2)}R`;
+  const dueLabel = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString(undefined,
+    { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  function roomCells(t, nowMs) {
+    const rm = roomOf(t);
+    const stopTip = rm.stop == null ? "No stop distance (the row has no mark or no risk)"
+      : rm.stop < 0 ? `The last mark is ${fmtRoom(-rm.stop)} through the stop - the rules close it at the next in-session scan`
+      : `${fmtRoom(rm.stop)} of price between the last mark and the stop (1R = the risk at entry)`;
+    const tgtTip = rm.target == null
+      ? (t.tp3_hit ? "Past TP3 - no target left; the trail manages the rest" : "No target distance (the row has no mark or no target)")
+      : `${fmtRoom(rm.target)} from the last mark to ${rm.tp} (1R = the risk at entry)`;
+    const ts = timeStopOf(t, nowMs);
+    const tsTip = !ts
+      ? (t.tp1_hit ? "Past TP1 - a runner is exempt from the time stop"
+        : MAX_HOLD_DAYS > 0 ? "No entry date on this row" : "The time stop is switched off")
+      : ts.left <= 0
+        ? `Past ${MAX_HOLD_DAYS} days without TP1 (held ${ts.held} days) - the rules close it at the next in-session scan`
+        : `Closes on or after ${dueLabel(ts.due)} unless TP1 is hit first - the ${MAX_HOLD_DAYS}-day time stop (held ${ts.held} days)`;
+    // A week or less to go reads warmer: "what is due this week" at a glance.
+    const tsCls = ts && ts.left <= 7 ? " jr-ts-soon" : "";
+    return `<td class="num jr-rs" data-label="To stop" title="${esc(stopTip)}">${rm.stop == null ? "—" : fmtRoom(rm.stop)}</td>` +
+      `<td class="num jr-rt" data-label="To target"${rm.tp ? ` data-tp="${esc(rm.tp)}"` : ""} title="${esc(tgtTip)}">${rm.target == null ? "—" : fmtRoom(rm.target)}</td>` +
+      `<td class="num jr-ts${tsCls}" data-label="Time stop" title="${esc(tsTip)}">${!ts ? "—" : ts.left <= 0 ? "due" : `${ts.left}d`}</td>`;
+  }
+
   // The book's open-positions table: the essentials per row (the comparison
   // overview that showed the full detail went 2026-09-21). On a phone
   // (journal.css, ≤680px) each row is two compact lines — symbol · market ·
@@ -684,14 +968,17 @@
         ` title="${esc(OPEN_SORT_TIPS[key])}">${label}</th>`;
     };
     const head = `<tr><th>Symbol</th><th>Gr</th><th class="num">Entry</th><th class="num">Stop</th><th class="num">Now</th>
-      ${sortTh("r", "R")}${sortTh("usd", "$")}${sortTh("opened", "Opened")}</tr>`;
+      ${sortTh("r", "R")}${sortTh("usd", "$")}${sortTh("stop", "To stop")}${sortTh("target", "To target")}${sortTh("time", "Time stop")}${sortTh("opened", "Opened")}</tr>`;
     const rows = sortedOpen(list, side).map((t) => {
-      return `<tr data-tid="${esc(t.id)}" data-side="${side}">
+      // jr-ts-on: a time stop applies. On a phone its countdown takes the
+      // Opened slot (journal.css): days left and days held say the same thing.
+      return `<tr data-tid="${esc(t.id)}" data-side="${side}"${timeStopOf(t, nowMs) ? ' class="jr-ts-on"' : ""}>
         ${symCell(t)}
         <td data-label="Grade">${gradeChip(gradeOf(t))}</td>
         <td class="num" data-label="Entry">${px(t.entry)}</td>
         <td class="num" data-label="Stop">${px(t.stop)}</td>
         ${liveCells(t, side)}
+        ${roomCells(t, nowMs)}
         <td class="num jr-stamp" data-label="Opened"><span class="jr-at">${stamp(openedMs(t))}</span><span class="num-sub jr-age">${durText(openedMs(t), nowMs)}</span></td></tr>`;
     }).join("");
     return `<table class="jr-table jr-cardable jr-open-tbl"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
@@ -1283,6 +1570,175 @@
         `<tbody>${rowsHTML}</tbody></table></div></div>`;
   }
 
+  // ── THE PRE-REGISTERED CHECKPOINTS (owner item 6, 2026-11-02) ─────────────
+  // The decision pack (docs/DECISIONS_2026-10-14.md) froze nine checkpoints
+  // on 14 Oct. PR-0..PR-3 are judged on hc4-1 RULES closes and each is read
+  // ONCE, on the day its n-th close lands (one second read when the first
+  // lands between the lines); PR-4..PR-8 are decided off the book (the
+  // decision replay, the A+ rosters, Ignition's forward test).
+  // scripts/decision_pack.py is the canonical evaluator. This is its mirror,
+  // so the journal can say where each one stands from the book it already
+  // has. PREREG is decision_pack.PREREG as JSON plus a display `label`, pinned
+  // key for key by tests/test_checkpoint_mirror.py; prEvaluate is pinned to
+  // decision_pack.evaluate on the shared cases in
+  // tests/fixtures/checkpoint_cases.json, run by that pytest AND by
+  // test/journal_checkpoints.test.js -- so the two cannot drift apart.
+  // It replaces the "Strategy review checkpoint: n/30" line, whose host
+  // (#review-checkpoint) had left journal.html, so it rendered nowhere.
+  // INERT like the cycle board and the w3-1 strip: a fold, no control, no
+  // call to act. It states the register's verdicts; acting on one is the
+  // owner's call, and the register's replay veto is read first.
+  /* PREREG-BEGIN */
+  const PREREG = [
+    {"id": "PR-0", "item": "cycle", "kind": "live", "cohort": "all", "min_n": 40, "line": -0.25, "pass": 0.0, "then": {"min_n": 80, "line": -0.25}, "action": "owner review of the whole rule set before any further change", "label": "whole cycle"},
+    {"id": "PR-1", "item": "#2", "kind": "live", "cohort": "cell:3D reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 3D reclaim from the entry cells for new entries", "label": "3D reclaim"},
+    {"id": "PR-2", "item": "#1", "kind": "live", "cohort": "market:asx", "versus": "market:nasdaq", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "stop NEW ASX entries; open ASX positions run to their exits", "label": "ASX vs NASDAQ"},
+    {"id": "PR-3", "item": "#3", "kind": "live", "cohort": "grade:A", "versus": "grade:A+", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "bot back to A+ only", "label": "A vs A+"},
+    {"id": "PR-4", "item": "#4", "kind": "replay", "min_gain": 0.05, "action": "weekly-level only, if it beats weekly+3d by >= +0.05R/trade in ASX and NASDAQ separately and in both halves", "label": "weekly level only"},
+    {"id": "PR-5", "item": "#137/#153", "kind": "replay", "min_gain": 0.1, "min_n": 200, "action": "arm 1W/3D on completed candles only, if completed beats forming by >= +0.10R/trade with >= 200 trades in each arm", "label": "completed candles"},
+    {"id": "PR-6", "item": "#36", "kind": "rosters", "since": "2026-09-21", "read_on": "2026-10-27", "min_n": 40, "gap_pp": 1.0, "horizon": "20", "action": "demote the High-conviction badge to a plain tag (display only)", "label": "High-conviction badge"},
+    {"id": "PR-7", "item": "#32", "kind": "replay", "min_gain": 0.03, "action": "change the 28-day time stop, only if 21/42/off beats 28 by >= +0.03R/trade in ASX and NASDAQ separately", "label": "time stop length"},
+    {"id": "PR-8", "item": "#47", "kind": "forward", "min_n": 30, "action": "drop Ignition's 3x volume rule if, on >= 30 forward trades in a market, the no-volume-rule variant does at least as well", "label": "Ignition volume rule"}
+  ];
+  /* PREREG-END */
+  // decision_pack.HC41's tag and grade-label date (pinned with PREREG). The
+  // checkpoints judge hc4-1 whatever cycle bot_rules.json names as current.
+  const PREREG_COHORT = { tag: "hc4-1", grade_label_fixed: "2026-09-24" };
+
+  // Python 3's round(x, nd): the EXACT decimal value of the double, ties to
+  // even (CPython rounds through dtoa, then back to the nearest double).
+  // decision_pack compares its ROUNDED averages with each line, so a mirror
+  // that rounded any other way (toFixed sends an exact half up) could
+  // disagree with it exactly on a line. toFixed(100) is the double's exact
+  // expansion for every value this page meets (a double >= 2^-40 has fewer
+  // than 100 fractional digits); the rounding is done on that string.
+  function pyRound(x, nd) {
+    if (typeof x !== "number" || !isFinite(x)) return x;
+    const s = Math.abs(x).toFixed(100);
+    const dot = s.indexOf(".");
+    const keep = s.slice(0, dot) + s.slice(dot + 1, dot + 1 + nd);
+    const rest = s.slice(dot + 1 + nd);
+    const half = "5" + "0".repeat(rest.length - 1);
+    // same-length digit strings compare as the numbers they spell
+    const upward = rest > half || (rest === half && Number(keep[keep.length - 1]) % 2 === 1);
+    const digits = (BigInt(keep) + (upward ? 1n : 0n)).toString().padStart(nd + 1, "0");
+    const out = Number(digits.slice(0, digits.length - nd) + "." + digits.slice(digits.length - nd));
+    return out === 0 ? 0 : (x < 0 ? -out : out);
+  }
+  // decision_pack's helpers, line for line. A rules close is a
+  // MECHANICAL_EXITS reason after strip() + lower(), exactly as is_rules().
+  const prR = (r) => (typeof r.realized_r === "number" && r.realized_r === r.realized_r ? r.realized_r : 0);
+  const prIsRules = (r) => MECHANICAL_EXITS.includes(String(r.exit_reason || "").trim().toLowerCase());
+  const prStr = (v) => (v == null ? "None" : String(v));
+  const prDay = (r) => String(r.exit_date || "");
+  function prStats(rows) {
+    const vals = rows.map(prR);
+    const n = vals.length;
+    if (!n) return { n: 0, avg: null };
+    const tot = vals.reduce((a, b) => a + b, 0);    // Python's sum(): left to right from 0
+    return { n, avg: pyRound(tot / n, 3) };
+  }
+  function prSelect(rows, spec) {
+    if (spec === "all") return rows.slice();
+    const i = spec.indexOf(":");
+    const kind = i < 0 ? spec : spec.slice(0, i), val = i < 0 ? "" : spec.slice(i + 1);
+    if (kind === "cell") return rows.filter((r) => `${prStr(r.timeframe)} ${prStr(r.entry_type)}` === val);
+    if (kind === "market") return rows.filter((r) => r.market === val);
+    if (kind === "grade") return rows.filter((r) => r.grade === val
+      && String(r.entry_date || "") >= PREREG_COHORT.grade_label_fixed);
+    return [];
+  }
+  // A read at n: every close up to and including the day the n-th landed.
+  function prRead(rows, n) {
+    const dated = rows.slice().sort((a, b) => {
+      const da = prDay(a), db = prDay(b);
+      if (da !== db) return da < db ? -1 : 1;
+      const sa = String(a.symbol || ""), sb = String(b.symbol || "");
+      return sa < sb ? -1 : sa > sb ? 1 : 0;
+    });
+    if (dated.length < n) return null;
+    const cutoff = prDay(dated[n - 1]);
+    return { rows: dated.filter((r) => prDay(r) <= cutoff), cutoff };
+  }
+  function prTrips(pr, pool, rows, cutoff, line) {
+    const s = prStats(rows);
+    if (s.avg == null || s.avg > line) return { tripped: false, s, vs: null };
+    if (!pr.versus) return { tripped: true, s, vs: null };
+    const vs = prStats(prSelect(pool, pr.versus).filter((r) => prDay(r) <= cutoff));
+    return { tripped: vs.avg != null && s.avg <= vs.avg - pr.gap, s, vs };
+  }
+  // decision_pack.evaluate: NOT DUE, TRIPPED, CLEAR or HOLD.
+  function prEvaluate(pr, closed) {
+    const pool = (closed || []).filter((r) => r && r.cycle === PREREG_COHORT.tag && prIsRules(r));
+    const rows = prSelect(pool, pr.cohort);
+    const now = prStats(rows);
+    const out = { id: pr.id, n: now.n, avg: now.avg, min_n: pr.min_n };
+    const first = prRead(rows, pr.min_n);
+    if (!first) { out.verdict = "NOT DUE"; return out; }
+    const a = prTrips(pr, pool, first.rows, first.cutoff, pr.line);
+    Object.assign(out, { read_on: first.cutoff, read_n: a.s.n, read_avg: a.s.avg,
+                         versus_avg: a.vs ? a.vs.avg : null });
+    if (a.tripped) { out.verdict = "TRIPPED"; return out; }
+    if ("pass" in pr && a.s.avg >= pr.pass) { out.verdict = "CLEAR"; return out; }
+    const then = pr.then;
+    const second = then ? prRead(rows, then.min_n) : null;
+    if (!then) out.verdict = "CLEAR";
+    else if (!second) out.verdict = "HOLD";
+    else {
+      const b = prTrips(pr, pool, second.rows, second.cutoff, then.line);
+      Object.assign(out, { read_on: second.cutoff, read_n: b.s.n, read_avg: b.s.avg,
+                           versus_avg: b.vs ? b.vs.avg : null, second: true });
+      out.verdict = b.tripped ? "TRIPPED" : "CLEAR";
+    }
+    return out;
+  }
+
+  const OFF_BOOK = { replay: "the decision replay", rosters: "the A+ rosters", forward: "Ignition's forward test" };
+  const prDate = (iso) => (iso ? new Date(iso + "T00:00:00Z").toLocaleDateString(undefined,
+    { day: "numeric", month: "short", timeZone: "UTC" }) : "");
+  function checkpointLine(d) {
+    const tag = PREREG_COHORT.tag;
+    const tagged = (r) => r && r.cycle === tag;
+    if (!((d && d.open) || []).some(tagged) && !((d && d.closed) || []).some(tagged)) return "";
+    const fmt = (x) => (x == null ? "—" : `${x >= 0 ? "+" : ""}${x.toFixed(2)}R`);
+    const vCls = { "TRIPPED": "pr-trip", "HOLD": "pr-hold", "CLEAR": "pr-clear", "NOT DUE": "pr-wait" };
+    const live = PREREG.filter((p) => p.kind === "live").map((p) => [p, prEvaluate(p, d.closed)]);
+    const off = PREREG.filter((p) => p.kind !== "live");
+    const vsName = (p) => String(p.versus || "").split(":").pop().toUpperCase();
+    const status = (p, v) => (v.verdict === "NOT DUE" ? `${v.n}/${p.min_n}`
+      : v.verdict === "HOLD" && p.then ? `2nd read ${v.n}/${p.then.min_n}` : "");
+    const summary = live.map(([p, v]) =>
+      `<span class="pr-cell">${esc(p.id)} <b class="${vCls[v.verdict]}">${esc(v.verdict)}</b>` +
+      `${status(p, v) ? ` <span class="pr-n">${esc(status(p, v))}</span>` : ""}</span>`).join("") +
+      `<span class="pr-cell pr-offbook">${esc(off.map((p) => p.id).join(" · "))} off the book</span>`;
+    const readText = (p, v) => {
+      if (v.verdict === "NOT DUE") return `${v.n} of ${p.min_n} rules closes so far`;
+      let s = `read ${prDate(v.read_on)}: ${fmt(v.read_avg)} over ${v.read_n} closes`;
+      if (v.versus_avg != null) s += ` vs ${vsName(p)} ${fmt(v.versus_avg)}`;
+      const line = v.second ? p.then.line : p.line;
+      s += ` · line ${fmt(line)}${p.versus ? ` and ${p.gap.toFixed(2)}R below ${vsName(p)}` : ""}`;
+      if (v.verdict === "HOLD" && p.then) s += ` · second read at ${p.then.min_n} closes (${v.n} now)`;
+      return s;
+    };
+    const liveItems = live.map(([p, v]) =>
+      `<li><span class="pr-id">${esc(p.id)}</span><span class="pr-what">${esc(p.label)}</span>` +
+      `<b class="pr-v ${vCls[v.verdict]}">${esc(v.verdict)}</b>` +
+      `<span class="pr-read">${esc(readText(p, v))}</span>` +
+      `<span class="pr-act">Pre-registered response: ${esc(p.action)}</span></li>`).join("");
+    const offItems = off.map((p) =>
+      `<li><span class="pr-id">${esc(p.id)}</span><span class="pr-what">${esc(p.label)}</span>` +
+      `<span class="pr-v pr-wait">off the book</span>` +
+      `<span class="pr-read">decided by ${esc(OFF_BOOK[p.kind] || p.kind)}, not by closes</span>` +
+      `<span class="pr-act">${esc(p.action)}</span></li>`).join("");
+    return `<div class="jr-pr" id="bot-pr">` +
+      `<details class="jr-pr-fold"><summary title="The checkpoints the owner's decision pack froze on 14 Oct (docs/DECISIONS_2026-10-14.md). Each live one is read once, on the day its n-th ${esc(tag)} rules close lands - never as a rolling number. Mirrors scripts/decision_pack.py.">` +
+        `📋 ${esc(tag)} checkpoints <span class="pr-frozen">frozen 14 Oct</span>${summary}</summary>` +
+        `<ul class="jr-pr-list">${liveItems}${offItems}</ul>` +
+        `<p class="jr-pr-note">A verdict is the frozen line's. Before acting on a trip the register's replay veto is read: ` +
+        `if the decision replay shows the same cohort at +0.05R a trade or better (stocks, with the time stop), it holds for a second read at twice the closes.</p>` +
+      `</details></div>`;
+  }
+
   function renderSide(side) {
     const d = state[side], pre = side;
     const s = stats(d.closed, d.open.length);
@@ -1290,12 +1746,20 @@
     if (side === "bot") {
       const host = $("#bot-stats");
       document.querySelectorAll("#bot-w3, #bot-hc").forEach((el) => el.remove());
-      // The current cycle first, then the ended one (REFINE200 #37/#194).
+      // The checkpoint fold keeps its open/shut state across the 3-minute
+      // repaint: a re-render must not snap shut what the owner is reading.
+      const prOpen = !!document.querySelector("#bot-pr details[open]");
+      document.querySelectorAll("#bot-pr").forEach((el) => el.remove());
+      // The current cycle first, its checkpoints, then the ended cycle
+      // (REFINE200 #37/#194; owner item 6).
       if (host) host.insertAdjacentHTML("beforebegin", cycleLine(d));
+      if (host) host.insertAdjacentHTML("beforebegin", checkpointLine(d));
+      if (prOpen) { const f = document.querySelector("#bot-pr details"); if (f) f.open = true; }
       if (host) host.insertAdjacentHTML("beforebegin", w3Line(d));
       renderTide();
     }
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
+    if (side === "bot") drawRulesHand("bot-rchart", d);
     paintOpen(side);
     $("#" + pre + "-closed").innerHTML = deciderHTML(d.closed) + closedRows(d.closed, side);
     $("#" + pre + "-open-n").textContent = d.open.length ? `(${d.open.length})` : "";
@@ -1678,27 +2142,10 @@
     paintLoadFailure();
     const fxn = $("#fx-note");
     if (fxn) fxn.textContent = ` · $ figures in US$ — ASX P&L converted at AUD/USD ${FX_AUDUSD.toFixed(4)}`;
-    // Strategy-review checkpoint (owner decision, locked until the evidence
-    // exists): NASDAQ slot weighting + confluence priority get reviewed at 30
-    // closed bot trades — not before, so the forward test isn't reset mid-run.
-    const chk = $("#review-checkpoint");
-    if (chk) {
-      const n = state.bot.closed.length;
-      // FIRED STATE (Lane A, 2026-08-16). It used to read as a celebration —
-      // a green tick and "time to review" — which is the wrong tone for the
-      // one moment the number needs reading carefully. A book of 30+ closes is
-      // a BLEND: some exits the rules took, some the owner took by hand, and
-      // those two have wildly different records (measured at head: 19 by the
-      // rules at -6.97R against 23 owner closes at -0.15R). Reviewing the
-      // combined figure as if one system produced it is how a rules problem
-      // gets attributed to the market. The line now states the split it is
-      // asking to be judged on, and says whose call it is.
-      const sp = deciderSplit(state.bot.closed);
-      chk.textContent = n >= 30
-        ? `Review checkpoint reached — ${n} closed: ${sp.bot} by the rules, ${sp.own} closed by you. ` +
-          `Read those two records separately before touching NASDAQ allocation or confluence priority — your call, nothing is locked now.`
-        : `Strategy review checkpoint: ${n}/30 closed bot trades. NASDAQ allocation & confluence-priority decisions stay locked until then.`;
-    }
+    // (The "Strategy review checkpoint: n/30" line that sat here wrote into
+    // #review-checkpoint, a host journal.html no longer had, so it rendered
+    // nowhere. The decision pack's own checkpoints replace it: checkpointLine,
+    // owner item 6, 2026-11-02.)
   }
 
   // A load that FAILED with nothing in memory (UI review 2026-10-13, states-1)

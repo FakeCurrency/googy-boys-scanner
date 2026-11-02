@@ -132,7 +132,12 @@
           "Keep it, or close it in the book — a manual close is the only thing that frees this slot.",
       };
     }
-    const left = (maxHold != null && held != null) ? maxHold - held : null;
+    // The engine closes on the first in-session day held is MORE than
+    // maxHold (vivek_run: held > max_hold), so the first eligible day is
+    // maxHold + 1 -- every time-stop close in the book landed on day 29. This
+    // counted to day 28 and said "due" a day early (2026-11-02; the journal's
+    // open-table countdown reads the same day).
+    const left = (maxHold != null && held != null) ? maxHold + 1 - held : null;
     const due = left != null && left <= 0;
     return {
       kind: due ? "due" : "timed",

@@ -89,6 +89,7 @@ vm.runInContext(
   + slice("const scanPrice = new Map()", ";\n") + "\n"
   + slice("function openedMs(t) {", "\n  }") + "\n"
   + slice("const OPEN_SORT_KEYS =", ";\n") + "\n"
+  + slice("const OPEN_SORT_FIRST =", ";\n") + "\n"
   + slice("let openSort = {", ";") + "\n"
   + slice("function openMetric(t, side) {", "\n  }") + "\n"
   + slice("const openSortValue = (t, side, key) =>", ";\n") + "\n"
@@ -382,6 +383,21 @@ test("a new column always opens best-first, and re-clicking reverses it", () => 
   assert.equal(sortStr(), "r:1", "re-clicking the live column reverses");
   setOpenSort("usd");
   assert.equal(sortStr(), "usd:-1", "switching columns resets to best-first");
+});
+
+test("the room and time-stop columns open NEAREST-first (owner items 8/9, 2026-11-02)", () => {
+  // "which positions are near the stop / the target / their time stop" is
+  // the question those columns answer, so the first click is ascending -
+  // the opposite of R and $, where the first click is the best.
+  for (const k of ["stop", "target", "time"]) {
+    resetSort();
+    setOpenSort(k);
+    assert.equal(sortStr(), k + ":1", `${k} must open nearest-first`);
+    setOpenSort(k);
+    assert.equal(sortStr(), k + ":-1", `re-clicking ${k} reverses it`);
+  }
+  resetSort(); setOpenSort("stop"); setOpenSort("r");
+  assert.equal(sortStr(), "r:-1", "switching back to R still opens best-first");
 });
 
 test("an unknown key is ignored rather than sorting by undefined", () => {
@@ -1100,25 +1116,20 @@ test("renderSide injects it above the bot stats, and re-render does not duplicat
 });
 
 // ---------------------------------------------------------------------------
-test("the fired review checkpoint states the BLEND, and reads as the owner's call", () => {
-  // Lane A (2026-08-16). It used to read "✅ Review checkpoint reached — time
-  // to review", which celebrates a threshold and invites reading ONE combined
-  // record. A 30+ close book is two records: measured at head, 19 closes by
-  // the rules at -6.97R against 23 owner closes at -0.15R. Judging the blend
-  // as if one system produced it is how a rules problem gets blamed on the
-  // market. Pre-30 wording is deliberately untouched — nothing is decided yet.
+test("the dead n/30 review line is gone; the decision pack's checkpoints replaced it", () => {
+  // Lane A (2026-08-16) taught that line to name the rules/you split. Its
+  // host, #review-checkpoint, then left journal.html, so for weeks it wrote
+  // into nothing. Owner item 6 (2026-11-02) replaced it with the decision
+  // pack's own register (checkpointLine; test/journal_checkpoints.test.js
+  // pins its arithmetic to scripts/decision_pack.py). The split it carried
+  // still prints above the closed table (deciderHTML) and as two lines in the
+  // cumulative-R chart.
   const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", "journal.js"), "utf8");
   const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.ok(/const sp = deciderSplit\(state\.bot\.closed\)/.test(code),
-    "the checkpoint must derive the split from the SHIPPED deciderSplit, not recount");
-  assert.ok(/\$\{sp\.bot\} by the rules, \$\{sp\.own\} closed by you/.test(code),
-    "the fired line must name both records");
-  assert.ok(/your call, nothing is locked now/.test(code),
-    "it must hand the decision back rather than instruct");
-  assert.ok(!/✅ Review checkpoint reached/.test(code),
-    "the celebratory tick is back on the one line that needs careful reading");
-  assert.ok(/stay locked until then/.test(code),
-    "the PRE-30 wording must be untouched — the gate itself has not moved");
+  assert.ok(!/review-checkpoint/.test(code), "the hostless #review-checkpoint writer is back");
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", checkpointLine\(d\)\)/.test(code),
+    "renderSide no longer draws the checkpoint strip");
+  assert.ok(/deciderHTML\(d\.closed\)/.test(code), "the rules/you split left the closed table");
 });
 
 

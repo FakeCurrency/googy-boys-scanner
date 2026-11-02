@@ -223,6 +223,14 @@ jobs:
       - name: Journal money-path tests (TOP100 #30/#33/#74, open sort, exit evidence)
         if: success() || failure()
         run: node test/journal_money.test.js
+      # Owner items 6-10 (2026-11-02): the checkpoint strip's evaluator against
+      # tests/fixtures/checkpoint_cases.json (the cases decision_pack.py also
+      # has to reproduce, tests/test_checkpoint_mirror.py), the time stop on
+      # day 29, the room to the stop / target, the rules-vs-hand series, and
+      # the deck's per-cell record against the journal's cycle board.
+      - name: Journal checkpoints + countdown + R chart + deck cell record (owner items 6-10)
+        if: success() || failure()
+        run: node test/journal_checkpoints.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
         if: success() || failure()
         run: node test/escaping.test.js
@@ -598,7 +606,18 @@ jobs:
           # whole chips, the list starting ~250px higher), journal-desktop 3.81%
           # and journal-390 6.29% (open positions first, the stalled table
           # folded, two-line phone rows, the duplicate chips gone).
-          key: screenshot-baselines-v25-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
+          #
+          # v25 -> v26 (2026-11-02): INTENTIONAL — owner items 6-10 (the
+          # journal's checkpoint strip, the rules-vs-hand cumulative-R chart,
+          # the open table's to-stop / to-target / time-stop columns and three
+          # more sort keys, the deck's per-cell record). Measured against
+          # baselines cut from the commit before, same fixtures, frozen clock:
+          # index-desktop 0.00%, index-390 0.00% (the deck change lives in a
+          # badge title and the expanded row, neither in the shot),
+          # journal-desktop 1.47% (three new columns), journal-390 4.20% (the
+          # sort control on its own line, line 2 of each row carrying the room
+          # and the countdown).
+          key: screenshot-baselines-v26-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: |
