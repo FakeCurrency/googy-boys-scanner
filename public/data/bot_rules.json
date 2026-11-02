@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-02T11:25:41Z",
+  "generated_at": "2026-11-02T12:25:52Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -17,7 +17,7 @@
       "break"
     ]
   },
-  "cycle_tag": "hc4-1",
+  "cycle_tag": "hc4-2",
   "min_rr": 1.5,
   "allow_shorts": false,
   "max_positions": 60,
@@ -45,6 +45,50 @@
   "crypto_majors": [
     "BTC",
     "ETH"
+  ],
+  "sector_gics": {
+    "energy": "energy",
+    "materials": "materials",
+    "capital goods": "industrials",
+    "commercial & professional services": "industrials",
+    "transportation": "industrials",
+    "automobiles & components": "consumer discretionary",
+    "consumer durables & apparel": "consumer discretionary",
+    "consumer services": "consumer discretionary",
+    "consumer discretionary distribution & retail": "consumer discretionary",
+    "retailing": "consumer discretionary",
+    "consumer staples distribution & retail": "consumer staples",
+    "food & staples retailing": "consumer staples",
+    "food, beverage & tobacco": "consumer staples",
+    "household & personal products": "consumer staples",
+    "health care equipment & services": "health care",
+    "pharmaceuticals, biotechnology & life sciences": "health care",
+    "banks": "financials",
+    "financial services": "financials",
+    "diversified financials": "financials",
+    "insurance": "financials",
+    "software & services": "information technology",
+    "technology hardware & equipment": "information technology",
+    "semiconductors & semiconductor equipment": "information technology",
+    "telecommunication services": "communication services",
+    "media & entertainment": "communication services",
+    "utilities": "utilities",
+    "equity real estate investment trusts (reits)": "real estate",
+    "real estate management & development": "real estate",
+    "not applic": "",
+    "class pend": "",
+    "basic materials": "materials",
+    "industrials": "industrials",
+    "consumer cyclical": "consumer discretionary",
+    "consumer defensive": "consumer staples",
+    "healthcare": "health care",
+    "technology": "information technology",
+    "communication services": "communication services",
+    "real estate": "real estate"
+  },
+  "one_per_company": true,
+  "fill_recheck_triggers": [
+    "break"
   ],
   "min_adv": {
     "asx": 250000,
