@@ -356,6 +356,13 @@ _ARTEFACTS = [
     ("public/data/ignition/crypto.json",        {}, True),
     ("public/data/ignition/asx.json",           {}, True),
     ("public/data/ignition/nasdaq.json",        {}, True),
+    # The bot book (NEXT100 #8): vivek_run._save_market_book and _write_combined
+    # moved from a bare json.dumps(indent=2) onto this publisher, so a NaN is
+    # written as null -- and a finite book must still come back byte-identical.
+    ("journal/vivek_bot_book.asx.json",         {}, False),
+    ("journal/vivek_bot_book.nasdaq.json",      {}, False),
+    ("journal/vivek_bot_book.crypto.json",      {}, False),
+    ("journal/vivek_bot_book.json",             {}, False),
 ]
 
 

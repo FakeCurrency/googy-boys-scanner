@@ -102,16 +102,10 @@ def test_the_ringfenced_bot_file_never_reads_the_gate_constant():
         "the gate must stay OUTSIDE the ringfenced decision engine")
 
 
-def test_cycle_tag_is_stamped_only_while_a_cycle_is_active():
-    """Source-contract pin (house pattern): the stamp exists, guards on the
-    config tag, and follows sizing_mode so the audit block stays together."""
-    src = inspect.getsource(vivek_run._ticket_to_position)
-    assert 'snap["sizing_mode"]' in src
-    assert 'VIVEK_BOT_CYCLE_TAG' in src
-    assert 'snap["cycle"] = _cycle' in src
-    assert src.index('snap["sizing_mode"]') < src.index('snap["cycle"]')
-    assert "if _cycle:" in src, (
-        "no cycle -> NO key at all (absent != empty, the review-flags rule)")
+# The cycle stamp itself is pinned by BEHAVIOUR now (NEXT100 #1): a real fill
+# through run_market must carry config.VIVEK_BOT_CYCLE_TAG, and no key at all
+# while no cycle is active -- tests/test_fill_stamps.py. The source-text pin
+# that stood here could pass while the stamp never reached a row.
 
 
 def test_config_ships_the_gate_and_the_cycle_tag():

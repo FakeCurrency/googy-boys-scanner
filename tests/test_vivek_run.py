@@ -554,8 +554,11 @@ def test_unpriceable_position_gets_auditable_counter(tmp_path, monkeypatch):
 
 def _vpos(symbol="BHP", market="asx", **kw):
     import copy
+    # A money-complete open row: verify_books also checks units, notional,
+    # booked_pct against the exits and the stop against entry - risk (NEXT100 #7).
     p = {"symbol": symbol, "market": market, "direction": "long", "status": "open",
          "entry": 100.0, "stop": 96.0, "risk": 4.0, "risk_usd": 100.0,
+         "units": 25.0, "notional": 2500.0, "booked_pct": 0.0, "exits": [],
          "unreal_usd": 0.0, "realized_r": 0.0}
     p.update(kw)
     return copy.deepcopy(p)
