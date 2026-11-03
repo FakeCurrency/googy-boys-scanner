@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T03:25:59Z",
+  "generated_at": "2026-11-03T05:06:02Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -231,15 +231,19 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-03T03:17:23Z",
+      "at": "2026-11-03T05:06:00Z",
       "reasons": {
-        "MVF": "global_cap",
-        "RMD": "global_cap",
-        "TWE": "global_cap"
+        "AEF": "global_cap",
+        "COL": "global_cap",
+        "FLT": "global_cap",
+        "NHF": "global_cap",
+        "NWS": "dup_symbol",
+        "REH": "global_cap",
+        "UNI": "global_cap"
       }
     },
     "crypto": {
-      "at": "2026-11-03T03:25:56Z",
+      "at": "2026-11-03T05:00:45Z",
       "reasons": {}
     }
   },
