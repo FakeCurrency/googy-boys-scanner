@@ -13,7 +13,7 @@ what to do when something breaks.
 |------|---------|
 | Run a VIVEK scan | `python -m scanner.run --market asx` (or nasdaq / crypto; `--limit 40` for a quick slice) |
 | Check the kill switch (loss check, flattens only on a breach) | `python -m scanner.broker.kill_switch --dry-run` |
-| Audit bot-book integrity (read-only) | `python -m scanner.broker.vivek_run --verify` |
+| Audit bot-book integrity (read-only; append-only vs git HEAD + open-row money) | `python -m scanner.broker.vivek_run --verify` (`--no-head` only to check a restore, Runbook 2) |
 | Rebuild the derived combined book | `python -m scanner.broker.vivek_run --rebuild-combined` |
 | Is every open row at the configured notional? (read-only) | `python scripts/resize_book_notional.py --check` — exit 0 yes / 3 rows to restate / 4 an off-target row it cannot restate (Runbook 7) |
 | Freshness watchdog (read-only preview) | `python -m scanner.watchdog --dry-run` |
@@ -271,12 +271,23 @@ No run has SAVED the track record recently.
 ### Runbook 2 — Book corrupt or missing
 The runner ABORTS on an unreadable book (BookCorruptError) and touches nothing.
 1. `python -m scanner.broker.vivek_run --verify` — read-only; lists exactly
-   what is wrong (unparseable file, cross-market strays, duplicate opens, stale
-   combined view).
+   what is wrong: an unparseable file, cross-market strays, duplicate opens, a
+   stale combined view; an open row's money (entry / risk / units / notional
+   not a finite number > 0, a long's stop below its original `entry - risk`,
+   `booked_pct` not equal to its exits, a non-finite `realized_r`); and, against
+   git HEAD (NEXT100 #7: the book only grows), a closed row `REWRITTEN` or
+   `GONE`, an open row that `VANISHED` (neither open nor closed now), or the
+   closed count falling. No git / no HEAD = one NOTICE and that leg is skipped.
 2. Stale/missing COMBINED view only → `--rebuild-combined` (the canonical
    per-market files are the record; the combined file is derived).
 3. A damaged CANONICAL file → restore it ("Backup and restore" below), then
-   `--verify` again, then let the next run proceed.
+   `--verify --no-head` (the restored files on their own: every check except
+   the HEAD comparison) must say OK. A plain `--verify` then lists every row
+   opened or closed after the snapshot as `GONE` / `VANISHED` (and the closed
+   count falling): that is the track record the restore DROPS, not a fault.
+   Read the list, accept it on purpose by committing the restore, and
+   `--verify` is clean again against the new HEAD. Then let the next run
+   proceed.
 4. Never hand-edit position rows; never edit a closed row.
 
 ### Runbook 3 — Daily/weekly loss guard or the kill switch fired
@@ -392,17 +403,50 @@ old.
 python scripts/backup_journal.py list
 python scripts/backup_journal.py restore <backup-dir>   # verifies, asks for "yes", data files only
 python -m scanner.broker.vivek_run --rebuild-combined
-python -m scanner.broker.vivek_run --verify
+python -m scanner.broker.vivek_run --verify --no-head   # the restored book on its own: must say OK
+python -m scanner.broker.vivek_run --verify             # vs git HEAD: lists what the restore drops
 ```
+
+The last command FAILS by design whenever a row was opened or closed after
+the snapshot: `--verify` proves the book append-only against git HEAD
+(NEXT100 #7), so each such row prints as `closed <id> is GONE` or `open <id>
+VANISHED`, with `closed count fell`. That is the restore throwing away
+track-record rows. Accept it on purpose, never by habit: check that every line
+is a GONE / VANISHED / count line for a row the snapshot predates (a VANISHED
+open row's id ends in its entry date, after the snapshot; a GONE closed row's
+`exit_date` in `git show HEAD:journal/vivek_bot_book.<market>.json` is after
+it, and the restored file may hold it as open again), then commit the restore,
+and `--verify` is clean against the new HEAD. (Restoring
+`2026-11-01T00-23-36` over the 3 Nov tip: closed JBH and BGD GONE, open BXB
+and MM8 VANISHED, asx closed count 69 → 67; `--no-head` OK.) Any other line
+is a fault in the snapshot itself. `--no-head` (a loud NOTICE,
+and the OK line says what it did not check) is for a human checking a restore;
+no workflow passes it (`tests/test_book_integrity.py`).
 
 **Restore (artifact copy, if the tree itself is damaged):** Actions → "Backup
 bot book" → a run → download `book-backups-*` → unzip into `backups/` → the same
 commands.
 
-**Drill (every ~3 months):** restore the latest snapshot into a scratch clone,
-`--rebuild-combined` + `--verify`, confirm "book verify OK" with plausible
-counts, discard the clone. A backup never restored is a hope, not a backup.
-(2026-07-21: drill on `2026-07-20T22-32-20` — OK, 24 open / 4 closed.)
+**Drill (every ~3 months):** in a scratch clone (a full `git clone`, not
+`--depth`), copy the snapshot out of `backups/` (it is committed AFTER the
+commit it was taken from), then check the clone out at that commit, so HEAD's
+book is the snapshot's and the append-only leg holds; the stamp is UTC
+(`2026-11-03T03-01-36` → `2026-11-03T03:01:36Z`). A GONE / VANISHED line there
+means a book commit landed in the seconds between the backup job's checkout
+and its stamp: take the commit before it.
+```bash
+cp -r backups/<stamp> ../snap
+git checkout -q $(git rev-list -1 --before=<YYYY-MM-DDTHH:MM:SSZ> main)
+python scripts/backup_journal.py restore ../snap
+python -m scanner.broker.vivek_run --rebuild-combined
+python -m scanner.broker.vivek_run --verify
+```
+Confirm "book verify OK" with plausible counts, discard the clone. On the
+current tip instead, the same restore lists every row opened or closed since
+the snapshot as GONE / VANISHED: that is the gate working, not the backup
+failing (`--verify --no-head` checks the snapshot alone). A backup never
+restored is a hope, not a backup. (2026-07-21: drill on `2026-07-20T22-32-20`
+— OK, 24 open / 4 closed.)
 
 ---
 
