@@ -932,6 +932,20 @@ VIVEK_PARITY_RANDOM_DRAWS = 20          # random entries per taken trade
 VIVEK_PARITY_RANDOM_SEED = 20261103     # one seed: the same data gives the same draws
 VIVEK_PARITY_BOOTSTRAP_N = 1000         # entry-month block-bootstrap resamples
 VIVEK_PARITY_PLACEBO_N = 200            # dropout placebos scored with the real pass gate
+# NEXT100 #14 (3 Nov 2026): every decision replay also writes a SLIM summary
+# (schema 1, documented in scripts/decision_pack.py: the live-rules arm's
+# taken trades, each variant's verdict and R/slot-month, the run's commit SHA
+# and params) plus its pinned INPUTS (per sampled name: first/last bar, bar
+# count and a digest of the close series), and decision_replay.yml's
+# commit-summary job commits both here. Written only when the replay is run
+# with --summary-dir (scanner/replay_summary.py); simulation-only, no trade
+# path reads it. The digest is sha1 over the closes rounded to _DP decimals,
+# its first _HEX hex chars: enough to tell a yfinance re-base from the same
+# tape, small enough to commit for 900 names.
+VIVEK_PARITY_SUMMARY_DIR = "data/research/decision_replay"
+VIVEK_PARITY_SUMMARY_SCHEMA = 1
+VIVEK_PARITY_INPUT_DIGEST_DP = 6
+VIVEK_PARITY_INPUT_DIGEST_HEX = 12
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes

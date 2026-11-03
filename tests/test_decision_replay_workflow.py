@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import subprocess
 
 import yaml
 
@@ -37,14 +38,96 @@ def _step(uses_prefix: str) -> dict:
     return next(s for s in JOB["steps"] if str(s.get("uses", "")).startswith(uses_prefix))
 
 
-def test_it_is_read_only():
+def test_the_replay_job_is_read_only():
+    """The REPLAY job: read token, no git writes. The commit-summary job
+    (NEXT100 #14) is the one writer and is pinned apart below."""
     assert DOC["permissions"] == {"contents": "read"}
     assert "permissions" not in JOB or JOB["permissions"] == {"contents": "read"}
-    assert "write" not in CODE.split("jobs:")[0], "no write scope anywhere"
+    assert "write" not in CODE.split("jobs:")[0], "no write scope at the workflow level"
+    replay_code = "\n".join(l for l in "\n".join(_runs()).splitlines()
+                            if not l.lstrip().startswith("#"))
     for banned in ("git add", "git commit", "git push", "assert_staged"):
-        assert banned not in CODE, f"a read-only replay must not contain '{banned}'"
+        assert banned not in replay_code, f"a read-only replay must not contain '{banned}'"
     assert "decision_replay.yml" not in str(getattr(config, "WATCHDOG_RUNS", {})), (
-        "it commits nothing, so it has no freshness to watch")
+        "it commits nothing on a clock, so it has no freshness to watch")
+
+
+# -- NEXT100 #14: the slim summary is committed by a SECOND job ---------------
+
+SUMMARY_JOB = DOC["jobs"]["commit-summary"]
+SUMMARY_PATHS = ("data/research/decision_replay/summary.json",
+                 "data/research/decision_replay/inputs.json")
+
+
+def _summary_runs() -> list[str]:
+    return [s["run"] for s in SUMMARY_JOB["steps"] if "run" in s]
+
+
+def test_the_replay_writes_the_slim_summary_and_uploads_it_on_its_own():
+    joined = re.sub(r"\\\n\s*", " ", "\n".join(_runs()))
+    cmd = re.search(r"python -m scanner\.vivek_backtest --parity [^\n]*", joined).group(0)
+    assert '--summary-dir "$OUT/summary"' in cmd, "the summary must be asked for explicitly"
+    up = next(s for s in JOB["steps"] if str(s.get("uses", "")).startswith("actions/upload-artifact")
+              and "summary" in str(s["with"]["name"]))
+    assert up["with"]["name"] == "decision-replay-summary-${{ github.run_id }}"
+    assert up["with"]["path"] == "${{ runner.temp }}/decision-replay/summary/"
+    assert up["with"]["if-no-files-found"] == "error", "a replay that wrote no summary is lost output"
+    assert "if" not in up, "only a successful replay uploads a verdict worth committing"
+    assert config.VIVEK_PARITY_SUMMARY_DIR == "data/research/decision_replay"
+
+
+def test_the_commit_job_follows_a_successful_replay_with_the_only_write_token():
+    assert SUMMARY_JOB["needs"] == "replay"
+    assert SUMMARY_JOB["if"] == "success()"
+    assert SUMMARY_JOB["permissions"] == {"contents": "write"}
+    assert isinstance(SUMMARY_JOB["timeout-minutes"], int) and SUMMARY_JOB["timeout-minutes"] <= 30
+    writers = [name for name, job in DOC["jobs"].items()
+               if (job.get("permissions") or {}).get("contents") == "write"]
+    assert writers == ["commit-summary"]
+    group = str(SUMMARY_JOB["concurrency"]["group"])
+    assert group.startswith("decision-replay-summary-") and "github.ref_name" in group
+    assert group != str(DOC["concurrency"]["group"])
+    assert "scan" not in group, "not a book writer: it never joins the scan mutex"
+    assert SUMMARY_JOB["concurrency"]["cancel-in-progress"] is False
+
+
+def test_the_commit_job_checks_out_the_branch_tip_and_downloads_the_same_artifact():
+    co = next(s for s in SUMMARY_JOB["steps"] if str(s.get("uses", "")).startswith("actions/checkout"))
+    assert co["with"]["ref"] == "${{ github.ref }}", "a queued commit must land on the tip, not the start SHA"
+    dl = next(s for s in SUMMARY_JOB["steps"] if str(s.get("uses", "")).startswith("actions/download-artifact"))
+    up = next(s for s in JOB["steps"] if "summary" in str((s.get("with") or {}).get("name", "")))
+    assert dl["with"]["name"] == up["with"]["name"], "it must download what the replay uploaded"
+    assert dl["with"]["path"] == "${{ runner.temp }}/decision-replay-summary"
+
+
+def test_the_commit_job_stages_one_path_at_a_time_gates_on_both_and_pushes_with_retry():
+    run = "\n".join(_summary_runs())
+    code = "\n".join(l for l in run.splitlines() if not l.lstrip().startswith("#"))
+    assert 'git add -- "$p"' in code and "git add -A" in code
+    assert not re.search(r'git add -- "\$p" "\$', code), "one pathspec per git add"
+    gate = next(l for l in code.splitlines() if "assert_staged.sh" in l)
+    for p in SUMMARY_PATHS:
+        assert f'"{p.replace("data/research/decision_replay", "$DEST")}"' in gate, (p, gate)
+    assert 'DEST="data/research/decision_replay"' in code
+    assert "journal/" not in code and "public/data" not in code, "never a book writer"
+    assert 'git push origin "HEAD:$BRANCH"' in code and 'BRANCH="${GITHUB_REF_NAME}"' in code
+    assert "for i in 1 2 3 4 5; do" in code and 'git reset --hard "origin/$BRANCH"' in code
+    assert "set -o pipefail" in code and "set -u" in code
+    assert 'git config user.name "github-actions[bot]"' in code
+    assert '"schema": 1' in code, "it refuses to commit a file the pack cannot read"
+    assert "data: decision replay summary" in code
+    assert not any("${{" in r for r in _summary_runs()), "no expression interpolation in run:"
+    for r in _summary_runs():
+        subprocess.run(["bash", "-n"], input=r, text=True, check=True)
+
+
+def test_the_commit_job_is_deliberately_absent_from_the_watchdog():
+    """Like momentum.yml / ignition.yml: a committing job with no
+    WATCHDOG_RUNS entry, because it only follows a replay -- which runs on a
+    kick or a dispatch, never on a clock -- so there is no freshness to
+    alarm on. Reversible in one line in config if that ever changes."""
+    cfg = (ROOT / "scanner" / "config.py").read_text(encoding="utf-8")
+    assert '"decision_replay.yml"' not in cfg
 
 
 def test_the_triggers_are_a_dispatch_or_the_kick_file_on_any_branch():

@@ -61,6 +61,13 @@ the live-rules arm only:
 A same-weeks figure averages the CLOSED trades (exit set) of the cohort
 (all / cell / market / grade, as the live line spells it) entered in the
 read's ISO weeks; trades still open are counted apart.
+
+The writer is scanner/replay_summary.py (NEXT100 #14): decision_replay.yml's
+commit-summary job commits the file after every replay, beside inputs.json
+(per sampled name: first/last bar, bar count, a digest of the closes, so a
+moved verdict can be told apart from re-based data). summary.json also
+carries a free-form "variants" block (each variant's verdict and R per
+slot-month) the reader above ignores.
 """
 from __future__ import annotations
 
