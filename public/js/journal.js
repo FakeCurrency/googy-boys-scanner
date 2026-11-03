@@ -207,7 +207,7 @@
         }
       }
       if (Object.keys(drift).length) {
-        console.warn("[journal] sizing fallbacks drifted from bot_rules.json (scanner/config.py) — live values now in effect:", drift);
+        console.warn("[journal] fallbacks drifted from bot_rules.json (scanner/config.py) — live values now in effect:", drift);
         RULES_GEN++;  // no reader since 2026-09-21; journal_money.test pins the bump
       }
     } catch (_) { /* offline — fallbacks stand */ }
