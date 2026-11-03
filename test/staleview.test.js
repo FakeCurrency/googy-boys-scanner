@@ -33,11 +33,14 @@ const APP = fs.readFileSync(path.join(__dirname, "..", "public", "js", "app.js")
 
 // Same extraction approach as test/escaping.test.js: walk the candidate `;`
 // terminators and let the JS parser say which one closes the expression.
+// The walk window is a bound, not a pin: bookFacts reached ~4,000 chars with
+// NEXT100 #9, and running out of window reads as "no longer defines", so it
+// is status.test.js's 12,000.
 function extractConst(src, name) {
   const at = src.search(new RegExp(`\\bconst\\s+${name}\\s*=`));
   if (at < 0) return null;
   const start = src.indexOf("=", at) + 1;
-  for (let i = src.indexOf(";", start); i > 0 && i - start < 4000; i = src.indexOf(";", i + 1)) {
+  for (let i = src.indexOf(";", start); i > 0 && i - start < 12000; i = src.indexOf(";", i + 1)) {
     const candidate = src.slice(start, i).trim();
     try { new Function(`return (${candidate});`); return candidate; } catch (_) { /* keep walking */ }
   }
@@ -1955,7 +1958,28 @@ test("MECHANICAL_EXITS is IDENTICAL in app.js, journal.js and status.js", () => 
   const a = grab("app.js"), j = grab("journal.js"), st = grab("status.js");
   assert.deepStrictEqual(a, j, "app.js and journal.js disagree about mechanical exits");
   assert.deepStrictEqual(a, st, "app.js and status.js disagree about mechanical exits");
-  assert.deepStrictEqual(a, ["stop", "time", "trail", "target"]);
+  // ...and all three are config's list (NEXT100 #9), read from config, not re-typed
+  const cfg = fs.readFileSync(path.join(__dirname, "..", "scanner", "config.py"), "utf8");
+  const m = /^VIVEK_BOT_RULES_EXITS\s*=\s*\(([^)]*)\)/m.exec(cfg);
+  assert.ok(m, "config.VIVEK_BOT_RULES_EXITS moved — re-point this pin");
+  assert.deepStrictEqual(a, [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]));
+  assert.ok(!a.includes("manual"), "a hand close can never be a rules exit");
+});
+
+test("bookFacts splits with the PUBLISHED rules exits, and the deck still agrees with the journal", () => {
+  // NEXT100 #9: config's list reaches the deck as bot_rules.json rules_exits.
+  // A reason the fallback does not know is counted once it is published; an
+  // empty or malformed list is the fallback, never "nothing is the rules'".
+  const book = { open: [], closed: [
+    { realized_r: 0.5, exit_reason: "d14" }, { realized_r: -1, exit_reason: "stop" },
+    { realized_r: 2, exit_reason: "manual" }, { realized_r: 1 }] };
+  assert.deepStrictEqual([bookFacts(book).rules.n, bookFacts(book).owner.n], [1, 3]);
+  const pub = { rules_exits: ["stop", "time", "trail", "target", "D14 "] };
+  const f = bookFacts(book, pub);
+  assert.deepStrictEqual([f.rules.n, f.owner.n, f.rules.r], [2, 2, -0.5]);
+  for (const bad of [[], "stop", [7], [""]]) {
+    assert.strictEqual(bookFacts(book, { rules_exits: bad }).rules.n, 1, JSON.stringify(bad));
+  }
 });
 
 

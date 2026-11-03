@@ -69,7 +69,9 @@ def live_r(row: dict) -> float | None:
 
 
 def is_rules_exit(row: dict) -> bool:
-    return str(row.get("exit_reason") or "").strip().lower() in ("stop", "time", "trail", "target")
+    """A close the rules took (config.VIVEK_BOT_RULES_EXITS); anything else,
+    an absent reason included, was a hand close."""
+    return str(row.get("exit_reason") or "").strip().lower() in config.VIVEK_BOT_RULES_EXITS
 
 
 # -- matching --------------------------------------------------------------------

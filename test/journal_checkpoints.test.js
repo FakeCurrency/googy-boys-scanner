@@ -298,7 +298,7 @@ function sliceFrom(src, startMarker, endMarker) {
 }
 
 test("app.js cellRecord counts exactly what journal.js cycleCells counts, cell by cell", () => {
-  const cellRecord = new Function("return (" + sliceFrom(APP, "const cellRecord = (b, tag) => {", "\n  };")
+  const cellRecord = new Function("return (" + sliceFrom(APP, "const cellRecord = (b, tag, rules) => {", "\n  };")
     .replace("const cellRecord = ", "").slice(0, -1) + ");")();
   const board = new Function(
     sliceFrom(SRC, "const MECHANICAL_EXITS =", ";\n") + "\n"
@@ -346,7 +346,25 @@ test("the record rides the High-conviction badge's title and the expanded panel,
 
 test("no rules file, no note: the cycle is never guessed", () => {
   assert.ok(/const tag = rules && typeof rules\.cycle_tag === "string" \? rules\.cycle_tag\.trim\(\) : "";/.test(APP));
-  assert.ok(/const rec = tag \? \{ tag, cells: cellRecord\(b, tag\) \} : null;/.test(APP));
+  assert.ok(/const rec = tag \? \{ tag, cells: cellRecord\(b, tag, rules\) \} : null;/.test(APP));
+});
+
+test("the deck's cell record counts the PUBLISHED rules exits (NEXT100 #9)", () => {
+  const cellRecord = new Function("return (" + sliceFrom(APP, "const cellRecord = (b, tag, rules) => {", "\n  };")
+    .replace("const cellRecord = ", "").slice(0, -1) + ");")();
+  const row = (exit_reason, realized_r) => ({ cycle: "hc4-3", timeframe: "3D", entry_type: "reclaim",
+    exit_reason, realized_r });
+  const book = { closed: [row("stop", -1), row("d14", 0.25), row("manual", 2)] };
+  // no rules file: the fallback list -- a new reason is not yet a rules exit
+  assert.deepEqual(cellRecord(book, "hc4-3")["3D reclaim"], { n: 1, r: -1 });
+  // a published list that names it: counted, and "manual" still never is
+  const pub = { rules_exits: ["stop", "time", "trail", "target", "d14"] };
+  assert.deepEqual(cellRecord(book, "hc4-3", pub)["3D reclaim"], { n: 2, r: -0.75 });
+  // empty, malformed or blank lists keep the fallback rather than count nothing
+  for (const bad of [[], "stop", [1, 2], [" "], null]) {
+    assert.deepEqual(cellRecord(book, "hc4-3", { rules_exits: bad })["3D reclaim"], { n: 1, r: -1 },
+      JSON.stringify(bad));
+  }
 });
 
 // ── the owner's "20 more" (2 Nov): slots, sectors, day 14, the cycle switch ──

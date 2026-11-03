@@ -47,7 +47,13 @@ from scanner.journal_common import atomic_write  # noqa: E402
 MARKETS = ("asx", "nasdaq", "crypto")
 GRADE_RAW_SINCE = "2026-07-20"   # H2: evaluate_setup reads grade_raw from this day
 A_TAKEABLE_SINCE = "2026-09-21"  # A joined A+ (hc4-1); the ticket still stamps "A+"
-MECHANICAL = ("stop", "trail", "target", "time", "tp")
+
+
+def is_rules_exit(row: dict) -> bool:
+    """A close the rules took: config.VIVEK_BOT_RULES_EXITS, compared the way
+    decision_pack.is_rules compares (NEXT100 #9). This file used to carry its
+    own list with an extra "tp", a reason no book row has ever carried."""
+    return str(row.get("exit_reason") or "").strip().lower() in config.VIVEK_BOT_RULES_EXITS
 
 
 # -- reading ---------------------------------------------------------------
@@ -262,8 +268,8 @@ def build_note(rows: list[dict], scans: dict, fresh: list[dict], now: dt.datetim
                  f"{'--' if s['r_per_trade'] is None else format(s['r_per_trade'], '+.3f')} | "
                  f"{'--' if s['win_pct'] is None else format(s['win_pct'], '.1f') + '%'} |")
     inc = by(cl, "in")
-    mech = [r for r in inc if str(r.get("exit_reason") or "") in MECHANICAL]
-    hand = [r for r in inc if str(r.get("exit_reason") or "") not in MECHANICAL]
+    mech = [r for r in inc if is_rules_exit(r)]
+    hand = [r for r in inc if not is_rules_exit(r)]
     sm, sh = closed_stats(mech), closed_stats(hand)
     L += ["", f"In-cell closes by who closed them: the rules (stop/trail/target/28-day time "
           f"stop) {sm['n']} for {_r(sm['net_r'])}R; by hand {sh['n']} for {_r(sh['net_r'])}R. "

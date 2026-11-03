@@ -250,11 +250,21 @@ def test_the_backtest_replica_applies_cells_grades_and_the_level_gate(tmp_path):
 # -- read-only by construction -----------------------------------------------
 
 def test_it_is_read_only_and_imports_nothing_from_the_trade_path():
+    # The one scanner module allowed is scanner.config (NEXT100 #9: the
+    # rules-exit list is defined once there), and only by name: `from scanner
+    # import config`. config is stdlib-only (tests/test_rules_exits.py).
     tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            mods = [a.name for a in node.names] if isinstance(node, ast.Import) else [node.module or ""]
+            if isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            elif node.module == "scanner":
+                mods = [f"scanner.{a.name}" for a in node.names]
+            else:
+                mods = [node.module or ""]
             for m in mods:
+                if m == "scanner.config":
+                    continue
                 assert not m.startswith(("scanner", "phasemap", "subprocess", "shutil")), m
         if isinstance(node, ast.Call):
             f = node.func

@@ -192,6 +192,11 @@ def bot_rules_payload() -> dict:
         "max_notional_pct_adv": config.VIVEK_BOT_MAX_NOTIONAL_PCT_ADV,
         "max_hold_days": config.VIVEK_BOT_MAX_HOLD_DAYS,
         "reentry_cooldown_days": config.VIVEK_BOT_REENTRY_COOLDOWN_DAYS,
+        # Which closes are the RULES' (NEXT100 #9): a classification for the
+        # readers, never a gate. journal.js / app.js / status.js count rules vs
+        # hand closes with this list; their MECHANICAL_EXITS literal is only
+        # the fallback for a missing or older rules file.
+        "rules_exits": list(config.VIVEK_BOT_RULES_EXITS),
         "max_data_age_days": config.VIVEK_BOT_MAX_DATA_AGE_DAYS,
         "earnings_buffer_days": config.VIVEK_BOT_EARNINGS_BUFFER_DAYS,
         "max_weekly_loss_pct": config.VIVEK_BOT_MAX_WEEKLY_LOSS_PCT,
@@ -327,11 +332,6 @@ def _skips(path: pathlib.Path = BOT_RULES_FILE) -> dict:
     return dict(sorted(out.items()))
 
 
-# A rules close, as the journal counts one (journal.js / app.js / status.js
-# MECHANICAL_EXITS, scripts/decision_pack.py): anything else was a hand close.
-_RULES_EXITS = ("stop", "time", "trail", "target")
-
-
 def _evidence_by_market(bt_path: pathlib.Path = ENTRY_QUALITY_SOURCE) -> dict:
     """{market: {backtest, live}} -- each None when its file is unreadable.
 
@@ -368,8 +368,11 @@ def _evidence_by_market(bt_path: pathlib.Path = ENTRY_QUALITY_SOURCE) -> dict:
             f = vivek_run._market_book_file(m)
             if f.exists():
                 closed = json.loads(f.read_text(encoding="utf-8")).get("closed") or []
+                # a rules close (config.VIVEK_BOT_RULES_EXITS); anything else
+                # was a hand close
                 out[m]["live"] = avg(r.get("realized_r") for r in closed
-                                     if str(r.get("exit_reason") or "").lower() in _RULES_EXITS)
+                                     if str(r.get("exit_reason") or "").lower()
+                                     in config.VIVEK_BOT_RULES_EXITS)
     except Exception as e:          # noqa: BLE001 - a display field, never fatal
         print(f"  WARNING live evidence skipped ({type(e).__name__}: {e})", flush=True)
     return out
