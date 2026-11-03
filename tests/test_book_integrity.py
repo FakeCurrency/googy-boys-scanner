@@ -15,6 +15,8 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import os
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -95,9 +97,13 @@ def test_the_committed_book_verifies_clean():
 # ── #7 (a): append-only against git HEAD ─────────────────────────────────────
 
 def _git(repo, *args):
+    # Like vivek_run._head_books: an exported GIT_DIR / GIT_WORK_TREE (a hook)
+    # must never send this scratch repo's add + commit to the outer one.
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR")}
     subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com",
                     "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", *args],
-                   cwd=repo, check=True, capture_output=True)
+                   cwd=repo, check=True, capture_output=True, env=env)
 
 
 @pytest.fixture
@@ -181,6 +187,86 @@ def test_the_max_closed_trim_drops_exactly_the_oldest(committed, monkeypatch):
     assert any("MID-1 is GONE" in p for p in verify())
 
 
+@pytest.mark.parametrize("closed_now,needle", [
+    # At the cap with NOTHING new closed: a rewrite of the oldest row is a
+    # rewrite, not a trim (the old allowance accepted any front run once full).
+    ([_closed("OLD-1", r=9.9), _closed("MID-1", r=-1.0)], "closed OLD-1 was REWRITTEN"),
+    # Both rows rewritten, still nothing new.
+    ([_closed("OLD-1", r=9.9), _closed("MID-1", r=9.9)], "closed MID-1 was REWRITTEN"),
+    # A rewrite moved to the END, posing as trim + append: a closed id never
+    # closes twice.
+    ([_closed("MID-1", r=-1.0), _closed("OLD-1", r=9.9)], "closed OLD-1 was REWRITTEN"),
+    # One new close drops exactly ONE row; dropping two is a loss.
+    ([_closed("NEW-1")], "closed MID-1 is GONE"),
+])
+def test_the_trim_allowance_is_exactly_the_overflow(committed, monkeypatch, closed_now, needle):
+    edit, verify = committed
+    monkeypatch.setattr(vr, "MAX_CLOSED", 2)              # HEAD's file is AT the cap
+    edit(lambda b: b.update(closed=[copy.deepcopy(r) for r in closed_now]))
+    probs = verify()
+    assert any(needle in p for p in probs), probs
+
+
+def test_the_trim_keeps_the_survivors_in_order(monkeypatch):
+    """The trim slices the FRONT off an ordered list: survivors shuffled
+    while a row went missing is not that trim."""
+    monkeypatch.setattr(vr, "MAX_CLOSED", 3)
+    a, b, c, n = (_closed(x) for x in ("A-1", "B-1", "C-1", "N-1"))
+    head = {"open": [], "closed": [a, b, c]}
+    assert vr._append_only_problems("asx", head, {"open": [], "closed": [b, c, n]}) == []
+    probs = vr._append_only_problems("asx", head, {"open": [], "closed": [c, b, n]})
+    assert any("closed A-1 is GONE" in p for p in probs), probs
+
+
+def test_a_real_trim_at_the_cap_still_passes(committed, monkeypatch):
+    """Two new closes into a full file drop exactly the two oldest."""
+    edit, verify = committed
+    monkeypatch.setattr(vr, "MAX_CLOSED", 2)
+    edit(lambda b: b.update(closed=[_closed("NEW-1"), _closed("NEW-2", r=0.5)]))
+    assert verify() == []
+
+
+# ── --verify --no-head: the restore check ────────────────────────────────────
+
+def test_no_head_skips_only_the_append_only_leg_and_says_so(committed, caplog):
+    edit, verify = committed
+
+    def restore_older(b):                     # what restoring an older snapshot looks like
+        b["closed"].pop(1)
+        b["open"].pop(1)
+    edit(restore_older)
+    assert any("VANISHED" in p for p in verify())             # vs HEAD: the rows it drops
+    caplog.clear()
+    with caplog.at_level(logging.INFO, logger="vivek_run"):
+        assert verify(head=False) == []
+    notes = [r.getMessage() for r in caplog.records if "--no-head" in r.getMessage()]
+    assert len(notes) == 1 and "APPEND-ONLY check vs git HEAD is OFF" in notes[0]
+    assert not any("append-only check vs HEAD over" in r.getMessage() for r in caplog.records)
+    edit(lambda b: b["open"][0].update(stop=90.0))           # every other leg still runs
+    assert any("'stop' 90 is BELOW" in p for p in verify(head=False))
+
+
+def test_the_no_head_cli_says_what_it_did_not_check(committed, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["vivek_run", "--verify", "--no-head"])
+    vr.main()
+    out = capsys.readouterr().out
+    assert "book verify OK" in out and "--no-head: append-only vs HEAD NOT checked" in out
+    monkeypatch.setattr(sys, "argv", ["vivek_run", "--no-head"])
+    monkeypatch.setattr(config, "VIVEK_BOT_ENABLED", False)  # a fall-through is a no-op
+    with pytest.raises(SystemExit) as e:
+        vr.main()
+    assert e.value.code == 2                                  # only with --verify
+
+
+def test_no_workflow_skips_the_append_only_leg():
+    """--no-head is for a human checking a restore. A workflow passing it
+    would switch the track record's append-only gate off."""
+    wf = pathlib.Path(vr.ROOT) / ".github" / "workflows"
+    users = [f.name for f in sorted(wf.glob("*.y*ml"))
+             if "--no-head" in f.read_text(encoding="utf-8")]
+    assert users == []
+
+
 def test_a_tampered_stop_and_nan_units_fail_the_same_gate(committed):
     edit, verify = committed
 
@@ -203,17 +289,34 @@ def test_no_git_is_a_notice_not_a_failure(tmp_path, monkeypatch, caplog):
     assert len(notes) == 1 and "append-only check vs git HEAD skipped" in notes[0]
 
 
-def test_the_cli_verify_passes_on_the_committed_book():
-    """`python -m scanner.broker.vivek_run --verify` on the real checkout:
-    green, and the append-only leg really ran against HEAD."""
+def test_a_git_show_that_hangs_is_a_notice_not_a_crash(committed, monkeypatch, caplog):
+    edit, verify = committed
+    edit(lambda b: b["closed"].pop(1))        # would fail -- if HEAD could be read
+    real = subprocess.run
+
+    def hung(cmd, *a, **k):
+        if "show" in cmd:
+            raise subprocess.TimeoutExpired(cmd, 60)
+        return real(cmd, *a, **k)
+    monkeypatch.setattr(vr.subprocess, "run", hung)
+    with caplog.at_level(logging.INFO, logger="vivek_run"):
+        assert verify() == []
+    assert any("git show HEAD:" in r.getMessage() and "append-only check is skipped"
+               in r.getMessage() for r in caplog.records)
+
+
+def test_verify_passes_on_the_committed_book(monkeypatch, caplog):
+    """verify_books on the real checkout: green, and the append-only leg
+    really ran against HEAD. The public twin is pointed at the journal's
+    combined file, so this gate reads journal/ only -- never public/data/
+    (outside test.yml's path filter: a delayed fuse on the next code push)."""
     if shutil.which("git") is None:
         pytest.skip("git not installed")
-    got = subprocess.run([sys.executable, "-m", "scanner.broker.vivek_run", "--verify"],
-                         cwd=vr.ROOT, capture_output=True, text=True, timeout=120)
-    assert got.returncode == 0, got.stdout + got.stderr
-    assert "book verify OK" in got.stdout
-    assert "append-only check vs HEAD over" in got.stdout + got.stderr \
-        or "NOTICE" in got.stdout + got.stderr
+    monkeypatch.setattr(vr, "PUBLIC_FILE", vr.BOOK_FILE)
+    with caplog.at_level(logging.INFO, logger="vivek_run"):
+        assert vr.verify_books() == []
+    said = " ".join(r.getMessage() for r in caplog.records)
+    assert "append-only check vs HEAD over" in said or "NOTICE" in said
 
 
 # ── #8: NaN-proof writes and fills ───────────────────────────────────────────

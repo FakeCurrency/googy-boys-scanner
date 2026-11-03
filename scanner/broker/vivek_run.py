@@ -349,7 +349,7 @@ def _non_finite_fields(book: dict) -> list[str]:
     return found
 
 
-def verify_books() -> list[str]:
+def verify_books(head: bool = True) -> list[str]:
     """Integrity audit of book layout v2. Returns problem strings ([] = healthy).
 
     READ-ONLY. Run by the scan/close workflows AFTER their write steps (Phase 4
@@ -366,7 +366,11 @@ def verify_books() -> list[str]:
          HEAD holds is still there by id (open, or closed since); the closed
          count never falls -- except the oldest rows _save_market_book's
          MAX_CLOSED trim drops, exactly that. No git / no HEAD = one notice,
-         and this check alone is skipped.
+         and this check alone is skipped. `head=False` (the CLI's
+         `--verify --no-head`) skips it on purpose with a loud notice: a
+         RESTORE check only (a snapshot predates every row opened or closed
+         since, so against HEAD it lists them all) -- never in a workflow
+         (tests/test_book_integrity.py pins that).
       6. open-row money: entry, risk, units, notional finite and > 0; a long's
          stop at or above its original (entry - risk; the stop only ever
          moves up); booked_pct in [0, 1] and equal to its exits' pct sum;
@@ -375,7 +379,10 @@ def verify_books() -> list[str]:
     problems: list[str] = []
     market_files = [m for m in config.MARKETS if _market_book_file(m).exists()]
     parse_ok = True
-    head_books = _head_books(market_files) if market_files else {}
+    if not head:
+        log.warning("book verify NOTICE: --no-head - the APPEND-ONLY check vs git HEAD "
+                    "is OFF for this run (a restore check only; never in a workflow)")
+    head_books = _head_books(market_files) if (market_files and head) else {}
     for market in market_files:
         p = _market_book_file(market)
         try:
@@ -520,7 +527,12 @@ def _head_books(markets: list[str]) -> dict:
             rel = _market_book_file(m).resolve().relative_to(root.resolve()).as_posix()
         except ValueError:
             continue
-        got = _git("show", f"HEAD:{rel}", cwd=root)
+        try:
+            got = _git("show", f"HEAD:{rel}", cwd=root)
+        except (OSError, subprocess.SubprocessError) as e:
+            log.info("book verify NOTICE: git show HEAD:%s failed (%s) - its "
+                     "append-only check is skipped", rel, e)
+            continue
         if got.returncode != 0:
             continue                  # not in HEAD: a new file, nothing to hold it to
         try:
@@ -538,7 +550,12 @@ def _append_only_problems(market: str, head: dict, now: dict) -> list[str]:
     closed row is never edited and never dropped; an open row never vanishes
     (it stays open or it closes); the closed count never falls. The one
     legal loss is _save_market_book's MAX_CLOSED trim, which drops the OLDEST
-    rows from the front once the file holds MAX_CLOSED -- allowed exactly."""
+    rows from the front once the file holds MAX_CLOSED -- allowed exactly:
+    with `appended` = the rows now holds that HEAD does not, the trim drops
+    d = len(head) + appended - MAX_CLOSED rows, so now must be HEAD's last
+    len(head) - d rows, unchanged and in order, then the appended rows -- none
+    of which may carry the id of a row HEAD already closed (a closed id never
+    closes twice, so a rewrite cannot pass as trim + append)."""
     from collections import Counter
 
     def canon(r) -> str:
@@ -556,8 +573,24 @@ def _append_only_problems(market: str, head: dict, now: dict) -> list[str]:
             pool[c] -= 1
         else:
             missing.append((i, r))
-    trimmed = len(now_closed) >= MAX_CLOSED
-    if missing and not (trimmed and [i for i, _ in missing] == list(range(len(missing)))):
+    # Exactly the trim (see the docstring): d rows off HEAD's front, no more.
+    head_pool = Counter(canon(r) for r in head_closed)
+    appended = 0
+    for r in now_closed:
+        c = canon(r)
+        if head_pool[c] > 0:
+            head_pool[c] -= 1
+        else:
+            appended += 1
+    d = len(head_closed) + appended - MAX_CLOSED
+    keep = len(head_closed) - d
+    head_ids = {r.get("id") for r in head_closed if isinstance(r, dict)}
+    trimmed = (0 < d <= len(head_closed) and len(now_closed) == MAX_CLOSED
+               and [canon(r) for r in now_closed[:keep]]
+               == [canon(r) for r in head_closed[d:]]
+               and not any(isinstance(r, dict) and r.get("id") in head_ids
+                           for r in now_closed[keep:]))
+    if missing and not trimmed:
         now_by_id: dict = {}
         for r in now_closed:
             if isinstance(r, dict):
@@ -1453,6 +1486,12 @@ def _stamp_horizon(pos: dict, price: float, day: str) -> None:
     open, so a pre-TP1 row is already closed and never stamped. Written once;
     nothing reads it to decide anything (scripts/decision_pack.py reports it);
     it survives the close like `d14`. NaN-safe: a bad mark stamps nothing.
+
+    Readers filter on `cycle` (hc4-2's rows reach day 29 from 1 Dec 2026): a
+    runner already PAST the horizon when this stamp shipped -- seven hc4-1
+    rows held 35-42 days on 3 Nov 2026 -- is stamped late, on its first run
+    after it, with that day's R; `held` says how late. A weekend or holiday
+    can also put a first in-session run a few days past the horizon.
     """
     days = int(config.VIVEK_BOT_HORIZON_STAMP_DAYS or 0)
     if days <= 0 or pos.get("horizon") or pos.get("status") != "open":
@@ -1472,6 +1511,14 @@ def _stamp_horizon(pos: dict, price: float, day: str) -> None:
                       "r": round(total, 3),
                       "booked": round(booked, 4),
                       "tp1_hit": bool(pos.get("tp1_hit"))}
+
+
+def _stamp_failed(market: str, what: str, ids, e: Exception) -> None:
+    """One ASCII WARNING for a REPORT-ONLY stamp that raised. The run carries
+    on: the row (and the book write) stands, only the stamp is missing."""
+    msg = f"{type(e).__name__}: {e}".encode("ascii", "backslashreplace").decode("ascii")
+    log.warning("vivek_run [%s]: WARNING %s skipped for %s (%s) - report only, "
+                "the book is unaffected", market, what, ids, msg)
 
 
 # ── fill stamps (NEXT100 #2) -- REPORT ONLY ──────────────────────────────────
@@ -1711,12 +1758,13 @@ def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
 
 
 # Earnings calendars already looked up in THIS process, keyed by
-# (yf_symbol, market-local day) -> [report dates]. One scan process walks every
-# market, and the refill passes (#6) can revisit the fill loop, so a name is
-# asked about once per day per process, not once per fill attempt. A lookup
-# that failed is cached as [] for the day too: it fails open either way, and a
+# (yf_symbol, market-local day) -> [report dates], or None for a lookup that
+# FAILED (NEXT100 #2: the fill stamps it as `lookup: failed`). One scan process
+# walks every market, and the refill passes (#6) can revisit the fill loop, so
+# a name is asked about once per day per process, not once per fill attempt.
+# A failed lookup is cached for the day too: it fails open either way, and a
 # throttled Yahoo is not helped by asking again a minute later.
-_EARNINGS_CACHE: dict[tuple[str, str], list] = {}
+_EARNINGS_CACHE: dict[tuple[str, str], list | None] = {}
 
 
 def _earnings_dates(yf_symbol: str) -> list | None:
@@ -2063,8 +2111,12 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 pos["unreal_usd"] = round(ur * (pos.get("risk_usd", 0.0) or 0.0), 2)
                 # Horizon stamp -- REPORT ONLY, AFTER management and the time
                 # stop, so only a row they left open (a runner) is stamped.
+                # A report stamp may never cost the run its book write.
                 if is_open:
-                    _stamp_horizon(pos, price, day)
+                    try:
+                        _stamp_horizon(pos, price, day)
+                    except Exception as e:
+                        _stamp_failed(market, "horizon stamp", pos.get("id"), e)
             still_open.append(pos)
     book["open"] = still_open
 
@@ -2386,11 +2438,15 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
             plans = decision["plans"]
 
     if opened_events:
-        _stamp_fills(opened_events, market=market, rows=results, decisions=decisions,
-                     closed_now=closed_events, open_at_start=open_at_start,
-                     open_elsewhere=gate.get("open_elsewhere") if max_total else 0,
-                     now=now, earnings_on=earnings_gate and earnings_buffer > 0,
-                     yf_map=yf_map)
+        try:                     # REPORT ONLY: a stamp may never cost a fill its record
+            _stamp_fills(opened_events, market=market, rows=results, decisions=decisions,
+                         closed_now=closed_events, open_at_start=open_at_start,
+                         open_elsewhere=gate.get("open_elsewhere") if max_total else 0,
+                         now=now, earnings_on=earnings_gate and earnings_buffer > 0,
+                         yf_map=yf_map)
+        except Exception as e:
+            _stamp_failed(market, "fill stamps", ",".join(
+                str(p.get("id")) for p in opened_events), e)
 
     if is_open:
         _record_skips(market, decision, fill_codes, bool(guard["breached"]), now)
@@ -2474,11 +2530,17 @@ def main() -> None:
     parser.add_argument("--verify", action="store_true",
                         help="read-only integrity audit of the book files; "
                              "exit 1 (and list problems) if anything is wrong")
+    parser.add_argument("--no-head", action="store_true",
+                        help="with --verify: skip the append-only check vs git HEAD "
+                             "(a RESTORE check only - a snapshot predates every row "
+                             "opened or closed since; never used by a workflow)")
     args = parser.parse_args()
+    if args.no_head and not args.verify:
+        parser.error("--no-head only goes with --verify")
 
     if args.verify:
         logging.basicConfig(level=logging.INFO, format="%(message)s")
-        problems = verify_books()
+        problems = verify_books(head=not args.no_head)
         if problems:
             for pr in problems:
                 print(f"BOOK VERIFY FAIL: {pr}")
@@ -2486,7 +2548,8 @@ def main() -> None:
         v = _combined_view()
         n_files = sum(1 for m in config.MARKETS if _market_book_file(m).exists())
         print(f"book verify OK - {n_files} market file(s), "
-              f"{len(v['open'])} open / {len(v['closed'])} closed combined")
+              f"{len(v['open'])} open / {len(v['closed'])} closed combined"
+              + (" (--no-head: append-only vs HEAD NOT checked)" if args.no_head else ""))
         return
 
     if args.rebuild_combined:

@@ -40,7 +40,9 @@ def _saved(tmp_path, market):
 
 def test_a_real_fill_is_tagged_with_the_live_cycle_and_carries_the_stamps(tmp_path, monkeypatch):
     _enable(monkeypatch, tmp_path)
-    assert config.VIVEK_BOT_CYCLE_TAG == "hc4-2"
+    # A cycle is live (its literal, 'hc4-2', is pinned in test_level_gate.py),
+    # so this test can never pass vacuously on an empty tag.
+    assert config.VIVEK_BOT_CYCLE_TAG
     uni = [{"symbol": "BHP", "yf": "BHP.AX"}]
     bk = vr.run_market("asx", [_row(score=9)], {"BHP.AX": _frame(101.0)}, uni,
                        now=_aest(2024, 1, 2, 11, 0))
@@ -256,6 +258,41 @@ def test_a_row_closed_before_the_horizon_gets_none(tmp_path, monkeypatch):
 def test_a_closed_session_run_stamps_nothing(tmp_path, monkeypatch):
     bk = _run(tmp_path, monkeypatch, [_runner()], 110.0, _aest(2024, 1, 30, 18, 0))
     assert "horizon" not in bk["open"][0]
+
+
+def _boom(*a, **k):
+    raise RuntimeError("stamp bug – test")      # non-ASCII on purpose
+
+
+def test_a_raising_fill_stamp_never_costs_the_fill(tmp_path, monkeypatch, caplog):
+    """REPORT ONLY: a bug in the stamps logs one ASCII WARNING; the fill, the
+    cycle tag and the saved book all stand."""
+    _enable(monkeypatch, tmp_path)
+    monkeypatch.setattr(vr, "_stamp_fills", _boom)
+    with caplog.at_level("WARNING", logger="vivek_run"):
+        bk = vr.run_market("asx", [_row()], {"BHP.AX": _frame(101.0)},
+                           [{"symbol": "BHP", "yf": "BHP.AX"}], now=_aest(2024, 1, 2, 11, 0))
+    (pos,) = bk["open"]
+    (disk,) = _saved(tmp_path, "asx")["open"]
+    assert disk["id"] == pos["id"] and disk["cycle"] == config.VIVEK_BOT_CYCLE_TAG
+    assert not any(k in disk for k in STAMPS)
+    (warn,) = [r.getMessage() for r in caplog.records if "fill stamps skipped" in r.getMessage()]
+    assert pos["id"] in warn and warn.isascii()
+
+
+def test_a_raising_horizon_stamp_never_costs_the_run(tmp_path, monkeypatch, caplog):
+    _enable(monkeypatch, tmp_path)
+    _write_market_book(tmp_path, "asx", open_=[_runner()])
+    monkeypatch.setattr(vr, "_stamp_horizon", _boom)
+    with caplog.at_level("WARNING", logger="vivek_run"):
+        bk = _run(tmp_path, monkeypatch, [_runner()], 110.0, _aest(2024, 1, 30, 11, 0),
+                  seed=False)
+    (pos,) = bk["open"]
+    assert "horizon" not in pos and pos["unreal_r"] is not None
+    assert _saved(tmp_path, "asx")["open"][0]["id"] == pos["id"]
+    (warn,) = [r.getMessage() for r in caplog.records
+               if "horizon stamp skipped" in r.getMessage()]
+    assert warn.isascii()
 
 
 def test_the_close_keeps_the_horizon_stamp(tmp_path, monkeypatch):
