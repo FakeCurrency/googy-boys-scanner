@@ -1404,6 +1404,47 @@ ALERT_RETURNS_CAP = 20000
 # tests/test_bar_final.py pins every derivation and both exceptions.
 BAR_FINAL = {"asx": ("Australia/Sydney", 16, 40),
              "nasdaq": ("America/New_York", 16, 30)}
+# MARKET_HOLIDAYS (NEXT100 #4, 3 Nov 2026): every FULL-DAY exchange closure
+# from 2026-09-01 through 2027-12-31, {market: {ISO date: what it is}}, in the
+# market's own calendar. Checked on 3 Nov 2026 against the ASX Trade cash-market
+# calendar and the NYSE Group 2026/2027 holiday calendar, which the US equity
+# markets (Nasdaq included) share; Nasdaq's own 2027 page could not be fetched.
+# Early closes (ASX 24 and 31 Dec, US 27 Nov 2026 / 24 Dec 2026 / 26 Nov 2027)
+# are NOT closures and are not listed; nor is Mon 26 Apr 2027 (the ASX
+# calendar lists the Anzac Day substitute as a trading day). Crypto never
+# closes. REPORT ONLY today: scripts/decision_pack.py flags a projected time
+# stop landing on one (it would book at a stale close on a shut market) and
+# audits day_marks dated on one; no engine path reads it yet, and
+# scanner/time_stop.py still does not model holidays.
+# tests/test_market_holidays.py pins the shape and the certain dates.
+MARKET_HOLIDAYS = {
+    "asx": {
+        "2026-12-25": "Christmas Day",
+        "2026-12-28": "Boxing Day (observed; 26 Dec is a Saturday)",
+        "2027-01-01": "New Year's Day",
+        "2027-01-26": "Australia Day",
+        "2027-03-26": "Good Friday",
+        "2027-03-29": "Easter Monday",
+        "2027-06-14": "King's Birthday",
+        "2027-12-27": "Christmas Day (observed; 25 Dec is a Saturday)",
+        "2027-12-28": "Boxing Day (observed; 26 Dec is a Sunday)",
+    },
+    "nasdaq": {
+        "2026-09-07": "Labor Day",
+        "2026-11-26": "Thanksgiving Day",
+        "2026-12-25": "Christmas Day",
+        "2027-01-01": "New Year's Day",
+        "2027-01-18": "Martin Luther King Jr. Day",
+        "2027-02-15": "Washington's Birthday",
+        "2027-03-26": "Good Friday",
+        "2027-05-31": "Memorial Day",
+        "2027-06-18": "Juneteenth (observed; 19 Jun is a Saturday)",
+        "2027-07-05": "Independence Day (observed; 4 Jul is a Sunday)",
+        "2027-09-06": "Labor Day",
+        "2027-11-25": "Thanksgiving Day",
+        "2027-12-24": "Christmas Day (observed; 25 Dec is a Saturday)",
+    },
+}
 # The ledger's ASX 16:45 is five minutes PAST BAR_FINAL on purpose, not a stale
 # copy: a ledger return is FROZEN at its first stamp (no later run corrects a
 # pre-auction read), and stamp() compares the clock when its fetch STARTS,
