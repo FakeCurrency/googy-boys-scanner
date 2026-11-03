@@ -6,8 +6,8 @@ This is an **honest** roadmap, not a feature wishlist. The goal is a
 **profitable, maintainable** system, and the ordering principle is unchanged
 from day one: **prove the edge before building on top of it.**
 
-Last updated: 2026-08-07 (P1 answered — see below. Supersedes the 2026-07-10
-version, which was written before the bot book had any closes to read).
+Last updated: 2026-11-03 (hc4-2 live, NEXT100 under way. Supersedes the
+2026-08-07 version, written while cycle w3-1 was still running).
 
 ---
 
@@ -15,11 +15,11 @@ version, which was written before the bot book had any closes to read).
 
 | Area | Reality |
 |------|---------|
-| **Edge / profitability** | 🟡 **Read once, and the answer was "iterate, do not scale."** The firehose journal was retired 2026-07-09; the ONLY track record is the bot book (A/A+ four-cell longs since 2026-09-21; 60 open x $2,500 across all markets from the sizing-change merge, approved 2026-09-27 — was 30 x $5,000; one per symbol, 6 per sector per market; daily loss guards). It reached n=30 and was read on 2026-08-01 — see [`docs/archive/DECISION-PACK-N30.md`](docs/archive/DECISION-PACK-N30.md). The full live rule-set is **negative** (parity −0.033R/trade, n=613). One cohort survived three disjoint samples: **weekly + 3-day, +0.056R/trade**, and that cohort (the weekly/3-day level gate, still in force) was tested forward as cycle **w3-1** until 2026-09-21, when the bot moved to the four high-conviction cells; new rows carry cycle **hc4-1** (split any hc4-1 read at the 60 x $2,500 capacity change — the merge / resize commit; restated rows carry `resized_at`). |
+| **Edge / profitability** | 🟡 **No live edge shown yet: iterate, do not scale.** The ONLY track record is the bot book (A/A+ longs in four entry cells, $2,500 x 60 open across all markets, one per symbol, 6 per sector per market, daily/weekly loss guards; no hand closes since 2026-10-14). The n=30 read (2026-08-01, [`docs/archive/DECISION-PACK-N30.md`](docs/archive/DECISION-PACK-N30.md)) found the full rule-set negative (parity −0.033R/trade, n=613). Cycle **w3-1** (2026-08-02 → 2026-09-21, the weekly/3-day gate) ended a **KILL** at n=30 (−0.192R/trade). Cycle **hc4-1** (2026-09-21 → 2026-11-02, the four high-conviction cells) ended with **PR-0** (−0.271R/trade at 41 rules closes, line −0.25R), **PR-1** (3D reclaim −0.433R at 21, line −0.30R) and **PR-6** (the High-conviction badge) tripped, 27–28 Oct. Cycle **hc4-2** is live from 2026-11-02 with the owner-approved items 2, 3, 4, 6 and 7 of the decision pack (1 and 5 not). The 3 Nov decision replay on the hc4-2 code: +0.059R/trade over 1,251 trades, 0.0345R per slot-month. Compare R, not dollars (restated rows carry `resized_at`). |
 | Scanners | ✅ **Three lenses live.** VIVEK (200-SMA reaction, W/3D/D plans, A+/A/B+ grades), PhaseMap (sweep→displacement zones, nightly, spec doc is source of truth), Specs (3× volume-spike base breakouts, discovery-only per its own backtest). Multi-lens confluence banners + ALERTS log (labelled unproven — no edge found; the Discord alert channel was removed 2026-08-27). Report-only MOMENTUM and IGNITION sit outside every signal path. |
 | Universes | ✅ ASX full (~2,000) · NASDAQ Global Select (~1,430, expanded from 99 on 2026-07-10) · crypto top-200 (pegs out) + pinned extras, priced from exchange klines since 2026-09-28. |
-| Backtests | ✅ Weekly walk-forward (lens_backtest.yml, owns `vivek_backtest.json`, feeds Insights) + monthly long-only evidence file (vivek_backtest.yml). PhaseMap + Specs replays weekly. All still **survivor-biased on yfinance** — see priority 2. |
-| Execution bot | 🟡 Paper mode per market via crypto_bot.yml + scan.yml. The Bybit execution path (bracket/reconcile) was **removed 2026-09-17** with the AI BOT page; only the kill switch's flatten clients remain. Live capital is **not enabled**. |
+| Backtests | ✅ Weekly walk-forward (lens_backtest.yml, owns `vivek_backtest.json`, feeds Insights) + monthly long-only evidence file (vivek_backtest.yml). PhaseMap + Specs replays weekly. `decision_replay.yml` replays the live bot rules for the decision pack (read-only). All still **survivor-biased on yfinance** — see priority 2. |
+| Execution bot | 🟡 Paper mode per market via crypto_bot.yml + scan.yml. The Bybit execution path (bracket/reconcile) was **removed 2026-09-17** with the AI BOT page; only the kill switch's flatten clients remain. Live capital is **not enabled**: PAPER ONLY is the owner's ruling. |
 | Tests / CI | ✅ pytest + the JS suites + e2e run on **every push** (test.yml); no test reaches the network. Dependencies pinned exactly (`requirements.txt` production, `requirements-dev.txt` tooling). |
 | Data | 🟡 yfinance only: ~15 min delayed, no delisted history. Fine for operating; not fine for *publishable* backtest numbers. |
 | Strategy identity | ✅ Resolved: this is a **swing/position system** (the old "scalp on a 30-min cron" incoherence is dead). |
@@ -29,44 +29,49 @@ version, which was written before the bot book had any closes to read).
 
 ## 2. Priorities (ordered)
 
-### P1 — ✅ ANSWERED 2026-08-01, and re-opened as cycle w3-1
-The first read is done. `docs/archive/DECISION-PACK-N30.md`: **do not scale, iterate.** The
-exact live rule-set is negative over history (−0.033R/trade, −0.019 R/slot-month,
-n=613 parity trades) and the live book agreed in shape (21 closed, −6.40R, 38%
-win). Mirrored shorts, confluence C1 and filter stacking were all tested and
-**killed** — `docs/archive/RESEARCH-LEDGER.md` has the numbers so none of them get proposed
-again.
+### P1 — Let hc4-2 run untouched to its own checkpoints
+The discipline has not changed since the first read: **rules frozen for the
+whole cycle**, read only at pre-registered checkpoints. w3-1 answered its
+question with a KILL; hc4-1 tripped three of its lines, and the owner's
+answer to them is hc4-2 (approved Mon 2 Nov; `docs/DECISIONS_2026-10-14.md`,
+"Approved, Mon 2 Nov: hc4-2 starts"). hc4-2 now runs to its own frozen
+register, PR-9..PR-16, each line read once on the day its n-th hc4-2 rules
+close lands (`python scripts/decision_pack.py` prints the verdicts; the
+journal's checkpoint strip mirrors it). Mid-cycle rule changes reset the clock
+and throw away the only evidence this system produces, so anything
+trade-affecting goes to the **hc4-3 candidates** ("Next-cycle candidates" in
+the same pack) and lands together at the hc4-2 → hc4-3 boundary. Which trades
+get taken is always the owner's call. Mirrored shorts, confluence C1 and
+filter stacking were tested and **killed** (`docs/archive/RESEARCH-LEDGER.md`);
+none of them gets proposed again.
 
-What survived three disjoint samples is the **weekly + 3-day** cohort
-(+0.056R/trade pooled, holds at 2× costs). The w3-only level gate was enabled
-with owner sign-off on 2026-08-02, opening pre-registered cycle **w3-1**: 30
-closes, band pess +0.056 / mid +0.10 R/trade, **rules frozen for the duration**.
-
-So P1 is now the same discipline as before, pointed at a narrower question:
-**let w3-1 reach n=30 untouched.** Mid-cycle rule changes reset the clock and
-throw away the only evidence this system produces. `scripts/evidence_brief.py`
-prints the cycle counter off the entry-time stamp, never inferred from dates.
+**Under way: NEXT100 (3 Nov 2026, owner: "Do it all please").** 100 items in
+seven stages: 1 lock hc4-2's record · 2 the replay overhaul · 3 evidence
+ledgers · 4 deck and chart, phone first · 5 journal, pages and digest · 6 data
+and alarms · 7 the hc4-3 decision-pack write-ups with replay results.
+Report-only work, integrity checks, docs and alarms ship as they are done;
+every trade-affecting item goes to the hc4-3 decision pack, never into hc4-2.
 
 ### P2 — Data provider decision (OWNER: EODHD ~US$20/mo or Norgate ~A$40/mo)
 Unlocks delisted-aware (honest) backtests, better intraday data, and removes
 the single-provider risk. Everything numeric on the Insights page carries a
 survivorship warning until this happens.
 
-### P3 — Bybit testnet round-trip drill, then staged live
-The order path is unit/integration tested against recorded shapes; the last
-gap is one supervised end-to-end drill on testnet: place → fill → reconcile →
-kill-switch flatten. After that, live with tiny risk (0.1%/trade), crypto
-only, for ≥2 weeks in parallel with paper before normal sizing.
-Gates stay: `BYBIT_TESTNET=false` **and** live-confirm flag **and**
-per-market mode flip in config.py.
+### P3 — Execution: PAPER ONLY (owner ruling)
+The Bybit order path (bracket/reconcile) was removed on 2026-09-17 with the AI
+BOT page. `bybit_client.py` / `alpaca_client.py` survive only as the kill
+switch's flatten path, and no keys are set. There is no live-trading step on
+this roadmap; reopening one is the owner's call, and only after a cycle shows
+a real edge.
 
 ### P4 — Site privacy (OWNER: Cloudflare Access)
 The journal and book are public reading today. One toggle in the Cloudflare
 dashboard puts the whole site behind a login.
 
-### P5 — IBKR for ASX (+ futures) — only after w3-1 says the edge is real
-`ib_insync` + IB Gateway on a VPS. Do not start this before the crypto loop
-has proven itself end to end; it doubles the operational surface.
+### P5 — IBKR for ASX (+ futures) — parked with P3
+`ib_insync` + IB Gateway on a VPS would double the operational surface.
+Nothing here starts while the book is PAPER ONLY, and not before a cycle shows
+the edge is real (w3-1 ended a KILL; hc4-1 tripped PR-0).
 
 ---
 
@@ -76,10 +81,13 @@ has proven itself end to end; it doubles the operational surface.
 - **Cloudflare Access** (P4).
 - **An alert channel** (an SMTP secret) — today the only alarms are GitHub's
   red-run emails and run-page annotations.
-- **The decision pack** (`docs/DECISIONS_2026-10-14.md`): its pre-registered
-  checkpoints decide what changes at cycle hc4-2.
-- (`GBS_SYNC_CODE` is orphaned since the watchlist went, 2026-09-21; safe to
-  delete.)
+- **The decision pack** (`docs/DECISIONS_2026-10-14.md`): hc4-2's frozen
+  register (PR-9..PR-16) decides what changes at cycle hc4-3; the hc4-3
+  candidates wait for the owner's call at that boundary.
+- **yfinance 1.4.1 → 1.7.0** (#84) and **widening Ignition NASDAQ past Global
+  Select** are open owner decisions.
+- (Orphaned, safe to delete: the old Discord alert webhook secret,
+  `TICK_SECRET`, `GBS_SYNC_CODE`.)
 
 ---
 
@@ -92,6 +100,7 @@ has proven itself end to end; it doubles the operational surface.
 | Pullback / reversal / short / scalp as scheduled scans | 2026-06 | VIVEK-only pipeline; engines remain for Specs + backtests. |
 | `core/` parallel engine, firebase relic, Grok build docs | 2026-07-09 | Dead weight. |
 | "Scalp bot" identity | 2026-06 | Structurally impossible on cron + delayed data. |
+| Discord ALERT router · AI BOT page + Bybit execution · TURTLE · HORIZON + REGIME · Reversals/Fib engine · RECS page | 2026-08-27 → 2026-10-20 | Owner calls; CLAUDE.md "Removed features stay removed" lists each, with write-ups in `docs/claude-history.md`. |
 
 ---
 
