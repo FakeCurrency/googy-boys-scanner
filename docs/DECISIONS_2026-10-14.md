@@ -1268,8 +1268,49 @@ closes, 26 reached -0.5R and 2 of those went on to win; booking all 26 at
 average 0.16R). The replay runs it as `V11_cut_mae0.5`; the decision pack
 prints the live what-if every day.
 
-The 3 Nov decision replay (run on the hc4-2 code with these variants) and
-the live-vs-replay trade-by-trade study print their tables in the run log.
+### What the 3 Nov replay said
+
+The decision replay on the hc4-2 code: 5 years, 300 names a market, the live
+scan's order within a day (Actions run 41551046515; every table is in its log).
+The live rules made **+0.059R a trade over 1,251 trades** (+0.107R at a
+resting stop), **0.0345R per slot-month** (0.0627 at a resting stop).
+
+| Variant | R per slot-month | The gate (overall, ASX, NASDAQ, both halves) |
+|---|---|---|
+| V7 no ASX | 0.0345 -> 0.0437 | **PASS**, the first variant to pass it; the ASX's own figure is -0.0096 |
+| V6 no 3D reclaim | -> 0.0420 | fail |
+| V9 no 1W break (H2) | -> 0.0391 | fail; the cell is 2 of the 1,251 trades |
+| V10 1D break on crypto only (H3) | -> 0.0376 | fail |
+| V2 the day-14 cut, best under +0.5R (H4) | -> 0.0267 | fail, and now WORSE than the rules (it was the 14 Oct run's best) |
+| V11 a cut at -0.5R adverse | -> 0.0175 | fail, the worst of all: it closes the trades that recover |
+
+- **H1:** a resting stop nearly doubles R per slot-month (0.0345 -> 0.0627),
+  by recording the same exits at the stop instead of at the scan's later
+  price. Still your call whether the paper book should model one.
+- **H2 and H3 failed the gate.** Neither is worth proposing; they stay here
+  as a record, not as items.
+- **H4:** on the hc4-2 code the day-14 cut loses to the rules. PR-16 still
+  reads it live at 40 hc4-2 rules closes, unchanged.
+- **The -0.5R cut:** the live what-if above (90 trades, one bad window) and
+  the replay (1,381 trades, five years) disagree, and the replay is the
+  larger sample: it says no.
+- **The 3D-reclaim cohort the replay veto reads** (stocks, with the time
+  stop): **+0.054R a trade over 689** (+0.113R at a resting stop), just over
+  the +0.05R line, where the register says hold and read again at 40
+  closes. This is the 3 Nov run on the hc4-2 code; the 14 Oct report that
+  item 1 named is still unread and expires Fri 13 Nov.
+- **Is the ranking any good?** On the 42 days a slot filled while another
+  signal was refused for want of one, the taken averaged +0.086R (63) and the
+  refused +0.059R (75). The bot's order picks slightly better, not worse.
+- **Live vs replay, trade by trade (hc4-1):** on the 23 rules closes both
+  took, the replay lost about what the live book lost (-13.80R against
+  -14.81R; -12.69R at a resting stop), and the live entry cost 0.02R a trade
+  against the replay's next-open fill. The hc4-1 loss was the window, not the
+  execution. The live bot also took 46 trades the replay never took (it reads
+  the forming bar intraday; the replay, completed bars); those stand at
+  +8.85R, open ones at today's marks.
+- **V7 (no ASX) is evidence, not an item.** Whether the ASX keeps its slots is
+  your call; PR-14 reads the ASX live in hc4-2.
 
 ---
 
