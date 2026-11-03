@@ -1,0 +1,91 @@
+{
+  "_about": "Shared cases for THE TIME STOP's day-29 boundary (NEXT100 #3). One table, three readers: scanner/time_stop.py time_stop_due (the Python definition) and scanner/broker/vivek_run.run_market (the engine that actually closes the row) in tests/test_time_stop_cases.py, and public/js/journal.js timeStopOf (the journal's countdown) in test/time_stop_cases.test.js. Each case is one open long: market, entry_date, tp1_hit and the max_hold (VIVEK_BOT_MAX_HOLD_DAYS) it runs under, with `due` = the expected first market date the time stop may fire (null = no time stop). Each run is one run_market call at `at` (an ISO instant whose offset IS the market's own clock at that instant), with `session` = market_open() at that instant, `held` = market days since entry and `closes` = whether that run must close the row with exit_reason \"time\". The rule the table pins: a pre-TP1 row closes at the first IN-SESSION run held MORE than max_hold days -- day 29 under 28 -- and a stock whose day falls on a weekend goes at Monday's run.",
+  "cases": [
+    {
+      "name": "nasdaq: day 28 holds, day 29 closes, but not before the open",
+      "market": "nasdaq", "entry_date": "2026-10-13", "tp1_hit": false, "max_hold": 28,
+      "due": "2026-11-11",
+      "runs": [
+        {"at": "2026-11-10T12:00:00-05:00", "session": true, "held": 28, "closes": false},
+        {"at": "2026-11-10T20:00:00-05:00", "session": false, "held": 28, "closes": false},
+        {"at": "2026-11-11T09:00:00-05:00", "session": false, "held": 29, "closes": false},
+        {"at": "2026-11-11T12:00:00-05:00", "session": true, "held": 29, "closes": true}
+      ]
+    },
+    {
+      "name": "asx: day 29 midweek closes in session; the 16:40 closing scan never manages",
+      "market": "asx", "entry_date": "2026-10-13", "tp1_hit": false, "max_hold": 28,
+      "due": "2026-11-11",
+      "runs": [
+        {"at": "2026-11-10T12:00:00+11:00", "session": true, "held": 28, "closes": false},
+        {"at": "2026-11-11T10:30:00+11:00", "session": true, "held": 29, "closes": true},
+        {"at": "2026-11-11T11:10:00+11:00", "session": true, "held": 29, "closes": true},
+        {"at": "2026-11-11T16:40:00+11:00", "session": false, "held": 29, "closes": false}
+      ]
+    },
+    {
+      "name": "asx: day 29 on a Saturday closes at Monday's run",
+      "market": "asx", "entry_date": "2026-10-09", "tp1_hit": false, "max_hold": 28,
+      "due": "2026-11-09",
+      "runs": [
+        {"at": "2026-11-06T12:00:00+11:00", "session": true, "held": 28, "closes": false},
+        {"at": "2026-11-07T12:00:00+11:00", "session": false, "held": 29, "closes": false},
+        {"at": "2026-11-08T12:00:00+11:00", "session": false, "held": 30, "closes": false},
+        {"at": "2026-11-09T12:00:00+11:00", "session": true, "held": 31, "closes": true}
+      ]
+    },
+    {
+      "name": "nasdaq: day 29 on a Saturday closes at Monday's run, across the US clock change",
+      "market": "nasdaq", "entry_date": "2026-10-02", "tp1_hit": false, "max_hold": 28,
+      "due": "2026-11-02",
+      "runs": [
+        {"at": "2026-10-30T12:00:00-04:00", "session": true, "held": 28, "closes": false},
+        {"at": "2026-10-31T12:00:00-04:00", "session": false, "held": 29, "closes": false},
+        {"at": "2026-11-02T12:00:00-05:00", "session": true, "held": 31, "closes": true}
+      ]
+    },
+    {
+      "name": "crypto: no weekend, day 29 on a Saturday closes that Saturday",
+      "market": "crypto", "entry_date": "2026-10-09", "tp1_hit": false, "max_hold": 28,
+      "due": "2026-11-07",
+      "runs": [
+        {"at": "2026-11-06T12:22:00+00:00", "session": true, "held": 28, "closes": false},
+        {"at": "2026-11-06T23:52:00+00:00", "session": true, "held": 28, "closes": false},
+        {"at": "2026-11-07T00:22:00+00:00", "session": true, "held": 29, "closes": true}
+      ]
+    },
+    {
+      "name": "nasdaq under max_hold 30: day 29 holds, day 31 on a Sunday rolls to Monday",
+      "market": "nasdaq", "entry_date": "2026-10-01", "tp1_hit": false, "max_hold": 30,
+      "due": "2026-11-02",
+      "runs": [
+        {"at": "2026-10-30T12:00:00-04:00", "session": true, "held": 29, "closes": false},
+        {"at": "2026-11-01T12:00:00-05:00", "session": false, "held": 31, "closes": false},
+        {"at": "2026-11-02T12:00:00-05:00", "session": true, "held": 32, "closes": true}
+      ]
+    },
+    {
+      "name": "a runner past TP1 has no time stop",
+      "market": "nasdaq", "entry_date": "2026-10-13", "tp1_hit": true, "max_hold": 28,
+      "due": null,
+      "runs": [
+        {"at": "2026-11-11T12:00:00-05:00", "session": true, "held": 29, "closes": false},
+        {"at": "2026-12-01T12:00:00-05:00", "session": true, "held": 49, "closes": false}
+      ]
+    },
+    {
+      "name": "max_hold 0 switches the time stop off",
+      "market": "asx", "entry_date": "2026-10-13", "tp1_hit": false, "max_hold": 0,
+      "due": null,
+      "runs": [
+        {"at": "2026-11-11T12:00:00+11:00", "session": true, "held": 29, "closes": false}
+      ]
+    },
+    {
+      "name": "no entry date: no time stop to count to",
+      "market": "nasdaq", "entry_date": "", "tp1_hit": false, "max_hold": 28,
+      "due": null,
+      "runs": []
+    }
+  ]
+}

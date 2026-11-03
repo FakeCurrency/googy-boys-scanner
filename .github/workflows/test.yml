@@ -231,6 +231,13 @@ jobs:
       - name: Journal checkpoints + countdown + R chart + deck cell record (owner items 6-10)
         if: success() || failure()
         run: node test/journal_checkpoints.test.js
+      # NEXT100 #3 (2026-11-03): the time stop's day-29 boundary as ONE table,
+      # tests/fixtures/time_stop_cases.json. tests/test_time_stop_cases.py runs
+      # it through time_stop_due and a real vivek_run.run_market; this runs
+      # journal.js timeStopOf over it, so the countdown names the engine's day.
+      - name: Time-stop day-29 boundary, shared with the engine (NEXT100 #3)
+        if: success() || failure()
+        run: node test/time_stop_cases.test.js
       - name: HTML-escaping contract across public/js (TOP100 #75/#76/#77, 203)
         if: success() || failure()
         run: node test/escaping.test.js
