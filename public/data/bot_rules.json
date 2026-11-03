@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T15:26:03Z",
+  "generated_at": "2026-11-03T15:44:49Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -245,6 +245,36 @@
     "crypto": {
       "at": "2026-11-03T15:26:01Z",
       "reasons": {}
+    },
+    "nasdaq": {
+      "at": "2026-11-03T15:44:46Z",
+      "reasons": {
+        "AAL": "global_cap",
+        "BZ": "global_cap",
+        "CARG": "global_cap",
+        "CWCO": "global_cap",
+        "FFIN": "dup_symbol",
+        "FWONA": "global_cap",
+        "GRFS": "global_cap",
+        "HBAN": "global_cap",
+        "JKHY": "global_cap",
+        "LOPE": "global_cap",
+        "LPLA": "global_cap",
+        "LYTS": "global_cap",
+        "MQ": "global_cap",
+        "MSEX": "global_cap",
+        "NMRK": "global_cap",
+        "PAYX": "global_cap",
+        "PENN": "global_cap",
+        "PEP": "global_cap",
+        "PYPL": "global_cap",
+        "REYN": "global_cap",
+        "SAIA": "global_cap",
+        "SIRI": "global_cap",
+        "SNY": "global_cap",
+        "SPOK": "global_cap",
+        "UTMD": "global_cap"
+      }
     }
   },
   "evidence_by_market": {
