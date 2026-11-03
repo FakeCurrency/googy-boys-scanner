@@ -24,6 +24,89 @@ from scanner import data as _data  # noqa: E402
 from scanner import sectorcache as _sectorcache  # noqa: E402
 
 
+# -- a test session leaves journal/ byte-clean: a hard check (NEXT100 #10) ------
+#
+# journal/ is the live bot book and the alert state. CLAUDE.md rule 1 reads a
+# diff there after a test run as a REAL change (a scan wrote it), so a test that
+# leaked into the live files would be committed as truth by the next session.
+# The autouse fixtures below point every known writer at tmp_path; this is the
+# net under them. The session's CONTROLLER (a plain run, or xdist's controller
+# -- never a worker, which would see its siblings' writes mid-run) hashes every
+# file under journal/ at session start and again at session finish, after every
+# worker is done. Any file changed, added or removed fails the session (exit 1)
+# and names the files. It only reports: the files are left exactly as the
+# session left them.
+
+JOURNAL_DIR = ROOT / "journal"
+_JOURNAL_AT_START = pytest.StashKey[dict]()
+
+
+def _journal_digest() -> dict:
+    """{repo-relative path: sha256} for every file under journal/."""
+    import hashlib  # local: keeps this section one self-contained block
+    out = {}
+    if JOURNAL_DIR.is_dir():
+        for p in sorted(JOURNAL_DIR.rglob("*")):
+            if p.is_file():
+                try:
+                    out[p.relative_to(ROOT).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
+                except OSError as e:
+                    out[p.relative_to(ROOT).as_posix()] = f"unreadable: {type(e).__name__}"
+    return out
+
+
+def _journal_changes(before: dict, after: dict) -> list:
+    """['changed  journal/x.json', 'added    journal/y.json', ...], sorted by path."""
+    lines = []
+    for path in sorted(before.keys() | after.keys()):
+        if path not in after:
+            lines.append(f"removed  {path}")
+        elif path not in before:
+            lines.append(f"added    {path}")
+        elif before[path] != after[path]:
+            lines.append(f"changed  {path}")
+    return lines
+
+
+def _is_xdist_worker(config) -> bool:
+    return hasattr(config, "workerinput")
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionstart(session):
+    if not _is_xdist_worker(session.config):
+        session.config.stash[_JOURNAL_AT_START] = _journal_digest()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    config = session.config
+    if _is_xdist_worker(config) or _JOURNAL_AT_START not in config.stash:
+        return
+    changes = _journal_changes(config.stash[_JOURNAL_AT_START], _journal_digest())
+    if not changes:
+        return
+    lines = [f"This test session changed {len(changes)} file(s) under journal/, the live bot "
+             "book and alert state (CLAUDE.md rule 1):"]
+    lines += [f"  {c}" for c in changes]
+    lines += ["A test wrote the real journal: point it at tmp_path, as the autouse fixtures in "
+              "tests/conftest.py do for the frame and sector caches.",
+              "The files are left as the session left them. Read `git diff -- journal/` before "
+              "restoring anything: if a real scan or a git pull ran in this checkout during the "
+              "session, the change is real."]
+    if session.exitstatus in (pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED):
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
+        lines.append("Session exit status set to 1 (failed), whatever the tests above said.")
+    tr = config.pluginmanager.get_plugin("terminalreporter")
+    if tr is not None:
+        tr.write_line("")                  # off the end of the progress dots
+        tr.write_sep("=", "journal/ is NOT byte-clean after this test session", red=True, bold=True)
+        for line in lines:
+            tr.write_line(line, red=True)
+    else:
+        sys.stderr.write("journal/ is NOT byte-clean after this test session\n"
+                         + "\n".join(lines) + "\n")
+
+
 @pytest.fixture(autouse=True)
 def _isolated_frame_cache(tmp_path, monkeypatch):
     """Every test gets its own empty last-good frame cache (2026-09-05).
