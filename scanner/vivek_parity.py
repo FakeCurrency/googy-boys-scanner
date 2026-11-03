@@ -59,7 +59,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from . import config, vivek
+from . import config, replay_stats, vivek
 from .broker.vivek_bot import _company_key, _is_fund_or_reit, _sector_key, size_position
 from .vivek_backtest import (
     EQUITY,
@@ -888,10 +888,25 @@ def _portfolio_block(eligible: list[dict], taken: list[dict], skipped: dict, gat
         "slot_months": slot_months,
         "r_per_slot_month": r_psm,
         "r_per_slot_month_house": r_psm_house,
+        # NEXT100 #15: beside every R/slot-month, the sum of realised R and
+        # the per-market average R reweighted to the live book's market mix.
+        "total_r": replay_stats.total_r(taken),
+        "live_mix_r": replay_stats.live_mix_r(taken, live_mix()),
     }
     if note:
         out["note"] = note
     return out
+
+
+_LIVE_MIX: dict | None = None
+
+
+def live_mix() -> dict:
+    """The live book's market mix, read once per process (replay_stats)."""
+    global _LIVE_MIX
+    if _LIVE_MIX is None:
+        _LIVE_MIX = replay_stats.live_market_mix()
+    return _LIVE_MIX
 
 
 def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> dict:
@@ -1107,7 +1122,11 @@ def load_market_series(mk: str, limit: int | None, period: str,
         log.info("[parity] %s - excluded %d in-sample symbols (%d remain)",
                  mk, uni_before - len(uni_all), len(uni_all))
     uni = _sample(uni_all, limit)
-    log.info("[parity] %s - downloading %d of %d eligible (%s)", mk, len(uni), len(uni_all), period)
+    # NEXT100 #20: the NASDAQ directory carries no sectors; fill blanks from
+    # the committed sources so the per-market sector cap binds as live.
+    sectors = replay_stats.fill_sectors(mk, uni)
+    log.info("[parity] %s - downloading %d of %d eligible (%s); sectors %d/%d named",
+             mk, len(uni), len(uni_all), period, sectors["named"], sectors["total"])
     frames, sources = fetch_market_frames(mk, uni, period)
     meta = {u["yf"]: u for u in uni}
     t0 = time.time()
@@ -1126,6 +1145,7 @@ def load_market_series(mk: str, limit: int | None, period: str,
         "engine_calls": sum(s.evaluated for s in series),
         "phase1_minutes": round((time.time() - t0) / 60, 2),
         "data_sources": sources,
+        "sectors": sectors,
         "sampled_symbols": [u.get("symbol") for u in uni],
     }
 
@@ -1177,8 +1197,17 @@ def _caveats() -> list[str]:
         "days filled. It never enters the book.",
         "Slot contention scales with the universe: a run that samples part of "
         "a market sees only coverage[market].sampled_pct of its signals, so "
-        "book_full counts are a LOWER bound unless --limit 0. Read R/trade and "
-        "R/slot-month by cell and market.",
+        "with VIVEK_PARITY_SLOT_SCALE 'universe' the books run at the live caps "
+        "scaled to the pooled sample share (never under VIVEK_PARITY_SLOT_SCALE_MIN "
+        "slots) and the unscaled book_full count prints beside it; 'none' leaves "
+        "book_full a LOWER bound unless --limit 0. Read R/trade and R/slot-month "
+        "by cell and market; total R and the live-mix R (per-market average R "
+        "reweighted to the live book's market mix) sit beside every R/slot-month.",
+        "Replication: a variant that passes the grid is re-run with the baseline "
+        "on a second sample sharing no name with the first (the even stride over "
+        "the names the first draw left) at the same caps; its verdict reads "
+        "PASS (replicated) or PASS (not replicated), and only a replicated pass "
+        "can be the best variant.",
         "R units are primary. Dollar columns inherit the live sizing mode "
         f"({_sizing_basis().get('sizing_mode')}) and are secondary.",
         "Variant PASS requires R/slot-month improvement overall, on ASX AND "
@@ -1240,13 +1269,15 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
     return report
 
 
-def run_variant_books(series: list[SymbolSeries], base_taken: list[dict]) -> dict:
-    """Each one-delta variant re-runs the whole book (phase 2 only)."""
+def run_variant_books(series: list[SymbolSeries], base_taken: list[dict], *,
+                      max_total: int | None = None, max_sector: int | None = None) -> dict:
+    """Each one-delta variant re-runs the whole book (phase 2 only) at the
+    baseline's caps (NEXT100 #15: the scaled ones when the slot scale is on)."""
     results = {}
     split = _split_date(base_taken)
     for rules in variant_grid():
         t0 = time.time()
-        book = run_book(series, rules)
+        book = run_book(series, rules, max_total=max_total, max_sector=max_sector)
         taken = book["taken"]
         port = _portfolio_block([], taken, book["skipped"], book["gated"], book["peak_open"],
                                 book["max_open_total"], book["max_per_sector"],
@@ -1298,6 +1329,8 @@ def best_variant(variant_results: dict) -> dict:
         v = vr.get("verdict") or {}
         if not v.get("pass"):
             continue
+        if v.get("replicated") is False:          # NEXT100 #18: a pass the second sample refused
+            continue
         delta = (v.get("checks") or {}).get("overall", {}).get("delta")
         if delta is None:
             continue
@@ -1305,7 +1338,10 @@ def best_variant(variant_results: dict) -> dict:
             best = {"name": name, "delta": delta, "delta_desc": vr.get("delta"),
                     "verdict": v}
     return best or {"name": None, "delta": None,
-                    "reason": "no variant passed ASX+NASDAQ+both-halves gate"}
+                    "reason": ("no variant passed ASX+NASDAQ+both-halves gate"
+                               + (" and replicated on a disjoint sample"
+                                  if any((vr.get("verdict") or {}).get("replicated") is False
+                                         for vr in variant_results.values()) else ""))}
 
 
 def load_exclude_map(path) -> dict[str, set[str]]:
@@ -1340,7 +1376,18 @@ def run_parity(markets: list[str], limit: int | None, period: str,
         coverage[mk] = cov
     rules = baseline_rules()
     t1 = time.time()
-    book = run_book(series, rules, shadow=True)
+    # NEXT100 #15: the books run at the caps scaled to the sample's share of
+    # the live universe; the unscaled baseline runs once for the side-by-side.
+    scale = replay_stats.slot_scale(coverage)
+    caps = {"max_total": scale["max_open_total"], "max_sector": scale["max_per_sector"]}
+    book = run_book(series, rules, shadow=True, **caps)
+    if (scale["max_open_total"], scale["max_per_sector"]) != (
+            scale["live"]["max_open_total"], scale["live"]["max_per_sector"]):
+        unscaled = run_book(series, rules)
+        scale["unscaled"] = {"taken": len(unscaled["taken"]),
+                             "book_full": unscaled["skipped"].get("book_full", 0),
+                             "sector_cap": unscaled["skipped"].get("sector_cap", 0),
+                             "peak_open": unscaled["peak_open"]}
     eligible = run_book(series, rules, max_total=math.inf, max_sector=0)["taken"]
     params = {
         "mode": tag,
@@ -1358,9 +1405,19 @@ def run_parity(markets: list[str], limit: int | None, period: str,
         **_sizing_basis(),
         **replay_params(),
     }
-    variant_results = run_variant_books(series, book["taken"]) if run_variants else {}
+    variant_results = (run_variant_books(series, book["taken"], max_total=caps["max_total"],
+                                         max_sector=caps["max_sector"]) if run_variants else {})
+    replication = {}
+    if variant_results:
+        from . import replay_replicate                 # NEXT100 #18, lazy: it imports this module
+        replication = replay_replicate.replicate_passes(
+            markets, limit, period, exclude_map, workers, variant_results, coverage,
+            {"max_open_total": caps["max_total"], "max_per_sector": caps["max_sector"]})
     report = build_parity_report(eligible, coverage, params, variant_results, book=book)
     report["mode"] = tag
+    report["baseline"]["slot_scale"] = scale
+    report["live_mix"] = live_mix()
+    report["replication"] = replication
     report["best_variant"] = best_variant(variant_results) if variant_results else {}
     report["sampled_symbols"] = sample_symbol_map(coverage)
     report["runtime_minutes"] = {"total": round((time.time() - t0) / 60, 2),
@@ -1395,13 +1452,18 @@ def summary_markdown(report: dict) -> str:
                  f"per market; period {p.get('period')}; workers {p.get('workers')}")
     for mk, c in cov.items():
         src = (c.get("data_sources") or {}).get("by_source")
+        sec = c.get("sectors") or {}
+        sec_txt = (f"; sectors {sec.get('named')}/{sec.get('total')} named"
+                   + (f" (filled {', '.join(f'{k} {v}' for k, v in sorted((sec.get('filled') or {}).items()))})"
+                      if sec.get("filled") else "")) if sec else ""
         lines.append(f"- {mk}: {c.get('replayed')} replayed of {c.get('symbols')} sampled "
                      f"({c.get('sampled_pct')}% of {c.get('universe')}); "
-                     f"{c.get('signals')} signal bars; sources {src}")
+                     f"{c.get('signals')} signal bars; sources {src}{sec_txt}")
     rt = report.get("runtime_minutes") or {}
     if rt:
         lines.append(f"- runtime {rt.get('total')} min (signals {rt.get('phase1')}, "
                      f"books {rt.get('books')})")
+    lines += slot_scale_lines(b.get("slot_scale") or {}, port, report.get("live_mix") or {})
     lines += ["", "Cells read `n · expectancy R (house-fill R)`; R/slot-month is the "
               "pass metric. The headline R is the worst-print stop fill.", ""]
 
@@ -1415,8 +1477,8 @@ def summary_markdown(report: dict) -> str:
         return (sl or {}).get(key) or {}
 
     lines += ["### Overall (book)", "",
-              "| rule | delta | taken | expR | expR house | win% | R/slot-month | Δ vs base | peak | book_full | verdict |",
-              "|---|---|---|---|---|---|---|---|---|---|---|"]
+              "| rule | delta | taken | expR | expR house | win% | R/slot-month | Δ vs base | total R | live-mix R | peak | book_full | sector_cap | verdict |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     base_rpsm = port.get("r_per_slot_month")
     for name in names:
         bk = book_of(name)
@@ -1424,11 +1486,13 @@ def summary_markdown(report: dict) -> str:
         m = pt.get("portfolio") or {}
         rpsm = pt.get("r_per_slot_month")
         d = None if rpsm is None or base_rpsm is None else rpsm - base_rpsm
-        ver = "—" if name == "baseline" else ("PASS" if (bk.get("verdict") or {}).get("pass") else "fail")
+        ver = "—" if name == "baseline" else _verdict_label(bk.get("verdict"))
+        skipped = pt.get("skipped") or {}
         lines.append(f"| {name} | {bk.get('delta', 'live rules')} | {pt.get('taken')} | "
                      f"{_fmt_r(m.get('expectancy_r'))} | {_fmt_r(m.get('expectancy_r_house'))} | "
-                     f"{m.get('win_rate')} | {_fmt_r(rpsm)} | {_fmt_r(d)} | {pt.get('peak_open')} | "
-                     f"{(pt.get('skipped') or {}).get('book_full', 0)} | {ver} |")
+                     f"{m.get('win_rate')} | {_fmt_r(rpsm)} | {_fmt_r(d)} | "
+                     f"{_fmt_r(pt.get('total_r'))} | {_fmt_r(pt.get('live_mix_r'))} | {pt.get('peak_open')} | "
+                     f"{skipped.get('book_full', 0)} | {skipped.get('sector_cap', 0)} | {ver} |")
     lines += ["", f"Baseline R/slot-month at the house stop fill (a resting stop): "
               f"{_fmt_r(port.get('r_per_slot_month_house'))} (worst print {_fmt_r(base_rpsm)})."]
     mkts = sorted(cov)
@@ -1471,12 +1535,96 @@ def summary_markdown(report: dict) -> str:
                            ("refused, contested days", "contested_skipped")):
             m = rk.get(key) or {}
             lines.append(f"| {label} | {_cell_txt(m)} | {m.get('win_rate', '—')} |")
+    lines += replication_lines(report.get("replication") or {})
     bv = report.get("best_variant") or {}
     lines += ["", f"Best passing variant: {bv.get('name') or 'none'}"
               + (f" ({bv.get('delta_desc')}, Δ R/slot-month {_fmt_r(bv.get('delta'))})"
                  if bv.get("name") else f" -- {bv.get('reason', '')}"), ""]
     lines += ["### Caveats", ""] + [f"- {c}" for c in report.get("caveats") or []] + [""]
     return "\n".join(lines)
+
+
+def _verdict_label(verdict: dict | None) -> str:
+    from .replay_replicate import verdict_label
+    return verdict_label(verdict)
+
+
+def _pct(x) -> str:
+    return "-" if x is None else f"{100 * float(x):.1f}%"
+
+
+def slot_scale_lines(scale: dict, port: dict, mix: dict) -> list[str]:
+    """NEXT100 #15: the caps the books ran at beside the live ones, both
+    book_full counts, and the live mix the live-mix R is weighted to."""
+    if not scale and not mix:
+        return []
+    out = []
+    if scale:
+        live = scale.get("live") or {}
+        by = scale.get("by_market") or {}
+        shares = ", ".join(f"{mk} {_pct(v.get('share'))} ({v.get('symbols')}/{v.get('universe')})"
+                           for mk, v in sorted(by.items()))
+        skipped = port.get("skipped") or {}
+        line = (f"- slot scale `{scale.get('mode')}`: sample share {_pct(scale.get('share'))} "
+                f"({shares}) -> caps {scale.get('max_open_total')} total / "
+                f"{scale.get('max_per_sector')} per sector per market "
+                f"(live {live.get('max_open_total')} / {live.get('max_per_sector')}); "
+                f"book_full {skipped.get('book_full', 0)}, sector_cap {skipped.get('sector_cap', 0)}, "
+                f"taken {port.get('taken')}, peak {port.get('peak_open')}")
+        un = scale.get("unscaled")
+        if un:
+            line += (f"; at the live caps: book_full {un.get('book_full')}, sector_cap "
+                     f"{un.get('sector_cap')}, taken {un.get('taken')}, peak {un.get('peak_open')}")
+        if scale.get("note"):
+            line += f"; {scale['note']}"
+        out.append(line)
+    if mix:
+        w = ", ".join(f"{mk} {_pct(v)}" for mk, v in sorted((mix.get("weights") or {}).items()))
+        line = (f"- live mix (entries tagged {'/'.join(mix.get('cycles') or [])}, n={mix.get('n')}, "
+                f"source {mix.get('source')}): {w}; the live-mix R column reweights each book's "
+                "per-market average R to it")
+        if mix.get("note"):
+            line += f"; {mix['note']}"
+        out.append(line)
+    return out
+
+
+def replication_lines(rep: dict) -> list[str]:
+    """NEXT100 #18: the disjoint second sample's read of every passing variant."""
+    if not rep:
+        return []
+    out = ["", "### Replication (a second sample sharing no name with the first)", ""]
+    if not rep.get("ran"):
+        out.append(f"- not run: {rep.get('reason')}")
+        return out
+    for mk, s in sorted((rep.get("sample") or {}).items()):
+        txt = (f"- {mk}: {s.get('symbols')} names of {s.get('universe')}, "
+               f"overlap dropped {s.get('overlap_dropped')}"
+               + (f"; {s['note']}" if s.get("note") else ""))
+        if s.get("replayed") is not None:
+            txt += f"; {s.get('replayed')} replayed, {s.get('signals')} signal bars"
+        out.append(txt)
+    caps = rep.get("caps") or {}
+    out.append(f"- caps {caps.get('max_total')} total / {caps.get('max_sector')} per sector per market; "
+               f"{rep.get('minutes')} min")
+    out += ["", "| variant | verdict | first sample R/slot-month base -> variant | "
+            "second sample base -> variant | second: asx | nasdaq | half 1 | half 2 |",
+            "|---|---|---|---|---|---|---|---|"]
+
+    def flag(c) -> str:
+        p = (c or {}).get("pass")
+        return "n/a" if p is None else ("pass" if p else "fail")
+
+    for name, v in (rep.get("variants") or {}).items():
+        f, s = v.get("first") or {}, v.get("second") or {}
+        ch = s.get("checks") or {}
+        ov = ch.get("overall") or {}
+        out.append(f"| {name} | {v.get('label')} | {_fmt_r(f.get('baseline'))} -> {_fmt_r(f.get('variant'))} "
+                   f"({f.get('taken')} taken) | {_fmt_r(ov.get('baseline'))} -> {_fmt_r(ov.get('variant'))} "
+                   f"({s.get('baseline_taken')} -> {s.get('taken')} taken) | "
+                   f"{flag(ch.get('market:asx'))} | {flag(ch.get('market:nasdaq'))} | "
+                   f"{flag(ch.get('half:first'))} | {flag(ch.get('half:second'))} |")
+    return out
 
 
 def print_parity(report: dict) -> None:

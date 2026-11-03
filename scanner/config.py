@@ -898,6 +898,25 @@ VIVEK_PARITY_MAE_CUTS = (0.5,)
 # NASDAQ and in BOTH time halves of the sample (crypto is reported but not a
 # pass gate — thin N).
 VIVEK_PARITY_PASS_MARKETS = ("asx", "nasdaq")
+# NEXT100 #15 (3 Nov): the live book is always full (60/60 since early Oct)
+# and a 300-name replay almost never is, so its slot competition is far
+# weaker than live. "universe" scales the replay's book cap and per-market
+# sector cap to the sample's share of the live universe (sampled / universe,
+# all markets pooled), never below VIVEK_PARITY_SLOT_SCALE_MIN slots; "none"
+# runs the live caps as they are (the old behaviour). The unscaled baseline
+# is still run once so both book_full counts print side by side.
+VIVEK_PARITY_SLOT_SCALE = "universe"
+VIVEK_PARITY_SLOT_SCALE_MIN = 3
+# The live-mix R per trade reweights the replay's per-market average R to the
+# live book's market mix at entry, read from these cycles' rows in
+# journal/vivek_bot_book.json at run time (equal weights, with a note, when
+# the book is unreadable).
+VIVEK_PARITY_LIVE_CYCLES = ("hc4-1", "hc4-2")
+# NEXT100 #18: every variant that passes the grid is re-run (baseline + that
+# variant only) on a second sample that shares no name with the first -- the
+# even stride over the names the first draw left -- before its verdict reads
+# "PASS (replicated)". At most one extra sample per market per run.
+VIVEK_PARITY_REPLICATE = True
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes
