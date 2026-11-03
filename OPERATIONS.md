@@ -194,6 +194,16 @@ and the watchdog stays quiet about it. Thresholds: `WATCHDOG_*` in config.
 - *"newest backup is Nh old"* (CRITICAL) — dispatch "Backup bot book" today,
   then investigate.
 - *"PhaseMap latest.json is N days behind"* — dispatch "PhaseMap nightly scan".
+- *"<MARKET> book last saved by a scan ... hours of its own trading session
+  ago"* (CRITICAL `scan_stale_asx` / `scan_stale_nasdaq`, NEXT100 #13) — that
+  stock market's in-session scans stopped saving its book for more than 3
+  session hours, so its stops and time stops are not being checked. Check
+  cron-job.org first (`ops.yml cronjob-history` for that market's job ids),
+  then the `scan.yml` runs, then tap SCAN for that market.
+- Lamp: *"GitHub key expires in N days"* (NEXT100 #12) — regenerate the
+  repo-scoped PAT (Actions: read and write) and replace `GH_DISPATCH_TOKEN` in
+  Cloudflare (stored as Text). The next heal or scan records the new date on
+  `/api/health`.
 
 **Must-change gates.** Every workflow that commits data FAILS (red run → email)
 when a scheduled run stages none of its must-change outputs
