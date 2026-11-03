@@ -76,7 +76,8 @@ breakout on crypto, ASX and NASDAQ.
   `DISCORD_MORNING_WEBHOOK_URL`. The removed alert webhook's secret name must
   never appear in a workflow, even in a comment (`tests/test_alert_credentials.py`).
 - **`TELEGRAM_ENABLED` stays False** — the owner's scalp-era mute.
-- **No SHA-pinning of the five first-party actions** (TOP100 #56); third-party
+- **No SHA-pinning of the six first-party actions** (TOP100 #56; actions/download-artifact
+  joined 2026-11-03 for the replay summary); third-party
   actions must be 40-hex pinned; nothing floats on `@main`/`@latest`.
 - **Reliability without paying** (2026-10-06): free cron-job.org jobs are the
   real clock. **The ASX close is 16:40 Sydney** ("Fix it properly").
@@ -144,7 +145,8 @@ breakout on crypto, ASX and NASDAQ.
 ```
 scanner/            config.py (ALL constants) · vivek.py · scan.py · run.py (CLI, publishes bot_rules.json)
                     data.py + exchange_data.py (the one fetch path) · universe.py · conviction.py
-                    confluence_alert.py · vivek_backtest.py + vivek_parity.py · vivek_journal.py
+                    confluence_alert.py · vivek_backtest.py + vivek_parity.py (+ replay_stats.py,
+                    replay_noise.py, replay_replicate.py, replay_summary.py) · vivek_journal.py
                     (trade primitives + the one close writer) · spec*.py · ignition/ · momentum/
                     watchdog.py · sectorcache.py · marketcaps.py · history_archive.py
 scanner/broker/     vivek_bot.py (decisions, RINGFENCED) · vivek_run.py (the paper book) ·
@@ -190,7 +192,7 @@ them.
 | `backup_book.yml` | `35 21` + `35 23` backstop | `backups/<stamp>/` (keep 30) + 90-day artifact |
 | `lens_backtest.yml` | Sunday `0 8` | replays → `vivek_backtest.json` |
 | `vivek_backtest.yml` | 1st `0 8` | `vivek_backtest_longonly.json` |
-| `decision_replay.yml` | push `.github/replay-kick`; manual | READ-ONLY parity replay + V1–V11 + live-vs-replay → summary, the LOG + 90-day artifact; red if `public/data` moved |
+| `decision_replay.yml` | push `.github/replay-kick`; manual | READ-ONLY parity replay + V1–V11 + live-vs-replay → summary, the LOG + 90-day artifact; red if `public/data` moved. Its second job `commit-summary` (the only one with `contents: write`, own concurrency group, no WATCHDOG entry: it only follows a replay) commits `data/research/decision_replay/summary.json` + `inputs.json` (NEXT100 #14) |
 | `dispatch_scan.yml` | push `.github/scan-kick` | a real `scan.yml` dispatch — how a cloud session triggers a scan |
 | `ops.yml` | manual | cron-job.org + Cloudflare actions |
 | `test.yml` · `test_alerts.yml` | push (path-filtered)/PR · manual | the CI gate · alert-path self-test |
@@ -230,7 +232,8 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
 - **Must-change gate:** every committing workflow runs
   `scripts/assert_staged.sh` after staging (ANY-OF: list canonical files, never
   only a derived view): scan, crypto_bot, phasemap, backup_book,
-  alert_returns, momentum, the ignition twins (per path), close_position
+  alert_returns, momentum, the ignition twins (per path), decision_replay's
+  commit-summary (ANY-OF the two summary paths), close_position
   (`journal_type=bot`), resize_book (behind `--check` exit 3). `confluence.yml`
   gates on an unstaged tree instead (pinned decision). A new committing
   workflow also needs a `WATCHDOG_RUNS` entry unless pinned otherwise
@@ -843,6 +846,48 @@ only — no trade rule, grade, gate or book row moved.
 
 
 ---
+
+## NEXT100 (2026-11-03)
+
+Owner: *"come up with another 100 things worth refining/fixing ... Chasing
+profitability"* → "Do it all please". The staged list with the evidence for
+each item was reviewed twice against the repo and the book; Stage 1 (items
+1-13) shipped as PR #86 and the first half of Stage 2 (14-18, 20) as the next
+PR, both on 3-4 Nov. No trade rule moved; Stage 7 (83-100) is trade-affecting
+and goes to the hc4-3 decision pack with its replay test first.
+
+- **Stage 2, the replay as a fair judge (simulation only):** the decision
+  replay runs at LIVE SLOT PRESSURE (`VIVEK_PARITY_SLOT_SCALE` "universe":
+  the book cap and per-market sector cap scaled to the pooled sample share,
+  floor `VIVEK_PARITY_SLOT_SCALE_MIN` 3 / 1 per sector; the unscaled baseline
+  prints beside it) and every R/slot-month carries total R and the LIVE-MIX R
+  (per-market averages reweighted to the hc4-1/hc4-2 market mix read from the
+  book at run time) — `scanner/replay_stats.py`, #15. NASDAQ (and any blank)
+  replay sectors are filled read-only from `data/sector_map.json` → the
+  universe cache → the book and bucketed through the bot's `_sector_key`;
+  blank stays exempt (#20). A variant that passes the grid is re-run with the
+  baseline on a second sample sharing no name with the first
+  (`scanner/replay_replicate.py`, `VIVEK_PARITY_REPLICATE`): verdicts read
+  "PASS (replicated)" / "PASS (not replicated)", only a replicated pass can
+  be `best_variant`, a thin second draw is flagged (#18). `scanner/replay_noise.py`
+  (#16/#17): `versus.random_timing` (every taken trade against
+  `VIVEK_PARITY_RANDOM_DRAWS` 20 random signal days on the SAME series within
+  ±`VIVEK_PARITY_RANDOM_WINDOW_BARS` 182, the plan re-anchored to the random
+  fill, through the replay's own exit model; P = share of random books
+  averaging ≥ the real mean R); beside every variant the paired entry-month
+  block-bootstrap 90% band of the R/slot-month difference, P(no gain)
+  (variant ≤ baseline; an identical variant reads 1.0) and a dropout-placebo
+  pass rate scored with the real `variant_passes` gate (a weak null for
+  exit-rule variants). Reading rule: a PASS whose placebo rate is high or
+  whose band straddles 0 cannot carry a money decision. `scanner/replay_summary.py`
+  (#14) writes `data/research/decision_replay/summary.json` (schema 1, the
+  live-rules arm's taken trades, each variant's verdict; the decision pack's
+  same-weeks figure reads it) and `inputs.json` (per name first/last bar, bar
+  count and a close-series digest, so a yfinance re-base is told from a moved
+  rule); a force-closed end-of-data trade is an OPEN row. Expect ~2 min more
+  per replay, ~2× only on a run where a variant passes. Tests:
+  `tests/test_replay_fair_judge.py`, `test_replay_noise.py`,
+  `test_replay_summary.py`, `test_decision_replay_workflow.py`.
 
 ## 20 MORE (2026-11-03)
 
