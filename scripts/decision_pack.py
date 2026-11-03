@@ -15,7 +15,8 @@ re-read on any later day without re-deriving anything by hand:
 
 READ-ONLY: it opens files for reading and prints to stdout. Nothing is
 written, nothing is downloaded, and nothing under scanner/broker/ is
-imported (tests/test_decision_pack.py pins all three).
+imported -- the one scanner import is scanner.config, for the rules-exit
+list (tests/test_decision_pack.py pins all three).
 
 THE PRE-REGISTRATION (PREREG below) is FROZEN on 2026-10-14, deliberately
 hardcoded beside the code that evaluates it -- the evidence_brief pattern.
@@ -35,12 +36,19 @@ import sys
 from collections import Counter, defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:                  # runnable as `python scripts/decision_pack.py`
+    sys.path.insert(0, ROOT)
+from scanner import config  # noqa: E402  (stdlib-only constants; the ONE scanner import)
+
 MARKETS = ("asx", "nasdaq", "crypto")
 
-# The journal's own definition of a rules exit (journal.js / app.js /
-# status.js MECHANICAL_EXITS; parity pinned by the test). Anything else --
-# "manual", or no reason at all -- was a hand close.
-MECHANICAL_EXITS = ("stop", "time", "trail", "target")
+# The ONE definition of a rules exit (NEXT100 #9): config.VIVEK_BOT_RULES_EXITS,
+# which the site reads from bot_rules.json (journal.js / app.js / status.js
+# MECHANICAL_EXITS are its offline fallbacks; parity pinned by the tests).
+# Anything else -- "manual", or no reason at all -- was a hand close. Config's
+# list is APPEND-ONLY (tests/test_rules_exits.py), so the frozen checkpoints
+# below never lose a reason they counted.
+MECHANICAL_EXITS = config.VIVEK_BOT_RULES_EXITS
 
 # The hc4-1 cycle as it was defined when the pack was written. Frozen here
 # (not read from config) so a later rule change cannot silently redefine the

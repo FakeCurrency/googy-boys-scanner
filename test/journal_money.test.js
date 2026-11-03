@@ -689,11 +689,17 @@ const { tfSplit, tfLineHTML, wrongFromEntry, excursionTip, reasonTip, tideHTML }
 
 const cl = (reason, r) => ({ status: "closed", exit_reason: reason, realized_r: r });
 
-test("the four mechanical reasons are exactly the four the engine writes", () => {
+test("the mechanical reasons are exactly config's rules exits, and never 'manual'", () => {
   // stop / time / trail / target are the frozen rules acting. Adding "manual"
   // to this list would erase the entire distinction in one edit, which is why
-  // it is asserted by value rather than by length.
-  assert.deepEqual([...MECHANICAL_EXITS].sort(), ["stop", "target", "time", "trail"]);
+  // it is asserted by value rather than by length. NEXT100 #9: the value is
+  // config.VIVEK_BOT_RULES_EXITS (read from config.py, never re-typed here),
+  // which tests/test_rules_exits.py keeps append-only and manual-free.
+  const cfg = fs.readFileSync(path.resolve(__dirname, "../scanner/config.py"), "utf8");
+  const m = /^VIVEK_BOT_RULES_EXITS\s*=\s*\(([^)]*)\)/m.exec(cfg);
+  assert.ok(m, "config.VIVEK_BOT_RULES_EXITS moved — re-point this pin");
+  assert.deepEqual([...MECHANICAL_EXITS], [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]));
+  assert.ok(!MECHANICAL_EXITS.includes("manual"), "a hand close can never be a rules exit");
 });
 
 test("a stop-out is the rules, a manual close is not", () => {
@@ -1616,7 +1622,8 @@ async function atest(name, fn) {
     failed++;
   }
 }
-const rctx = vm.createContext({ console: { warn() {}, log() {}, error() {} } });
+const rctxWarns = [];
+const rctx = vm.createContext({ console: { warn: (...a) => { rctxWarns.push(a); }, log() {}, error() {} } });
 vm.runInContext(
   "let EQUITY = 150000, POSITION_NOTIONAL = 2500, RISK_PCT = 0.35, NOTIONAL_LIVE = false, RULES_GEN = 1;\n"
   + "let LIVE_CYCLE = 'hc4-1', ENTRY_CELLS = [['1W', 'reclaim']];\n"
@@ -1628,10 +1635,13 @@ vm.runInContext(
   + "const fetch = async () => ({ ok: true, json: async () => RULES });\n"
   + slice("const sharedRead = (kind, fresh) =>", "\n  };") + "\n"
   + slice("const cellsOf = (ec) =>", "\n  };") + "\n"
+  + slice("const MECHANICAL_EXITS =", "];\n") + "\n"
+  + "const EXITS0 = MECHANICAL_EXITS.slice(); this.exitsRef = MECHANICAL_EXITS;\n"
+  + "this.resetExits = () => { MECHANICAL_EXITS.splice(0, MECHANICAL_EXITS.length, ...EXITS0); };\n"
   + slice("async function loadBotRules(fresh) {", "\n  }") + "\n"
   + "this.load = async (rules) => { RULES = rules; NOTIONAL_LIVE = false; POSITION_NOTIONAL = 2500;"
   + " await loadBotRules(); return { live: NOTIONAL_LIVE, notional: POSITION_NOTIONAL,"
-  + " cycle: LIVE_CYCLE, cells: JSON.stringify(ENTRY_CELLS) }; };",
+  + " cycle: LIVE_CYCLE, cells: JSON.stringify(ENTRY_CELLS), exits: MECHANICAL_EXITS.slice() }; };",
   rctx);
 
 // init lifts .jr-loading (UI100 review, 2026-10-20): after the repaint that
@@ -1694,6 +1704,28 @@ function initCtx({ throwOn2nd = false } = {}) {
     const k = await rctx.load({ cycle_tag: "  ", entry_cells: "nope" });
     assert.equal(k.cycle, "hc5-1", "a blank tag must not replace a good one");
     assert.equal(k.cells, JSON.stringify([["3D", "reclaim"], ["1D", "break"]]), "a malformed table keeps the last good one");
+  });
+  await atest("the published rules_exits are adopted IN PLACE and drift-logged (NEXT100 #9)", async () => {
+    // (the context's arrays are another realm's: compare copies made here)
+    const ref = rctx.exitsRef, fallback = [...ref];
+    try {
+      rctxWarns.length = 0;
+      const same = await rctx.load({ rules_exits: fallback.slice() });
+      assert.deepEqual([...same.exits], fallback);
+      assert.equal(rctxWarns.length, 0, "a list equal to the fallback is not drift");
+      const r = await rctx.load({ rules_exits: [...fallback, " D14 "] });
+      assert.deepEqual([...r.exits], [...fallback, "d14"], "the published list is not the list in force");
+      assert.strictEqual(rctx.exitsRef, ref, "adopted IN PLACE: every reader keeps the same array");
+      assert.deepEqual([...ref], [...fallback, "d14"]);
+      assert.ok(rctxWarns.some((w) => w[1] && w[1].rules_exits), "a drifted fallback must say so");
+      for (const bad of [[], "stop", [1], [" "], null]) {
+        rctx.resetExits();
+        const k = await rctx.load({ rules_exits: bad });
+        assert.deepEqual([...k.exits], fallback, `a malformed list (${JSON.stringify(bad)}) must keep the fallback`);
+      }
+      const none = await rctx.load({ max_open_total: 60 });
+      assert.deepEqual([...none.exits], fallback, "an older rules file without the key keeps the fallback");
+    } finally { rctx.resetExits(); }
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

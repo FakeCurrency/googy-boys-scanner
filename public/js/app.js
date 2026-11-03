@@ -942,13 +942,18 @@
   // the RULES (a hand close measures timing, not the cell), keyed by
   // timeframe x entry type. Dependency-free on purpose: the board and this
   // are held to one answer by test/journal_checkpoints.test.js. Display
-  // only: nothing the bot reads.
-  const cellRecord = (b, tag) => {
+  // only: nothing the bot reads. `rules` (optional) supplies the rules exits
+  // (bot_rules.json rules_exits = config VIVEK_BOT_RULES_EXITS, NEXT100 #9);
+  // the literal is the fallback, pinned to config by test_js_config_mirrors.
+  const cellRecord = (b, tag, rules) => {
     const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
+    const pub = rules && rules.rules_exits;
+    const exits = Array.isArray(pub) && pub.length && pub.every((x) => typeof x === "string" && x.trim())
+      ? pub.map((x) => x.trim().toLowerCase()) : MECHANICAL_EXITS;
     const out = {};
     for (const r of (b && Array.isArray(b.closed)) ? b.closed : []) {
       if (!r || r.cycle !== tag) continue;
-      if (!MECHANICAL_EXITS.includes(String(r.exit_reason || "").toLowerCase())) continue;
+      if (!exits.includes(String(r.exit_reason || "").toLowerCase())) continue;
       const k = `${String(r.timeframe || "").toUpperCase()} ${String(r.entry_type || "").toLowerCase()}`;
       const c = out[k] = out[k] || { n: 0, r: 0 };
       c.n += 1;
@@ -2817,7 +2822,12 @@
     // MECHANICAL_EXITS mirrors journal.js and status.js; the three copies are
     // held together by a parity test (test/staleview.test.js) rather than by
     // hope, because a list that drifts here silently re-blends the split.
+    // NEXT100 #9: the PUBLISHED rules.rules_exits wins (cellRecord's test);
+    // the literal is the fallback, pinned to config by test_js_config_mirrors.
     const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
+    const ex = rules && rules.rules_exits;
+    const exits = Array.isArray(ex) && ex.length && ex.every((x) => typeof x === "string" && x.trim())
+      ? ex.map((x) => x.trim().toLowerCase()) : MECHANICAL_EXITS;
     // NB: the parameter above is already named `rules` (the published rulebook)
     // — these are exit-side tallies, hence the by* names.
     const zero = () => ({ n: 0, wins: 0, losses: 0, r: 0 });
@@ -2826,7 +2836,7 @@
       const r = +((p && p.realized_r) ?? NaN);
       // An ABSENT exit_reason is a human act, same rule journal.js applies: a
       // row with no recorded mechanism was not closed by one.
-      const side = MECHANICAL_EXITS.includes(String((p && p.exit_reason) || "").toLowerCase())
+      const side = exits.includes(String((p && p.exit_reason) || "").toLowerCase())
         ? byRules : byOwner;
       side.n++;
       if (isFinite(r)) {
@@ -2933,7 +2943,7 @@
         // the cycle named by the rules. No rules file = no note, never a
         // guessed cycle.
         const tag = rules && typeof rules.cycle_tag === "string" ? rules.cycle_tag.trim() : "";
-        const rec = tag ? { tag, cells: cellRecord(b, tag) } : null;
+        const rec = tag ? { tag, cells: cellRecord(b, tag, rules) } : null;
         const recChanged = JSON.stringify(rec) !== JSON.stringify(state.cellRec || null);
         state.cellRec = rec;
         const skips = rules && rules.skips && typeof rules.skips === "object" ? rules.skips : null;

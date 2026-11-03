@@ -841,6 +841,20 @@ VIVEK_BOT_MAX_HOLD_DAYS  = 28
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
 VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+# A RULES exit (NEXT100 #9): the trade-level `exit_reason` values the bot's
+# own rules write -- the stop, the 28-day time stop, the trail after TP1 and
+# the final target. Anything else -- "manual", a caller's label on a hand
+# close, or no exit_reason at all -- is a human act. A CLASSIFICATION for
+# readers, never a gate (no trade path reads it): every "rules close" figure
+# counts with it -- scripts/decision_pack.py, bot_vs_cells.py, run.py's
+# evidence card, live_vs_replay -- and the site reads it from bot_rules.json
+# `rules_exits` (the MECHANICAL_EXITS literals in app.js / journal.js /
+# status.js are offline fallbacks, pinned to this by test_js_config_mirrors).
+# APPEND-ONLY, lowercase: closed rows keep their reason forever and the
+# decision pack's frozen checkpoints count them, so a reason never leaves; a
+# new close path adds its reason here in the commit that first writes it
+# (tests/test_rules_exits.py fails until it does).
+VIVEK_BOT_RULES_EXITS = ("stop", "time", "trail", "target")
 
 # ── Parity backtest + n≥30 decision pack (simulation-only; live bot UNTOUCHED)
 # These knobs exist so the parity replay and its variant grid read ONE place

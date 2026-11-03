@@ -165,6 +165,19 @@
       if (typeof j.cycle_tag === "string" && j.cycle_tag.trim()) LIVE_CYCLE = j.cycle_tag.trim();
       const cells = cellsOf(j.entry_cells);
       if (cells) ENTRY_CELLS = cells;
+      // Which closes are the RULES' (NEXT100 #9): config VIVEK_BOT_RULES_EXITS
+      // as published. Adopted IN PLACE (the SCALE pattern), so the decider
+      // split, the mechanism line, the cumulative-R chart, the cycle board and
+      // the checkpoint strip all follow config with no edit here. A missing,
+      // empty or malformed list keeps the fallback literal.
+      const ex = j.rules_exits;
+      if (Array.isArray(ex) && ex.length && ex.every((x) => typeof x === "string" && x.trim())) {
+        const live = ex.map((x) => x.trim().toLowerCase());
+        if (live.join("|") !== MECHANICAL_EXITS.join("|")) {
+          drift.rules_exits = { fallback: MECHANICAL_EXITS.slice(), live: live.slice() };
+          MECHANICAL_EXITS.splice(0, MECHANICAL_EXITS.length, ...live);
+        }
+      }
       // The exit ladder (TOP100 #33). These three fractions decide how much of
       // a position each TP books. The page used them for the manual book's R;
       // since that went (2026-09-21) nothing here reads SCALE — every R shown is
@@ -1141,6 +1154,11 @@
   // existing consumer reads — it states the composition of the row set the
   // reader is about to look at, immediately above it. Splitting the equity
   // curve itself is a bigger call and is the owner's.
+  //
+  // The list is config VIVEK_BOT_RULES_EXITS (NEXT100 #9), published as
+  // bot_rules.json rules_exits: loadBotRules adopts it IN PLACE, so every
+  // reader below follows config. This literal is the offline FALLBACK only,
+  // pinned to config by tests/test_js_config_mirrors.py.
   const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
 
   function deciderSplit(list) {

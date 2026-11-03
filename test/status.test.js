@@ -74,11 +74,11 @@ function sliceFn(name) {
 }
 
 const NAMES = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "CYCLE_TAG", "MECHANICAL_EXITS",
-               "esc", "agoText", "bookState", "cycleTagOf", "cohort", "mergeStamps", "marketAges",
+               "esc", "agoText", "bookState", "cycleTagOf", "rulesExitsOf", "cohort", "mergeStamps", "marketAges",
                "uptime", "overall", "triggerMix", "integrity", "healthBreaches"];
 const body = NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`;
 const { HEALTH_MAX_H, HEAL_STALE_MIN, FALLBACK_CAP, CYCLE_TAG, MECHANICAL_EXITS,
-        esc, agoText, bookState, cycleTagOf, cohort, mergeStamps, marketAges,
+        esc, agoText, bookState, cycleTagOf, rulesExitsOf, cohort, mergeStamps, marketAges,
         uptime, overall, triggerMix, integrity, healthBreaches } = new Function(body)();
 
 // CODE-only view: every ban below asks whether status.js DOES something, and
@@ -569,8 +569,36 @@ test("no rules, or a rules file without the key, falls back to the config litera
 
 test("the sheet counts and titles the cohort with the PUBLISHED tag", () => {
   assert.ok(/const tag = cycleTagOf\(STATE\.rules\)/.test(CODE), "the sheet no longer reads the published tag");
-  assert.ok(/cohort\(STATE\.book, tag\)/.test(CODE));
+  assert.ok(/cohort\(STATE\.book, tag, rulesExitsOf\(STATE\.rules\)\)/.test(CODE),
+    "the sheet no longer splits the cohort with the PUBLISHED rules exits");
   assert.ok(!/cohort\(STATE\.book, CYCLE_TAG\)/.test(CODE), "the cohort is counted off the literal again");
+});
+
+// ── rules exits (NEXT100 #9) ────────────────────────────────────────────────
+suite("rules exits — read from bot_rules.json, the literal is only the fallback");
+
+test("the published rules_exits wins, normalised", () => {
+  assert.deepEqual(rulesExitsOf({ rules_exits: ["stop", " Time ", "trail", "target", "d14"] }),
+    ["stop", "time", "trail", "target", "d14"]);
+});
+
+test("no rules, no key, or a malformed list falls back to the config literal", () => {
+  for (const r of [null, {}, { rules_exits: [] }, { rules_exits: "stop" }, { rules_exits: [1] },
+                   { rules_exits: ["stop", ""] }]) {
+    assert.strictEqual(rulesExitsOf(r), MECHANICAL_EXITS, JSON.stringify(r));
+  }
+});
+
+test("the cohort split follows the published list; manual and absent stay human", () => {
+  const book = { open: [], closed: [
+    { cycle: "hc4-3", exit_reason: "d14", realized_r: 0.5 },
+    { cycle: "hc4-3", exit_reason: "stop", realized_r: -1 },
+    { cycle: "hc4-3", exit_reason: "manual", realized_r: 2 },
+    { cycle: "hc4-3", realized_r: 1 }] };
+  const before = cohort(book, "hc4-3");
+  assert.deepEqual([before.byRules, before.byOwner], [1, 3], "the fallback must not know a new reason");
+  const after = cohort(book, "hc4-3", rulesExitsOf({ rules_exits: [...MECHANICAL_EXITS, "d14"] }));
+  assert.deepEqual([after.byRules, after.byOwner, after.rulesR], [2, 2, -0.5]);
 });
 
 // ── integrity + the unloaded book (REFINE200 #188) ─────────────────────────

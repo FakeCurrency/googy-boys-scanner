@@ -93,6 +93,31 @@ def test_journal_market_calendars_match_config():
     assert js == py, f"journal.js MARKET_TZ {js} but config.MARKETS timezones are {py}"
 
 
+# -- the rules-exit list (NEXT100 #9) --------------------------------------------
+
+_EXITS_DECL = re.compile(r"const\s+MECHANICAL_EXITS\s*=\s*(\[[^\]]*\])\s*;")
+
+
+@pytest.mark.parametrize("name, copies", [("app.js", 2), ("journal.js", 1), ("status.js", 1)])
+def test_rules_exit_fallbacks_match_config(name, copies):
+    """Every MECHANICAL_EXITS literal is config.VIVEK_BOT_RULES_EXITS, in order.
+    The pages count rules vs hand closes with bot_rules.json `rules_exits`;
+    the literal is what they count with when that file is missing or older,
+    which is exactly when nobody would notice it had drifted."""
+    src = _src(name)
+    found = _EXITS_DECL.findall(src)
+    assert len(found) == copies, (
+        f"{name}: expected {copies} MECHANICAL_EXITS fallback(s), got {found} -- re-point this test")
+    for lit in found:
+        assert json.loads(lit) == list(config.VIVEK_BOT_RULES_EXITS), (
+            f"{name} falls back to MECHANICAL_EXITS = {lit} but VIVEK_BOT_RULES_EXITS is "
+            f"{config.VIVEK_BOT_RULES_EXITS} -- offline, the page would split rules and hand "
+            "closes differently from every other surface")
+    code = re.sub(r"//[^\n]*", "", re.sub(r"/\*[\s\S]*?\*/", "", src))
+    assert len(re.findall(r"\.rules_exits\b", code)) >= copies, (
+        f"{name} no longer reads bot_rules.json rules_exits: the fallback would be the rule")
+
+
 # chart.js's per-leg cost model (COMMISSION_BPS / SLIPPAGE_BPS / legCost) had
 # no caller and was deleted in REFINE200 #94 -- hygiene.test.js pins it gone,
 # so there is no chart mirror left to compare.

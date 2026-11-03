@@ -81,7 +81,10 @@
   const CYCLE_TARGET = 30;     // the pre-registered close count for the cohort
   const REPO = "FakeCurrency/googy-boys-scanner";
   // Mirrors journal.js MECHANICAL_EXITS. test/status.test.js parses BOTH files
-  // and fails if they diverge, so this copy cannot drift silently.
+  // and fails if they diverge, so this copy cannot drift silently. FALLBACK
+  // only since NEXT100 #9: rulesExitsOf reads bot_rules.json rules_exits
+  // (config VIVEK_BOT_RULES_EXITS); tests/test_js_config_mirrors.py pins this
+  // literal to config.
   const MECHANICAL_EXITS = ["stop", "time", "trail", "target"];
 
   const esc = (s) => String(s == null ? "" : s)
@@ -128,15 +131,24 @@
   const cycleTagOf = (rules) =>
     (rules && typeof rules.cycle_tag === "string" && rules.cycle_tag.trim()) || CYCLE_TAG;
 
+  // Which closes are the rules': bot_rules.json's rules_exits, else the
+  // fallback. An empty or malformed list is the fallback, never "none".
+  const rulesExitsOf = (rules) => {
+    const v = rules && rules.rules_exits;
+    return Array.isArray(v) && v.length && v.every((x) => typeof x === "string" && x.trim())
+      ? v.map((x) => x.trim().toLowerCase()) : MECHANICAL_EXITS;
+  };
+
   // The live cycle's cohort, straight off the audit tag vivek_run stamps on each row.
   // Rows written before the gate carry no `cycle` key at all, so absent means
   // out-of-cohort rather than "unknown" — the same absent-is-not-empty
-  // convention the review flags use.
-  const cohort = (book, tag) => {
+  // convention the review flags use. `exits` = rulesExitsOf(rules).
+  const cohort = (book, tag, exits) => {
     const b = book && typeof book === "object" ? book : {};
     const opens = (Array.isArray(b.open) ? b.open : []).filter((r) => r && r.cycle === tag);
     const closes = (Array.isArray(b.closed) ? b.closed : []).filter((r) => r && r.cycle === tag);
-    const mech = (r) => MECHANICAL_EXITS.indexOf(String((r && r.exit_reason) || "").toLowerCase()) >= 0;
+    const ex = Array.isArray(exits) ? exits : MECHANICAL_EXITS;
+    const mech = (r) => ex.indexOf(String((r && r.exit_reason) || "").toLowerCase()) >= 0;
     const byRules = closes.filter(mech);
     const byOwner = closes.filter((r) => !mech(r));
     const sumR = (a) => a.reduce((n, r) => n + (typeof r.realized_r === "number" ? r.realized_r : 0), 0);
@@ -411,7 +423,7 @@
     const bs = STATE.book_state || bookState(null, NaN);
     const now = Date.now();
     const tag = cycleTagOf(STATE.rules);
-    const ch = cohort(STATE.book, tag);
+    const ch = cohort(STATE.book, tag, rulesExitsOf(STATE.rules));
     const stamps = mergeStamps(STATE.funnel);
     const u7 = uptime(stamps, now, 7, HEALTH_MAX_H);
     const u30 = uptime(stamps, now, 30, HEALTH_MAX_H);
