@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "generated_at": "2026-11-03T22:14:31Z",
+ "generated_at": "2026-11-03T23:24:41Z",
  "run": {
-  "id": "41721493622",
-  "sha": "fe6efd59d5cdb9df2b52b080746cd1722c8effb5",
+  "id": "41723121676",
+  "sha": "c736b6ff94cedab0d5439e18832bd10d82d78dd9",
   "ref": "claude/peaceful-brown-1fmgfn",
   "mode": "decision_replay",
   "cycle_tag": "hc4-2",
@@ -14,11 +14,11 @@
    "nasdaq",
    "crypto"
   ],
-  "replay_generated_at": "2026-11-03T22:14:25Z",
+  "replay_generated_at": "2026-11-03T23:24:35Z",
   "runtime_minutes": {
-   "total": 49.62,
-   "phase1": 27.54,
-   "books": 22.08
+   "total": 50.52,
+   "phase1": 28.47,
+   "books": 22.04
   },
   "rules": {
    "max_hold_days": 28,
@@ -100,14 +100,14 @@
     "universe": 1372,
     "priced": 300,
     "replayed": 283,
-    "signals": 37161
+    "signals": 37164
    },
    "crypto": {
     "symbols": 200,
     "universe": 200,
     "priced": 167,
     "replayed": 154,
-    "signals": 9622
+    "signals": 9625
    }
   }
  },
@@ -603,16 +603,6 @@
    "reason": "time"
   },
   {
-   "m": "asx",
-   "s": "PFP",
-   "cell": "1W reclaim",
-   "grade": "A+",
-   "entry": "2023-06-02",
-   "exit": "2023-07-03",
-   "r": -0.6971,
-   "reason": "time"
-  },
-  {
    "m": "nasdaq",
    "s": "CASK",
    "cell": "1W reclaim",
@@ -620,6 +610,16 @@
    "entry": "2023-06-02",
    "exit": "2023-07-03",
    "r": 0.6658,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-02",
+   "exit": "2023-07-03",
+   "r": -0.6971,
    "reason": "time"
   },
   {
@@ -1729,7 +1729,7 @@
    "grade": "A",
    "entry": "2025-01-27",
    "exit": "2025-04-07",
-   "r": 0.9914,
+   "r": 0.9913,
    "reason": "trail"
   },
   {
@@ -2869,7 +2869,7 @@
    "grade": "A+",
    "entry": "2023-02-14",
    "exit": "2023-03-15",
-   "r": -0.2608,
+   "r": -0.2607,
    "reason": "time"
   },
   {
@@ -3829,7 +3829,7 @@
    "grade": "A",
    "entry": "2025-12-05",
    "exit": "2026-01-05",
-   "r": 0.0641,
+   "r": 0.0642,
    "reason": "time"
   },
   {
@@ -4089,20 +4089,20 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0313,
-      "delta": 0.0433,
+      "variant": 0.0316,
+      "delta": 0.0436,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.0491,
-      "delta": 0.0324,
+      "variant": -0.0511,
+      "delta": 0.0304,
       "pass": true
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0596,
-      "delta": 0.0537,
+      "variant": 0.0626,
+      "delta": 0.0567,
       "pass": true
      },
      "half:first": {
@@ -4113,15 +4113,15 @@
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0346,
-      "delta": 0.0785,
+      "variant": 0.0351,
+      "delta": 0.079,
       "pass": true
      }
     },
-    "taken": 367,
-    "slot_months": 654.7187,
-    "r_per_slot_month": 0.0313,
-    "r_per_slot_month_house": 0.0541
+    "taken": 364,
+    "slot_months": 655.4743,
+    "r_per_slot_month": 0.0316,
+    "r_per_slot_month_house": 0.053
    },
    "V11_cut_mae0.5": {
     "delta": "cut pre-TP1 at -0.5R adverse",
@@ -4131,14 +4131,14 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": -0.0001,
-      "delta": 0.0119,
+      "variant": 0.0014,
+      "delta": 0.0134,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.1006,
-      "delta": -0.0191,
+      "variant": -0.0936,
+      "delta": -0.0121,
       "pass": false
      },
      "market:nasdaq": {
@@ -4149,8 +4149,8 @@
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": -0.0066,
-      "delta": -0.0206,
+      "variant": -0.0037,
+      "delta": -0.0177,
       "pass": false
      },
      "half:second": {
@@ -4160,10 +4160,10 @@
       "pass": true
      }
     },
-    "taken": 463,
-    "slot_months": 622.423,
-    "r_per_slot_month": -0.0001,
-    "r_per_slot_month_house": 0.05
+    "taken": 459,
+    "slot_months": 623.9014,
+    "r_per_slot_month": 0.0014,
+    "r_per_slot_month_house": 0.0512
    },
    "V1_hold_42d": {
     "delta": "time-stop 42d",
@@ -4173,39 +4173,39 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0092,
-      "delta": 0.0212,
+      "variant": 0.0106,
+      "delta": 0.0226,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.0352,
-      "delta": 0.0463,
+      "variant": -0.0356,
+      "delta": 0.0459,
       "pass": true
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0243,
-      "delta": 0.0184,
+      "variant": 0.0288,
+      "delta": 0.0229,
       "pass": true
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": -0.01,
-      "delta": -0.024,
+      "variant": -0.0101,
+      "delta": -0.0241,
       "pass": false
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0348,
-      "delta": 0.0787,
+      "variant": 0.0403,
+      "delta": 0.0842,
       "pass": true
      }
     },
-    "taken": 258,
-    "slot_months": 668.8131,
-    "r_per_slot_month": 0.0092,
-    "r_per_slot_month_house": 0.0382
+    "taken": 259,
+    "slot_months": 668.9446,
+    "r_per_slot_month": 0.0106,
+    "r_per_slot_month_house": 0.0386
    },
    "V1_hold_56d": {
     "delta": "time-stop 56d",
@@ -4257,39 +4257,39 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0765,
-      "delta": 0.0885,
+      "variant": 0.0672,
+      "delta": 0.0792,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": 0.0273,
-      "delta": 0.1088,
+      "variant": 0.0115,
+      "delta": 0.093,
       "pass": true
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0794,
-      "delta": 0.0735,
+      "variant": 0.0732,
+      "delta": 0.0673,
       "pass": true
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": 0.0754,
-      "delta": 0.0614,
+      "variant": 0.0684,
+      "delta": 0.0544,
       "pass": true
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0788,
-      "delta": 0.1227,
+      "variant": 0.0647,
+      "delta": 0.1086,
       "pass": true
      }
     },
-    "taken": 73,
-    "slot_months": 688.5257,
-    "r_per_slot_month": 0.0765,
-    "r_per_slot_month_house": 0.0866
+    "taken": 74,
+    "slot_months": 688.3285,
+    "r_per_slot_month": 0.0672,
+    "r_per_slot_month_house": 0.0779
    },
    "V2_cut_d10_mfe0.25": {
     "delta": "early cut day 10 if mfe_r < 0.25",
@@ -4341,39 +4341,39 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0048,
-      "delta": 0.0168,
+      "variant": 0.0115,
+      "delta": 0.0235,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.1928,
-      "delta": -0.1113,
+      "variant": -0.1751,
+      "delta": -0.0936,
       "pass": false
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0465,
-      "delta": 0.0406,
+      "variant": 0.0519,
+      "delta": 0.046,
       "pass": true
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": -0.0282,
-      "delta": -0.0422,
+      "variant": -0.0258,
+      "delta": -0.0398,
       "pass": false
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0439,
-      "delta": 0.0878,
+      "variant": 0.0558,
+      "delta": 0.0997,
       "pass": true
      }
     },
-    "taken": 662,
-    "slot_months": 584.4435,
-    "r_per_slot_month": 0.0048,
-    "r_per_slot_month_house": 0.0383
+    "taken": 661,
+    "slot_months": 584.0821,
+    "r_per_slot_month": 0.0115,
+    "r_per_slot_month_house": 0.0454
    },
    "V2_cut_d14_mfe0.25": {
     "delta": "early cut day 14 if mfe_r < 0.25",
@@ -4383,20 +4383,20 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0304,
-      "delta": 0.0424,
+      "variant": 0.0404,
+      "delta": 0.0524,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.1239,
-      "delta": -0.0424,
+      "variant": -0.1211,
+      "delta": -0.0396,
       "pass": false
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0726,
-      "delta": 0.0667,
+      "variant": 0.0729,
+      "delta": 0.067,
       "pass": true
      },
      "half:first": {
@@ -4407,15 +4407,15 @@
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0675,
-      "delta": 0.1114,
+      "variant": 0.0914,
+      "delta": 0.1353,
       "pass": true
      }
     },
-    "taken": 439,
-    "slot_months": 637.8973,
-    "r_per_slot_month": 0.0304,
-    "r_per_slot_month_house": 0.0588
+    "taken": 436,
+    "slot_months": 637.6016,
+    "r_per_slot_month": 0.0404,
+    "r_per_slot_month_house": 0.0682
    },
    "V2_cut_d14_mfe0.5": {
     "delta": "early cut day 14 if mfe_r < 0.5",
@@ -4425,39 +4425,39 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0244,
-      "delta": 0.0364,
+      "variant": 0.0121,
+      "delta": 0.0241,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.0921,
-      "delta": -0.0106,
+      "variant": -0.134,
+      "delta": -0.0525,
       "pass": false
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0523,
-      "delta": 0.0464,
+      "variant": 0.0465,
+      "delta": 0.0406,
       "pass": true
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": -0.0197,
-      "delta": -0.0337,
+      "variant": -0.0206,
+      "delta": -0.0346,
       "pass": false
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0806,
-      "delta": 0.1245,
+      "variant": 0.0533,
+      "delta": 0.0972,
       "pass": true
      }
     },
-    "taken": 522,
-    "slot_months": 617.8234,
-    "r_per_slot_month": 0.0244,
-    "r_per_slot_month_house": 0.0484
+    "taken": 514,
+    "slot_months": 621.9302,
+    "r_per_slot_month": 0.0121,
+    "r_per_slot_month_house": 0.0362
    },
    "V3_weekly_level": {
     "delta": "level_tf in ('weekly',)",
@@ -4467,20 +4467,20 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0579,
-      "delta": 0.0699,
+      "variant": 0.0587,
+      "delta": 0.0707,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": 0.0332,
-      "delta": 0.1147,
+      "variant": 0.0337,
+      "delta": 0.1152,
       "pass": true
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.061,
-      "delta": 0.0551,
+      "variant": 0.0621,
+      "delta": 0.0562,
       "pass": true
      },
      "half:first": {
@@ -4491,15 +4491,15 @@
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.1052,
-      "delta": 0.1491,
+      "variant": 0.1074,
+      "delta": 0.1513,
       "pass": true
      }
     },
     "taken": 311,
     "slot_months": 555.4333,
-    "r_per_slot_month": 0.0579,
-    "r_per_slot_month_house": 0.0698
+    "r_per_slot_month": 0.0587,
+    "r_per_slot_month_house": 0.0705
    },
    "V4_break_only": {
     "delta": "entry_types ('break',)",
@@ -4509,14 +4509,14 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.023,
-      "delta": 0.035,
+      "variant": 0.0236,
+      "delta": 0.0356,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.0416,
-      "delta": 0.0399,
+      "variant": -0.0393,
+      "delta": 0.0422,
       "pass": true
      },
      "market:nasdaq": {
@@ -4527,21 +4527,21 @@
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": -0.0222,
-      "delta": -0.0362,
+      "variant": -0.0227,
+      "delta": -0.0367,
       "pass": false
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0765,
-      "delta": 0.1204,
+      "variant": 0.078,
+      "delta": 0.1219,
       "pass": true
      }
     },
-    "taken": 137,
-    "slot_months": 275.2854,
-    "r_per_slot_month": 0.023,
-    "r_per_slot_month_house": 0.0507
+    "taken": 138,
+    "slot_months": 276.3039,
+    "r_per_slot_month": 0.0236,
+    "r_per_slot_month_house": 0.0512
    },
    "V4_reclaim_break": {
     "delta": "entry_types ('reclaim', 'break')",
@@ -4593,39 +4593,39 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0505,
-      "delta": 0.0625,
+      "variant": 0.0441,
+      "delta": 0.0561,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.01,
-      "delta": 0.0715,
+      "variant": -0.0002,
+      "delta": 0.0813,
       "pass": true
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0704,
-      "delta": 0.0645,
+      "variant": 0.0583,
+      "delta": 0.0524,
       "pass": true
      },
      "half:first": {
       "baseline": 0.014,
-      "variant": 0.0294,
-      "delta": 0.0154,
+      "variant": 0.0273,
+      "delta": 0.0133,
       "pass": true
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0844,
-      "delta": 0.1283,
+      "variant": 0.0712,
+      "delta": 0.1151,
       "pass": true
      }
     },
     "taken": 330,
-    "slot_months": 636.1889,
-    "r_per_slot_month": 0.0505,
-    "r_per_slot_month_house": 0.0717
+    "slot_months": 632.5092,
+    "r_per_slot_month": 0.0441,
+    "r_per_slot_month_house": 0.0629
    },
    "V6_no_3d_reclaim": {
     "delta": "cells 1W reclaim/break, 1D break",
@@ -4635,14 +4635,14 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0455,
-      "delta": 0.0575,
+      "variant": 0.0478,
+      "delta": 0.0598,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": 0.008,
-      "delta": 0.0895,
+      "variant": 0.0171,
+      "delta": 0.0986,
       "pass": true
      },
      "market:nasdaq": {
@@ -4659,15 +4659,15 @@
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": 0.0737,
-      "delta": 0.1176,
+      "variant": 0.08,
+      "delta": 0.1239,
       "pass": true
      }
     },
-    "taken": 330,
-    "slot_months": 570.1191,
-    "r_per_slot_month": 0.0455,
-    "r_per_slot_month_house": 0.0564
+    "taken": 331,
+    "slot_months": 571.0719,
+    "r_per_slot_month": 0.0478,
+    "r_per_slot_month_house": 0.0587
    },
    "V7_no_asx": {
     "delta": "markets except asx",
@@ -4761,20 +4761,20 @@
     "checks": {
      "overall": {
       "baseline": -0.012,
-      "variant": 0.0024,
-      "delta": 0.0144,
+      "variant": 0.0199,
+      "delta": 0.0319,
       "pass": true
      },
      "market:asx": {
       "baseline": -0.0815,
-      "variant": -0.0233,
-      "delta": 0.0582,
+      "variant": -0.0335,
+      "delta": 0.048,
       "pass": true
      },
      "market:nasdaq": {
       "baseline": 0.0059,
-      "variant": 0.0112,
-      "delta": 0.0053,
+      "variant": 0.0334,
+      "delta": 0.0275,
       "pass": true
      },
      "half:first": {
@@ -4785,17 +4785,17 @@
      },
      "half:second": {
       "baseline": -0.0439,
-      "variant": -0.0027,
-      "delta": 0.0412,
+      "variant": 0.0347,
+      "delta": 0.0786,
       "pass": true
      }
     },
-    "taken": 378,
-    "slot_months": 651.039,
-    "r_per_slot_month": 0.0024,
-    "r_per_slot_month_house": 0.041
+    "taken": 368,
+    "slot_months": 652.1561,
+    "r_per_slot_month": 0.0199,
+    "r_per_slot_month_house": 0.057
    }
   },
-  "best": "V5_aplus_only"
+  "best": "V7_no_asx"
  }
 }
