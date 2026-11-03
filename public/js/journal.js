@@ -1700,10 +1700,14 @@
   // INERT like the cycle board and the w3-1 strip: a fold, no control, no
   // call to act. It states the register's verdicts; acting on one is the
   // owner's call, and the register's replay veto is read first.
+  // Set 3 Nov 2026 (NEXT100 #5, owner-approved): PR-1 carries its replay-veto
+  // read (`veto`: its trip holds for one final re-read at 40 closes), and
+  // hc4-2's live lines carry `read: "entry"` -- read over the cycle's first n
+  // entries at their time-stop horizon, so prEvaluate also takes the open rows.
   /* PREREG-BEGIN */
   const PREREG = [
     {"id": "PR-0", "item": "cycle", "kind": "live", "cohort": "all", "min_n": 40, "line": -0.25, "pass": 0.0, "then": {"min_n": 80, "line": -0.25}, "action": "owner review of the whole rule set before any further change", "label": "whole cycle"},
-    {"id": "PR-1", "item": "#2", "kind": "live", "cohort": "cell:3D reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 3D reclaim from the entry cells for new entries", "label": "3D reclaim"},
+    {"id": "PR-1", "item": "#2", "kind": "live", "cohort": "cell:3D reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "veto": {"read_on": "2026-11-03", "replay_avg": 0.054, "replay_n": 689, "min_avg": 0.05, "source": "3 Nov decision replay, hc4-2 code"}, "action": "drop 3D reclaim from the entry cells for new entries", "label": "3D reclaim"},
     {"id": "PR-2", "item": "#1", "kind": "live", "cohort": "market:asx", "versus": "market:nasdaq", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "stop NEW ASX entries; open ASX positions run to their exits", "label": "ASX vs NASDAQ"},
     {"id": "PR-3", "item": "#3", "kind": "live", "cohort": "grade:A", "versus": "grade:A+", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "bot back to A+ only", "label": "A vs A+"},
     {"id": "PR-4", "item": "#4", "kind": "replay", "min_gain": 0.05, "action": "weekly-level only, if it beats weekly+3d by >= +0.05R/trade in ASX and NASDAQ separately and in both halves", "label": "weekly level only"},
@@ -1711,13 +1715,13 @@
     {"id": "PR-6", "item": "#36", "kind": "rosters", "since": "2026-09-21", "read_on": "2026-10-27", "min_n": 40, "gap_pp": 1.0, "horizon": "20", "action": "demote the High-conviction badge to a plain tag (display only)", "label": "High-conviction badge"},
     {"id": "PR-7", "item": "#32", "kind": "replay", "min_gain": 0.03, "action": "change the 28-day time stop, only if 21/42/off beats 28 by >= +0.03R/trade in ASX and NASDAQ separately", "label": "time stop length"},
     {"id": "PR-8", "item": "#47", "kind": "forward", "min_n": 30, "action": "drop Ignition's 3x volume rule if, on >= 30 forward trades in a market, the no-volume-rule variant does at least as well", "label": "Ignition volume rule"},
-    {"id": "PR-9", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "all", "min_n": 40, "line": -0.25, "pass": 0.0, "then": {"min_n": 80, "line": -0.25}, "action": "owner review of the whole rule set before any further change", "label": "whole cycle"},
-    {"id": "PR-10", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1W reclaim from the entry cells for new entries", "label": "1W reclaim"},
-    {"id": "PR-11", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W break", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1W break from the entry cells for new entries", "label": "1W break"},
-    {"id": "PR-12", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:3D reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 3D reclaim from the entry cells for new entries", "label": "3D reclaim"},
-    {"id": "PR-13", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1D break", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1D break from the entry cells for new entries", "label": "1D break"},
-    {"id": "PR-14", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "market:asx", "versus": "market:nasdaq", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "stop NEW ASX entries; open ASX positions run to their exits", "label": "ASX vs NASDAQ"},
-    {"id": "PR-15", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "grade:A", "versus": "grade:A+", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "bot back to A+ only", "label": "A vs A+"},
+    {"id": "PR-9", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "all", "min_n": 40, "line": -0.25, "pass": 0.0, "then": {"min_n": 80, "line": -0.25}, "action": "owner review of the whole rule set before any further change", "label": "whole cycle"},
+    {"id": "PR-10", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:1W reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1W reclaim from the entry cells for new entries", "label": "1W reclaim"},
+    {"id": "PR-11", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:1W break", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1W break from the entry cells for new entries", "label": "1W break"},
+    {"id": "PR-12", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:3D reclaim", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 3D reclaim from the entry cells for new entries", "label": "3D reclaim"},
+    {"id": "PR-13", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:1D break", "min_n": 20, "line": -0.3, "pass": 0.0, "then": {"min_n": 40, "line": -0.15}, "action": "drop 1D break from the entry cells for new entries", "label": "1D break"},
+    {"id": "PR-14", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "market:asx", "versus": "market:nasdaq", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "stop NEW ASX entries; open ASX positions run to their exits", "label": "ASX vs NASDAQ"},
+    {"id": "PR-15", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "grade:A", "versus": "grade:A+", "gap": 0.3, "min_n": 15, "line": -0.3, "then": {"min_n": 30, "line": -0.3}, "action": "bot back to A+ only", "label": "A vs A+"},
     {"id": "PR-16", "item": "#4", "cycle": "hc4-2", "kind": "shadow", "min_n": 40, "min_gain": 0.05, "day": 14, "floor": 0.5, "action": "propose a day-14 cut for the next cycle (exit a pre-TP1 trade whose best R by day 14 is under +0.5R), if it beats the rules by >= +0.05R/trade in ASX and NASDAQ separately", "label": "day-14 cut"}
   ];
   /* PREREG-END */
@@ -1789,28 +1793,112 @@
   }
   // decision_pack.cycle_of: an entry judges hc4-1 unless it names a cycle.
   const prCycle = (pr) => pr.cycle || PREREG_COHORT.tag;
-  // decision_pack.evaluate: NOT DUE, TRIPPED, CLEAR or HOLD.
-  function prEvaluate(pr, closed) {
+  // decision_pack.read_mode / horizon_value / horizon_entries (NEXT100 #5,
+  // set 3 Nov): hc4-2's lines read the cycle's first n ENTRIES, each at its
+  // time-stop horizon -- a runner's `horizon` stamp R, else a rules close's
+  // realised R; a row closed by hand before its horizon leaves the cohort.
+  const prMode = (pr) => pr.read || "close";
+  const prEntryDay = (r) => String(r.entry_date || "");
+  const PR_HAND = "hand";
+  function prHorizon(r, isOpen) {
+    const h = r.horizon;
+    if (h && typeof h === "object" && typeof h.r === "number" && isFinite(h.r)) return [h.r, String(h.day || "")];
+    if (isOpen) return null;
+    if (!prIsRules(r)) return PR_HAND;
+    return [prR(r), prDay(r)];
+  }
+  function prEntries(tag, closed, open) {
+    const out = [];
+    for (const [rows, isOpen] of [[closed || [], false], [open || [], true]]) {
+      for (const r of rows) {
+        if (!r || r.cycle !== tag) continue;
+        const v = prHorizon(r, isOpen);
+        if (v !== PR_HAND) out.push({ r, v });
+      }
+    }
+    const key = (e) => [prEntryDay(e.r), String(e.r.opened_at || ""), String(e.r.symbol || "")];
+    return out.sort((a, b) => {
+      const x = key(a), y = key(b);
+      for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+      return 0;
+    });
+  }
+  // decision_pack._close_reader / _entry_reader: { now, read(n, line) }.
+  function prCloseReader(pr, closed) {
     const pool = (closed || []).filter((r) => r && r.cycle === prCycle(pr) && prIsRules(r));
     const rows = prSelect(pool, pr.cohort);
     const now = prStats(rows);
-    const out = { id: pr.id, n: now.n, avg: now.avg, min_n: pr.min_n };
-    const first = prRead(rows, pr.min_n);
+    const read = (n, line) => {
+      const got = prRead(rows, n);
+      if (!got) return null;
+      const t = prTrips(pr, pool, got.rows, got.cutoff, line);
+      return { tripped: t.tripped, s: t.s, vs: t.vs, day: got.cutoff };
+    };
+    return { now: { n: now.n, avg: now.avg }, read };
+  }
+  function prEntryReader(pr, closed, open) {
+    const ents = prEntries(prCycle(pr), closed, open);
+    const val = new Map(ents.filter((e) => e.v != null).map((e) => [e.r, e.v]));
+    const all = ents.map((e) => e.r);
+    const rows = prSelect(all, pr.cohort);
+    const vrows = pr.versus ? prSelect(all, pr.versus) : [];
+    const statsOf = (rs) => prStats(rs.map((r) => ({ realized_r: val.get(r)[0] })));
+    const read = (n, line) => {
+      const cohort = rows.slice(0, n);
+      if (cohort.length < n) return null;
+      const last = prEntryDay(cohort[cohort.length - 1]);
+      const both = cohort.concat(vrows.filter((r) => prEntryDay(r) <= last));
+      if (both.some((r) => !val.has(r))) return null;
+      const day = both.reduce((m, r) => (val.get(r)[1] > m ? val.get(r)[1] : m), "");
+      const s = statsOf(cohort);
+      if (s.avg == null || s.avg > line) return { tripped: false, s, vs: null, day };
+      if (!pr.versus) return { tripped: true, s, vs: null, day };
+      const vs = statsOf(both.slice(cohort.length));
+      return { tripped: vs.avg != null && s.avg <= vs.avg - pr.gap, s, vs, day };
+    };
+    const valued = rows.filter((r) => val.has(r));
+    const now = statsOf(valued);
+    return { now: { n: now.n, avg: now.avg, entries: rows.length }, read };
+  }
+  // decision_pack.vetoes / veto_reason (PR-1, set 3 Nov): a first-read trip
+  // holds for ONE final re-read at then.min_n with then.line. The words are
+  // decision_pack's, character for character (the shared cases compare them).
+  const prVetoes = (pr) => !!(pr.veto && typeof pr.veto === "object" && pr.veto.replay_avg >= pr.veto.min_avg);
+  const prSigned = (x, nd) => `${x >= 0 ? "+" : ""}${pyRound(x, nd).toFixed(nd)}`;
+  function prVetoReason(pr, unit, final) {
+    const v = pr.veto, then = pr.then;
+    if (final) return `final re-read at ${then.min_n} ${unit} after the replay veto (line ${prSigned(then.line, 2)}R; no second veto)`;
+    return `replay veto: ${v.source} (read ${v.read_on}) has the cohort at ${prSigned(v.replay_avg, 3)}R a trade over ${v.replay_n}, `
+      + `at or over ${prSigned(v.min_avg, 2)}R, so the trip holds for one final re-read at ${then.min_n} ${unit} with the line at ${prSigned(then.line, 2)}R`;
+  }
+  // decision_pack.evaluate: NOT DUE, TRIPPED, CLEAR or HOLD.
+  function prEvaluate(pr, closed, open) {
+    const entry = prMode(pr) === "entry";
+    const rd = entry ? prEntryReader(pr, closed, open) : prCloseReader(pr, closed);
+    const out = { id: pr.id, n: rd.now.n, avg: rd.now.avg, min_n: pr.min_n };
+    if (entry) out.entries = rd.now.entries;
+    const first = rd.read(pr.min_n, pr.line);
     if (!first) { out.verdict = "NOT DUE"; return out; }
-    const a = prTrips(pr, pool, first.rows, first.cutoff, pr.line);
-    Object.assign(out, { read_on: first.cutoff, read_n: a.s.n, read_avg: a.s.avg,
-                         versus_avg: a.vs ? a.vs.avg : null });
-    if (a.tripped) { out.verdict = "TRIPPED"; return out; }
-    if ("pass" in pr && a.s.avg >= pr.pass) { out.verdict = "CLEAR"; return out; }
+    const put = (x) => Object.assign(out, { read_on: x.day, read_n: x.s.n, read_avg: x.s.avg,
+                                            versus_avg: x.vs ? x.vs.avg : null });
+    put(first);
     const then = pr.then;
-    const second = then ? prRead(rows, then.min_n) : null;
+    if (first.tripped) {
+      if (!prVetoes(pr)) { out.verdict = "TRIPPED"; return out; }
+      const unit = entry ? "entries" : "closes";
+      const again = rd.read(then.min_n, then.line);
+      if (!again) return Object.assign(out, { verdict: "HOLD", reason: prVetoReason(pr, unit, false) });
+      put(again);
+      return Object.assign(out, { second: true, verdict: again.tripped ? "TRIPPED" : "CLEAR",
+                                  reason: prVetoReason(pr, unit, true) });
+    }
+    if ("pass" in pr && first.s.avg >= pr.pass) { out.verdict = "CLEAR"; return out; }
+    const second = then ? rd.read(then.min_n, then.line) : null;
     if (!then) out.verdict = "CLEAR";
     else if (!second) out.verdict = "HOLD";
     else {
-      const b = prTrips(pr, pool, second.rows, second.cutoff, then.line);
-      Object.assign(out, { read_on: second.cutoff, read_n: b.s.n, read_avg: b.s.avg,
-                           versus_avg: b.vs ? b.vs.avg : null, second: true });
-      out.verdict = b.tripped ? "TRIPPED" : "CLEAR";
+      put(second);
+      Object.assign(out, { second: true, verdict: second.tripped ? "TRIPPED" : "CLEAR" });
     }
     return out;
   }
@@ -1867,16 +1955,24 @@
     const vCls = { "TRIPPED": "pr-trip", "HOLD": "pr-hold", "CLEAR": "pr-clear", "NOT DUE": "pr-wait" };
     const mine = PREREG.filter((p) => prCycle(p) === tag);
     const judged = mine.filter((p) => p.kind === "live" || p.kind === "shadow")
-      .map((p) => [p, p.kind === "shadow" ? prEvaluateShadow(p, d.closed) : prEvaluate(p, d.closed)]);
+      .map((p) => [p, p.kind === "shadow" ? prEvaluateShadow(p, d.closed) : prEvaluate(p, d.closed, d.open)]);
     const off = mine.filter((p) => p.kind !== "live" && p.kind !== "shadow");
     const vsName = (p) => String(p.versus || "").split(":").pop().toUpperCase();
-    const status = (p, v) => (v.verdict === "NOT DUE" ? `${v.n}/${p.min_n}`
-      : v.verdict === "HOLD" && p.then ? `2nd read ${v.n}/${p.then.min_n}` : "");
+    // An entry-cohort line (hc4-2, NEXT100 #5) counts entries, a close-order
+    // line closes; a trip the replay veto holds waits for its final re-read.
+    const byEntry = (p) => prMode(p) === "entry";
+    const got = (p, v) => (byEntry(p) ? v.entries : v.n);
+    const status = (p, v) => (v.verdict === "NOT DUE" ? `${Math.min(got(p, v), p.min_n)}/${p.min_n}${byEntry(p) ? " in" : ""}`
+      : v.verdict === "HOLD" && p.then ? `${v.reason ? "re-read" : "2nd read"} ${got(p, v)}/${p.then.min_n}` : "");
     const summary = judged.map(([p, v]) =>
       `<span class="pr-cell">${esc(p.id)} <b class="${vCls[v.verdict]}">${esc(v.verdict)}</b>` +
       `${status(p, v) ? ` <span class="pr-n">${esc(status(p, v))}</span>` : ""}</span>`).join("") +
       (off.length ? `<span class="pr-cell pr-offbook">${esc(off.map((p) => p.id).join(" · "))} off the book</span>` : "");
     const readText = (p, v) => {
+      if (v.verdict === "NOT DUE" && byEntry(p)) {
+        return `${Math.min(v.entries, p.min_n)} of the first ${p.min_n} entries in, ${v.n} at their day-${MAX_HOLD_DAYS + 1} horizon`
+          + ` · read once the first ${p.min_n} all are`;
+      }
       if (v.verdict === "NOT DUE") return `${v.n} of ${p.min_n} rules closes so far`;
       if (p.kind === "shadow") {
         return `read ${prDate(v.read_on)} over ${v.read_n} closes: ` + SHADOW_MARKETS.map((m) => {
@@ -1884,11 +1980,14 @@
           return `${m.toUpperCase()} rules ${fmt(b.rules_avg)} vs cut ${fmt(b.cut_avg)}`;
         }).join(" · ") + ` · the cut must win by +${p.min_gain.toFixed(2)}R in each`;
       }
-      let s = `read ${prDate(v.read_on)}: ${fmt(v.read_avg)} over ${v.read_n} closes`;
+      const unit = byEntry(p) ? "entries" : "closes";
+      let s = `read ${prDate(v.read_on)}: ${fmt(v.read_avg)} over ${v.read_n} ${byEntry(p) ? "entries at their horizon" : "closes"}`;
       if (v.versus_avg != null) s += ` vs ${vsName(p)} ${fmt(v.versus_avg)}`;
       const line = v.second ? p.then.line : p.line;
       s += ` · line ${fmt(line)}${p.versus ? ` and ${p.gap.toFixed(2)}R below ${vsName(p)}` : ""}`;
-      if (v.verdict === "HOLD" && p.then) s += ` · second read at ${p.then.min_n} closes (${v.n} now)`;
+      if (v.reason) s += ` · ${v.reason}`;
+      else if (v.verdict === "HOLD" && p.then) s += ` · second read at ${p.then.min_n} ${unit} (${got(p, v)} now)`;
+      if (v.reason && v.verdict === "HOLD") s += ` (${got(p, v)} now)`;
       return s;
     };
     const judgedItems = judged.map(([p, v]) =>
@@ -1902,7 +2001,10 @@
       `<span class="pr-read">decided by ${esc(OFF_BOOK[p.kind] || p.kind)}, not by closes</span>` +
       `<span class="pr-act">${esc(p.action)}</span></li>`).join("");
     const frozen = PREREG_FROZEN[tag] || "";
-    return `<details class="jr-pr-fold" data-cycle="${esc(tag)}"><summary title="The checkpoints the owner's decision pack froze${frozen ? ` on ${esc(frozen)}` : ""} (docs/DECISIONS_2026-10-14.md). Each is read once, on the day its n-th ${esc(tag)} rules close lands - never as a rolling number. Mirrors scripts/decision_pack.py.">` +
+    const howRead = mine.some(byEntry)
+      ? `Each live line is read once, over the cycle's first n ${esc(tag)} entries, on the day the last of them reaches its time-stop horizon (set 3 Nov) - never as a rolling number.`
+      : `Each is read once, on the day its n-th ${esc(tag)} rules close lands - never as a rolling number.`;
+    return `<details class="jr-pr-fold" data-cycle="${esc(tag)}"><summary title="The checkpoints the owner's decision pack froze${frozen ? ` on ${esc(frozen)}` : ""} (docs/DECISIONS_2026-10-14.md). ${howRead} Mirrors scripts/decision_pack.py.">` +
         `📋 ${esc(tag)} checkpoints${frozen ? ` <span class="pr-frozen">frozen ${esc(frozen)}</span>` : ""}${summary}</summary>` +
         `<ul class="jr-pr-list">${judgedItems}${offItems}</ul>` +
         `<p class="jr-pr-note">A verdict is the frozen line's. Before acting on a trip the register's replay veto is read: ` +

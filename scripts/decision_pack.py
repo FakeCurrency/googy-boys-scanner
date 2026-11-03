@@ -15,14 +15,52 @@ re-read on any later day without re-deriving anything by hand:
 
 READ-ONLY: it opens files for reading and prints to stdout. Nothing is
 written, nothing is downloaded, and nothing under scanner/broker/ is
-imported -- the one scanner import is scanner.config, for the rules-exit
-list (tests/test_decision_pack.py pins all three).
+imported (tests/test_decision_pack.py pins all three). STDLIB-ONLY: the two
+scanner modules it reads, scanner.time_stop and scanner.config (the rules-exit
+list, the holiday table), are standard library only, and the test walks the
+whole import tree.
 
 THE PRE-REGISTRATION (PREREG below) is FROZEN on 2026-10-14, deliberately
 hardcoded beside the code that evaluates it -- the evidence_brief pattern.
 The point of writing a threshold down before the data arrives is that it
 cannot be moved once the data is in; a test pins the doc's register to these
 numbers, so moving one means editing both in plain sight. ASCII prints only.
+Two register changes were set on 3 Nov 2026 (NEXT100 #5, owner-approved,
+each written before the data it judges): PR-1 carries its replay-veto read
+(`veto`), which holds its first-read trip for one FINAL re-read at its second
+n; and hc4-2's live lines are read by ENTRY COHORT (`"read": "entry"`): the
+cycle's first n entries, each at its time-stop horizon, instead of the first
+n closes (in close order the quick losers land first).
+
+OPEN ROWS AND THE TIME STOP (NEXT100 #4). An open row is valued at what it
+has booked (`realized_r`: a runner's TP legs, less the entry cost) PLUS its
+open part at today's mark (`unreal_r`). Every projected or scheduled
+time-stop day is scanner.time_stop.time_stop_due's -- the engine's day
+max_hold + 1, a stock's weekend rolled to the Monday -- and
+scanner.config.MARKET_HOLIDAYS flags the ones that land on a shut market.
+
+THE REPLAY SUMMARY (NEXT100 #6). Beside every checkpoint read the pack prints
+the standard error of the read's mean R (sample SD / sqrt n), the ISO weeks
+its entries span, and the replay's figure for the same cohort entered in the
+same ISO weeks, read from data/research/decision_replay/summary.json (the
+decision replay writes it; until it is committed the line says so). Schema 1,
+the live-rules arm only:
+
+    {"schema": 1,
+     "generated_at": "2026-11-03T10:00:00Z",   # ISO timestamp
+     "run": {...},                             # free-form: run id, code, window
+     "trades": [{"m": "asx",                   # market: asx | nasdaq | crypto
+                 "s": "BHP",                   # symbol
+                 "cell": "3D reclaim",         # 1W reclaim | 1W break | 3D reclaim | 1D break
+                 "grade": "A+",                # A+ | A
+                 "entry": "2026-09-28",        # entry date, YYYY-MM-DD
+                 "exit": "2026-10-20",         # exit date, or null while still open
+                 "r": -0.42,                   # R of the trade (a mark when open)
+                 "reason": "stop"}]}           # exit reason (stop, time, trail, ...)
+
+A same-weeks figure averages the CLOSED trades (exit set) of the cohort
+(all / cell / market / grade, as the live line spells it) entered in the
+read's ISO weeks; trades still open are counted apart.
 """
 from __future__ import annotations
 
@@ -36,11 +74,14 @@ import sys
 from collections import Counter, defaultdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:                  # runnable as `python scripts/decision_pack.py`
+if ROOT not in sys.path:          # runnable as `python scripts/decision_pack.py`
     sys.path.insert(0, ROOT)
-from scanner import config  # noqa: E402  (stdlib-only constants; the ONE scanner import)
+from scanner import config  # noqa: E402  (stdlib-only constants)
+from scanner.config import MARKET_HOLIDAYS  # noqa: E402  (stdlib-only)
+from scanner.time_stop import time_stop_due  # noqa: E402  (stdlib-only: the one definition)
 
 MARKETS = ("asx", "nasdaq", "crypto")
+REPLAY_SUMMARY = "data/research/decision_replay/summary.json"   # NEXT100 #6, schema above
 
 # The ONE definition of a rules exit (NEXT100 #9): config.VIVEK_BOT_RULES_EXITS,
 # which the site reads from bot_rules.json (journal.js / app.js / status.js
@@ -95,6 +136,12 @@ HC42 = {
 # line (and, where `versus` is set, also <= the versus cohort's average over
 # the same days minus `gap`); it clears when the average is >= pass. Anything
 # else waits for the one second read (`then`).
+# "read": "entry" (hc4-2's lines, set 3 Nov 2026, NEXT100 #5) reads the
+# line's first min_n ENTRIES instead, each at its time-stop horizon (see
+# horizon_value), on the day the last of them gets there; a versus cohort is
+# its entries up to the cohort's last entry date. No "read" = close order.
+# "veto" (PR-1, set 3 Nov 2026): the replay-veto read; a first-read trip
+# holds for one FINAL re-read at then.min_n with then.line.
 PREREG = (
     {"id": "PR-0", "item": "cycle", "kind": "live", "cohort": "all",
      "min_n": 40, "line": -0.25, "pass": 0.00,
@@ -103,6 +150,12 @@ PREREG = (
     {"id": "PR-1", "item": "#2", "kind": "live", "cohort": "cell:3D reclaim",
      "min_n": 20, "line": -0.30, "pass": 0.00,
      "then": {"min_n": 40, "line": -0.15},
+     # set 3 Nov 2026 (NEXT100 #5, owner-approved): the replay-veto read. The
+     # first read tripped (-0.433R over 21); the replay has the cohort at or
+     # over min_avg, so the trip HOLDS for one final re-read at then.min_n
+     # closes with then.line -- no second veto.
+     "veto": {"read_on": "2026-11-03", "replay_avg": 0.054, "replay_n": 689,
+              "min_avg": 0.05, "source": "3 Nov decision replay, hc4-2 code"},
      "action": "drop 3D reclaim from the entry cells for new entries"},
     {"id": "PR-2", "item": "#1", "kind": "live", "cohort": "market:asx",
      "versus": "market:nasdaq", "gap": 0.30, "min_n": 15, "line": -0.30,
@@ -132,31 +185,31 @@ PREREG = (
     # hc4-2 proposal, written before the cycle's first entry). An entry with
     # no "cycle" key judges hc4-1; these judge hc4-2's rules closes. "shadow"
     # is judged on the day-14 stamps (`d14`) the book writes from hc4-2 on.
-    {"id": "PR-9", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "all",
+    {"id": "PR-9", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "all",
      "min_n": 40, "line": -0.25, "pass": 0.00,
      "then": {"min_n": 80, "line": -0.25},
      "action": "owner review of the whole rule set before any further change"},
-    {"id": "PR-10", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W reclaim",
+    {"id": "PR-10", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:1W reclaim",
      "min_n": 20, "line": -0.30, "pass": 0.00,
      "then": {"min_n": 40, "line": -0.15},
      "action": "drop 1W reclaim from the entry cells for new entries"},
-    {"id": "PR-11", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1W break",
+    {"id": "PR-11", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:1W break",
      "min_n": 20, "line": -0.30, "pass": 0.00,
      "then": {"min_n": 40, "line": -0.15},
      "action": "drop 1W break from the entry cells for new entries"},
-    {"id": "PR-12", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:3D reclaim",
+    {"id": "PR-12", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:3D reclaim",
      "min_n": 20, "line": -0.30, "pass": 0.00,
      "then": {"min_n": 40, "line": -0.15},
      "action": "drop 3D reclaim from the entry cells for new entries"},
-    {"id": "PR-13", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "cell:1D break",
+    {"id": "PR-13", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "cell:1D break",
      "min_n": 20, "line": -0.30, "pass": 0.00,
      "then": {"min_n": 40, "line": -0.15},
      "action": "drop 1D break from the entry cells for new entries"},
-    {"id": "PR-14", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "market:asx",
+    {"id": "PR-14", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "market:asx",
      "versus": "market:nasdaq", "gap": 0.30, "min_n": 15, "line": -0.30,
      "then": {"min_n": 30, "line": -0.30},
      "action": "stop NEW ASX entries; open ASX positions run to their exits"},
-    {"id": "PR-15", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "cohort": "grade:A",
+    {"id": "PR-15", "item": "hc4-2", "cycle": "hc4-2", "kind": "live", "read": "entry", "cohort": "grade:A",
      "versus": "grade:A+", "gap": 0.30, "min_n": 15, "line": -0.30,
      "then": {"min_n": 30, "line": -0.30},
      "action": "bot back to A+ only"},
@@ -316,40 +369,183 @@ def _trips(pr, pool, rows, cutoff, line):
     return vs["avg"] is not None and s["avg"] <= vs["avg"] - pr["gap"], s, vs
 
 
-def evaluate(pr, closed):
-    """Verdict for one live PREREG entry: NOT DUE, TRIPPED, CLEAR or HOLD
-    (between the lines at the first read, waiting for the second)."""
+def read_mode(pr):
+    """How a live line is read: "close" (the day its n-th rules close lands;
+    hc4-1's lines) or "entry" (its first n entries at their horizon; hc4-2's,
+    set 3 Nov 2026)."""
+    return pr.get("read", "close")
+
+
+def _entry_day(row):
+    return str(row.get("entry_date") or "")
+
+
+HAND = "hand"   # horizon_value: closed by hand before its horizon
+
+
+def horizon_value(row, is_open):
+    """What one entry counts in an entry-cohort read (NEXT100 #5): (R, day)
+    once it has reached its horizon, None while it has not, or HAND when it
+    was closed by hand before it (it leaves the cohort). The horizon is the
+    time stop's day: a row the book stamped there (`horizon`, written on the
+    first in-session run a still-open runner is held past max_hold days)
+    counts the stamp's R on the stamp's day; a row closed by the rules before
+    it counts its realised R on its exit day."""
+    h = row.get("horizon")
+    if (isinstance(h, dict) and isinstance(h.get("r"), (int, float))
+            and not isinstance(h["r"], bool) and math.isfinite(h["r"])):
+        return h["r"], str(h.get("day") or "")
+    if is_open:
+        return None
+    if not is_rules(row):
+        return HAND
+    return r_of(row), _exit_day(row)
+
+
+def horizon_entries(tag, closed, opn=()):
+    """Every entry of cycle `tag` an entry-cohort read sees, as (row, value)
+    in entry order -- entry_date, then opened_at, then symbol -- closed rows
+    before open ones on a full tie. Rows closed by hand before their horizon
+    are left out."""
+    out = []
+    for rows, is_open in ((closed, False), (opn, True)):
+        for r in rows or ():
+            if r.get("cycle") != tag:
+                continue
+            v = horizon_value(r, is_open)
+            if v != HAND:
+                out.append((r, v))
+    out.sort(key=lambda e: (_entry_day(e[0]), str(e[0].get("opened_at") or ""),
+                            str(e[0].get("symbol") or "")))
+    return out
+
+
+def _close_reader(pr, closed):
+    """(now, read) for a close-order line: read(n, line) is the read at the
+    day the n-th rules close landed, None before it."""
     pool = cycle_rules_closes(closed, cycle_of(pr))
     rows = select(pool, pr["cohort"])
     now = stats(rows)
+
+    def read(n, line):
+        got = _read(rows, n)
+        if got is None:
+            return None
+        rows_n, cutoff = got
+        tripped, s, vs = _trips(pr, pool, rows_n, cutoff, line)
+        return {"tripped": tripped, "s": s, "vs": vs, "day": cutoff,
+                "rows": rows_n, "value": r_of, "at": n, "line": line}
+    return {"n": now["n"], "avg": now["avg"]}, read
+
+
+def _entry_reader(pr, closed, opn):
+    """(now, read) for an entry-cohort line: read(n, line) reads the line's
+    first n entries once every one of them -- and, with `versus`, every
+    versus entry dated up to the cohort's last entry -- has its horizon
+    value, on the latest of their horizon days; None before that."""
+    ents = horizon_entries(cycle_of(pr), closed, opn)
+    val = {id(r): v for r, v in ents if v is not None}
+    rows = select([r for r, _ in ents], pr["cohort"])
+    vrows = select([r for r, _ in ents], pr["versus"]) if pr.get("versus") else []
+
+    def value(r):
+        return val[id(r)][0]
+
+    def read(n, line):
+        cohort = rows[:n]
+        if len(cohort) < n:
+            return None
+        last = _entry_day(cohort[-1])
+        vs_rows = [r for r in vrows if _entry_day(r) <= last]
+        if any(id(r) not in val for r in cohort + vs_rows):
+            return None
+        day = max(val[id(r)][1] for r in cohort + vs_rows)
+        s = stats(cohort, value)
+        tripped, vs = False, None
+        if s["avg"] is not None and s["avg"] <= line:
+            if not pr.get("versus"):
+                tripped = True
+            else:
+                vs = stats(vs_rows, value)
+                tripped = vs["avg"] is not None and s["avg"] <= vs["avg"] - pr["gap"]
+        return {"tripped": tripped, "s": s, "vs": vs, "day": day,
+                "rows": cohort, "value": value, "at": n, "line": line}
+    valued = [r for r in rows if id(r) in val]
+    return {"n": len(valued), "avg": stats(valued, value)["avg"], "entries": len(rows)}, read
+
+
+def vetoes(pr):
+    """True when the entry carries a replay-veto read at or over its line."""
+    v = pr.get("veto")
+    return isinstance(v, dict) and v["replay_avg"] >= v["min_avg"]
+
+
+def veto_reason(pr, unit, final):
+    """The words evaluate() puts beside a vetoed line (journal.js
+    prVetoReason prints the same string)."""
+    v, then = pr["veto"], pr["then"]
+    if final:
+        return (f"final re-read at {then['min_n']} {unit} after the replay veto "
+                f"(line {then['line']:+.2f}R; no second veto)")
+    return (f"replay veto: {v['source']} (read {v['read_on']}) has the cohort at "
+            f"{v['replay_avg']:+.3f}R a trade over {v['replay_n']}, at or over "
+            f"{v['min_avg']:+.2f}R, so the trip holds for one final re-read at "
+            f"{then['min_n']} {unit} with the line at {then['line']:+.2f}R")
+
+
+def _evaluate(pr, closed, opn=()):
+    """evaluate() plus the reads behind its verdict, in order (the first,
+    then the second or the veto's re-read once it has landed)."""
+    entry = read_mode(pr) == "entry"
+    now, read = _entry_reader(pr, closed, opn) if entry else _close_reader(pr, closed)
     out = {"id": pr["id"], "n": now["n"], "avg": now["avg"], "min_n": pr["min_n"]}
-    first = _read(rows, pr["min_n"])
+    if entry:
+        out["entries"] = now["entries"]
+    first = read(pr["min_n"], pr["line"])
     if first is None:
         out["verdict"] = "NOT DUE"
-        return out
-    read, cutoff = first
-    tripped, s, vs = _trips(pr, pool, read, cutoff, pr["line"])
-    out.update(read_on=cutoff, read_n=s["n"], read_avg=s["avg"],
-               versus_avg=vs["avg"] if vs else None)
-    if tripped:
-        out["verdict"] = "TRIPPED"
-        return out
-    if "pass" in pr and s["avg"] >= pr["pass"]:
-        out["verdict"] = "CLEAR"
-        return out
+        return out, []
+
+    def put(rd):
+        out.update(read_on=rd["day"], read_n=rd["s"]["n"], read_avg=rd["s"]["avg"],
+                   versus_avg=rd["vs"]["avg"] if rd["vs"] else None)
+    put(first)
     then = pr.get("then")
-    second = _read(rows, then["min_n"]) if then else None
+    if first["tripped"]:
+        if not vetoes(pr):
+            out["verdict"] = "TRIPPED"
+            return out, [first]
+        # the replay veto: the trip holds for ONE final re-read (no second veto)
+        unit = "entries" if entry else "closes"
+        second = read(then["min_n"], then["line"])
+        if second is None:
+            out.update(verdict="HOLD", reason=veto_reason(pr, unit, False))
+            return out, [first]
+        put(second)
+        out.update(verdict="TRIPPED" if second["tripped"] else "CLEAR",
+                   reason=veto_reason(pr, unit, True))
+        return out, [first, second]
+    if "pass" in pr and first["s"]["avg"] >= pr["pass"]:
+        out["verdict"] = "CLEAR"
+        return out, [first]
+    second = read(then["min_n"], then["line"]) if then else None
     if then is None:
         out["verdict"] = "CLEAR"
     elif second is None:
         out["verdict"] = "HOLD"
     else:
-        read2, cutoff2 = second
-        tripped2, s2, vs2 = _trips(pr, pool, read2, cutoff2, then["line"])
-        out.update(read_on=cutoff2, read_n=s2["n"], read_avg=s2["avg"],
-                   versus_avg=vs2["avg"] if vs2 else None)
-        out["verdict"] = "TRIPPED" if tripped2 else "CLEAR"
-    return out
+        put(second)
+        out["verdict"] = "TRIPPED" if second["tripped"] else "CLEAR"
+        return out, [first, second]
+    return out, [first]
+
+
+def evaluate(pr, closed, opn=()):
+    """Verdict for one live PREREG entry: NOT DUE, TRIPPED, CLEAR or HOLD
+    (between the lines at the first read waiting for the second, or a trip
+    held by the replay veto for its re-read). Close-order lines read only
+    the rules closes in `closed`; entry-cohort lines also read `opn`."""
+    return _evaluate(pr, closed, opn)[0]
 
 
 SHADOW_MARKETS = ("asx", "nasdaq")
@@ -370,11 +566,13 @@ def whatif_d14(row, floor):
     return r_of(row)
 
 
-def evaluate_shadow(pr, closed):
+def evaluate_shadow(pr, closed, opn=()):
     """Verdict for a "shadow" entry (PR-16): read ONCE on the day the cycle's
     min_n-th rules close lands, over every rules close up to that day. It
     trips -- the cut is proposed -- when the cut's average beats the rules'
-    by min_gain or more in the ASX and NASDAQ separately; otherwise CLEAR."""
+    by min_gain or more in the ASX and NASDAQ separately; otherwise CLEAR.
+    `opn` is accepted for evaluate()'s signature and not read: the shadow
+    stays a close-order read (NEXT100 #5 left PR-16 unchanged)."""
     pool = cycle_rules_closes(closed, cycle_of(pr))
     out = {"id": pr["id"], "n": len(pool), "min_n": pr["min_n"]}
     first = _read(pool, pr["min_n"])
@@ -397,6 +595,90 @@ def evaluate_shadow(pr, closed):
     return out
 
 
+# -- how sure a read is (NEXT100 #6) ----------------------------------------
+
+def iso_week(day):
+    """'2026-W40' for an ISO date, None for anything else."""
+    try:
+        y, w, _ = dt.date.fromisoformat(str(day or "")[:10]).isocalendar()
+    except ValueError:
+        return None
+    return f"{y}-W{w:02d}"
+
+
+def read_spread(rows, value=r_of):
+    """The standard error of a read's mean R (sample SD / sqrt n; None
+    under two rows) and the distinct ISO weeks its entries span. The frozen
+    lines do not move: this only says how much a read could be noise, and
+    whether it is one window's verdict."""
+    vals = [value(r) for r in rows]
+    se = round(statistics.stdev(vals) / math.sqrt(len(vals)), 3) if len(vals) > 1 else None
+    weeks = sorted({w for w in (iso_week(_entry_day(r)) for r in rows) if w})
+    return {"n": len(vals), "se": se, "weeks": weeks}
+
+
+def load_replay_summary(root=ROOT):
+    """The committed decision-replay summary (schema 1, the module
+    docstring), or None while it is absent. ValueError when the file is
+    there but is not schema 1."""
+    p = os.path.join(root, *REPLAY_SUMMARY.split("/"))
+    if not os.path.exists(p):
+        return None
+    doc = _load(p)
+    if not (isinstance(doc, dict) and doc.get("schema") == 1 and isinstance(doc.get("trades"), list)):
+        raise ValueError(f"{REPLAY_SUMMARY} is not a schema-1 replay summary")
+    return doc
+
+
+def replay_cohort(trades, spec):
+    """The replay trades a live cohort spec names (all / cell / market / grade)."""
+    if spec == "all":
+        return list(trades)
+    kind, _, val = spec.partition(":")
+    key = {"cell": "cell", "market": "m", "grade": "grade"}.get(kind)
+    if key is None:
+        raise ValueError(f"unknown cohort {spec!r}")
+    return [t for t in trades if isinstance(t, dict) and t.get(key) == val]
+
+
+def replay_same_weeks(summary, spec, weeks):
+    """The replay's figure for a live read's cohort entered in the same ISO
+    weeks: n, average R and its standard error over the CLOSED trades (exit
+    set, a finite r), and how many of those weeks' trades were still open."""
+    wk = set(weeks)
+    rows = [t for t in replay_cohort(summary.get("trades") or [], spec)
+            if iso_week(t.get("entry")) in wk]
+    done = [t for t in rows if t.get("exit")]
+    vals = [float(t["r"]) for t in done
+            if isinstance(t.get("r"), (int, float)) and not isinstance(t["r"], bool)
+            and math.isfinite(t["r"])]
+    n = len(vals)
+    return {"n": n, "avg": round(sum(vals) / n, 3) if n else None,
+            "se": round(statistics.stdev(vals) / math.sqrt(n), 3) if n > 1 else None,
+            "open": len(rows) - len(done)}
+
+
+def spread_text(rd, spec, replay):
+    """One line of #6 beside a read: its SE, its ISO entry weeks, and the
+    replay's same-cohort, same-weeks figure (or why there is none)."""
+    sp = read_spread(rd["rows"], rd["value"])
+    wk = sp["weeks"]
+    span = ", ".join(wk) if len(wk) <= 4 else f"{wk[0]} .. {wk[-1]}"
+    se = "-" if sp["se"] is None else f"{sp['se']:.3f}R"
+    text = f"se {se}, {len(wk)} ISO entry week{'' if len(wk) == 1 else 's'} ({span or '-'})"
+    if isinstance(replay, str):
+        return f"{text}; replay same weeks: {replay}"
+    f = replay_same_weeks(replay, spec, wk)
+    if not f["n"]:
+        fig = "no closed replay trade of this cohort entered in those weeks"
+    else:
+        fse = "-" if f["se"] is None else f"{f['se']:.3f}R"
+        fig = f"n={f['n']} avg {f['avg']:+.3f}R (se {fse})"
+    if f["open"]:
+        fig += f", {f['open']} still open in the replay (left out)"
+    return f"{text}; replay same weeks: {fig}"
+
+
 # -- report sections -------------------------------------------------------
 
 def headline(closed):
@@ -409,37 +691,85 @@ def headline(closed):
                                              key=lambda kv: str(kv[0]))}}
 
 
+def unreal_of(row):
+    """The open part of an open row at today's mark (unreal_r; 0 if unpriced)."""
+    v = row.get("unreal_r")
+    return v if isinstance(v, (int, float)) and v == v else 0.0
+
+
+def open_r(row):
+    """An OPEN row's R at today's mark: what it has booked (realized_r: a
+    runner's TP legs, less the entry cost) plus its open part (unreal_r,
+    already scaled to the fraction still held). NEXT100 #4: the pack used to
+    read unreal_r alone and missed the runners' booked R."""
+    return r_of(row) + unreal_of(row)
+
+
+def _hold_days(row):
+    """The frozen time-stop length of the row's cycle (HC41 / HC42)."""
+    return (HC42 if row.get("cycle") == HC42["tag"] else HC41)["max_hold_days"]
+
+
+def due_day(row):
+    """The engine's time-stop day for an open row, ISO, or None (past TP1,
+    no entry date): scanner.time_stop.time_stop_due, the ONE definition --
+    day max_hold + 1, a stock's weekend rolled to the Monday."""
+    d = time_stop_due(row, _hold_days(row))
+    return d.isoformat() if d else None
+
+
 def projected_closes(opn):
     """A what-if, never a verdict: every open hc4-1 row that has not reached
-    TP1 closes at TODAY's mark on the day its 28-day time stop falls due.
-    Stops, trails and new entries before then are ignored, so this only says
-    which way a checkpoint is leaning, not where it will land."""
+    TP1 closes at TODAY's mark (booked + open) on the day its time stop falls
+    due. Stops, trails and new entries before then are ignored, so this only
+    says which way a checkpoint is leaning, not where it will land."""
     out = []
     for r in opn:
-        if r.get("cycle") != HC41["tag"] or r.get("tp1_hit"):
+        if r.get("cycle") != HC41["tag"]:
             continue
-        try:
-            d = dt.date.fromisoformat(r["entry_date"]) + dt.timedelta(days=HC41["max_hold_days"])
-        except (KeyError, ValueError):
+        d = due_day(r)
+        if d is None:
             continue
-        out.append(dict(r, status="closed", exit_reason="time", exit_date=d.isoformat(),
-                        realized_r=r.get("unreal_r") or 0.0))
+        out.append(dict(r, status="closed", exit_reason="time", exit_date=d,
+                        realized_r=open_r(r)))
     return out
 
 
-def time_stop_schedule(opn):
-    """Calendar dates the 28-day time stop falls due for hc4-1 rows that have
-    not reached TP1 (a runner past TP1 is exempt)."""
-    due = Counter()
-    for r in opn:
-        if r.get("cycle") != HC41["tag"] or r.get("tp1_hit"):
-            continue
-        try:
-            d = dt.date.fromisoformat(r["entry_date"]) + dt.timedelta(days=HC41["max_hold_days"])
-        except (KeyError, ValueError):
-            continue
-        due[d.isoformat()] += 1
+def time_stop_schedule(opn, tag=HC41["tag"]):
+    """Days the time stop falls due for a cycle's open rows that have not
+    reached TP1 (a runner past TP1 is exempt), as [(day, n)]."""
+    due = Counter(d for d in (due_day(r) for r in opn if r.get("cycle") == tag) if d)
     return sorted(due.items())
+
+
+def holiday_stops(opn, holidays=None):
+    """Open pre-TP1 rows whose time stop falls on a full-day closure of their
+    market (MARKET_HOLIDAYS). The engine does not model holidays, so each
+    would book at a stale close on a shut market. Report only:
+    [{"day", "market", "symbol", "cycle", "holiday"}] by day."""
+    holidays = MARKET_HOLIDAYS if holidays is None else holidays
+    out = []
+    for r in opn:
+        d = due_day(r)
+        name = (holidays.get(r.get("market")) or {}).get(d) if d else None
+        if name:
+            out.append({"day": d, "market": r.get("market"), "symbol": r.get("symbol"),
+                        "cycle": r.get("cycle"), "holiday": name})
+    return sorted(out, key=lambda x: (x["day"], str(x["market"]), str(x["symbol"])))
+
+
+def holiday_marks(rows, holidays=None):
+    """Audit: rows (open or closed) with a day_marks entry dated on a
+    full-day closure of their own market -- a session the book stamped on a
+    shut market. {(market, day): sorted symbols}."""
+    holidays = MARKET_HOLIDAYS if holidays is None else holidays
+    out = defaultdict(set)
+    for r in rows:
+        shut = holidays.get(r.get("market")) or {}
+        for day in (r.get("day_marks") or {}):
+            if str(day)[:10] in shut:
+                out[(r.get("market"), str(day)[:10])].add(str(r.get("symbol")))
+    return {k: sorted(v) for k, v in sorted(out.items())}
 
 
 def mae_report(closed, opn, deep=-0.5):
@@ -448,7 +778,7 @@ def mae_report(closed, opn, deep=-0.5):
     return {"closed": len(hit), "won": sum(1 for r in hit if r_of(r) > 0),
             "by_exit": dict(Counter(str(r.get("exit_reason")) for r in hit)),
             "open": len(still),
-            "open_now_positive": sum(1 for r in still if (r.get("unreal_r") or 0) > 0)}
+            "open_now_positive": sum(1 for r in still if open_r(r) > 0)}
 
 
 def review_label(row):
@@ -459,8 +789,7 @@ def review_label(row):
 
 def review_report(closed, opn):
     out = {}
-    for name, rows, val in (("closed", closed, r_of),
-                            ("open", opn, lambda r: r.get("unreal_r") or 0.0)):
+    for name, rows, val in (("closed", closed, r_of), ("open", opn, open_r)):
         g = group(rows, review_label)
         out[name] = {k: dict(stats(v, val),
                              risk_usd=round(sum(r.get("risk_usd") or 0 for r in v)),
@@ -620,13 +949,14 @@ def _held(row, end):
 def r_per_slot_month(rows, today=None):
     """R per slot-month: R earned per position-slot held for a month (30.4375
     days), the decision replay's pass metric. A closed row holds its slot
-    entry to exit; an open row (``today`` given) to today, at its mark."""
+    entry to exit; an open row (``today`` given) to today, at its mark --
+    booked plus open (open_r)."""
     tot = days = 0.0
     for r in rows:
         if r.get("status") == "open":
             if today is None:
                 continue
-            tot += float(r.get("unreal_r") or 0.0)
+            tot += open_r(r)
             days += _held(r, today)
         else:
             tot += r_of(r)
@@ -833,6 +1163,9 @@ def main(argv=None, root=ROOT, out=sys.stdout):
 
     w("# Decision pack numbers (scripts/decision_pack.py)")
     w(f"book: {len(closed)} closed, {len(opn)} open")
+    w(f"open rows at today's marks (#4: booked + open): booked "
+      f"{sum(r_of(r) for r in opn):+.2f}R + open {sum(unreal_of(r) for r in opn):+.2f}R "
+      f"= {sum(open_r(r) for r in opn):+.2f}R")
     h = headline(closed)
     w(f"all closes    {fmt(h['all'])}")
     w(f"rules closes  {fmt(h['rules'])}")
@@ -844,6 +1177,17 @@ def main(argv=None, root=ROOT, out=sys.stdout):
         w(f"ASX hand closes the archive can replay: {len(cf)}; taken by hand "
           f"{sum(x['hand_r'] for x in cf):+.2f}R, rules would have made "
           f"{sum(x['rules_r'] for x in cf):+.2f}R ({dict(Counter(x['how'] for x in cf))})")
+
+    def schedule(tag):
+        cum = len(cycle_rules_closes(closed, tag))
+        w(f"time stops due ({tag}, pre-TP1; scanner.time_stop's day, a stock's weekend "
+          f"rolled to the Monday):")
+        for d, n in time_stop_schedule(opn, tag):
+            cum += n
+            shut = [x for x in holiday_stops(opn) if x["day"] == d and x["cycle"] == tag]
+            flag = "".join(f"  ! {len(g)} on a {mk.upper()} holiday ({g[0]['holiday']})"
+                           for mk, g in sorted(group(shut, lambda x: x["market"]).items()))
+            w(f"  {d} {n:2}  -> {cum} {tag} closes if nothing stops out first{flag}")
 
     w("")
     w("## hc4-1 (rules closes only)")
@@ -857,13 +1201,9 @@ def main(argv=None, root=ROOT, out=sys.stdout):
         for k in sorted(g, key=str):
             o = [r for r in g[k] if r.get("status") == "open"]
             c = [r for r in g[k] if r.get("status") == "closed" and is_rules(r)]
-            w(f"  {label:6} {str(k):12} open {len(o):2} unreal {sum(r.get('unreal_r') or 0 for r in o):+6.2f}R"
-              f" | closed {fmt(stats(c))}")
-    cum = len(hcc)
-    w("time stops due (hc4-1, pre-TP1):")
-    for d, n in time_stop_schedule(opn):
-        cum += n
-        w(f"  {d} {n:2}  -> {cum} hc4-1 closes if nothing stops out first")
+            w(f"  {label:6} {str(k):12} open {len(o):2} at {sum(open_r(r) for r in o):+6.2f}R "
+              f"(booked {sum(r_of(r) for r in o):+5.2f}R) | closed {fmt(stats(c))}")
+    schedule(HC41["tag"])
 
     w("")
     w(f"## hc4-2 (rules closes only; the cycle since {HC42['start']})")
@@ -876,24 +1216,64 @@ def main(argv=None, root=ROOT, out=sys.stdout):
         for k in sorted(g, key=str):
             o = [r for r in g[k] if r.get("status") == "open"]
             c = [r for r in g[k] if r.get("status") == "closed" and is_rules(r)]
-            w(f"  {label:6} {str(k):12} open {len(o):2} | closed {fmt(stats(c))}")
+            w(f"  {label:6} {str(k):12} open {len(o):2} at {sum(open_r(r) for r in o):+6.2f}R "
+              f"| closed {fmt(stats(c))}")
     stamped = [r for r in h2 if isinstance(r.get("d14"), dict)]
     w(f"day-14 stamps (#4, report only): {len(stamped)} rows; on closed rules closes the "
       f"cut would apply to {sum(1 for r in h2c if whatif_d14(r, HC42['d14_mfe_floor']) != r_of(r))}")
+    w(f"horizon stamps (NEXT100 #5, what an entry-cohort read counts for a runner): "
+      f"{sum(1 for r in h2 if isinstance(r.get('horizon'), dict))} rows")
+    if any(r.get("status") == "open" for r in h2):
+        schedule(HC42["tag"])
 
     w("")
-    w("## Pre-registered checkpoints (hc4-1 frozen 2026-10-14, hc4-2 frozen 2026-11-02)")
+    w("## Market holidays (scanner.config.MARKET_HOLIDAYS; report only, the engine does "
+      "not model them)")
+    shut = holiday_stops(opn)
+    if shut:
+        for (d, mk), g in sorted(group(shut, lambda x: (x["day"], x["market"])).items()):
+            w(f"  ! time stop on a shut market: {d} {mk} {g[0]['holiday']}: {len(g)} "
+              f"({', '.join(str(x['symbol']) for x in g)}) -- would book at a stale close")
+    else:
+        w("  no open row's time stop falls on a market holiday")
+    marks = holiday_marks(closed + opn)
+    w("  audit, day_marks dated on a market holiday (a session stamped on a shut market): "
+      + ("; ".join(f"{mk} {d} {(MARKET_HOLIDAYS.get(mk) or {}).get(d)}: {len(s)} rows"
+                   for (mk, d), s in marks.items()) or "none"))
+
+    try:
+        replay = load_replay_summary(root)
+    except ValueError as exc:
+        replay = f"unreadable ({exc})"
+    if replay is None:
+        replay = "no committed replay summary yet"
+
+    def reads_text(pr, reads, indent):
+        for i, rd in enumerate(reads):
+            word = "entries" if read_mode(pr) == "entry" else "closes"
+            label = "first read" if i == 0 else "re-read"
+            w(f"{indent}{label} {rd['day']} at {rd['at']} {word} (line {rd['line']:+.2f}R): "
+              f"n={rd['s']['n']} avg {rd['s']['avg']:+.3f}R | {spread_text(rd, pr['cohort'], replay)}")
+
+    w("")
+    w("## Pre-registered checkpoints (hc4-1 frozen 2026-10-14, hc4-2 frozen 2026-11-02; "
+      "PR-1's veto and hc4-2's entry-cohort reads set 2026-11-03)")
     for pr in PREREG:
         tag = cycle_of(pr)
         if pr["kind"] == "live":
-            v = evaluate(pr, closed)
+            v, reads = _evaluate(pr, closed, opn)
             avg = f"{v['avg']:+.3f}R" if v["avg"] is not None else "-"
             read = ""
             if v.get("read_on"):
                 vs = f" vs {v['versus_avg']:+.3f}R" if v.get("versus_avg") is not None else ""
                 read = f"  read {v['read_on']}: n={v['read_n']} avg {v['read_avg']:+.3f}R{vs}"
-            w(f"  {pr['id']:5} {tag} {pr['item']:5} {pr['cohort']:16} n={v['n']}/{v['min_n']} "
+            count = (f"entries {v['entries']}/{v['min_n']} ({v['n']} at the horizon)"
+                     if read_mode(pr) == "entry" else f"n={v['n']}/{v['min_n']}")
+            w(f"  {pr['id']:5} {tag} {pr['item']:5} {pr['cohort']:16} {count} "
               f"avg {avg}  line {pr['line']:+.2f}R{read}  -> {v['verdict']}")
+            if v.get("reason"):
+                w(f"        {v['reason']}")
+            reads_text(pr, reads, "        ")
         elif pr["kind"] == "shadow":
             v = evaluate_shadow(pr, closed)
             read = ""
@@ -906,14 +1286,16 @@ def main(argv=None, root=ROOT, out=sys.stdout):
               f"{read}  -> {v['verdict']}")
         else:
             w(f"  {pr['id']:5} {tag} {pr['item']:9} {pr['kind']}: {pr['action']}")
-    w("  what-if, hc4-1 (open rows close at today's marks on their time-stop day):")
+    w("  what-if, hc4-1 (open rows close at today's marks, booked + open, on their "
+      "time-stop day):")
     proj = closed + projected_closes(opn)
     for pr in PREREG:
         if pr["kind"] == "live" and cycle_of(pr) == HC41["tag"]:
-            v = evaluate(pr, proj)
+            v, reads = _evaluate(pr, proj)
             read = (f"read {v['read_on']}: n={v['read_n']} avg {v['read_avg']:+.3f}R"
                     if v.get("read_on") else f"n={v['n']}/{v['min_n']}")
             w(f"    {pr['id']} {read} -> {v['verdict']}")
+            reads_text(pr, reads, "      ")
 
     w("")
     w("## Live book by market / cell / level (all cycles)")

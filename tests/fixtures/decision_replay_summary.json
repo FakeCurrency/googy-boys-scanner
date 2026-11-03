@@ -1,0 +1,13 @@
+{
+ "schema": 1,
+ "generated_at": "2026-11-03T10:00:00Z",
+ "run": {"id": "fixture", "code": "hc4-2", "note": "tests/test_decision_pack.py: the same-weeks match (NEXT100 #6)"},
+ "trades": [
+  {"m": "asx", "s": "IN1", "cell": "3D reclaim", "grade": "A+", "entry": "2026-09-22", "exit": "2026-10-20", "r": 1.0, "reason": "trail"},
+  {"m": "nasdaq", "s": "IN2", "cell": "3D reclaim", "grade": "A", "entry": "2026-09-30", "exit": "2026-10-28", "r": -0.5, "reason": "stop"},
+  {"m": "asx", "s": "WK41", "cell": "3D reclaim", "grade": "A+", "entry": "2026-10-07", "exit": "2026-10-09", "r": -1.0, "reason": "stop"},
+  {"m": "asx", "s": "CELL", "cell": "1W reclaim", "grade": "A+", "entry": "2026-09-23", "exit": "2026-10-21", "r": 2.0, "reason": "time"},
+  {"m": "asx", "s": "OPEN", "cell": "3D reclaim", "grade": "A+", "entry": "2026-09-24", "exit": null, "r": 0.3, "reason": "open"},
+  {"m": "asx", "s": "YEAR", "cell": "3D reclaim", "grade": "A+", "entry": "2025-09-24", "exit": "2025-10-22", "r": -1.0, "reason": "time"}
+ ]
+}

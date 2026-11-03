@@ -56,7 +56,17 @@ vm.runInContext(
   + slice("function prRead(rows, n) {", "\n  }") + "\n"
   + slice("function prTrips(pr, pool, rows, cutoff, line) {", "\n  }") + "\n"
   + slice("const prCycle = ", ";\n") + "\n"
-  + slice("function prEvaluate(pr, closed) {", "\n  }") + "\n"
+  + slice("const prMode = ", ";\n") + "\n"
+  + slice("const prEntryDay = ", ";\n") + "\n"
+  + slice("const PR_HAND = ", ";\n") + "\n"
+  + slice("function prHorizon(r, isOpen) {", "\n  }") + "\n"
+  + slice("function prEntries(tag, closed, open) {", "\n  }") + "\n"
+  + slice("function prCloseReader(pr, closed) {", "\n  }") + "\n"
+  + slice("function prEntryReader(pr, closed, open) {", "\n  }") + "\n"
+  + slice("const prVetoes = ", ";\n") + "\n"
+  + slice("const prSigned = ", ";\n") + "\n"
+  + slice("function prVetoReason(pr, unit, final) {", "\n  }") + "\n"
+  + slice("function prEvaluate(pr, closed, open) {", "\n  }") + "\n"
   + slice("const SHADOW_MARKETS = ", ";\n") + "\n"
   + slice("function prWhatifD14(r, floor) {", "\n  }") + "\n"
   + slice("function prEvaluateShadow(pr, closed) {", "\n  }") + "\n"
@@ -92,7 +102,7 @@ const deepSame = (a, b) => (a && typeof a === "object" && b && typeof b === "obj
   ? Object.keys(b).every((k) => deepSame(a[k], b[k])) && Object.keys(a).every((k) => k in b)
   : same(a, b);
 const judgedEntries = () => J.PREREG.filter((p) => p.kind === "live" || p.kind === "shadow");
-const runJs = (pr, closed) => (pr.kind === "shadow" ? J.prEvaluateShadow(pr, closed) : J.prEvaluate(pr, closed));
+const runJs = (pr, closed, open) => (pr.kind === "shadow" ? J.prEvaluateShadow(pr, closed) : J.prEvaluate(pr, closed, open));
 
 // ── 6. the checkpoints ───────────────────────────────────────────────────────
 suite("6 · prEvaluate == decision_pack.evaluate on every shared case");
@@ -114,7 +124,7 @@ test("the shared cases are all present and every judged checkpoint is covered", 
 for (const c of CASES.cases) {
   test(`case: ${c.name}`, () => {
     for (const pr of judgedEntries()) {
-      const got = runJs(pr, c.closed);
+      const got = runJs(pr, c.closed, c.open || []);
       const want = c.expect[pr.id];
       for (const k of Object.keys(want)) {
         assert.ok(deepSame(got[k], want[k]), `${pr.id}.${k}: JS ${JSON.stringify(got[k])} vs decision_pack ${JSON.stringify(want[k])}`);
@@ -138,6 +148,22 @@ test("the strip is inert: no button, link or handler in checkpointLine", () => {
   assert.ok(!/<button|<a\s|onclick|data-osort|data-closeall|addEventListener/.test(body),
     "a control appeared in the checkpoint strip — it must stay a record, never a prompt");
   assert.ok(/<details class="jr-pr-fold" data-cycle=/.test(body) && !/<details[^>]*\bopen\b/.test(body), "the fold must ship shut");
+});
+
+test("the strip hands the open rows to prEvaluate: an entry-cohort line counts a runner's horizon stamp", () => {
+  // NEXT100 #5 (3 Nov): hc4-2's lines read the first n entries at their
+  // horizon, and a runner still open there is valued from its stamp -- a
+  // strip that passed only the closed rows would wait on it forever.
+  const body = slice("function checkpointFold(d, tag) {", "\n  }");
+  assert.ok(/prEvaluate\(p, d\.closed, d\.open\)/.test(body), "checkpointFold no longer passes the open rows");
+  const live = J.PREREG.filter((p) => p.kind === "live");
+  // compared as JSON: arrays built inside the vm carry its realm's prototype
+  assert.equal(JSON.stringify(live.filter((p) => p.read === "entry").map((p) => p.id)),
+    JSON.stringify(["PR-9", "PR-10", "PR-11", "PR-12", "PR-13", "PR-14", "PR-15"]));
+  const runner = { symbol: "R", cycle: "hc4-2", timeframe: "1W", entry_type: "reclaim", market: "asx",
+    entry_date: "2026-11-02", horizon: { day: "2026-12-02", held: 30, r: 2, booked: 0.4, tp1_hit: true } };
+  assert.equal(J.prEvaluate(J.PREREG[10], [], [runner]).n, 1, "an open runner's stamp did not count");
+  assert.equal(J.prEvaluate(J.PREREG[10], [], []).n, 0);
 });
 
 test("renderSide draws it beside the cycle board and keeps the fold's state over a repaint", () => {

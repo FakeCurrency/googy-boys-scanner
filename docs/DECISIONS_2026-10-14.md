@@ -182,7 +182,8 @@ is why each live checkpoint below is paired with the replay.
   cohort at +0.05R a trade or better (stocks, with the time stop), hold and
   read again at twice the number of closes. One fortnight of live data
   shouldn't overrule ten years on its own, and ten years shouldn't overrule a
-  live result that is clearly bad.
+  live result that is clearly bad. PR-1's veto was read on 3 Nov; its re-read
+  is at 40 closes and final (see "Set 3 Nov 2026" below).
 - **One boundary.** Approved changes all land together as the next cycle,
   **hc4-2**, with its own cycle tag. Nothing changes row by row in the middle
   of hc4-1. The earliest sensible boundary is the PR-0 read, around 27 Oct.
@@ -201,7 +202,7 @@ is why each live checkpoint below is paired with the replay.
 | ID | Item | Measure | Read when | Line | If it trips |
 |---|---|---|---|---|---|
 | PR-0 | cycle | avg R of all hc4-1 rules closes | n >= 40 (~27 Oct) | trips at -0.25R or worse; passes at 0.00R or better; in between, read again at n >= 80 | owner review of the whole rule set before anything else changes |
-| PR-1 | #2 | avg R of hc4-1 3D-reclaim rules closes | n >= 20 (~26 Oct) | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 3D reclaim from the entry cells (new entries only) |
+| PR-1 | #2 | avg R of hc4-1 3D-reclaim rules closes | n >= 20 (~26 Oct) | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R. **Replay veto read 3 Nov:** the first read tripped (-0.433R over 21) and the 3 Nov decision replay has the cohort at +0.054R a trade over 689, so the trip holds for one final re-read at n >= 40 with the line at -0.15R (no second veto) | drop 3D reclaim from the entry cells (new entries only) |
 | PR-2 | #1 | avg R of hc4-1 ASX rules closes vs NASDAQ over the same days | n >= 15 ASX closes; if it doesn't trip, second read at n >= 30 | ASX at -0.30R or worse AND at least 0.30R below NASDAQ (same line at both reads) | stop new ASX entries; open ASX positions run to their exits |
 | PR-3 | #3 | avg R of hc4-1 A vs A+ rules closes, rows opened from 24 Sep | n >= 15 A closes; if it doesn't trip, second read at n >= 30 | A at -0.30R or worse AND at least 0.30R below A+ (same line at both reads) | bot back to A+ only |
 | PR-4 | #4 | replay: weekly-level only vs weekly + 3-day | the decision_replay run | weekly-only better by +0.05R/trade or more, in ASX and NASDAQ separately and in both halves of the sample | weekly-level only |
@@ -1227,23 +1228,56 @@ merge):
 
 ### hc4-2 register (frozen 2 Nov 2026)
 
-Each live line is read once, on the day its n-th hc4-2 rules close lands. The
-replay veto applies as it does for hc4-1. PR-16 is read once at 40 closes.
+Each live line is read once. Since 3 Nov (below) hc4-2's live lines read the
+cycle's first n entries at their time-stop horizon, not the first n closes.
+The replay veto applies as it does for hc4-1. PR-16 is read once at 40 closes.
 
-| ID | Item | Measure | Read when | Line | If it trips |
-|---|---|---|---|---|---|
-| PR-9 | hc4-2 | avg R of all hc4-2 rules closes | n >= 40 | trips at -0.25R or worse; passes at 0.00R or better; in between, read again at n >= 80 at -0.25R | owner review of the whole rule set before anything else changes |
-| PR-10 | hc4-2 | avg R of hc4-2 1W-reclaim rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1W reclaim from the entry cells (new entries only) |
-| PR-11 | hc4-2 | avg R of hc4-2 1W-break rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1W break from the entry cells (new entries only) |
-| PR-12 | hc4-2 | avg R of hc4-2 3D-reclaim rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 3D reclaim from the entry cells (new entries only) |
-| PR-13 | hc4-2 | avg R of hc4-2 1D-break rules closes | n >= 20 | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1D break from the entry cells (new entries only) |
-| PR-14 | hc4-2 | avg R of hc4-2 ASX rules closes vs NASDAQ over the same days | n >= 15 ASX closes; if it doesn't trip, second read at n >= 30 | ASX at -0.30R or worse AND at least 0.30R below NASDAQ (same line at both reads) | stop new ASX entries; open ASX positions run to their exits |
-| PR-15 | hc4-2 | avg R of hc4-2 A vs A+ rules closes | n >= 15 A closes; if it doesn't trip, second read at n >= 30 | A at -0.30R or worse AND at least 0.30R below A+ (same line at both reads) | bot back to A+ only |
-| PR-16 | #4 | day-14 what-if vs the rules, per market, on hc4-2 rules closes | n >= 40 | the cut (exit a pre-TP1 trade whose best R by day 14 is under +0.5R, at its day-14 R less costs) beats the rules by +0.05R/trade or more in the ASX and NASDAQ separately | propose the day-14 cut for the next cycle |
+| ID | Item | Measure | Read when | Read | Line | If it trips |
+|---|---|---|---|---|---|---|
+| PR-9 | hc4-2 | avg R of all hc4-2 entries at their horizon | n >= 40 | entry cohort at the time-stop horizon | trips at -0.25R or worse; passes at 0.00R or better; in between, read again at n >= 80 at -0.25R | owner review of the whole rule set before anything else changes |
+| PR-10 | hc4-2 | avg R of hc4-2 1W-reclaim entries at their horizon | n >= 20 | entry cohort at the time-stop horizon | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1W reclaim from the entry cells (new entries only) |
+| PR-11 | hc4-2 | avg R of hc4-2 1W-break entries at their horizon | n >= 20 | entry cohort at the time-stop horizon | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1W break from the entry cells (new entries only) |
+| PR-12 | hc4-2 | avg R of hc4-2 3D-reclaim entries at their horizon | n >= 20 | entry cohort at the time-stop horizon | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 3D reclaim from the entry cells (new entries only) |
+| PR-13 | hc4-2 | avg R of hc4-2 1D-break entries at their horizon | n >= 20 | entry cohort at the time-stop horizon | -0.30R or worse; if between -0.30R and 0, second read at n >= 40 with the line at -0.15R | drop 1D break from the entry cells (new entries only) |
+| PR-14 | hc4-2 | avg R of hc4-2 ASX entries at their horizon vs NASDAQ entries up to the last of them | n >= 15 ASX entries; if it doesn't trip, second read at n >= 30 | entry cohort at the time-stop horizon | ASX at -0.30R or worse AND at least 0.30R below NASDAQ (same line at both reads) | stop new ASX entries; open ASX positions run to their exits |
+| PR-15 | hc4-2 | avg R of hc4-2 A vs A+ entries at their horizon | n >= 15 A entries; if it doesn't trip, second read at n >= 30 | entry cohort at the time-stop horizon | A at -0.30R or worse AND at least 0.30R below A+ (same line at both reads) | bot back to A+ only |
+| PR-16 | #4 | day-14 what-if vs the rules, per market, on hc4-2 rules closes | n >= 40 | close order (unchanged) | the cut (exit a pre-TP1 trade whose best R by day 14 is under +0.5R, at its day-14 R less costs) beats the rules by +0.05R/trade or more in the ASX and NASDAQ separately | propose the day-14 cut for the next cycle |
 
 `scripts/decision_pack.py` (`PREREG`, `HC42`) and the journal's strip carry the
 same lines, and `tests/test_decision_pack.py` /
 `tests/test_checkpoint_mirror.py` pin all three together.
+
+### Set 3 Nov 2026 (NEXT100 #5, owner-approved)
+
+You approved both on 3 Nov ("Do it all please"). Each was written down before
+the data it judges arrives.
+
+- **PR-1's replay veto, and its re-read.** PR-1 tripped at its first read
+  (20 closes, -0.433R over 21 on 27 Oct). The 3 Nov decision replay, on the
+  hc4-2 code, has stock 3D reclaims at **+0.054R a trade over 689**, just
+  over the veto's +0.05R line, so the veto applies: the trip **holds**. The
+  register had not said what the re-read's line is; now it does. PR-1 is read
+  once more at **40** hc4-1 3D-reclaim rules closes, against its own second
+  line, **-0.15R**, and that read is **final**: TRIPPED or CLEAR, with no
+  second veto. Until the 40th close the pack and the journal say HOLD and
+  name the veto. (The replay figure is recorded on PR-1 itself, as data.)
+- **hc4-2's lines are read by entry, not by close.** Read in close order, the
+  quick losers land first: hc4-1's first 20 closes averaged -0.509R while
+  its 108 entries stand near +0.07R. So PR-9 to PR-15 now read the line's
+  **first n hc4-2 entries** (by entry date), each at its **time-stop
+  horizon**: a trade the rules closed before then counts its realised R; a
+  runner still open on its time-stop day counts the R the book stamps on it
+  that day (`horizon`); a trade you closed by hand before its horizon leaves
+  the cohort and the next entry takes its place. The read happens once, on
+  the day the last of those n entries reaches its horizon. A line with a
+  `versus` cohort also waits for every versus entry dated up to the cohort's
+  last entry. The lines, the second reads and the veto are unchanged; hc4-1's
+  lines (PR-0 to PR-8) keep the close-order read, and PR-16 is unchanged.
+
+Beside every read the pack now also prints its standard error, the ISO weeks
+its entries span, and the decision replay's figure for the same cohort in the
+same weeks (NEXT100 #6) - whether a trip could be noise, and whether the
+replay lost the same weeks. The lines themselves stay where they are.
 
 ## Next-cycle candidates (written Tue 3 Nov; nothing here is live)
 
