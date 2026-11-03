@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T20:26:45Z",
+  "generated_at": "2026-11-03T20:40:38Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -99,6 +99,12 @@
   "max_notional_pct_adv": 2.0,
   "max_hold_days": 28,
   "reentry_cooldown_days": 7,
+  "rules_exits": [
+    "stop",
+    "time",
+    "trail",
+    "target"
+  ],
   "max_data_age_days": 3,
   "earnings_buffer_days": 3,
   "max_weekly_loss_pct": 6.0,
@@ -247,7 +253,7 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-03T20:15:02Z",
+      "at": "2026-11-03T20:40:34Z",
       "reasons": {
         "AAL": "global_cap",
         "BZ": "global_cap",
