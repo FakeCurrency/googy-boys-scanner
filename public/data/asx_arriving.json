@@ -1,13 +1,39 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-11-02T16:44:38+11:00",
+  "generated_at": "2026-11-03T11:17:01+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "IKE",
+      "name": "Ikegps Group Limited",
+      "sector": "Technology Hardware & Equipment",
+      "dir": "SHORT",
+      "price": 0.70999998,
+      "turnover_avg20": 89173,
+      "turnover_today": 403377,
+      "rvol": 4.8,
+      "adv_usd": 89173.1,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "SHG",
+      "name": "Singular Health Group Ltd",
+      "sector": "Health Care Equipment & Services",
+      "dir": "SHORT",
+      "price": 0.2,
+      "turnover_avg20": 82671,
+      "turnover_today": 331009,
+      "rvol": 3.5,
+      "adv_usd": 82671.17,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "EQU",
       "name": "Equus Energy Limited",
@@ -35,6 +61,19 @@
       "is_product": true
     },
     {
+      "symbol": "VMC",
+      "name": "Venus Metals Corporation Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.091,
+      "turnover_avg20": 42528,
+      "turnover_today": 167924,
+      "rvol": 4.1,
+      "adv_usd": 42528.8,
+      "fund": false,
+      "is_product": false
+    },
+    {
       "symbol": "FSA",
       "name": "Fsa Group Limited",
       "sector": "Financial Services",
@@ -44,19 +83,6 @@
       "turnover_today": 134554,
       "rvol": 5.1,
       "adv_usd": 26375.66,
-      "fund": false,
-      "is_product": false
-    },
-    {
-      "symbol": "VMC",
-      "name": "Venus Metals Corporation Limited",
-      "sector": "Materials",
-      "dir": "SHORT",
-      "price": 0.092,
-      "turnover_avg20": 40068,
-      "turnover_today": 118710,
-      "rvol": 3.0,
-      "adv_usd": 40068.11,
       "fund": false,
       "is_product": false
     },
