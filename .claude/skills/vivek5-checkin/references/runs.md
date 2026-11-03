@@ -42,7 +42,7 @@ Several workflows go red in the same window, and the next run of each is green. 
 - **ops.yml**: a failed action prints `OPS RESULT: FAILED (exit N)` plus `##[error]exit N -- read the log. Green on purpose...`. Success prints `OPS RESULT: OK`.
 - **kill_switch.yml**: firing prints `KILL SWITCH TRIGGERED` and `::error::KILL SWITCH TRIGGERED for: <markets>`, and the run stays green.
 - **morning_plays.yml**:
-  - A refusal (`slot is waiting for a post-close <market> scan`) is green. It only matters if the LAST rung also refused: 21:45 Melbourne for ASX, 18:45 New York (10:45 Melbourne) for US.
+  - A refusal (`slot is waiting for a post-close <market> scan`) is green. It only matters if the LAST rung also refused: 21:45 Melbourne for ASX, and for US the 23:45 UTC rung, 18:45 New York (10:45 Melbourne) this season (set in UTC, so its Melbourne time holds when New York's clocks change).
   - A missing webhook (`::warning::DISCORD_MORNING_WEBHOOK_URL is not set`) is green too.
 - **scan.yml**: a run whose gate printed `-> skip` scanned nothing and is green. A heartbeat run that lost its write only warns (`::warning::book not staged (manual run ...)`). Trust the data stamps.
 - **momentum / ignition**: exit 3 (`published nothing - the download came back empty and the previous file was kept`) is green by design.

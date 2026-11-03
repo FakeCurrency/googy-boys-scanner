@@ -305,11 +305,12 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   resize or the SIZING 2 resize commit (restated rows carry `resized_at`);
   split any hc4-1 read there, not at a calendar date.
 - **Management:** TP ladder + trail, 28-day time stop (pre-TP1, fires on the
-  first in-session run with held > 28 CALENDAR days counted on the market's
-  own date, never market days (`vivek_run._held_days`): day 29, or a stock
-  market's first session after it (`time_stop.time_stop_due` rolls a weekend
-  to Monday); the journal's countdown and the stalled strip count to that
-  day), mark-sanity
+  first in-session priced run with held > 28 CALENDAR days counted on the
+  market's own date, never market days (`vivek_run._held_days`): day 29, or a
+  stock market's first session after it, because the stop fires only in
+  session (`time_stop.time_stop_due` models that weekend roll for display;
+  nothing decides on it); the journal's countdown and the stalled strip count
+  to that day), mark-sanity
   (`VIVEK_MARK_SANITY_PCT` 35%/60%; pauses on a suspect mark, alerts on the 2nd
   hit, accepts on the 3rd; only while the market is open). A split accepted by
   mark-sanity is restated (prices ÷ ratio, units × ratio, R unchanged, audited

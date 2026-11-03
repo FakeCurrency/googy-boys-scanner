@@ -17,7 +17,7 @@ python3 -I <this skill's folder>/scripts/scanner_status.py --repo <the repo>
 
 In the scanner repo the skill lives at `.claude/skills/vivek5-checkin/`, so from the repo root that is `python3 -I .claude/skills/vivek5-checkin/scripts/scanner_status.py --repo .` On Windows use the repo venv's python (`.venv\Scripts\python.exe`): there is often no `python3`, and Python there needs the `tzdata` package for time zones, which the venv has.
 
-It fetches origin/main and prints, in Melbourne time: each market's scans this session and whether the closing scan landed, crypto's last 24 hours, the after-close lenses, the paper bot (open count against 60, loss guards, what opened or closed, names with no price or near their stop), new multi-lens alignments, and a verdict list split into LOOKS WRONG and NOT DUE YET. Add `--since "<when>"` to measure changes from the last check-in in this chat instead of the last 24 hours. Read its output before deciding anything; its flags are where to dig, not the final word (a public holiday looks like a missing session). Its `clocks:` line is today's New York offset from the time-zone database. `references/schedule.md` gives Melbourne equivalents for one season, named in its header: if the two differ, every Melbourne time it pairs with a New York one is off by the difference.
+It fetches origin/main and prints, in Melbourne time: each market's scans this session and whether the closing scan landed, crypto's last 24 hours, the after-close lenses, the paper bot (open count against 60, loss guards, what opened or closed, names with no price or near their stop), new multi-lens alignments, and a verdict list split into LOOKS WRONG and NOT DUE YET. Add `--since "<when>"` to measure changes from the last check-in in this chat instead of the last 24 hours. Read its output before deciding anything; its flags are where to dig, not the final word (a public holiday looks like a missing session). Its `clocks:` line is today's gap between New York and Melbourne, from the time-zone database. `references/schedule.md` gives Melbourne equivalents for one season, named in its header. If the two differ, use schedule.md's "When the clocks change": times set in New York (the NASDAQ pings, the close gate, the bar-final, the post-close scan, Momentum NASDAQ) move in Melbourne by the difference, but times set in UTC (the US digest ladder, its last rung included, and Ignition NASDAQ's cron) keep their Melbourne times until Melbourne's own clocks change, and then move by that one hour alone.
 
 ## 2. Check what the repo cannot see, with the GitHub tools
 
@@ -38,7 +38,7 @@ Use a subagent for the run listing when the window is long; the raw listing is l
 - **NASDAQ belongs to New York's date.** At a Melbourne afternoon check-in, its book is 8 to 9 hours old by design.
 - **Late by design:**
   - PhaseMap lands overnight.
-  - Ignition ASX's first screen lands about 17:30 to 18:15; Ignition NASDAQ's about 16:35 to 17:30 New York (08:35 to 09:30 Melbourne; its bar is final at 16:30 New York). GitHub runs both, so either can slip hours.
+  - Ignition ASX's first screen lands about 17:30 to 18:15; Ignition NASDAQ's about 16:35 to 17:30 New York (08:35 to 09:30 Melbourne, from its 21:34 UTC cron; its bar is final at 16:30 New York). GitHub runs both, so either can slip hours.
   - On Sundays and Mondays crypto Momentum lands 5 to 6 hours late (about 17:00).
   - Hundreds of ASX names showing a day-old price intraday is thin trading, not a fault.
 - **Green does not mean fine.**

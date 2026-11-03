@@ -26,6 +26,7 @@ import ast
 import datetime as dt
 import importlib.util
 import json
+import operator
 import os
 import re
 import subprocess
@@ -206,6 +207,33 @@ def test_the_script_is_ascii_for_windows_consoles():
     SCRIPT.read_bytes().decode("ascii")
 
 
+# timedelta(days, seconds, microseconds, milliseconds, minutes, hours, weeks), each in seconds
+_TD_UNITS = (86400, 1, 1e-6, 1e-3, 60, 3600, 604800)
+_TD_UNIT_OF = dict(zip(("days", "seconds", "microseconds", "milliseconds", "minutes", "hours", "weeks"),
+                       _TD_UNITS))
+# New York's and Melbourne's UTC offsets and the gaps between them, in seconds
+ZONE_SHIFT_S = {h * 3600 for h in (4, 5, 10, 11, 14, 15, 16)}
+_ARITH = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+          ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv,
+          ast.USub: operator.neg, ast.UAdd: operator.pos}
+
+
+def _const_num(node):
+    """A constant number's value however it is spelt (-5, 11 * 3600, 16 * 60),
+    else None (a name or a call is not knowable from the source alone)."""
+    if isinstance(node, ast.Constant):
+        return node.value if type(node.value) in (int, float) else None
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _ARITH:
+        v = _const_num(node.operand)
+        return None if v is None else _ARITH[type(node.op)](v)
+    if isinstance(node, ast.BinOp) and type(node.op) in _ARITH:
+        a, b = _const_num(node.left), _const_num(node.right)
+        if a is None or b is None or (b == 0 and isinstance(node.op, (ast.Div, ast.FloorDiv))):
+            return None
+        return _ARITH[type(node.op)](a, b)
+    return None
+
+
 def test_the_script_converts_with_zoneinfo_never_a_fixed_offset():
     """NEXT100 #11: a fixed offset is right for half the year. Every zone is a
     ZoneInfo with an IANA key (UTC is dt.timezone.utc: no offset to go stale);
@@ -221,10 +249,15 @@ def test_the_script_converts_with_zoneinfo_never_a_fixed_offset():
                 assert [a.value for a in node.args if isinstance(a, ast.Constant)] in (
                     ["Australia/Melbourne"], ["Australia/Sydney"], ["America/New_York"]), node.lineno
             if name == "timedelta":
-                for kw in node.keywords:
-                    if kw.arg == "hours" and isinstance(kw.value, ast.Constant):
-                        assert kw.value.value not in (4, 5, 10, 11, 14, 15, 16), \
-                            f"line {node.lineno}: hours={kw.value.value} is a zone offset"
+                # Every argument with a constant value, positional or keyword, however
+                # it is spelt (hours=-5, (0, 11 * 3600), minutes=16 * 60): no single one,
+                # and not their sum, may be a whole zone offset or shift.
+                parts = list(zip(_TD_UNITS, node.args))
+                parts += [(_TD_UNIT_OF[kw.arg], kw.value) for kw in node.keywords if kw.arg in _TD_UNIT_OF]
+                secs = [unit * v for unit, v in ((u, _const_num(a)) for u, a in parts) if v is not None]
+                for s in (*secs, sum(secs)):
+                    assert round(abs(s), 3) not in ZONE_SHIFT_S, \
+                        f"line {node.lineno}: a timedelta of {s / 3600:g} h is a zone offset"
         elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value != usage:
             assert not re.search(r"[+-](0[45]|1[01]):?00\b", node.value), node.value
 
