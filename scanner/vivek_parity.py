@@ -1275,7 +1275,10 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
 def run_variant_books(series: list[SymbolSeries], base_taken: list[dict], *,
                       max_total: int | None = None, max_sector: int | None = None) -> dict:
     """Each one-delta variant re-runs the whole book (phase 2 only) at the
-    baseline's caps (NEXT100 #15: the scaled ones when the slot scale is on)."""
+    baseline's caps (NEXT100 #15: the scaled ones when the slot scale is on).
+    ``stats`` (NEXT100 #17, scanner/replay_noise.py): the paired month-bootstrap
+    band, P(no gain) and the placebo pass rate beside each verdict."""
+    from . import replay_noise
     results = {}
     split = _split_date(base_taken)
     for rules in variant_grid():
@@ -1294,6 +1297,8 @@ def run_variant_books(series: list[SymbolSeries], base_taken: list[dict], *,
             "portfolio": port,
             "slices": report_by_slices(taken, split),
             "verdict": variant_passes(base_taken, taken, skip_markets=tuple(rules.drop_markets)),
+            "stats": replay_noise.variant_stats(base_taken, taken, tuple(rules.drop_markets),
+                                                name=rules.name),
         }
         log.info("[parity] variant %s: %d taken (%.1fs)", rules.name, len(taken), time.time() - t0)
     return results
@@ -1417,6 +1422,8 @@ def run_parity(markets: list[str], limit: int | None, period: str,
             markets, limit, period, exclude_map, workers, variant_results, coverage,
             {"max_open_total": caps["max_total"], "max_per_sector": caps["max_sector"]})
     report = build_parity_report(eligible, coverage, params, variant_results, book=book)
+    from . import replay_noise                   # NEXT100 #16: versus.random_timing + bands
+    replay_noise.attach(report, series, book["taken"], rules)
     report["mode"] = tag
     report["baseline"]["slot_scale"] = scale
     report["live_mix"] = live_mix()
@@ -1480,8 +1487,9 @@ def summary_markdown(report: dict) -> str:
         return (sl or {}).get(key) or {}
 
     lines += ["### Overall (book)", "",
-              "| rule | delta | taken | expR | expR house | win% | R/slot-month | Δ vs base | total R | live-mix R | peak | book_full | sector_cap | verdict |",
-              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+              "| rule | delta | taken | expR | expR house | win% | R/slot-month | Δ vs base | total R | live-mix R | peak | book_full | sector_cap | verdict | 90% band dR/sm | P(no gain) | placebo pass |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    from . import replay_noise                   # NEXT100 #17: the three cells per variant
     base_rpsm = port.get("r_per_slot_month")
     for name in names:
         bk = book_of(name)
@@ -1495,9 +1503,11 @@ def summary_markdown(report: dict) -> str:
                      f"{_fmt_r(m.get('expectancy_r'))} | {_fmt_r(m.get('expectancy_r_house'))} | "
                      f"{m.get('win_rate')} | {_fmt_r(rpsm)} | {_fmt_r(d)} | "
                      f"{_fmt_r(pt.get('total_r'))} | {_fmt_r(pt.get('live_mix_r'))} | {pt.get('peak_open')} | "
-                     f"{skipped.get('book_full', 0)} | {skipped.get('sector_cap', 0)} | {ver} |")
+                     f"{skipped.get('book_full', 0)} | {skipped.get('sector_cap', 0)} | {ver} | "
+                     f"{replay_noise.stats_cells(bk.get('stats')) if name != 'baseline' else '- | - | -'} |")
     lines += ["", f"Baseline R/slot-month at the house stop fill (a resting stop): "
               f"{_fmt_r(port.get('r_per_slot_month_house'))} (worst print {_fmt_r(base_rpsm)})."]
+    lines += replay_noise.versus_markdown(report)
     mkts = sorted(cov)
     cells = sorted({c for name in names for c in slices(name, "by_cell")})
     for title, key, cols in (("By market (book)", "by_market", mkts),

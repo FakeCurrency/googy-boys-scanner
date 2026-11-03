@@ -923,6 +923,15 @@ VIVEK_PARITY_REPLICATE = True
 # weaker evidence than one on a full draw. A whole-universe run (--limit 0)
 # has no disjoint names and is not replicated at all (the label stays PASS).
 VIVEK_PARITY_REPLICATE_MIN_SHARE = 0.5
+# NEXT100 #16/#17 (3 Nov): the replay's own statistics -- a random-timing
+# baseline (same names, same exit model, random entry days), month-block
+# bootstrap bands, P(no gain) per variant and a dropout-placebo pass rate.
+# Read by scanner/replay_noise.py alone; no trade path reads them.
+VIVEK_PARITY_RANDOM_WINDOW_BARS = 182   # a draw lands within +/- this many bars of the real signal
+VIVEK_PARITY_RANDOM_DRAWS = 20          # random entries per taken trade
+VIVEK_PARITY_RANDOM_SEED = 20261103     # one seed: the same data gives the same draws
+VIVEK_PARITY_BOOTSTRAP_N = 1000         # entry-month block-bootstrap resamples
+VIVEK_PARITY_PLACEBO_N = 200            # dropout placebos scored with the real pass gate
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes
