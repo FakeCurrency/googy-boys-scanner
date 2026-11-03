@@ -689,9 +689,14 @@ def decide(rows: list[dict], equity: float, market: str | None = None,
         if one_per_company else set())
 
     def drop(out, code, reason):
-        log.info("SKIP  %-8s [%s] %s", (out.get("plan") or out).get("symbol", "?"), code, reason)
+        sym = (out.get("plan") or out).get("symbol", "?")
+        log.info("SKIP  %-8s [%s] %s", sym, code, reason)
         reasons[code] += 1
-        skipped.append({**out, "take": False, "code": code, "reason": reason, "plan": None})
+        # MECHANICAL (2 Nov): the record keeps the symbol it refused (the plan
+        # that carried it is cleared) -- report data for the deck's "not
+        # taken" chip via vivek_run.LAST_SKIPS; no decision reads it.
+        skipped.append({**out, "take": False, "code": code, "reason": reason, "plan": None,
+                        "symbol": sym})
 
     for row in rows:
         out = plan_trade(row, equity, market=market, cells=cells, **{

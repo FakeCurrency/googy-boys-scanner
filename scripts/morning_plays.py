@@ -289,13 +289,55 @@ def shown_rows(picks_by_market: dict[str, list[dict]]) -> dict[str, list[dict]]:
     return {m: list(v[:cap]) for m, v in picks_by_market.items()}
 
 
+def next_time_stop(data_dir: pathlib.Path, max_hold: int,
+                   today: dt.date | None = None) -> dt.date | None:
+    """The first day an open pre-TP1 position's time stop falls due, on the
+    engine's convention (scanner.vivek_journal.time_stop_due, the one Python
+    definition; journal.js timeStopOf is the browser's). None when nothing is
+    due (or the book is unreadable)."""
+    if not max_hold > 0:
+        return None
+    try:
+        book = json.loads((data_dir / "vivek_bot_book.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    from scanner.vivek_journal import time_stop_due
+    due = [d for d in (time_stop_due(r, max_hold) for r in book.get("open") or [])
+           if d is not None and (today is None or d >= today)]
+    return min(due) if due else None
+
+
+def bot_capacity_line(data_dir: pathlib.Path, today: dt.date | None = None) -> str | None:
+    """One line when the paper bot has no slot to open anything (the owner's
+    "20 more", 2 Nov): the digest lists the plays either way, so it says when
+    a listed play is one the bot cannot take. None while a slot is free or
+    bot_rules.json is unreadable -- the digest never guesses."""
+    try:
+        rules = json.loads((data_dir / "bot_rules.json").read_text(encoding="utf-8"))
+        open_n, cap = int(rules.get("open_total")), int(rules.get("max_open_total"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if cap <= 0 or open_n < cap:
+        return None
+    try:
+        hold = int(rules.get("max_hold_days") or 0)
+    except (TypeError, ValueError):
+        hold = 0
+    nxt = next_time_stop(data_dir, hold, today)
+    when = f"; its next time stops fall due {nxt:%a} {nxt.day} {nxt:%b}" if nxt else ""
+    return (f"_Bot book full ({open_n}/{cap}): the paper bot opens none of these "
+            f"until a position closes{when}._")
+
+
 def build_messages(picks_by_market: dict[str, list[dict]],
                    ages: dict[str, float | None],
-                   when_label: str, had_qualifying: bool = False) -> list[str]:
+                   when_label: str, had_qualifying: bool = False,
+                   bot_line: str | None = None) -> list[str]:
     """One or more Discord `content` strings (chunked to CONTENT_LIMIT).
 
     `had_qualifying` distinguishes an empty list because there were no plays at
     all from one because every current play was already sent inside the window.
+    `bot_line` (bot_capacity_line) goes under the header when there are plays.
     """
     header = f"\U0001f3af **VIVEK 5.0 plays — {when_label}**"
     markets_label = " + ".join(m.upper() for m in picks_by_market) or "the market"
@@ -310,7 +352,7 @@ def build_messages(picks_by_market: dict[str, list[dict]],
 
     cap = row_cap()
     stale_h = float(getattr(config, "MORNING_PLAYS_STALE_H", 20.0) or 0)
-    lines = [header]
+    lines = [header] + ([bot_line] if bot_line else [])
     for market, picks in picks_by_market.items():
         lines.append("")
         lines.extend(_market_block(market, picks, cap, ages.get(market), stale_h))
@@ -589,7 +631,8 @@ def main(argv=None, now=None) -> int:
     total_qual = sum(len(v) for v in picks_by_market.values())
     total_new = sum(len(v) for v in new_by_market.values())
     messages = build_messages(new_by_market, ages, when_label,
-                              had_qualifying=bool(total_qual))
+                              had_qualifying=bool(total_qual),
+                              bot_line=bot_capacity_line(pathlib.Path(args.data_dir), today))
     per = ", ".join(f"{m} {len(v)}" for m, v in new_by_market.items())
     print(f"morning_plays: {slot_name or '+'.join(markets)} slot: {total_new} new of "
           f"{total_qual} qualifying long plays ({per}); {len(messages)} message(s)")

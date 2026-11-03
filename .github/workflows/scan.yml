@@ -131,7 +131,7 @@ jobs:
       # triggered on. Its own timeout: git has none, and a stalled fetch that
       # ran into the job's would skip the scan instead of reaching the
       # fail-open below.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         continue-on-error: true
         timeout-minutes: 2
         with:
@@ -223,11 +223,11 @@ jobs:
       # start. Nothing in this job reads github.sha; scan.py's display-only
       # `code_sha` stamp reads git HEAD first, GITHUB_SHA only as a fallback
       # (tests/test_code_sha.py). Pinned in tests/test_workflow_mutex.py.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -239,7 +239,7 @@ jobs:
       # are reused from here so coverage stays high. Keyed by run number so each
       # run restores the most recent cache and writes an updated one.
       - name: Restore frame cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/frames
           key: vivek-frames-${{ github.run_id }}
@@ -259,7 +259,7 @@ jobs:
       # the same `path`, whatever its key prefix. Both writers are in the
       # `scan` mutex, so each chain stays one linear history.
       - name: Restore crypto frame cache (crypto_bot.yml's chain)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/frames/crypto*
           key: vivek-frames-crypto-${{ github.run_id }}

@@ -1245,6 +1245,32 @@ replay veto applies as it does for hc4-1. PR-16 is read once at 40 closes.
 same lines, and `tests/test_decision_pack.py` /
 `tests/test_checkpoint_mirror.py` pin all three together.
 
+## Next-cycle candidates (written Tue 3 Nov; nothing here is live)
+
+From the owner's "20 more" list (2 Nov), items 9-12. hc4-2 runs untouched to
+its own checkpoints; anything approved here lands together at the hc4-2 ->
+hc4-3 boundary, and which trades get taken stays your call. Each one has its
+test written down before the evidence for it arrives: the decision replay now
+runs it as a variant (or prints it beside the baseline), and its log carries
+every table, so a session can read the figures after the artifact expires.
+
+| ID | Change | Evidence on 3 Nov | What would have to be true before it goes to you |
+|---|---|---|---|
+| H1 (#9) | Record a stop the way a resting stop order fills: at the stop, or at the open when the bar gapped through it (today the book fills at the next hourly scan's price). | Live stops average -1.17R (28 stops), 0.16R past the stop each. On the 6 ASX stops with an archived bar, 0.90R of that was the overnight gap and 0.71R the scan's lag. The 14 Oct replay made +0.059R a trade at the worst print, +0.105R at a resting fill. | A recording rule, not a selection rule: no trade changes, the R booked on a stop does. The replay now prints R per slot-month at both fills; the question for you is only whether the paper book should model a resting stop. |
+| H2 (#10) | Drop the 1W break cell. | The one cell that loses across all markets in the 10-year long-only replay: -0.22R a trade over 27 (-0.25R over 17 on stocks). Live: 1 rules close. | `V9_no_1w_break` passes the replay's gate: better R per slot-month overall, on the ASX and on NASDAQ, and in both halves. |
+| H3 (#11) | Keep the 1D break cell on crypto only. | 10-year replay: stocks -0.05R a trade over 61, crypto +0.51R over 24. Live: 2 rules closes. | `V10_1d_break_crypto_only` passes the same gate (it changes only the stock markets, which the gate reads). |
+| H4 (#12) | Settle in advance what a PR-16 trip means. | The 14 Oct replay's best variant was this cut (0.0328 -> 0.0532 R per slot-month) and it failed the gate. hc4-2 stamps every row at day 14 (report only). | Already settled by PR-16's own line: if the cut beats the rules by +0.05R a trade in the ASX and NASDAQ separately at 40 hc4-2 rules closes, it is proposed for the next cycle; if not, the idea is retired. Nothing else reopens it. |
+
+Also measured, not proposed: a cut at -0.5R adverse (#5). Of hc4-1's 48 rules
+closes, 26 reached -0.5R and 2 of those went on to win; booking all 26 at
+-0.5R less costs would have made -8.87R instead of -13.41R (all cycles:
+-15.07R instead of -29.82R), before the slippage a cut fills with (stops
+average 0.16R). The replay runs it as `V11_cut_mae0.5`; the decision pack
+prints the live what-if every day.
+
+The 3 Nov decision replay (run on the hc4-2 code with these variants) and
+the live-vs-replay trade-by-trade study print their tables in the run log.
+
 ---
 
 *Regenerate the live-book figures with `python scripts/decision_pack.py`. It

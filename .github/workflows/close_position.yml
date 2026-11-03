@@ -84,11 +84,11 @@ jobs:
       # branch `ref` makes checkout fetch the branch TIP at job start; the
       # redispatch job keeps re-dispatching on github.ref_name, so a branch
       # dispatch stays on its branch. Pinned in tests/test_workflow_mutex.py.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip

@@ -148,8 +148,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -174,8 +174,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       # functions/api/*.js are ES modules, and `node --check file.js` on a
@@ -376,8 +376,8 @@ jobs:
       PIXELMATCH_VERSION: "8.0.0"
       PNGJS_VERSION: "7.0.0"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       # ONE consolidated install (2026-07-25): npm's --no-save installs can
@@ -478,7 +478,7 @@ jobs:
       # job succeeds, so a red run never stores what it drew).
       - name: Restore screenshot baselines
         if: (success() || failure()) && steps.toolchain.outcome == 'success'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: test/e2e/__baseline__
           # v11 -> v12 (2026-07-30): INTENTIONAL visual change — the deck's bot
@@ -623,7 +623,13 @@ jobs:
           # plain "Bot cell" tag. Measured against baselines cut from the
           # commit before: index-desktop 3.40% (the filter pill, plain), and
           # index-390, journal-desktop, journal-390 0.00% each.
-          key: screenshot-baselines-v27-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
+          #
+          # v27 -> v28 (2026-11-03): INTENTIONAL -- the owner's "20 more": the
+          # journal's slots line ("6 of 30 slots free.") under the Open
+          # positions title shifts the page down one line. Measured against
+          # baselines cut from the commit before: journal-desktop 3.58%,
+          # journal-390 3.80%, index-desktop and index-390 0.00% each.
+          key: screenshot-baselines-v28-${{ runner.os }}-pw${{ env.PLAYWRIGHT_VERSION }}-${{ hashFiles('test/e2e/fixtures/data/**') }}
       - name: Screenshot-diff (desktop + 390px, <2% drift)
         if: (success() || failure()) && steps.toolchain.outcome == 'success'
         run: |
@@ -631,7 +637,7 @@ jobs:
           node test/e2e/screenshot-diff.e2e.js
       - name: Upload screenshot diffs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: screenshot-diffs
           path: test/e2e/__diff__/
@@ -639,7 +645,7 @@ jobs:
           if-no-files-found: ignore
       - name: Upload mobile screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mobile-screenshots
           path: test/e2e/__shots__/

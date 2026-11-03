@@ -27,6 +27,15 @@ life and hid every signal behind it (IS 150 such phantoms over 4,556
 symbol-days, OOS 538 over 17,852) and re-entered within the stop cooldown only
 for the book to refuse it.
 
+hc4-2 (2 Nov) is mirrored too: a BREAK's R:R is re-measured from the fill
+and refused under VIVEK_BOT_MIN_RR (``fill_rr``), one position per company
+(``dup_company``), and the sector cap counts GICS sectors (through the bot's
+own ``_sector_key``). A day's candidates are taken in the live scan's order
+(grade -> score -> R:R, scan.py) -- the replay used to take them weekly-first
+and then alphabetically, which no live run ever did. The baseline also
+shadow-runs every signal it refused for a full book once per episode, so
+``ranking`` can say whether the bot's order picks the better trades.
+
 Variants re-run phase 2 with ONE delta each -- entry filters and exit rules
 alike, so a longer hold also blocks the entries it would really have blocked.
 A variant PASSES only if R/slot-month improves overall, on ASX and NASDAQ and
@@ -51,13 +60,14 @@ import numpy as np
 import pandas as pd
 
 from . import config, vivek
-from .broker.vivek_bot import _is_fund_or_reit, _sector_key, size_position
+from .broker.vivek_bot import _company_key, _is_fund_or_reit, _sector_key, size_position
 from .vivek_backtest import (
     EQUITY,
     LEVEL_TFS,
     _build_row,
     _candidate_mask,
     _force_close,
+    _house_stop_fill,
     _mark_bar,
     _metrics,
     _sample,
@@ -95,6 +105,8 @@ class ParityRules:
     max_hold_days: int | None = None          # None → read live config; 0 → off
     early_cut_day: int | None = None          # calendar days; None = off
     early_cut_mfe: float | None = None        # cut if peak mfe_r still below this
+    # V11: close pre-TP1 the first bar the adverse move reaches this many R
+    mae_cut_r: float | None = None
     # None = the LIVE level gate (VIVEK_BOT_LEVEL_TF_ALLOW); () = gate off
     # (every level, as the config reads an empty allowlist); e.g. ("weekly",).
     level_tfs: tuple[str, ...] | None = None
@@ -182,6 +194,15 @@ def variant_grid() -> list[ParityRules]:
     out.append(ParityRules(name="V6_no_3d_reclaim", cells=no_3dr))
     out.append(ParityRules(name="V7_no_asx", drop_markets=("asx",)))
     out.append(ParityRules(name="V8_asx_3d_reclaim_off", market_cells=(("asx", no_3dr),)))
+    # The owner's "20 more" (2 Nov), next-cycle candidates #10, #11 and #5:
+    # the one cell that loses across markets in the 10-year backtest, the 1D
+    # break on stocks (negative there, positive on crypto), and an adverse cut.
+    out.append(ParityRules(name="V9_no_1w_break", cells=_without_cell(_bot_cells(), "1W", "break")))
+    no_1db = _without_cell(_bot_cells(), "1D", "break")
+    out.append(ParityRules(name="V10_1d_break_crypto_only",
+                           market_cells=(("asx", no_1db), ("nasdaq", no_1db))))
+    for cut in getattr(config, "VIVEK_PARITY_MAE_CUTS", (0.5,)):
+        out.append(ParityRules(name=f"V11_cut_mae{float(cut):g}", mae_cut_r=float(cut)))
     return out
 
 
@@ -340,8 +361,32 @@ def _held_days(tr: dict, day: str) -> int:
         return 0
 
 
+def _mae_cut(tr: dict, high: float, low: float, day: str, costs, rules: ParityRules,
+             open_) -> bool:
+    """V11: a pre-TP1 trade closes the first bar its adverse move reaches
+    ``rules.mae_cut_r`` R. Adverse side first, as every stop here; the
+    headline fills at the bar's worst print, the house twin at the cut level
+    (or the open when the bar gapped through it) -- the stop conventions."""
+    if not rules.mae_cut_r or tr["status"] != "open" or tr.get("tp1_hit"):
+        return False
+    risk = float(tr.get("risk") or 0)
+    if not (risk > 0):
+        return False
+    is_long = tr["direction"] == "long"
+    cut = float(rules.mae_cut_r)
+    level = tr["entry"] - cut * risk if is_long else tr["entry"] + cut * risk
+    if not ((low <= level) if is_long else (high >= level)):
+        return False
+    gross_at = tr.get("gross_r", tr.get("realized_r", 0.0)) or 0.0
+    _close_special(tr, low if is_long else high, day, "mae_cut", costs)
+    _house_stop_fill(tr, level, gross_at, open_, costs)
+    return True
+
+
 def _parity_bar(tr: dict, high: float, low: float, close: float, day: str,
                 costs, is_last: bool, rules: ParityRules, open_) -> None:
+    if _mae_cut(tr, high, low, day, costs, rules, open_):
+        return
     _mark_bar(tr, open_, high, low, day, costs)
 
     held = _held_days(tr, day)
@@ -448,6 +493,7 @@ def symbol_signals(df: pd.DataFrame, market: str, symbol: str, name: str,
             continue
         s.signals.append((j, {"grade": grade, "dir": row["dir"], "level_tf": row.get("level_tf"),
                               "entry_types": list(row.get("entry_types") or []),
+                              "score": row.get("score"), "rr": row.get("rr"),
                               "plans": armed}))
     return s
 
@@ -505,10 +551,28 @@ def collect_series(market: str, frames: dict, meta: dict, workers: int = 1) -> l
 
 # ── phase 2: one chronological book across every market ──────────────────────
 
+_GRADE_RANK = {"A+": 0, "A": 1, "B+": 2, "WATCH": 3}     # scan.py _VIVEK_RANK
+
+
+def _rank_key(rec: dict, tf: str) -> tuple:
+    """A day's candidates in the live scan's order: grade, then score, then
+    R:R (scan.py sorts its rows so and vivek_bot.decide walks them
+    best-first). A record without the key (an older fixture) falls back to
+    weekly-first, as the replay used to order every tie."""
+    def num(v) -> float:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return 0.0
+        return f if math.isfinite(f) else 0.0
+    return (_GRADE_RANK.get(rec.get("grade"), 9), -num(rec.get("score")), -num(rec.get("rr")),
+            0 if tf == "1W" else 1)
+
+
 def _events(series: list[SymbolSeries], rules: ParityRules) -> list[tuple]:
     """Every fill this rule set would ATTEMPT, sorted the way the book sees
-    them: fill date, weekly plans first on a tie (the bot's walk order),
-    then symbol. The detection-time filters (grade, side, level gate, cell
+    them: fill date, then the live scan's order (``_rank_key``), then
+    symbol. The detection-time filters (grade, side, level gate, cell
     walk, R:R, tradeability on the plan's own levels) are applied here --
     they are the replay's old `continue`s, and none of them reads the book."""
     min_rr = float(getattr(config, "VIVEK_BOT_MIN_RR", 1.5) or 1.5)
@@ -531,7 +595,7 @@ def _events(series: list[SymbolSeries], rules: ParityRules) -> list[tuple]:
             if rules.apply_tradeability and _tradeability_ok(
                     float(plan.get("entry") or s.c[j]), float(plan["stop"]), s.market):
                 continue
-            out.append((int(s.days[j + 1]), 0 if tf == "1W" else 1, s.symbol, s.market,
+            out.append((int(s.days[j + 1]), _rank_key(rec, tf), s.symbol, s.market,
                         si, j, tf))
     out.sort()
     return out
@@ -554,6 +618,11 @@ def _open_at_fill(s: SymbolSeries, j: int, rec: dict, tf: str,
         code = _tradeability_ok(tr["entry"], tr["stop"], s.market)
         if code:
             return None, code
+    # hc4-2 #152, as vivek_run._ticket_to_position: a break's R:R re-measured
+    # from the fill; under the floor the fill is refused.
+    if plan.get("entry_trigger") in tuple(getattr(config, "VIVEK_BOT_FILL_RECHECK_TRIGGERS", ()) or ()):
+        if float(tr.get("rr") or 0) < float(getattr(config, "VIVEK_BOT_MIN_RR", 1.5) or 1.5):
+            return None, "fill_rr"
     adv = None if not np.isfinite(s.adv[j]) else float(s.adv[j])   # known at the prior close
     if rules.apply_adv_gate:
         sz = size_position(EQUITY, tr["entry"], tr["stop"])
@@ -587,7 +656,7 @@ def _run_trade(tr: dict, s: SymbolSeries, k0: int, rules: ParityRules) -> dict:
 
 def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
              max_total: int | None = None, max_sector: int | None = None,
-             cooldown: int | None = None) -> dict:
+             cooldown: int | None = None, shadow: bool = False) -> dict:
     """Phase 2: walk every attempted fill in date order through ONE book.
 
     ``max_total`` (default the live global cap) and ``max_sector`` (default
@@ -597,7 +666,12 @@ def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
     fills dated AFTER its exit (the old sims' rule). A held symbol's further
     signals are not looked at, as live. A stop-out blocks the symbol for
     ``cooldown`` days counted to the SIGNAL bar (the live
-    ``_cooldown_symbols`` window). Returns the taken trades and the counts."""
+    ``_cooldown_symbols`` window). A second listed line of a company already
+    held is refused (``dup_company``, hc4-2 #12) when the live switch is on.
+    With ``shadow`` a signal refused for a FULL book is still played out on
+    its own, once per symbol until that shadow trade ends, and returned as
+    ``shadow_book_full`` -- it never touches the book. Returns the taken
+    trades and the counts."""
     rules = rules or baseline_rules()
     if max_total is None:
         max_total = int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or config.VIVEK_BOT_MAX_POSITIONS)
@@ -608,6 +682,11 @@ def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
 
     heap: list[tuple] = []                    # (exit day, seq, key, market, sector key, reason)
     held: set[str] = set()
+    one_co = bool(getattr(config, "VIVEK_BOT_ONE_PER_COMPANY", False))
+    company_of: dict[str, str] = {}
+    held_companies: Counter = Counter()
+    shadows: list[dict] = []
+    shadow_until: dict[str, int] = {}
     sector_count: Counter = Counter()
     cool_until: dict[str, int] = {}
     taken: list[dict] = []
@@ -618,6 +697,9 @@ def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
         while heap and heap[0][0] < fill_day:
             ex_day, _, key, mkk, sk, reason = heapq.heappop(heap)
             held.discard(key)
+            co = company_of.pop(key, "")
+            if co:
+                held_companies[co] -= 1
             if sk:
                 sector_count[(mkk, sk)] -= 1
             if cool and reason == "stop":
@@ -626,6 +708,10 @@ def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
         if key in held:
             continue                          # holding it: the bot never looks again
         s = series[si]
+        co = _company_key(s.name, sym, mk) if one_co else ""
+        if co and held_companies[co] > 0:
+            skips["dup_company"] += 1         # hc4-2 #12, before the cooldown as live
+            continue
         if cool_until.get(key, -1) >= int(s.days[j]):
             skips["cooldown"] += 1
             continue
@@ -635,6 +721,11 @@ def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
             continue
         if len(held) >= max_total:
             skips["book_full"] += 1
+            if shadow and shadow_until.get(key, -1) < fill_day:
+                sh = _run_trade(tr, s, j + 1, rules)
+                shadows.append(sh)
+                shadow_until[key] = (_iso_to_int(sh["exit_date"]) if sh.get("exit_date")
+                                     else fill_day)
             continue
         sk = _sector_key(sym, s.sector, mk)
         if max_sector and sk and sector_count[(mk, sk)] >= max_sector:
@@ -643,12 +734,18 @@ def run_book(series: list[SymbolSeries], rules: ParityRules | None = None, *,
         _run_trade(tr, s, j + 1, rules)
         taken.append(tr)
         held.add(key)
+        if co:
+            company_of[key] = co
+            held_companies[co] += 1
         if sk:
             sector_count[(mk, sk)] += 1
         heapq.heappush(heap, (_iso_to_int(tr["exit_date"]), seq, key, mk, sk, tr.get("exit_reason")))
         peak = max(peak, len(held))
-    return {"taken": taken, "skipped": dict(skips), "gated": dict(gated), "peak_open": peak,
-            "max_open_total": max_total, "max_per_sector": max_sector, "cooldown_days": cool}
+    out = {"taken": taken, "skipped": dict(skips), "gated": dict(gated), "peak_open": peak,
+           "max_open_total": max_total, "max_per_sector": max_sector, "cooldown_days": cool}
+    if shadow:
+        out["shadow_book_full"] = shadows
+    return out
 
 
 def replay_symbol_parity(df: pd.DataFrame, market: str, symbol: str, name: str,
@@ -761,6 +858,7 @@ def _portfolio_block(eligible: list[dict], taken: list[dict], skipped: dict, gat
                      peak_open: int, max_total, max_sector: int, cooldown: int,
                      rules: ParityRules, note: str | None = None) -> dict:
     slot_months, r_psm = _slot_month_stats(taken)
+    _, r_psm_house = _slot_month_stats(taken, "realized_r_house")
     out = {
         "params": {
             "max_open_total": max_total,
@@ -778,7 +876,8 @@ def _portfolio_block(eligible: list[dict], taken: list[dict], skipped: dict, gat
                           "global_slot_cap", "sector_cap", "cooldown",
                           "min_price", "stop_width", "adv_gates",
                           "grade_gate", "long_only", "entry_cells", "level_gate",
-                          "cell_walk_one_plan", "chronological_book"],
+                          "cell_walk_one_plan", "chronological_book",
+                          "fill_rr_recheck", "one_per_company", "live_rank_order"],
         },
         "eligible": _metrics(eligible),
         "portfolio": _metrics(taken),
@@ -788,6 +887,7 @@ def _portfolio_block(eligible: list[dict], taken: list[dict], skipped: dict, gat
         "peak_open": peak_open,
         "slot_months": slot_months,
         "r_per_slot_month": r_psm,
+        "r_per_slot_month_house": r_psm_house,
     }
     if note:
         out["note"] = note
@@ -803,8 +903,9 @@ def portfolio_sim_parity(trades: list[dict], max_total: int | None = None) -> di
                             cooldown_days(), baseline_rules(), note)
 
 
-def _slot_month_stats(trades: list[dict]) -> tuple[float, float | None]:
-    """Integrate concurrent open slots over calendar days → slot-months; R / that."""
+def _slot_month_stats(trades: list[dict], r_key: str = "realized_r") -> tuple[float, float | None]:
+    """Integrate concurrent open slots over calendar days → slot-months; R / that.
+    ``r_key="realized_r_house"`` reads the same book at the house stop fill."""
     if not trades:
         return 0.0, None
     events: list[tuple[dt.date, int]] = []  # (date, delta)
@@ -819,7 +920,7 @@ def _slot_month_stats(trades: list[dict]) -> tuple[float, float | None]:
             continue
         events.append((e, +1))
         events.append((x, -1))  # free on exit day (not occupying next)
-        total_r += float(t.get("realized_r") or 0.0)
+        total_r += float(t.get(r_key) if t.get(r_key) is not None else (t.get("realized_r") or 0.0))
     if not events:
         return 0.0, None
     events.sort(key=lambda z: (z[0], z[1]))  # exits (-1) before entries (+1) on same day
@@ -908,6 +1009,9 @@ def report_by_slices(trades: list[dict], split: str | None = None) -> dict:
         "by_market_cell": {mk: {c: _cohort_stats([t for t in trades if t.get("market") == mk
                                                   and _cell_of(t) == c]) for c in cells}
                            for mk in by_mkt},
+        # The replay veto reads a cell on STOCKS (docs/DECISIONS_2026-10-14.md).
+        "by_stocks_cell": {c: _cohort_stats([t for t in trades if t.get("market") in ("asx", "nasdaq")
+                                             and _cell_of(t) == c]) for c in cells},
         "by_cell_quarter": {c: {q: {k: m[k] for k in ("n", "expectancy_r", "total_r",
                                                        "expectancy_r_house")}
                                     for q, m in ((q, _metrics(v)) for q, v in sorted(qs.items()))}
@@ -962,6 +1066,29 @@ def variant_passes(baseline_taken: list[dict], variant_taken: list[dict],
 
 
 # ── driver ────────────────────────────────────────────────────────────────────
+
+def ranking_block(taken: list[dict], shadows: list[dict]) -> dict:
+    """Does the bot's order pick the better trades? (the owner's "20 more" #8)
+
+    ``shadows`` are signals the baseline refused for a FULL book, each played
+    out on its own (``run_book(shadow=True)``). On a CONTESTED day -- one that
+    both filled a slot and turned a signal away for want of one -- the taken
+    and the refused compete for the same slots, ranked by the live order
+    (grade -> score -> R:R): if the refused do as well, the order adds nothing."""
+    days_taken = {t.get("entry_date") for t in taken}
+    days_skipped = {t.get("entry_date") for t in shadows}
+    contested = (days_taken & days_skipped) - {None}
+    return {
+        "taken": _metrics(taken),
+        "skipped_book_full": _metrics(shadows),
+        "contested_days": len(contested),
+        "contested_taken": _metrics([t for t in taken if t.get("entry_date") in contested]),
+        "contested_skipped": _metrics([t for t in shadows if t.get("entry_date") in contested]),
+        "note": ("a refused signal is shadowed once per symbol until its shadow trade ends; "
+                 "book_full counts are a lower bound under --limit, so read the contested "
+                 "split, not the totals"),
+    }
+
 
 def load_market_series(mk: str, limit: int | None, period: str,
                        exclude_symbols: set[str] | None = None,
@@ -1035,13 +1162,19 @@ def _caveats() -> list[str]:
         "Stop fill: the headline (realized_r, expectancy_r) books a stop at the "
         "bar's worst print; *_house re-prices the same exits at the stop, or at "
         "the open when the bar gapped through it (the owner's house rule).",
-        "Parity mode mirrors the live hc4-1 lifecycle: grades A/A+ (grade_raw), "
-        "long-only, the four-cell walk (one plan per symbol), the weekly/3d LEVEL "
-        "gate (fail-closed), the 28d pre-TP1 time stop, ADV + tradeability gates "
-        "at the fill, the 7-day stop cooldown, the global slot cap and the "
-        "per-market sector cap, run as ONE chronological book across markets "
-        "(a refused signal leaves its symbol free for the next one). The "
-        "earnings buffer and the daily/weekly loss guards are NOT replayed.",
+        "Parity mode mirrors the live lifecycle (hc4-2): grades A/A+ (grade_raw, "
+        "graded on the bot's cell plan), long-only, the four-cell walk (one plan "
+        "per symbol), the weekly/3d LEVEL gate (fail-closed), the 28d pre-TP1 "
+        "time stop, ADV + tradeability gates at the fill, a break's R:R "
+        "re-checked at the fill, one position per company, the 7-day stop "
+        "cooldown, the global slot cap and the per-market GICS sector cap, run "
+        "as ONE chronological book across markets (a refused signal leaves its "
+        "symbol free for the next one), each day's candidates in the live "
+        "scan's order (grade, score, R:R). The earnings buffer and the "
+        "daily/weekly loss guards are NOT replayed.",
+        "ranking: a signal refused for a full book is shadow-played once per "
+        "symbol; the contested-day split compares it with the trades the same "
+        "days filled. It never enters the book.",
         "Slot contention scales with the universe: a run that samples part of "
         "a market sees only coverage[market].sampled_pct of its signals, so "
         "book_full counts are a LOWER bound unless --limit 0. Read R/trade and "
@@ -1097,6 +1230,8 @@ def build_parity_report(baseline_trades: list[dict], coverage: dict,
             "all_signals": report_by_slices(baseline_trades, split),
             "portfolio": port,
             "portfolio_slices": report_by_slices(taken, split),
+            "ranking": (ranking_block(taken, book.get("shadow_book_full") or [])
+                        if book is not None and "shadow_book_full" in book else None),
         },
         "variants": variant_results or {},
         "trades": published,
@@ -1117,7 +1252,8 @@ def run_variant_books(series: list[SymbolSeries], base_taken: list[dict]) -> dic
                                 book["max_open_total"], book["max_per_sector"],
                                 book["cooldown_days"], rules)
         port.pop("eligible", None)
-        exit_rule = rules.max_hold_days is not None or rules.early_cut_day is not None
+        exit_rule = (rules.max_hold_days is not None or rules.early_cut_day is not None
+                     or rules.mae_cut_r is not None)
         results[rules.name] = {
             "delta": _delta_desc(rules),
             "kind": "exit_rule" if exit_rule else "entry_rule",
@@ -1145,9 +1281,13 @@ def _delta_desc(rules: ParityRules) -> str:
         return "cells " + ", ".join(f"{tf} {'/'.join(t)}" for tf, t in (rules.cells or ()))
     if rules.name.startswith("V7_"):
         return f"markets except {', '.join(rules.drop_markets)}"
-    if rules.name.startswith("V8_"):
+    if rules.name.startswith(("V8_", "V10_")):
         return "; ".join(f"{mk} cells " + ", ".join(f"{tf} {'/'.join(t)}" for tf, t in cells)
                          for mk, cells in (rules.market_cells or ()))
+    if rules.name.startswith("V9_"):
+        return "cells " + ", ".join(f"{tf} {'/'.join(t)}" for tf, t in (rules.cells or ()))
+    if rules.name.startswith("V11_"):
+        return f"cut pre-TP1 at -{rules.mae_cut_r:g}R adverse"
     return rules.name
 
 
@@ -1200,7 +1340,7 @@ def run_parity(markets: list[str], limit: int | None, period: str,
         coverage[mk] = cov
     rules = baseline_rules()
     t1 = time.time()
-    book = run_book(series, rules)
+    book = run_book(series, rules, shadow=True)
     eligible = run_book(series, rules, max_total=math.inf, max_sector=0)["taken"]
     params = {
         "mode": tag,
@@ -1250,7 +1390,7 @@ def summary_markdown(report: dict) -> str:
     p = report.get("params") or {}
     cov = report.get("coverage") or {}
     variants = report.get("variants") or {}
-    lines = ["## VIVEK decision replay (parity, hc4-1)", ""]
+    lines = [f"## VIVEK decision replay (parity, {getattr(config, 'VIVEK_BOT_CYCLE_TAG', '')})", ""]
     lines.append(f"- markets {', '.join(p.get('markets') or [])}; limit {p.get('limit') or 'all'} "
                  f"per market; period {p.get('period')}; workers {p.get('workers')}")
     for mk, c in cov.items():
@@ -1289,6 +1429,8 @@ def summary_markdown(report: dict) -> str:
                      f"{_fmt_r(m.get('expectancy_r'))} | {_fmt_r(m.get('expectancy_r_house'))} | "
                      f"{m.get('win_rate')} | {_fmt_r(rpsm)} | {_fmt_r(d)} | {pt.get('peak_open')} | "
                      f"{(pt.get('skipped') or {}).get('book_full', 0)} | {ver} |")
+    lines += ["", f"Baseline R/slot-month at the house stop fill (a resting stop): "
+              f"{_fmt_r(port.get('r_per_slot_month_house'))} (worst print {_fmt_r(base_rpsm)})."]
     mkts = sorted(cov)
     cells = sorted({c for name in names for c in slices(name, "by_cell")})
     for title, key, cols in (("By market (book)", "by_market", mkts),
@@ -1304,6 +1446,9 @@ def summary_markdown(report: dict) -> str:
               "|---|" + "---|" * len(cells)]
     for mk in mkts:
         lines.append(f"| {mk} | " + " | ".join(_cell_txt((mc.get(mk) or {}).get(c)) for c in cells) + " |")
+    sc = slices("baseline", "by_stocks_cell")
+    if sc:
+        lines.append("| stocks (asx+nasdaq) | " + " | ".join(_cell_txt(sc.get(c)) for c in cells) + " |")
     allsig = (b.get("all_signals") or {}).get("by_cell") or {}
     lines += ["", "### Every signal the rules would take (no slot cap), by cell", "",
               "| cell | n · expR (house) | R/slot-month |", "|---|---|---|"]
@@ -1314,6 +1459,18 @@ def summary_markdown(report: dict) -> str:
         lines += ["", "### Baseline book by exit reason", "", "| exit | n · expR (house) |", "|---|---|"]
         for k in sorted(er):
             lines.append(f"| {k} | {_cell_txt(er[k])} |")
+    rk = b.get("ranking") or {}
+    if rk:
+        lines += ["", "### Does the bot's order pick the better trades?", "",
+                  f"{rk.get('contested_days')} contested days (a slot filled AND a signal "
+                  "refused for a full book on the same day).", "",
+                  "| group | n · expR (house) | win% |", "|---|---|---|"]
+        for label, key in (("taken, all days", "taken"), ("refused for a full book, all days",
+                                                         "skipped_book_full"),
+                           ("taken, contested days", "contested_taken"),
+                           ("refused, contested days", "contested_skipped")):
+            m = rk.get(key) or {}
+            lines.append(f"| {label} | {_cell_txt(m)} | {m.get('win_rate', '—')} |")
     bv = report.get("best_variant") or {}
     lines += ["", f"Best passing variant: {bv.get('name') or 'none'}"
               + (f" ({bv.get('delta_desc')}, Δ R/slot-month {_fmt_r(bv.get('delta'))})"
@@ -1334,6 +1491,7 @@ def print_parity(report: dict) -> None:
           f"house={pm.get('expectancy_r_house')}  "
           f"totR={pm.get('total_r')}  win={pm.get('win_rate')}%  "
           f"R/slot-month={port.get('r_per_slot_month')}  "
+          f"house R/slot-month={port.get('r_per_slot_month_house')}  "
           f"slot-months={port.get('slot_months')}  "
           f"taken={port.get('taken')} peak_open={port.get('peak_open')}")
     print("skips:", port.get("skipped"), " gated:", port.get("gated"))
@@ -1354,3 +1512,7 @@ def print_parity(report: dict) -> None:
               f"R/sm {d.get('baseline')} -> {d.get('variant')}  delta={d.get('delta')}")
     bv = report.get("best_variant") or {}
     print("\nBEST:", bv)
+    # Every table again, in the log: a cloud session reads job logs for 90
+    # days but cannot download the artifact, and the step summary page is not
+    # in the API at all (the 14 Oct by-cell figure was stranded exactly so).
+    print("\n" + summary_markdown(report))

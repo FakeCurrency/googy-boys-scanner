@@ -44,12 +44,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The repo's interpreter, not the runner image's (REFINE200 #85): the
       # system python3 moves whenever ubuntu-latest does, every other job runs
       # 3.12. Before the gate because the verify step at the end always runs.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -108,7 +108,7 @@ jobs:
       #   python scripts/backup_journal.py restore <backup-dir>
       - name: Upload snapshots as run artifact (off-tree copy)
         if: steps.gate.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: book-backups-${{ github.run_id }}
           path: backups/

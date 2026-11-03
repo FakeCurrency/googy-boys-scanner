@@ -305,6 +305,55 @@ test("it renders against the REAL published reports without throwing", async () 
   assert.ok(!/undefined|NaN/.test(h), "a real report leaked undefined/NaN into the page");
 });
 
+suite("by market, three readings (the owner's \"20 more\" #7, 2 Nov)");
+
+/* The page with nav.js's shared loader: the card reads bot_rules.json
+ * `evidence_by_market` through window.VivekBook.rules(), never a fetch. */
+function renderWithRules(rules) {
+  let html = null, fetches = 0;
+  const el = { set innerHTML(v) { html = v; }, get innerHTML() { return html; } };
+  const doc = { querySelector: (s) => (s === "#sys-backtest" ? el : null) };
+  const fetchStub = (f) => { fetches++; return Promise.resolve({ ok: true, json: () => Promise.resolve(
+    f.includes("longonly") ? REPORT() : f.includes("edge_summary") ? EDGE : null) }); };
+  const win = { VivekBook: { rules: () => Promise.resolve(rules) } };
+  new Function("document", "fetch", "window", "Promise", "JSON", "Math", "String", "Number",
+               "Object", "isFinite", "console", SRC)(doc, fetchStub, win, Promise, JSON, Math, String, Number,
+               Object, isFinite, console);
+  return new Promise((res) => setTimeout(() => res({ html, fetches }), 5));
+}
+const EV = {
+  asx: { backtest: { n: 128, avg_r: -0.031, period: "10y", generated_at: "2026-11-01T14:52:45Z" },
+         live: { n: 40, avg_r: -0.347 } },
+  nasdaq: { backtest: { n: 303, avg_r: 0.219 }, live: { n: 44, avg_r: -0.36 } },
+  crypto: { backtest: { n: 115, avg_r: 0.627 }, live: { n: 0, avg_r: null } },
+};
+// The index column comes from the evidence pipeline's own file (the engine is
+// fenced from reading it), shaped as edge_summary.json publishes it.
+const EDGE = { by_market: {
+  asx: { baseline_aplus: { "20": { excess: { long: { n: 35, mean: -0.0816 } } } } },
+  nasdaq: { baseline_aplus: { "20": { excess: { long: { n: 107, mean: -0.021 } } } } },
+} };
+
+test("the card leads section 8 with every market's three readings, read off the rules file", async () => {
+  const { html, fetches } = await renderWithRules({ evidence_by_market: EV });
+  assert.ok(html.indexOf("By market, three readings") < html.indexOf("Long-only replay"));
+  assert.match(html, /<td>ASX<\/td><td class="bt-neg">-0\.031R <span class="bt-note">n 128<\/span><\/td>/);
+  assert.match(html, /<td class="bt-neg">-8\.2% <span class="bt-note">n 35<\/span><\/td>/);
+  assert.match(html, /<td>NASDAQ<\/td><td class="bt-pos">\+0\.219R/);
+  assert.match(html, /<td>CRYPTO<\/td><td class="bt-pos">\+0\.627R <span class="bt-note">n 115<\/span><\/td><td class="bt-none">—<\/td><td class="bt-none">—<\/td>/,
+    "no live closes and no index reading are dashes, never zeros");
+  assert.match(html, /replay run 2026-11-01/);
+  assert.equal(fetches, 3, "the two reports + the index file; the rules come from the shared loader");
+});
+
+test("no rules (or no block in them) means no card, and the reports still render", async () => {
+  for (const rules of [null, {}]) {
+    const { html } = await renderWithRules(rules);
+    assert.ok(!/By market, three readings/.test(html));
+    assert.ok(/Long-only replay/.test(html));
+  }
+});
+
 run().then(() => {
   console.log(`\nsystem_backtest.test.js: ${passed}/${passed + failed} passed`);
   if (failed) process.exit(1);

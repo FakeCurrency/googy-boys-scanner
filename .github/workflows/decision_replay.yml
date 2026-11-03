@@ -7,8 +7,9 @@
 # (scanner/vivek_parity.py), by market, by cell, by grade.
 #
 # It runs `python -m scanner.vivek_backtest --parity` and delivers TWO things:
-# the decision tables in the step summary, and the full JSON report (+ the run
-# log) as a 30-day artifact. It COMMITS NOTHING: contents: read, no git
+# the decision tables in the step summary AND the log (a cloud session reads
+# logs, not artifacts), and the full JSON report (+ the run log) as a 90-day
+# artifact; then the live-vs-replay trade-by-trade study (2 Nov). It COMMITS NOTHING: contents: read, no git
 # writes, so no assert_staged and no WATCHDOG_RUNS entry (evidence_brief /
 # crypto_source_check pattern), and its own concurrency group -- the `scan`
 # group serialises book writers and this writes no book. The report goes to
@@ -55,9 +56,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 330
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -90,13 +91,30 @@ jobs:
             --out "$OUT/decision_replay.json" --summary-md "$GITHUB_STEP_SUMMARY" \
             2>&1 | tee "$OUT/replay.log"
 
+      # The owner's "20 more" #3 (2 Nov): every hc4-1 trade beside the replay's
+      # trade on the same symbol -- where the live R went. Same rules, same
+      # fetch path, unconstrained (no slot cap); reads the book, writes only to
+      # RUNNER_TEMP and the step summary, and prints its tables to the log.
+      - name: Live vs replay, trade by trade (hc4-1, read-only)
+        if: success() || failure()
+        run: |
+          set -o pipefail
+          OUT="$RUNNER_TEMP/decision-replay"
+          mkdir -p "$OUT"
+          python -m scanner.live_vs_replay --cycle hc4-1 --period 5y \
+            --out "$OUT/live_vs_replay.json" --summary-md "$GITHUB_STEP_SUMMARY" \
+            2>&1 | tee "$OUT/live_vs_replay.log"
+
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: decision-replay-${{ github.run_id }}
           path: ${{ runner.temp }}/decision-replay/
-          retention-days: 30
+          # 90 (2 Nov): the 14 Oct report expired before anyone could read
+          # its by-cell row (a cloud session cannot download artifacts). The
+          # replay now also prints every table into the job log.
+          retention-days: 90
           if-no-files-found: warn
 
       - name: Nothing under public/data moved

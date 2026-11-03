@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The backstop cron's freshness gate: has a pass LANDED ON MAIN since
       # this backstop's slot opened? The slot is the most recent 22:00 UTC
@@ -95,7 +95,7 @@ jobs:
           echo "run=true" >> "$GITHUB_OUTPUT"
 
       - if: steps.gate.outputs.run == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip

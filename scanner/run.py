@@ -221,6 +221,16 @@ def bot_rules_payload() -> dict:
         # long-only backtest so the browser stops downloading the whole file
         # to read three numbers. null when the file is missing or unreadable.
         "entry_quality": _entry_quality(),
+        # The owner's "20 more" (2 Nov), DISPLAY ONLY: when slots free up (the
+        # time stops falling due) and each market's GICS sector load, read off
+        # the canonical books with the bot's own _sector_key; and why each
+        # A/A+ cell row was not taken at the last in-session run (`skips`).
+        "capacity": _capacity(),
+        "skips": _skips(),
+        # The system page's evidence card (the owner's "20 more" #7): three
+        # readings per market, copied here like entry_quality so the browser
+        # downloads no 1MB file and re-derives nothing.
+        "evidence_by_market": _evidence_by_market(),
         # REFINE200 #121: these two used to sit beside the real rules (TOP100
         # #34 published them for the browser risk engine, removed 2026-09-17).
         # Nothing in the trade path enforces either one, so they are no longer
@@ -259,6 +269,109 @@ def _book_counts() -> dict:
         out["closed_total"] = closed
     except Exception as e:          # noqa: BLE001 - a display field, never fatal
         print(f"  WARNING book counts skipped ({type(e).__name__}: {e})", flush=True)
+    return out
+
+
+def _capacity(today: dt.date | None = None) -> dict | None:
+    """{time_stops_due: [[date, n], ...] (the next 12 days with any), sector_load:
+    {market: {gics sector: open n}}}; None when a book cannot be read (a
+    display field, never fatal)."""
+    try:
+        from collections import Counter
+
+        from .broker import vivek_bot, vivek_run
+        from .vivek_journal import time_stop_due
+        hold = int(config.VIVEK_BOT_MAX_HOLD_DAYS or 0)
+        today = today or dt.datetime.now(dt.timezone.utc).date()
+        due: Counter = Counter()
+        load: dict[str, Counter] = {}
+        for m in config.MARKETS:
+            f = vivek_run._market_book_file(m)
+            if not f.exists():
+                continue
+            for p in json.loads(f.read_text(encoding="utf-8")).get("open") or []:
+                d = time_stop_due(dict(p, market=p.get("market") or m), hold)
+                if d is not None and d >= today:
+                    due[d.isoformat()] += 1
+                k = vivek_bot._sector_key(p.get("symbol"), p.get("sector"), m)
+                if k:
+                    load.setdefault(m, Counter())[k] += 1
+        return {"time_stops_due": [[d, n] for d, n in sorted(due.items())[:12]],
+                "sector_load": {m: dict(sorted(c.items(), key=lambda kv: (-kv[1], kv[0])))
+                                for m, c in load.items()}}
+    except Exception as e:          # noqa: BLE001 - a display field, never fatal
+        print(f"  WARNING capacity skipped ({type(e).__name__}: {e})", flush=True)
+        return None
+
+
+BOT_RULES_FILE = REPO_ROOT / "public" / "data" / "bot_rules.json"
+
+
+def _skips(path: pathlib.Path = BOT_RULES_FILE) -> dict:
+    """{market: {at, reasons: {symbol: code}}}: this process's in-session bot
+    runs (vivek_run.LAST_SKIPS) over the last published record, so a market
+    that did not run keeps its last one (and resize_book's republish keeps
+    them all)."""
+    out: dict = {}
+    try:
+        prev = json.loads(path.read_text(encoding="utf-8")).get("skips")
+        if isinstance(prev, dict):
+            out.update(prev)
+    except (OSError, ValueError, AttributeError):
+        pass
+    try:
+        from .broker import vivek_run
+        out.update(vivek_run.LAST_SKIPS)
+    except Exception as e:          # noqa: BLE001 - a display field, never fatal
+        print(f"  WARNING skips not merged ({type(e).__name__}: {e})", flush=True)
+    return dict(sorted(out.items()))
+
+
+# A rules close, as the journal counts one (journal.js / app.js / status.js
+# MECHANICAL_EXITS, scripts/decision_pack.py): anything else was a hand close.
+_RULES_EXITS = ("stop", "time", "trail", "target")
+
+
+def _evidence_by_market(bt_path: pathlib.Path = ENTRY_QUALITY_SOURCE) -> dict:
+    """{market: {backtest, live}} -- each None when its file is unreadable.
+
+    backtest: the 10-year long-only replay's trades under the bot's OWN entry
+      rule today (grades, entry cells, level gate; long only): n + avg R.
+    live:     the paper book's rules closes, every cycle: n + avg R.
+    The third reading on the page (A+ longs against the index) is the
+    evidence pipeline's research summary, which the engine never reads
+    (a test fences it, both ways): the browser reads that file itself.
+    Display only; every number is copied or averaged."""
+    mkts = list(config.MARKETS)
+    out = {m: {"backtest": None, "live": None} for m in mkts}
+
+    def avg(vals):
+        vals = [v for v in vals if isinstance(v, (int, float)) and v == v]
+        return {"n": len(vals), "avg_r": round(sum(vals) / len(vals), 3) if vals else None}
+
+    try:
+        bt = json.loads(bt_path.read_text(encoding="utf-8"))
+        cells = {tf: set(ets) for tf, ets in config.VIVEK_BOT_ENTRY_CELLS.items()}
+        grades, levels = set(config.VIVEK_BOT_GRADES), set(config.VIVEK_BOT_LEVEL_TF_ALLOW or ())
+        for m in mkts:
+            out[m]["backtest"] = dict(avg(
+                t.get("realized_r") for t in bt.get("trades") or []
+                if t.get("market") == m and t.get("direction") == "long"
+                and t.get("grade") in grades and t.get("entry_type") in cells.get(t.get("timeframe"), ())
+                and (not levels or t.get("level_tf") in levels)),
+                period=(bt.get("params") or {}).get("period"), generated_at=bt.get("generated_at"))
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
+    try:
+        from .broker import vivek_run
+        for m in mkts:
+            f = vivek_run._market_book_file(m)
+            if f.exists():
+                closed = json.loads(f.read_text(encoding="utf-8")).get("closed") or []
+                out[m]["live"] = avg(r.get("realized_r") for r in closed
+                                     if str(r.get("exit_reason") or "").lower() in _RULES_EXITS)
+    except Exception as e:          # noqa: BLE001 - a display field, never fatal
+        print(f"  WARNING live evidence skipped ({type(e).__name__}: {e})", flush=True)
     return out
 
 

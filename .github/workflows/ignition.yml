@@ -72,7 +72,7 @@ jobs:
     # group for six hours and stalls every later refresh with it.
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # THE BACKSTOP GATE. The 01:14 / 02:14 crons exist only to cover a
       # dropped 00:14; when today's post-midnight file is already on the
@@ -105,7 +105,7 @@ jobs:
             echo "backstop: no post-midnight file yet (stamp '${STAMP}') - running"
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.due.outputs.run == 'true'
         with:
           python-version: "3.12"
@@ -119,7 +119,7 @@ jobs:
       # or the momentum lens's frames, and disappears cleanly with the lens.
       - name: Restore frame cache
         if: steps.due.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/frames
           key: ignition-frames-${{ github.run_id }}

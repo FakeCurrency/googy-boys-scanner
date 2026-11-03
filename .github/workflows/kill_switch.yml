@@ -38,9 +38,9 @@ jobs:
     outputs:
       watchdog_alarm: ${{ steps.watchdog.outputs.alarm }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -52,7 +52,7 @@ jobs:
       # rides the cache, same prefix-restore pattern as the frame cache —
       # zero commits, zero deploys. .cache/ is gitignored.
       - name: Restore watchdog state
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/watchdog_state.json
           key: watchdog-state-${{ github.run_id }}

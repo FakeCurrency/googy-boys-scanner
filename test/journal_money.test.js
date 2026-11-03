@@ -1109,9 +1109,10 @@ test("a different cycle tag is not counted as w3-1", () => {
 test("renderSide injects it above the bot stats, and re-render does not duplicate", () => {
   assert.ok(/document\.querySelectorAll\("#bot-w3, #bot-hc"\)\.forEach\(\(el\) => el\.remove\(\)\);/.test(SRC),
     "the remove-before-insert guard is gone - every refresh would stack another line");
-  assert.ok(/host\.insertAdjacentHTML\("beforebegin", cycleLine\(d\)\)/.test(SRC),
+  // d0 = the whole book (the cycle switch narrows the stats, never the board)
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", cycleLine\(d0\)\)/.test(SRC),
     "renderSide no longer renders the current-cycle scoreboard");
-  assert.ok(/host\.insertAdjacentHTML\("beforebegin", w3Line\(d\)\)/.test(SRC),
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", w3Line\(d0\)\)/.test(SRC),
     "renderSide no longer renders the w3 line");
 });
 
@@ -1127,7 +1128,7 @@ test("the dead n/30 review line is gone; the decision pack's checkpoints replace
   const src = fs.readFileSync(path.join(__dirname, "..", "public", "js", "journal.js"), "utf8");
   const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   assert.ok(!/review-checkpoint/.test(code), "the hostless #review-checkpoint writer is back");
-  assert.ok(/host\.insertAdjacentHTML\("beforebegin", checkpointLine\(d\)\)/.test(code),
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", checkpointLine\(d0\)\)/.test(code),
     "renderSide no longer draws the checkpoint strip");
   assert.ok(/deciderHTML\(d\.closed\)/.test(code), "the rules/you split left the closed table");
 });

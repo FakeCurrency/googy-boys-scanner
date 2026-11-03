@@ -89,7 +89,7 @@ jobs:
     # this group, stalls every later Momentum refresh rather than just itself.
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # THE GATE. A manual dispatch screens the market it names, no questions.
       # Every automatic wake-up asks scripts/momentum_due.py instead, reading
@@ -117,7 +117,7 @@ jobs:
           echo "wake-up: ${{ github.event_name }}"
           python3 scripts/momentum_due.py --dir "$STAMPS" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.due.outputs.market != ''
         with:
           python-version: "3.12"
@@ -132,7 +132,7 @@ jobs:
       # one more thing that disappears cleanly when the lens does.
       - name: Restore frame cache
         if: steps.due.outputs.market != ''
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/frames
           key: momentum-frames-${{ github.run_id }}

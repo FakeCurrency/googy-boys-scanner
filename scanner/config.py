@@ -866,6 +866,10 @@ VIVEK_PARITY_V2_CUTS = (
     (10, 0.25), (10, 0.50),
     (14, 0.25), (14, 0.50),
 )
+# V11 adverse cut (2 Nov, the owner's "20 more" #5): close a pre-TP1 trade the
+# first bar its adverse move reaches this many R. Live, 54 closes went -0.5R
+# or worse and 3 of them won; this is the replay's read of cutting there.
+VIVEK_PARITY_MAE_CUTS = (0.5,)
 # A variant only PASSES if its R/slot-month improvement holds in BOTH ASX and
 # NASDAQ and in BOTH time halves of the sample (crypto is reported but not a
 # pass gate — thin N).

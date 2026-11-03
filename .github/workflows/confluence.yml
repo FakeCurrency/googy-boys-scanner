@@ -67,11 +67,11 @@ jobs:
       # main's tip, never the phasemap run's head_sha (the commit phasemap
       # STARTED from, which predates the data it just pushed). Pinned in
       # tests/test_workflow_hardening.py.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip

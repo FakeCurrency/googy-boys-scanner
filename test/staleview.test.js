@@ -477,7 +477,7 @@ test("the book line carries the stall COUNT only when the probe flagged somethin
     "the strip must render from bookFacts, not ad-hoc sums");
   assert.ok(/readShared\("rules"/.test(body),
     "the strip no longer reads the cap (bot_rules.json, via the page's shared read), so it cannot show free slots");
-  assert.ok(/facts\.atCap \? "FULL"/.test(body),
+  assert.ok(/facts\.atCap \? `FULL\$\{nextFree/.test(body),
     "a full book must say FULL rather than quietly reading '0 free'");
   assert.ok(/facts\.stalled\.length \? ` · \$\{facts\.stalled\.length\} stalled`/.test(body),
     "the stall count must be GATED on the probe having flagged something");

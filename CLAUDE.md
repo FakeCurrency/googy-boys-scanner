@@ -188,7 +188,7 @@ them.
 | `backup_book.yml` | `35 21` + `35 23` backstop | `backups/<stamp>/` (keep 30) + 90-day artifact |
 | `lens_backtest.yml` | Sunday `0 8` | replays → `vivek_backtest.json` |
 | `vivek_backtest.yml` | 1st `0 8` | `vivek_backtest_longonly.json` |
-| `decision_replay.yml` | push `.github/replay-kick`; manual | READ-ONLY parity replay + V1–V8 → summary + artifact; red if `public/data` moved |
+| `decision_replay.yml` | push `.github/replay-kick`; manual | READ-ONLY parity replay + V1–V11 + live-vs-replay → summary, the LOG + 90-day artifact; red if `public/data` moved |
 | `dispatch_scan.yml` | push `.github/scan-kick` | a real `scan.yml` dispatch — how a cloud session triggers a scan |
 | `ops.yml` | manual | cron-job.org + Cloudflare actions |
 | `test.yml` · `test_alerts.yml` | push (path-filtered)/PR · manual | the CI gate · alert-path self-test |
@@ -654,7 +654,7 @@ counted exclusions).
   `public/js/*.js` (`new Function(body)()`, one realm; `fnSrc()` lets the parser
   find a function's end). Mutation-verify new pins.
 - **Screenshot gate**: clock frozen to the fixtures' `FROZEN_MS`; the key
-  digests the fixtures + Playwright version (`screenshot-baselines-v27`); a
+  digests the fixtures + Playwright version (`screenshot-baselines-v28`); a
   `.clock` sentinel discards (never fails) a foreign baseline; NO
   `restore-keys`; > 2% drift on a deliberate change → bump the key, record it.
 - **Lighthouse gate** serves a STAGED root on the fixtures: 1.7 MB transfer,
@@ -755,3 +755,44 @@ only — no trade rule, grade, gate or book row moved.
 - **Loading:** system.html fetches the backtest files only as their section
   approaches; alerts render only the newest day until another is opened.
 
+
+---
+
+## 20 MORE (2026-11-03)
+
+Owner: *"I want to do another 20 odd things"* → "all the new ones" (the 16
+items that move no trade rule; 9–12 went into the decision pack as
+next-cycle candidates H1–H4). No trade rule, grade, gate or book row moved.
+
+- **Decision replay** (`scanner/vivek_parity.py`): mirrors hc4-2 (a break's
+  R:R re-checked at the fill → `fill_rr`; one per company → `dup_company`;
+  GICS sectors via the bot's `_sector_key`); a day's candidates go in the
+  live scan's order (grade → score → R:R, `_rank_key`; `_build_row` now
+  carries `score`/`rr`); variants V9 (no 1W break), V10 (1D break crypto
+  only), V11 (cut at −0.5R adverse, `VIVEK_PARITY_MAE_CUTS`); house-fill
+  R/slot-month; `ranking` (signals refused for a full book shadow-played
+  once per episode, taken vs refused on contested days); the full markdown
+  printed into the LOG (a cloud session reads logs, never artifacts);
+  artifact 90 days. `decision_replay.yml` then runs `scanner/live_vs_replay.py`
+  (each hc4-1 trade beside the replay's trade on that symbol).
+- **Decision pack** adds three report-only readouts: stop fills past the stop
+  (ASX split into gap vs scan lag from the archive), the −0.5R cut what-if,
+  R per slot-month per cycle.
+- **`bot_rules.json`** gains `capacity` (`time_stops_due`, `sector_load`),
+  `skips` (`vivek_run.LAST_SKIPS`, why each candidate was not taken at the
+  last in-session run, merged over the last published record) and
+  `evidence_by_market` (replay under the bot's own entry rule · live rules
+  closes · A+ longs vs the index). `vivek_journal.time_stop_due` is the ONE
+  Python definition of the time-stop day (journal.js `timeStopOf` is the
+  browser's). `vivek_bot.decide()`'s skip records carry the symbol
+  (MECHANICAL, flagged).
+- **Site:** deck — the Bot-cell tag carries the bot's own "not taken"
+  reason (`NOT_TAKEN`, inside the tag, never a new chip) and the book fold the
+  next slot day; journal — slots-free line, GICS sector-load fold, day-14
+  sub-line in the time-stop cell, cycle switch (stats/curve/closed only;
+  `gbs:jr-cycle`); system page — the by-market evidence card (via
+  `VivekBook.rules()`, never a third download); Ignition — the forward
+  bucket's count beside the replay's.
+- **Digest:** one line under the header when the book is full, with the
+  next time-stop day. **Actions:** checkout@v5, setup-python@v6,
+  setup-node@v5, cache@v5, upload-artifact@v5 (Node 24).
