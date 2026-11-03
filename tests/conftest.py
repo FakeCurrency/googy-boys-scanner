@@ -29,7 +29,8 @@ from scanner import sectorcache as _sectorcache  # noqa: E402
 # journal/ is the live bot book and the alert state. CLAUDE.md rule 1 reads a
 # diff there after a test run as a REAL change (a scan wrote it), so a test that
 # leaked into the live files would be committed as truth by the next session.
-# The autouse fixtures below point every known writer at tmp_path; this is the
+# Per-test redirects (test_vivek_run._enable, the STATE_FILE monkeypatches) and
+# the autouse cache fixtures below point writers at tmp_path; this is the
 # net under them. The session's CONTROLLER (a plain run, or xdist's controller
 # -- never a worker, which would see its siblings' writes mid-run) hashes every
 # file under journal/ at session start and again at session finish, after every
