@@ -284,9 +284,10 @@
   // THE TIME STOP, as the engine applies it (vivek_run.run_market): a row that
   // has not reached TP1 closes at the first IN-SESSION run whose market date
   // is MORE than max_hold_days calendar days after entry_date -- so day
-  // max_hold + 1 (29), never day 28. Every time-stop close in the live book
-  // landed on day 29, or on the Monday after when 29 fell on a weekend.
-  // Stock holidays are not modelled, hence "on or after". null = no time
+  // max_hold + 1 (29), never day 28. Time-stop closes in the live book land
+  // ON OR AFTER that day (57 of 58 on it; ADP a day late, a missed run), on
+  // the Monday after when 29 fell on a weekend. Stock holidays are not
+  // modelled either, hence "on or after". null = no time
   // stop applies: past TP1 (a runner is exempt), the rule switched off, or no
   // entry date.
   function timeStopOf(t, ms) {
@@ -1759,7 +1760,7 @@
     const vals = rows.map(prR);
     const n = vals.length;
     if (!n) return { n: 0, avg: null };
-    const tot = vals.reduce((a, b) => a + b, 0);    // Python's sum(): left to right from 0
+    const tot = vals.reduce((a, b) => a + b, 0);    // left to right from 0, as decision_pack stats() adds
     return { n, avg: pyRound(tot / n, 3) };
   }
   function prSelect(rows, spec) {
@@ -1802,7 +1803,8 @@
   const PR_HAND = "hand";
   function prHorizon(r, isOpen) {
     const h = r.horizon;
-    if (h && typeof h === "object" && typeof h.r === "number" && isFinite(h.r)) return [h.r, String(h.day || "")];
+    if (h && typeof h === "object" && typeof h.r === "number" && isFinite(h.r) &&
+        typeof h.day === "string" && h.day.length >= 10) return [h.r, h.day];
     if (isOpen) return null;
     if (!prIsRules(r)) return PR_HAND;
     return [prR(r), prDay(r)];
@@ -2008,7 +2010,7 @@
         `📋 ${esc(tag)} checkpoints${frozen ? ` <span class="pr-frozen">frozen ${esc(frozen)}</span>` : ""}${summary}</summary>` +
         `<ul class="jr-pr-list">${judgedItems}${offItems}</ul>` +
         `<p class="jr-pr-note">A verdict is the frozen line's. Before acting on a trip the register's replay veto is read: ` +
-        `if the decision replay shows the same cohort at +0.05R a trade or better (stocks, with the time stop), it holds for a second read at twice the closes.</p>` +
+        `if the decision replay shows the same cohort at +0.05R a trade or better (stocks, with the time stop), it holds for one more read at the line's second n, and that read is final (PR-1: re-read at 40 closes, set 3 Nov).</p>` +
       `</details>`;
   }
 

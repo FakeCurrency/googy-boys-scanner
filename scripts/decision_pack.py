@@ -286,7 +286,9 @@ def stats(rows, value=r_of):
     n = len(vals)
     if not n:
         return {"n": 0, "total": 0.0, "avg": None, "wins": 0, "win_pct": None}
-    tot = sum(vals)
+    tot = 0.0
+    for v in vals:            # left to right, as journal.js prStats does (Python
+        tot += v              # 3.12's sum() compensates, which can move a 3rd decimal)
     wins = sum(1 for v in vals if v > 0)
     return {"n": n, "total": round(tot, 2), "avg": round(tot / n, 3),
             "wins": wins, "win_pct": round(100.0 * wins / n)}
@@ -392,9 +394,12 @@ def horizon_value(row, is_open):
     counts the stamp's R on the stamp's day; a row closed by the rules before
     it counts its realised R on its exit day."""
     h = row.get("horizon")
+    # a stamp counts only with a finite R AND an ISO day (a stamp with no day
+    # would date the read nowhere); anything else is treated as no stamp
     if (isinstance(h, dict) and isinstance(h.get("r"), (int, float))
-            and not isinstance(h["r"], bool) and math.isfinite(h["r"])):
-        return h["r"], str(h.get("day") or "")
+            and not isinstance(h["r"], bool) and math.isfinite(h["r"])
+            and isinstance(h.get("day"), str) and len(h["day"]) >= 10):
+        return h["r"], h["day"]
     if is_open:
         return None
     if not is_rules(row):
@@ -633,7 +638,7 @@ def load_replay_summary(root=ROOT):
 def replay_cohort(trades, spec):
     """The replay trades a live cohort spec names (all / cell / market / grade)."""
     if spec == "all":
-        return list(trades)
+        return [t for t in trades if isinstance(t, dict)]
     kind, _, val = spec.partition(":")
     key = {"cell": "cell", "market": "m", "grade": "grade"}.get(kind)
     if key is None:
@@ -1267,7 +1272,7 @@ def main(argv=None, root=ROOT, out=sys.stdout):
             if v.get("read_on"):
                 vs = f" vs {v['versus_avg']:+.3f}R" if v.get("versus_avg") is not None else ""
                 read = f"  read {v['read_on']}: n={v['read_n']} avg {v['read_avg']:+.3f}R{vs}"
-            count = (f"entries {v['entries']}/{v['min_n']} ({v['n']} at the horizon)"
+            count = (f"entries {v['entries']}/{v['min_n']} ({v['n']} of the cycle's entries at the horizon)"
                      if read_mode(pr) == "entry" else f"n={v['n']}/{v['min_n']}")
             w(f"  {pr['id']:5} {tag} {pr['item']:5} {pr['cohort']:16} {count} "
               f"avg {avg}  line {pr['line']:+.2f}R{read}  -> {v['verdict']}")
