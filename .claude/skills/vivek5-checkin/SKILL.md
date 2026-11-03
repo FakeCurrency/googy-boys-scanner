@@ -17,14 +17,14 @@ python3 -I <this skill's folder>/scripts/scanner_status.py --repo <the repo>
 
 In the scanner repo the skill lives at `.claude/skills/vivek5-checkin/`, so from the repo root that is `python3 -I .claude/skills/vivek5-checkin/scripts/scanner_status.py --repo .` On Windows use the repo venv's python (`.venv\Scripts\python.exe`): there is often no `python3`, and Python there needs the `tzdata` package for time zones, which the venv has.
 
-It fetches origin/main and prints, in Melbourne time: each market's scans this session and whether the closing scan landed, crypto's last 24 hours, the after-close lenses, the paper bot (open count against 60, loss guards, what opened or closed, names with no price or near their stop), new multi-lens alignments, and a verdict list split into LOOKS WRONG and NOT DUE YET. Add `--since "<when>"` to measure changes from the last check-in in this chat instead of the last 24 hours. Read its output before deciding anything; its flags are where to dig, not the final word (a public holiday looks like a missing session).
+It fetches origin/main and prints, in Melbourne time: each market's scans this session and whether the closing scan landed, crypto's last 24 hours, the after-close lenses, the paper bot (open count against 60, loss guards, what opened or closed, names with no price or near their stop), new multi-lens alignments, and a verdict list split into LOOKS WRONG and NOT DUE YET. Add `--since "<when>"` to measure changes from the last check-in in this chat instead of the last 24 hours. Read its output before deciding anything; its flags are where to dig, not the final word (a public holiday looks like a missing session). Its `clocks:` line is today's New York offset from the time-zone database. `references/schedule.md` gives Melbourne equivalents for one season, named in its header: if the two differ, every Melbourne time it pairs with a New York one is off by the difference.
 
 ## 2. Check what the repo cannot see, with the GitHub tools
 
 Load `mcp__github__actions_list`, `mcp__github__actions_get` and `mcp__github__get_job_logs` with ToolSearch. Owner `FakeCurrency`, repo `googy-boys-scanner`. Details and exact log lines are in `references/runs.md`; read it the first time you do this.
 
 1. **Failure emails.** List the last 100 runs with no filter (newest first; a branch filter has returned old runs out of order) and keep those with conclusion `failure` since the window start. For each, classify it with the signatures in runs.md: GitHub outage, a real fault, a pull-request branch, or something Claude did. `cancelled` and `action_required` send no failure email. If there were none, say so; do not search Gmail for them (the connected inbox is not the one GitHub mails). A session sees only this repo, so if Viv says an email arrived and nothing here failed, ask him for its subject line: it may be another of his repos, cron-job.org or Cloudflare.
-2. **The digest.** Read the `Post the morning digest` step of the first `morning_plays.yml` run after 17:15 (ASX) or 07:15 (US) Melbourne. Report sent with the count of new plays, or why not. A later "already went out today" is success.
+2. **The digest.** Read the `Post the morning digest` step of the first `morning_plays.yml` run at or after 17:15 Melbourne (ASX), or for the US slot 16:15 New York (08:15 Melbourne). Report sent with the count of new plays, or why not. A later "already went out today" is success.
 3. **The kill switch and watchdog.** Read the newest `kill_switch.yml` run's log for the per-market `kill-switch OK` lines and the `watchdog:` lines. Only mention them if something triggered, or if Viv asks.
 
 Use a subagent for the run listing when the window is long; the raw listing is large.
@@ -35,10 +35,10 @@ Use a subagent for the run listing when the window is long; the raw listing is l
 
 - **cron-job.org is the real clock.** GitHub's own crons land hours late or never. A late GitHub run is not an outage when the cron-job.org path delivered.
 - **The ASX close counts from 16:40 Sydney.** A scan at 16:15 is not the close.
-- **NASDAQ belongs to New York's date.** At a Melbourne afternoon check-in, its book is 9 to 10 hours old by design.
+- **NASDAQ belongs to New York's date.** At a Melbourne afternoon check-in, its book is 8 to 9 hours old by design.
 - **Late by design:**
   - PhaseMap lands overnight.
-  - Ignition ASX's first screen lands about 17:30 to 18:15; Ignition NASDAQ's about 08:35 to 09:30 (its bar is final at 07:30). GitHub runs both, so either can slip hours.
+  - Ignition ASX's first screen lands about 17:30 to 18:15; Ignition NASDAQ's about 16:35 to 17:30 New York (08:35 to 09:30 Melbourne; its bar is final at 16:30 New York). GitHub runs both, so either can slip hours.
   - On Sundays and Mondays crypto Momentum lands 5 to 6 hours late (about 17:00).
   - Hundreds of ASX names showing a day-old price intraday is thin trading, not a fault.
 - **Green does not mean fine.**

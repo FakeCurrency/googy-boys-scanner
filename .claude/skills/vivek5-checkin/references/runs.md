@@ -42,7 +42,7 @@ Several workflows go red in the same window, and the next run of each is green. 
 - **ops.yml**: a failed action prints `OPS RESULT: FAILED (exit N)` plus `##[error]exit N -- read the log. Green on purpose...`. Success prints `OPS RESULT: OK`.
 - **kill_switch.yml**: firing prints `KILL SWITCH TRIGGERED` and `::error::KILL SWITCH TRIGGERED for: <markets>`, and the run stays green.
 - **morning_plays.yml**:
-  - A refusal (`slot is waiting for a post-close <market> scan`) is green. It only matters if the LAST rung also refused: 21:45 Melbourne for ASX, 10:45 for US.
+  - A refusal (`slot is waiting for a post-close <market> scan`) is green. It only matters if the LAST rung also refused: 21:45 Melbourne for ASX, 18:45 New York (10:45 Melbourne) for US.
   - A missing webhook (`::warning::DISCORD_MORNING_WEBHOOK_URL is not set`) is green too.
 - **scan.yml**: a run whose gate printed `-> skip` scanned nothing and is green. A heartbeat run that lost its write only warns (`::warning::book not staged (manual run ...)`). Trust the data stamps.
 - **momentum / ignition**: exit 3 (`published nothing - the download came back empty and the previous file was kept`) is green by design.
@@ -51,7 +51,7 @@ Several workflows go red in the same window, and the next run of each is green. 
 
 ## 4. The digest (morning_plays.yml, job `digest`, step `Post the morning digest`)
 
-- **Which run.** The first run at or after 17:15 Melbourne is the ASX slot, from cron-job.org's 06:15 UTC rung. The first at or after 07:15 Melbourne (20:15 UTC the day before) is the US slot (NASDAQ + crypto). Under AEST, or New York on EST from 2 Nov, these move: see schedule.md.
+- **Which run.** The first run at or after 17:15 Melbourne is the ASX slot, from cron-job.org's 06:15 UTC rung. The US slot (NASDAQ + crypto) is the first at or after 16:15 New York (08:15 Melbourne, 21:15 UTC the day before). The 07:15 and 07:45 Melbourne rungs come before the 16:05 New York close and print `slot is waiting for a post-close nasdaq scan`, which is normal. These move when the clocks change: see schedule.md's header and "When the clocks change".
 - **Which trigger.** The env block above the output shows it: `EVENT: workflow_dispatch` with `SLOT_INPUT: asx|us` is the cron-job.org ladder; `EVENT: schedule` with `SCHEDULE: 58 5 * * 1-5` (etc.) is GitHub's late backstop.
 - **Delivered** prints three lines:
   1. `morning_plays: asx slot data gate passed (asx scan Thu 16:45 is past the Thu 16:40 close (Australia/Sydney)).`
@@ -76,7 +76,7 @@ A heartbeat for crypto prints `scan gate: heartbeat:  -> crypto`.
 - **Momentum** (momentum.yml, job `momentum`, step `Which market is due`). It prints one line per market, `<m> DUE|skip owes <time Z> file <time Z> - <reason>`, then `picked: <market>` or `picked: nothing due`.
   - Every finished morning_plays run triggers it, so most runs are 15-second "nothing due" runs. That is normal.
   - The screen step then prints `momentum: <m> scanned X/Y ... hits H ...` and `Pushed.`.
-- **Ignition ASX and NASDAQ** (ignition_asx.yml / ignition_nasdaq.yml, job `ignition`, step `Is this run due`, both through `scripts/ignition_due.py <market>`). Only the backstops are gated (ASX `24 7,9` UTC, NASDAQ `34 22,23` UTC). `gate: run=false` after `backstop: already screened after the <market> <time> close` is a correct skip, and so is NASDAQ's `gate: intraday run landed at/after 15:30 New York`. The bar is final at 16:40 Sydney (ASX) and 16:30 New York (NASDAQ).
+- **Ignition ASX and NASDAQ** (ignition_asx.yml / ignition_nasdaq.yml, job `ignition`, step `Is this run due`, both through `scripts/ignition_due.py <market>`). Only the backstops are gated (ASX `24 7,9` UTC, NASDAQ `34 22,23` UTC). `gate: run=false` after `backstop: already screened after the <market> <time> close` is a correct skip, and so is NASDAQ's `gate: intraday run landed at/after 15:30 New York`. The bar is final at 16:40 Sydney for the ASX, and at 16:30 New York (08:30 Melbourne) for NASDAQ.
 - **Ignition crypto** (ignition.yml). It publishes the new UTC bar at about 16:45 to 17:00 Melbourne via its 05:44 UTC cron, because the 00:14 UTC primary has not fired in days.
 
 ## 7. Kill switch and watchdog (kill_switch.yml, job `check`)

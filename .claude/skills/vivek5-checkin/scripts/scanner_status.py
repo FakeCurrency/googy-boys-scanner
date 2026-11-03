@@ -116,6 +116,18 @@ def last_weekday_at(now: dt.datetime, hm, tz) -> dt.datetime:
     return at(d, hm, tz)
 
 
+def clocks(now: dt.datetime) -> str:
+    """Today's New York offset from Melbourne, read from the tz database. The
+    skill's schedule.md pairs New York times with Melbourne ones for ONE season
+    (its header names it); this line is how a check-in sees that season pass
+    (US summer time starts the second Sunday of March, Melbourne's the first
+    Sunday of October; they end the first Sunday of November and of April)."""
+    m, n = now.astimezone(MEL), now.astimezone(NY)
+    hours = (m.utcoffset() - n.utcoffset()).total_seconds() / 3600
+    return (f"clocks: Melbourne {m:%Z}, New York {n:%Z}: New York + {hours:.0f} h = Melbourne "
+            "(schedule.md pairs New York and Melbourne times for the season its header names)")
+
+
 def in_window(m: str, t: dt.datetime) -> bool:
     (h0, h1, tz) = WINDOW[m]
     lt = t.astimezone(tz)
@@ -435,6 +447,7 @@ def main() -> int:
     head = git("log", "-1", "--format=%h %cI", REV).split()
     print(f"Vivek 5.0 status at {mel(now, '%a %d %b %H:%M %Z')} Melbourne; repo {REV} {head[0]} "
           f"(last commit {mel(ts(head[1]), '%H:%M')})")
+    print(clocks(now))
     for fn in (lambda: scans(now), lambda: lenses(now), lambda: book(now, since), lambda: confluence(now, since)):
         try:
             fn()
