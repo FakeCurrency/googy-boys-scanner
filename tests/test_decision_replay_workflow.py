@@ -85,9 +85,9 @@ def test_the_inputs_are_validated_before_they_reach_python():
 
 
 def test_the_report_is_uploaded_even_when_the_run_fails():
-    up = _step("actions/upload-artifact@v4")
+    up = _step("actions/upload-artifact@v5")
     assert up.get("if") == "always()"
-    assert up["with"]["retention-days"] == 30
+    assert up["with"]["retention-days"] == 90
     assert up["with"]["path"].startswith("${{ runner.temp }}/decision-replay")
 
 

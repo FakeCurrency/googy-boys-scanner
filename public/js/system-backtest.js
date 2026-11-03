@@ -125,10 +125,50 @@
   const load = (f) => fetch(f, { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
+  /* BY MARKET, THREE READINGS SIDE BY SIDE (the owner's "20 more" #7, 2 Nov):
+   * the 10-year long-only replay under the bot's own entry rule and the paper
+   * book's rules closes (bot_rules.json `evidence_by_market`, scanner/run.py),
+   * and A+ longs against the index over 20 sessions -- read here straight off
+   * the evidence pipeline's edge_summary.json, which the engine is fenced from
+   * reading. Nothing is re-derived; a reading a file lacks is a dash. */
+  const pctPts = (v) => (num(v) == null ? "—" : `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`);
+  const indexOf = (edge, m) => {
+    const x = (((((edge || {}).by_market || {})[m] || {}).baseline_aplus || {})["20"] || {}).excess;
+    const lg = (x && x.long) || null;
+    return lg && num(lg.mean) != null ? { n: lg.n, mean: lg.mean } : null;
+  };
+  function marketCard(ev, edge) {
+    if (!ev || typeof ev !== "object") return "";
+    const mkts = ["asx", "nasdaq", "crypto"].filter((m) => ev[m]);
+    if (!mkts.length) return "";
+    const cell = (m, money) => !m || num(m.n) == null || !m.n ? `<td class="bt-none">—</td>`
+      : `<td class="${rCls(money ? m.mean : m.avg_r)}">${money ? pctPts(m.mean) : r2(m.avg_r) + "R"}` +
+        ` <span class="bt-note">n ${int(m.n)}</span></td>`;
+    const bt0 = (ev[mkts[0]] || {}).backtest || {};
+    return `<h3 class="bt-h">By market, three readings <span class="bt-when">replay run ` +
+      `${esc(String(bt0.generated_at || "—").slice(0, 10))}</span></h3>` +
+      `<p class="bt-lead">Side by side so a market's story reads in one line: what the ` +
+      `${esc(bt0.period || "")} replay of the bot's own entry rule made a trade, what the live ` +
+      `paper book's rules closes made, and how A+ longs did against the market's index over 20 ` +
+      `sessions. Different samples and periods — read them as three witnesses, not one number.</p>` +
+      `<table class="sys-t bt-t bt-mkt"><tr><th>market</th><th>replay, avg R</th>` +
+      `<th>live rules closes, avg R</th><th>A+ longs vs the index, 20 sessions</th></tr>` +
+      mkts.map((m) => `<tr><td>${esc(m.toUpperCase())}</td>${cell(ev[m].backtest)}` +
+        `${cell(ev[m].live)}${cell(indexOf(edge, m), true)}</tr>`).join("") + `</table>`;
+  }
+  // The page's one rules read (nav.js window.VivekBook, loaded before this
+  // script). Without it there is no card -- never a second download.
+  const rulesRead = () => (typeof window !== "undefined" && window.VivekBook && window.VivekBook.rules
+    ? Promise.resolve(window.VivekBook.rules()).catch(() => null) : Promise.resolve(null));
+
   function show() {
+    const rules = rulesRead();
     return Promise.all([
       load("data/vivek_backtest_longonly.json"),
       load("data/vivek_backtest.json"),
+      rules,
+      // The index column's file, only when there is a card to put it in.
+      rules.then((r) => (r && r.evidence_by_market ? load("data/edge_summary.json") : null)),
     ]).then(render).catch(() => {
       paint(`<p class="bt-none">The backtest reports could not be loaded.</p>`);
     });
@@ -172,12 +212,13 @@
     }
   }
 
-  function render([lo, both]) {
+  function render([lo, both, rules, edge]) {
+    const card = marketCard(rules && rules.evidence_by_market, edge);
     if (!lo && !both) {
-      paint(`<p class="bt-none">No backtest report is published yet.</p>`);
+      paint(card + `<p class="bt-none">No backtest report is published yet.</p>`);
       return;
     }
-    let html = "";
+    let html = card;
     if (lo) {
       html += block(lo, "Long-only replay",
         "The one that matches how these plays are actually traded: longs only, " +

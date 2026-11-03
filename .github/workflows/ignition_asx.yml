@@ -73,7 +73,7 @@ jobs:
     # an unbounded job holds this group for six hours.
     timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # THE BACKSTOP GATE. The 07:24 / 09:24 crons exist only to cover a
       # dropped 06:24; once a file generated AFTER today's ASX close, and
@@ -113,7 +113,7 @@ jobs:
           esac
           echo "gate: ${VERDICT} (stamp '${STAMP}')"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.due.outputs.run == 'true'
         with:
           python-version: "3.12"
@@ -127,7 +127,7 @@ jobs:
       # or the momentum lens's frames, and disappears cleanly with the lens.
       - name: Restore frame cache
         if: steps.due.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/frames
           key: ignition-asx-frames-${{ github.run_id }}

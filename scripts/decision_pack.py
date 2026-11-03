@@ -511,6 +511,131 @@ def _archive(root, market, symbol):
     return [b[0] for b in bars], bars
 
 
+# -- the owner's "20 more" (2 Nov): report-only readouts -------------------
+
+def _open_on(root, row):
+    """The exit day's OPEN from the completed-bar archive, in the prices the
+    book traded: the archive is dividend-adjusted, so it is rescaled by the
+    mark the book carried into that session (day_marks[exit day], the prior
+    close as traded) over the archive's prior close. None without the bar,
+    the prior bar, or a plausible scale (a split is not a dividend)."""
+    a = _archive(root, row.get("market", ""), row.get("symbol"))
+    if not a:
+        return None
+    days, bars = a
+    j = bisect.bisect_left(days, row.get("exit_date") or "")
+    if j >= len(days) or days[j] != row.get("exit_date") or j == 0:
+        return None
+    o, prev_close = bars[j][1], bars[j - 1][4]
+    if not (isinstance(o, (int, float)) and o > 0 and isinstance(prev_close, (int, float))
+            and prev_close > 0):
+        return None
+    carried = (row.get("day_marks") or {}).get(row.get("exit_date"))
+    scale = (carried / prev_close) if isinstance(carried, (int, float)) and carried > 0 else 1.0
+    if not 0.8 <= scale <= 1.25:
+        return None
+    return o * scale
+
+
+def stop_audit(root, closed):
+    """#4 How far past its stop each stop-out filled, in R, and why. The book
+    fills a stop at the scan that sees it (hourly, on ~15-min-delayed data);
+    a resting stop order would fill AT the stop, or at the open when the bar
+    gapped through it. Where the archive has the exit day's bar (ASX), the
+    distance splits into the GAP (stop to the open, unavoidable) and the LAG
+    (resting fill to the actual fill: what a resting stop would have saved)."""
+    out = {}
+    for mk in MARKETS:
+        rows = [r for r in closed if r.get("market") == mk and r.get("exit_reason") == "stop"]
+        slips, gaps, lags, exit_r = [], [], [], []
+        for r in rows:
+            try:
+                entry, risk, px = float(r["entry"]), float(r["risk"]), float(r["exit_price"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if not (risk > 0 and px > 0):
+                continue
+            long_ = r.get("direction", "long") != "short"
+            sign = 1.0 if long_ else -1.0
+            stop = r.get("stop")
+            stop = float(stop) if isinstance(stop, (int, float)) and stop > 0 else entry - sign * risk
+            slips.append(sign * (stop - px) / risk)
+            exit_r.append(r_of(r))
+            o = _open_on(root, r)
+            if o is None:
+                continue
+            rest = min(o, stop) if long_ else max(o, stop)
+            gaps.append(sign * (stop - rest) / risk)
+            lags.append(sign * (rest - px) / risk)
+        if slips:
+            out[mk] = {"n": len(slips), "avg_exit_r": round(sum(exit_r) / len(exit_r), 3),
+                       "slip_total": round(sum(slips), 2), "slip_avg": round(sum(slips) / len(slips), 3),
+                       "with_bar": len(gaps), "gap_total": round(sum(gaps), 2),
+                       "lag_total": round(sum(lags), 2)}
+    return out
+
+
+def mae_cut_whatif(closed, cut=-0.5, tag=None):
+    """#5 What-if, never a verdict: every rules close whose recorded MAE
+    reached `cut` R is booked at `cut` less its own costs instead. Before
+    slippage (a stop-like cut fills past its level too), and MAE is folded
+    from scan marks only, so an intrabar dip a scan never saw is missed."""
+    rows = [r for r in closed if is_rules(r) and (tag is None or r.get("cycle") == tag)]
+
+    def hit(r):
+        m = r.get("mae_r")
+        return isinstance(m, (int, float)) and m == m and m <= cut
+
+    def cut_r(r):
+        return round(cut - float(r.get("cost_r") or 0.0), 4)
+
+    def block(rs):
+        h = [r for r in rs if hit(r)]
+        return {"n": len(rs), "hit": len(h), "winners_cut": sum(1 for r in h if r_of(r) > 0),
+                "rules_total": round(sum(r_of(r) for r in rs), 2),
+                "cut_total": round(sum(cut_r(r) if hit(r) else r_of(r) for r in rs), 2)}
+
+    out = block(rows)
+    out["by_market"] = {mk: block([r for r in rows if r.get("market") == mk])
+                        for mk in MARKETS if any(r.get("market") == mk for r in rows)}
+    return out
+
+
+def _held(row, end):
+    try:
+        return max(0, (dt.date.fromisoformat(str(end)[:10])
+                       - dt.date.fromisoformat(str(row["entry_date"])[:10])).days)
+    except (KeyError, TypeError, ValueError):
+        return 0
+
+
+def r_per_slot_month(rows, today=None):
+    """R per slot-month: R earned per position-slot held for a month (30.4375
+    days), the decision replay's pass metric. A closed row holds its slot
+    entry to exit; an open row (``today`` given) to today, at its mark."""
+    tot = days = 0.0
+    for r in rows:
+        if r.get("status") == "open":
+            if today is None:
+                continue
+            tot += float(r.get("unreal_r") or 0.0)
+            days += _held(r, today)
+        else:
+            tot += r_of(r)
+            days += _held(r, r.get("exit_date"))
+    sm = days / 30.4375
+    return {"n": len(rows), "slot_months": round(sm, 2),
+            "r_per_slot_month": round(tot / sm, 4) if sm > 0 else None}
+
+
+def book_today(opn, closed):
+    """The book's own latest market day (deterministic, not the wall clock)."""
+    days = [str(r.get("last_mark_day") or "")[:10] for r in opn]
+    days += [str(r.get("exit_date") or "")[:10] for r in closed]
+    days = [d for d in days if d]
+    return max(days) if days else None
+
+
 def hand_close_counterfactual(root, closed):
     """What the rules would have done with each ASX hand close, replayed on
     the completed-bar archive from the day after the hand exit: the row's
@@ -796,6 +921,47 @@ def main(argv=None, root=ROOT, out=sys.stdout):
     m = mae_report(closed, opn)
     w(f"  closed {m['closed']}, won {m['won']}, by exit {m['by_exit']}; "
       f"open {m['open']} (now positive {m['open_now_positive']})")
+
+    w("")
+    w("## Stops: how far past the stop they filled (2 Nov list #4)")
+    for mk, a in stop_audit(root, closed).items():
+        line = (f"  {mk:7} n={a['n']:<3} avg exit {a['avg_exit_r']:+.3f}R | past the stop "
+                f"{a['slip_total']:+.2f}R (avg {a['slip_avg']:+.3f}R)")
+        if a["with_bar"]:
+            line += (f" | {a['with_bar']} with the day's bar: gap {a['gap_total']:+.2f}R, "
+                     f"scan lag {a['lag_total']:+.2f}R (what a resting stop would save)")
+        else:
+            line += " | no archived bar (the archive is ASX only)"
+        w(line)
+
+    w("")
+    w("## What-if: cut at -0.5R adverse (2 Nov list #5; report only, before slippage)")
+    for label, tag in (("all cycles", None), (HC41["tag"], HC41["tag"]), (HC42["tag"], HC42["tag"])):
+        m = mae_cut_whatif(closed, tag=tag)
+        w(f"  {label:10} rules n={m['n']:<3} reached -0.5R {m['hit']:<3} (winners among them "
+          f"{m['winners_cut']}) | rules {m['rules_total']:+.2f}R -> cut {m['cut_total']:+.2f}R")
+        for mk, b in m["by_market"].items():
+            w(f"    {mk:7} n={b['n']:<3} hit {b['hit']:<3} | {b['rules_total']:+.2f}R -> "
+              f"{b['cut_total']:+.2f}R")
+
+    w("")
+    today = book_today(opn, closed)
+    w(f"## R per slot-month (2 Nov list #6; the replay's pass metric; book day {today})")
+    for tag in sorted({r.get("cycle") for r in closed} | {r.get("cycle") for r in opn}, key=str):
+        cr = [r for r in closed if r.get("cycle") == tag and is_rules(r)]
+        op = [r for r in opn if r.get("cycle") == tag]
+        a, b = r_per_slot_month(cr), r_per_slot_month(cr + op, today)
+        if not (a["n"] or b["n"]):
+            continue
+        ra = "-" if a["r_per_slot_month"] is None else f"{a['r_per_slot_month']:+.4f}"
+        rb = "-" if b["r_per_slot_month"] is None else f"{b['r_per_slot_month']:+.4f}"
+        w(f"  cycle {str(tag):6} rules closes n={a['n']:<3} {ra} R/slot-month | with "
+          f"{len(op)} open at today's marks {rb}")
+    h1 = [r for r in closed if r.get("cycle") == HC41["tag"] and is_rules(r)]
+    for mk, rows in sorted(group(h1, lambda r: r.get("market")).items(), key=lambda kv: str(kv[0])):
+        v = r_per_slot_month(rows)["r_per_slot_month"]
+        w(f"    {HC41['tag']} {str(mk):7} n={len(rows):<3} "
+          f"{'-' if v is None else f'{v:+.4f}'} R/slot-month")
 
     w("")
     w("## #35 review flags")

@@ -108,6 +108,10 @@
   // ONLY: loadBotRules adopts bot_rules.max_hold_days. The open table's
   // countdown reads it (2026-11-02).
   let MAX_HOLD_DAYS = 28;
+  // bot_rules.json `capacity` (the owner's "20 more", 2 Nov): the days slots
+  // free as time stops fall due, and each market's GICS sector load. null
+  // until the rules load -- the lines it feeds then say nothing, never a guess.
+  let CAPACITY = null, MAX_OPEN = null, SECTOR_CAP = 0;
   // Each market's own calendar (config MARKETS[m].timezone). The engine
   // counts a position's days held against the MARKET's date, not the
   // viewer's, so the countdown does too (pinned by test_js_config_mirrors).
@@ -153,6 +157,9 @@
       // The time stop the countdown counts to. 0 is a real value (off), so
       // the test is the type, never truthiness.
       if (typeof j.max_hold_days === "number" && isFinite(j.max_hold_days)) MAX_HOLD_DAYS = j.max_hold_days;
+      CAPACITY = j.capacity && typeof j.capacity === "object" ? j.capacity : null;
+      if (typeof j.max_open_total === "number" && j.max_open_total > 0) MAX_OPEN = j.max_open_total;
+      if (typeof j.max_per_sector === "number") SECTOR_CAP = j.max_per_sector;
       // The current cycle and the cells it trades (REFINE200 #37/#125): read,
       // never hard-coded, so the next cycle's scoreboard needs no edit here.
       if (typeof j.cycle_tag === "string" && j.cycle_tag.trim()) LIVE_CYCLE = j.cycle_tag.trim();
@@ -892,6 +899,76 @@
 
   // Just the open table + its control — NOT renderSide, which also redraws the
   // equity SVG and the stat cards. A sort click changes neither.
+  // WHEN THE NEXT CYCLE CAN TRADE (the owner's "20 more" #13 and #17, 2 Nov).
+  // A full book takes nothing new, so the line under the open table says when
+  // slots free (bot_rules.json capacity.time_stops_due -- the engine's own day,
+  // vivek_journal.time_stop_due) and a fold shows each market's GICS sector
+  // load against the per-market cap. Both READ-ONLY: no control, no call.
+  const fmtDue = (iso) => {
+    // By hand, not toLocaleDateString: ICU builds disagree on "Wed 11 Nov"
+    // vs "Wed, 11 Nov", and the deck's nextSlots prints the same day.
+    const t = Date.parse(`${iso}T12:00:00Z`);
+    if (!isFinite(t)) return String(iso);
+    const d = new Date(t);
+    return `${"Sun Mon Tue Wed Thu Fri Sat".split(" ")[d.getUTCDay()]} ${d.getUTCDate()} ` +
+      `${"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[d.getUTCMonth()]}`;
+  };
+  function capacityText(nOpen) {
+    if (!(MAX_OPEN > 0)) return "";
+    if (nOpen < MAX_OPEN) return `${MAX_OPEN - nOpen} of ${MAX_OPEN} slots free.`;
+    const due = (CAPACITY && Array.isArray(CAPACITY.time_stops_due) ? CAPACITY.time_stops_due : [])
+      .filter((d) => Array.isArray(d) && typeof d[0] === "string" && +d[1] > 0);
+    if (!due.length) return `${nOpen} of ${MAX_OPEN} slots · full.`;
+    const head = due.slice(0, 4).map((d) => `${fmtDue(d[0])} (${d[1]})`).join(" · ");
+    const rest = due.slice(4).reduce((a, d) => a + (+d[1]), 0);
+    return `${nOpen} of ${MAX_OPEN} slots · full. Slots free as time stops fall due: ${head}` +
+      (rest ? ` · ${rest} more by ${fmtDue(due[due.length - 1][0])}` : "") +
+      `, unless a stop or TP1 comes first. ${LIVE_CYCLE} takes its first trade in the first free slot.`;
+  }
+  function sectorLoadHTML() {
+    const load = CAPACITY && CAPACITY.sector_load && typeof CAPACITY.sector_load === "object" ? CAPACITY.sector_load : null;
+    if (!load || !(SECTOR_CAP > 0)) return { html: "", full: 0 };
+    let full = 0;
+    const lines = Object.keys(load).sort().map((mk) => {
+      const parts = Object.entries(load[mk] || {}).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+        .map(([k, n]) => {
+          const at = n >= SECTOR_CAP;
+          if (at) full += 1;
+          return `<span class="jr-sec${at ? " jr-sec-full" : ""}">${esc(k)} ${n}/${SECTOR_CAP}</span>`;
+        });
+      return `<div class="jr-sec-line"><b>${esc(mk.toUpperCase())}</b> ${parts.join(" · ") || "none"}</div>`;
+    });
+    return { html: lines.join(""), full };
+  }
+  function paintCapacity(open) {
+    const sec = $("#sec-open");
+    if (!sec) return;
+    let line = $("#bot-capacity");
+    if (!line) {
+      line = document.createElement("div");
+      line.id = "bot-capacity"; line.className = "jr-cap-line";
+      const title = sec.querySelector(".jr-section-title");
+      if (title) title.after(line); else sec.prepend(line);
+    }
+    const txt = capacityText(open.length);
+    line.textContent = txt;
+    line.hidden = !txt;
+    let fold = $("#bot-sectors");
+    const { html, full } = sectorLoadHTML();
+    if (!html) { if (fold) fold.hidden = true; return; }
+    if (!fold) {
+      fold = document.createElement("details");
+      fold.id = "bot-sectors"; fold.className = "jr-fold jr-fold-quiet jr-sectors";
+      fold.innerHTML = `<summary></summary><div class="jr-sec-body"></div>`;
+      const em = $("#bot-emergency");
+      if (em) em.before(fold); else sec.append(fold);
+    }
+    fold.hidden = false;
+    fold.querySelector("summary").textContent =
+      `Sector load (GICS, ${SECTOR_CAP} per sector per market)` + (full ? ` · ${full} full` : "");
+    fold.querySelector(".jr-sec-body").innerHTML = html;
+  }
+
   function paintOpen(side) {
     const host = $("#" + side + "-open");
     // UI100 review (2026-10-20): until a book load has been TRIED the table
@@ -900,6 +977,8 @@
     // positions." straight under the hero that the real rows then shoved
     // down (CLS). A failed first load is paintLoadFailure's to say.
     if (host && (botTried || state[side].open.length)) host.innerHTML = openRows(state[side].open, side, Date.now());
+    // typeof: the tests slice paintOpen alone; in the page it is always here.
+    if (side === "bot" && typeof paintCapacity === "function") paintCapacity(state.bot.open || []);
     // Guarded: journal.js can land one commit ahead of the journal.html that
     // adds this host, and the page must stay whole in between.
     const sortHost = $("#" + side + "-open-sort");
@@ -947,7 +1026,22 @@
     const tsCls = ts && ts.left <= 7 ? " jr-ts-soon" : "";
     return `<td class="num jr-rs" data-label="To stop" title="${esc(stopTip)}">${rm.stop == null ? "—" : fmtRoom(rm.stop)}</td>` +
       `<td class="num jr-rt" data-label="To target"${rm.tp ? ` data-tp="${esc(rm.tp)}"` : ""} title="${esc(tgtTip)}">${rm.target == null ? "—" : fmtRoom(rm.target)}</td>` +
-      `<td class="num jr-ts${tsCls}" data-label="Time stop" title="${esc(tsTip)}">${!ts ? "—" : ts.left <= 0 ? "due" : `${ts.left}d`}</td>`;
+      `<td class="num jr-ts${tsCls}" data-label="Time stop" title="${esc(tsTip)}">${!ts ? "—" : ts.left <= 0 ? "due" : `${ts.left}d`}${d14Sub(t)}</td>`;
+  }
+  // THE DAY-14 STAMP on an open row (the owner's "20 more" #16): the engine's
+  // report-only `d14` (vivek_run._stamp_d14) -- R and best R at day 14, and
+  // whether PR-16's day-14 cut would have closed it. Never a control.
+  function d14Sub(t) {
+    const d = t && t.d14;
+    if (!d || typeof d !== "object" || typeof d.r !== "number") return "";
+    const pr = PREREG.find((x) => x.kind === "shadow") || { floor: 0.5 };
+    const best = typeof d.mfe_r === "number" ? d.mfe_r : null;
+    const cut = !d.tp1_hit && best != null && best < pr.floor;
+    const tip = `Day-14 stamp (report only): on ${d.day}, day ${d.held}, this position was ` +
+      `${rfmt(d.r)}; its best so far ${best == null ? "unknown" : rfmt(best)}; TP1 ${d.tp1_hit ? "hit" : "not hit"}. ` +
+      (cut ? `The day-14 cut PR-16 measures would have closed it here (best under +${pr.floor}R).`
+        : `The day-14 cut PR-16 measures would have kept it.`);
+    return `<span class="num-sub jr-d14${cut ? " jr-d14-cut" : ""}" title="${esc(tip)}">d14 ${rfmt(d.r)}${cut ? " ✂" : ""}</span>`;
   }
 
   // The book's open-positions table: the essentials per row (the comparison
@@ -1798,8 +1892,47 @@
       `</details>`;
   }
 
+  // THE CYCLE SWITCH (the owner's "20 more" #15, 2 Nov): the stats, the
+  // equity curve and the closed trades for one cycle or for all of them, so
+  // a new cycle's record is not read through the old one's. The cycle lines,
+  // checkpoints and the rules-vs-hand chart above stay whole. The choice is a
+  // per-viewer convenience (localStorage, try/catch); "all" is the default.
+  const CYC_KEY = "gbs:jr-cycle";
+  let cycleView = "all";
+  try { cycleView = localStorage.getItem(CYC_KEY) || "all"; } catch (_) { /* private window */ }
+  function cyclesIn(d) {
+    const first = {};
+    for (const r of [...(d.closed || []), ...(d.open || [])]) {
+      if (!r || !r.cycle) continue;
+      const e = String(r.entry_date || "");
+      if (!(r.cycle in first) || e < first[r.cycle]) first[r.cycle] = e;
+    }
+    return Object.keys(first).sort((a, b) => (first[a] < first[b] ? -1 : 1));
+  }
+  function cyclePick(d) {
+    const tags = cyclesIn(d);
+    if (!tags.includes(cycleView)) cycleView = "all";
+    const btn = (v, label) => `<button type="button" class="jr-cyc-b${cycleView === v ? " is-on" : ""}" ` +
+      `data-cyc="${esc(v)}" aria-pressed="${cycleView === v}">${esc(label)}</button>`;
+    return tags.length < 2 ? "" : `<span class="jr-cyc" role="group" aria-label="Show one cycle">` +
+      btn("all", "All") + tags.map((t) => btn(t, t)).join("") + `</span>`;
+  }
+  const inView = (rows) => cycleView === "all" ? rows : rows.filter((r) => r && r.cycle === cycleView);
+
   function renderSide(side) {
-    const d = state[side], pre = side;
+    const d0 = state[side], pre = side;
+    // The bot side reads through the cycle switch; the stats, the curve and
+    // the closed table below see only the chosen cycle.
+    const d = side === "bot" ? { ...d0, closed: inView(d0.closed || []), open: inView(d0.open || []) } : d0;
+    if (side === "bot") {
+      const pick = $("#bot-cycle-pick") || (() => {
+        const hd = document.querySelector("#sec-bot .side-hd");
+        if (!hd) return null;
+        hd.insertAdjacentHTML("beforeend", `<span id="bot-cycle-pick"></span>`);
+        return $("#bot-cycle-pick");
+      })();
+      if (pick) pick.innerHTML = cyclePick(d0);
+    }
     const s = stats(d.closed, d.open.length);
     statCards($("#" + pre + "-stats"), s);
     if (side === "bot") {
@@ -1811,17 +1944,17 @@
       document.querySelectorAll("#bot-pr").forEach((el) => el.remove());
       // The current cycle first, its checkpoints, then the ended cycle
       // (REFINE200 #37/#194; owner item 6).
-      if (host) host.insertAdjacentHTML("beforebegin", cycleLine(d));
-      if (host) host.insertAdjacentHTML("beforebegin", checkpointLine(d));
+      if (host) host.insertAdjacentHTML("beforebegin", cycleLine(d0));
+      if (host) host.insertAdjacentHTML("beforebegin", checkpointLine(d0));
       for (const f of document.querySelectorAll("#bot-pr details")) if (prOpen.includes(f.dataset.cycle)) f.open = true;
-      if (host) host.insertAdjacentHTML("beforebegin", w3Line(d));
+      if (host) host.insertAdjacentHTML("beforebegin", w3Line(d0));
       renderTide();
     }
     drawEquity(pre + "-equity", series(d.closed), side === "bot" ? "Claude" : "you");
-    if (side === "bot") drawRulesHand("bot-rchart", d);
+    if (side === "bot") drawRulesHand("bot-rchart", d0);
     paintOpen(side);
     $("#" + pre + "-closed").innerHTML = deciderHTML(d.closed) + closedRows(d.closed, side);
-    $("#" + pre + "-open-n").textContent = d.open.length ? `(${d.open.length})` : "";
+    $("#" + pre + "-open-n").textContent = d0.open.length ? `(${d0.open.length})` : "";
     $("#" + pre + "-closed-n").textContent = d.closed.length ? `(${d.closed.length})` : "";
     return s;
   }
@@ -2396,6 +2529,13 @@
       // headers — are the same attribute, so they cannot drift apart.
       const osort = e.target.closest("[data-osort]");
       if (osort) { setOpenSort(osort.getAttribute("data-osort")); return; }
+      const cyc = e.target.closest("[data-cyc]");
+      if (cyc) {
+        cycleView = cyc.getAttribute("data-cyc") || "all";
+        try { localStorage.setItem(CYC_KEY, cycleView); } catch (_) { /* per-viewer only */ }
+        renderSide("bot");
+        return;
+      }
       const all = e.target.closest("[data-closeall]");
       if (all) { closeAllBot(); return; }
     });

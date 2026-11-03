@@ -148,7 +148,7 @@ def test_every_job_is_bounded_and_least_privileged():
 def test_it_uses_only_the_reviewed_first_party_actions():
     uses = {s["uses"] for spec in _doc()["jobs"].values()
             for s in spec.get("steps") or [] if "uses" in s}
-    assert uses == {"actions/checkout@v4", "actions/setup-python@v5"}, uses
+    assert uses == {"actions/checkout@v5", "actions/setup-python@v6"}, uses
 
 
 # -- the loop: regenerate, never replay -------------------------------------

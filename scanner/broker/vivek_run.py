@@ -1428,6 +1428,33 @@ def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
 
 #: decide() skip codes that mean "a cap had no room" -- the only refusals a
 #: plan freed at the fill can change (see the refill in run_market).
+#: WHY EACH CANDIDATE WAS NOT TAKEN, per market, from the last in-session run
+#: of this process (the owner's "20 more" #14, 2 Nov). REPORT ONLY: nothing
+#: reads it to decide; scanner/run.py merges it into bot_rules.json `skips`
+#: for the deck's "not taken" chip. A market whose session was shut keeps its
+#: last published record.
+LAST_SKIPS: dict[str, dict] = {}
+
+
+def _record_skips(market: str, decision: dict, fill_codes: dict[str, str],
+                  guard_breached: bool, now: dt.datetime) -> None:
+    """{symbol: code} for every row decide() refused (its own skip code) and
+    every plan this run did not fill (the fill-time code, or `loss_guard`
+    when a breached guard halted new entries)."""
+    reasons: dict[str, str] = {}
+    for s in decision.get("skipped") or []:
+        sym = str(s.get("symbol") or "").upper()
+        if sym and s.get("code"):
+            reasons[sym] = str(s["code"])
+    for out in decision.get("plans") or []:
+        sym = str(((out.get("plan") or {}).get("symbol")) or "").upper()
+        if sym and guard_breached:
+            reasons[sym] = "loss_guard"
+    reasons.update(fill_codes)
+    LAST_SKIPS[market] = {"at": now.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                          "reasons": dict(sorted(reasons.items()))}
+
+
 _CAPACITY_SKIPS = frozenset({"book_full", "global_cap", "notional_cap",
                              "long_cap", "sector_cap"})
 
@@ -1864,6 +1891,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         str(r.get("symbol") or "").upper(): r.get("level_tf")
         for r in (results or []) if r.get("symbol")
     }
+    fill_codes: dict[str, str] = {}      # why a plan was refused at the fill (report only)
     if is_open and not guard["breached"]:
         plans = decision["plans"]
         refused: set[str] = set()        # skipped at the fill this run
@@ -1880,10 +1908,12 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                     log.info("SKIP  %-8s [stale_cache] only a cached frame this run - "
                              "no fill off a past price", sym)
                     skipped_now.add(str(sym).upper())
+                    fill_codes[str(sym).upper()] = "stale_cache"
                     continue
                 price = _current_price(frames, yf_map.get(sym))
                 if price is None:
                     skipped_now.add(str(sym).upper())
+                    fill_codes[str(sym).upper()] = "no_price"
                     continue
                 # Earnings gap-avoidance (best-effort, fail-open) — only for the
                 # handful of names actually being filled, never the universe.
@@ -1893,6 +1923,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                     log.info("SKIP  %-8s [earnings] reports within %dd - gap risk",
                              sym, earnings_buffer)
                     skipped_now.add(str(sym).upper())
+                    fill_codes[str(sym).upper()] = "earnings"
                     continue
                 pos = _ticket_to_position(
                     out, price, market, day,
@@ -1901,6 +1932,7 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 if pos is None:                              # don't chase / wide at fill
                     chased += 1
                     skipped_now.add(str(sym).upper())
+                    fill_codes[str(sym).upper()] = "refused_at_fill"
                     continue
                 if market == "crypto":
                     _stamp_identity(pos, frames.get(yf_map.get(sym)),
@@ -1939,6 +1971,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 equity, market=market, open_book=_open_book_view(book, market),
                 cooldown_syms=cooldown, **gate)
             plans = decision["plans"]
+
+    if is_open:
+        _record_skips(market, decision, fill_codes, bool(guard["breached"]), now)
 
     book_open = sum(1 for p in book["open"] if p.get("market") == market)
     book_short = sum(1 for p in book["open"]

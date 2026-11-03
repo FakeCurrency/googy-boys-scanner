@@ -896,6 +896,27 @@
     );
     const range = Array.isArray(bt.date_range) && bt.date_range.length === 2
       ? bt.date_range[0] + " → " + bt.date_range[1] : "";
+    // THE FORWARD BUCKET (the owner's "20 more" #20, 2 Nov): the screen's own
+    // trades since the pre-registered start, read off the file -- how far the
+    // evidence a decision to trade Ignition needs has got. No pace is
+    // computed: the replay's own count and span say how rare a trigger is.
+    const fwd = obj(bt.forward_compare);
+    const fp = obj(fwd.primary);
+    if (fwd.from) {
+      const fopen = num(fp.open);
+      const span = Array.isArray(bt.date_range) && bt.date_range.length === 2
+        ? String(bt.date_range[0]).slice(0, 4) + "→" + String(bt.date_range[1]).slice(0, 4) : "";
+      items.push(["forward since " + fwd.from, fmtN(fp.n),
+        (fopen ? "(+" + fmtN(fopen) + " open) " : "") +
+          "(the replay: " + fmtN(p.n) + (span ? " in " + span : "") + ")",
+        "Pre-registered " + (fwd.registered || fwd.from) + ": the screen's trades since then, scored " +
+          "exactly as the replay scores them" + (fwd.primary_exit ? " (exit " + fwd.primary_exit +
+          (fwd.compare_exit ? ", compared with " + fwd.compare_exit : "") + ")" : "") +
+          ". Trading Ignition needs this bucket to beat random timing, and your ruling. Triggers " +
+          "are rare -- the replay found " + fmtN(p.n) + (range ? " across " + range : "") +
+          " -- so that evidence is likely years away.",
+        "ig-ev-fwd"]);
+    }
     const design = obj(sc.design_cases_excluded);
     const dNames = Object.keys(design);
     const tip = "Walk-forward replay, pre-registered before it ran" +

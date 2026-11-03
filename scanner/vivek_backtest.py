@@ -251,10 +251,12 @@ def _build_row(sig: dict, df_slice: pd.DataFrame, symbol: str, name: str, sector
         return None, None, None
     entry_types = ([gate_plan["entry_trigger"]] if armed and gate_plan.get("entry_trigger")
                    else vivek.entry_types(sig))
+    # score + rr: the live scan's sort key (grade -> score -> R:R, scan.py),
+    # which the parity replay uses to order a day's candidates like the bot.
     row = {"symbol": symbol, "name": name, "sector": sector,
            "dir": "LONG" if sig["direction"] == "long" else "SHORT",
            "grade": grade, "entry_types": entry_types,
-           "level_tf": sig.get("level_tf")}
+           "level_tf": sig.get("level_tf"), "score": points, "rr": gate_rr}
     return row, plans, grade
 
 

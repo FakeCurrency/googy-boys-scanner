@@ -132,11 +132,11 @@ jobs:
       # github.sha; scan.py's display-only `code_sha` stamp reads git HEAD
       # first, GITHUB_SHA only as a fallback (tests/test_code_sha.py). Pinned
       # in tests/test_workflow_mutex.py.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -149,7 +149,7 @@ jobs:
       # pickles included, each time. Its own chain now; scan.yml layers it in
       # (see the "Restore crypto frame cache" step there for the why).
       - name: Restore frame cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/frames/crypto*
           key: vivek-frames-crypto-${{ github.run_id }}
@@ -159,7 +159,7 @@ jobs:
       # Watchdog alert-state (dedup) — shared prefix with kill_switch.yml so
       # both hosts see the same first-alert/reminder/recovery history.
       - name: Restore watchdog state
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .cache/watchdog_state.json
           key: watchdog-state-${{ github.run_id }}

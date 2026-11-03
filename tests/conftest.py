@@ -41,6 +41,20 @@ def _isolated_frame_cache(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_carried_skip_record():
+    """vivek_run.LAST_SKIPS is per-PROCESS state (2026-11-03): the last
+    in-session run's "not taken" record, which run.bot_rules_payload() merges
+    into bot_rules.json. A test that drives run_market leaves it behind, and
+    the next test in the same xdist worker that compares a published payload
+    with a fresh subprocess's (test_resize_book_workflow) then sees a record
+    the subprocess never had. Every test starts and ends with it empty."""
+    from scanner.broker import vivek_run
+    vivek_run.LAST_SKIPS.clear()
+    yield
+    vivek_run.LAST_SKIPS.clear()
+
+
+@pytest.fixture(autouse=True)
 def _no_exchange_network(monkeypatch):
     """No test may reach a real exchange (2026-09-28). The shipped default is
     config.CRYPTO_DATA_SOURCE = "exchange", so without this every crypto path

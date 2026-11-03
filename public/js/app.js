@@ -896,10 +896,44 @@
     // than the other A+ longs over 20 sessions, so the label promised what the
     // evidence did not show. Same rows, same place; it now says what it is --
     // a setup in one of the bot's entry cells -- and keeps the live record.
-    return `<span class="rbadge hiconv" title="Bot cell: ${esc(cells.join(" + "))} — ` +
+    // WHY NOT TAKEN (the owner's "20 more" #14, 2 Nov): the bot's own reason
+    // for this row at its market's last in-session run (bot_rules.json
+    // `skips`, recorded by vivek_run). Part of the tag, not a new chip, so a
+    // phone row keeps its two whole chips. A held name says nothing here.
+    const nt = notTaken(r);
+    return `<span class="rbadge hiconv${nt ? " hiconv-nt" : ""}" title="Bot cell: ${esc(cells.join(" + "))} — ` +
       `armed A/A+ in one of the bot's four entry cells (1W reclaim/break, 3D reclaim, 1D break)` +
-      `${live.length ? esc(". Live, the bot's rules closes: " + live.join("; ")) : ""}">` +
-      `Bot cell${cells.length > 1 ? ` ×${cells.length}` : ""}</span>`;
+      `${live.length ? esc(". Live, the bot's rules closes: " + live.join("; ")) : ""}` +
+      `${nt ? esc(`. Not taken at the last ${String(state.market || "").toUpperCase()} run (${nt.at}): ${nt.long}.`) : ""}">` +
+      `Bot cell${cells.length > 1 ? ` ×${cells.length}` : ""}${nt ? ` · ${esc(nt.short)}` : ""}</span>`;
+  }
+  // decide()'s skip codes (and vivek_run's fill-time ones) in a few words.
+  const NOT_TAKEN = {
+    book_full: ["full", "the book had no free slot"],
+    global_cap: ["full", "the book had no free slot across the markets"],
+    global_cap_unknown: ["full?", "a sibling market's book was unreadable, so the cap could not be counted"],
+    notional_cap: ["$ cap", "the book's notional cap was reached"],
+    long_cap: ["long cap", "the long cap was reached"],
+    sector_cap: ["sector full", "its GICS sector already holds the per-market cap"],
+    dup_company: ["same co.", "the book already holds another listed line of this company"],
+    dup_symbol: ["held", "already held"],
+    cooldown: ["cooldown", "stopped out recently: the re-entry cooldown is running"],
+    loss_guard: ["guard", "a loss guard had halted new entries"],
+    earnings: ["earnings", "it reports within the earnings buffer"],
+    stale_cache: ["no price", "only a cached price was available, so no fill"],
+    no_price: ["no price", "no live price this run"],
+    refused_at_fill: ["fill refused", "refused at the fill (chased past TP1, a stop too wide, or the R:R gone)"],
+  };
+  function notTaken(r) {
+    const sym = String((r && r.symbol) || "").toUpperCase();
+    const held = state.heldSyms && state.heldSyms[state.market];
+    if (!sym || (held && held.has(sym))) return null;
+    const rec = state.skips && state.skips[state.market];
+    const code = rec && rec.reasons ? rec.reasons[sym] : null;
+    if (!code) return null;
+    const [short, long] = NOT_TAKEN[code] || ["not taken", String(code)];
+    const at = typeof PM !== "undefined" && PM.fmtMelb && rec.at ? PM.fmtMelb(rec.at) : String(rec.at || "");
+    return { short, long, at };
   }
   // ── THE LIVE CYCLE'S RECORD PER CELL (owner item 10, 2026-11-02) ─────────
   // What each of the bot's entry cells has made in the CURRENT cycle
@@ -2823,6 +2857,22 @@
              maxOpen, free, atCap: maxOpen != null && open.length >= maxOpen };
   };
 
+  // "Wed 11 Nov (2)": the first day time stops fall due, from bot_rules.json
+  // capacity.time_stops_due; "" without it (never a guessed day).
+  function nextSlots(rules) {
+    const due = rules && rules.capacity && Array.isArray(rules.capacity.time_stops_due)
+      ? rules.capacity.time_stops_due : [];
+    const first = due.find((d) => Array.isArray(d) && typeof d[0] === "string" && +d[1] > 0);
+    if (!first) return "";
+    const t = Date.parse(`${first[0]}T12:00:00Z`);
+    if (!isFinite(t)) return "";
+    // By hand (as journal.js fmtDue): ICU builds disagree on the comma.
+    const d = new Date(t);
+    const day = `${"Sun Mon Tue Wed Thu Fri Sat".split(" ")[d.getUTCDay()]} ${d.getUTCDate()} ` +
+      `${"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[d.getUTCMonth()]}`;
+    return `${day} (${first[1]})`;
+  }
+
   // `fresh` = the 3-minute re-read: it asks the shared loader for a new copy
   // (UI100 #100); the boot call shares the page's one read.
   async function loadBotActivity(fresh) {
@@ -2886,7 +2936,10 @@
         const rec = tag ? { tag, cells: cellRecord(b, tag) } : null;
         const recChanged = JSON.stringify(rec) !== JSON.stringify(state.cellRec || null);
         state.cellRec = rec;
-        if ((changed || recChanged) && state.data) renderRows();
+        const skips = rules && rules.skips && typeof rules.skips === "object" ? rules.skips : null;
+        const skipsChanged = JSON.stringify(skips) !== JSON.stringify(state.skips || null);
+        state.skips = skips;
+        if ((changed || recChanged || skipsChanged) && state.data) renderRows();
       } catch (_) { /* marking is best-effort, same as HELD above */ }
       const evts = [];
       for (const p2 of b.open || []) {
@@ -2932,10 +2985,14 @@
       // and "0 free" is a different morning to "96 A+" and "8 free". The line
       // says "60/60"; the fold reuses the Journal's own wording ("N of <cap>
       // book slots", "FULL") verbatim so the two surfaces read as one system.
+      // hc4-2 start (the owner's "20 more" #13): a full book frees its slots
+      // as the time stops fall due -- bot_rules.json capacity, the engine's
+      // own day (vivek_journal.time_stop_due).
+      const nextFree = facts.atCap ? nextSlots(rules) : "";
       const capTxt = facts.maxOpen == null
         ? `${facts.open} open`
         : `${facts.open} of ${facts.maxOpen} book slots · ` +
-          (facts.atCap ? "FULL" : `${facts.free} free`);
+          (facts.atCap ? `FULL${nextFree ? ` · next slots ${nextFree}` : ""}` : `${facts.free} free`);
       // THE RECORD, UNBLENDED (Session B, 2026-08-19, owner-ordered). This
       // used to print one `record 16W-29L -6.9R`, which is two different
       // systems' results added together and labelled as the bot's. The rules

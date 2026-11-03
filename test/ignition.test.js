@@ -2427,3 +2427,23 @@ test("the symbol link carries src=ignition so chart.js knows which lens sent it"
   assert.equal(q.get("src"), "ignition");
   assert.equal(I.chartHref("crypto", "TAO"), "chart.html?m=crypto&s=TAO&src=ignition");
 });
+
+// ── the forward bucket's count (the owner's "20 more" #20, 2 Nov) ─────────────
+// The evidence line says how far the forward bucket has got, read off the
+// file's forward_compare, beside the replay's own count and span -- no pace
+// is computed, and a file without the block says nothing about it.
+test("the evidence line counts the forward bucket off the file, beside the replay's own count", () => {
+  assert.ok(!/forward since/.test(I.evidenceHTML("ok", BT2, null)), "no forward_compare, no claim");
+  const bt = JSON.parse(JSON.stringify(BT2));
+  bt.forward_compare = { from: "2026-10-14", registered: "2026-10-14", primary_exit: "trail9",
+                         compare_exit: "trail26", primary: { n: 0, open: 0 } };
+  const h = I.evidenceHTML("ok", bt, null);
+  assert.match(h, /forward since 2026-10-14 <b>0<\/b> \(the replay: 87 in 2017→2026\)<\/span>/);
+  assert.match(h, /exit trail9, compared with trail26/);
+  assert.match(h, /likely years away/);
+  noJunk(h, "forward item");
+  bt.forward_compare.primary = { n: 3, open: 2 };
+  assert.match(I.evidenceHTML("ok", bt, null), /forward since 2026-10-14 <b>3<\/b> \(\+2 open\) \(the replay: 87/);
+  delete bt.forward_compare.primary;
+  assert.match(I.evidenceHTML("ok", bt, null), /forward since 2026-10-14 <b>—<\/b>/, "no count published is a dash");
+});

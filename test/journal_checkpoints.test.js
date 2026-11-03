@@ -142,7 +142,9 @@ test("the strip is inert: no button, link or handler in checkpointLine", () => {
 
 test("renderSide draws it beside the cycle board and keeps the fold's state over a repaint", () => {
   const body = slice("function renderSide(side) {", "\n  }");
-  assert.ok(/host\.insertAdjacentHTML\("beforebegin", checkpointLine\(d\)\)/.test(body), "renderSide no longer draws the strip");
+  // d0 = the whole book: the cycle switch (2 Nov) narrows the stats, the
+  // curve and the closed table, never the checkpoints.
+  assert.ok(/host\.insertAdjacentHTML\("beforebegin", checkpointLine\(d0\)\)/.test(body), "renderSide no longer draws the strip");
   assert.ok(/document\.querySelectorAll\("#bot-pr"\)\.forEach\(\(el\) => el\.remove\(\)\)/.test(body),
     "no remove-before-insert for #bot-pr — every 3-minute refresh would stack another strip");
   assert.ok(/const prOpen = \[\.\.\.document\.querySelectorAll\("#bot-pr details\[open\]"\)\]\.map\(\(f\) => f\.dataset\.cycle\)/.test(body),
@@ -328,8 +330,13 @@ test("the record rides the High-conviction badge's title and the expanded panel,
   // PR-6 (owner, 2026-11-02): the badge is a plain "Bot cell" tag -- no gold,
   // no stacked marks -- and it is SHORTER than the old label, so the phone's
   // two-whole-chip fit (UI100 #32) only gets easier.
-  assert.ok(/`Bot cell\$\{cells\.length > 1 \? ` ×\$\{cells\.length\}` : ""\}<\/span>`;/.test(badge),
+  assert.ok(/`Bot cell\$\{cells\.length > 1 \? ` ×\$\{cells\.length\}` : ""\}\$\{nt \? ` · \$\{esc\(nt\.short\)\}` : ""\}<\/span>`;/.test(badge),
     "the bot-cell tag's visible label changed");
+  // 2 Nov: the "not taken" reason rides INSIDE the tag (no new chip), so its
+  // words stay short enough for the phone's two whole chips.
+  const nt = sliceFrom(APP, "const NOT_TAKEN = {", "\n  };");
+  const shorts = [...nt.matchAll(/^\s+\w+: \["([^"]+)",/gm)].map((m) => m[1]);
+  assert.ok(shorts.length >= 10 && shorts.every((w) => w.length <= 12), JSON.stringify(shorts));
   assert.ok(!/🎯|High conviction<\/span>/.test(badge.replace(/\/\/[^\n]*/g, "")),
     "the demoted badge is gold again");
   const detail = sliceFrom(APP, "function detailHtmlVivek(r) {", "\n  }");
@@ -341,6 +348,115 @@ test("no rules file, no note: the cycle is never guessed", () => {
   assert.ok(/const tag = rules && typeof rules\.cycle_tag === "string" \? rules\.cycle_tag\.trim\(\) : "";/.test(APP));
   assert.ok(/const rec = tag \? \{ tag, cells: cellRecord\(b, tag\) \} : null;/.test(APP));
 });
+
+// ── the owner's "20 more" (2 Nov): slots, sectors, day 14, the cycle switch ──
+suite("20 more · the slots line, the sector-load fold, the day-14 sub-line, the cycle switch");
+{
+  const cx = vm.createContext({ console, Intl, Date, Math, Number, String, JSON, Object, Array, isFinite });
+  vm.runInContext(
+    slice("const esc = (s) =>", ";\n") + "\n" + slice("const rfmt = (r) =>", ";\n") + "\n"
+    + slice("/* PREREG-BEGIN */", "/* PREREG-END */") + "\n"
+    + "var MAX_OPEN = 60, CAPACITY = null, SECTOR_CAP = 6, LIVE_CYCLE = 'hc4-2', cycleView = 'all';\n"
+    + slice("const fmtDue = (iso) => {", "\n  };") + "\n"
+    + slice("function capacityText(nOpen) {", "\n  }") + "\n"
+    + slice("function sectorLoadHTML() {", "\n  }") + "\n"
+    + slice("function d14Sub(t) {", "\n  }") + "\n"
+    + slice("function cyclesIn(d) {", "\n  }") + "\n"
+    + slice("function cyclePick(d) {", "\n  }") + "\n"
+    + slice("const inView = ", ";\n") + "\n"
+    + "this.J2 = { capacityText, sectorLoadHTML, d14Sub, cyclesIn, cyclePick, inView,"
+    + " set: (k, v) => { eval(k + ' = v'); } };", cx);
+  const J2 = cx.J2;
+  const DUE = [["2026-11-11", 2], ["2026-11-12", 1], ["2026-11-16", 9], ["2026-11-18", 3], ["2026-11-19", 5], ["2026-11-25", 7]];
+
+  test("a full book says when slots free, on the engine's days, and what takes the first one", () => {
+    J2.set("CAPACITY", { time_stops_due: DUE });
+    const t = J2.capacityText(60);
+    assert.ok(t.startsWith("60 of 60 slots · full. Slots free as time stops fall due: Wed 11 Nov (2) · Thu 12 Nov (1) · Mon 16 Nov (9) · Wed 18 Nov (3) · 12 more by Wed 25 Nov"), t);
+    assert.ok(/unless a stop or TP1 comes first\. hc4-2 takes its first trade in the first free slot\.$/.test(t), t);
+    assert.equal(J2.capacityText(57), "3 of 60 slots free.");
+    J2.set("CAPACITY", null);
+    assert.equal(J2.capacityText(60), "60 of 60 slots · full.", "no capacity block: no guessed day");
+    J2.set("MAX_OPEN", null);
+    assert.equal(J2.capacityText(60), "", "no cap known: nothing at all");
+    J2.set("MAX_OPEN", 60);
+  });
+
+  test("the sector fold marks every GICS sector at the cap, per market", () => {
+    J2.set("CAPACITY", { sector_load: { nasdaq: { "health care": 6, financials: 6, industrials: 5 }, asx: { materials: 5 } } });
+    const { html, full } = J2.sectorLoadHTML();
+    assert.equal(full, 2);
+    assert.ok(html.indexOf("<b>ASX</b>") < html.indexOf("<b>NASDAQ</b>"));
+    assert.match(html, /<span class="jr-sec jr-sec-full">financials 6\/6<\/span> · <span class="jr-sec jr-sec-full">health care 6\/6<\/span> · <span class="jr-sec">industrials 5\/6<\/span>/);
+    J2.set("SECTOR_CAP", 0);
+    assert.equal(J2.sectorLoadHTML().html, "", "no cap published: no fold");
+    J2.set("SECTOR_CAP", 6);
+  });
+
+  test("the day-14 sub-line reads the engine's stamp and says whether PR-16's cut would have closed it", () => {
+    assert.equal(J2.d14Sub({}), "");
+    const kept = J2.d14Sub({ d14: { day: "2026-11-02", held: 15, mfe_r: 0.624, r: 0.596, tp1_hit: false } });
+    assert.match(kept, /^<span class="num-sub jr-d14" title="[^"]*would have kept it\.">d14 \+0\.60R<\/span>$/);
+    const cut = J2.d14Sub({ d14: { day: "2026-11-02", held: 14, mfe_r: 0.31, r: -0.2, tp1_hit: false } });
+    assert.match(cut, /jr-d14 jr-d14-cut/);
+    assert.match(cut, /best under \+0\.5R/);
+    assert.ok(!/jr-d14-cut/.test(J2.d14Sub({ d14: { day: "x", held: 14, mfe_r: 0.2, r: 1.1, tp1_hit: true } })),
+      "past TP1 the cut never applies");
+  });
+
+  test("the cycle switch lists the book's cycles oldest first and filters only when one is picked", () => {
+    const book = { closed: [{ cycle: "hc4-1", entry_date: "2026-09-22" }, { cycle: "w3-1", entry_date: "2026-08-02" }, { entry_date: "2026-07-01" }],
+                   open: [{ cycle: "hc4-2", entry_date: "2026-11-03" }] };
+    assert.deepEqual(JSON.parse(JSON.stringify(J2.cyclesIn(book))), ["w3-1", "hc4-1", "hc4-2"]);
+    const pick = J2.cyclePick(book);
+    assert.match(pick, /data-cyc="all" aria-pressed="true">All<\/button><button type="button" class="jr-cyc-b" data-cyc="w3-1"/);
+    assert.equal(J2.inView(book.closed).length, 3);
+    J2.set("cycleView", "hc4-1");
+    assert.equal(J2.inView(book.closed).length, 1);
+    J2.set("cycleView", "gone");
+    J2.cyclePick(book);
+    assert.equal(J2.inView(book.closed).length, 3, "a remembered cycle the book no longer has falls back to all");
+    assert.equal(J2.cyclePick({ closed: [{ cycle: "hc4-1" }], open: [] }), "", "one cycle: no switch");
+  });
+
+  test("the four displays are inert: no call, no fetch, no storage beyond the switch's own memory", () => {
+    const body = slice("function capacityText(nOpen) {", "\n  }") + slice("function sectorLoadHTML() {", "\n  }")
+      + slice("function paintCapacity(open) {", "\n  }") + slice("function d14Sub(t) {", "\n  }");
+    assert.ok(!/fetch\(|\/api\/|localStorage|<button|onclick/.test(body), body.slice(0, 200));
+  });
+}
+
+suite("20 more · the deck's \"not taken\" reason and next free slot (app.js)");
+{
+  const APP2 = fs.readFileSync(path.resolve(__dirname, "../public/js/app.js"), "utf8");
+  const cut = (a, b) => { const i = APP2.indexOf(a); assert.ok(i >= 0, a); return APP2.slice(i, APP2.indexOf(b, i + a.length) + b.length); };
+  const cx = vm.createContext({ console, Intl, Date, Math, Number, String, JSON, Object, Array, isFinite });
+  vm.runInContext("var state = {}, PM = { fmtMelb: (iso) => 'Tue 3 Nov, 11:10 am AEDT' };\n"
+    + cut("const NOT_TAKEN = {", "\n  };") + "\n" + cut("function notTaken(r) {", "\n  }") + "\n"
+    + cut("function nextSlots(rules) {", "\n  }") + "\nthis.A = { notTaken, nextSlots, state };", cx);
+  const A = cx.A;
+
+  test("a row the bot refused carries the bot's own reason; a held one, or one it never saw, carries none", () => {
+    A.state.market = "nasdaq";
+    A.state.heldSyms = { nasdaq: new Set(["HELD"]) };
+    A.state.skips = { nasdaq: { at: "2026-11-02T15:41:00Z", reasons: { AAPL: "sector_cap", HELD: "dup_symbol", X: "mystery" } } };
+    const nt = A.notTaken({ symbol: "aapl" });
+    assert.equal(nt.short, "sector full");
+    assert.match(nt.long, /GICS sector/);
+    assert.equal(nt.at, "Tue 3 Nov, 11:10 am AEDT");
+    assert.equal(A.notTaken({ symbol: "HELD" }), null);
+    assert.equal(A.notTaken({ symbol: "NEW" }), null);
+    assert.equal(A.notTaken({ symbol: "X" }).short, "not taken", "an unknown code says so, never a guess");
+    A.state.market = "asx";
+    assert.equal(A.notTaken({ symbol: "AAPL" }), null, "another market's record never leaks");
+  });
+
+  test("the book fold's next free slot is the first day with any, or nothing", () => {
+    assert.equal(A.nextSlots({ capacity: { time_stops_due: [["2026-11-11", 2], ["2026-11-12", 1]] } }), "Wed 11 Nov (2)");
+    assert.equal(A.nextSlots({ capacity: { time_stops_due: [] } }), "");
+    assert.equal(A.nextSlots(null), "");
+  });
+}
 
 // ─────────────────────────────── summary ─────────────────────────────────────
 console.log(`\n${"─".repeat(48)}`);

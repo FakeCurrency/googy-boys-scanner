@@ -192,6 +192,25 @@ def market_open(market_key: str, now: dt.datetime) -> bool:
     return open_min <= cur <= close_min
 
 
+def time_stop_due(pos: dict, max_hold: int) -> dt.date | None:
+    """The day a position's pre-TP1 time stop falls due, as the engine applies
+    it (vivek_run.run_market): the first in-session run whose market date is
+    MORE than `max_hold` calendar days after entry -- day max_hold + 1 -- and
+    on a stock market the Monday when that day is a weekend (holidays are not
+    modelled: "on or after"). journal.js timeStopOf is the browser's copy.
+    None past TP1 (a runner is exempt), with the rule off, or no entry date.
+    Display only: nothing decides on it."""
+    if not max_hold > 0 or pos.get("tp1_hit"):
+        return None
+    try:
+        due = dt.date.fromisoformat(str(pos.get("entry_date") or "")[:10]) + dt.timedelta(days=max_hold + 1)
+    except ValueError:
+        return None
+    if pos.get("market") != "crypto" and due.weekday() >= 5:
+        due += dt.timedelta(days=7 - due.weekday())
+    return due
+
+
 def _r_of(price, entry, risk, is_long):
     return (price - entry) / risk if is_long else (entry - price) / risk
 

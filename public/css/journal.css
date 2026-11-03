@@ -936,3 +936,23 @@ details.jr-fold.jr-fold-quiet > summary {
 .jr-book-failed .jr-section-title:has(+ #bot-rchart),
 .jr-book-failed .jr-section-title:has(+ #bot-closed) { display: none; }
 .jr-load-err { color: var(--text); background: var(--panel); border-radius: var(--radius-md); border-left: 3px solid var(--red); text-align: left; padding: 18px 20px; }
+
+/* The owner's "20 more" (2 Nov), read-only displays: the slots line under the
+   open table, the sector-load fold, the cycle switch in the bot card's header
+   and the day-14 sub-line in the time-stop cell. */
+.jr-cap-line { margin: -4px 0 10px; font: 500 12.5px/1.45 var(--sans); color: var(--muted-2); }
+.jr-cap-line[hidden] { display: none; }
+details.jr-sectors[hidden] { display: none; }
+.jr-sec-body { padding: 2px 0 8px; }
+.jr-sec-line { font: 500 12px/1.6 var(--sans); color: var(--muted-2); }
+.jr-sec-line b { color: var(--text-2); margin-right: 4px; }
+.jr-sec-full { color: var(--red-ink); font-weight: 700; }
+.jr-cyc { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.jr-cyc-b {
+  font: 600 11.5px/1 var(--sans); color: var(--muted-2); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; cursor: pointer;
+}
+.jr-cyc-b.is-on { color: var(--text); background: var(--fill); border-color: var(--border-2); }
+.jr-d14 { display: block; }
+.jr-d14-cut { color: var(--text-2); }
+@media (max-width: 680px) { .jr-d14 { display: inline; margin-left: 4px; } }
