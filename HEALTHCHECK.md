@@ -37,7 +37,7 @@ All three good → everything is moving. Done.
 5. **Actions search: `is:failure`** — an empty week = clean. Any red run: open
    it; the failed STEP name tells the story (and the email already did).
 6. **Journal page** — P&L headline present, marks fresh after the latest
-   scan, the hc4-1 cell board filling; the ALERTS page keeps filling.
+   scan, the live cycle's cell board filling; the ALERTS page keeps filling.
 7. **End-to-end probe**: tap **SCAN** on the dashboard → within ~10–20 min
    "Last scanned" resets (the button waits up to 25 min). That one tap proves
    the whole loop: dispatch → Actions run → data commit → Cloudflare deploy →
