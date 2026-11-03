@@ -24,7 +24,9 @@ this and answers in plain English.
      deploy all have to work for it to stay fresh.
 3. **Glance at the status lamp** (top bar) and the bot strip ("Bot: N open ·
    …"). Amber for a loss-guard breach is the machine protecting itself, not a
-   fault.
+   fault. Amber naming a market ("ASX not scanned for Nh of its trading
+   session") means that market's scans stopped; amber saying "GitHub key
+   expires in N days" means the scan key needs renewing (OPERATIONS.md).
 
 All three good → everything is moving. Done.
 
