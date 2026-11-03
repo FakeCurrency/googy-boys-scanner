@@ -246,6 +246,11 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   `site-probe` (`paths` = up to 10 site GETs). Confirm mutations with a
   read-back; "merged" is not "live". Output is redacted. Pass a credential
   failure (missing secret, 401/403) to the owner yourself.
+- **Bare-Python jobs stay stdlib-only, imports inside functions too**: the
+  digest, the scan gate, backup, the sentinel, the evidence brief and ops run
+  with no `pip install`; `tests/test_bare_python_jobs.py` finds them from the
+  workflows and walks each script's imports at every depth (3 Nov: a lazy
+  import through `vivek_journal` reached numpy and crashed the ASX digest).
 - **Every job carries `timeout-minutes`** (TOP100 #44): one stuck run in the
   `scan` group silently costs a whole session.
 - **Routines can't help** (no MCP connectors, no push token); a cloud session
@@ -785,8 +790,9 @@ next-cycle candidates H1–H4). No trade rule, grade, gate or book row moved.
   `skips` (`vivek_run.LAST_SKIPS`, why each candidate was not taken at the
   last in-session run, merged over the last published record) and
   `evidence_by_market` (replay under the bot's own entry rule · live rules
-  closes · A+ longs vs the index). `vivek_journal.time_stop_due` is the ONE
-  Python definition of the time-stop day (journal.js `timeStopOf` is the
+  closes · A+ longs vs the index). `scanner/time_stop.py` `time_stop_due` is
+  the ONE Python definition of the time-stop day (stdlib-only: the digest
+  imports it; `vivek_journal` re-exports it; journal.js `timeStopOf` is the
   browser's). `vivek_bot.decide()`'s skip records carry the symbol
   (MECHANICAL, flagged).
 - **Site:** deck — the Bot-cell tag carries the bot's own "not taken"

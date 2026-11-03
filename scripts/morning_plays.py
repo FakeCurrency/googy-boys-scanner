@@ -71,6 +71,7 @@ if str(ROOT) not in sys.path:                # runnable as `python scripts/morni
     sys.path.insert(0, str(ROOT))
 
 from scanner import config, conviction       # noqa: E402
+from scanner.time_stop import time_stop_due  # noqa: E402  (stdlib-only, 3 Nov)
 from scripts import _marketclock as clock     # noqa: E402  (REFINE200 #128)
 
 DATA_DIR = ROOT / "public" / "data"
@@ -292,16 +293,16 @@ def shown_rows(picks_by_market: dict[str, list[dict]]) -> dict[str, list[dict]]:
 def next_time_stop(data_dir: pathlib.Path, max_hold: int,
                    today: dt.date | None = None) -> dt.date | None:
     """The first day an open pre-TP1 position's time stop falls due, on the
-    engine's convention (scanner.vivek_journal.time_stop_due, the one Python
+    engine's convention (scanner.time_stop.time_stop_due, the one Python
     definition; journal.js timeStopOf is the browser's). None when nothing is
-    due (or the book is unreadable)."""
+    due (or the book is unreadable). This job runs on a bare Python: every
+    import here stays stdlib-only (tests/test_bare_python_jobs.py; 3 Nov)."""
     if not max_hold > 0:
         return None
     try:
         book = json.loads((data_dir / "vivek_bot_book.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    from scanner.vivek_journal import time_stop_due
     due = [d for d in (time_stop_due(r, max_hold) for r in book.get("open") or [])
            if d is not None and (today is None or d >= today)]
     return min(due) if due else None

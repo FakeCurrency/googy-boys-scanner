@@ -10,7 +10,7 @@ import json
 from scanner import run
 from scanner.broker import vivek_bot as vb
 from scanner.broker import vivek_run
-from scanner.vivek_journal import time_stop_due
+from scanner.time_stop import time_stop_due
 from tests.test_vivek_bot_global_cap import _rows
 
 

@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 from . import config
 from .broker.vivek_bot import manage_position, _is_fund_or_reit
 from .journal_common import atomic_write
+from .time_stop import time_stop_due  # noqa: F401  (re-exported; the one definition, stdlib-only)
 
 log = logging.getLogger(__name__)
 
@@ -190,25 +191,6 @@ def market_open(market_key: str, now: dt.datetime) -> bool:
     close_min = ch * 60 + cm + delay
     cur = now.hour * 60 + now.minute
     return open_min <= cur <= close_min
-
-
-def time_stop_due(pos: dict, max_hold: int) -> dt.date | None:
-    """The day a position's pre-TP1 time stop falls due, as the engine applies
-    it (vivek_run.run_market): the first in-session run whose market date is
-    MORE than `max_hold` calendar days after entry -- day max_hold + 1 -- and
-    on a stock market the Monday when that day is a weekend (holidays are not
-    modelled: "on or after"). journal.js timeStopOf is the browser's copy.
-    None past TP1 (a runner is exempt), with the rule off, or no entry date.
-    Display only: nothing decides on it."""
-    if not max_hold > 0 or pos.get("tp1_hit"):
-        return None
-    try:
-        due = dt.date.fromisoformat(str(pos.get("entry_date") or "")[:10]) + dt.timedelta(days=max_hold + 1)
-    except ValueError:
-        return None
-    if pos.get("market") != "crypto" and due.weekday() >= 5:
-        due += dt.timedelta(days=7 - due.weekday())
-    return due
 
 
 def _r_of(price, entry, risk, is_long):
