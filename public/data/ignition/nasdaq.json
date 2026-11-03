@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-01T11:33:21+00:00",
+  "generated_at": "2026-11-03T03:01:53+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-10-30",
+  "last_closed_bar": "2026-11-02",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25437.0,
-    "sma200": 25055.75,
+    "close": 25164.36,
+    "sma200": 25063.92,
     "above_200": true,
-    "vs_200_pct": 1.5,
-    "as_of": "2026-10-30"
+    "vs_200_pct": 0.4,
+    "as_of": "2026-11-02"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,30 +52,32 @@
   "summary": {
     "universe": 1427,
     "downloaded": 1427,
-    "screened": 1325,
+    "screened": 1324,
     "skipped": {
-      "short history": 102
+      "short history": 103
     },
     "counts": {
-      "IGNITING": 0,
+      "IGNITING": 1,
       "RUNNING": 0,
-      "CLOSED": 1,
-      "COILED": 12,
+      "CLOSED": 0,
+      "COILED": 11,
       "provisional": 0,
-      "igniting_confirmed": 0
+      "igniting_confirmed": 1
     },
     "bars": {
-      "completed_last": "2026-10-30",
-      "raw_last": "2026-10-30",
-      "expected_completed": "2026-10-30",
-      "lagging": 1,
+      "completed_last": "2026-11-02",
+      "raw_last": "2026-11-02",
+      "expected_completed": "2026-11-02",
+      "lagging": 2,
       "screened": 1427,
       "completed_dist": {
-        "2026-10-30": 1426,
+        "2026-11-02": 1425,
+        "2026-10-30": 1,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-10-30": 1426,
+        "2026-11-02": 1425,
+        "2026-10-30": 1,
         "2026-10-28": 1
       },
       "rows_lagging": 0
@@ -106,63 +108,58 @@
       "refused": 0
     },
     "mcap": {
-      "rows": 13,
-      "have": 13
+      "rows": 12,
+      "have": 12
     },
-    "elapsed_s": 185.1
+    "elapsed_s": 161.2
   },
   "results": [
     {
-      "symbol": "PCVX",
-      "name": "Vaxcyte, Inc. - Common Stock",
-      "yf": "PCVX",
+      "symbol": "PERI",
+      "name": "Perion Network Ltd - Ordinary Shares",
+      "yf": "PERI",
       "source": "yahoo",
-      "trigger_date": "2026-10-05",
-      "trigger_close": 73.81999969,
-      "entry": 73.34999847,
-      "entry_basis": "next_open",
-      "entry_date": "2026-10-06",
-      "bars_since": 19,
-      "rvol": 9.98,
-      "ext_pct": 25.9,
-      "turnover_trigger": 1101689675.0,
-      "turnover_base": 87099738.0,
+      "trigger_date": "2026-11-02",
+      "trigger_close": 11.40999985,
+      "entry": 11.40999985,
+      "entry_basis": "trigger_close",
+      "entry_date": null,
+      "bars_since": 0,
+      "rvol": 38.81,
+      "ext_pct": 26.7,
+      "turnover_trigger": 89175995.0,
+      "turnover_base": 1763411.0,
       "base": {
-        "high": 63.97999954,
-        "low": 52.47000122,
+        "high": 10.14999962,
+        "low": 8.34000015,
         "bars": 60,
-        "range_pct": 21.9
+        "range_pct": 21.7
       },
-      "stop": 61.82639371,
-      "risk_pct": 15.7,
+      "stop": 9.91670744,
+      "risk_pct": 13.1,
       "wide_stop": false,
-      "mm_target": 75.48999786,
+      "mm_target": 11.95999908,
       "mm_passed": false,
-      "mm_r": 0.19,
+      "mm_r": 0.37,
       "coil": {
-        "ribbon_pct": 7.37,
-        "atr_pctl": 8.7,
-        "vol_pctl": 57.5,
-        "drawdown_pct": 53.3,
-        "coiled": false,
-        "coiled_bars": 0
+        "ribbon_pct": 5.96,
+        "atr_pctl": 6.3,
+        "vol_pctl": 0.2,
+        "drawdown_pct": 73.6,
+        "coiled": true,
+        "coiled_bars": 10
       },
       "mfe_r": 0.0,
-      "exit_reason": "trail",
-      "exit_date": "2026-10-16",
-      "exit_price": 65.12999725,
-      "exit_r": -0.71,
-      "exit_pending": false,
-      "state": "CLOSED",
+      "state": "IGNITING",
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 62.02999878,
-      "change_pct": -15.4,
-      "r_now": -0.98,
-      "trail": 62.16444439,
-      "mcap": 9548829696.0,
-      "mcap_asof": "2026-10-27",
-      "mcap_src": "cache"
+      "last_bar": "2026-11-02",
+      "price": 11.40999985,
+      "change_pct": 0.0,
+      "r_now": 0.0,
+      "trail": 9.00555558,
+      "mcap": 471265952.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "GPRE",
@@ -171,13 +168,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.64,
-        "atr_pctl": 3.8,
-        "vol_pctl": 14.5,
-        "drawdown_pct": 55.8,
+        "ribbon_pct": 10.07,
+        "atr_pctl": 4.4,
+        "vol_pctl": 15.7,
+        "drawdown_pct": 56.8,
         "coiled": true,
-        "coiled_bars": 20,
-        "last_coiled": "2026-10-30"
+        "coiled_bars": 21,
+        "last_coiled": "2026-11-02"
       },
       "base": {
         "high": 16.57999992,
@@ -186,11 +183,11 @@
       },
       "breakout_level": 16.57999992,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 14.10000038,
-      "mcap": 945585984.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-02",
+      "price": 13.78999996,
+      "mcap": 966614592.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CRNC",
@@ -199,13 +196,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.78,
-        "atr_pctl": 3.8,
-        "vol_pctl": 20.4,
-        "drawdown_pct": 70.6,
+        "ribbon_pct": 7.65,
+        "atr_pctl": 4.4,
+        "vol_pctl": 17.5,
+        "drawdown_pct": 70.8,
         "coiled": true,
-        "coiled_bars": 12,
-        "last_coiled": "2026-10-30"
+        "coiled_bars": 13,
+        "last_coiled": "2026-11-02"
       },
       "base": {
         "high": 9.34000015,
@@ -214,39 +211,11 @@
       },
       "breakout_level": 9.34000015,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 8.09000015,
-      "mcap": 376315712.0,
-      "mcap_asof": "2026-10-27",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "PERI",
-      "name": "Perion Network Ltd - Ordinary Shares",
-      "yf": "PERI",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 5.96,
-        "atr_pctl": 6.3,
-        "vol_pctl": 0.2,
-        "drawdown_pct": 73.6,
-        "coiled": true,
-        "coiled_bars": 10,
-        "last_coiled": "2026-10-30"
-      },
-      "base": {
-        "high": 10.14999962,
-        "low": 8.34000015,
-        "bars": 60
-      },
-      "breakout_level": 10.14999962,
-      "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 8.69999981,
-      "mcap": 358096032.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-02",
+      "price": 8.03999996,
+      "mcap": 363651264.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PTON",
@@ -255,25 +224,25 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.35,
-        "atr_pctl": 1.6,
+        "ribbon_pct": 3.92,
+        "atr_pctl": 1.2,
         "vol_pctl": 4.0,
-        "drawdown_pct": 53.0,
+        "drawdown_pct": 51.4,
         "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-10-30"
+        "coiled_bars": 7,
+        "last_coiled": "2026-11-02"
       },
       "base": {
-        "high": 6.0,
+        "high": 5.7750001,
         "low": 4.69000006,
         "bars": 60
       },
       "breakout_level": 5.7750001,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 5.11999989,
-      "mcap": 2312854528.0,
-      "mcap_asof": "2026-10-28",
+      "last_bar": "2026-11-02",
+      "price": 5.30000019,
+      "mcap": 2247023616.0,
+      "mcap_asof": "2026-11-01",
       "mcap_src": "cache"
     },
     {
@@ -283,13 +252,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.42,
-        "atr_pctl": 2.8,
-        "vol_pctl": 31.8,
-        "drawdown_pct": 69.2,
+        "ribbon_pct": 10.59,
+        "atr_pctl": 3.1,
+        "vol_pctl": 32.5,
+        "drawdown_pct": 67.7,
         "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-10-30"
+        "coiled_bars": 7,
+        "last_coiled": "2026-11-02"
       },
       "base": {
         "high": 13.13000011,
@@ -298,11 +267,11 @@
       },
       "breakout_level": 13.13000011,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 12.05000019,
-      "mcap": 2367372800.0,
-      "mcap_asof": "2026-10-27",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-02",
+      "price": 12.65999985,
+      "mcap": 2415063808.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "ROOT",
@@ -311,13 +280,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.19,
-        "atr_pctl": 2.0,
+        "ribbon_pct": 8.62,
+        "atr_pctl": 1.8,
         "vol_pctl": 0.4,
         "drawdown_pct": 71.4,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-10-30"
+        "coiled_bars": 6,
+        "last_coiled": "2026-11-02"
       },
       "base": {
         "high": 58.84000015,
@@ -326,10 +295,38 @@
       },
       "breakout_level": 58.84000015,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 51.75999832,
-      "mcap": 832452416.0,
-      "mcap_asof": "2026-10-29",
+      "last_bar": "2026-11-02",
+      "price": 51.72999954,
+      "mcap": 801465920.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
+    },
+    {
+      "symbol": "LINE",
+      "name": "Lineage, Inc. - Common Stock",
+      "yf": "LINE",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.76,
+        "atr_pctl": 1.4,
+        "vol_pctl": 29.0,
+        "drawdown_pct": 54.1,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-02"
+      },
+      "base": {
+        "high": 42.47942608,
+        "low": 32.75,
+        "bars": 60
+      },
+      "breakout_level": 42.47942608,
+      "provisional": false,
+      "last_bar": "2026-11-02",
+      "price": 37.02000046,
+      "mcap": 9282685952.0,
+      "mcap_asof": "2026-11-02",
       "mcap_src": "cache"
     },
     {
@@ -339,23 +336,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.34,
-        "atr_pctl": 9.5,
-        "vol_pctl": 4.6,
-        "drawdown_pct": 50.7,
-        "coiled": true,
-        "coiled_bars": 1,
+        "ribbon_pct": 4.7,
+        "atr_pctl": 11.7,
+        "vol_pctl": 9.1,
+        "drawdown_pct": 48.9,
+        "coiled": false,
+        "coiled_bars": 0,
         "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 15.38000011,
-        "low": 13.31499958,
+        "low": 13.19099998,
         "bars": 60
       },
       "breakout_level": 15.38000011,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 13.22000027,
+      "last_bar": "2026-11-02",
+      "price": 13.69999981,
       "mcap": 777421760.0,
       "mcap_asof": "2026-10-30",
       "mcap_src": "previous"
@@ -367,10 +364,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.82,
-        "atr_pctl": 40.3,
-        "vol_pctl": 41.9,
-        "drawdown_pct": 48.1,
+        "ribbon_pct": 6.51,
+        "atr_pctl": 47.6,
+        "vol_pctl": 42.3,
+        "drawdown_pct": 49.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-20"
@@ -382,39 +379,11 @@
       },
       "breakout_level": 24.0,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 20.17000008,
-      "mcap": 263087584.0,
-      "mcap_asof": "2026-10-27",
-      "mcap_src": "cache"
-    },
-    {
-      "symbol": "OTLY",
-      "name": "Oatly Group AB - American Depositary Shares",
-      "yf": "OTLY",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 8.86,
-        "atr_pctl": 95.0,
-        "vol_pctl": 80.8,
-        "drawdown_pct": 72.3,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-23"
-      },
-      "base": {
-        "high": 16.20000076,
-        "low": 8.0,
-        "bars": 60
-      },
-      "breakout_level": 16.20000076,
-      "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 7.75,
-      "mcap": 255300608.0,
-      "mcap_asof": "2026-10-30",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-02",
+      "price": 19.79000092,
+      "mcap": 254472320.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "IRWD",
@@ -423,10 +392,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.27,
-        "atr_pctl": 2.4,
-        "vol_pctl": 22.0,
-        "drawdown_pct": 77.7,
+        "ribbon_pct": 12.72,
+        "atr_pctl": 3.0,
+        "vol_pctl": 20.6,
+        "drawdown_pct": 78.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-23"
@@ -438,11 +407,11 @@
       },
       "breakout_level": 4.5999999,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 3.5,
-      "mcap": 579992256.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-02",
+      "price": 3.46000004,
+      "mcap": 571730240.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "OSUR",
@@ -451,10 +420,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.78,
-        "atr_pctl": 57.5,
-        "vol_pctl": 49.2,
-        "drawdown_pct": 53.4,
+        "ribbon_pct": 12.75,
+        "atr_pctl": 93.1,
+        "vol_pctl": 53.2,
+        "drawdown_pct": 59.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-21"
@@ -466,38 +435,38 @@
       },
       "breakout_level": 4.38000011,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 3.94000006,
-      "mcap": 286909472.0,
-      "mcap_asof": "2026-10-28",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-02",
+      "price": 3.46000004,
+      "mcap": 238286592.0,
+      "mcap_asof": "2026-11-02",
+      "mcap_src": "cache"
     },
     {
-      "symbol": "ICFI",
-      "name": "ICF International, Inc. - Common Stock",
-      "yf": "ICFI",
+      "symbol": "OTLY",
+      "name": "Oatly Group AB - American Depositary Shares",
+      "yf": "OTLY",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 19.32,
-        "atr_pctl": 4.6,
-        "vol_pctl": 17.1,
-        "drawdown_pct": 46.2,
+        "ribbon_pct": 13.28,
+        "atr_pctl": 94.4,
+        "vol_pctl": 80.8,
+        "drawdown_pct": 72.5,
         "coiled": false,
         "coiled_bars": 0,
-        "last_coiled": "2026-10-19"
+        "last_coiled": "2026-10-23"
       },
       "base": {
-        "high": 97.06999969,
-        "low": 81.01000214,
+        "high": 16.20000076,
+        "low": 7.38000011,
         "bars": 60
       },
-      "breakout_level": 97.97000122,
+      "breakout_level": 16.20000076,
       "provisional": false,
-      "last_bar": "2026-10-30",
-      "price": 95.48000336,
-      "mcap": 1713403264.0,
-      "mcap_asof": "2026-10-27",
+      "last_bar": "2026-11-02",
+      "price": 7.71000004,
+      "mcap": 255300608.0,
+      "mcap_asof": "2026-10-30",
       "mcap_src": "previous"
     }
   ],
