@@ -40,12 +40,15 @@ third is not implemented in this phase so a live order is impossible here:
 
 import datetime as dt
 import json
+import math
+import numbers
 import os
 import logging
 import pathlib
+import subprocess
 from zoneinfo import ZoneInfo
 
-from .. import config
+from .. import config, output
 from . import vivek_bot, vivek_guard
 from ..vivek_journal import (_close_remaining, _current_price, _excursion, _mark,
                              _snapshot, costs_for, market_open)
@@ -159,9 +162,9 @@ def _split_from_legacy(market: str) -> dict | None:
         stray = ([p for p in legacy["open"] if p.get("market") not in known]
                  + [p for p in legacy["closed"] if p.get("market") not in known])
         if stray:
-            atomic_write(UNASSIGNED_FILE, json.dumps(
+            output.write_json(UNASSIGNED_FILE,
                 {"version": BOOK_VERSION, "note": "entries with unknown market, "
-                 "preserved by the v2 per-market split", "entries": stray}, indent=2))
+                 "preserved by the v2 per-market split", "entries": stray}, indent=2)
             log.warning("book migration: %d entries with unknown market preserved "
                         "to %s", len(stray), UNASSIGNED_FILE.name)
     mbook = {
@@ -298,10 +301,52 @@ def _combined_view(override: dict | None = None) -> dict:
 def _write_combined() -> None:
     """Regenerate the DERIVED combined view (journal + public twin) from the
     canonical files. Written after the canonical save, so a crash in between
-    leaves combined at most one run stale - and always regenerable."""
-    payload = json.dumps(_combined_view(), indent=2)
-    atomic_write(BOOK_FILE, payload)
-    atomic_write(PUBLIC_FILE, payload)
+    leaves combined at most one run stale - and always regenerable.
+
+    Serialised by `output.dumps` (NEXT100 #8): non-finite floats become null
+    and allow_nan=False stands behind it, so one NaN can never publish the bare
+    token JSON.parse rejects -- which would blank the deck, the journal and the
+    status lamp at once. The canonical save names any it finds."""
+    payload = output.dumps(_combined_view(), indent=2)
+    atomic_write(BOOK_FILE, payload, newline="\n")
+    atomic_write(PUBLIC_FILE, payload, newline="\n")
+
+
+def _finite_pos(v) -> float | None:
+    """`v` as a finite float > 0, else None (missing, junk, NaN, inf, <= 0)."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) and f > 0 else None
+
+
+def _non_finite_fields(book: dict) -> list[str]:
+    """'<row id> <field>' for every non-finite number in a book about to be
+    written (rows named by id; book-level fields by their key path). A
+    DETECTOR for the warning only: the scrub itself is output._finite."""
+    found: list[str] = []
+
+    def walk(v, path: str, owner: str) -> None:
+        if isinstance(v, dict):
+            for k, x in v.items():
+                walk(x, f"{path}.{k}" if path else str(k), owner)
+        elif isinstance(v, (list, tuple)):
+            for i, x in enumerate(v):
+                walk(x, f"{path}[{i}]", owner)
+        elif (isinstance(v, numbers.Real) and not isinstance(v, numbers.Integral)
+              and not math.isfinite(float(v))):
+            found.append(f"{owner} {path}".strip())
+
+    for key, val in (book or {}).items():
+        if key in ("open", "closed") and isinstance(val, list):
+            for row in val:
+                rid = (str(row.get("id") or row.get("symbol") or "?")
+                       if isinstance(row, dict) else "?")
+                walk(row, "", f"{key}:{rid}")
+        else:
+            walk(val, str(key), "book")
+    return found
 
 
 def verify_books() -> list[str]:
@@ -316,10 +361,21 @@ def verify_books() -> list[str]:
       4. the derived combined file + its public twin match what the canonical
          files derive to right now (volatile timestamps ignored) — staleness
          is recoverable with --rebuild-combined, and the next scan self-heals
+      5. APPEND-ONLY against git HEAD (NEXT100 #7): every closed row HEAD
+         holds is still there, byte-for-byte as parsed JSON; every open row
+         HEAD holds is still there by id (open, or closed since); the closed
+         count never falls -- except the oldest rows _save_market_book's
+         MAX_CLOSED trim drops, exactly that. No git / no HEAD = one notice,
+         and this check alone is skipped.
+      6. open-row money: entry, risk, units, notional finite and > 0; a long's
+         stop at or above its original (entry - risk; the stop only ever
+         moves up); booked_pct in [0, 1] and equal to its exits' pct sum;
+         realized_r finite (_open_row_money_problems).
     """
     problems: list[str] = []
     market_files = [m for m in config.MARKETS if _market_book_file(m).exists()]
     parse_ok = True
+    head_books = _head_books(market_files) if market_files else {}
     for market in market_files:
         p = _market_book_file(market)
         try:
@@ -328,6 +384,11 @@ def verify_books() -> list[str]:
             problems.append(f"{p.name}: UNPARSEABLE ({e})")
             parse_ok = False
             continue
+        if isinstance(mb.get("open"), list):
+            problems += _open_row_money_problems(market, mb["open"])
+        if market in head_books and isinstance(mb.get("open"), list) \
+                and isinstance(mb.get("closed"), list):
+            problems += _append_only_problems(market, head_books[market], mb)
         for section in ("open", "closed"):
             rows = mb.get(section)
             if not isinstance(rows, list):
@@ -375,6 +436,156 @@ def verify_books() -> list[str]:
     return problems
 
 
+# Float slack for the stop check: prices and risk are stored rounded to 8 dp,
+# so entry - risk can sit a few 1e-9 off the stop it was measured from.
+_STOP_TOL_ABS = 2e-8
+_STOP_TOL_REL = 1e-9
+_PCT_TOL = 1e-6
+
+
+def _open_row_money_problems(market: str, rows: list) -> list[str]:
+    """Open-row money checks (NEXT100 #7), one ASCII line per failure naming
+    the market, the row id and the field. Split-restated rows divide entry,
+    stop and risk by the same ratio and resized rows freeze all three, so the
+    stop invariant holds on both."""
+    out: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            out.append(f"{market}: open row is not an object ({type(row).__name__})")
+            continue
+        rid = row.get("id") or row.get("symbol") or "?"
+        for k in ("entry", "risk", "units", "notional"):
+            if _finite_pos(row.get(k)) is None:
+                out.append(f"{market}: open {rid} '{k}' is not a finite number > 0 "
+                           f"({row.get(k)!r})")
+        entry, risk = _finite_pos(row.get("entry")), _finite_pos(row.get("risk"))
+        stop = vivek_guard._finite(row.get("stop"))
+        if stop is None:
+            out.append(f"{market}: open {rid} 'stop' is not a finite number "
+                       f"({row.get('stop')!r})")
+        elif entry is not None and risk is not None:
+            tol = _STOP_TOL_ABS + _STOP_TOL_REL * entry
+            side = str(row.get("direction") or "").strip().lower()
+            if side == "long" and stop < entry - risk - tol:
+                out.append(f"{market}: open {rid} 'stop' {stop:g} is BELOW the original "
+                           f"stop {entry - risk:g} (entry {entry:g} - risk {risk:g})")
+            elif side == "short" and stop > entry + risk + tol:
+                out.append(f"{market}: open {rid} 'stop' {stop:g} is ABOVE the original "
+                           f"stop {entry + risk:g} (entry {entry:g} + risk {risk:g})")
+        booked = vivek_guard._finite(row.get("booked_pct"))
+        exits = row.get("exits") if isinstance(row.get("exits"), list) else None
+        if booked is None or not (-_PCT_TOL <= booked <= 1 + _PCT_TOL):
+            out.append(f"{market}: open {rid} 'booked_pct' is not in [0, 1] "
+                       f"({row.get('booked_pct')!r})")
+        elif exits is None:
+            out.append(f"{market}: open {rid} 'exits' is not a list")
+        else:
+            total = sum(vivek_guard._num(x.get("pct")) if isinstance(x, dict) else math.nan
+                        for x in exits)
+            if not (abs(total - booked) <= _PCT_TOL):
+                out.append(f"{market}: open {rid} 'booked_pct' {booked:g} does not match "
+                           f"its exits' pct sum {total:g}")
+        if vivek_guard._finite(row.get("realized_r")) is None:
+            out.append(f"{market}: open {rid} 'realized_r' is not finite "
+                       f"({row.get('realized_r')!r})")
+    return out
+
+
+def _head_books(markets: list[str]) -> dict:
+    """{market: its canonical book as committed at git HEAD}. A market whose
+    file HEAD does not carry (a new file) is simply absent. When git or HEAD
+    cannot be read at all, ONE notice is logged and {} comes back: the
+    append-only check is skipped, never failed (a tarball, a fresh init)."""
+    # The repository that holds BOOK_DIR is the one consulted, whatever an
+    # outer process exported (a hook's GIT_DIR would point at another repo).
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR")}
+
+    def _git(*args, cwd):
+        return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
+                              text=True, encoding="utf-8", timeout=60, env=env)
+    try:
+        top = _git("rev-parse", "--show-toplevel", cwd=BOOK_DIR)
+        if top.returncode != 0:
+            raise RuntimeError("not inside a git checkout")
+        root = pathlib.Path(top.stdout.strip())
+        if _git("rev-parse", "--verify", "-q", "HEAD", cwd=root).returncode != 0:
+            raise RuntimeError("no HEAD commit")
+    except (OSError, subprocess.SubprocessError, RuntimeError) as e:
+        log.info("book verify NOTICE: append-only check vs git HEAD skipped (%s)", e)
+        return {}
+    out: dict = {}
+    for m in markets:
+        try:
+            rel = _market_book_file(m).resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            continue
+        got = _git("show", f"HEAD:{rel}", cwd=root)
+        if got.returncode != 0:
+            continue                  # not in HEAD: a new file, nothing to hold it to
+        try:
+            out[m] = json.loads(got.stdout)
+        except ValueError as e:
+            log.info("book verify NOTICE: HEAD's %s does not parse (%s) - its "
+                     "append-only check is skipped", rel, e)
+    if out:
+        log.info("book verify: append-only check vs HEAD over %s", ", ".join(sorted(out)))
+    return out
+
+
+def _append_only_problems(market: str, head: dict, now: dict) -> list[str]:
+    """NEXT100 #7: the book may only GROW against what HEAD committed. A
+    closed row is never edited and never dropped; an open row never vanishes
+    (it stays open or it closes); the closed count never falls. The one
+    legal loss is _save_market_book's MAX_CLOSED trim, which drops the OLDEST
+    rows from the front once the file holds MAX_CLOSED -- allowed exactly."""
+    from collections import Counter
+
+    def canon(r) -> str:
+        return json.dumps(r, sort_keys=True)
+
+    out: list[str] = []
+    head_closed = head.get("closed") if isinstance(head.get("closed"), list) else []
+    head_open = head.get("open") if isinstance(head.get("open"), list) else []
+    now_closed, now_open = now["closed"], now["open"]
+    pool = Counter(canon(r) for r in now_closed)
+    missing: list[tuple[int, dict]] = []
+    for i, r in enumerate(head_closed):
+        c = canon(r)
+        if pool[c] > 0:
+            pool[c] -= 1
+        else:
+            missing.append((i, r))
+    trimmed = len(now_closed) >= MAX_CLOSED
+    if missing and not (trimmed and [i for i, _ in missing] == list(range(len(missing)))):
+        now_by_id: dict = {}
+        for r in now_closed:
+            if isinstance(r, dict):
+                now_by_id.setdefault(r.get("id"), r)
+        for _, r in missing[:10]:
+            rid = r.get("id") if isinstance(r, dict) else None
+            cur = now_by_id.get(rid)
+            if cur is None:
+                out.append(f"{market}: closed {rid} is GONE from the book "
+                           f"(it is in HEAD; closed rows are never removed)")
+            else:
+                diff = sorted(k for k in set(r) | set(cur) if canon(r.get(k)) != canon(cur.get(k)))
+                out.append(f"{market}: closed {rid} was REWRITTEN ({', '.join(diff[:8]) or '?'}"
+                           f"{' ...' if len(diff) > 8 else ''}) - closed rows are never edited")
+        if len(missing) > 10:
+            out.append(f"{market}: ... and {len(missing) - 10} more closed row(s) changed or gone")
+    now_ids = {r.get("id") for r in now_open + now_closed if isinstance(r, dict)}
+    for r in head_open:
+        rid = r.get("id") if isinstance(r, dict) else None
+        if rid not in now_ids:
+            out.append(f"{market}: open {rid} VANISHED - in HEAD's open book, now "
+                       f"neither open nor closed")
+    if len(now_closed) < len(head_closed) and not trimmed:
+        out.append(f"{market}: closed count fell from {len(head_closed)} to "
+                   f"{len(now_closed)} - the closed book only grows")
+    return out
+
+
 def _save_market_book(market: str, mbook: dict) -> None:
     """Persist ONE market's canonical file, then refresh the combined view."""
     mbook["version"] = BOOK_VERSION
@@ -382,7 +593,16 @@ def _save_market_book(market: str, mbook: dict) -> None:
     mbook["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     if len(mbook["closed"]) > MAX_CLOSED:
         mbook["closed"] = mbook["closed"][-MAX_CLOSED:]
-    atomic_write(_market_book_file(market), json.dumps(mbook, indent=2))
+    # NaN-PROOF (NEXT100 #8): through the one publish path, which writes a
+    # non-finite float as null (output._finite) -- named here, once per save,
+    # so the bad value is found at its row rather than as a blank page.
+    bad = _non_finite_fields(mbook)
+    if bad:
+        shown = ", ".join(bad[:12]) + (" ..." if len(bad) > 12 else "")
+        log.warning("vivek_run [%s]: WARNING %d non-finite value(s) written as null: %s",
+                    market, len(bad),
+                    shown.encode("ascii", "backslashreplace").decode("ascii"))
+    output.write_json(_market_book_file(market), mbook, indent=2)
     _write_combined()
 
 
@@ -803,7 +1023,8 @@ def _apply_level_gate(results: list[dict]) -> tuple[list[dict], int]:
 
 
 def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
-                        level_tf: str | None = None) -> dict | None:
+                        level_tf: str | None = None,
+                        trigger_bar: str | None = None) -> dict | None:
     """Build a paper book position from a decide() plan, filling at the current
     intraday price with the journal's don't-chase guard. Carries entry_type +
     label + timeframe + grade + sector end-to-end. Returns None to not-chase,
@@ -814,9 +1035,25 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     It never gates entry, sizing, or management — stamped so the n≥30 ruling can
     split expectancy by level without re-deriving history. vivek_bot.py is not
     touched; the runner copies it off the scan row at fill time.
+
+    ``trigger_bar`` is AUDIT-ONLY too (NEXT100 #2): the date of the bar that
+    triggered the plan the bot walked to. decide()'s ticket is built by the
+    ringfenced plan_trade, which never copied it, so every row carried null;
+    the runner now reads it off the scan row's own plan, like level_tf.
     """
     plan = out["plan"]
     tf = plan["timeframe"]
+    # A FILL NEEDS REAL NUMBERS (NEXT100 #8). A NaN quote passed every
+    # comparison below -- `entry_price <= stop` is False for NaN, so the
+    # journal's don't-chase guard let it through, and `fill > 0` is False, so
+    # the stop cap was skipped -- and a NaN-priced row reached the book. Same
+    # `not (x > 0)` discipline as the guards (#63): a non-finite or
+    # non-positive fill or stop refuses the fill.
+    fill_px, stop_px = _finite_pos(entry_price), _finite_pos(plan.get("stop"))
+    if fill_px is None or stop_px is None:
+        log.info("SKIP  %-8s [bad_fill] fill %r / stop %r is not a finite positive price",
+                 plan.get("symbol"), entry_price, plan.get("stop"))
+        return None
     # Reuse the journal's snapshot so the fill model (don't-chase, risk, MAE/MFE,
     # ids) is identical to the forward-test journal — single source of truth.
     row = {
@@ -830,10 +1067,16 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     jplan = {
         "stop": plan["stop"], "tp1": plan["tp1"], "tp2": plan["tp2"], "tp3": plan["tp3"],
         "scale": plan["scale"], "entry_trigger": plan["entry_type"],
-        "armed": True, "trigger_bar": plan.get("trigger_bar"),
+        "armed": True,
+        "trigger_bar": trigger_bar if trigger_bar is not None else plan.get("trigger_bar"),
     }
     snap = _snapshot(row, tf, jplan, market, entry_price, day)
     if snap is None:
+        return None
+    # The row's 1R as stored (8 dp): a fill a hair off its stop can round to 0.
+    if _finite_pos(snap.get("risk", abs(fill_px - stop_px))) is None:
+        log.info("SKIP  %-8s [bad_fill] risk %r at the fill is not a finite positive number",
+                 plan["symbol"], snap.get("risk"))
         return None
     # THE STOP CAP, RE-READ AT THE FILL (owner, 2026-09-24 --
     # reviews/2026-09-24-bot-vs-cells.md). evaluate_setup tests
@@ -843,8 +1086,8 @@ def _ticket_to_position(out: dict, entry_price: float, market: str, day: str,
     # BNB 25.04% were booked that way). Same cap, same `>`, measured where the
     # money goes in. ENTRY ONLY: held positions never pass through here.
     cap = float(config.VIVEK_BOT_MAX_STOP_PCT or 0)
-    fill = float(snap["entry"])
-    if cap > 0 and fill > 0:
+    fill = float(snap["entry"])               # finite and > 0: checked above
+    if cap > 0:
         fill_pct = abs(fill - float(plan["stop"])) / fill * 100.0
         if fill_pct > cap:
             log.info("SKIP  %-8s [wide_stop_at_fill] stop %.2f%% from the fill %g > max %g%%",
@@ -1196,6 +1439,158 @@ def _stamp_d14(pos: dict, price: float, day: str) -> None:
                   "tp1_hit": bool(pos.get("tp1_hit"))}
 
 
+def _stamp_horizon(pos: dict, price: float, day: str) -> None:
+    """THE HORIZON STAMP (NEXT100 item 5's input). REPORT ONLY.
+
+    The time stop closes a pre-TP1 row on the first in-session run with held >
+    VIVEK_BOT_MAX_HOLD_DAYS (day 29), so a row still OPEN on that run or any
+    later one is a runner past TP1 -- the rules let it run, the replay's fixed
+    horizon would have cut it. On the first in-session run at or past
+    VIVEK_BOT_HORIZON_STAMP_DAYS held, `horizon` records what such a cut would
+    have booked: the day, days held, r = realised + unrealised R at THIS mark
+    (after this run's management), the R already booked and whether TP1 had
+    been hit. Called AFTER management and the time stop, on a row they left
+    open, so a pre-TP1 row is already closed and never stamped. Written once;
+    nothing reads it to decide anything (scripts/decision_pack.py reports it);
+    it survives the close like `d14`. NaN-safe: a bad mark stamps nothing.
+    """
+    days = int(config.VIVEK_BOT_HORIZON_STAMP_DAYS or 0)
+    if days <= 0 or pos.get("horizon") or pos.get("status") != "open":
+        return
+    held = _held_days(pos, day)
+    if held is None or held < days:
+        return
+    px, entry, risk = _finite_pos(price), _finite_pos(pos.get("entry")), _finite_pos(pos.get("risk"))
+    booked = vivek_guard._finite(pos.get("realized_r"))
+    if px is None or entry is None or risk is None or booked is None:
+        return
+    unreal = vivek_guard._unreal_r(pos, px)
+    total = booked + unreal
+    if not math.isfinite(total):
+        return
+    pos["horizon"] = {"day": day, "held": held,
+                      "r": round(total, 3),
+                      "booked": round(booked, 4),
+                      "tp1_hit": bool(pos.get("tp1_hit"))}
+
+
+# ── fill stamps (NEXT100 #2) -- REPORT ONLY ──────────────────────────────────
+# The last CALENDAR day a traded timeframe's bar covers, as days after its
+# label: scanner.vivek._resample_weekly_ohlc labels a W-FRI bar by the Friday
+# it ENDS on; _resample_3day_ohlc's epoch-anchored 72h bins are labelled by
+# the day they START, so the bar ends two days later; a daily bar is its own
+# day. Pinned against the real resamplers (tests/test_fill_stamps.py).
+_BAR_END_OFFSET_DAYS = {"1D": 0, "3D": 2, "1W": 0}
+
+
+def _trigger_bar_forming(market: str, tf: str | None, bar: str | None,
+                         now: dt.datetime) -> bool | None:
+    """Was the plan's trigger bar still FORMING at `now` (the fill)? None when
+    it cannot be told (no bar, an unknown timeframe, an unparseable date).
+    A bar forms until its last day's daily bar is final (scan._bar_is_forming,
+    the same clock the scan drops a forming daily bar by)."""
+    off = _BAR_END_OFFSET_DAYS.get(str(tf or ""))
+    if off is None or not bar:
+        return None
+    try:
+        last = dt.date.fromisoformat(str(bar)[:10]) + dt.timedelta(days=off)
+    except ValueError:
+        return None
+    from ..scan import _bar_is_forming          # deferred, as in _enrich_adv
+    return bool(last > now.date() or _bar_is_forming(market, last, now))
+
+
+def _slot_queue(rows: list[dict], decisions: list[dict]) -> list[str]:
+    """The run's slot candidates, in the order decide() walked them (the
+    scan's grade -> score -> R:R order): every plan a decide() pass returned
+    plus every row a capacity cap turned away (_CAPACITY_SKIPS). `rank` is a
+    fill's 1-based place in it and `rank_of` its length."""
+    want: set[str] = set()
+    for d in decisions:
+        for out in d.get("plans") or []:
+            want.add(str((out.get("plan") or {}).get("symbol") or "").upper())
+        for s in d.get("skipped") or []:
+            if s.get("code") in _CAPACITY_SKIPS and s.get("symbol"):
+                want.add(str(s["symbol"]).upper())
+    queue: list[str] = []
+    for r in rows or []:
+        sym = str(r.get("symbol") or "").upper()
+        if sym and sym in want and sym not in queue:
+            queue.append(sym)
+    return queue
+
+
+def _earnings_seen(yf_symbol: str | None, today: dt.date, cache: dict | None) -> dict | None:
+    """What the earnings buffer saw for this fill, from the per-day cache the
+    gate itself filled (never a second lookup): the next report date on or
+    after `today` and whether the lookup worked. None = no lookup was made."""
+    key = (str(yf_symbol or ""), today.isoformat())
+    if not yf_symbol or cache is None or key not in cache:
+        return None
+    dates = cache[key]
+    if dates is None:
+        return {"next": None, "lookup": "failed"}
+    nxt = min((d for d in dates if d >= today), default=None)
+    return {"next": nxt.isoformat() if nxt else None, "lookup": "ok"}
+
+
+def _stamp_fills(opened: list[dict], *, market: str, rows: list[dict],
+                 decisions: list[dict], closed_now: list[dict], open_at_start: int,
+                 open_elsewhere: int | None, now: dt.datetime,
+                 earnings_on: bool, yf_map: dict) -> None:
+    """Stamp the run's NEW rows with what the run saw when it took them
+    (NEXT100 #2). REPORT ONLY: nothing reads these to decide anything; they
+    exist so liquidity, slot order, forming bars, earnings and same-run
+    rotations can be judged on hc4-2's own rows from their first fill.
+
+      adv / adv_share  the 20-day ADV the liquidity gates read (row adv_usd,
+                       market currency; null = none, the gate was exempt) and
+                       notional / adv
+      score            the scan row's score
+      rank / rank_of   place among the run's slot candidates (_slot_queue)
+      freed_by         {id, exit_reason} of the row this run closed whose slot
+                       the fill took (the position caps, filled in close
+                       order); absent when the book had room anyway
+      trigger_bar_forming  whether the plan's trigger bar was still forming
+      earnings         NASDAQ (the gated markets): {next, lookup}
+    """
+    by_sym = {str(r.get("symbol") or "").upper(): r for r in rows or []}
+    queue = _slot_queue(rows, decisions)
+    max_pos = int(config.VIVEK_BOT_MAX_POSITIONS or 0)
+    max_total = int(config.VIVEK_BOT_MAX_OPEN_TOTAL or 0)
+    for k, pos in enumerate(opened, 1):
+        sym = str(pos.get("symbol") or "").upper()
+        row = by_sym.get(sym) or {}
+        adv = _finite_pos(row.get("adv_usd"))
+        pos["adv"] = round(adv, 2) if adv else None
+        notional = _finite_pos(pos.get("notional"))
+        if adv and notional:
+            pos["adv_share"] = round(notional / adv, 8)
+        pos["score"] = row.get("score")
+        if sym in queue:
+            pos["rank"], pos["rank_of"] = queue.index(sym) + 1, len(queue)
+        # Slots the run freed are handed out in close order: the k-th fill
+        # needed one when the book it started with was already full at it.
+        over = []
+        if max_pos:
+            over.append(open_at_start + k - max_pos)
+        if max_total and open_elsewhere is not None:
+            over.append(open_elsewhere + open_at_start + k - max_total)
+        need = max(over) if over else 0
+        if 1 <= need <= len(closed_now):
+            src = closed_now[need - 1]
+            pos["freed_by"] = {"id": src.get("id"), "exit_reason": src.get("exit_reason")}
+        forming = _trigger_bar_forming(market, pos.get("timeframe"),
+                                       pos.get("trigger_bar"), now)
+        if forming is not None:
+            pos["trigger_bar_forming"] = forming
+        if earnings_on:
+            seen = _earnings_seen(yf_map.get(pos.get("symbol")), now.date(),
+                                  _EARNINGS_CACHE)
+            if seen is not None:
+                pos["earnings"] = seen
+
+
 def close_bot_position(symbol: str, market: str, price: float,
                        direction: str | None = None, day: str | None = None,
                        reason: str = "manual") -> dict | None:
@@ -1324,9 +1719,11 @@ def _cooldown_symbols(book: dict, market: str, day: str) -> set[str]:
 _EARNINGS_CACHE: dict[tuple[str, str], list] = {}
 
 
-def _earnings_dates(yf_symbol: str) -> list:
-    """The report dates Yahoo lists for `yf_symbol`, as plain dates ([] on any
-    lookup problem -- the caller fails OPEN)."""
+def _earnings_dates(yf_symbol: str) -> list | None:
+    """The report dates Yahoo lists for `yf_symbol`, as plain dates. None when
+    the lookup itself failed (NEXT100 #2: the fill stamps `lookup: failed`
+    instead of a failure reading as "no report due"); the caller fails OPEN
+    either way."""
     try:
         import yfinance as yf
         cal = yf.Ticker(yf_symbol).calendar
@@ -1337,7 +1734,7 @@ def _earnings_dates(yf_symbol: str) -> list:
         elif cal is not None and hasattr(cal, "loc"):        # legacy DataFrame shape
             raw = list(cal.loc["Earnings Date"]) if "Earnings Date" in getattr(cal, "index", []) else []
     except Exception:
-        return []
+        return None
     out = []
     for d in raw:
         # Normalise datetime/pandas-Timestamp -> plain date. A datetime IS a
@@ -1376,7 +1773,7 @@ def _earnings_within(yf_symbol: str | None, buffer_days: int,
                 cache.pop(stale, None)                        # a past day's answers
             cache[key] = dates
     horizon = today + dt.timedelta(days=buffer_days)
-    return any(today <= d <= horizon for d in dates)
+    return any(today <= d <= horizon for d in (dates or ()))
 
 
 def _enrich_adv(results: list[dict], frames: dict, yf_map: dict,
@@ -1590,6 +1987,9 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
     # 1) manage open positions for THIS market — mark to the observed price.
     closed_now = 0
     closed_events: list[dict] = []          # for the end-of-run alert digest
+    # What this market held BEFORE the run closed anything: the fill stamps'
+    # `freed_by` counts which new row took a slot a close just freed.
+    open_at_start = sum(1 for p in book["open"] if p.get("market") == market)
     still_open = []
     max_hold = int(config.VIVEK_BOT_MAX_HOLD_DAYS or 0)
     for pos in book["open"]:
@@ -1661,6 +2061,10 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 ur = vivek_guard._unreal_r(pos, price)
                 pos["unreal_r"] = round(ur, 3)
                 pos["unreal_usd"] = round(ur * (pos.get("risk_usd", 0.0) or 0.0), 2)
+                # Horizon stamp -- REPORT ONLY, AFTER management and the time
+                # stop, so only a row they left open (a runner) is stamped.
+                if is_open:
+                    _stamp_horizon(pos, price, day)
             still_open.append(pos)
     book["open"] = still_open
 
@@ -1891,6 +2295,11 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
         str(r.get("symbol") or "").upper(): r.get("level_tf")
         for r in (results or []) if r.get("symbol")
     }
+    # symbol -> its scan row, for the trigger bar of the plan the bot walked
+    # to (row["plans"][ticket timeframe]) -- NEXT100 #2, audit only.
+    row_by_sym = {str(r.get("symbol") or "").upper(): r
+                  for r in (results or []) if r.get("symbol")}
+    decisions = [decision]               # every decide() pass, for the rank stamp
     fill_codes: dict[str, str] = {}      # why a plan was refused at the fill (report only)
     if is_open and not guard["breached"]:
         plans = decision["plans"]
@@ -1925,9 +2334,12 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                     skipped_now.add(str(sym).upper())
                     fill_codes[str(sym).upper()] = "earnings"
                     continue
+                walked = (((row_by_sym.get(str(sym or "").upper()) or {}).get("plans")
+                           or {}).get(out["plan"].get("timeframe")) or {})
                 pos = _ticket_to_position(
                     out, price, market, day,
                     level_tf=level_tf_by_sym.get(str(sym or "").upper()),
+                    trigger_bar=walked.get("trigger_bar"),
                 )
                 if pos is None:                              # don't chase / wide at fill
                     chased += 1
@@ -1970,7 +2382,15 @@ def run_market(market: str, results: list[dict], frames: dict, universe: list[di
                 [r for r in results if str(r.get("symbol") or "").upper() not in refused],
                 equity, market=market, open_book=_open_book_view(book, market),
                 cooldown_syms=cooldown, **gate)
+            decisions.append(decision)
             plans = decision["plans"]
+
+    if opened_events:
+        _stamp_fills(opened_events, market=market, rows=results, decisions=decisions,
+                     closed_now=closed_events, open_at_start=open_at_start,
+                     open_elsewhere=gate.get("open_elsewhere") if max_total else 0,
+                     now=now, earnings_on=earnings_gate and earnings_buffer > 0,
+                     yf_map=yf_map)
 
     if is_open:
         _record_skips(market, decision, fill_codes, bool(guard["breached"]), now)

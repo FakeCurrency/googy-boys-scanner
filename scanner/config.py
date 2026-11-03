@@ -837,6 +837,13 @@ VIVEK_BOT_MAX_NOTIONAL_PCT_ADV = 2.0
 #    days is going nowhere — close it (exit_reason "time") and free the slot.
 #    Runners past TP1 are exempt: they're already risk-free. 0 = off.
 VIVEK_BOT_MAX_HOLD_DAYS  = 28
+#  • HORIZON_STAMP_DAYS (NEXT100, REPORT ONLY): DERIVED, never typed. The time
+#    stop fires on the first in-session run with held > MAX_HOLD_DAYS (day 29),
+#    so a row still open at MAX_HOLD_DAYS + 1 is a runner past TP1. On that
+#    first run vivek_run._stamp_horizon records its R (`horizon`) for the
+#    decision pack's fixed-horizon what-if. Nothing reads it to decide; it
+#    moves with the time stop (0 = off with it).
+VIVEK_BOT_HORIZON_STAMP_DAYS = (VIVEK_BOT_MAX_HOLD_DAYS + 1) if VIVEK_BOT_MAX_HOLD_DAYS else 0
 #  • REENTRY_COOLDOWN_DAYS: after a full stop-out, don't re-enter the same
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
