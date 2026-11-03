@@ -83,20 +83,68 @@ def test_decision_pack_produces_every_shared_expectation():
     for case in doc["cases"]:
         for pr in judged:
             fn = dp.evaluate_shadow if pr["kind"] == "shadow" else dp.evaluate
-            got = fn(pr, case["closed"])
+            got = fn(pr, case["closed"], case.get("open", []))
             assert got == case["expect"][pr["id"]], (case["name"], pr["id"], got)
 
 
 def test_the_live_snapshot_is_the_reads_the_owner_was_given():
-    """The 2026-11-02 book: PR-0 and PR-1 tripped at their first reads, PR-2
-    sits between its lines waiting for 30 ASX closes, PR-3 is not due."""
+    """The 2026-11-02 book: PR-0 tripped at its first read; PR-1 tripped at
+    its first read too, and since 3 Nov (NEXT100 #5) the replay veto holds
+    that trip for the final re-read at 40 closes; PR-2 sits between its lines
+    waiting for 30 ASX closes, PR-3 is not due."""
     case = next(c for c in _cases()["cases"] if c["name"].startswith("live book"))
-    want = {"PR-0": ("TRIPPED", "2026-10-28", 41, -0.271), "PR-1": ("TRIPPED", "2026-10-27", 21, -0.433),
+    want = {"PR-0": ("TRIPPED", "2026-10-28", 41, -0.271), "PR-1": ("HOLD", "2026-10-27", 21, -0.433),
             "PR-2": ("HOLD", "2026-10-30", 15, -0.399)}
     for pid, (verdict, day, n, avg) in want.items():
         e = case["expect"][pid]
         assert (e["verdict"], e["read_on"], e["read_n"], e["read_avg"]) == (verdict, day, n, avg), (pid, e)
     assert case["expect"]["PR-3"]["verdict"] == "NOT DUE"
+    why = case["expect"]["PR-1"]["reason"]
+    assert "replay veto" in why and "+0.054R" in why and "689" in why and "40 closes" in why, why
+    assert "reason" not in case["expect"]["PR-2"], "a HOLD between the lines is not the veto's"
+
+
+def test_the_3_nov_register_changes_are_marked_in_the_register():
+    """NEXT100 #5 (owner-approved 3 Nov): PR-1 carries the veto read as data,
+    hc4-2's live lines say they read by entry cohort, and nothing else moved
+    -- hc4-1's lines and the PR-16 shadow keep the close-order read."""
+    reg = {p["id"]: p for p in dp.PREREG}
+    assert reg["PR-1"]["veto"] == {"read_on": "2026-11-03", "replay_avg": 0.054, "replay_n": 689,
+                                   "min_avg": 0.05, "source": "3 Nov decision replay, hc4-2 code"}
+    assert [p["id"] for p in dp.PREREG if "veto" in p] == ["PR-1"]
+    for p in dp.PREREG:
+        if "veto" in p:
+            assert p.get("then") and dp.vetoes(p), p["id"]       # a veto needs its re-read
+        want = "entry" if p.get("cycle") == "hc4-2" and p["kind"] == "live" else "close"
+        assert dp.read_mode(p) == want, p["id"]
+    assert "read" not in reg["PR-16"] and reg["PR-16"]["kind"] == "shadow"
+
+
+def test_the_new_cases_sit_on_each_new_edge():
+    """The shared cases carry the 3 Nov reads, so both evaluators are held to
+    them: the veto's hold and both outcomes of its final re-read, a runner's
+    horizon stamp, a cohort not due yet, entry order over close order, a hand
+    close leaving the cohort, and a versus line before and after its versus
+    entries are in."""
+    names = {c["name"]: c["expect"] for c in _cases()["cases"]}
+    hold = names["PR-1 veto: a first-read trip holds for the final re-read"]["PR-1"]
+    assert (hold["verdict"], hold["n"], "40 closes" in hold["reason"]) == ("HOLD", 30, True)
+    trip = names["PR-1 veto: the final re-read at 40 trips at -0.15"]["PR-1"]
+    clear = names["PR-1 veto: the final re-read at 40 clears"]["PR-1"]
+    assert (trip["verdict"], trip["read_n"], trip["read_avg"]) == ("TRIPPED", 40, -0.175)
+    assert (clear["verdict"], clear["read_n"], clear["read_avg"]) == ("CLEAR", 40, -0.05)
+    assert "final re-read" in trip["reason"] and "no second veto" in clear["reason"]
+    runner = names["entry cohort: a runner's horizon stamp counts"]["PR-10"]
+    assert (runner["verdict"], runner["read_avg"], runner["read_on"]) == ("HOLD", -0.25, "2026-12-08")
+    wait = names["entry cohort: not due while an early entry is short of its horizon"]["PR-10"]
+    assert (wait["verdict"], wait["entries"], wait["n"]) == ("NOT DUE", 25, 24)
+    order = names["entry cohort: the first entries, not the first closes"]["PR-10"]
+    assert (order["verdict"], order["read_avg"]) == ("CLEAR", 0.1)
+    hand = names["entry cohort: a hand close before the horizon leaves the cohort"]["PR-10"]
+    assert (hand["verdict"], hand["read_avg"], hand["read_on"]) == ("TRIPPED", -0.425, "2026-12-03")
+    assert names["entry cohort: a versus line waits for its versus entries"]["PR-14"]["verdict"] == "NOT DUE"
+    vs = names["entry cohort: a versus line trips once they are in"]["PR-14"]
+    assert (vs["verdict"], vs["read_avg"], vs["versus_avg"], vs["read_on"]) == ("TRIPPED", -0.5, 0.0, "2026-12-07")
 
 
 def test_the_rounding_cases_are_pythons_round():
@@ -108,9 +156,12 @@ def test_the_rounding_cases_are_pythons_round():
 
 def test_an_average_that_rounds_onto_a_line_is_a_case():
     """The edge a toFixed() mirror would get wrong: -0.2996 is above PR-1's
-    -0.30 line raw, on it once rounded to three places, so it trips."""
+    -0.30 line raw, on it once rounded to three places, so it trips (and the
+    replay veto then holds the trip for the re-read)."""
     names = {c["name"]: c for c in _cases()["cases"]}
     on = names["an average that ROUNDS onto the line trips"]["expect"]["PR-1"]
     off = names["an average that rounds off the line holds"]["expect"]["PR-1"]
-    assert (on["verdict"], on["read_avg"]) == ("TRIPPED", -0.3)
-    assert (off["verdict"], off["read_avg"]) == ("HOLD", -0.299)
+    # PR-1's trips HOLD under the replay veto since 3 Nov: the trip shows as
+    # the veto's reason; a read off the line holds with no reason at all
+    assert (on["verdict"], on["read_avg"], "replay veto" in on.get("reason", "")) == ("HOLD", -0.3, True)
+    assert (off["verdict"], off["read_avg"], "reason" in off) == ("HOLD", -0.299, False)
