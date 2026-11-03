@@ -42,6 +42,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / ".claude" / "skills" / "vivek5-checkin"
 SCRIPT = SKILL / "scripts" / "scanner_status.py"
 MEL = ZoneInfo("Australia/Melbourne")
+NY = ZoneInfo("America/New_York")
 UTC = dt.timezone.utc
 # A developer's commit.gpgsign / init.defaultBranch / hooks must not reach the fixtures.
 GIT_ENV = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",
@@ -109,6 +110,49 @@ def test_every_cron_job_id_in_the_skill_is_one_claude_md_knows():
         assert ids <= known, f"{doc.name} names cron-job.org jobs CLAUDE.md does not: {sorted(ids - known)}"
 
 
+# "10:40 New York (02:40 Melbourne)" and "11:10 to 16:10 New York (03:10 to 08:10 Melbourne)"
+NY_MEL_PAIR = re.compile(r"(\d\d):(\d\d)(?: to (\d\d):(\d\d))? New York \((\d\d):(\d\d)(?: to (\d\d):(\d\d))? Melbourne")
+# "from Sun 14 Mar 2027 makes it New York + 15 h" / "from Sun 14 Mar 2027: New York + 15 h"
+CLOCK_CHANGE = re.compile(r"from (\w{3}) (\d{1,2}) (\w{3}) (\d{4})(?::| makes it) New York \+ (\d+) h")
+
+
+def _ny_to_mel_h(day: dt.date) -> int:
+    noon = dt.datetime.combine(day, dt.time(12), UTC)   # past both zones' change instants that day
+    return round((noon.astimezone(MEL).utcoffset() - noon.astimezone(NY).utcoffset()).total_seconds() / 3600)
+
+
+def test_new_york_times_in_the_skill_convert_at_the_season_schedule_md_names():
+    """NEXT100 #11: schedule.md still put New York on EDT after it left it on
+    1 Nov 2026, so a check-in read every NASDAQ time an hour early. The skill
+    states New York times first with the Melbourne equivalent for ONE season,
+    named in schedule.md's header. Every pair must convert at that offset, and
+    the season's start and each clock change the page names must be the day the
+    tz database changes on (the status script's clocks line covers the rest)."""
+    sched = (SKILL / "references" / "schedule.md").read_text(encoding="utf-8")
+    head = re.search(r"\*\*New York \+ (\d+) h = Melbourne\*\*: New York on \w+ \(UTC-\d+\) since "
+                     r"(\w{3}) (\d{1,2}) (\w{3}) (\d{4})", sched)
+    assert head, "schedule.md's header must name the season its Melbourne times are for"
+    off = int(head.group(1))
+    starts = [(head.group(2), head.group(3), head.group(4), head.group(5), str(off)), *CLOCK_CHANGE.findall(sched)]
+    assert len(starts) >= 3, starts              # the season and at least the next two changes
+    for wd, d, mon, y, hours in starts:
+        day = dt.datetime.strptime(f"{d} {mon} {y}", "%d %b %Y").date()
+        assert day.strftime("%a") == wd, (wd, day)
+        assert _ny_to_mel_h(day) == int(hours) != _ny_to_mel_h(day - dt.timedelta(days=1)), \
+            f"the clocks do not change to New York + {hours} h on {wd} {d} {mon} {y}"
+    pairs = 0
+    for doc in [SKILL / "SKILL.md", *sorted((SKILL / "references").glob("*.md"))]:
+        for g in NY_MEL_PAIR.findall(doc.read_text(encoding="utf-8")):
+            ny = [(g[i], g[i + 1]) for i in (0, 2) if g[i]]
+            mel = [(g[i], g[i + 1]) for i in (4, 6) if g[i]]
+            assert len(ny) == len(mel), (doc.name, g)
+            for (nh, nm), (mh, mm) in zip(ny, mel):
+                gap = (int(mh) * 60 + int(mm) - int(nh) * 60 - int(nm)) % 1440
+                assert gap == off * 60, f"{doc.name}: {nh}:{nm} New York is not {mh}:{mm} Melbourne at + {off} h"
+                pairs += 1
+    assert pairs >= 15, pairs
+
+
 # ---------------------------------------------------------------------------
 # read-only by construction
 STDLIB = {"__future__", "argparse", "datetime", "json", "os", "subprocess", "sys", "zoneinfo"}
@@ -162,6 +206,29 @@ def test_the_script_is_ascii_for_windows_consoles():
     SCRIPT.read_bytes().decode("ascii")
 
 
+def test_the_script_converts_with_zoneinfo_never_a_fixed_offset():
+    """NEXT100 #11: a fixed offset is right for half the year. Every zone is a
+    ZoneInfo with an IANA key (UTC is dt.timezone.utc: no offset to go stale);
+    no timezone(timedelta(...)), no hour shift between the zones, and no
+    offset written into a string outside the usage docstring."""
+    tree = _tree()
+    usage = ast.get_docstring(tree, clean=False)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
+            assert name != "timezone", f"line {node.lineno}: a fixed-offset timezone(...)"
+            if name == "ZoneInfo":
+                assert [a.value for a in node.args if isinstance(a, ast.Constant)] in (
+                    ["Australia/Melbourne"], ["Australia/Sydney"], ["America/New_York"]), node.lineno
+            if name == "timedelta":
+                for kw in node.keywords:
+                    if kw.arg == "hours" and isinstance(kw.value, ast.Constant):
+                        assert kw.value.value not in (4, 5, 10, 11, 14, 15, 16), \
+                            f"line {node.lineno}: hours={kw.value.value} is a zone offset"
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value != usage:
+            assert not re.search(r"[+-](0[45]|1[01]):?00\b", node.value), node.value
+
+
 def test_the_never_list_still_carries_every_rule():
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     start = text.index("- **Never, during a check-in:**")
@@ -195,6 +262,18 @@ def test_last_weekday_at_skips_the_weekend_and_follows_new_york_dst():
     for now, want in ((dt.datetime(2026, 10, 30, 9, 0, tzinfo=MEL), "Fri 07:05"),
                       (dt.datetime(2026, 11, 3, 9, 0, tzinfo=MEL), "Tue 08:05")):
         assert m.last_weekday_at(now, (16, 5), m.NY).astimezone(MEL).strftime("%a %H:%M") == want
+
+
+@pytest.mark.parametrize("now,want", [
+    ("2026-10-08T17:25:00+11:00", "Melbourne AEDT, New York EDT: New York + 15 h"),
+    ("2026-11-04T06:19:00+11:00", "Melbourne AEDT, New York EST: New York + 16 h"),   # since 1 Nov 2026
+    ("2027-03-16T09:00:00+11:00", "Melbourne AEDT, New York EDT: New York + 15 h"),   # US DST from 14 Mar
+    ("2027-04-06T09:00:00+10:00", "Melbourne AEST, New York EDT: New York + 14 h"),   # AEST from 4 Apr
+])
+def test_the_clocks_line_reads_the_time_zone_database(now, want):
+    """NEXT100 #11: schedule.md's Melbourne times are for one season; the
+    clocks line is what tells a check-in that the season has passed."""
+    assert _mod().clocks(dt.datetime.fromisoformat(now)).startswith(f"clocks: {want} = Melbourne (")
 
 
 def test_in_window_is_inclusive_and_weekday_only():
@@ -497,6 +576,7 @@ def test_a_bare_now_means_melbourne(tmp_path):
     repo = _repo(tmp_path, then, files)
     bare = _status(repo, "2026-10-08T17:25:00")
     assert bare.splitlines()[0].startswith("Vivek 5.0 status at Thu 08 Oct 17:25 AEDT Melbourne")
+    assert bare.splitlines()[1].startswith("clocks: Melbourne AEDT, New York EDT: New York + 15 h = Melbourne")
     assert bare == _status(repo, NOW)
 
 
