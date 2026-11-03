@@ -108,8 +108,11 @@ def test_the_summary_is_schema_1_key_for_key_and_the_pack_reads_it(replayed):
         assert list(row) == want, "key for key, in the fixture's order"
         assert row["m"] in ("asx", "nasdaq", "crypto") and row["s"] == src["symbol"]
         assert row["cell"] in cells and row["grade"] in ("A+", "A")
-        assert row["entry"] == src["entry_date"] and row["exit"] == src["exit_date"]
-        assert row["r"] == round(src["realized_r"], 4) and row["reason"] == src["exit_reason"]
+        assert row["entry"] == src["entry_date"] and row["r"] == round(src["realized_r"], 4)
+        if src["exit_reason"] == rs.EOD_REASON:      # force-closed at the series end: a mark
+            assert row["exit"] is None and row["reason"] == "open"
+        else:
+            assert row["exit"] == src["exit_date"] and row["reason"] == src["exit_reason"]
     # the reader's same-weeks figure over the written file
     weeks = sorted({dp.iso_week(t["entry"]) for t in doc["trades"]})
     f = dp.replay_same_weeks(doc, "all", weeks)
@@ -177,6 +180,72 @@ def test_series_inputs_accepts_a_flat_list_and_lists_unpriced_sample_names():
     assert out["asx"]["names"] == ["AAA", "ZZZ"] and set(out["asx"]["series"]) == {"AAA"}
     assert out["asx"]["series"]["AAA"]["n"] == 5 and out["asx"]["series"]["AAA"]["last"] == "2024-01-05"
     assert out["nasdaq"]["series"]["BBB"]["first"] == "2024-01-01"
+
+
+# -- a trade still open at the series end is an OPEN row, not a close -----------
+
+def _load_one_late_signal(mk, limit, period, exclude_symbols=None, workers=1):
+    """One name per market, one signal 10 bars before the 120-bar end: the
+    trade is still open on the last bar and the replay force-closes it."""
+    s = _series(f"{mk[:1].upper()}L", mk, signals=[(110, {"1W": "reclaim"}, "A+", "weekly")])
+    return [s], {"symbols": 1, "universe": 1, "sampled_pct": 100.0, "replayed": 1,
+                 "priced": 1, "signals": 1, "data_sources": {"by_source": {"x": 1}},
+                 "sampled_symbols": [s.symbol]}
+
+
+def test_a_trade_force_closed_at_the_series_end_is_written_open_with_its_mark(monkeypatch, tmp_path):
+    """vivek_backtest._force_close stamps exit_reason "eod" and realized_r =
+    the MARK on every trade still open at the last bar. The pack counts any
+    row with `exit` set as CLOSED, and the live cycle's ISO weeks are the
+    newest bars of the tape, so such a row must be the docstring's open row
+    (exit null, reason "open", r the mark), never averaged into the
+    same-weeks figure."""
+    monkeypatch.setattr(vp, "load_market_series", _load_one_late_signal)
+    monkeypatch.setattr(vp, "fx_rates", lambda: {"audusd": 0.66, "source": "fallback"})
+    out_dir = tmp_path / "data" / "research" / "decision_replay"
+    rep = vp.run_parity(["asx"], 1, "5y", run_variants=False, workers=1, summary_dir=out_dir)
+    taken = [t for t in rep["trades"] if t["taken"]]
+    assert len(taken) == 1, "the one late signal is taken"
+    src = taken[0]
+    assert src["exit_reason"] == "eod" and src["exit_date"] == "2024-04-29", \
+        "the replay force-closed it on the last bar (the premise of this test)"
+    assert isinstance(src["realized_r"], float)
+    dp = _dp()
+    doc = dp.load_replay_summary(root=str(tmp_path))
+    assert len(doc["trades"]) == 1
+    row = doc["trades"][0]
+    assert row["exit"] is None and row["reason"] == "open", row
+    assert row["r"] == round(src["realized_r"], 4), "r is the mark, kept"
+    assert list(row) == list(rs.TRADE_KEYS)
+    week = dp.iso_week(row["entry"])
+    f = dp.replay_same_weeks(doc, "all", [week])
+    assert f == {"n": 0, "avg": None, "se": None, "open": 1}, "counted apart, never averaged"
+    # the unit rule, beside a runner the same function labels as closed
+    assert rs.trade_row({"exit_date": "2024-04-29", "exit_reason": "eod", "realized_r": -0.028})[
+        "reason"] == "open"
+    assert rs.trade_row({"exit_date": "2024-04-29", "exit_reason": "trail", "realized_r": 0.9})[
+        "exit"] == "2024-04-29"
+
+
+def test_a_writer_fault_is_logged_and_the_report_still_returns(monkeypatch, tmp_path, caplog):
+    """A fault in the summary writer must not throw away the replay's report
+    (the CLI writes --out, prints the tables and appends --summary-md AFTER
+    run_parity returns); it is logged as a run annotation instead and the
+    workflow's upload step carries the red."""
+    monkeypatch.setattr(vp, "load_market_series", _fake_load)
+    monkeypatch.setattr(vp, "fx_rates", lambda: {"audusd": 0.66, "source": "fallback"})
+
+    def boom(*a):
+        raise OSError("disk went away")
+
+    monkeypatch.setattr(rs, "write_summary", boom)
+    with caplog.at_level("ERROR", logger="vivek_parity"):
+        rep = vp.run_parity(["asx"], 6, "5y", run_variants=False, workers=1,
+                            summary_dir=tmp_path / "s")
+    assert rep["mode"] == "parity" and rep["trades"], "the report still returns"
+    assert any("::error::decision replay summary NOT written (OSError: disk went away)" in r.message
+               for r in caplog.records)
+    assert not (tmp_path / "s").exists()
 
 
 # -- the hook is opt-in --------------------------------------------------------

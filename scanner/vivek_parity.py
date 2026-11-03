@@ -1439,8 +1439,17 @@ def run_parity(markets: list[str], limit: int | None, period: str,
     if summary_dir:
         # NEXT100 #14: the slim committed summary + the pinned inputs. Only
         # when asked (the CLI's --summary-dir); existing callers write nothing.
+        # GUARDED: a writer fault must not throw away a 70-minute-to-5-hour
+        # replay's report, tables and step summary (the CLI writes those
+        # after this returns). It is logged as a run annotation and the
+        # workflow's upload step (if-no-files-found: error) carries the red.
         from .replay_summary import write_summary
-        write_summary(report, series_by_market, summary_dir)
+        try:
+            write_summary(report, series_by_market, summary_dir)
+        except Exception as exc:   # noqa: BLE001 - the report must still land
+            log.error("::error::decision replay summary NOT written (%s: %s); "
+                      "the report, tables and step summary still follow",
+                      type(exc).__name__, exc)
     return report
 
 

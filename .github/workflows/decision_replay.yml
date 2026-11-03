@@ -159,7 +159,8 @@ jobs:
   # of the same branch. Only after a SUCCESSFUL replay (needs + success()).
   # The branch TIP is checked out (ref: github.ref), never the SHA the run
   # started on, so a queued commit never replays stale data over newer
-  # writes; the push is the ignition.yml rebase-and-retry, branch-aware.
+  # writes; the push is momentum.yml's rebase-and-retry (one pathspec per
+  # git add, fetch + reset + re-checkout of this run's paths), branch-aware.
   commit-summary:
     needs: replay
     if: success()
@@ -192,7 +193,9 @@ jobs:
               exit 1
             fi
           done
-          if ! grep -q '"schema": 1' "$SRC/summary.json"; then
+          # Exact: write_json's indent=1 prints `"schema": 1,` (a bare
+          # '"schema": 1' would also pass a schema 10).
+          if ! grep -q '"schema": 1,' "$SRC/summary.json"; then
             echo "::error::summary.json is not the schema-1 summary scripts/decision_pack.py reads"
             exit 1
           fi

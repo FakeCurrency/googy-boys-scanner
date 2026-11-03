@@ -114,7 +114,8 @@ def test_the_commit_job_stages_one_path_at_a_time_gates_on_both_and_pushes_with_
     assert "for i in 1 2 3 4 5; do" in code and 'git reset --hard "origin/$BRANCH"' in code
     assert "set -o pipefail" in code and "set -u" in code
     assert 'git config user.name "github-actions[bot]"' in code
-    assert '"schema": 1' in code, "it refuses to commit a file the pack cannot read"
+    assert "'\"schema\": 1,'" in code, \
+        "it refuses to commit a file the pack cannot read; exact (a bare 1 also matches 10)"
     assert "data: decision replay summary" in code
     assert not any("${{" in r for r in _summary_runs()), "no expression interpolation in run:"
     for r in _summary_runs():

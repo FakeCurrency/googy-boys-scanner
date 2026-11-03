@@ -108,10 +108,27 @@ def _num(v, nd: int = 4):
     return round(f, nd) if math.isfinite(f) else None
 
 
+EOD_REASON = "eod"   # vivek_backtest._force_close's end-of-data marker
+
+
 def trade_row(t: dict) -> dict:
-    """One slim row from a published parity trade (vivek_parity._slim_parity)."""
+    """One slim row from a published parity trade (vivek_parity._slim_parity).
+
+    The replay FORCE-CLOSES every trade still open on its last bar
+    (vivek_backtest._force_close: exit_date = the last day, exit_reason =
+    "eod", realized_r = the MARK). That is not a close: the pack's
+    replay_same_weeks counts any row with `exit` set as CLOSED and averages
+    its r, and the live cycle's ISO weeks are the newest bars of the tape,
+    so an eod row written as closed would build the same-weeks figure from
+    marks. An eod trade is therefore written as the docstring's open row:
+    exit null, reason "open", r = the mark. A RUNNER whose remainder is
+    force-closed at eod is labelled "trail" / "target" by _force_close
+    (pre-existing: it booked TP1 / TP3 for real) and so still counts as
+    closed."""
     exit_day = t.get("exit_date") or None
     reason = t.get("exit_reason")
+    if reason == EOD_REASON:
+        exit_day, reason = None, "open"
     return {
         "m": t.get("market"),
         "s": t.get("symbol"),
