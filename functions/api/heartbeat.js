@@ -274,6 +274,7 @@ export async function onRequestGet(context) {
     token, repo, workflow, ref,
     inputs: { market, reason: "heartbeat" },
     refund,
+    kv: env.JOURNAL_KV,   // notes the token's expiry off GitHub's answer (NEXT100 #12)
   });
 
   if (r.ok) {

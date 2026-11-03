@@ -32,12 +32,15 @@ const SRC = path.join(__dirname, "..", "functions", "api", "morning_plays.js");
 // prepended (exports stripped) rather than stubbed, so the headers, the 10s
 // abort and the cooldown refund rule these tests assert on are the shipped
 // ones. Same pattern as api_guards.test.js.
+// (_dispatch.js imports _token_expiry.js since NEXT100 #12, so that helper is
+// prepended first and every helper's own import line comes off too.)
 const helper = (f) => fs
   .readFileSync(path.join(__dirname, "..", "functions", "api", f), "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm, "")
   .replace(/export\s+async\s+function/g, "async function")
   .replace(/export\s+function/g, "function")
   .replace(/export\s+const/g, "const");
-const source = ["_secrets.js", "_dispatch.js"].map(helper).join("\n") + "\n" + fs.readFileSync(SRC, "utf8")
+const source = ["_secrets.js", "_token_expiry.js", "_dispatch.js"].map(helper).join("\n") + "\n" + fs.readFileSync(SRC, "utf8")
   .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm, "")
   .replace(/export\s+const\s+onRequest/, "globalThis.onRequest");
 

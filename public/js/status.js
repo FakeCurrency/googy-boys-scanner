@@ -50,6 +50,18 @@
  *         (project rule 3 — never hardcode a published constant twice). 30
  *         until the owner's 2026-09-27 resize to 60 × $2,500.
  *
+ * TWO SIGNALS COMPUTED SERVER-SIDE (NEXT100 #12/#13, 2026-11-03), so this file
+ * carries no threshold of its own for them -- /api/health owns both lines:
+ *   - a STOCK MARKET GONE QUIET: health lists asx/nasdaq as `breached` entries
+ *     of kind "stale" once that market's own scan is older than its alarm line
+ *     in SESSION hours (crypto's hourly commit keeps the combined book fresh,
+ *     so the whole-pipeline age above could never see a dead stock clock).
+ *     AMBER, named by market; kept apart from the loss guards, which are
+ *     entries of every other kind.
+ *   - GH_DISPATCH_TOKEN EXPIRING: health answers token_expiring (inside its
+ *     TOKEN_WARN_DAYS) with token_days_left; the lamp goes AMBER with "GitHub
+ *     key expires in N days" and does nothing when health knows no date.
+ *
  * Uptime is measured, not asserted: public/data/funnel_history.json carries a
  * wall-clock stamp for every successful scan publish (scanner/run.py appends
  * one immediately after output.write_vivek_pair), so the ledger IS the
@@ -300,8 +312,12 @@
     }
     if (s.healthOk === false) return { level: "red", why: `no scan committed for ${s.bookAgeH.toFixed(1)}h — past the ${HEALTH_MAX_H}h alarm` };
     if (s.bookAgeH * 60 > HEAL_STALE_MIN) return { level: "amber", why: `last scan ${agoText(s.bookAgeH * 36e5)} — past the whole pipeline's ${HEAL_STALE_MIN}m overdue mark` };
+    // A stock market's own clock stopping outranks a breach: its stops and
+    // time stops fire only in a scan (NEXT100 #13).
+    if (s.stale && s.stale.length) return { level: "amber", why: staleText(s.stale) };
     if (s.breached && s.breached.length) return { level: "amber", why: `loss guard breached: ${s.breached.map((b) => b.market).join(", ")} — new entries halted` };
     // (Stalled rows are not a lamp level — see REFINE200 #189 in the header.)
+    if (s.token) return { level: "amber", why: tokenText(s.token.daysLeft) };
     if (s.bookReadable === false) return { level: "amber", why: "pipeline fresh, but the book file didn't load here" };
     return { level: "green", why: `scanning normally — last scan ${agoText(s.bookAgeH * 36e5)}` };
   };
@@ -344,12 +360,38 @@
       (e) => (e && e.status ? { ok: false, status: e.status, json: null } : null));
   };
 
-  // Breaches as /api/health reports them (it reads the book server-side), or
-  // null when the answer predates the field.
+  // LOSS-GUARD breaches as /api/health reports them (it reads the book
+  // server-side), or null when the answer predates the field. Entries of kind
+  // "stale" are a market's scan gone quiet, not a guard (healthStale below).
   const healthBreaches = (hj) => (hj && Array.isArray(hj.breached)
-    ? hj.breached.filter((b) => b && b.market)
+    ? hj.breached.filter((b) => b && b.market && b.kind !== "stale")
       .map((b) => ({ market: String(b.market), kind: String(b.kind || "loss limit") }))
     : null);
+
+  // The stock markets /api/health lists as gone quiet in their own session
+  // hours (NEXT100 #13): its `breached` entries of kind "stale". [] when there
+  // are none or the answer predates them.
+  const healthStale = (hj) => (hj && Array.isArray(hj.breached)
+    ? hj.breached.filter((b) => b && b.market && b.kind === "stale")
+      .map((b) => ({ market: String(b.market),
+                     sessionH: typeof b.session_h === "number" && isFinite(b.session_h) ? b.session_h : null }))
+    : []);
+
+  const staleText = (stale) => stale.map((m) => `${m.market.toUpperCase()} not scanned for ` +
+    (m.sessionH != null ? `${m.sessionH.toFixed(1)}h` : "hours") + " of its trading session").join("; ") +
+    " — its stops and time stops wait for the next scan";
+
+  // GH_DISPATCH_TOKEN inside /api/health's warning line (NEXT100 #12), or null
+  // — not expiring, or no date known (a null value does nothing).
+  const tokenWarning = (hj) => (hj && hj.token_expiring === true
+    && typeof hj.token_days_left === "number" && isFinite(hj.token_days_left)
+    ? { daysLeft: hj.token_days_left, expires: String(hj.token_expires || "") }
+    : null);
+
+  const tokenText = (d) => (d < 0
+    ? "GitHub key has expired — renew GH_DISPATCH_TOKEN in Cloudflare; scans, heals and the digest cannot be dispatched"
+    : d === 0 ? "GitHub key expires within a day — renew GH_DISPATCH_TOKEN in Cloudflare"
+      : `GitHub key expires in ${d} day${d === 1 ? "" : "s"} — renew GH_DISPATCH_TOKEN in Cloudflare`);
 
   // The LIGHT reads /api/health (a small answer to the exact question the
   // lamp asks — is a scan fresher than the alarm threshold, and is any loss
@@ -375,6 +417,9 @@
           // Only a book this page actually TRIED to read can be unreadable.
           bookReadable: STATE.bookTried ? !!STATE.book : null,
           breached: STATE.book ? bs.breached : (fromHealth || []),
+          // Health-only signals: the book carries neither (NEXT100 #12/#13).
+          stale: healthStale(hj),
+          token: tokenWarning(hj),
           stalled: bs.stalled,
         };
         STATE.book_state = bs;
@@ -459,6 +504,17 @@
       : (STATE.sig && STATE.sig.bookAgeH != null ? `<b>${STATE.sig.bookAgeH.toFixed(1)}h ago</b>` : "—"),
       `whole pipeline: overdue at ${HEAL_STALE_MIN}m · alarm at ${HEALTH_MAX_H}h (each market's own heal ping uses a shorter line)`);
     const ledgerFrom = stamps.length ? String(new Date(stamps[0]).toISOString().slice(0, 10)) : "";
+    // The dispatch token's expiry, as /api/health read it from KV (NEXT100 #12).
+    const hjs = STATE.health && STATE.health.json ? STATE.health.json : null;
+    const tk = tokenWarning(hjs);
+    const tkDays = hjs && typeof hjs.token_days_left === "number" ? hjs.token_days_left : null;
+    h += row("GitHub key", hjs && hjs.token_expires && tkDays != null
+      ? `<b${tk ? ' class="sys-amber"' : ""}>${tkDays < 0 ? "expired" : `${tkDays} day${tkDays === 1 ? "" : "s"} left`}</b>`
+        + ` · ${esc(String(hjs.token_expires).slice(0, 10))}`
+      : `<b>not reported</b>`,
+      hjs && hjs.token_expires
+        ? `GH_DISPATCH_TOKEN dispatches every scan, heal, digest and SCAN; read off GitHub's answer to the last dispatch${typeof hjs.token_warn_days === "number" ? ` · amber inside ${hjs.token_warn_days} days` : ""}`
+        : "GitHub states it on each dispatch's answer; none recorded yet, or the key does not expire");
     h += row("Uptime · 7d", upVal(u7), upNote(u7, `measured on committed scans`));
     h += row("Uptime · 30d", upVal(u30),
       upNote(u30, u30 && u30.clamped && ledgerFrom ? `the ledger starts ${ledgerFrom}` : ""));
@@ -479,9 +535,15 @@
     if (!ages.length) {
       h += `<p class="sys-empty">funnel_history.json didn't load — per-market ages unavailable.</p>`;
     } else {
+      // A market /api/health lists as gone quiet in its session is marked
+      // (NEXT100 #13); the age itself is the funnel ledger's, as before.
+      const quiet = healthStale(STATE.health && STATE.health.json);
       ages.forEach((a) => {
+        const q = quiet.find((m) => m.market === a.market);
         h += row(a.market.toUpperCase(),
-          `<b>${esc(agoText(a.ageMs))}</b>`,
+          `<b>${esc(agoText(a.ageMs))}</b>` + (q
+            ? ` <span class="sys-warn">${q.sessionH != null ? esc(q.sessionH.toFixed(1)) + "h" : "past the line"} of its session unscanned</span>`
+            : ""),
           a.published != null ? `${a.published} published of ${a.scanned} scanned · ${a.runs} runs on file` : "");
       });
     }

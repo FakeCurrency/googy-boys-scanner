@@ -132,7 +132,9 @@ export const onRequestPost = withAccessLog("/api/scan", async ({ env, request })
 
   // Transport + the cooldown refund rule live in _dispatch.js; the wording below
   // is this endpoint's own (it answers the deck's SCAN button).
-  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { market }, refund: refundGuard });
+  // `kv` notes the token's expiry off GitHub's answer (NEXT100 #12).
+  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { market }, refund: refundGuard,
+                                     kv: env.JOURNAL_KV });
 
   if (r.ok) {
     const scope = market === "all" ? "Full scan" : `${market.toUpperCase()} scan`;

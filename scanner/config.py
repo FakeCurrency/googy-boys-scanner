@@ -1354,6 +1354,17 @@ WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
 WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
 # Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
 WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
+# Each STOCK market on its own clock (NEXT100 #13, 2026-11-03). The book probe's
+# min() age across books is satisfied by crypto's hourly run 24/7, so a dead
+# ASX or NASDAQ scan was invisible to it -- while 57 of 60 open rows are stocks
+# whose stops and time stops fire only in an in-session scan. CRITICAL once a
+# stock market's canonical book (journal/vivek_bot_book.<market>.json, saved by
+# every non-dry in-session run) is older than this many SESSION hours: time
+# inside MARKET_SCAN_WINDOWS, on the market's own weekdays and clock, so a
+# night or a weekend never counts. Scans land hourly in session, so 3 is about
+# two missed scans in a row. functions/api/health.js mirrors it as
+# STOCK_STALE_SESSION_H (pinned, tests/test_js_config_mirrors.py).
+WATCHDOG_STOCK_SCAN_MAX_SESSION_H = 3.0
 
 # ── Confluence forward-return ledger (scripts/alert_returns.py, 2026-08-20) ──
 # Research artefact only: measures whether multi-lens alignment predicts

@@ -636,3 +636,141 @@ def test_assert_staged_gate(tmp_path):
     # any-of semantics: second path staged is enough
     r = _gate(repo, script, "test", "missing.json", "book.json")
     assert r.returncode == 0
+
+
+
+# ── NEXT100 #13: each stock market on its own session clock ────────────────────
+#
+# The book probe's min() age is satisfied by crypto's hourly run 24/7, so a dead
+# ASX or NASDAQ clock never reached it. Each stock market is now judged on its
+# OWN canonical book, in hours of its own trading session.
+
+UTC = dt.timezone.utc
+
+
+def _at(s: str) -> dt.datetime:
+    return dt.datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(UTC)
+
+
+def _books(root, stamps: dict):
+    """Canonical per-market books stamped as given (UTC ISO) + the combined view."""
+    j = root / "journal"
+    j.mkdir(parents=True, exist_ok=True)
+    (j / "vivek_bot_book.json").write_text(json.dumps(
+        {"open": [], "closed": [], "updated_at": max(stamps.values())}), encoding="utf-8")
+    for m, ts in stamps.items():
+        (j / f"vivek_bot_book.{m}.json").write_text(json.dumps(
+            {"version": 2, "market": m, "open": [], "closed": [], "updated_at": ts}),
+            encoding="utf-8")
+    return root
+
+
+# Tue 3 Nov 2026 03:00 UTC = 14:00 AEDT (ASX in session) = Mon 22:00 EST.
+ASX_IN_SESSION = _at("2026-11-03T03:00:00Z")
+
+
+def test_a_quiet_asx_is_critical_while_crypto_keeps_the_combined_book_fresh(tmp_path):
+    root = _books(tmp_path, {
+        "asx": "2026-11-02T05:00:00+00:00",      # Mon 16:00 AEDT: 0.75 + 3.0 session h
+        "nasdaq": "2026-11-02T21:45:00+00:00",   # Mon 16:45 EST: no session since
+        "crypto": "2026-11-03T02:48:00+00:00",   # 12 minutes ago
+    })
+    probs = wd.probe_content(root, ASX_IN_SESSION)
+    assert [p["key"] for p in probs] == ["scan_stale_asx"], probs
+    f = probs[0]
+    assert f["severity"] == "CRITICAL"
+    assert "ASX" in f["msg"] and "3.8 hours of its own trading session" in f["msg"], f["msg"]
+    assert f"limit {config.WATCHDOG_STOCK_SCAN_MAX_SESSION_H:.0f}h" in f["msg"]
+    assert f["msg"].isascii(), "scanner logs are ASCII-only (cp1252 consoles)"
+
+
+def test_exactly_at_the_line_is_silent_and_one_minute_past_it_is_not(tmp_path):
+    base = {"nasdaq": "2026-11-02T21:45:00+00:00", "crypto": "2026-11-03T02:48:00+00:00"}
+    at_line = _books(tmp_path / "a", {**base, "asx": "2026-11-02T05:45:00+00:00"})   # 3.0h
+    assert wd.probe_content(at_line, ASX_IN_SESSION) == []
+    past = _books(tmp_path / "b", {**base, "asx": "2026-11-02T05:44:00+00:00"})      # 3.02h
+    assert [p["key"] for p in wd.probe_content(past, ASX_IN_SESSION)] == ["scan_stale_asx"]
+
+
+def test_the_weekend_and_the_night_never_count(tmp_path):
+    # Mon 2 Nov 00:30 UTC = 11:30 AEDT Monday; Friday's 16:45 close was 66h of
+    # wall clock ago but only 0.5h of ASX session. NASDAQ: Sunday evening.
+    root = _books(tmp_path, {
+        "asx": "2026-10-30T05:45:00+00:00",
+        "nasdaq": "2026-10-30T20:45:00+00:00",
+        "crypto": "2026-11-02T00:10:00+00:00",
+    })
+    assert wd.probe_content(root, _at("2026-11-02T00:30:00Z")) == []
+
+
+def test_nasdaq_is_judged_on_its_own_clock(tmp_path):
+    # Tue 3 Nov 19:00 UTC = 14:00 EST: NASDAQ last saved Monday's 16:45 close,
+    # so 10:30-14:00 today = 3.5 session h. ASX saved its own close (Tue 16:45
+    # AEDT) and is shut now (Wed 06:00 AEDT).
+    root = _books(tmp_path, {
+        "asx": "2026-11-03T05:45:00+00:00",
+        "nasdaq": "2026-11-02T21:45:00+00:00",
+        "crypto": "2026-11-03T18:40:00+00:00",
+    })
+    probs = wd.probe_content(root, _at("2026-11-03T19:00:00Z"))
+    assert [p["key"] for p in probs] == ["scan_stale_nasdaq"], probs
+    assert "3.5 hours" in probs[0]["msg"]
+
+
+def test_crypto_keeps_its_own_rule_and_gets_no_session_finding(tmp_path):
+    # A day-old crypto book behind fresh stock books: the min() rule stays
+    # satisfied (unchanged), and no session finding is ever raised for crypto.
+    root = _books(tmp_path, {
+        "asx": "2026-11-03T02:10:00+00:00",
+        "nasdaq": "2026-11-02T21:45:00+00:00",
+        "crypto": "2026-11-02T03:00:00+00:00",
+    })
+    keys = {p["key"] for p in wd.probe_content(root, ASX_IN_SESSION)}
+    assert not any(k.endswith("crypto") for k in keys), keys
+    assert "book_stale" not in keys
+
+
+def test_a_stock_market_with_no_book_is_not_invented_into_a_finding(tmp_path):
+    root = _books(tmp_path, {"nasdaq": "2026-11-02T21:45:00+00:00",
+                             "crypto": "2026-11-03T02:48:00+00:00"})
+    assert wd.probe_content(root, ASX_IN_SESSION) == []
+
+
+def test_market_session_hours_runs_the_cases_health_js_runs():
+    """tests/fixtures/session_hours_cases.json is read by test/health.test.js
+    too, so the watchdog and the site's lamp cannot disagree about a market."""
+    import pathlib
+    fx = pathlib.Path(__file__).parent / "fixtures" / "session_hours_cases.json"
+    cases = json.loads(fx.read_text(encoding="utf-8"))["cases"]
+    assert len(cases) >= 10
+    for c in cases:
+        got = wd.market_session_hours(c["market"], _at(c["start"]), _at(c["end"]))
+        assert abs(got - c["hours"]) < 1e-9, (c["name"], got, c["hours"], c["why"])
+
+
+def test_market_session_hours_fails_quiet():
+    a, b = _at("2026-11-02T00:00:00Z"), _at("2026-11-02T03:00:00Z")
+    assert wd.market_session_hours("crypto", a, b) == 0.0       # no session window
+    assert wd.market_session_hours("asx", None, b) == 0.0
+    assert wd.market_session_hours("asx", b, a) == 0.0
+
+
+def test_the_stale_market_rides_the_watchdog_cadence_and_the_alarm(monkeypatch, tmp_path, capsys):
+    """First detection annotates and raises the red-run alarm ONCE; a run
+    inside the reminder window says nothing new; the fresh scan recovers it."""
+    stale = _books(tmp_path / "t1", {
+        "asx": "2026-11-02T05:00:00+00:00", "nasdaq": "2026-11-02T21:45:00+00:00",
+        "crypto": "2026-11-03T02:48:00+00:00"})
+    found = wd.probe_content(stale, ASX_IN_SESSION)
+    raise_env = {"WATCHDOG_RAISE": "1"}
+    res, state, out = _live_run(monkeypatch, tmp_path, found, env=raise_env, now=ASX_IN_SESSION)
+    printed = capsys.readouterr().out
+    assert "::error title=Watchdog CRITICAL::ASX book last saved" in printed
+    assert [a["key"] for a in res["alarm"]] == ["scan_stale_asx"]
+    assert out.startswith("alarm=ASX book last saved")
+    later = ASX_IN_SESSION + dt.timedelta(minutes=30)
+    res2, state2, _ = _live_run(monkeypatch, tmp_path, found, state=state, env=raise_env, now=later)
+    assert res2["alarm"] == [] and "::error" not in capsys.readouterr().out, "one alarm per episode"
+    res3, _, _ = _live_run(monkeypatch, tmp_path, [], state=state2, env=raise_env, now=later)
+    assert res3["recovered"] == ["scan_stale_asx"]
+    assert "::notice title=Watchdog recovered::scan_stale_asx" in capsys.readouterr().out

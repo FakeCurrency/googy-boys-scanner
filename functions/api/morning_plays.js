@@ -140,7 +140,9 @@ export const onRequest = async ({ request, env }) => {
   }
 
   // Transport + the cooldown refund rule live in _dispatch.js.
-  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { slot }, refund: refundGuard });
+  // `kv` notes the token's expiry off GitHub's answer (NEXT100 #12).
+  const r = await dispatchWorkflow({ token, repo, workflow, ref, inputs: { slot }, refund: refundGuard,
+                                     kv: env.JOURNAL_KV });
 
   if (r.ok) {
     return json(202, { ok: true, configured: true, slot,

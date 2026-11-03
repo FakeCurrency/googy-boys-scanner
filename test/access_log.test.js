@@ -43,9 +43,12 @@ const STRIP_EXPORTS = (src) => src
 const HELPER = STRIP_EXPORTS(SRC("_access_log.js"));
 // The shared dispatch transport and the request guards, prepended real (see
 // api_guards.test.js).
-const DISPATCH_HELPER = STRIP_EXPORTS(SRC("_dispatch.js"));
-const GUARD_HELPERS = STRIP_EXPORTS(SRC("_secrets.js")) + "\n" + STRIP_EXPORTS(SRC("_same_origin.js"));
 const LOCAL_IMPORTS = /^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm;
+// _dispatch.js imports _token_expiry.js (NEXT100 #12): that helper goes first
+// and the import line comes off, as for the endpoints.
+const DISPATCH_HELPER = STRIP_EXPORTS(SRC("_token_expiry.js")) + "\n" +
+  STRIP_EXPORTS(SRC("_dispatch.js")).replace(LOCAL_IMPORTS, "");
+const GUARD_HELPERS = STRIP_EXPORTS(SRC("_secrets.js")) + "\n" + STRIP_EXPORTS(SRC("_same_origin.js"));
 
 function loadModule(file, { strip = [], sandboxExtra = {} } = {}) {
   let source = SRC(file);
