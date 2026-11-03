@@ -1359,10 +1359,10 @@ WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
 # ASX or NASDAQ scan was invisible to it -- while 57 of 60 open rows are stocks
 # whose stops and time stops fire only in an in-session scan. CRITICAL once a
 # stock market's canonical book (journal/vivek_bot_book.<market>.json, saved by
-# every non-dry in-session run) is older than this many SESSION hours: time
+# every non-dry run of that market) is older than this many SESSION hours: time
 # inside MARKET_SCAN_WINDOWS, on the market's own weekdays and clock, so a
-# night or a weekend never counts. Scans land hourly in session, so 3 is about
-# two missed scans in a row. functions/api/health.js mirrors it as
+# night or a weekend never counts. Scans land hourly in session, so it takes
+# three missed (or late) scans in a row to pass 3. functions/api/health.js mirrors it as
 # STOCK_STALE_SESSION_H (pinned, tests/test_js_config_mirrors.py).
 WATCHDOG_STOCK_SCAN_MAX_SESSION_H = 3.0
 
