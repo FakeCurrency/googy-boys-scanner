@@ -159,7 +159,7 @@ jobs:
   # of the same branch. Only after a SUCCESSFUL replay (needs + success()).
   # The branch TIP is checked out (ref: github.ref), never the SHA the run
   # started on, so a queued commit never replays stale data over newer
-  # writes; the push is momentum.yml's rebase-and-retry (one pathspec per
+  # writes; the push is the other committing lens workflows' rebase-and-retry (one pathspec per
   # git add, fetch + reset + re-checkout of this run's paths), branch-aware.
   commit-summary:
     needs: replay
