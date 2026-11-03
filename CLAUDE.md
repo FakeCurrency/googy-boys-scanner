@@ -384,7 +384,10 @@ pinned key for key and both evaluators run `tests/fixtures/checkpoint_cases.json
 (`tests/test_checkpoint_mirror.py`, `test/journal_checkpoints.test.js`), so a
 register change edits the doc, the script and the JS together. Items 1 (drop
 the 3D reclaim; needs the replay-veto figure first) and 5 (crypto slots) were
-NOT approved. **Rules vs owner:** an absent `exit_reason` is a human
+NOT approved. The 3 Nov replay on hc4-2 code (the decision pack's "What the 3
+Nov replay said"): stock 3D reclaims +0.054R/trade over 689 (over the veto's
++0.05R line), V7 no-ASX the first variant to PASS the gate, V9/V10/V11 and the
+day-14 cut fail, and on hc4-1's matched trades the replay lost what live lost. **Rules vs owner:** an absent `exit_reason` is a human
 act; `MECHANICAL_EXITS` (app.js, journal.js, status.js) is parity-pinned; the
 two records print separately, never pooled; evidence strips stay INERT (no
 controls or calls-to-action).
