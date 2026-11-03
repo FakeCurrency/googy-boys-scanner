@@ -265,8 +265,18 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
 - **Layout:** canonical `journal/vivek_bot_book.<market>.json` (a market's run
   writes only its own); `journal/vivek_bot_book.json` + the public twin are a
   DERIVED view (`python -m scanner.broker.vivek_run --rebuild-combined`;
-  `--verify` is a failing gate in the scan/close workflows). An unreadable book
-  aborts the runner. **Never hand-edit rows; never edit a closed row.**
+  `--verify` is a failing gate in the scan/close workflows). `--verify` also
+  proves the book APPEND-ONLY against git HEAD (NEXT100 #7: HEAD's closed rows
+  present and identical, its open rows still present by id, the closed count
+  never falling except exactly the MAX_CLOSED trim; no git = one notice) and
+  checks open-row money (entry/risk/units/notional finite > 0, a long's stop
+  never below entry - risk, booked_pct = the sum of exits). A restore from a
+  backup lists the rows it drops; `--verify --no-head` skips only that leg, is
+  for restores only and never appears in a workflow (pinned). The book files
+  are written through `scanner.output` (a non-finite value becomes null with
+  one WARNING; #8), and a non-finite fill, stop or risk is refused
+  (`bad_fill`). An unreadable book aborts the runner. **Never hand-edit rows;
+  never edit a closed row.**
 - **What it takes** (cycle `hc4-2`, since 2026-11-02; hc4-1 ran 2026-09-21 →
   2026-11-02): `grade_raw` A/A+, LONG,
   the first armed complete plan walking `VIVEK_BOT_ENTRY_CELLS` 1W (reclaim,
@@ -289,6 +299,19 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   exempt, drop `dup_company`, #12); a `d14` stamp at held ≥
   `VIVEK_BOT_D14_STAMP_DAYS` (14) records r / mfe_r / tp1_hit — REPORT ONLY,
   it never closes anything (PR-16 reads it).
+- **Report-only stamps (NEXT100 #2, 3 Nov; nothing reads them to decide):** new
+  fills carry `adv` (the ADV the liquidity gates read; null = exempt) +
+  `adv_share`, `score`, `rank`/`rank_of` (place among the run's slot seekers:
+  decide() plans plus capacity-capped rows), `freed_by` {id, exit_reason} (the
+  same-run close whose position slot it took), `trigger_bar` (read off the
+  scan row's plan: the ringfenced plan_trade never copied it) +
+  `trigger_bar_forming`, and on NASDAQ `earnings` {next, lookup: ok|failed}
+  (`_earnings_dates` returns None on a failed lookup, still failing open). A
+  still-open row at held >= `VIVEK_BOT_HORIZON_STAMP_DAYS` (max hold + 1 = 29;
+  a runner past TP1) gets `horizon` {day, held, r, booked, tp1_hit} once, on
+  the first in-session run; hc4-2's entry-cohort reads use it (hc4-1 runners
+  already past day 29 are stamped late; nothing reads theirs). Stamps are
+  guarded: a failure logs one WARNING and never costs the fill or the save.
 - **Capacity:** 60 open across ALL markets (`VIVEK_BOT_MAX_OPEN_TOTAL`),
   $150,000 notional, one per symbol cross-market, **6 per sector PER MARKET**
   (`sectorcache.global_sector_load` warns when one real sector exceeds it summed
