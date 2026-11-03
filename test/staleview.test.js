@@ -1966,7 +1966,7 @@ test("MECHANICAL_EXITS is IDENTICAL in app.js, journal.js and status.js", () => 
   assert.ok(!a.includes("manual"), "a hand close can never be a rules exit");
 });
 
-test("bookFacts splits with the PUBLISHED rules exits, and the deck still agrees with the journal", () => {
+test("bookFacts splits with the PUBLISHED rules exits; an empty or malformed list keeps the fallback", () => {
   // NEXT100 #9: config's list reaches the deck as bot_rules.json rules_exits.
   // A reason the fallback does not know is counted once it is published; an
   // empty or malformed list is the fallback, never "nothing is the rules'".

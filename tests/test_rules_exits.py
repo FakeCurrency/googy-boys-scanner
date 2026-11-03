@@ -4,8 +4,9 @@ Every "rules close" figure -- the decision pack's checkpoints, the journal's
 decider split and cycle board, the deck's record line and per-cell note, the
 status sheet's cohort, the system page's evidence card, the bot-vs-cells and
 live-vs-replay studies -- turns on which `exit_reason` values count as the
-rules acting. The tuple was typed out in seven places (one of them, in
-scripts/bot_vs_cells.py, with an extra "tp"). Now it lives once in config;
+rules acting. The tuple was typed out in eight places -- four in Python (one
+of them, in scripts/bot_vs_cells.py, with an extra "tp") and four JS literals,
+two of them in app.js. Now it lives once in config;
 Python imports it and the site reads it from bot_rules.json `rules_exits`
 (tests/test_js_config_mirrors.py pins the JS offline fallbacks).
 
@@ -14,7 +15,11 @@ The pins here:
     the reasons the frozen hc4-1 / hc4-2 checkpoints already count;
   * every trade-level reason the book's close writers can stamp, other than
     the hand close's "manual", is in it -- so a new exit path cannot ship as a
-    silent "hand close";
+    silent "hand close". The sweep reads every reason slot of the one close
+    writer (vivek_journal._close_remaining: `reason`, `exit_reason`, by position
+    or keyword) and every `["exit_reason"] = ...` in vivek_journal.py and
+    vivek_run.py; a writer in another module is outside it (the replays stamp
+    their own reasons, so the sweep cannot widen to the whole tree);
   * no Python file outside config re-types it, and every reader follows it;
   * bot_rules.json publishes it;
   * config stays stdlib-only, so the bare-Python decision pack can import it.
@@ -82,9 +87,9 @@ def _strs(node):
     return set()               # a Name: a caller's label (the hand close's `reason`)
 
 
-def _written_reasons():
+def _written_reasons(paths=_WRITERS):
     out = set()
-    for path in _WRITERS:
+    for path in paths:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Call):
                 f = node.func
@@ -92,6 +97,8 @@ def _written_reasons():
                     continue
                 if len(node.args) > 3:
                     out |= _strs(node.args[3])     # the exit record's reason (the default verdict)
+                if len(node.args) > 5:
+                    out |= _strs(node.args[5])     # exit_reason passed by position
                 for kw in node.keywords:
                     if kw.arg in ("reason", "exit_reason"):
                         out |= _strs(kw.value)
@@ -112,6 +119,21 @@ def test_every_reason_a_close_writer_stamps_is_classified():
     assert not unclassified, (
         f"the book can now close a row with exit_reason {unclassified}, which no reader counts as "
         "the rules: add it to config.VIVEK_BOT_RULES_EXITS (or it reads as a hand close everywhere)")
+
+
+def test_the_close_writer_sweep_reads_every_reason_slot(tmp_path):
+    """Mutation check for the sweep itself: `reason` and `exit_reason`, by
+    position or by keyword, a ternary's branches and a direct assignment are
+    all seen; a caller's label (a Name) and a ternary's TEST are not reasons."""
+    planted = tmp_path / "writer.py"
+    planted.write_text(
+        'vj._close_remaining(t, p, d, "pos4", c, "pos6")\n'
+        '_close_remaining(t, p, d, "pos4b", c, exit_reason="kw_exit")\n'
+        '_close_remaining(t, p, d, reason="kw_reason", costs=c)\n'
+        '_close_remaining(t, p, d, "manual", c, exit_reason=label)\n'
+        't["exit_reason"] = "if_body" if t["not_a_reason"] else "if_else"\n', encoding="utf-8")
+    assert _written_reasons((planted,)) == {
+        "pos4", "pos6", "pos4b", "kw_exit", "kw_reason", "manual", "if_body", "if_else"}
 
 
 # -- one definition: nobody re-types it, everybody follows it ------------------
@@ -136,7 +158,9 @@ def _retyped_copies():
                 if not all(isinstance(e, ast.Constant) and isinstance(e.value, str) for e in node.elts):
                     continue
                 if _SIGNATURE <= {e.value for e in node.elts} and _NOT_A_COPY not in lines[node.lineno - 1]:
-                    hits.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+                    # as_posix: the owner runs the gate on Windows, where a bare
+                    # relative path prints with backslashes
+                    hits.append(f"{path.relative_to(ROOT).as_posix()}:{node.lineno}")
     return hits
 
 

@@ -852,8 +852,11 @@ VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
 # status.js are offline fallbacks, pinned to this by test_js_config_mirrors).
 # APPEND-ONLY, lowercase: closed rows keep their reason forever and the
 # decision pack's frozen checkpoints count them, so a reason never leaves; a
-# new close path adds its reason here in the commit that first writes it
-# (tests/test_rules_exits.py fails until it does).
+# new close path adds its reason here in the commit that first writes it.
+# tests/test_rules_exits.py fails until it does for a reason stamped through
+# the one close writer (vivek_journal._close_remaining) or an `exit_reason`
+# assignment in vivek_journal.py / vivek_run.py; a writer elsewhere is
+# outside that sweep.
 VIVEK_BOT_RULES_EXITS = ("stop", "time", "trail", "target")
 
 # ── Parity backtest + n≥30 decision pack (simulation-only; live bot UNTOUCHED)
