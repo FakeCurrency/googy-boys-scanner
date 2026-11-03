@@ -99,9 +99,11 @@ breakout on crypto, ASX and NASDAQ.
 
 1. **Git first, always:** other sessions + CI push constantly. Before ANY
    commit: `git stash -q -u; git pull -q --rebase origin main; git stash pop -q`.
-   A full pytest run leaves `journal/` byte-clean, so a diff in
-   `journal/alert_state.json` after tests is a real alert-state change —
-   never discard it with `git checkout`.
+   A full pytest run leaves `journal/` byte-clean (a hard check since
+   NEXT100 #10: tests/conftest.py hashes journal/ on the session controller
+   at start and finish and fails the session naming any changed file), so a
+   diff in `journal/alert_state.json` after tests is a real alert-state
+   change — never discard it with `git checkout`.
 2. **Version bump:** every edit to ANY `public/js/*.js` or `public/css/*.css`
    bumps its `?v=` in every referencing HTML page (assets are cached immutable
    for a year — a missed bump pins the old file). Read numbers from the HTML.
@@ -310,7 +312,9 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   stock market's first session after it, because the stop fires only in
   session (`time_stop.time_stop_due` models that weekend roll for display;
   nothing decides on it); the journal's countdown and the stalled strip count
-  to that day), mark-sanity
+  to that day; the boundary is one case table,
+  `tests/fixtures/time_stop_cases.json`, run through `time_stop_due`, a real
+  `run_market` and journal.js `timeStopOf`, NEXT100 #3), mark-sanity
   (`VIVEK_MARK_SANITY_PCT` 35%/60%; pauses on a suspect mark, alerts on the 2nd
   hit, accepts on the 3rd; only while the market is open). A split accepted by
   mark-sanity is restated (prices ÷ ratio, units × ratio, R unchanged, audited
@@ -375,7 +379,8 @@ fields frozen and verified; CLOSED rows never touched; sized off
 
 **Cycles and the decision pack.** **w3-1** (2026-08-02 → 2026-09-21, the
 weekly/3d gate) ENDED; its n=30 read is a KILL (−0.192R/trade). **hc4-1**
-(2026-09-21 → 2026-11-02) ENDED with PR-0, PR-1 and PR-6 TRIPPED (27-28 Oct).
+(2026-09-21 → 2026-11-02) ENDED with PR-0, PR-1 and PR-6 TRIPPED (27-28 Oct);
+PR-1 now HOLDs under the replay veto (set 3 Nov, below).
 **hc4-2** (`VIVEK_BOT_CYCLE_TAG`) is live from 2 Nov; the journal's per-cell
 board reads `cycle_tag` + `entry_cells` from `bot_rules.json`.
 `docs/DECISIONS_2026-10-14.md` holds the OWNER items and a frozen register
@@ -384,8 +389,23 @@ PR-0..PR-16, pinned to `PREREG` in `scripts/decision_pack.py`
 carries its `cycle`: PR-0..PR-8 read hc4-1's rules closes (all read), PR-9..PR-16
 read hc4-2's. PR-16 is a SHADOW line (`kind: "shadow"`): the day-14 what-if
 against the rules' own result, per market — it reads the `d14` stamp and never
-closes anything. Each checkpoint is read ONCE on the day its n-th rules close
-of its cycle lands (+ one second read), never rolling;
+closes anything. Each hc4-1 checkpoint is read ONCE on the day its n-th rules
+close lands (+ one second read), never rolling. **Set 3 Nov 2026 (NEXT100 #5,
+owner-approved):** PR-1 carries its replay-veto read as data (`veto`: +0.054R a
+trade over 689, the 3 Nov replay on hc4-2 code), so its first-read trip HOLDs
+until the 40th hc4-1 3D-reclaim rules close and is then read once more at
+−0.15R, FINAL (no second veto); hc4-2's live lines PR-9..PR-15 carry
+`read: "entry"`: each reads the line's first n hc4-2 entries (entry_date, then
+opened_at, then symbol) at their time-stop horizon (a runner's `horizon` stamp
+R, else a rules close's realised R; a hand close before the horizon leaves
+the cohort), on the day the last of them (and every versus entry up to the
+cohort's last entry date) gets there. Beside every read the pack prints the
+SE of the mean R, the ISO entry weeks and the replay's same-cohort same-weeks
+figure from `data/research/decision_replay/summary.json` (schema 1, in the
+decision_pack docstring; not committed yet). The pack values an open row at
+booked + open R (`realized_r` + `unreal_r`) and dates time stops with
+`time_stop.time_stop_due`; it stays stdlib-only (its only scanner imports are
+scanner.config and scanner.time_stop);
 `python scripts/decision_pack.py` prints verdicts. The journal's checkpoint
 strip is its JS mirror (`journal.js` `PREREG` + `prEvaluate` +
 `prEvaluateShadow`), one fold per cycle, newest first: the register literal is
@@ -440,6 +460,11 @@ controls or calls-to-action).
   Momentum/Specs and digest ASX gates derive from it. Exceptions: the ledger's
   ASX 16:45 and the US digest's 16:05. Shared clock `scripts/_marketclock.py`;
   pins `tests/test_bar_final.py`. Frame ages use the market's calendar.
+- **Holidays:** `config.MARKET_HOLIDAYS` is the dated full-day closure table
+  (asx, nasdaq; 2026-09-01..2027-12-31; early closes not listed; Mon 26 Apr
+  2027 and ASX 2027-12-28 to re-verify). REPORT ONLY (NEXT100 #4): the decision
+  pack flags time stops due on a shut market and audits day_marks stamped on
+  one; nothing in the trade path reads it yet (`tests/test_market_holidays.py`).
 - **NaN discipline:** guard with `not (x > 0)`, never `x <= 0` (#63 — a NaN risk
   passed every gate and disarmed the guards; publish-time scrubbing never
   reached the in-memory rows the bot reads). Publish via `output.write_json`.
