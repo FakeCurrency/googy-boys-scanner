@@ -1,0 +1,4801 @@
+{
+ "schema": 1,
+ "generated_at": "2026-11-03T22:14:31Z",
+ "run": {
+  "id": "41721493622",
+  "sha": "fe6efd59d5cdb9df2b52b080746cd1722c8effb5",
+  "ref": "claude/peaceful-brown-1fmgfn",
+  "mode": "decision_replay",
+  "cycle_tag": "hc4-2",
+  "period": "5y",
+  "limit": 300,
+  "markets": [
+   "asx",
+   "nasdaq",
+   "crypto"
+  ],
+  "replay_generated_at": "2026-11-03T22:14:25Z",
+  "runtime_minutes": {
+   "total": 49.62,
+   "phase1": 27.54,
+   "books": 22.08
+  },
+  "rules": {
+   "max_hold_days": 28,
+   "grades": [
+    "A+",
+    "A"
+   ],
+   "long_only": true,
+   "level_tf_allow": [
+    "weekly",
+    "3d"
+   ],
+   "entry_cells": {
+    "1W": [
+     "reclaim",
+     "break"
+    ],
+    "3D": [
+     "reclaim"
+    ],
+    "1D": [
+     "break"
+    ]
+   },
+   "max_open_total": 60,
+   "max_per_sector": 6,
+   "cooldown_days": 7
+  },
+  "params": {
+   "mode": "decision_replay",
+   "markets": [
+    "asx",
+    "nasdaq",
+    "crypto"
+   ],
+   "limit": 300,
+   "period": "5y",
+   "exclude_funds": true,
+   "long_only": true,
+   "grades": [
+    "A+",
+    "A"
+   ],
+   "level_tf_allow": [
+    "weekly",
+    "3d"
+   ],
+   "time_stop_days": 28,
+   "mfe_days": [
+    5,
+    10,
+    14,
+    21
+   ],
+   "excluded_counts": {
+    "asx": 0,
+    "nasdaq": 0,
+    "crypto": 0
+   },
+   "workers": 4,
+   "equity": 150000,
+   "position_notional": 2500.0,
+   "sizing_mode": "fixed_notional",
+   "intrabar": "pessimistic (stop-first)",
+   "stop_fill": "worst print: a stop fills at the bar's adverse extreme (a long's LOW), not at the stop; realized_r_house / *_house re-price the same exits at the stop, or at the open when the bar gapped through it",
+   "reentry_cooldown_days": 7,
+   "crypto_data_source": "exchange"
+  },
+  "coverage": {
+   "asx": {
+    "symbols": 300,
+    "universe": 1714,
+    "priced": 295,
+    "replayed": 290,
+    "signals": 13863
+   },
+   "nasdaq": {
+    "symbols": 300,
+    "universe": 1372,
+    "priced": 300,
+    "replayed": 283,
+    "signals": 37161
+   },
+   "crypto": {
+    "symbols": 200,
+    "universe": 200,
+    "priced": 167,
+    "replayed": 154,
+    "signals": 9622
+   }
+  }
+ },
+ "trades": [
+  {
+   "m": "nasdaq",
+   "s": "WAFD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2022-12-20",
+   "exit": "2023-01-18",
+   "r": 0.1504,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AD8",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2022-12-20",
+   "exit": "2023-01-18",
+   "r": 0.2321,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2022-12-21",
+   "exit": "2023-01-19",
+   "r": -0.0351,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FISV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2022-12-22",
+   "exit": "2023-01-20",
+   "r": 0.2359,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NSIT",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2022-12-22",
+   "exit": "2023-01-20",
+   "r": 0.7055,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CHEF",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2022-12-22",
+   "exit": "2023-01-20",
+   "r": 0.5912,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "UFCS",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2022-12-22",
+   "exit": "2023-01-20",
+   "r": 0.3316,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "TTEK",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2022-12-22",
+   "exit": "2023-01-05",
+   "r": -1.5168,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "BAP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2022-12-23",
+   "exit": "2023-01-23",
+   "r": -0.4161,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-05",
+   "exit": "2023-02-03",
+   "r": 0.0084,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "RRR",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-01-06",
+   "exit": "2023-02-06",
+   "r": 0.3863,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CCOI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-09",
+   "exit": "2023-02-07",
+   "r": 0.5201,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CAKE",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-01-09",
+   "exit": "2023-02-07",
+   "r": 0.4158,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BJRI",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-01-10",
+   "exit": "2023-02-08",
+   "r": 0.8621,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "GQG",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-12",
+   "exit": "2023-02-10",
+   "r": -0.138,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-20",
+   "exit": "2023-02-20",
+   "r": 0.0356,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "XMR",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-01-22",
+   "exit": "2023-02-20",
+   "r": -0.2691,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FSV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-24",
+   "exit": "2023-02-22",
+   "r": -0.0972,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NXPI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-27",
+   "exit": "2023-02-27",
+   "r": 0.0018,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NWBI",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-01-30",
+   "exit": "2023-02-28",
+   "r": 0.0902,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-01",
+   "exit": "2023-03-02",
+   "r": 0.2112,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-06",
+   "exit": "2023-03-07",
+   "r": 0.7045,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FROG",
+   "cell": "1D break",
+   "grade": "A+",
+   "entry": "2023-02-08",
+   "exit": "2023-03-09",
+   "r": -1.3058,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "AD8",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-14",
+   "exit": "2023-03-15",
+   "r": 0.3734,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ECPG",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-14",
+   "exit": "2023-03-15",
+   "r": -0.7611,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "UFCS",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-02-21",
+   "exit": "2023-03-22",
+   "r": -0.4258,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-21",
+   "exit": "2023-03-22",
+   "r": -0.274,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NXPI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-01",
+   "exit": "2023-03-30",
+   "r": 0.0791,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IDXX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-14",
+   "exit": "2023-04-12",
+   "r": 0.0135,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MEDP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-15",
+   "exit": "2023-04-13",
+   "r": 0.6731,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CAKE",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-03-16",
+   "exit": "2023-04-14",
+   "r": -0.5313,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BJRI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-03-16",
+   "exit": "2023-04-14",
+   "r": -0.3492,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "NUF",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-03-16",
+   "exit": "2023-05-15",
+   "r": 0.6338,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "MAY",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-03-16",
+   "exit": "2023-03-23",
+   "r": -1.5004,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "TCBK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-17",
+   "exit": "2023-04-17",
+   "r": -0.7721,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-03-24",
+   "exit": "2023-04-24",
+   "r": 0.0545,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-30",
+   "exit": "2023-04-28",
+   "r": -0.5125,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "VRSK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-30",
+   "exit": "2023-04-28",
+   "r": 0.0944,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DRVN",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-31",
+   "exit": "2023-05-01",
+   "r": 0.1721,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-06",
+   "exit": "2023-05-05",
+   "r": -0.2226,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CMCSA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-28",
+   "exit": "2023-05-30",
+   "r": -0.1187,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "AEIS",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-05-01",
+   "exit": "2023-10-19",
+   "r": 1.8921,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DRVN",
+   "cell": "1D break",
+   "grade": "A+",
+   "entry": "2023-05-02",
+   "exit": "2023-05-04",
+   "r": -1.3299,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "CUV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-03",
+   "exit": "2023-06-01",
+   "r": -0.6552,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-03",
+   "exit": "2023-06-01",
+   "r": -0.0136,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AZJ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-10",
+   "exit": "2023-06-08",
+   "r": 0.1253,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IOSP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-18",
+   "exit": "2023-06-16",
+   "r": 0.3773,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "1D break",
+   "grade": "A",
+   "entry": "2023-05-18",
+   "exit": "2023-06-07",
+   "r": -1.0143,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CAKE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-19",
+   "exit": "2023-06-20",
+   "r": -0.1712,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-02",
+   "exit": "2023-07-03",
+   "r": -0.6971,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CASK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-02",
+   "exit": "2023-07-03",
+   "r": 0.6658,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CVCO",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-06-02",
+   "exit": "2023-08-24",
+   "r": 0.1697,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CMCSA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-08",
+   "exit": "2023-07-07",
+   "r": 0.1872,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SGM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-09",
+   "exit": "2023-07-10",
+   "r": -0.0688,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "AMLX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-09",
+   "exit": "2023-07-10",
+   "r": -0.6786,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CHEF",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-23",
+   "exit": "2023-07-24",
+   "r": 0.7402,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IOSP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-27",
+   "exit": "2023-07-26",
+   "r": 0.7863,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "SLM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-11",
+   "exit": "2023-08-09",
+   "r": -0.2549,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "WES",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-14",
+   "exit": "2023-08-14",
+   "r": 0.4647,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "NUF",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-18",
+   "exit": "2023-08-16",
+   "r": -0.3956,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PDN",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-07-21",
+   "exit": "2023-08-21",
+   "r": 0.3041,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LNT",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-24",
+   "exit": "2023-08-22",
+   "r": -0.6313,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-28",
+   "exit": "2023-08-28",
+   "r": -0.3145,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-28",
+   "exit": "2023-08-28",
+   "r": -0.3462,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-07-31",
+   "exit": "2023-08-29",
+   "r": -0.0275,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ONC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-08-04",
+   "exit": "2023-09-05",
+   "r": -0.0386,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-11",
+   "exit": "2023-09-11",
+   "r": -0.1376,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "BAP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-08-16",
+   "exit": "2023-08-17",
+   "r": 0.0754,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "BAP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-18",
+   "exit": "2023-09-18",
+   "r": 0.5695,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KLIC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-22",
+   "exit": "2023-09-20",
+   "r": -0.6009,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-24",
+   "exit": "2023-09-22",
+   "r": -0.5742,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HOOD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-08-24",
+   "exit": "2023-09-22",
+   "r": -0.6372,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HALO",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-08-28",
+   "exit": "2023-09-07",
+   "r": -1.2163,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ENVX",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-08-29",
+   "exit": "2023-09-27",
+   "r": -0.6058,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MRVL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-29",
+   "exit": "2023-09-27",
+   "r": -0.2937,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-09-13",
+   "exit": "2023-10-12",
+   "r": 0.4152,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "XRP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-09-15",
+   "exit": "2023-10-14",
+   "r": -0.0345,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CASK",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-09-26",
+   "exit": "2023-10-06",
+   "r": 0.4175,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ALGM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-09-26",
+   "exit": "2023-10-25",
+   "r": -1.1502,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-10-06",
+   "exit": "2023-10-26",
+   "r": 0.1331,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "A4N",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-10-06",
+   "exit": "2023-11-06",
+   "r": 1.6009,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CVCO",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-10",
+   "exit": "2023-11-08",
+   "r": -0.2955,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SRG",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-10",
+   "exit": "2023-11-08",
+   "r": 0.2717,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MRVL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-11",
+   "exit": "2023-10-26",
+   "r": -1.0149,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-10-13",
+   "exit": "2023-10-30",
+   "r": -1.0325,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PERI",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-10-17",
+   "exit": "2023-11-15",
+   "r": 0.3852,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IOSP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-10-18",
+   "exit": "2024-08-07",
+   "r": 2.4383,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CASK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-20",
+   "exit": "2023-11-20",
+   "r": -0.7317,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MMSI",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-10-30",
+   "exit": "2023-11-28",
+   "r": 0.1246,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FSV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-31",
+   "exit": "2024-05-29",
+   "r": 0.248,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "STEP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-31",
+   "exit": "2023-11-24",
+   "r": -1.1095,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "TTEK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-11-01",
+   "exit": "2025-01-30",
+   "r": 2.6728,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FA",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-11-01",
+   "exit": "2025-03-05",
+   "r": 1.4485,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "UPBD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-11-03",
+   "exit": "2023-12-04",
+   "r": 0.5642,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-11-09",
+   "exit": "2023-12-08",
+   "r": -0.4201,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AX1",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-11-29",
+   "exit": "2023-12-28",
+   "r": 1.1416,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ASND",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-12-01",
+   "exit": "2024-05-14",
+   "r": 1.1947,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-12-05",
+   "exit": "2024-01-03",
+   "r": 0.3455,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NWBI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-12-11",
+   "exit": "2024-01-09",
+   "r": 0.305,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "POWI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-12-13",
+   "exit": "2024-01-11",
+   "r": -0.1984,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "SRAD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-12-21",
+   "exit": "2024-01-19",
+   "r": 0.1515,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-12-27",
+   "exit": "2024-01-25",
+   "r": 0.9899,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "NUF",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-01-03",
+   "exit": "2024-02-01",
+   "r": 0.2464,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-01-08",
+   "exit": "2024-02-06",
+   "r": -0.1858,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LUNG",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-01-10",
+   "exit": "2024-02-08",
+   "r": 0.5079,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DNUT",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-01-19",
+   "exit": "2024-02-20",
+   "r": -0.2197,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CAKE",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-01-19",
+   "exit": "2024-02-20",
+   "r": 0.672,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NWBI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-01-22",
+   "exit": "2024-02-01",
+   "r": 0.0376,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BOKF",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-01-26",
+   "exit": "2024-02-26",
+   "r": -0.2479,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LITE",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-02-07",
+   "exit": "2024-02-08",
+   "r": -1.0734,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NWBI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-02-09",
+   "exit": "2024-03-11",
+   "r": -0.3793,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AGL",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2024-02-09",
+   "exit": "2024-03-11",
+   "r": 0.1855,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-02-22",
+   "exit": "2024-03-22",
+   "r": 0.3149,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ON",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-02-27",
+   "exit": "2024-03-27",
+   "r": -0.2173,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BOKF",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-03-06",
+   "exit": "2024-04-04",
+   "r": 0.0718,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-03-08",
+   "exit": "2024-04-08",
+   "r": 0.0166,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "NUF",
+   "cell": "1W break",
+   "grade": "A+",
+   "entry": "2024-03-18",
+   "exit": "2024-04-16",
+   "r": -0.7194,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "BAP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-03-22",
+   "exit": "2024-04-22",
+   "r": -0.3812,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-03-28",
+   "exit": "2024-04-26",
+   "r": -0.0975,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AGL",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-04-05",
+   "exit": "2024-05-06",
+   "r": 1.2919,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HWC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-04-09",
+   "exit": "2024-05-08",
+   "r": 0.4626,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-04-16",
+   "exit": "2024-05-28",
+   "r": 1.1249,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CMCSA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-04-22",
+   "exit": "2024-04-26",
+   "r": -1.1911,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CHEF",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-04-23",
+   "exit": "2024-07-09",
+   "r": 2.0043,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "APE",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-04-30",
+   "exit": "2024-05-22",
+   "r": -3.1387,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HALO",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-05-08",
+   "exit": "2024-11-15",
+   "r": 1.2662,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "S32",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-05-16",
+   "exit": "2024-06-14",
+   "r": -0.0527,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "QLYS",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-05-24",
+   "exit": "2024-06-03",
+   "r": -1.2863,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BCYC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-05-28",
+   "exit": "2024-06-26",
+   "r": -0.7374,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-05-29",
+   "exit": "2024-06-27",
+   "r": 0.9077,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CCOI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-05-31",
+   "exit": "2024-06-10",
+   "r": -1.0915,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-06-11",
+   "exit": "2024-07-01",
+   "r": -1.1502,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PENG",
+   "cell": "1D break",
+   "grade": "A",
+   "entry": "2024-06-11",
+   "exit": "2024-07-18",
+   "r": 1.5324,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-06-18",
+   "exit": "2025-04-03",
+   "r": 2.0678,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NWBI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-07-01",
+   "exit": "2025-04-04",
+   "r": 0.1997,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FSBC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-07-03",
+   "exit": "2025-04-03",
+   "r": 1.132,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CIGI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-07-05",
+   "exit": "2025-01-13",
+   "r": 1.3611,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-07-10",
+   "exit": "2024-08-08",
+   "r": -0.207,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "SRAD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-07-22",
+   "exit": "2024-08-14",
+   "r": -0.279,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CMCSA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-08-20",
+   "exit": "2024-09-18",
+   "r": -0.0494,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ONC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-09-06",
+   "exit": "2024-11-12",
+   "r": 0.1304,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-09-10",
+   "exit": "2024-10-09",
+   "r": -0.2137,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CMCSA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-09-19",
+   "exit": "2024-10-18",
+   "r": 0.3546,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PENG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-10-08",
+   "exit": "2024-10-16",
+   "r": -1.3137,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ECPG",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-10-18",
+   "exit": "2024-11-18",
+   "r": 0.1903,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "APE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-10-23",
+   "exit": "2024-11-21",
+   "r": -0.1358,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-11-11",
+   "exit": "2024-11-19",
+   "r": -1.2629,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRPN",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-11-13",
+   "exit": "2024-11-13",
+   "r": -9.7818,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KDP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-11-14",
+   "exit": "2024-11-19",
+   "r": -1.0863,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HSIC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-11-19",
+   "exit": "2024-12-18",
+   "r": -0.3078,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NXPI",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-11-19",
+   "exit": "2024-12-05",
+   "r": 0.2272,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MEDP",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-11-20",
+   "exit": "2024-12-19",
+   "r": 0.6515,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HALO",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-11-20",
+   "exit": "2024-12-19",
+   "r": 0.4312,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FROG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-11-21",
+   "exit": "2024-12-20",
+   "r": -0.0087,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "TCL",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-11-26",
+   "exit": "2025-03-12",
+   "r": -0.1021,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IIIV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-12-20",
+   "exit": "2025-01-21",
+   "r": 0.214,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ECPG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-12-26",
+   "exit": "2025-01-24",
+   "r": 0.903,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "FMG",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-12-30",
+   "exit": "2025-01-28",
+   "r": 0.1348,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-01-08",
+   "exit": "2025-02-06",
+   "r": 0.5577,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DRVN",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-01-14",
+   "exit": "2025-02-12",
+   "r": 0.7322,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IOSP",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-01-21",
+   "exit": "2025-02-19",
+   "r": -1.0103,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-01-27",
+   "exit": "2025-04-07",
+   "r": 0.9914,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "A4N",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-02-03",
+   "exit": "2025-03-04",
+   "r": -0.1991,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PXA",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-02-06",
+   "exit": "2025-02-06",
+   "r": -5.6329,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-02-12",
+   "exit": "2025-03-13",
+   "r": -0.3175,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AEL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-02-13",
+   "exit": "2025-03-14",
+   "r": 0.1311,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-02-26",
+   "exit": "2025-03-27",
+   "r": -0.378,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PENG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-02-27",
+   "exit": "2025-03-10",
+   "r": -1.1633,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PDD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-03-06",
+   "exit": "2025-04-04",
+   "r": -0.715,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CWCO",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-03-10",
+   "exit": "2025-03-24",
+   "r": -1.4535,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MEDP",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-03-11",
+   "exit": "2025-03-31",
+   "r": -1.3517,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MRCY",
+   "cell": "1D break",
+   "grade": "A+",
+   "entry": "2025-03-14",
+   "exit": "2025-04-14",
+   "r": 0.2066,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ARM",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-03-17",
+   "exit": "2025-04-03",
+   "r": -1.051,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FSV",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-03-17",
+   "exit": "2025-04-07",
+   "r": -1.0251,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-03-21",
+   "exit": "2025-04-07",
+   "r": -1.0818,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "RRR",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-03-25",
+   "exit": "2025-04-04",
+   "r": -1.3936,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FSBC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-04-08",
+   "exit": "2026-11-03",
+   "r": 1.8198,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-04-10",
+   "exit": "2025-05-09",
+   "r": 0.788,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ROST",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-04-11",
+   "exit": "2025-05-12",
+   "r": 0.4559,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-04-11",
+   "exit": "2026-11-03",
+   "r": 1.7964,
+   "reason": "target"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-04-11",
+   "exit": "2025-08-22",
+   "r": -0.7954,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "SGM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-04-15",
+   "exit": "2025-05-14",
+   "r": 0.657,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PDD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-04-15",
+   "exit": "2025-05-14",
+   "r": 1.1237,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BFST",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-04-15",
+   "exit": "2025-05-14",
+   "r": 0.8014,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "YORW",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-04-21",
+   "exit": "2025-05-14",
+   "r": -1.0112,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BJRI",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-04-23",
+   "exit": "2025-08-04",
+   "r": 0.2147,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NWBI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-04-24",
+   "exit": "2025-05-23",
+   "r": 0.4524,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CIGI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-04-30",
+   "exit": "2025-05-29",
+   "r": 0.1686,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MIDD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-05-13",
+   "exit": "2025-06-11",
+   "r": -0.0292,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "VICR",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-05-13",
+   "exit": "2025-06-11",
+   "r": 0.0967,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "RDX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-05-15",
+   "exit": "2025-06-05",
+   "r": -1.0969,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HALO",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-05-16",
+   "exit": "2025-06-16",
+   "r": 0.8987,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HSIC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-05-16",
+   "exit": "2025-06-16",
+   "r": -0.0638,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FISV",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-05-20",
+   "exit": "2025-06-18",
+   "r": -0.3377,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PXA",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-05-26",
+   "exit": "2025-06-24",
+   "r": 0.3277,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DDOG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-06-06",
+   "exit": "2025-12-11",
+   "r": 1.2548,
+   "reason": "trail"
+  },
+  {
+   "m": "crypto",
+   "s": "ETH",
+   "cell": "1D break",
+   "grade": "A+",
+   "entry": "2025-06-12",
+   "exit": "2025-06-21",
+   "r": -1.0631,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "QLYS",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-06-17",
+   "exit": "2025-07-16",
+   "r": 0.0112,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HTHT",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-06-17",
+   "exit": "2025-07-16",
+   "r": -0.149,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HSIC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-06-23",
+   "exit": "2025-07-22",
+   "r": 0.0212,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FA",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-07-02",
+   "exit": "2025-07-31",
+   "r": 0.0722,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ARB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-07-14",
+   "exit": "2025-08-12",
+   "r": 0.0917,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "QLYS",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-07-18",
+   "exit": "2025-08-18",
+   "r": -0.3559,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HSIC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-07-23",
+   "exit": "2025-08-05",
+   "r": -1.5095,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CVCO",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-08-04",
+   "exit": "2026-02-02",
+   "r": 2.2758,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "TITN",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-08-05",
+   "exit": "2025-09-03",
+   "r": 0.4478,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AGL",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-08-06",
+   "exit": "2025-08-13",
+   "r": -1.6229,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "FMG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-08-13",
+   "exit": "2025-09-11",
+   "r": -0.1764,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-08-14",
+   "exit": "2025-09-12",
+   "r": 0.1093,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FISV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-08-20",
+   "exit": "2025-09-18",
+   "r": -0.2769,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ENVX",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-08-22",
+   "exit": "2025-09-11",
+   "r": -1.2486,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MXL",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-08-26",
+   "exit": "2025-09-24",
+   "r": -0.1584,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "EGH",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-09-02",
+   "exit": "2025-10-01",
+   "r": -0.0129,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PCAR",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-09-12",
+   "exit": "2025-10-13",
+   "r": -0.9358,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AGL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-09-12",
+   "exit": "2025-10-13",
+   "r": 0.4089,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KRYS",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-09-23",
+   "exit": "2025-10-22",
+   "r": 0.5764,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-10-06",
+   "exit": "2025-10-10",
+   "r": -1.2158,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ECPG",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-10-14",
+   "exit": "2026-11-03",
+   "r": 3.9603,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BJRI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-10-15",
+   "exit": "2026-03-02",
+   "r": 1.2375,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "RELY",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-10-22",
+   "exit": "2025-11-06",
+   "r": -1.2564,
+   "reason": "stop"
+  },
+  {
+   "m": "crypto",
+   "s": "GOMINING",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-10-27",
+   "exit": "2025-11-16",
+   "r": -1.083,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HSIC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-11-05",
+   "exit": "2025-12-04",
+   "r": 0.1455,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-11-12",
+   "exit": "2025-12-11",
+   "r": 1.4082,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FSV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-11-13",
+   "exit": "2025-12-12",
+   "r": -0.0921,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "RDX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-11-25",
+   "exit": "2025-12-24",
+   "r": 0.4226,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "YORW",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-12-16",
+   "exit": "2026-01-14",
+   "r": 0.0545,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "RDX",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-12-29",
+   "exit": "2026-01-27",
+   "r": 0.2845,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-01-06",
+   "exit": "2026-01-28",
+   "r": 0.1646,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "YORW",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-01-15",
+   "exit": "2026-02-13",
+   "r": -0.0843,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PXA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-01-15",
+   "exit": "2026-02-13",
+   "r": 0.0126,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-01-28",
+   "exit": "2026-02-13",
+   "r": -1.0783,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PDD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-02-03",
+   "exit": "2026-03-04",
+   "r": -0.2407,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MLKN",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-02-04",
+   "exit": "2026-03-05",
+   "r": -0.2336,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "USLM",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-02-09",
+   "exit": "2026-04-30",
+   "r": 2.1678,
+   "reason": "target"
+  },
+  {
+   "m": "asx",
+   "s": "TNE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-02-17",
+   "exit": "2026-03-18",
+   "r": 1.2066,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "YORW",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-02-17",
+   "exit": "2026-03-18",
+   "r": -1.0899,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-03-05",
+   "exit": "2026-04-06",
+   "r": 0.3971,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRWD",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-03-05",
+   "exit": "2026-04-06",
+   "r": -0.096,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BCH",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-03-05",
+   "exit": "2026-04-03",
+   "r": -0.2489,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "HVN",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-03-06",
+   "exit": "2026-03-12",
+   "r": -1.1976,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MIDD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-03-18",
+   "exit": "2026-03-26",
+   "r": -1.061,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IRTC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-03-20",
+   "exit": "2026-04-20",
+   "r": 0.328,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-03-27",
+   "exit": "2026-04-27",
+   "r": 0.1299,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BGB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-04-05",
+   "exit": "2026-05-04",
+   "r": 0.4401,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "FWD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-04-09",
+   "exit": "2026-05-08",
+   "r": -0.2891,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MIDD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-04-09",
+   "exit": "2026-05-08",
+   "r": 0.7863,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRWD",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-04-16",
+   "exit": "2026-11-03",
+   "r": 2.26,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MGNI",
+   "cell": "1D break",
+   "grade": "A+",
+   "entry": "2026-04-22",
+   "exit": "2026-05-21",
+   "r": -0.0231,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MEDP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-04-28",
+   "exit": "2026-05-27",
+   "r": 0.0837,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-04-30",
+   "exit": "2026-05-29",
+   "r": -0.57,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IRTC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-05-01",
+   "exit": "2026-06-01",
+   "r": -0.7994,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PPS",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-05-08",
+   "exit": "2026-06-09",
+   "r": 0.2438,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRAI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-05-12",
+   "exit": "2026-06-10",
+   "r": 0.0521,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-05-13",
+   "exit": "2026-05-18",
+   "r": -3.2948,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "JD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-05-21",
+   "exit": "2026-06-11",
+   "r": -1.2308,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DLTR",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-05-22",
+   "exit": "2026-11-03",
+   "r": 1.9483,
+   "reason": "trail"
+  },
+  {
+   "m": "crypto",
+   "s": "BGB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-05-25",
+   "exit": "2026-06-23",
+   "r": -0.71,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ONC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-06-04",
+   "exit": "2026-06-11",
+   "r": -1.2231,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "RELY",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-06-12",
+   "exit": "2026-09-23",
+   "r": 1.7921,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IOSP",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-06-15",
+   "exit": "2026-07-14",
+   "r": -0.386,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRAI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-06-29",
+   "exit": "2026-11-03",
+   "r": 1.429,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "PPS",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-07-16",
+   "exit": "2026-08-14",
+   "r": 0.4451,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2026-07-24",
+   "exit": "2026-08-24",
+   "r": 0.3338,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AGL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-08-19",
+   "exit": "2026-09-17",
+   "r": -0.2245,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "UNI",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-09-07",
+   "exit": "2026-10-06",
+   "r": 0.0799,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BNB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-09-12",
+   "exit": "2026-10-11",
+   "r": 0.1461,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "GWA",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-09-17",
+   "exit": "2026-10-16",
+   "r": 0.2761,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IDXX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-09-23",
+   "exit": "2026-11-03",
+   "r": 2.0037,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IOSP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-09-24",
+   "exit": "2026-10-23",
+   "r": 0.0895,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-10-13",
+   "exit": null,
+   "r": -0.4025,
+   "reason": "open"
+  },
+  {
+   "m": "crypto",
+   "s": "GOMINING",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-10-18",
+   "exit": null,
+   "r": 0.4208,
+   "reason": "open"
+  },
+  {
+   "m": "nasdaq",
+   "s": "WERN",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-06",
+   "exit": "2023-03-24",
+   "r": 0.155,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LAUR",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-01-20",
+   "exit": "2023-02-21",
+   "r": 0.0665,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FHB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-01-23",
+   "exit": "2023-02-21",
+   "r": 0.4848,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IART",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-02-08",
+   "exit": "2023-03-09",
+   "r": -0.7259,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CASK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-14",
+   "exit": "2023-03-15",
+   "r": -0.2608,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-22",
+   "exit": "2023-03-23",
+   "r": -0.1016,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "HLI",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-02-22",
+   "exit": "2026-11-03",
+   "r": 4.9781,
+   "reason": "target"
+  },
+  {
+   "m": "asx",
+   "s": "BAP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-02-23",
+   "exit": "2023-03-24",
+   "r": -0.1065,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "BWIN",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-03-01",
+   "exit": "2023-03-09",
+   "r": -1.4582,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "JRVR",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-03",
+   "exit": "2023-04-03",
+   "r": -0.7166,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-24",
+   "exit": "2023-08-15",
+   "r": 0.1881,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "YORW",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-03-27",
+   "exit": "2023-04-25",
+   "r": -0.2863,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-03-30",
+   "exit": "2023-04-28",
+   "r": -0.1028,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CASK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-13",
+   "exit": "2023-05-12",
+   "r": 0.2847,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ING",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-14",
+   "exit": "2023-05-15",
+   "r": 0.1794,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-17",
+   "exit": "2023-05-16",
+   "r": -0.1107,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IART",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-17",
+   "exit": "2023-05-12",
+   "r": -1.0245,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "QLYS",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-04-18",
+   "exit": "2023-05-17",
+   "r": -0.4311,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NAVI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-04-28",
+   "exit": "2023-05-30",
+   "r": -0.4973,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CHEF",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-05",
+   "exit": "2023-06-05",
+   "r": -0.387,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PDD",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-05-16",
+   "exit": "2023-06-14",
+   "r": 1.0196,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-17",
+   "exit": "2023-06-15",
+   "r": 0.1189,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "POWI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-05-18",
+   "exit": "2023-06-16",
+   "r": 0.4876,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CERT",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-06-02",
+   "exit": "2023-06-08",
+   "r": -1.4891,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LPLA",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-06-08",
+   "exit": "2023-07-07",
+   "r": 0.7954,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IDXX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-15",
+   "exit": "2023-08-02",
+   "r": 1.3666,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-19",
+   "exit": "2023-07-18",
+   "r": 0.1611,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ADSK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-06-20",
+   "exit": "2023-07-19",
+   "r": 0.1921,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-31",
+   "exit": "2023-08-29",
+   "r": 0.063,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRSR",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-07-31",
+   "exit": "2023-08-16",
+   "r": -1.042,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "SGM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-17",
+   "exit": "2023-09-12",
+   "r": -1.0306,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "RRR",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-08-25",
+   "exit": "2023-09-25",
+   "r": -0.4527,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CIGI",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-30",
+   "exit": "2023-09-28",
+   "r": -0.6156,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AIZ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-08-30",
+   "exit": "2023-09-28",
+   "r": 0.1069,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRWD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-09-06",
+   "exit": "2023-10-05",
+   "r": 0.0034,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ASND",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-09-08",
+   "exit": "2023-10-09",
+   "r": -0.565,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BTC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-09-19",
+   "exit": "2023-10-18",
+   "r": 0.4603,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PFP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-09-26",
+   "exit": "2023-10-25",
+   "r": 0.4217,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "FET",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-10-17",
+   "exit": "2025-10-10",
+   "r": 1.9349,
+   "reason": "target"
+  },
+  {
+   "m": "crypto",
+   "s": "BTC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-10-22",
+   "exit": "2023-11-20",
+   "r": 1.0542,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "RRR",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-11-13",
+   "exit": "2024-12-18",
+   "r": 2.0124,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MRVL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-11-13",
+   "exit": "2023-12-12",
+   "r": 0.0162,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2023-11-16",
+   "exit": "2023-12-15",
+   "r": -0.6709,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FWONA",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2023-11-21",
+   "exit": "2023-12-20",
+   "r": -0.067,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CAKE",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2023-11-24",
+   "exit": "2023-12-26",
+   "r": 0.6693,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "STEP",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2023-12-18",
+   "exit": "2024-01-16",
+   "r": 0.5225,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SGM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-02-05",
+   "exit": "2024-03-05",
+   "r": -0.8756,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-02-05",
+   "exit": "2024-03-05",
+   "r": -0.1806,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MGNI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-02-27",
+   "exit": "2024-03-20",
+   "r": 0.1178,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-03-13",
+   "exit": "2024-04-11",
+   "r": 0.4641,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PXA",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-03-25",
+   "exit": "2024-04-23",
+   "r": -0.4753,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "TRMB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-04-24",
+   "exit": "2024-05-23",
+   "r": -0.2093,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SEK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-04-30",
+   "exit": "2024-05-29",
+   "r": -0.8025,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "FHB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-05-09",
+   "exit": "2024-06-07",
+   "r": -0.6702,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AQZ",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-05-31",
+   "exit": "2024-07-01",
+   "r": -0.2799,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CNDT",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-06-04",
+   "exit": "2024-07-03",
+   "r": -0.3581,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "S32",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-06-27",
+   "exit": "2024-07-19",
+   "r": -1.4356,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KLIC",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-07-05",
+   "exit": "2024-08-02",
+   "r": -1.2318,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "YORW",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-07-19",
+   "exit": "2024-08-19",
+   "r": -0.2513,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "TCL",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2024-08-05",
+   "exit": "2024-09-03",
+   "r": 1.4205,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PDN",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-08-08",
+   "exit": "2024-09-04",
+   "r": -1.0396,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ON",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-08-09",
+   "exit": "2024-09-09",
+   "r": -0.1442,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-08-15",
+   "exit": "2024-09-13",
+   "r": 0.8286,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "SRAD",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2024-09-05",
+   "exit": "2024-10-04",
+   "r": 0.0742,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "AZJ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-09-16",
+   "exit": "2024-10-15",
+   "r": 0.1923,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IIIV",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-10-10",
+   "exit": "2024-11-08",
+   "r": 0.4631,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CWCO",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-10-16",
+   "exit": "2024-11-14",
+   "r": -0.5303,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NTES",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-12-06",
+   "exit": "2025-01-06",
+   "r": -0.166,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "APE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2024-12-19",
+   "exit": "2025-01-17",
+   "r": 0.2123,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "COLL",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2024-12-20",
+   "exit": "2025-02-04",
+   "r": 0.1755,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "QLYS",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-01-23",
+   "exit": "2025-02-21",
+   "r": -0.1437,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NVAX",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-02-06",
+   "exit": "2025-03-07",
+   "r": -0.165,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ROCK",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-02-12",
+   "exit": "2025-03-13",
+   "r": 0.5079,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "S32",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-03-07",
+   "exit": "2025-04-03",
+   "r": -1.0485,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "RDX",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-03-28",
+   "exit": "2025-04-28",
+   "r": -0.2396,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IMMR",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-04-08",
+   "exit": "2025-05-07",
+   "r": 0.1029,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "BAP",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-05-09",
+   "exit": "2025-06-10",
+   "r": 0.0544,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PGC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-05-30",
+   "exit": "2025-06-30",
+   "r": 0.1866,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KDP",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-06-11",
+   "exit": "2025-07-10",
+   "r": 0.5168,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "TITN",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-06-12",
+   "exit": "2025-07-11",
+   "r": 0.0105,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PENG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-06-20",
+   "exit": "2025-10-08",
+   "r": 1.2482,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "NBTB",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-06-25",
+   "exit": "2025-08-01",
+   "r": 0.0642,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PGC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-07-15",
+   "exit": "2025-08-13",
+   "r": -0.4993,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "NXG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-07-18",
+   "exit": "2025-08-18",
+   "r": -0.0175,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MRVL",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-08-05",
+   "exit": "2025-08-29",
+   "r": -1.0401,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "AZJ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-08-14",
+   "exit": "2025-09-12",
+   "r": -0.0562,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-09-04",
+   "exit": "2025-10-03",
+   "r": -0.1462,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "TBN",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-09-15",
+   "exit": "2025-10-22",
+   "r": 0.6323,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "AZJ",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-09-18",
+   "exit": "2025-10-17",
+   "r": 0.3332,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "AOSL",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-09-25",
+   "exit": "2025-10-24",
+   "r": 0.19,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "KMB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-10-02",
+   "exit": "2025-10-31",
+   "r": -0.4936,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SGM",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-10-10",
+   "exit": "2026-11-03",
+   "r": 2.7319,
+   "reason": "target"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HNST",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-10-13",
+   "exit": "2025-11-06",
+   "r": -1.9404,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CRESY",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-10-14",
+   "exit": "2026-03-03",
+   "r": 1.6592,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PGC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-10-23",
+   "exit": "2025-11-03",
+   "r": -1.1118,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-10-24",
+   "exit": "2025-11-24",
+   "r": 0.0212,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "AVPT",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-11-03",
+   "exit": "2025-11-07",
+   "r": -2.1694,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "IMMR",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-11-10",
+   "exit": "2025-11-19",
+   "r": -1.0572,
+   "reason": "stop"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LSCC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-11-20",
+   "exit": "2026-11-03",
+   "r": 1.4909,
+   "reason": "target"
+  },
+  {
+   "m": "crypto",
+   "s": "BTC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-11-25",
+   "exit": "2025-12-24",
+   "r": -0.0594,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PGC",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-12-05",
+   "exit": "2026-01-05",
+   "r": 0.0641,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "HSIC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2025-12-12",
+   "exit": "2026-01-12",
+   "r": 0.0025,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "CUV",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2025-12-16",
+   "exit": "2026-01-14",
+   "r": -0.185,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "XRP",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2025-12-27",
+   "exit": "2026-01-25",
+   "r": 0.3336,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "MGNI",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-01-13",
+   "exit": "2026-02-03",
+   "r": -1.8575,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "AGL",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-01-27",
+   "exit": "2026-03-11",
+   "r": 1.4798,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "ANGO",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2026-02-17",
+   "exit": "2026-03-18",
+   "r": -0.2551,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "PDD",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-03-17",
+   "exit": "2026-04-15",
+   "r": -0.235,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "MXI",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-03-19",
+   "exit": "2026-04-15",
+   "r": -1.0424,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "EGH",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-03-23",
+   "exit": "2026-04-21",
+   "r": 0.195,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "GRAB",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-04-16",
+   "exit": "2026-05-15",
+   "r": -0.4835,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CWCO",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-05-28",
+   "exit": "2026-06-26",
+   "r": -0.2021,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BTC",
+   "cell": "1W reclaim",
+   "grade": "A",
+   "entry": "2026-06-08",
+   "exit": "2026-07-07",
+   "r": -0.0125,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "DYN",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-06-12",
+   "exit": "2026-09-08",
+   "r": 0.1525,
+   "reason": "trail"
+  },
+  {
+   "m": "asx",
+   "s": "TNE",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-06-16",
+   "exit": "2026-07-15",
+   "r": -0.2853,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-06-24",
+   "exit": "2026-07-23",
+   "r": 0.4799,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BTC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-07-08",
+   "exit": "2026-08-06",
+   "r": 0.0627,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "SIG",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-07-15",
+   "exit": "2026-08-13",
+   "r": 0.0871,
+   "reason": "time"
+  },
+  {
+   "m": "crypto",
+   "s": "BTC",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-08-07",
+   "exit": "2026-09-05",
+   "r": 1.2239,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CWCO",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-08-14",
+   "exit": "2026-09-14",
+   "r": -0.8738,
+   "reason": "time"
+  },
+  {
+   "m": "asx",
+   "s": "PPS",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-08-25",
+   "exit": "2026-09-08",
+   "r": -1.1625,
+   "reason": "stop"
+  },
+  {
+   "m": "asx",
+   "s": "ELD",
+   "cell": "3D reclaim",
+   "grade": "A+",
+   "entry": "2026-09-10",
+   "exit": "2026-10-09",
+   "r": 0.1735,
+   "reason": "time"
+  },
+  {
+   "m": "nasdaq",
+   "s": "EXE",
+   "cell": "1W reclaim",
+   "grade": "A+",
+   "entry": "2026-10-07",
+   "exit": null,
+   "r": 0.1229,
+   "reason": "open"
+  },
+  {
+   "m": "nasdaq",
+   "s": "LNT",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-10-12",
+   "exit": "2026-11-03",
+   "r": 1.2815,
+   "reason": "trail"
+  },
+  {
+   "m": "nasdaq",
+   "s": "CVCO",
+   "cell": "3D reclaim",
+   "grade": "A",
+   "entry": "2026-10-26",
+   "exit": "2026-11-03",
+   "r": 1.5976,
+   "reason": "trail"
+  }
+ ],
+ "variants": {
+  "baseline": {
+   "taken": 396,
+   "slot_months": 648.7064,
+   "r_per_slot_month": -0.012,
+   "r_per_slot_month_house": 0.0357
+  },
+  "by_name": {
+   "V10_1d_break_crypto_only": {
+    "delta": "asx cells 1W reclaim/break, 3D reclaim; nasdaq cells 1W reclaim/break, 3D reclaim",
+    "kind": "entry_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0313,
+      "delta": 0.0433,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.0491,
+      "delta": 0.0324,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0596,
+      "delta": 0.0537,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0287,
+      "delta": 0.0147,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0346,
+      "delta": 0.0785,
+      "pass": true
+     }
+    },
+    "taken": 367,
+    "slot_months": 654.7187,
+    "r_per_slot_month": 0.0313,
+    "r_per_slot_month_house": 0.0541
+   },
+   "V11_cut_mae0.5": {
+    "delta": "cut pre-TP1 at -0.5R adverse",
+    "kind": "exit_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": -0.0001,
+      "delta": 0.0119,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.1006,
+      "delta": -0.0191,
+      "pass": false
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0235,
+      "delta": 0.0176,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": -0.0066,
+      "delta": -0.0206,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0075,
+      "delta": 0.0514,
+      "pass": true
+     }
+    },
+    "taken": 463,
+    "slot_months": 622.423,
+    "r_per_slot_month": -0.0001,
+    "r_per_slot_month_house": 0.05
+   },
+   "V1_hold_42d": {
+    "delta": "time-stop 42d",
+    "kind": "exit_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0092,
+      "delta": 0.0212,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.0352,
+      "delta": 0.0463,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0243,
+      "delta": 0.0184,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": -0.01,
+      "delta": -0.024,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0348,
+      "delta": 0.0787,
+      "pass": true
+     }
+    },
+    "taken": 258,
+    "slot_months": 668.8131,
+    "r_per_slot_month": 0.0092,
+    "r_per_slot_month_house": 0.0382
+   },
+   "V1_hold_56d": {
+    "delta": "time-stop 56d",
+    "kind": "exit_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.028,
+      "delta": 0.04,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": 0.0327,
+      "delta": 0.1142,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.027,
+      "delta": 0.0211,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0401,
+      "delta": 0.0261,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0139,
+      "delta": 0.0578,
+      "pass": true
+     }
+    },
+    "taken": 210,
+    "slot_months": 674.3326,
+    "r_per_slot_month": 0.028,
+    "r_per_slot_month_house": 0.0527
+   },
+   "V1_hold_off": {
+    "delta": "time-stop off",
+    "kind": "exit_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0765,
+      "delta": 0.0885,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": 0.0273,
+      "delta": 0.1088,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0794,
+      "delta": 0.0735,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0754,
+      "delta": 0.0614,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0788,
+      "delta": 0.1227,
+      "pass": true
+     }
+    },
+    "taken": 73,
+    "slot_months": 688.5257,
+    "r_per_slot_month": 0.0765,
+    "r_per_slot_month_house": 0.0866
+   },
+   "V2_cut_d10_mfe0.25": {
+    "delta": "early cut day 10 if mfe_r < 0.25",
+    "kind": "exit_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0058,
+      "delta": 0.0178,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.1269,
+      "delta": -0.0454,
+      "pass": false
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0342,
+      "delta": 0.0283,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": -0.0252,
+      "delta": -0.0392,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0459,
+      "delta": 0.0898,
+      "pass": true
+     }
+    },
+    "taken": 534,
+    "slot_months": 616.0164,
+    "r_per_slot_month": 0.0058,
+    "r_per_slot_month_house": 0.0323
+   },
+   "V2_cut_d10_mfe0.5": {
+    "delta": "early cut day 10 if mfe_r < 0.5",
+    "kind": "exit_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0048,
+      "delta": 0.0168,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.1928,
+      "delta": -0.1113,
+      "pass": false
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0465,
+      "delta": 0.0406,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": -0.0282,
+      "delta": -0.0422,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0439,
+      "delta": 0.0878,
+      "pass": true
+     }
+    },
+    "taken": 662,
+    "slot_months": 584.4435,
+    "r_per_slot_month": 0.0048,
+    "r_per_slot_month_house": 0.0383
+   },
+   "V2_cut_d14_mfe0.25": {
+    "delta": "early cut day 14 if mfe_r < 0.25",
+    "kind": "exit_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0304,
+      "delta": 0.0424,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.1239,
+      "delta": -0.0424,
+      "pass": false
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0726,
+      "delta": 0.0667,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0039,
+      "delta": -0.0101,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0675,
+      "delta": 0.1114,
+      "pass": true
+     }
+    },
+    "taken": 439,
+    "slot_months": 637.8973,
+    "r_per_slot_month": 0.0304,
+    "r_per_slot_month_house": 0.0588
+   },
+   "V2_cut_d14_mfe0.5": {
+    "delta": "early cut day 14 if mfe_r < 0.5",
+    "kind": "exit_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0244,
+      "delta": 0.0364,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.0921,
+      "delta": -0.0106,
+      "pass": false
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0523,
+      "delta": 0.0464,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": -0.0197,
+      "delta": -0.0337,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0806,
+      "delta": 0.1245,
+      "pass": true
+     }
+    },
+    "taken": 522,
+    "slot_months": 617.8234,
+    "r_per_slot_month": 0.0244,
+    "r_per_slot_month_house": 0.0484
+   },
+   "V3_weekly_level": {
+    "delta": "level_tf in ('weekly',)",
+    "kind": "entry_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0579,
+      "delta": 0.0699,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": 0.0332,
+      "delta": 0.1147,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.061,
+      "delta": 0.0551,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0314,
+      "delta": 0.0174,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.1052,
+      "delta": 0.1491,
+      "pass": true
+     }
+    },
+    "taken": 311,
+    "slot_months": 555.4333,
+    "r_per_slot_month": 0.0579,
+    "r_per_slot_month_house": 0.0698
+   },
+   "V4_break_only": {
+    "delta": "entry_types ('break',)",
+    "kind": "entry_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.023,
+      "delta": 0.035,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.0416,
+      "delta": 0.0399,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0504,
+      "delta": 0.0445,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": -0.0222,
+      "delta": -0.0362,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0765,
+      "delta": 0.1204,
+      "pass": true
+     }
+    },
+    "taken": 137,
+    "slot_months": 275.2854,
+    "r_per_slot_month": 0.023,
+    "r_per_slot_month_house": 0.0507
+   },
+   "V4_reclaim_break": {
+    "delta": "entry_types ('reclaim', 'break')",
+    "kind": "entry_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0182,
+      "delta": 0.0302,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.0503,
+      "delta": 0.0312,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0445,
+      "delta": 0.0386,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0091,
+      "delta": -0.0049,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.031,
+      "delta": 0.0749,
+      "pass": true
+     }
+    },
+    "taken": 373,
+    "slot_months": 653.7002,
+    "r_per_slot_month": 0.0182,
+    "r_per_slot_month_house": 0.0505
+   },
+   "V5_aplus_only": {
+    "delta": "grades ('A+',)",
+    "kind": "entry_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0505,
+      "delta": 0.0625,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.01,
+      "delta": 0.0715,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0704,
+      "delta": 0.0645,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0294,
+      "delta": 0.0154,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0844,
+      "delta": 0.1283,
+      "pass": true
+     }
+    },
+    "taken": 330,
+    "slot_months": 636.1889,
+    "r_per_slot_month": 0.0505,
+    "r_per_slot_month_house": 0.0717
+   },
+   "V6_no_3d_reclaim": {
+    "delta": "cells 1W reclaim/break, 1D break",
+    "kind": "entry_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0455,
+      "delta": 0.0575,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": 0.008,
+      "delta": 0.0895,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0513,
+      "delta": 0.0454,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.03,
+      "delta": 0.016,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.0737,
+      "delta": 0.1176,
+      "pass": true
+     }
+    },
+    "taken": 330,
+    "slot_months": 570.1191,
+    "r_per_slot_month": 0.0455,
+    "r_per_slot_month_house": 0.0564
+   },
+   "V7_no_asx": {
+    "delta": "markets except asx",
+    "kind": "entry_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0816,
+      "delta": 0.0936,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": null,
+      "delta": null,
+      "pass": null
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0849,
+      "delta": 0.079,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0545,
+      "delta": 0.0405,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.1216,
+      "delta": 0.1655,
+      "pass": true
+     }
+    },
+    "taken": 280,
+    "slot_months": 610.1355,
+    "r_per_slot_month": 0.0816,
+    "r_per_slot_month_house": 0.0965
+   },
+   "V8_asx_3d_reclaim_off": {
+    "delta": "asx cells 1W reclaim/break, 1D break",
+    "kind": "entry_rule",
+    "pass": true,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0647,
+      "delta": 0.0767,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": 0.049,
+      "delta": 0.1305,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0693,
+      "delta": 0.0634,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0252,
+      "delta": 0.0112,
+      "pass": true
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": 0.1154,
+      "delta": 0.1593,
+      "pass": true
+     }
+    },
+    "taken": 344,
+    "slot_months": 645.5195,
+    "r_per_slot_month": 0.0647,
+    "r_per_slot_month_house": 0.0818
+   },
+   "V9_no_1w_break": {
+    "delta": "cells 1W reclaim, 3D reclaim, 1D break",
+    "kind": "entry_rule",
+    "pass": false,
+    "split_entry_date": "2024-08-05",
+    "checks": {
+     "overall": {
+      "baseline": -0.012,
+      "variant": 0.0024,
+      "delta": 0.0144,
+      "pass": true
+     },
+     "market:asx": {
+      "baseline": -0.0815,
+      "variant": -0.0233,
+      "delta": 0.0582,
+      "pass": true
+     },
+     "market:nasdaq": {
+      "baseline": 0.0059,
+      "variant": 0.0112,
+      "delta": 0.0053,
+      "pass": true
+     },
+     "half:first": {
+      "baseline": 0.014,
+      "variant": 0.0068,
+      "delta": -0.0072,
+      "pass": false
+     },
+     "half:second": {
+      "baseline": -0.0439,
+      "variant": -0.0027,
+      "delta": 0.0412,
+      "pass": true
+     }
+    },
+    "taken": 378,
+    "slot_months": 651.039,
+    "r_per_slot_month": 0.0024,
+    "r_per_slot_month_house": 0.041
+   }
+  },
+  "best": "V5_aplus_only"
+ }
+}
