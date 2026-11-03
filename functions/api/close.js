@@ -218,6 +218,7 @@ async function dispatchClose(env, inputs, nCloses) {
   // Transport + the cooldown refund rule live in _dispatch.js.
   const r = await dispatchWorkflow({
     token, repo, workflow: "close_position.yml", ref, inputs, refund: refundGuard,
+    kv: env.JOURNAL_KV,   // notes the token's expiry off GitHub's answer (NEXT100 #12)
   });
 
   if (r.ok) {

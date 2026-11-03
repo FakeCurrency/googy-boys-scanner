@@ -18,9 +18,19 @@
  * names and its own strings, and each of those is asserted by that endpoint's
  * own tests. Unifying them would be a user-visible change dressed as a cleanup.
  *
+ * THE TOKEN'S EXPIRY (NEXT100 #12, 2026-11-03). Every call here is the one
+ * place a Function talks to GitHub with GH_DISPATCH_TOKEN, so it is also where
+ * GitHub's answer is read for the token's expiry date: the response headers go
+ * to _token_expiry.js noteTokenExpiry(), which keeps the date in KV for
+ * /api/health. Callers pass their JOURNAL_KV binding as `kv`; without one
+ * nothing is recorded. It never throws, so it cannot turn a landed dispatch
+ * into the refunding network-error path below.
+ *
  * Workers runtime: no Node builtins, no require. `fetch`, `AbortController` and
  * `setTimeout` are ambient.
  */
+
+import { noteTokenExpiry } from "./_token_expiry.js";
 
 export const DISPATCH_TIMEOUT_MS = 10_000;
 
@@ -30,8 +40,10 @@ export const DISPATCH_TIMEOUT_MS = 10_000;
  *   { ok: false, status }            -- GitHub refused; cooldown refunded
  *   { ok: false, aborted: true }     -- timed out; cooldown deliberately KEPT
  *   { ok: false, aborted: false }    -- network error; cooldown refunded
- * `refund` is optional and awaited only on the refunding paths. */
-export async function dispatchWorkflow({ token, repo, workflow, ref, inputs, refund,
+ * `refund` is optional and awaited only on the refunding paths. `kv` (the
+ * caller's JOURNAL_KV) is optional and only ever used to note the token's
+ * expiry date off GitHub's answer. */
+export async function dispatchWorkflow({ token, repo, workflow, ref, inputs, refund, kv,
                                          timeoutMs = DISPATCH_TIMEOUT_MS }) {
   const url = `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`;
 
@@ -51,6 +63,10 @@ export async function dispatchWorkflow({ token, repo, workflow, ref, inputs, ref
       body: JSON.stringify({ ref, inputs }),
       signal: ctrl.signal,
     });
+
+    // GitHub answered: note what it says about the token's expiry (never
+    // throws, swallows every KV error -- see _token_expiry.js).
+    await noteTokenExpiry(kv, res.headers, res.status);
 
     if (res.status === 204) return { ok: true };
 

@@ -43,11 +43,117 @@
  * directly. It stays as a manual / diagnostic probe -- e.g. ops.yml site-probe
  * with paths=/api/health?market=asx -- and its answers are unchanged.
  *
+ * TWO MORE THINGS THE PIPELINE ANSWER CARRIES (NEXT100 #12/#13, 2026-11-03),
+ * neither of which can move its 200/503 -- that stays the combined book's age:
+ *
+ *   - Per-stock-market staleness, as `breached` entries {market, kind:"stale",
+ *     session_h, updated_at}. 57 of 60 open rows are stocks whose stops and
+ *     time stops fire only in an in-session scan, and crypto's hourly commit
+ *     keeps the combined book fresh whatever the stock clock is doing, so a
+ *     dead ASX or NASDAQ scan was invisible here. Each stock market is judged
+ *     on its OWN published prices sidecar (the stamp scripts/scan_gate.py and
+ *     /api/heartbeat read: it moves if and only if that market scanned) in
+ *     SESSION hours -- time inside its config.MARKET_SCAN_WINDOWS window, on
+ *     its own weekdays and clock -- so a night or a weekend never counts. Past
+ *     STOCK_STALE_SESSION_H the market is listed. A sidecar that cannot be read
+ *     is not judged here (?market= answers 503 for it); the watchdog judges
+ *     the same market off its canonical book in scanner/watchdog.py.
+ *   - GH_DISPATCH_TOKEN's expiry, from KV ONLY (token_expires, token_days_left,
+ *     token_expiring, token_warn_days): _dispatch.js notes the date GitHub
+ *     states on each dispatch's answer (see _token_expiry.js). This endpoint
+ *     never calls GitHub; nothing stored = nulls and token_expiring false.
+ *
  * No secrets, read-only, never cached (a cached "ok" would defeat the point).
  */
 
+import { tokenExpiryOf } from "./_token_expiry.js";
+
 // Fixed allowlist — the asset path is NEVER interpolated from raw input.
 const MARKETS = new Set(["asx", "nasdaq", "crypto"]);
+
+// GH_DISPATCH_TOKEN's warning line (NEXT100 #12): with fewer than this many
+// whole days left before the token expires, the answer says
+// token_expiring:true and the status lamp turns amber. ONE home -- status.js
+// reads the flag and the number from the answer, never a copy of its own.
+const TOKEN_WARN_DAYS = 14;
+
+// Per-stock-market staleness (NEXT100 #13). Mirrors of
+// config.WATCHDOG_STOCK_SCAN_MAX_SESSION_H and config.MARKET_SCAN_WINDOWS
+// ([tz, first-scan minute, last-scan minute], market-local, weekdays), pinned
+// to config by tests/test_js_config_mirrors.py -- never edit one side alone.
+// SESSION_WALK_DAYS = watchdog.SESSION_WALK_DAYS (a stamp older than that is
+// stale under any reading, so the walk stops there).
+const STOCK_STALE_SESSION_H = 3;
+const SCAN_WINDOWS = { asx: ["Australia/Sydney", 660, 1005], nasdaq: ["America/New_York", 630, 1005] };
+const SESSION_WALK_DAYS = 31;
+
+// Minutes `tz` is ahead of UTC at the instant `ms` (DST-correct, via Intl,
+// which the Workers runtime ships with full time-zone data).
+const ZONE_FMT = {};
+function tzOffsetMin(ms, tz) {
+  const f = ZONE_FMT[tz] || (ZONE_FMT[tz] = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric",
+    hour: "numeric", minute: "numeric", second: "numeric",
+  }));
+  const p = {};
+  for (const part of f.formatToParts(new Date(ms))) p[part.type] = Number(part.value);
+  const wall = Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second);
+  return Math.round((wall - Math.floor(ms / 1000) * 1000) / 6e4);
+}
+
+// The instant of wall time `min` minutes past midnight, in `tz`, on the local
+// calendar date whose 00:00 UTC is `dayUtcMs`. Two passes, so a date on which
+// the clocks change still lands on the right side of the change.
+function localToMs(dayUtcMs, min, tz) {
+  const wall = dayUtcMs + min * 6e4;
+  const first = wall - tzOffsetMin(wall, tz) * 6e4;
+  return wall - tzOffsetMin(first, tz) * 6e4;
+}
+
+// Hours of a stock market's scan window between two instants: the overlap of
+// [startMs, endMs] with each weekday's [first, last] scan minute in the
+// market's own clock. Exact, and the same sum as scanner/watchdog.py
+// market_session_hours (both run tests/fixtures/session_hours_cases.json).
+function sessionHours(startMs, endMs, win) {
+  if (!win || !(endMs > startMs)) return 0;
+  const [tz, lo, hi] = win;
+  const local = new Date(startMs + tzOffsetMin(startMs, tz) * 6e4);
+  const day0 = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
+  let total = 0;
+  for (let i = 0; i < SESSION_WALK_DAYS; i++) {
+    const day = day0 + i * 864e5;
+    const open = localToMs(day, lo, tz);
+    if (open >= endMs) break;
+    const wd = new Date(day).getUTCDay();
+    if (wd >= 1 && wd <= 5) {
+      total += Math.max(0, Math.min(endMs, localToMs(day, hi, tz)) - Math.max(startMs, open));
+    }
+  }
+  return total / 36e5;
+}
+
+// The stock markets past STOCK_STALE_SESSION_H session hours since their own
+// last scan, as `breached` entries. Never throws: an unreadable sidecar is
+// left unjudged rather than invented into a finding.
+async function staleMarkets(context, nowMs) {
+  const rows = await Promise.all(Object.keys(SCAN_WINDOWS).map(async (m) => {
+    try {
+      const res = await context.env.ASSETS.fetch(
+        new Request(new URL(`/data/${m}_prices.json`, context.request.url)));
+      if (!res.ok) return null;
+      const stamp = String((await res.json()).generated_at || "");
+      const t = Date.parse(stamp);
+      if (!Number.isFinite(t)) return null;
+      const h = sessionHours(t, nowMs, SCAN_WINDOWS[m]);
+      return h > STOCK_STALE_SESSION_H
+        ? { market: m, kind: "stale", session_h: Math.round(h * 100) / 100, updated_at: stamp }
+        : null;
+    } catch (_) {
+      return null;
+    }
+  }));
+  return rows.filter(Boolean);
+}
 
 // The markets whose loss guard has halted new entries, as the book's `guard`
 // block records them (vivek_run writes breached + breach_kind per market).
@@ -83,14 +189,21 @@ export async function onRequestGet(context) {
 
   try {
     const assetURL = new URL(path, context.request.url);
-    const res = await context.env.ASSETS.fetch(new Request(assetURL));
+    const nowMs = Date.now();
+    // The pipeline answer also reads the stock sidecars and the token's
+    // expiry; neither helper throws, so only the book read can fail this.
+    const [res, stale, token] = await Promise.all([
+      context.env.ASSETS.fetch(new Request(assetURL)),
+      market ? null : staleMarkets(context, nowMs),
+      market ? null : tokenExpiryOf(context.env.JOURNAL_KV, nowMs),
+    ]);
     if (!res.ok) return json(503, { ok: false, error: `asset ${path} HTTP ${res.status}` });
     const doc = await res.json();
     const stamp = doc[stampKey] || "";
     const updated = Date.parse(stamp);
     if (!Number.isFinite(updated))
       return json(503, { ok: false, error: `${path} has no parseable ${stampKey}` });
-    const ageH = (Date.now() - updated) / 3.6e6;
+    const ageH = (nowMs - updated) / 3.6e6;
     const body = {
       ok: ageH <= maxH,
       age_h: Math.round(ageH * 100) / 100,
@@ -102,7 +215,10 @@ export async function onRequestGet(context) {
       // status lamp can show a breach without every page downloading the book.
       ...(market ? { market } : {
         open: Array.isArray(doc.open) ? doc.open.length : null,
-        breached: breachedOf(doc.guard),
+        breached: breachedOf(doc.guard).concat(stale),
+        ...token,
+        token_expiring: token.token_days_left !== null && token.token_days_left < TOKEN_WARN_DAYS,
+        token_warn_days: TOKEN_WARN_DAYS,
       }),
     };
     return json(body.ok ? 200 : 503, body);

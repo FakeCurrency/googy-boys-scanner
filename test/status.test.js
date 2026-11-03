@@ -75,11 +75,13 @@ function sliceFn(name) {
 
 const NAMES = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "CYCLE_TAG", "MECHANICAL_EXITS",
                "esc", "agoText", "bookState", "cycleTagOf", "rulesExitsOf", "cohort", "mergeStamps", "marketAges",
-               "uptime", "overall", "triggerMix", "integrity", "healthBreaches"];
+               "uptime", "overall", "triggerMix", "integrity", "healthBreaches",
+               "healthStale", "staleText", "tokenWarning", "tokenText"];
 const body = NAMES.map(sliceConst).join("\n") + `\nreturn { ${NAMES.join(", ")} };`;
 const { HEALTH_MAX_H, HEAL_STALE_MIN, FALLBACK_CAP, CYCLE_TAG, MECHANICAL_EXITS,
         esc, agoText, bookState, cycleTagOf, rulesExitsOf, cohort, mergeStamps, marketAges,
-        uptime, overall, triggerMix, integrity, healthBreaches } = new Function(body)();
+        uptime, overall, triggerMix, integrity, healthBreaches,
+        healthStale, staleText, tokenWarning, tokenText } = new Function(body)();
 
 // CODE-only view: every ban below asks whether status.js DOES something, and
 // the reasoning for each ban is written into the source beside it — the header
@@ -665,7 +667,8 @@ function lampHarness(healthJson) {
     get: (o) => { calls.push(["book", !!(o && o.fresh)]); return Promise.resolve({ updated_at: "x", open: [], closed: [] }); },
     rules: (o) => { calls.push(["rules", !!(o && o.fresh)]); return Promise.resolve({ max_open_total: 60 }); },
   };
-  const bodyL = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "bookState", "healthBreaches"].map(sliceConst).join("\n") +
+  const bodyL = ["HEALTH_MAX_H", "HEAL_STALE_MIN", "FALLBACK_CAP", "bookState", "healthBreaches",
+                 "healthStale", "tokenWarning"].map(sliceConst).join("\n") +
     "\nconst window = { VivekBook: VB };\n" +
     "const getJSON = (u) => { calls.push([u]); return Promise.resolve({ ok: true, status: 200, json: HJ }); };\n" +
     sliceConst("STATE") + "\n" + sliceConst("shared") + "\n" + sliceFn("loadLight") + "\n" +
@@ -701,6 +704,115 @@ test("opening the sheet re-reads the book and the rules FRESH, through the share
 test("the sheet open path asks for the book; the mount path does not", () => {
   assert.ok(/loadLight\(true\)\.then\(paintLamp\)/.test(CODE), "openSheet no longer reads the book fresh");
   assert.ok(/\n    loadLight\(\)\.then\(paintLamp\)/.test(CODE), "mount no longer lights the lamp off health alone");
+});
+
+// ── NEXT100 #12/#13: health-only signals ───────────────────────────────────
+suite("a stock market gone quiet, and the GitHub key's expiry (NEXT100 #12/#13)");
+
+const STALE_ASX = { market: "asx", kind: "stale", session_h: 4.75, updated_at: "2026-11-02T12:00:00+11:00" };
+
+test("health's stale entries are NOT loss guards — the guard list leaves them out", () => {
+  const hj = { breached: [{ market: "nasdaq", kind: "weekly" }, STALE_ASX] };
+  assert.deepEqual(healthBreaches(hj), [{ market: "nasdaq", kind: "weekly" }]);
+  assert.deepEqual(healthStale(hj), [{ market: "asx", sessionH: 4.75 }]);
+  assert.deepEqual(healthStale({}), [], "an answer without the field is no stale market, not a throw");
+  assert.deepEqual(healthStale(null), []);
+  assert.deepEqual(healthStale({ breached: [{ market: "asx", kind: "stale", session_h: "x" }] }),
+    [{ market: "asx", sessionH: null }], "a non-number session_h is unknown, never NaN");
+});
+
+test("a quiet stock market lights AMBER, by name, with its session hours", () => {
+  const o = overall(sig({ stale: [{ market: "asx", sessionH: 4.75 }] }));
+  assert.equal(o.level, "amber");
+  assert.ok(/^ASX not scanned for 4\.8h of its trading session/.test(o.why), o.why);
+  assert.ok(/stops and time stops/.test(o.why), "the reason must say what is at stake");
+  const two = overall(sig({ stale: [{ market: "asx", sessionH: 3.5 }, { market: "nasdaq", sessionH: null }] }));
+  assert.ok(/ASX/.test(two.why) && /NASDAQ not scanned for hours/.test(two.why), two.why);
+});
+
+test("the whole pipeline overdue still outranks one market; one market outranks a guard breach", () => {
+  const stale = [{ market: "nasdaq", sessionH: 3.2 }];
+  assert.ok(overall(sig({ bookAgeH: 2, stale })).why.includes(String(HEAL_STALE_MIN)));
+  const o = overall(sig({ stale, breached: [{ market: "asx", kind: "daily" }] }));
+  assert.ok(/NASDAQ not scanned/.test(o.why), o.why);
+  assert.equal(overall(sig({ bookAgeH: 6, healthOk: false, stale })).level, "red", "red stays red");
+});
+
+test("no stale list at all (an older health) leaves the lamp green", () => {
+  assert.equal(overall(sig({ stale: undefined })).level, "green");
+  assert.equal(overall(sig({ stale: [] })).level, "green");
+});
+
+test("the GitHub key inside health's warning line is AMBER: 'GitHub key expires in N days'", () => {
+  const tk = tokenWarning({ token_expiring: true, token_days_left: 9, token_expires: "2026-11-12T00:00:00Z" });
+  assert.deepEqual(tk, { daysLeft: 9, expires: "2026-11-12T00:00:00Z" });
+  const o = overall(sig({ token: tk }));
+  assert.equal(o.level, "amber");
+  assert.ok(/^GitHub key expires in 9 days/.test(o.why), o.why);
+  assert.ok(/^GitHub key expires in 1 day /.test(tokenText(1)), tokenText(1));
+  assert.ok(/within a day/.test(tokenText(0)));
+  assert.ok(/has expired/.test(tokenText(-2)));
+});
+
+test("a null, non-expiring or malformed token answer does NOTHING", () => {
+  assert.equal(tokenWarning({ token_expiring: false, token_days_left: 40 }), null);
+  assert.equal(tokenWarning({ token_expiring: true, token_days_left: null }), null, "no date known");
+  assert.equal(tokenWarning({ token_expiring: true, token_days_left: NaN }), null);
+  assert.equal(tokenWarning({ token_expiring: "true", token_days_left: 3 }), null, "only a real true");
+  assert.equal(tokenWarning({}), null);
+  assert.equal(tokenWarning(null), null);
+  assert.equal(overall(sig({ token: null })).level, "green");
+});
+
+test("a breach and a stale market still name themselves ahead of the key", () => {
+  const token = { daysLeft: 5, expires: "" };
+  assert.ok(/loss guard/.test(overall(sig({ token, breached: [{ market: "asx", kind: "daily" }] })).why));
+  assert.ok(/ASX not scanned/.test(overall(sig({ token, stale: [{ market: "asx", sessionH: 4 }] })).why));
+});
+
+test("status.js carries no threshold for either line — /api/health owns both", () => {
+  assert.ok(!/TOKEN_WARN_DAYS|STOCK_STALE_SESSION_H|\b14\s*\)/.test(CODE),
+    "status.js typed a copy of a line health.js owns");
+  assert.ok(/hj\.token_expiring === true/.test(CODE), "the lamp no longer reads health's own verdict");
+});
+
+test("the lamp takes both signals off the health answer, with or without the book", async () => {
+  const hj = { ok: true, age_h: 0.2, breached: [STALE_ASX],
+               token_expiring: true, token_days_left: 6, token_expires: "2026-11-09T00:00:00Z" };
+  const { loadLight, STATE } = lampHarness(hj);
+  await loadLight();
+  assert.deepEqual(STATE.sig.stale, [{ market: "asx", sessionH: 4.75 }]);
+  assert.deepEqual(STATE.sig.breached, [], "a stale market must not read as a loss guard");
+  assert.equal(STATE.sig.token.daysLeft, 6);
+  const withBook = lampHarness(hj);
+  await withBook.loadLight(true);
+  assert.deepEqual(withBook.STATE.sig.stale, [{ market: "asx", sessionH: 4.75 }],
+    "the book carries no stale list, so the sheet-open path keeps health's");
+});
+
+test("the sheet names the key's expiry and marks the quiet market", () => {
+  const book = { updated_at: new Date(Date.now() - 10 * 6e4).toISOString(), open: [], closed: [] };
+  const funnel = { markets: { asx: { t: ["2026-11-02T01:00:00Z"], scanned: [10], published: [2] },
+                              nasdaq: { t: ["2026-11-02T20:00:00Z"], scanned: [10], published: [2] } } };
+  const hj = { ok: true, age_h: 0.2, breached: [STALE_ASX], token_expiring: true, token_days_left: 6,
+               token_expires: "2026-11-09T00:00:00Z", token_warn_days: 14 };
+  const h = renderSheet({
+    sig: { healthReachable: true, healthOk: true, bookAgeH: 0.2, bookReadable: true, breached: [],
+           stale: healthStale(hj), token: tokenWarning(hj), stalled: [] },
+    book, rules: { max_open_total: 60, cycle_tag: "hc4-2" }, health: { ok: true, status: 200, json: hj },
+    funnel, book_state: bookState(book, 60),
+  });
+  assert.ok(/GitHub key<\/span><span class="sys-v"><b class="sys-amber">6 days left<\/b> · 2026-11-09/.test(h), h);
+  assert.ok(/amber inside 14 days/.test(h), "the note names health's line, read from the answer");
+  assert.ok(/ASX<\/span><span class="sys-v"><b>[^<]+<\/b> <span class="sys-warn">4\.8h of its session unscanned/.test(h), h);
+  assert.ok(!/NASDAQ<\/span><span class="sys-v"><b>[^<]+<\/b> <span class="sys-warn">/.test(h), "NASDAQ was not listed");
+  assert.ok(/Loss guards<\/span><span class="sys-v"><b>clear<\/b>/.test(h), "a stale market is not a guard");
+  const none = renderSheet({
+    sig: { healthReachable: true, healthOk: true, bookAgeH: 0.2, bookReadable: true, breached: [], stalled: [] },
+    book, rules: { max_open_total: 60 }, health: { ok: true, status: 200, json: { ok: true, age_h: 0.2 } },
+    funnel: null, book_state: bookState(book, 60),
+  });
+  assert.ok(/GitHub key<\/span><span class="sys-v"><b>not reported<\/b>/.test(none), "no date = says so, invents none");
 });
 
 (async () => {

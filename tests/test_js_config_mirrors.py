@@ -164,3 +164,35 @@ def test_the_illiquid_floor_in_the_copy_is_the_engines(path):
     assert all(float(f) == want for f in floors), (
         f"{path} tells the reader the ILLIQUID floor is ${floors}k/day but "
         f"phasemap/config.py turnover_floor is {PM_CONFIG.turnover_floor:,.0f}")
+
+
+# -- functions/api/health.js: each stock market's stale line (NEXT100 #13) ------
+# The site's alarm judges a stock market in its own session hours, off the same
+# windows and the same line as scanner/watchdog.py. A Function cannot import
+# config either, so its copies are pinned here, with both numbers on failure.
+
+def _health_src():
+    return (ROOT / "functions" / "api" / "health.js").read_text(encoding="utf-8")
+
+
+def test_health_stale_line_is_the_watchdogs():
+    js = _decl(_health_src(), "STOCK_STALE_SESSION_H", "health.js")
+    py = config.WATCHDOG_STOCK_SCAN_MAX_SESSION_H
+    assert _num_eq(js, py), (
+        f"health.js lists a stock market as stale past {js} session hours but "
+        f"config.WATCHDOG_STOCK_SCAN_MAX_SESSION_H is {py} -- the lamp and the "
+        "watchdog would disagree about the same market")
+
+
+def test_health_session_windows_are_config_market_scan_windows():
+    js = _decl(_health_src(), "SCAN_WINDOWS", "health.js")
+    py = {m: list(v) for m, v in config.MARKET_SCAN_WINDOWS.items()}
+    assert js == py, (
+        f"health.js SCAN_WINDOWS {js} but config.MARKET_SCAN_WINDOWS is {py} -- "
+        "session hours would be counted on a different clock than the scans run on")
+
+
+def test_health_session_walk_is_the_watchdogs():
+    from scanner import watchdog
+    js = _decl(_health_src(), "SESSION_WALK_DAYS", "health.js")
+    assert int(js) == int(watchdog.SESSION_WALK_DAYS), (js, watchdog.SESSION_WALK_DAYS)

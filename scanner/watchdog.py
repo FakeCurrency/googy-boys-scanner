@@ -173,6 +173,7 @@ def probe_content(root: pathlib.Path, now: dt.datetime) -> list[dict]:
         # book". Missing per-market files are not an error on their own: a
         # market that has never run has nothing to write.
         ages: dict[str, float] = {}
+        stamps: dict[str, dt.datetime] = {}
         newest: dt.datetime | None = None
         for market in config.MARKETS:
             mf = root / "journal" / f"vivek_bot_book.{market}.json"
@@ -190,6 +191,7 @@ def probe_content(root: pathlib.Path, now: dt.datetime) -> list[dict]:
             if age_m is None:
                 continue
             ages[market] = age_m
+            stamps[market] = ts
             if ts is not None and (newest is None or ts > newest):
                 newest = ts
 
@@ -209,6 +211,33 @@ def probe_content(root: pathlib.Path, now: dt.datetime) -> list[dict]:
                                     f"(limit {config.WATCHDOG_BOOK_MAX_AGE_H:.0f}h) - "
                                     f"no run has saved the track record recently "
                                     f"[{detail}]"))
+
+            # EACH STOCK MARKET ON ITS OWN CLOCK (NEXT100 #13, 2026-11-03).
+            # The min() above asks "did ANY run save the book?", and crypto's
+            # hourly run answers yes 24/7 -- so a dead ASX or NASDAQ clock never
+            # reached it, while their rows' stops and time stops fire only in
+            # an in-session scan. Each stock market is judged on its OWN
+            # canonical book's updated_at: _save_market_book stamps it on every
+            # non-dry run of that market, after the run has marked the book and
+            # run its stops (so it is the stamp of the thing at stake, not just
+            # of a publish), and no other market's run touches it. The site's
+            # twin (functions/api/health.js) cannot see journal/, so it reads
+            # the market's published prices sidecar, which the same scan writes
+            # a minute earlier. Measured in SESSION hours, so the night and the
+            # weekend never count. Crypto keeps the rule above.
+            for market in config.MARKET_SCAN_WINDOWS:
+                ts = stamps.get(market)
+                if ts is None:
+                    continue
+                sh = market_session_hours(market, ts, now)
+                limit = config.WATCHDOG_STOCK_SCAN_MAX_SESSION_H
+                if sh > limit:
+                    out.append(_finding(
+                        f"scan_stale_{market}", "CRITICAL",
+                        f"{market.upper()} book last saved by a scan "
+                        f"{ts:%Y-%m-%d %H:%M} UTC - {sh:.1f} hours of its own "
+                        f"trading session ago (limit {limit:.0f}h) - no "
+                        f"in-session scan is running its stops and time stops"))
 
             # The combined view running AHEAD of every file it is derived from
             # means a rebuild ran with no scan behind it - harmless in itself,
@@ -360,6 +389,53 @@ def session_hours_between(start: dt.datetime, end: dt.datetime) -> float:
         t += step
         n += 1
     return open_steps * 0.25
+
+
+# A stamp older than this many days is stale under any reading, so the
+# per-market walk stops there. functions/api/health.js SESSION_WALK_DAYS
+# mirrors it (pinned, tests/test_js_config_mirrors.py).
+SESSION_WALK_DAYS = 31
+
+
+def market_session_hours(market: str, start: dt.datetime | None,
+                         end: dt.datetime | None) -> float:
+    """Hours of ONE stock market's scan window between two instants
+    (NEXT100 #13): the overlap of [start, end] with each weekday's
+    config.MARKET_SCAN_WINDOWS [first, last] scan minute, in the market's own
+    calendar and clock, so the Friday-to-Monday gap and every night count
+    zero. Exact, not stepped like session_hours_between above, and the same
+    sum as functions/api/health.js sessionHours: both run
+    tests/fixtures/session_hours_cases.json.
+
+    Exchange holidays are not modelled (scripts/_marketclock.py): a holiday
+    weekday reads as a session, and the scans still run on one, so the stamp
+    keeps moving. Returns 0.0 on any unusable input (unknown market, bad tz,
+    end before start): fail QUIET, as session_hours_between does, rather than
+    invent an outage out of a configuration error.
+    """
+    from zoneinfo import ZoneInfo
+    if start is None or end is None or end <= start:
+        return 0.0
+    try:
+        tz_name, lo, hi = config.MARKET_SCAN_WINDOWS[market]
+        tz = ZoneInfo(tz_name)
+        t_open, t_close = dt.time(lo // 60, lo % 60), dt.time(hi // 60, hi % 60)
+    except Exception:                                              # noqa: BLE001
+        return 0.0
+    utc = dt.timezone.utc
+    day = start.astimezone(tz).date()
+    total = 0.0
+    for _ in range(SESSION_WALK_DAYS):
+        opens = dt.datetime.combine(day, t_open, tzinfo=tz).astimezone(utc)
+        if opens >= end:
+            break
+        if day.weekday() < 5:
+            closes = dt.datetime.combine(day, t_close, tzinfo=tz).astimezone(utc)
+            a, b = max(start, opens), min(end, closes)
+            if b > a:
+                total += (b - a).total_seconds()
+        day += dt.timedelta(days=1)
+    return total / 3600.0
 
 
 def _job_conclusion(fetch, repo: str, run: dict, job: str) -> str | None:

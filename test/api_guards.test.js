@@ -62,10 +62,13 @@ const ACCESS_LOG_HELPER = STRIP_EXPORTS(SRC("_access_log.js"));
 // the cooldown refund rule these guards assert on are the shipped ones rather
 // than a stub that could drift away from them. And for the two request guards
 // added 2026-10-14 (_secrets.js, _same_origin.js).
-const DISPATCH_HELPER = STRIP_EXPORTS(SRC("_dispatch.js"));
-const GUARD_HELPERS = STRIP_EXPORTS(SRC("_secrets.js")) + "\n" + STRIP_EXPORTS(SRC("_same_origin.js"));
 // Every `import {...} from "./_x.js"` line: the helpers are prepended instead.
 const LOCAL_IMPORTS = /^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm;
+// _dispatch.js imports _token_expiry.js (NEXT100 #12): that helper goes first
+// and the import line comes off, as for the endpoints. health.js reads it too.
+const DISPATCH_HELPER = STRIP_EXPORTS(SRC("_token_expiry.js")) + "\n" +
+  STRIP_EXPORTS(SRC("_dispatch.js")).replace(LOCAL_IMPORTS, "");
+const GUARD_HELPERS = STRIP_EXPORTS(SRC("_secrets.js")) + "\n" + STRIP_EXPORTS(SRC("_same_origin.js"));
 
 function loadModule(file, { strip = [], sandboxExtra = {} } = {}) {
   let source = SRC(file);
@@ -856,10 +859,150 @@ const hbTests = async () => {
   });
 };
 
+// ═══════ the dispatch token's expiry, noted off GitHub's answer (NEXT100 #12) ═════
+const tokenTests = async () => {
+  suite("_token_expiry.js — GH_DISPATCH_TOKEN's expiry, read off each dispatch, written only on change");
+
+  // The helper alone, and the transport with it (exactly as _dispatch.js
+  // imports it), each in its own realm.
+  const T = (() => {
+    const sandbox = { String, Number, Date, Math };
+    vm.createContext(sandbox);
+    vm.runInContext(STRIP_EXPORTS(SRC("_token_expiry.js")) +
+      "\n;this.parse = parseTokenExpiry; this.note = noteTokenExpiry; this.of = tokenExpiryOf;" +
+      " this.KEY = TOKEN_EXPIRY_KEY; this.HEADER = TOKEN_EXPIRY_HEADER;", sandbox);
+    return sandbox;
+  })();
+  const transport = (fetchImpl) => {
+    const sandbox = { String, Number, Date, Math, JSON, AbortController, setTimeout, clearTimeout, fetch: fetchImpl };
+    vm.createContext(sandbox);
+    vm.runInContext(DISPATCH_HELPER + "\n;this.dispatch = dispatchWorkflow;", sandbox);
+    return sandbox.dispatch;
+  };
+  const ghAnswer = (status, expiry) => async () => new Response(status === 204 ? null : "{}", {
+    status, headers: expiry === undefined ? {} : { "github-authentication-token-expiration": expiry },
+  });
+  const brokenKV = () => {
+    const kv = fakeKV();
+    kv.get = async () => { throw new Error("KV down"); };
+    kv.put = async () => { throw new Error("KV put() limit exceeded for the day."); };
+    kv.delete = async () => { throw new Error("KV down"); };
+    return kv;
+  };
+
+  await test("GitHub's header parses robustly to one ISO instant; anything else is null", () => {
+    const Z = "2027-01-31T00:00:00Z";
+    for (const raw of ["2027-01-31 00:00:00 UTC", "2027-01-31T00:00:00Z", "2027-01-31 00:00:00 +0000",
+                       "2027-01-31 10:00:00 +1000", "2027-01-31 10:00:00 +10:00", "2027-01-30 19:00:00 -0500",
+                       "2027-01-31", "  2027-01-31 00:00:00 utc ", "2027-01-31 00:00:00", "2027-01-31T00:00:00.000Z"]) {
+      assert.equal(T.parse(raw), Z, raw);
+    }
+    assert.equal(T.parse("2026-12-05 13:45:09 UTC"), "2026-12-05T13:45:09Z");
+    for (const bad of [null, undefined, "", "soon", "2027-02-31 00:00:00 UTC", "2027-13-01", "2027-01-31 25:00:00 UTC",
+                       "2027-01-31 00:00:00 +1500", "31/01/2027", "2027-01-31 00:00:00 PST"]) {
+      assert.equal(T.parse(bad), null, String(bad));
+    }
+    assert.equal(T.KEY, "gh_token_expiry");
+    assert.equal(T.HEADER, "github-authentication-token-expiration", "Headers.get is case-insensitive; the name is GitHub's");
+  });
+
+  await test("read first, write only when the date CHANGES — a steady token costs no writes", async () => {
+    const kv = fakeKV();
+    const h = new Headers({ "github-authentication-token-expiration": "2027-01-31 00:00:00 UTC" });
+    await T.note(kv, h, 204);
+    await T.note(kv, h, 204);
+    await T.note(kv, h, 422);                 // a refusal still carries the header
+    assert.equal(kv.store.get("gh_token_expiry"), "2027-01-31T00:00:00Z");
+    assert.equal(kv.writes("gh_token_expiry"), 1, "three answers, one date, ONE write");
+    await T.note(kv, new Headers({ "github-authentication-token-expiration": "2027-07-31 00:00:00 UTC" }), 204);
+    assert.equal(kv.store.get("gh_token_expiry"), "2027-07-31T00:00:00Z", "a renewed token's date replaces the old");
+    assert.equal(kv.writes("gh_token_expiry"), 2);
+  });
+
+  await test("an accepted dispatch with NO header forgets the old date; a refusal or a bad header keeps it", async () => {
+    const kv = fakeKV({ gh_token_expiry: "2027-01-31T00:00:00Z" });
+    await T.note(kv, new Headers({ "github-authentication-token-expiration": "whenever" }), 204);
+    await T.note(kv, new Headers(), 401);     // a dead token says nothing about its date
+    assert.equal(kv.store.get("gh_token_expiry"), "2027-01-31T00:00:00Z");
+    await T.note(kv, new Headers(), 204);     // the token in use does not expire
+    assert.ok(!kv.store.has("gh_token_expiry"), "a replaced, non-expiring token must not keep warning");
+    const empty = fakeKV();
+    await T.note(empty, new Headers(), 204);
+    assert.equal(empty.ops.filter(([op]) => op !== "get").length, 0, "nothing stored, nothing to forget: no write");
+  });
+
+  await test("no KV, no headers, or a KV that throws on everything: it resolves, silently", async () => {
+    const h = new Headers({ "github-authentication-token-expiration": "2027-01-31 00:00:00 UTC" });
+    await T.note(undefined, h, 204);
+    await T.note(fakeKV(), undefined, 204);
+    await T.note(fakeKV(), {}, 204);
+    await T.note(brokenKV(), h, 204);
+    // (JSON round trip: the answer is built in the helper's own realm.)
+    assert.deepEqual(JSON.parse(JSON.stringify(await T.of(brokenKV(), Date.now()))),
+      { token_expires: null, token_days_left: null });
+  });
+
+  await test("the transport notes it off every answer and the dispatch result is untouched", async () => {
+    const kv = fakeKV();
+    const D = transport(ghAnswer(204, "2027-01-31 00:00:00 UTC"));
+    const r = await D({ token: "ghp_SECRET_TOKEN", repo: "o/r", workflow: "scan.yml", ref: "main", inputs: {}, kv });
+    assert.deepEqual(JSON.parse(JSON.stringify(r)), { ok: true });
+    assert.equal(kv.store.get("gh_token_expiry"), "2027-01-31T00:00:00Z");
+    assert.ok(![...kv.store.values()].some((v) => String(v).includes("ghp_SECRET_TOKEN")), "the token reached KV");
+    let refunded = 0;
+    const r401 = await transport(ghAnswer(401))({ token: "t", repo: "o/r", workflow: "w", ref: "main", inputs: {},
+      kv, refund: async () => { refunded++; } });
+    assert.equal(r401.status, 401);
+    assert.equal(refunded, 1, "a refusal still refunds");
+    assert.equal(kv.store.get("gh_token_expiry"), "2027-01-31T00:00:00Z", "a 401 without a header keeps the date");
+  });
+
+  await test("a broken KV can never turn a landed dispatch into a refunded 'network error'", async () => {
+    let refunded = 0;
+    const r = await transport(ghAnswer(204, "2027-01-31 00:00:00 UTC"))({
+      token: "t", repo: "o/r", workflow: "w", ref: "main", inputs: {}, kv: brokenKV(),
+      refund: async () => { refunded++; } });
+    assert.equal(r.ok, true);
+    assert.equal(refunded, 0, "the cooldown of a dispatch that landed was refunded");
+  });
+
+  await test("a real endpoint records it end to end (scan.js, the SCAN button)", async () => {
+    const kv = fakeKV();
+    const S = loadModule("scan.js", {
+      strip: [[/export const onRequestPost/, "globalThis.onRequestPost"]],
+      sandboxExtra: { fetch: ghAnswer(204, "2027-03-01 12:00:00 UTC"), Headers },
+    });
+    const r = await S.onRequestPost({ env: { GH_DISPATCH_TOKEN: "t", JOURNAL_KV: kv },
+                                      request: browserPost("/api/scan", { market: "asx" }) });
+    assert.equal(r.status, 202);
+    assert.equal(kv.store.get("gh_token_expiry"), "2027-03-01T12:00:00Z");
+  });
+
+  await test("EVERY Function that dispatches hands the transport its KV, so none can miss the date", () => {
+    let calls = 0;
+    for (const f of fs.readdirSync(path.join(__dirname, "..", "functions", "api"))) {
+      if (!f.endsWith(".js") || f === "_dispatch.js") continue;
+      for (const m of SRC(f).matchAll(/dispatchWorkflow\(\{[\s\S]*?\}\);/g)) {
+        calls++;
+        assert.ok(/\bkv:\s*env\.JOURNAL_KV\b/.test(m[0]), `${f}: dispatchWorkflow without kv: ${m[0].slice(0, 80)}`);
+      }
+    }
+    assert.ok(calls >= 4, "scan, close, heartbeat and morning_plays all dispatch; found " + calls);
+    const D = SRC("_dispatch.js");
+    assert.ok(/await noteTokenExpiry\(kv, res\.headers, res\.status\);/.test(D),
+      "_dispatch.js no longer notes the expiry off the response (and only the response)");
+    const code = SRC("_token_expiry.js").split("\n").filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l)).join("\n");
+    assert.ok(!/console\.|logAccess|fetch\(|GH_DISPATCH_TOKEN/.test(code),
+      "_token_expiry.js logs, fetches or reads the token: it only ever sees response headers");
+    assert.ok(!/onRequest/.test(code), "a helper file must never become a routable endpoint");
+  });
+};
+
 // ── summary (sequential so the suite headers stay attached to their tests) ───
 (async () => {
   await scanTests();
   await secretTests();
+  await tokenTests();
   await hbTests();
   console.log(`\napi_guards.test.js: ${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

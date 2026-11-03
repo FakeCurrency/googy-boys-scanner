@@ -35,12 +35,15 @@ const SRC = path.join(__dirname, "..", "functions", "api", "heartbeat.js");
 // The REAL shared helpers it imports (the dispatch transport, the access log,
 // the secret trim) are prepended with exports stripped rather than stubbed —
 // see api_guards.test.js for why.
+// (_dispatch.js imports _token_expiry.js since NEXT100 #12, so that helper is
+// prepended first and every helper's own import line comes off too.)
 const helper = (f) => fs
   .readFileSync(path.join(__dirname, "..", "functions", "api", f), "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm, "")
   .replace(/export\s+async\s+function/g, "async function")
   .replace(/export\s+function/g, "function")
   .replace(/export\s+const/g, "const");
-const HELPERS = ["_secrets.js", "_access_log.js", "_dispatch.js"].map(helper).join("\n");
+const HELPERS = ["_secrets.js", "_access_log.js", "_token_expiry.js", "_dispatch.js"].map(helper).join("\n");
 const source = HELPERS + "\n" + fs.readFileSync(SRC, "utf8")
   .replace(/^import\s*\{[^}]*\}\s*from\s*"\.\/_[a-z_]+\.js";\s*$/gm, "")
   .replace(/export\s+async\s+function\s+onRequestGet/, "async function onRequestGet")
