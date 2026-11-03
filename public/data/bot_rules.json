@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T00:25:35Z",
+  "generated_at": "2026-11-03T01:15:29Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -149,6 +149,131 @@
         "expectancy_r": 0.012,
         "win_rate": 51.9,
         "profit_factor": 1.03
+      }
+    }
+  },
+  "capacity": {
+    "time_stops_due": [
+      [
+        "2026-11-11",
+        2
+      ],
+      [
+        "2026-11-12",
+        1
+      ],
+      [
+        "2026-11-16",
+        9
+      ],
+      [
+        "2026-11-18",
+        2
+      ],
+      [
+        "2026-11-19",
+        5
+      ],
+      [
+        "2026-11-20",
+        1
+      ],
+      [
+        "2026-11-23",
+        1
+      ],
+      [
+        "2026-11-24",
+        1
+      ],
+      [
+        "2026-11-25",
+        7
+      ],
+      [
+        "2026-11-26",
+        8
+      ],
+      [
+        "2026-11-27",
+        4
+      ],
+      [
+        "2026-11-30",
+        3
+      ]
+    ],
+    "sector_load": {
+      "asx": {
+        "materials": 5,
+        "consumer discretionary": 4,
+        "financials": 4,
+        "communication services": 3,
+        "industrials": 3,
+        "energy": 2,
+        "information technology": 2,
+        "utilities": 2
+      },
+      "nasdaq": {
+        "financials": 6,
+        "health care": 6,
+        "information technology": 6,
+        "industrials": 5,
+        "consumer staples": 4,
+        "consumer discretionary": 2,
+        "utilities": 2,
+        "materials": 1
+      },
+      "crypto": {
+        "crypto-alt": 3
+      }
+    }
+  },
+  "skips": {
+    "asx": {
+      "at": "2026-11-03T01:15:27Z",
+      "reasons": {
+        "MVF": "global_cap",
+        "RMD": "global_cap",
+        "TWE": "global_cap"
+      }
+    }
+  },
+  "evidence_by_market": {
+    "asx": {
+      "backtest": {
+        "n": 128,
+        "avg_r": -0.031,
+        "period": "10y",
+        "generated_at": "2026-11-01T14:52:45Z"
+      },
+      "live": {
+        "n": 40,
+        "avg_r": -0.347
+      }
+    },
+    "nasdaq": {
+      "backtest": {
+        "n": 303,
+        "avg_r": 0.219,
+        "period": "10y",
+        "generated_at": "2026-11-01T14:52:45Z"
+      },
+      "live": {
+        "n": 44,
+        "avg_r": -0.36
+      }
+    },
+    "crypto": {
+      "backtest": {
+        "n": 115,
+        "avg_r": 0.627,
+        "period": "10y",
+        "generated_at": "2026-11-01T14:52:45Z"
+      },
+      "live": {
+        "n": 6,
+        "avg_r": -0.016
       }
     }
   },
