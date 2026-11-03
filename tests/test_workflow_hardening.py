@@ -488,9 +488,13 @@ def test_the_first_party_actions_are_the_five_we_reviewed():
     exemption reasoned about five others.
     """
     seen = {u.split("@")[0] for _, _, u in _uses() if u.startswith("actions/")}
+    # actions/download-artifact joined on 2026-11-03 (NEXT100 #14): the
+    # decision replay's commit-summary job reads the replay's own small
+    # artifact with it. Same publisher and trust domain as upload-artifact,
+    # same major (v5, Node 24), reviewed under the argument above.
     assert seen == {"actions/checkout", "actions/setup-python",
                     "actions/setup-node", "actions/cache",
-                    "actions/upload-artifact"}, sorted(seen)
+                    "actions/upload-artifact", "actions/download-artifact"}, sorted(seen)
 
 
 # --------------------------------------------------------------------------

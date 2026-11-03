@@ -1256,6 +1256,10 @@ def main() -> None:
     ap.add_argument("--tag", default="parity",
                     help="with --parity: mode/tag stamp on the report "
                          "(e.g. parity_oos)")
+    ap.add_argument("--summary-dir", default=None,
+                    help="with --parity: also write the slim committed summary "
+                         "(summary.json + inputs.json, NEXT100 #14) into this "
+                         "directory; absent = nothing extra is written")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     # The replay drives vivek_bot.manage_position, which logs every TP hit at
@@ -1287,7 +1291,8 @@ def main() -> None:
         tag = args.tag or ("parity_oos" if args.exclude_from else "parity")
         report = parity.run_parity(markets, args.limit or None, period,
                                    run_variants=not args.no_variants,
-                                   exclude_map=excl, tag=tag, workers=workers)
+                                   exclude_map=excl, tag=tag, workers=workers,
+                                   summary_dir=args.summary_dir)
         parity.print_parity(report)
         if args.summary_md:
             with open(args.summary_md, "a", encoding="utf-8") as fh:

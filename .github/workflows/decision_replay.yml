@@ -9,12 +9,25 @@
 # It runs `python -m scanner.vivek_backtest --parity` and delivers TWO things:
 # the decision tables in the step summary AND the log (a cloud session reads
 # logs, not artifacts), and the full JSON report (+ the run log) as a 90-day
-# artifact; then the live-vs-replay trade-by-trade study (2 Nov). It COMMITS NOTHING: contents: read, no git
-# writes, so no assert_staged and no WATCHDOG_RUNS entry (evidence_brief /
-# crypto_source_check pattern), and its own concurrency group -- the `scan`
-# group serialises book writers and this writes no book. The report goes to
-# $RUNNER_TEMP, never public/data; the last step fails the run if anything
-# under public/data changed anyway.
+# artifact; then the live-vs-replay trade-by-trade study (2 Nov). The replay
+# job COMMITS NOTHING: contents: read, no git writes, so no assert_staged
+# and no WATCHDOG_RUNS entry (evidence_brief / crypto_source_check pattern),
+# and its own concurrency group -- the `scan` group serialises book writers
+# and this writes no book. The report goes to $RUNNER_TEMP, never
+# public/data; the job's last step fails the run if anything under
+# public/data changed anyway.
+#
+# NEXT100 #14 (3 Nov 2026): the replay also writes a SLIM summary (schema 1,
+# scripts/decision_pack.py's docstring: the live-rules arm's taken trades,
+# each variant's verdict and R/slot-month, the run's SHA and params) plus its
+# pinned INPUTS (per name: first/last bar, bar count, a digest of the closes),
+# so a later run can tell whether the rules or the data moved a verdict and
+# the pack can read the same-weeks figure without the 90-day artifact. The
+# second job, commit-summary, downloads that small artifact and commits the
+# two files under data/research/decision_replay/ on the branch the replay ran
+# on. It is the ONLY job with contents: write; it writes no book, so it has
+# its own concurrency group (not `scan`) and, like momentum / ignition, no
+# WATCHDOG_RUNS entry: it only ever follows a replay, which has no clock.
 #
 # RUNTIME. Nearly all of it is vivek.evaluate on every candidate bar (~50-65 ms
 # each, measured; ~400 per name over 5y, ~2x that over 10y), split across the
@@ -89,6 +102,7 @@ jobs:
           python -m scanner.vivek_backtest --parity --market "$MKT" --limit "$LIM" --period "$PER" \
             --tag decision_replay --workers 0 \
             --out "$OUT/decision_replay.json" --summary-md "$GITHUB_STEP_SUMMARY" \
+            --summary-dir "$OUT/summary" \
             2>&1 | tee "$OUT/replay.log"
 
       # The owner's "20 more" #3 (2 Nov): every hc4-1 trade beside the replay's
@@ -117,6 +131,17 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
+      # NEXT100 #14: the two small files the commit-summary job commits, as
+      # their own artifact (the big report above is never committed). Only
+      # on success: a failed replay has no verdict worth pinning.
+      - name: Upload the slim summary for the commit job
+        uses: actions/upload-artifact@v5
+        with:
+          name: decision-replay-summary-${{ github.run_id }}
+          path: ${{ runner.temp }}/decision-replay/summary/
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Nothing under public/data moved
         if: always()
         run: |
@@ -127,3 +152,95 @@ jobs:
             exit 1
           fi
           echo "public/data untouched"
+
+  # NEXT100 #14: commit the slim summary + pinned inputs on the branch the
+  # replay ran on. NOT a book writer (nothing under journal/ or public/data),
+  # so it stays out of the `scan` mutex; its own group serialises two replays
+  # of the same branch. Only after a SUCCESSFUL replay (needs + success()).
+  # The branch TIP is checked out (ref: github.ref), never the SHA the run
+  # started on, so a queued commit never replays stale data over newer
+  # writes; the push is the ignition.yml rebase-and-retry, branch-aware.
+  commit-summary:
+    needs: replay
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: decision-replay-summary-${{ github.ref_name }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: decision-replay-summary-${{ github.run_id }}
+          path: ${{ runner.temp }}/decision-replay-summary
+
+      - name: Commit and push the decision replay summary
+        run: |
+          set -u
+          set -o pipefail
+          SRC="$RUNNER_TEMP/decision-replay-summary"
+          DEST="data/research/decision_replay"
+          for f in summary.json inputs.json; do
+            if [ ! -s "$SRC/$f" ]; then
+              echo "::error::$SRC/$f is missing or empty - the replay reported success without writing its summary"
+              exit 1
+            fi
+          done
+          if ! grep -q '"schema": 1' "$SRC/summary.json"; then
+            echo "::error::summary.json is not the schema-1 summary scripts/decision_pack.py reads"
+            exit 1
+          fi
+          mkdir -p "$DEST"
+          cp "$SRC/summary.json" "$DEST/summary.json"
+          cp "$SRC/inputs.json" "$DEST/inputs.json"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="${GITHUB_REF_NAME}"
+          STAMP="$(date -u +'%Y-%m-%d %H:%M UTC')"
+
+          # ONE pathspec per `git add` (`git add a b` is all-or-nothing and
+          # banned, tests/test_workflow_hardening.py).
+          PATHS="$DEST/summary.json $DEST/inputs.json"
+          for p in $PATHS; do
+            git add -- "$p"
+          done
+          # The must-change gate, ANY-OF over the two files: every replay
+          # re-stamps generated_at, so a summary that stages nothing means
+          # the output was silently lost.
+          bash scripts/assert_staged.sh "decision replay summary" "$DEST/summary.json" "$DEST/inputs.json"
+
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "data: decision replay summary $STAMP"
+          SHA=$(git rev-parse HEAD)
+
+          # Rebase-and-retry. Only ever REPLACE a path THIS run generated, or
+          # a newer copy pushed meanwhile gets deleted.
+          for i in 1 2 3 4 5; do
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+            for p in $PATHS; do
+              if git cat-file -e "$SHA:$p" 2>/dev/null; then
+                git rm -rq --ignore-unmatch -- "$p" 2>/dev/null || true
+                git checkout "$SHA" -- "$p"
+              fi
+            done
+            git add -A
+            if git diff --cached --quiet; then echo "Nothing new vs $BRANCH."; exit 0; fi
+            git commit -m "data: decision replay summary $STAMP"
+            if git push origin "HEAD:$BRANCH"; then
+              echo "Pushed to $BRANCH."
+              exit 0
+            fi
+            echo "Push race - retry $i"; sleep $((i * 3))
+          done
+          echo "Could not push after retries"; exit 1

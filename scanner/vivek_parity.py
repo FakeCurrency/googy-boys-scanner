@@ -1373,14 +1373,17 @@ def sample_symbol_map(coverage: dict) -> dict[str, list[str]]:
 def run_parity(markets: list[str], limit: int | None, period: str,
                run_variants: bool = True,
                exclude_map: dict[str, set[str]] | None = None,
-               tag: str = "parity", workers: int = 1) -> dict:
+               tag: str = "parity", workers: int = 1,
+               summary_dir: str | os.PathLike | None = None) -> dict:
     t0 = time.time()
     series: list[SymbolSeries] = []
+    series_by_market: dict[str, list[SymbolSeries]] = {}   # NEXT100 #14: the inputs pin
     coverage: dict = {}
     exclude_map = exclude_map or {}
     for mk in markets:
         ss, cov = load_market_series(mk, limit, period, exclude_map.get(mk), workers)
         series += ss
+        series_by_market[mk] = ss
         coverage[mk] = cov
     rules = baseline_rules()
     t1 = time.time()
@@ -1433,6 +1436,11 @@ def run_parity(markets: list[str], limit: int | None, period: str,
     report["runtime_minutes"] = {"total": round((time.time() - t0) / 60, 2),
                                  "phase1": round((t1 - t0) / 60, 2),
                                  "books": round((time.time() - t1) / 60, 2)}
+    if summary_dir:
+        # NEXT100 #14: the slim committed summary + the pinned inputs. Only
+        # when asked (the CLI's --summary-dir); existing callers write nothing.
+        from .replay_summary import write_summary
+        write_summary(report, series_by_market, summary_dir)
     return report
 
 
