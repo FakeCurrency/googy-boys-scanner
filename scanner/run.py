@@ -280,7 +280,7 @@ def _capacity(today: dt.date | None = None) -> dict | None:
         from collections import Counter
 
         from .broker import vivek_bot, vivek_run
-        from .vivek_journal import time_stop_due
+        from .time_stop import time_stop_due
         hold = int(config.VIVEK_BOT_MAX_HOLD_DAYS or 0)
         today = today or dt.datetime.now(dt.timezone.utc).date()
         due: Counter = Counter()
