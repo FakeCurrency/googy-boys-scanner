@@ -1199,7 +1199,8 @@ def _caveats() -> list[str]:
         "a market sees only coverage[market].sampled_pct of its signals, so "
         "with VIVEK_PARITY_SLOT_SCALE 'universe' the books run at the live caps "
         "scaled to the pooled sample share (never under VIVEK_PARITY_SLOT_SCALE_MIN "
-        "slots) and the unscaled book_full count prints beside it; 'none' leaves "
+        "slots in total, 1 per sector per market) and the unscaled book_full count "
+        "prints beside it; 'none' leaves "
         "book_full a LOWER bound unless --limit 0. Read R/trade and R/slot-month "
         "by cell and market; total R and the live-mix R (per-market average R "
         "reweighted to the live book's market mix) sit beside every R/slot-month.",
@@ -1207,7 +1208,9 @@ def _caveats() -> list[str]:
         "on a second sample sharing no name with the first (the even stride over "
         "the names the first draw left) at the same caps; its verdict reads "
         "PASS (replicated) or PASS (not replicated), and only a replicated pass "
-        "can be the best variant.",
+        "can be the best variant. A run with no disjoint name anywhere (--limit 0) "
+        "is not replicated and the label stays PASS; a second sample under "
+        "VIVEK_PARITY_REPLICATE_MIN_SHARE of the first draw's names is marked thin.",
         "R units are primary. Dollar columns inherit the live sizing mode "
         f"({_sizing_basis().get('sizing_mode')}) and are secondary.",
         "Variant PASS requires R/slot-month improvement overall, on ASX AND "
@@ -1575,6 +1578,13 @@ def slot_scale_lines(scale: dict, port: dict, mix: dict) -> list[str]:
         if un:
             line += (f"; at the live caps: book_full {un.get('book_full')}, sector_cap "
                      f"{un.get('sector_cap')}, taken {un.get('taken')}, peak {un.get('peak_open')}")
+        fl = scale.get("floors")
+        if fl:                                         # the floors are a design choice: say so
+            hit = [{"max_open_total": "total", "max_per_sector": "per-sector"}.get(k, k)
+                   for k in scale.get("floored") or []]
+            line += f"; floors {fl.get('max_open_total')} total / {fl.get('max_per_sector')} per sector"
+            if hit:
+                line += f" (the {' and '.join(hit)} floor binds)"
         if scale.get("note"):
             line += f"; {scale['note']}"
         out.append(line)
@@ -1594,9 +1604,9 @@ def replication_lines(rep: dict) -> list[str]:
     if not rep:
         return []
     out = ["", "### Replication (a second sample sharing no name with the first)", ""]
-    if not rep.get("ran"):
+    ran = bool(rep.get("ran"))
+    if not ran:
         out.append(f"- not run: {rep.get('reason')}")
-        return out
     for mk, s in sorted((rep.get("sample") or {}).items()):
         txt = (f"- {mk}: {s.get('symbols')} names of {s.get('universe')}, "
                f"overlap dropped {s.get('overlap_dropped')}"
@@ -1604,9 +1614,13 @@ def replication_lines(rep: dict) -> list[str]:
         if s.get("replayed") is not None:
             txt += f"; {s.get('replayed')} replayed, {s.get('signals')} signal bars"
         out.append(txt)
+    if not ran:
+        return out
     caps = rep.get("caps") or {}
     out.append(f"- caps {caps.get('max_total')} total / {caps.get('max_sector')} per sector per market; "
                f"{rep.get('minutes')} min")
+    if rep.get("thin"):
+        out.append(f"- thin second sample: {rep['thin'].get('note')}")
     out += ["", "| variant | verdict | first sample R/slot-month base -> variant | "
             "second sample base -> variant | second: asx | nasdaq | half 1 | half 2 |",
             "|---|---|---|---|---|---|---|---|"]
