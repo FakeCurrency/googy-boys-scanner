@@ -333,8 +333,8 @@ its market's timezone, DST-proof) and GitHub's crons are backups. Manage with
   cache), seeded from the open book. A sector-less row is exempt from the cap,
   so cache edits are trade changes. Crypto uses `crypto-major`/`crypto-alt`.
 - **`bot_rules.json`** carries rules AND state (`open_total`, `closed_total`,
-  `entry_quality`; `null` = unreadable); unenforced limits sit under
-  `not_enforced`. Readers: status.js, journal.js, the deck, the evidence brief.
+  `entry_quality`; `null` = unreadable) and `rules_exits` (a classification,
+  not a gate); unenforced limits sit under `not_enforced`. Readers: status.js, journal.js, the deck, the evidence brief.
   Moving the cap or the notional also moves the close ceilings and fallbacks
   (`close.js`, journal.js, `vivek_run.CLOSE_BATCH_MAX`, close_position.yml,
   status.js `FALLBACK_CAP`, system.html) — `tests/test_close_ceiling_parity.py`
@@ -397,7 +397,13 @@ NOT approved. The 3 Nov replay on hc4-2 code (the decision pack's "What the 3
 Nov replay said"): stock 3D reclaims +0.054R/trade over 689 (over the veto's
 +0.05R line), V7 no-ASX the first variant to PASS the gate, V9/V10/V11 and the
 day-14 cut fail, and on hc4-1's matched trades the replay lost what live lost. **Rules vs owner:** an absent `exit_reason` is a human
-act; `MECHANICAL_EXITS` (app.js, journal.js, status.js) is parity-pinned; the
+act; a rules exit is `config.VIVEK_BOT_RULES_EXITS` (stop/time/trail/target,
+NEXT100 #9), the ONE definition behind every rules-close figure: APPEND-ONLY,
+lowercase, never "manual" (`tests/test_rules_exits.py`; a new close path must
+add its reason there). Python readers import it (decision_pack's one allowed
+scanner import is scanner.config); `bot_rules.json` publishes it as
+`rules_exits`, and the `MECHANICAL_EXITS` literals in app.js, journal.js and
+status.js are only offline fallbacks pinned to config. The
 two records print separately, never pooled; evidence strips stay INERT (no
 controls or calls-to-action).
 
@@ -569,6 +575,12 @@ counted exclusions).
   `::notice::` recovery; first / 6h / recovery). Never make the watchdog step
   fail (the cache would never save); the `watchdog-alarm` job carries the red.
   The committed `backups/` dir is load-bearing for its `backup_stale` probe.
+  Each stock market is also judged on its own canonical book's `updated_at`
+  in SESSION hours (`market_session_hours`: inside MARKET_SCAN_WINDOWS on the
+  market's own clock, DST-safe): past `WATCHDOG_STOCK_SCAN_MAX_SESSION_H` (3)
+  it raises CRITICAL `scan_stale_<market>` (NEXT100 #13); crypto keeps the
+  `book_stale` rule. The Python helper and health.js `sessionHours` run the
+  same `tests/fixtures/session_hours_cases.json`.
 - **Morning plays** (`scripts/morning_plays.py`): HIGH CONVICTION longs, no
   funds, grouped by market then label, one symbol per line. Slots: ASX after
   its close, NASDAQ + Crypto the next Melbourne morning (`MORNING_PLAYS_SLOTS`
@@ -588,7 +600,17 @@ counted exclusions).
 
 - **`/api/health`** — the ALARM: 200 while the published book is < 4h old
   (`max_h`), else 503; GitHub-independent; `?market=` is a manual probe; its
-  `breached:[{market,kind}]` feeds the status lamp.
+  `breached:[{market,kind}]` feeds the status lamp. It also lists each stock
+  market whose `<market>_prices.json` is more than 3 session hours old as
+  `{market, kind:"stale", session_h, updated_at}`, and carries the
+  `GH_DISPATCH_TOKEN` expiry read from KV only (`token_expires`,
+  `token_days_left`, `token_expiring` inside `TOKEN_WARN_DAYS` 14, whose one
+  home is health.js). Neither moves its 200/503 (NEXT100 #12/#13).
+- **`_token_expiry.js`** (NEXT100 #12): `_dispatch.js` reads
+  `github-authentication-token-expiration` off every GitHub answer into KV key
+  `gh_token_expiry` (read first, write only on change; an accepted 204 with no
+  header drops the key); it never throws, never logs, never sees the token.
+  Every `dispatchWorkflow` call passes `kv: env.JOURNAL_KV` (pinned).
 - **`/api/heartbeat`** — the HEALER: dispatches a scan only when overdue;
   `stale_min` floored per market (`STALE_FLOOR_MIN` asx/nasdaq 15, crypto 45,
   all 90 — check the cron-job.org jobs before raising one); 25-min heal window;
@@ -612,7 +634,10 @@ counted exclusions).
   health.js (4h), heartbeat.js (90m) and `bot_rules.json`, and pinned. Uptime
   is measured in the browser from `funnel_history.json` (two readers only:
   app.js, status.js). Routine stalls don't light it; it mounts in
-  `.deck-top-right`, never inside `.nav-pills`.
+  `.deck-top-right`, never inside `.nav-pills`. It lights AMBER for a quiet
+  stock market (health's `kind:"stale"` entries, kept apart from the loss
+  guards) and for the GitHub key inside health's warning window ("GitHub key
+  expires in N days"); it carries no threshold for either.
 
 ## Frontend rules
 
@@ -682,7 +707,8 @@ GitHub: `DISCORD_MORNING_WEBHOOK_URL`; `CRONJOB_API_KEY`,
 `CLOUDFLARE_API_TOKEN` (Pages: Edit), `CLOUDFLARE_ACCOUNT_ID` (ops.yml only;
 set 2026-09-10); `BYBIT_*` (testnet), `ALPACA_*` (legacy), `TELEGRAM_*`
 (muted). Cloudflare: `GH_DISPATCH_TOKEN` (repo-scoped PAT; stored as Text —
-never print values), `MORNING_PLAYS_TRIGGER_SECRET` (SET; the ladders use it
+never print values; its expiry shows on /api/health and the lamp, and a renewed
+token updates the date on the next dispatch), `MORNING_PLAYS_TRIGGER_SECRET` (SET; the ladders use it
 daily). **Orphaned, safe to delete:** the old Discord alert webhook secret,
 `TICK_SECRET`, `GBS_SYNC_CODE`. **Pending owner:** a data-provider key,
 Cloudflare Access, an alert channel.
