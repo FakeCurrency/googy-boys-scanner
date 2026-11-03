@@ -917,6 +917,12 @@ VIVEK_PARITY_LIVE_CYCLES = ("hc4-1", "hc4-2")
 # even stride over the names the first draw left -- before its verdict reads
 # "PASS (replicated)". At most one extra sample per market per run.
 VIVEK_PARITY_REPLICATE = True
+# A second sample that replays fewer names than this share of the first
+# draw's (over the markets it re-drew) is marked THIN in the replication
+# block: the verdict wording is unchanged, the note says a refusal there is
+# weaker evidence than one on a full draw. A whole-universe run (--limit 0)
+# has no disjoint names and is not replicated at all (the label stays PASS).
+VIVEK_PARITY_REPLICATE_MIN_SHARE = 0.5
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes

@@ -29,8 +29,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # ── #15 slot scale ────────────────────────────────────────────────────────────
 
 def _live_caps() -> tuple[int, int]:
-    total = int(getattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 0) or config.VIVEK_BOT_MAX_POSITIONS)
-    sector = int(getattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 0) or 0)
+    # direct reads (config first); 0 keeps its live meaning (total off = per-market cap)
+    total = int(config.VIVEK_BOT_MAX_OPEN_TOTAL or config.VIVEK_BOT_MAX_POSITIONS)
+    sector = int(config.VIVEK_BOT_MAX_PER_SECTOR or 0)
     return total, sector
 
 
@@ -45,9 +46,9 @@ def slot_scale(coverage: dict, mode: str | None = None) -> dict:
     "universe" scales the live caps by the pooled share, never below
     ``VIVEK_PARITY_SLOT_SCALE_MIN`` slots in total and 1 per sector; mode
     "none" returns the live caps."""
-    mode = str(mode if mode is not None else getattr(config, "VIVEK_PARITY_SLOT_SCALE", "none")).lower()
+    mode = str(mode if mode is not None else config.VIVEK_PARITY_SLOT_SCALE).lower()
     live_total, live_sector = _live_caps()
-    floor = int(getattr(config, "VIVEK_PARITY_SLOT_SCALE_MIN", 3) or 0)
+    floor = int(config.VIVEK_PARITY_SLOT_SCALE_MIN or 0)
     by_market = {}
     sampled = universe = 0
     for mk, cov in (coverage or {}).items():
@@ -61,8 +62,17 @@ def slot_scale(coverage: dict, mode: str | None = None) -> dict:
     out = {"mode": mode, "share": share, "by_market": by_market,
            "live": {"max_open_total": live_total, "max_per_sector": live_sector}}
     if mode == "universe" and share is not None and share < 1.0:
-        out["max_open_total"] = max(floor, _half_up(live_total * share))
-        out["max_per_sector"] = max(1, _half_up(live_sector * share)) if live_sector else 0
+        # The total floors at VIVEK_PARITY_SLOT_SCALE_MIN, the per-sector cap
+        # at 1 -- a design choice: at the real pooled share (~24%) the books
+        # run 14 total / 1 per sector per market. ``floors`` prints on the
+        # slot-scale line and ``floored`` names each floor that raised a cap.
+        raw_total = _half_up(live_total * share)
+        raw_sector = _half_up(live_sector * share) if live_sector else 0
+        out["max_open_total"] = max(floor, raw_total)
+        out["max_per_sector"] = max(1, raw_sector) if live_sector else 0
+        out["floors"] = {"max_open_total": floor, "max_per_sector": 1 if live_sector else 0}
+        out["floored"] = [k for k, raw in (("max_open_total", raw_total), ("max_per_sector", raw_sector))
+                          if raw < out[k]]
     else:
         if mode not in ("universe", "none"):
             out["note"] = f"unknown VIVEK_PARITY_SLOT_SCALE {mode!r}: live caps used"
@@ -84,8 +94,7 @@ def live_market_mix(root: pathlib.Path | str | None = None,
     the live markets, with a note, when the book cannot be read or holds no
     row of those cycles."""
     root = pathlib.Path(root) if root is not None else ROOT
-    cycles = tuple(cycles if cycles is not None
-                   else getattr(config, "VIVEK_PARITY_LIVE_CYCLES", ("hc4-1", "hc4-2")))
+    cycles = tuple(cycles if cycles is not None else config.VIVEK_PARITY_LIVE_CYCLES)
     path = root / "journal" / "vivek_bot_book.json"
     counts: Counter = Counter()
     note = None

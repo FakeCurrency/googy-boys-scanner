@@ -34,6 +34,7 @@ def test_a_half_sampled_universe_halves_the_caps(monkeypatch):
     assert (sc["max_open_total"], sc["max_per_sector"]) == (30, 3)
     assert sc["share"] == 0.5 and sc["by_market"]["asx"]["share"] == 0.5
     assert sc["live"] == {"max_open_total": 60, "max_per_sector": 6}
+    assert sc["floors"] == {"max_open_total": 3, "max_per_sector": 1} and sc["floored"] == []
 
 
 def test_the_share_is_pooled_across_markets_and_floors_at_three_slots(monkeypatch):
@@ -44,18 +45,27 @@ def test_the_share_is_pooled_across_markets_and_floors_at_three_slots(monkeypatc
     sc = rs.slot_scale(cov, mode="universe")
     assert sc["share"] == 0.001
     assert sc["max_open_total"] == 3 and sc["max_per_sector"] == 1
+    assert sc["floored"] == ["max_open_total", "max_per_sector"]
+    port = {"skipped": {}, "taken": 0, "peak_open": 0}
+    line = vp.slot_scale_lines(sc, port, {})[0]
+    assert line.isascii() and "floors 3 total / 1 per sector (the total and per-sector floor binds)" in line
+    sc = rs.slot_scale({"asx": {"symbols": 24, "universe": 100}}, mode="universe")
+    assert (sc["max_open_total"], sc["max_per_sector"]) == (14, 1) and sc["floored"] == []
+    assert ("caps 14 total / 1 per sector per market (live 60 / 6); book_full 0, sector_cap 0, "
+            "taken 0, peak 0; floors 3 total / 1 per sector") in vp.slot_scale_lines(sc, port, {})[0]
     # the OOS denominator is the universe BEFORE the exclusion
     sc = rs.slot_scale({"asx": {"symbols": 5, "universe": 8, "universe_before_exclude": 10}},
                        mode="universe")
-    assert sc["share"] == 0.5 and sc["max_open_total"] == 30
+    assert sc["share"] == 0.5 and sc["max_open_total"] == 30 and sc["floored"] == []
 
 
 def test_mode_none_and_a_whole_universe_keep_the_live_caps(monkeypatch):
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_OPEN_TOTAL", 60)
     monkeypatch.setattr(config, "VIVEK_BOT_MAX_PER_SECTOR", 6)
     assert rs.slot_scale({"asx": {"symbols": 5, "universe": 10}}, mode="none")["max_open_total"] == 60
+    assert "floors" not in rs.slot_scale({"asx": {"symbols": 5, "universe": 10}}, mode="none")
     full = rs.slot_scale({"asx": {"symbols": 10, "universe": 10}}, mode="universe")
-    assert (full["max_open_total"], full["max_per_sector"]) == (60, 6)
+    assert (full["max_open_total"], full["max_per_sector"]) == (60, 6) and "floors" not in full
     assert config.VIVEK_PARITY_SLOT_SCALE in ("universe", "none")
 
 
@@ -90,6 +100,7 @@ def test_the_scaled_caps_bind_the_baseline_and_every_variant_and_print(monkeypat
     md = vp.summary_markdown(rep)
     assert "slot scale `universe`: sample share 50.0%" in md
     assert "caps 2 total / 3 per sector per market (live 4 / 6)" in md
+    assert "floors 2 total / 1 per sector" in md
     assert "book_full 1" in md and "at the live caps: book_full 0" in md
     assert "| total R | live-mix R |" in md and "sectors 3/3 named (filled sector_map 3)" in md
     assert "### Replication" in md and "not run: VIVEK_PARITY_REPLICATE is off" in md
@@ -266,6 +277,10 @@ def test_a_pass_is_re_run_on_the_disjoint_sample_only_and_labelled(monkeypatch):
     assert vr["V7_no_asx"]["verdict"]["label"] == "PASS (replicated)"
     assert vr["V1_hold_off"]["verdict"]["label"] == "fail"
     assert block["variants"]["V7_no_asx"]["second"]["pass"] is True
+    chk = block["variants"]["V7_no_asx"]["second"]["checks"]
+    assert set(chk["overall"]) == {"baseline", "variant", "delta", "pass"}
+    assert chk["market:asx"] == {"pass": None} and chk["half:second"] == {"pass": True}
+    assert "thin" not in block                  # nasdaq: 3 replayed against the first draw's 3
     md = "\n".join(vp.replication_lines(block))
     assert md.isascii() and "| V7_no_asx | PASS (replicated) | +0.100 -> +0.200 (5 taken) | +0.100 -> +0.300" in md
     assert "overlap dropped 0" in md and "caps 7 total / 2 per sector per market" in md
@@ -296,3 +311,51 @@ def test_a_loader_that_ignores_the_exclusion_is_cut_to_the_disjoint_names(monkey
     block = rr.replicate_passes(["nasdaq"], 3, "5y", {}, 1, vr, cov, {"max_open_total": 3, "max_per_sector": 1})
     assert block["sample"]["nasdaq"]["overlap_dropped"] == 3
     assert block["sample"]["nasdaq"]["symbols"] == 1 and block["sample"]["nasdaq"]["replayed"] == 1
+    # 1 name against the first draw's 3 (under VIVEK_PARITY_REPLICATE_MIN_SHARE): the block
+    # says so; the verdict wording does not change
+    assert config.VIVEK_PARITY_REPLICATE_MIN_SHARE == 0.5
+    assert (block["thin"]["replayed"], block["thin"]["first"]) == (1, 3)
+    assert "under 50%" in block["thin"]["note"]
+    assert vr["V1_hold_off"]["verdict"]["label"] == "PASS (not replicated)"
+    lines = vp.replication_lines(block)
+    thin_line = next(ln for ln in lines if ln.startswith("- thin second sample"))
+    assert thin_line.isascii()                      # _fmt_r prints an em dash for a missing figure
+    assert "the second sample replayed 1 names against the first draw's 3 (under 50%)" in thin_line
+
+
+def test_a_whole_universe_run_has_no_disjoint_names_and_keeps_the_pass(monkeypatch):
+    """--limit 0 samples every market whole: nothing to re-draw, so the
+    replication is NOT RUN, the label stays PASS (neither confirmed nor
+    refused), best_variant keeps the name and the loader is never called."""
+    monkeypatch.setattr(config, "VIVEK_PARITY_REPLICATE", True)
+    loads: list = []
+    monkeypatch.setattr(vp, "load_market_series", lambda *a, **k: loads.append(a) or ([], {}))
+    cov = {"asx": {"symbols": 10, "universe": 10, "replayed": 10,
+                   "sampled_symbols": [f"A{i}" for i in range(10)]},
+           "nasdaq": {"symbols": 4, "universe": 4, "replayed": 4, "sampled_symbols": list("WXYZ")}}
+
+    def results():
+        return {"V7_no_asx": {"portfolio": {"taken": 5},
+                              "verdict": {"pass": True, "checks": {"overall": {"baseline": 0.1, "variant": 0.2, "delta": 0.1}}}}}
+
+    vr = results()
+    block = rr.replicate_passes(["asx", "nasdaq"], None, "5y", {}, 1, vr, cov,
+                                {"max_open_total": 60, "max_per_sector": 6})
+    assert block["ran"] is False and "whole-universe" in block["reason"] and loads == []
+    assert block["passing"] == ["V7_no_asx"]
+    assert all("no disjoint names" in s["note"] for s in block["sample"].values())
+    assert "replicated" not in vr["V7_no_asx"]["verdict"]
+    assert vr["V7_no_asx"]["verdict"]["label"] == "PASS"
+    assert vp.best_variant(vr)["name"] == "V7_no_asx"
+    md = "\n".join(vp.replication_lines(block))
+    assert md.isascii() and "- not run: no disjoint names to replay (whole-universe run)" in md
+    assert "- asx: 0 names of 10, overlap dropped 0; the first draw sampled the whole market" in md
+    # a second draw that replays nothing is the same case
+    monkeypatch.setattr(vp, "load_market_series",
+                        lambda *a, **k: ([], {"symbols": 0, "universe": 9, "sampled_symbols": []}))
+    vr = results()
+    block = rr.replicate_passes(["nasdaq"], 3, "5y", {}, 1, vr,
+                                {"nasdaq": {"symbols": 3, "universe": 9, "sampled_symbols": ["A0", "A1", "A2"]}},
+                                {"max_open_total": 3, "max_per_sector": 1})
+    assert block["ran"] is False and vr["V7_no_asx"]["verdict"]["label"] == "PASS"
+    assert vp.best_variant(vr)["name"] == "V7_no_asx"
