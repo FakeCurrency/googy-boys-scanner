@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-04T01:35:54+00:00",
+  "generated_at": "2026-11-04T02:40:26+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-02",
+  "last_closed_bar": "2026-11-03",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -61,7 +61,7 @@
       "IGNITING": 1,
       "RUNNING": 0,
       "CLOSED": 0,
-      "COILED": 11,
+      "COILED": 12,
       "provisional": 0,
       "igniting_confirmed": 1
     },
@@ -69,19 +69,17 @@
       "completed_last": "2026-11-03",
       "raw_last": "2026-11-03",
       "expected_completed": "2026-11-03",
-      "lagging": 1301,
+      "lagging": 0,
       "screened": 1425,
       "completed_dist": {
-        "2026-11-03": 124,
-        "2026-11-02": 1301,
+        "2026-11-03": 1425,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-03": 124,
-        "2026-11-02": 1301,
+        "2026-11-03": 1425,
         "2026-10-28": 1
       },
-      "rows_lagging": 12
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
@@ -109,10 +107,10 @@
       "refused": 0
     },
     "mcap": {
-      "rows": 12,
-      "have": 12
+      "rows": 13,
+      "have": 13
     },
-    "elapsed_s": 171.3
+    "elapsed_s": 164.5
   },
   "results": [
     {
@@ -122,10 +120,10 @@
       "source": "yahoo",
       "trigger_date": "2026-11-02",
       "trigger_close": 11.40999985,
-      "entry": 11.40999985,
-      "entry_basis": "trigger_close",
-      "entry_date": null,
-      "bars_since": 0,
+      "entry": 11.39999962,
+      "entry_basis": "next_open",
+      "entry_date": "2026-11-03",
+      "bars_since": 1,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -137,11 +135,11 @@
         "range_pct": 21.7
       },
       "stop": 9.91670744,
-      "risk_pct": 13.1,
+      "risk_pct": 13.0,
       "wide_stop": false,
       "mm_target": 11.95999908,
       "mm_passed": false,
-      "mm_r": 0.37,
+      "mm_r": 0.38,
       "coil": {
         "ribbon_pct": 5.96,
         "atr_pctl": 6.3,
@@ -150,14 +148,14 @@
         "coiled": true,
         "coiled_bars": 10
       },
-      "mfe_r": 0.0,
+      "mfe_r": 0.03,
       "state": "IGNITING",
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 11.40999985,
-      "change_pct": 0.0,
-      "r_now": 0.0,
-      "trail": 9.00555558,
+      "last_bar": "2026-11-03",
+      "price": 11.42000008,
+      "change_pct": 0.2,
+      "r_now": 0.01,
+      "trail": 9.30333339,
       "mcap": 471265952.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "previous"
@@ -169,13 +167,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.07,
-        "atr_pctl": 4.4,
-        "vol_pctl": 15.7,
-        "drawdown_pct": 56.8,
+        "ribbon_pct": 10.24,
+        "atr_pctl": 2.2,
+        "vol_pctl": 16.9,
+        "drawdown_pct": 55.9,
         "coiled": true,
-        "coiled_bars": 21,
-        "last_coiled": "2026-11-02"
+        "coiled_bars": 22,
+        "last_coiled": "2026-11-03"
       },
       "base": {
         "high": 16.57999992,
@@ -184,8 +182,8 @@
       },
       "breakout_level": 16.57999992,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 13.78999996,
+      "last_bar": "2026-11-03",
+      "price": 14.06999969,
       "mcap": 966614592.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "previous"
@@ -197,23 +195,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.65,
-        "atr_pctl": 4.4,
+        "ribbon_pct": 7.51,
+        "atr_pctl": 4.0,
         "vol_pctl": 17.5,
-        "drawdown_pct": 70.8,
+        "drawdown_pct": 69.9,
         "coiled": true,
-        "coiled_bars": 13,
-        "last_coiled": "2026-11-02"
+        "coiled_bars": 14,
+        "last_coiled": "2026-11-03"
       },
       "base": {
         "high": 9.34000015,
         "low": 7.51999998,
         "bars": 60
       },
-      "breakout_level": 9.34000015,
+      "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 8.03999996,
+      "last_bar": "2026-11-03",
+      "price": 8.27000046,
       "mcap": 363651264.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "previous"
@@ -225,23 +223,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.92,
-        "atr_pctl": 1.2,
-        "vol_pctl": 4.0,
-        "drawdown_pct": 51.4,
+        "ribbon_pct": 4.09,
+        "atr_pctl": 0.8,
+        "vol_pctl": 4.6,
+        "drawdown_pct": 51.3,
         "coiled": true,
-        "coiled_bars": 7,
-        "last_coiled": "2026-11-02"
+        "coiled_bars": 8,
+        "last_coiled": "2026-11-03"
       },
       "base": {
         "high": 5.7750001,
         "low": 4.69000006,
         "bars": 60
       },
-      "breakout_level": 5.7750001,
+      "breakout_level": 5.71999979,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 5.30000019,
+      "last_bar": "2026-11-03",
+      "price": 5.30999994,
       "mcap": 2247023616.0,
       "mcap_asof": "2026-11-01",
       "mcap_src": "cache"
@@ -253,13 +251,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.59,
-        "atr_pctl": 3.1,
-        "vol_pctl": 32.5,
-        "drawdown_pct": 67.7,
+        "ribbon_pct": 10.21,
+        "atr_pctl": 4.4,
+        "vol_pctl": 32.7,
+        "drawdown_pct": 67.8,
         "coiled": true,
-        "coiled_bars": 7,
-        "last_coiled": "2026-11-02"
+        "coiled_bars": 8,
+        "last_coiled": "2026-11-03"
       },
       "base": {
         "high": 13.13000011,
@@ -268,8 +266,8 @@
       },
       "breakout_level": 13.13000011,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 12.65999985,
+      "last_bar": "2026-11-03",
+      "price": 12.60000038,
       "mcap": 2415063808.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "previous"
@@ -281,13 +279,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.62,
-        "atr_pctl": 1.8,
-        "vol_pctl": 0.4,
-        "drawdown_pct": 71.4,
+        "ribbon_pct": 7.86,
+        "atr_pctl": 2.4,
+        "vol_pctl": 1.0,
+        "drawdown_pct": 70.3,
         "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-11-02"
+        "coiled_bars": 7,
+        "last_coiled": "2026-11-03"
       },
       "base": {
         "high": 58.84000015,
@@ -296,8 +294,8 @@
       },
       "breakout_level": 58.84000015,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 51.72999954,
+      "last_bar": "2026-11-03",
+      "price": 53.86999893,
       "mcap": 834621440.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "cache"
@@ -309,13 +307,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.76,
-        "atr_pctl": 1.4,
-        "vol_pctl": 29.0,
-        "drawdown_pct": 54.1,
+        "ribbon_pct": 8.61,
+        "atr_pctl": 2.0,
+        "vol_pctl": 19.8,
+        "drawdown_pct": 54.9,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-11-02"
+        "coiled_bars": 2,
+        "last_coiled": "2026-11-03"
       },
       "base": {
         "high": 42.47942608,
@@ -324,10 +322,66 @@
       },
       "breakout_level": 42.47942608,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 37.02000046,
+      "last_bar": "2026-11-03",
+      "price": 36.34999847,
       "mcap": 9282685952.0,
       "mcap_asof": "2026-11-02",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "SRPT",
+      "name": "Sarepta Therapeutics, Inc. - Common Stock",
+      "yf": "SRPT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 5.32,
+        "atr_pctl": 22.6,
+        "vol_pctl": 29.0,
+        "drawdown_pct": 89.3,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-03"
+      },
+      "base": {
+        "high": 23.62000084,
+        "low": 16.37000084,
+        "bars": 60
+      },
+      "breakout_level": 23.62000084,
+      "provisional": false,
+      "last_bar": "2026-11-03",
+      "price": 18.54000092,
+      "mcap": 1966775296.0,
+      "mcap_asof": "2026-10-31",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "FWRD",
+      "name": "Forward Air Corporation - Common Stock",
+      "yf": "FWRD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.36,
+        "atr_pctl": 24.6,
+        "vol_pctl": 0.6,
+        "drawdown_pct": 74.3,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-03"
+      },
+      "base": {
+        "high": 20.56999969,
+        "low": 14.10000038,
+        "bars": 60
+      },
+      "breakout_level": 20.56999969,
+      "provisional": false,
+      "last_bar": "2026-11-03",
+      "price": 18.39999962,
+      "mcap": 595218880.0,
+      "mcap_asof": "2026-11-01",
       "mcap_src": "cache"
     },
     {
@@ -337,10 +391,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.7,
-        "atr_pctl": 11.7,
-        "vol_pctl": 9.1,
-        "drawdown_pct": 48.9,
+        "ribbon_pct": 4.66,
+        "atr_pctl": 15.7,
+        "vol_pctl": 9.9,
+        "drawdown_pct": 47.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-30"
@@ -352,67 +406,11 @@
       },
       "breakout_level": 15.38000011,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 13.69999981,
+      "last_bar": "2026-11-03",
+      "price": 14.07999992,
       "mcap": 810221952.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "AVNW",
-      "name": "Aviat Networks, Inc. - Common Stock",
-      "yf": "AVNW",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.51,
-        "atr_pctl": 47.6,
-        "vol_pctl": 42.3,
-        "drawdown_pct": 49.1,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-20"
-      },
-      "base": {
-        "high": 24.0,
-        "low": 18.55999947,
-        "bars": 60
-      },
-      "breakout_level": 24.0,
-      "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 19.79000092,
-      "mcap": 254472320.0,
-      "mcap_asof": "2026-11-03",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "IRWD",
-      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
-      "yf": "IRWD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 12.72,
-        "atr_pctl": 3.0,
-        "vol_pctl": 20.6,
-        "drawdown_pct": 78.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-23"
-      },
-      "base": {
-        "high": 4.5999999,
-        "low": 3.38000011,
-        "bars": 60
-      },
-      "breakout_level": 4.5999999,
-      "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 3.46000004,
-      "mcap": 571730240.0,
-      "mcap_asof": "2026-11-03",
-      "mcap_src": "previous"
     },
     {
       "symbol": "OSUR",
@@ -421,10 +419,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.75,
-        "atr_pctl": 93.1,
-        "vol_pctl": 53.2,
-        "drawdown_pct": 59.1,
+        "ribbon_pct": 11.57,
+        "atr_pctl": 90.7,
+        "vol_pctl": 51.8,
+        "drawdown_pct": 58.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-21"
@@ -436,11 +434,39 @@
       },
       "breakout_level": 4.38000011,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 3.46000004,
+      "last_bar": "2026-11-03",
+      "price": 3.52999997,
       "mcap": 238286592.0,
       "mcap_asof": "2026-11-02",
       "mcap_src": "cache"
+    },
+    {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 12.75,
+        "atr_pctl": 2.2,
+        "vol_pctl": 20.6,
+        "drawdown_pct": 77.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-23"
+      },
+      "base": {
+        "high": 4.5999999,
+        "low": 3.38000011,
+        "bars": 60
+      },
+      "breakout_level": 4.5999999,
+      "provisional": false,
+      "last_bar": "2026-11-03",
+      "price": 3.5,
+      "mcap": 571730240.0,
+      "mcap_asof": "2026-11-03",
+      "mcap_src": "previous"
     },
     {
       "symbol": "OTLY",
@@ -449,10 +475,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 13.28,
-        "atr_pctl": 94.4,
-        "vol_pctl": 80.8,
-        "drawdown_pct": 72.5,
+        "ribbon_pct": 17.25,
+        "atr_pctl": 93.1,
+        "vol_pctl": 81.3,
+        "drawdown_pct": 71.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-23"
@@ -464,11 +490,11 @@
       },
       "breakout_level": 16.20000076,
       "provisional": false,
-      "last_bar": "2026-11-02",
-      "price": 7.71000004,
+      "last_bar": "2026-11-03",
+      "price": 7.92999983,
       "mcap": 253066720.0,
       "mcap_asof": "2026-11-04",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
