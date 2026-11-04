@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-04T15:44:57Z",
+  "generated_at": "2026-11-04T16:14:23Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 162,
+  "closed_total": 163,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -223,11 +223,12 @@
       "nasdaq": {
         "financials": 6,
         "health care": 6,
-        "information technology": 6,
         "industrials": 5,
+        "information technology": 5,
         "consumer staples": 4,
         "consumer discretionary": 2,
         "utilities": 2,
+        "communication services": 1,
         "materials": 1
       },
       "crypto": {
@@ -259,7 +260,7 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-04T15:44:53Z",
+      "at": "2026-11-04T16:14:20Z",
       "reasons": {
         "ACLS": "global_cap",
         "ALLT": "global_cap",
@@ -269,7 +270,6 @@
         "GRFS": "global_cap",
         "LPLA": "global_cap",
         "PAYX": "global_cap",
-        "PPLI": "global_cap",
         "SLDB": "global_cap",
         "STEP": "global_cap",
         "UTMD": "global_cap",
@@ -298,8 +298,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 44,
-        "avg_r": -0.36
+        "n": 45,
+        "avg_r": -0.339
       }
     },
     "crypto": {
