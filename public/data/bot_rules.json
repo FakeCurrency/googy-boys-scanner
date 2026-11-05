@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-04T23:25:29Z",
+  "generated_at": "2026-11-05T00:18:34Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 163,
+  "closed_total": 165,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -211,14 +211,14 @@
     ],
     "sector_load": {
       "asx": {
-        "materials": 5,
-        "consumer discretionary": 4,
-        "financials": 4,
+        "consumer discretionary": 5,
+        "financials": 5,
+        "materials": 4,
         "communication services": 3,
         "industrials": 3,
-        "energy": 2,
         "information technology": 2,
-        "utilities": 2
+        "utilities": 2,
+        "energy": 1
       },
       "nasdaq": {
         "financials": 6,
@@ -238,21 +238,17 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-04T04:17:03Z",
+      "at": "2026-11-05T00:18:31Z",
       "reasons": {
         "AEF": "global_cap",
-        "COL": "global_cap",
-        "CXO": "global_cap",
+        "CKF": "dup_symbol",
+        "DUR": "global_cap",
         "FLT": "global_cap",
-        "HVN": "global_cap",
-        "NHF": "global_cap",
         "NWS": "dup_symbol",
-        "PPM": "global_cap",
-        "REH": "global_cap",
         "RMD": "global_cap",
         "SNL": "global_cap",
-        "TNE": "global_cap",
-        "UNI": "global_cap"
+        "TWE": "global_cap",
+        "VYS": "global_cap"
       }
     },
     "crypto": {
@@ -287,8 +283,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 40,
-        "avg_r": -0.347
+        "n": 42,
+        "avg_r": -0.327
       }
     },
     "nasdaq": {
