@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-05T15:26:00Z",
+  "generated_at": "2026-11-05T15:43:54Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 165,
+  "closed_total": 166,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -178,7 +178,7 @@
       ],
       [
         "2026-11-19",
-        5
+        4
       ],
       [
         "2026-11-20",
@@ -258,21 +258,26 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-04T20:58:00Z",
+      "at": "2026-11-05T15:43:51Z",
       "reasons": {
-        "ACLS": "global_cap",
-        "ALLT": "global_cap",
-        "BBSI": "global_cap",
-        "BCRX": "global_cap",
+        "AAL": "global_cap",
+        "ALGN": "global_cap",
+        "AMCX": "global_cap",
+        "AVGO": "global_cap",
+        "BANF": "global_cap",
+        "CACC": "global_cap",
+        "CAE": "global_cap",
         "CWCO": "global_cap",
+        "FFIN": "dup_symbol",
         "GRFS": "global_cap",
-        "LPLA": "global_cap",
-        "PAYX": "global_cap",
+        "ISRG": "dup_symbol",
+        "LOPE": "global_cap",
+        "MGEE": "global_cap",
+        "MSEX": "global_cap",
+        "NMRK": "global_cap",
+        "NXST": "global_cap",
         "PPLI": "dup_symbol",
-        "SLDB": "global_cap",
-        "STEP": "global_cap",
-        "UTMD": "global_cap",
-        "VOR": "global_cap"
+        "TPG": "dup_symbol"
       }
     }
   },
@@ -297,8 +302,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 45,
-        "avg_r": -0.339
+        "n": 46,
+        "avg_r": -0.355
       }
     },
     "crypto": {
