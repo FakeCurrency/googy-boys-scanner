@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-04T02:40:26+00:00",
+  "generated_at": "2026-11-05T01:40:13+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-03",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25372.01,
-    "sma200": 25073.21,
+    "close": 25736.51,
+    "sma200": 25087.12,
     "above_200": true,
-    "vs_200_pct": 1.2,
-    "as_of": "2026-11-03"
+    "vs_200_pct": 2.6,
+    "as_of": "2026-11-04"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -66,20 +66,22 @@
       "igniting_confirmed": 1
     },
     "bars": {
-      "completed_last": "2026-11-03",
-      "raw_last": "2026-11-03",
-      "expected_completed": "2026-11-03",
-      "lagging": 0,
+      "completed_last": "2026-11-04",
+      "raw_last": "2026-11-04",
+      "expected_completed": "2026-11-04",
+      "lagging": 1299,
       "screened": 1425,
       "completed_dist": {
-        "2026-11-03": 1425,
+        "2026-11-04": 126,
+        "2026-11-03": 1299,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-03": 1425,
+        "2026-11-04": 126,
+        "2026-11-03": 1299,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 13
     },
     "sources": {
       "mode": "yahoo",
@@ -110,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 164.5
+    "elapsed_s": 177.8
   },
   "results": [
     {
@@ -212,9 +214,9 @@
       "provisional": false,
       "last_bar": "2026-11-03",
       "price": 8.27000046,
-      "mcap": 363651264.0,
-      "mcap_asof": "2026-11-03",
-      "mcap_src": "previous"
+      "mcap": 396443200.0,
+      "mcap_asof": "2026-11-04",
+      "mcap_src": "cache"
     },
     {
       "symbol": "PTON",
@@ -253,7 +255,7 @@
       "coil": {
         "ribbon_pct": 10.21,
         "atr_pctl": 4.4,
-        "vol_pctl": 32.7,
+        "vol_pctl": 33.5,
         "drawdown_pct": 67.8,
         "coiled": true,
         "coiled_bars": 8,
@@ -352,8 +354,8 @@
       "provisional": false,
       "last_bar": "2026-11-03",
       "price": 18.54000092,
-      "mcap": 1966775296.0,
-      "mcap_asof": "2026-10-31",
+      "mcap": 2005857152.0,
+      "mcap_asof": "2026-11-04",
       "mcap_src": "cache"
     },
     {
