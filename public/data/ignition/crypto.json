@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-05T13:30:44+00:00",
+  "generated_at": "2026-11-05T22:52:07+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-04",
@@ -49,8 +49,8 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 169,
-    "screened": 139,
+    "downloaded": 168,
+    "screened": 138,
     "skipped": {
       "short history": 30
     },
@@ -67,19 +67,19 @@
       "raw_last": "2026-11-05",
       "expected_completed": "2026-11-04",
       "lagging": 0,
-      "screened": 169,
+      "screened": 168,
       "completed_dist": {
-        "2026-11-04": 169
+        "2026-11-04": 168
       },
       "raw_dist": {
-        "2026-11-05": 169
+        "2026-11-05": 168
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 118,
+        "binance_vision": 117,
         "yahoo": 32,
         "coinbase": 19
       },
@@ -136,6 +136,7 @@
         "OZO",
         "PC0000023",
         "PC0000033",
+        "PC0000085",
         "PC0000097",
         "PEARL",
         "PI",
@@ -147,8 +148,7 @@
         "SHFL",
         "SN51",
         "UB",
-        "VSN",
-        "WBT"
+        "VSN"
       ],
       "yahoo_fallback": 32,
       "identity_rejected": {
@@ -202,9 +202,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 169,
+      "fresh": 168,
       "reused": 0,
-      "merged": 169,
+      "merged": 168,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 7
@@ -213,7 +213,7 @@
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 122.8
+    "elapsed_s": 110.0
   },
   "results": [
     {
@@ -239,8 +239,8 @@
       "breakout_level": 1.6581,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 1.3084,
-      "mcap": 82873547966.0,
+      "price": 1.2165,
+      "mcap": 77049287049.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -267,8 +267,8 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 4.73e-06,
-      "mcap": 2787895656.0,
+      "price": 4.51e-06,
+      "mcap": 2655386344.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -295,8 +295,8 @@
       "breakout_level": 3.092e-05,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 2.274e-05,
-      "mcap": 218874464.0,
+      "price": 2.102e-05,
+      "mcap": 203257605.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -323,8 +323,8 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 0.07598,
-      "mcap": 11891085836.0,
+      "price": 0.07153,
+      "mcap": 11192435285.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -351,8 +351,8 @@
       "breakout_level": 0.011163,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 0.007107,
-      "mcap": 447091639.0,
+      "price": 0.006475,
+      "mcap": 407224744.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -379,8 +379,8 @@
       "breakout_level": 10.42,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 7.33,
-      "mcap": 1165448057.0,
+      "price": 6.88,
+      "mcap": 1092588486.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -407,8 +407,8 @@
       "breakout_level": 0.0614,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 0.0454,
-      "mcap": 1439593747.0,
+      "price": 0.0458,
+      "mcap": 1455745502.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     },
@@ -435,8 +435,8 @@
       "breakout_level": 0.8861,
       "provisional": false,
       "last_bar": "2026-11-04",
-      "price": 0.5935,
-      "mcap": 390598815.0,
+      "price": 0.5613,
+      "mcap": 369593972.0,
       "mcap_asof": "2026-11-05",
       "mcap_src": "coingecko"
     }
