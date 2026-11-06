@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-05T14:57:03+00:00",
+  "generated_at": "2026-11-06T07:33:20+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-05",
+  "last_closed_bar": "2026-11-06",
   "report_only": true,
   "regime": {
     "index": "^AXJO",
     "label": "ASX 200",
-    "close": 9065.1,
-    "sma200": 8831.77,
+    "close": 9020.8,
+    "sma200": 8832.17,
     "above_200": true,
-    "vs_200_pct": 2.6,
-    "as_of": "2026-11-05"
+    "vs_200_pct": 2.1,
+    "as_of": "2026-11-06"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,9 +52,9 @@
   "summary": {
     "universe": 2060,
     "downloaded": 1851,
-    "screened": 1772,
+    "screened": 1774,
     "skipped": {
-      "short history": 79
+      "short history": 77
     },
     "counts": {
       "IGNITING": 0,
@@ -65,27 +65,29 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-05",
-      "raw_last": "2026-11-05",
-      "expected_completed": "2026-11-05",
-      "lagging": 404,
+      "completed_last": "2026-11-06",
+      "raw_last": "2026-11-06",
+      "expected_completed": "2026-11-06",
+      "lagging": 771,
       "screened": 1851,
       "completed_dist": {
-        "2026-11-05": 1447,
-        "2026-11-04": 403,
+        "2026-11-06": 1080,
+        "2026-11-05": 665,
+        "2026-11-04": 105,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-05": 1447,
-        "2026-11-04": 403,
+        "2026-11-06": 1080,
+        "2026-11-05": 665,
+        "2026-11-04": 105,
         "2026-11-03": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 2
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1850
+        "yahoo": 1368
       },
       "dead": {},
       "errors": {},
@@ -100,8 +102,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1850,
-      "reused": 1,
+      "fresh": 1368,
+      "reused": 483,
       "merged": 1851,
       "universe": 2060,
       "stale_dropped": 0,
@@ -111,7 +113,7 @@
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 552.3
+    "elapsed_s": 267.3
   },
   "results": [
     {
@@ -121,13 +123,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.27,
-        "atr_pctl": 1.4,
-        "vol_pctl": 7.9,
-        "drawdown_pct": 72.4,
+        "ribbon_pct": 8.07,
+        "atr_pctl": 2.4,
+        "vol_pctl": 8.1,
+        "drawdown_pct": 72.8,
         "coiled": true,
-        "coiled_bars": 29,
-        "last_coiled": "2026-11-05"
+        "coiled_bars": 30,
+        "last_coiled": "2026-11-06"
       },
       "base": {
         "high": 0.78138701,
@@ -136,8 +138,8 @@
       },
       "breakout_level": 0.78138701,
       "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 0.67500001,
+      "last_bar": "2026-11-06",
+      "price": 0.66500002,
       "mcap": 393776608.0,
       "mcap_asof": "2026-11-02",
       "mcap_src": "previous"
@@ -146,7 +148,7 @@
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.2,
@@ -177,13 +179,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.88,
-        "atr_pctl": 12.9,
-        "vol_pctl": 17.5,
-        "drawdown_pct": 68.1,
+        "ribbon_pct": 8.41,
+        "atr_pctl": 12.3,
+        "vol_pctl": 16.9,
+        "drawdown_pct": 68.8,
         "coiled": true,
-        "coiled_bars": 4,
-        "last_coiled": "2026-11-05"
+        "coiled_bars": 5,
+        "last_coiled": "2026-11-06"
       },
       "base": {
         "high": 5.30000019,
@@ -192,11 +194,39 @@
       },
       "breakout_level": 5.30000019,
       "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 4.34000015,
+      "last_bar": "2026-11-06",
+      "price": 4.25,
       "mcap": 197398832.0,
       "mcap_asof": "2026-11-02",
       "mcap_src": "previous"
+    },
+    {
+      "symbol": "ADH",
+      "name": "Adairs Limited",
+      "yf": "ADH.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 5.42,
+        "atr_pctl": 13.5,
+        "vol_pctl": 27.8,
+        "drawdown_pct": 45.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-10-29"
+      },
+      "base": {
+        "high": 1.51999998,
+        "low": 1.20500004,
+        "bars": 60
+      },
+      "breakout_level": 1.51999998,
+      "provisional": false,
+      "last_bar": "2026-11-06",
+      "price": 1.44500005,
+      "mcap": 260511776.0,
+      "mcap_asof": "2026-11-06",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "HMC",
@@ -205,12 +235,12 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.07,
-        "atr_pctl": 20.0,
-        "vol_pctl": 34.7,
-        "drawdown_pct": 72.3,
-        "coiled": true,
-        "coiled_bars": 2,
+        "ribbon_pct": 7.43,
+        "atr_pctl": 29.0,
+        "vol_pctl": 33.9,
+        "drawdown_pct": 73.2,
+        "coiled": false,
+        "coiled_bars": 0,
         "last_coiled": "2026-11-05"
       },
       "base": {
@@ -220,38 +250,10 @@
       },
       "breakout_level": 3.5999999,
       "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 3.42000008,
+      "last_bar": "2026-11-06",
+      "price": 3.30999994,
       "mcap": 1398767360.0,
       "mcap_asof": "2026-11-05",
-      "mcap_src": "cache"
-    },
-    {
-      "symbol": "ADH",
-      "name": "Adairs Limited",
-      "yf": "ADH.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 4.91,
-        "atr_pctl": 11.5,
-        "vol_pctl": 26.8,
-        "drawdown_pct": 44.7,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-29"
-      },
-      "base": {
-        "high": 1.50149093,
-        "low": 1.20500004,
-        "bars": 60
-      },
-      "breakout_level": 1.51999998,
-      "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 1.47000003,
-      "mcap": 239779008.0,
-      "mcap_asof": "2026-11-01",
       "mcap_src": "cache"
     },
     {
@@ -261,10 +263,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.42,
-        "atr_pctl": 26.0,
-        "vol_pctl": 3.6,
-        "drawdown_pct": 51.6,
+        "ribbon_pct": 7.47,
+        "atr_pctl": 26.8,
+        "vol_pctl": 5.0,
+        "drawdown_pct": 52.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-03"
@@ -274,10 +276,10 @@
         "low": 2.84500003,
         "bars": 60
       },
-      "breakout_level": 3.79999995,
+      "breakout_level": 3.77999997,
       "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 3.74000001,
+      "last_bar": "2026-11-06",
+      "price": 3.68000007,
       "mcap": 1074316800.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "cache"
@@ -286,7 +288,7 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.99,
@@ -317,23 +319,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 16.34,
-        "atr_pctl": 28.2,
-        "vol_pctl": 38.7,
-        "drawdown_pct": 42.8,
+        "ribbon_pct": 18.14,
+        "atr_pctl": 26.6,
+        "vol_pctl": 43.3,
+        "drawdown_pct": 42.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-29"
       },
       "base": {
-        "high": 4.53658533,
+        "high": 4.53999996,
         "low": 3.1400001,
         "bars": 60
       },
-      "breakout_level": 4.53999996,
+      "breakout_level": 4.55999994,
       "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 4.5,
+      "last_bar": "2026-11-06",
+      "price": 4.55999994,
       "mcap": 402208800.0,
       "mcap_asof": "2026-11-03",
       "mcap_src": "cache"
