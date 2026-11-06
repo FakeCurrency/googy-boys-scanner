@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-05T22:25:09Z",
+  "generated_at": "2026-11-06T00:09:58Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -238,24 +238,30 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-05T04:14:38Z",
+      "at": "2026-11-06T00:09:55Z",
       "reasons": {
         "AEF": "global_cap",
         "CKF": "dup_symbol",
+        "DRR": "global_cap",
         "DUR": "global_cap",
-        "FLT": "global_cap",
+        "EDV": "global_cap",
+        "HVN": "global_cap",
+        "IFT": "global_cap",
+        "IMD": "global_cap",
         "NHF": "dup_symbol",
         "NWS": "dup_symbol",
-        "RMD": "global_cap",
-        "SNL": "global_cap",
-        "TWE": "global_cap",
-        "UNI": "dup_symbol",
-        "VYS": "global_cap"
+        "PRN": "global_cap",
+        "QAN": "global_cap",
+        "SUL": "dup_symbol",
+        "VYS": "global_cap",
+        "WES": "global_cap"
       }
     },
     "crypto": {
-      "at": "2026-11-05T22:25:06Z",
-      "reasons": {}
+      "at": "2026-11-06T00:03:35Z",
+      "reasons": {
+        "PAXG": "dup_symbol"
+      }
     },
     "nasdaq": {
       "at": "2026-11-05T21:14:18Z",
