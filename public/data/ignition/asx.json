@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-06T07:33:20+00:00",
+  "generated_at": "2026-11-06T14:29:46+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-06",
@@ -51,8 +51,8 @@
   },
   "summary": {
     "universe": 2060,
-    "downloaded": 1851,
-    "screened": 1774,
+    "downloaded": 1850,
+    "screened": 1773,
     "skipped": {
       "short history": 77
     },
@@ -68,26 +68,26 @@
       "completed_last": "2026-11-06",
       "raw_last": "2026-11-06",
       "expected_completed": "2026-11-06",
-      "lagging": 771,
-      "screened": 1851,
+      "lagging": 742,
+      "screened": 1850,
       "completed_dist": {
-        "2026-11-06": 1080,
-        "2026-11-05": 665,
-        "2026-11-04": 105,
+        "2026-11-06": 1108,
+        "2026-11-05": 653,
+        "2026-11-04": 88,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-06": 1080,
-        "2026-11-05": 665,
-        "2026-11-04": 105,
+        "2026-11-06": 1108,
+        "2026-11-05": 653,
+        "2026-11-04": 88,
         "2026-11-03": 1
       },
-      "rows_lagging": 2
+      "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1368
+        "yahoo": 1326
       },
       "dead": {},
       "errors": {},
@@ -102,9 +102,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1368,
-      "reused": 483,
-      "merged": 1851,
+      "fresh": 1326,
+      "reused": 524,
+      "merged": 1850,
       "universe": 2060,
       "stale_dropped": 0,
       "refused": 0
@@ -113,7 +113,7 @@
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 267.3
+    "elapsed_s": 267.8
   },
   "results": [
     {
@@ -148,16 +148,16 @@
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.2,
-        "atr_pctl": 17.5,
-        "vol_pctl": 3.2,
-        "drawdown_pct": 80.8,
+        "ribbon_pct": 8.46,
+        "atr_pctl": 17.1,
+        "vol_pctl": 12.1,
+        "drawdown_pct": 81.2,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-11-05"
+        "coiled_bars": 6,
+        "last_coiled": "2026-11-06"
       },
       "base": {
         "high": 0.12,
@@ -166,8 +166,8 @@
       },
       "breakout_level": 0.12,
       "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 0.097,
+      "last_bar": "2026-11-06",
+      "price": 0.095,
       "mcap": 360624512.0,
       "mcap_asof": "2026-11-02",
       "mcap_src": "previous"
@@ -226,7 +226,7 @@
       "price": 1.44500005,
       "mcap": 260511776.0,
       "mcap_asof": "2026-11-06",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "HMC",
