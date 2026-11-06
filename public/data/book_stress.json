@@ -1,35 +1,35 @@
 {
  "schema_version": 1,
- "generated_at": "2026-11-05T02:35:45+00:00",
- "book_updated_at": "2026-11-05T02:25:40+00:00",
+ "generated_at": "2026-11-06T02:35:38+00:00",
+ "book_updated_at": "2026-11-06T02:25:29+00:00",
  "n_long": 60,
  "n_short_untouched": 0,
  "n_skipped_unpriced": 0,
- "base_unreal_r": 19.33,
+ "base_unreal_r": 10.62,
  "shocks": [
   {
    "shock_pct": 3.0,
-   "stopped": 0,
-   "unreal_r": 5.82,
-   "given_back_r": 13.51
+   "stopped": 1,
+   "unreal_r": -2.61,
+   "given_back_r": 13.23
   },
   {
    "shock_pct": 5.0,
-   "stopped": 0,
-   "unreal_r": -3.19,
-   "given_back_r": 22.52
+   "stopped": 5,
+   "unreal_r": -11.16,
+   "given_back_r": 21.78
   },
   {
    "shock_pct": 8.0,
-   "stopped": 5,
-   "unreal_r": -15.95,
-   "given_back_r": 35.28
+   "stopped": 10,
+   "unreal_r": -22.38,
+   "given_back_r": 32.99
   },
   {
    "shock_pct": 10.0,
-   "stopped": 13,
-   "unreal_r": -23.08,
-   "given_back_r": 42.42
+   "stopped": 18,
+   "unreal_r": -28.82,
+   "given_back_r": 39.44
   }
  ],
  "method": "uniform beta-1 shock on every long's last_mark vs its real stop; a stopped position realises its stop's R; R on the open remainder (1 - booked_pct) like unreal_r; no correlations, no betas - the honest floor of sophistication"
