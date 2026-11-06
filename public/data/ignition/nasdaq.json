@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-05T02:45:19+00:00",
+  "generated_at": "2026-11-06T01:44:57+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-04",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25736.51,
-    "sma200": 25087.12,
-    "above_200": true,
-    "vs_200_pct": 2.6,
-    "as_of": "2026-11-04"
+    "close": 24315.0,
+    "sma200": 25092.57,
+    "above_200": false,
+    "vs_200_pct": -3.1,
+    "as_of": "2026-11-05"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,9 +50,9 @@
     }
   },
   "summary": {
-    "universe": 1425,
-    "downloaded": 1425,
-    "screened": 1324,
+    "universe": 1426,
+    "downloaded": 1426,
+    "screened": 1325,
     "skipped": {
       "short history": 100,
       "stale frame": 1
@@ -66,25 +66,27 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-04",
-      "raw_last": "2026-11-04",
-      "expected_completed": "2026-11-04",
-      "lagging": 0,
-      "screened": 1424,
+      "completed_last": "2026-11-05",
+      "raw_last": "2026-11-05",
+      "expected_completed": "2026-11-05",
+      "lagging": 1303,
+      "screened": 1425,
       "completed_dist": {
-        "2026-11-04": 1424,
+        "2026-11-05": 122,
+        "2026-11-04": 1303,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-04": 1424,
+        "2026-11-05": 122,
+        "2026-11-04": 1303,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 13
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1425
+        "yahoo": 1426
       },
       "dead": {},
       "errors": {},
@@ -99,10 +101,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1425,
+      "fresh": 1426,
       "reused": 0,
-      "merged": 1425,
-      "universe": 1425,
+      "merged": 1426,
+      "universe": 1426,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -110,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 195.9
+    "elapsed_s": 179.0
   },
   "results": [
     {
@@ -352,8 +354,8 @@
       "provisional": false,
       "last_bar": "2026-11-04",
       "price": 19.07999992,
-      "mcap": 595218880.0,
-      "mcap_asof": "2026-11-01",
+      "mcap": 571910016.0,
+      "mcap_asof": "2026-11-05",
       "mcap_src": "cache"
     },
     {
@@ -408,9 +410,9 @@
       "provisional": false,
       "last_bar": "2026-11-04",
       "price": 3.76999998,
-      "mcap": 571730240.0,
-      "mcap_asof": "2026-11-03",
-      "mcap_src": "previous"
+      "mcap": 665917056.0,
+      "mcap_asof": "2026-11-05",
+      "mcap_src": "cache"
     },
     {
       "symbol": "PTON",
@@ -436,9 +438,9 @@
       "provisional": false,
       "last_bar": "2026-11-04",
       "price": 5.46000004,
-      "mcap": 2247023616.0,
-      "mcap_asof": "2026-11-01",
-      "mcap_src": "cache"
+      "mcap": 2484014336.0,
+      "mcap_asof": "2026-11-06",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "INMD",
