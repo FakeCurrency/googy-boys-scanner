@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-06T20:33:55Z",
+  "generated_at": "2026-11-06T21:14:42Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 166,
+  "closed_total": 167,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -224,9 +224,9 @@
         "financials": 6,
         "health care": 6,
         "industrials": 5,
-        "information technology": 5,
         "consumer staples": 4,
-        "consumer discretionary": 2,
+        "information technology": 4,
+        "consumer discretionary": 3,
         "utilities": 2,
         "communication services": 1,
         "materials": 1
@@ -256,26 +256,28 @@
       }
     },
     "nasdaq": {
-      "at": "2026-11-06T20:33:51Z",
+      "at": "2026-11-06T21:14:38Z",
       "reasons": {
-        "AMCX": "global_cap",
-        "BANF": "global_cap",
-        "BRKR": "global_cap",
-        "BZ": "global_cap",
-        "CTSH": "global_cap",
-        "FER": "global_cap",
+        "ALGN": "global_cap",
+        "ASYS": "global_cap",
+        "CARG": "global_cap",
+        "CEVA": "global_cap",
+        "CWCO": "global_cap",
         "GRFS": "global_cap",
-        "KMB": "dup_symbol",
-        "LINE": "global_cap",
-        "LOGI": "global_cap",
+        "HON": "global_cap",
+        "IMMR": "global_cap",
+        "KLAC": "global_cap",
+        "LKFT": "dup_symbol",
+        "LPLA": "global_cap",
+        "LRCX": "global_cap",
         "MGEE": "global_cap",
+        "MQ": "global_cap",
         "MSEX": "global_cap",
-        "NMRK": "global_cap",
-        "OMDA": "global_cap",
-        "PPLI": "dup_symbol",
-        "REYN": "global_cap",
-        "SNY": "global_cap",
-        "UTMD": "global_cap"
+        "PAYX": "global_cap",
+        "PLPC": "global_cap",
+        "TLN": "dup_symbol",
+        "VNOM": "global_cap",
+        "VOR": "global_cap"
       }
     }
   },
@@ -300,8 +302,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 46,
-        "avg_r": -0.355
+        "n": 47,
+        "avg_r": -0.344
       }
     },
     "crypto": {
