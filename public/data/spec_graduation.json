@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-11-07T03:18:45+11:00",
+ "updated_at": "2026-11-08T02:08:12+11:00",
  "markets": {
   "asx": {
    "seen": {
@@ -200,7 +200,7 @@
      "first_seen": "2026-08-05",
      "price": 0.17,
      "name": "Scidev Ltd",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "MHM": {
      "first_seen": "2026-08-05",
@@ -1304,7 +1304,7 @@
      "first_seen": "2026-09-02",
      "price": 0.083,
      "name": "Weststar Industrial Limited",
-     "last_seen": "2026-09-02"
+     "last_seen": "2026-11-08"
     },
     "SRH": {
      "first_seen": "2026-09-02",
@@ -1928,7 +1928,7 @@
      "first_seen": "2026-10-17",
      "price": 0.013,
      "name": "Baumart Holdings Limited",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "CMG": {
      "first_seen": "2026-10-17",
@@ -2000,7 +2000,7 @@
      "first_seen": "2026-10-21",
      "price": 0.058,
      "name": "Aucyber Limited",
-     "last_seen": "2026-10-21"
+     "last_seen": "2026-11-08"
     },
     "EMA": {
      "first_seen": "2026-10-21",
@@ -2056,12 +2056,6 @@
      "name": "Pinnacle Minerals Limited",
      "last_seen": "2026-10-29"
     },
-    "A11": {
-     "first_seen": "2026-10-29",
-     "price": 0.315,
-     "name": "Atlantic Lithium Limited",
-     "last_seen": "2026-11-02"
-    },
     "PPL": {
      "first_seen": "2026-10-29",
      "price": 0.036,
@@ -2074,17 +2068,11 @@
      "name": "Rbr Group Limited",
      "last_seen": "2026-10-30"
     },
-    "ALC": {
-     "first_seen": "2026-10-29",
-     "price": 0.115,
-     "name": "Alcidion Group Limited",
-     "last_seen": "2026-11-02"
-    },
     "TRP": {
      "first_seen": "2026-10-29",
      "price": 0.09,
      "name": "Tissue Repair Ltd",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "OMH": {
      "first_seen": "2026-10-29",
@@ -2156,37 +2144,67 @@
      "first_seen": "2026-11-06",
      "price": 0.12,
      "name": "Vmoto Limited",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "ODA": {
      "first_seen": "2026-11-06",
      "price": 0.067,
      "name": "Orcoda Limited",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "ARN": {
      "first_seen": "2026-11-06",
      "price": 0.38999999,
      "name": "Aldoro Resources Limited",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "RRE": {
      "first_seen": "2026-11-06",
      "price": 0.093,
      "name": "Right Resources Limited",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "HE8": {
      "first_seen": "2026-11-06",
      "price": 0.002,
      "name": "Helios Energy Ltd",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
     },
     "NES": {
      "first_seen": "2026-11-06",
      "price": 0.003,
      "name": "Nelson Resources Limited.",
-     "last_seen": "2026-11-06"
+     "last_seen": "2026-11-08"
+    },
+    "BPM": {
+     "first_seen": "2026-11-08",
+     "price": 0.36500001,
+     "name": "Bpm Minerals Limited",
+     "last_seen": "2026-11-08"
+    },
+    "AXI": {
+     "first_seen": "2026-11-08",
+     "price": 0.01,
+     "name": "Axtec Limited",
+     "last_seen": "2026-11-08"
+    },
+    "PEB": {
+     "first_seen": "2026-11-08",
+     "price": 0.22,
+     "name": "Pacific Edge Limited",
+     "last_seen": "2026-11-08"
+    },
+    "CCR": {
+     "first_seen": "2026-11-08",
+     "price": 0.18000001,
+     "name": "Credit Clear Limited",
+     "last_seen": "2026-11-08"
+    },
+    "AN1": {
+     "first_seen": "2026-11-08",
+     "price": 0.006,
+     "name": "Anagenics Limited",
+     "last_seen": "2026-11-08"
     }
    },
    "graduates": [
@@ -2769,9 +2787,29 @@
      "vivek_price": 0.057,
      "grade": "B+",
      "days": 92
+    },
+    {
+     "symbol": "A11",
+     "name": "Atlantic Lithium Limited",
+     "first_seen": "2026-10-29",
+     "spec_price": 0.315,
+     "graduated": "2026-11-06",
+     "vivek_price": 0.32499999,
+     "grade": "A",
+     "days": 8
+    },
+    {
+     "symbol": "ALC",
+     "name": "Alcidion Group Limited",
+     "first_seen": "2026-10-29",
+     "spec_price": 0.115,
+     "graduated": "2026-11-06",
+     "vivek_price": 0.105,
+     "grade": "B+",
+     "days": 8
     }
    ],
-   "graduated_total": 58
+   "graduated_total": 60
   },
   "nasdaq": {
    "seen": {},
