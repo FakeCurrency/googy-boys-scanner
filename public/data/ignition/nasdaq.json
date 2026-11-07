@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-06T02:48:40+00:00",
+  "generated_at": "2026-11-07T01:03:45+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-05",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 24315.0,
-    "sma200": 25092.57,
+    "close": 24579.42,
+    "sma200": 25098.28,
     "above_200": false,
-    "vs_200_pct": -3.1,
-    "as_of": "2026-11-05"
+    "vs_200_pct": -2.1,
+    "as_of": "2026-11-06"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -66,20 +66,22 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-05",
-      "raw_last": "2026-11-05",
-      "expected_completed": "2026-11-05",
-      "lagging": 0,
+      "completed_last": "2026-11-06",
+      "raw_last": "2026-11-06",
+      "expected_completed": "2026-11-06",
+      "lagging": 1307,
       "screened": 1425,
       "completed_dist": {
-        "2026-11-05": 1425,
+        "2026-11-06": 118,
+        "2026-11-05": 1307,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-05": 1425,
+        "2026-11-06": 118,
+        "2026-11-05": 1307,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 13
     },
     "sources": {
       "mode": "yahoo",
@@ -110,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 169.9
+    "elapsed_s": 151.0
   },
   "results": [
     {
@@ -240,8 +242,8 @@
       "provisional": false,
       "last_bar": "2026-11-05",
       "price": 39.52999878,
-      "mcap": 9282685952.0,
-      "mcap_asof": "2026-11-02",
+      "mcap": 9811764224.0,
+      "mcap_asof": "2026-11-06",
       "mcap_src": "cache"
     },
     {
@@ -296,9 +298,9 @@
       "provisional": false,
       "last_bar": "2026-11-05",
       "price": 11.06999969,
-      "mcap": 914942272.0,
-      "mcap_asof": "2026-11-02",
-      "mcap_src": "cache"
+      "mcap": 866828288.0,
+      "mcap_asof": "2026-11-07",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "SRPT",
