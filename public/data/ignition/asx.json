@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-06T14:29:46+00:00",
+  "generated_at": "2026-11-08T09:09:40+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-06",
@@ -68,18 +68,18 @@
       "completed_last": "2026-11-06",
       "raw_last": "2026-11-06",
       "expected_completed": "2026-11-06",
-      "lagging": 742,
+      "lagging": 354,
       "screened": 1850,
       "completed_dist": {
-        "2026-11-06": 1108,
-        "2026-11-05": 653,
-        "2026-11-04": 88,
+        "2026-11-06": 1496,
+        "2026-11-05": 286,
+        "2026-11-04": 67,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-06": 1108,
-        "2026-11-05": 653,
-        "2026-11-04": 88,
+        "2026-11-06": 1496,
+        "2026-11-05": 286,
+        "2026-11-04": 67,
         "2026-11-03": 1
       },
       "rows_lagging": 1
@@ -87,7 +87,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1326
+        "yahoo": 1378
       },
       "dead": {},
       "errors": {},
@@ -102,8 +102,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1326,
-      "reused": 524,
+      "fresh": 1378,
+      "reused": 472,
       "merged": 1850,
       "universe": 2060,
       "stale_dropped": 0,
@@ -113,7 +113,7 @@
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 267.8
+    "elapsed_s": 257.1
   },
   "results": [
     {
@@ -140,15 +140,15 @@
       "provisional": false,
       "last_bar": "2026-11-06",
       "price": 0.66500002,
-      "mcap": 393776608.0,
-      "mcap_asof": "2026-11-02",
-      "mcap_src": "previous"
+      "mcap": 399788480.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.46,
@@ -168,9 +168,9 @@
       "provisional": false,
       "last_bar": "2026-11-06",
       "price": 0.095,
-      "mcap": 360624512.0,
-      "mcap_asof": "2026-11-02",
-      "mcap_src": "previous"
+      "mcap": 342593280.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "KPG",
@@ -196,9 +196,9 @@
       "provisional": false,
       "last_bar": "2026-11-06",
       "price": 4.25,
-      "mcap": 197398832.0,
-      "mcap_asof": "2026-11-02",
-      "mcap_src": "previous"
+      "mcap": 192418576.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "ADH",
@@ -280,9 +280,9 @@
       "provisional": false,
       "last_bar": "2026-11-06",
       "price": 3.68000007,
-      "mcap": 1074316800.0,
-      "mcap_asof": "2026-11-03",
-      "mcap_src": "cache"
+      "mcap": 1162789888.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PNV",
@@ -308,9 +308,9 @@
       "provisional": false,
       "last_bar": "2026-11-05",
       "price": 0.90499997,
-      "mcap": 625211968.0,
-      "mcap_asof": "2026-11-02",
-      "mcap_src": "previous"
+      "mcap": 614849344.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "KGN",
@@ -336,9 +336,9 @@
       "provisional": false,
       "last_bar": "2026-11-06",
       "price": 4.55999994,
-      "mcap": 402208800.0,
-      "mcap_asof": "2026-11-03",
-      "mcap_src": "cache"
+      "mcap": 435646560.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "yahoo"
     }
   ],
   "errors": []
