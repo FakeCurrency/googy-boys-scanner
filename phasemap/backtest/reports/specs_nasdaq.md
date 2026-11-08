@@ -1,6 +1,6 @@
 # Specs backtest — NASDAQ
 
-Generated 2026-11-01 · engine scanner/spec.py (restored 2026-07-02) · universe 1427 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
+Generated 2026-11-08 · engine scanner/spec.py (restored 2026-07-02) · universe 1426 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** yfinance has no delisted history. Sub-$0.50 specs delist *constantly* — this cohort is missing its casualties and every number below is optimistic. Directional use only.
 
@@ -24,6 +24,6 @@ Entry at the signal close, the engine's stop, its one target booked in full (res
 | grade B | 2 | 50.0% | +0.8R | -1.0R | **-0.2R** | -0.122R | $-24 |
 
 ## Baseline
-- Random entry on the same sub-$0.50 universe (200 samples, seeded): fwd 5: +3.2% · fwd 10: +5.8% · fwd 20: +14.9%
+- Random entry on the same sub-$0.50 universe (200 samples, seeded): fwd 5: +8.5% · fwd 10: +11.4% · fwd 20: +25.6%
 
 Analysis only — not financial advice.
