@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-09T07:31:48+00:00",
+  "generated_at": "2026-11-09T16:45:02+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-09",
@@ -51,11 +51,11 @@
   },
   "summary": {
     "universe": 2060,
-    "downloaded": 1850,
-    "screened": 1771,
+    "downloaded": 1849,
+    "screened": 1717,
     "skipped": {
-      "short history": 78,
-      "stale frame": 1
+      "short history": 73,
+      "stale frame": 59
     },
     "counts": {
       "IGNITING": 0,
@@ -69,28 +69,28 @@
       "completed_last": "2026-11-09",
       "raw_last": "2026-11-09",
       "expected_completed": "2026-11-09",
-      "lagging": 749,
-      "screened": 1849,
+      "lagging": 635,
+      "screened": 1790,
       "completed_dist": {
-        "2026-11-09": 1100,
-        "2026-11-06": 433,
-        "2026-11-05": 252,
-        "2026-11-04": 64,
+        "2026-11-09": 1155,
+        "2026-11-06": 448,
+        "2026-11-05": 187,
+        "2026-11-04": 58,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-09": 1100,
-        "2026-11-06": 433,
-        "2026-11-05": 252,
-        "2026-11-04": 64,
+        "2026-11-09": 1155,
+        "2026-11-06": 448,
+        "2026-11-05": 187,
+        "2026-11-04": 58,
         "2026-11-03": 1
       },
-      "rows_lagging": 2
+      "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1364
+        "yahoo": 1456
       },
       "dead": {},
       "errors": {},
@@ -105,9 +105,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1364,
-      "reused": 486,
-      "merged": 1850,
+      "fresh": 1456,
+      "reused": 393,
+      "merged": 1849,
       "universe": 2060,
       "stale_dropped": 0,
       "refused": 0
@@ -116,7 +116,7 @@
       "rows": 10,
       "have": 10
     },
-    "elapsed_s": 302.3
+    "elapsed_s": 384.9
   },
   "results": [
     {
@@ -204,6 +204,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "PNV",
+      "name": "Polynovo Limited",
+      "yf": "PNV.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.65,
+        "atr_pctl": 23.4,
+        "vol_pctl": 21.2,
+        "drawdown_pct": 67.3,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-09"
+      },
+      "base": {
+        "high": 1.16999996,
+        "low": 0.83999997,
+        "bars": 60
+      },
+      "breakout_level": 1.16999996,
+      "provisional": false,
+      "last_bar": "2026-11-09",
+      "price": 0.91000003,
+      "mcap": 614849344.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "CAT",
       "name": "Catapult Sports Ltd",
       "yf": "CAT.AX",
@@ -240,7 +268,7 @@
       "coil": {
         "ribbon_pct": 9.53,
         "atr_pctl": 24.2,
-        "vol_pctl": 31.7,
+        "vol_pctl": 31.5,
         "drawdown_pct": 73.0,
         "coiled": true,
         "coiled_bars": 1,
@@ -316,34 +344,6 @@
       "mcap_src": "previous"
     },
     {
-      "symbol": "PNV",
-      "name": "Polynovo Limited",
-      "yf": "PNV.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.99,
-        "atr_pctl": 28.8,
-        "vol_pctl": 21.6,
-        "drawdown_pct": 67.4,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-03"
-      },
-      "base": {
-        "high": 1.16999996,
-        "low": 0.83999997,
-        "bars": 60
-      },
-      "breakout_level": 1.16999996,
-      "provisional": false,
-      "last_bar": "2026-11-05",
-      "price": 0.90499997,
-      "mcap": 614849344.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "CYG",
       "name": "Coventry Group Limited",
       "yf": "CYG.AX",
@@ -367,9 +367,9 @@
       "provisional": false,
       "last_bar": "2026-11-09",
       "price": 0.36000001,
-      "mcap": 53540408.0,
-      "mcap_asof": "2026-08-31",
-      "mcap_src": "cache"
+      "mcap": 50063760.0,
+      "mcap_asof": "2026-11-09",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "KGN",
