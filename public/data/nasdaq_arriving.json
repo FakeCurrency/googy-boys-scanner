@@ -1,25 +1,11 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-11-09T15:13:35-05:00",
+  "generated_at": "2026-11-09T16:13:51-05:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "HCM",
-      "name": "HUTCHMED (China) Limited - American Depositary Shares",
-      "sector": "",
-      "dir": "SHORT",
-      "price": 15.15999985,
-      "turnover_avg20": 731088,
-      "turnover_today": 2384667,
-      "rvol": 3.0,
-      "adv_usd": 731088.15,
-      "fund": false,
-      "is_product": false
-    }
-  ]
+  "results": []
 }
