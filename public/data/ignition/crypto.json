@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-08T21:23:14+00:00",
+  "generated_at": "2026-11-09T01:14:26+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-07",
+  "last_closed_bar": "2026-11-08",
   "report_only": true,
   "regime": {
-    "btc_close": 75867.59,
-    "btc_sma200": 73240.19,
+    "btc_close": 74851.44,
+    "btc_sma200": 73223.56,
     "btc_above_200": true,
-    "btc_vs_200_pct": 3.6,
-    "as_of": "2026-11-07"
+    "btc_vs_200_pct": 2.2,
+    "as_of": "2026-11-08"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -63,16 +63,17 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-07",
-      "raw_last": "2026-11-08",
-      "expected_completed": "2026-11-07",
-      "lagging": 0,
+      "completed_last": "2026-11-08",
+      "raw_last": "2026-11-09",
+      "expected_completed": "2026-11-08",
+      "lagging": 34,
       "screened": 168,
       "completed_dist": {
-        "2026-11-07": 168
+        "2026-11-08": 134,
+        "2026-11-07": 34
       },
       "raw_dist": {
-        "2026-11-08": 168
+        "2026-11-09": 168
       },
       "rows_lagging": 0
     },
@@ -213,9 +214,37 @@
       "rows": 3,
       "have": 3
     },
-    "elapsed_s": 106.0
+    "elapsed_s": 122.9
   },
   "results": [
+    {
+      "symbol": "XRP",
+      "name": "XRP",
+      "yf": "XRP-USD",
+      "source": "binance_vision",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.28,
+        "atr_pctl": 47.1,
+        "vol_pctl": 9.6,
+        "drawdown_pct": 69.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-04"
+      },
+      "base": {
+        "high": 1.6581,
+        "low": 1.15,
+        "bars": 60
+      },
+      "breakout_level": 1.6581,
+      "provisional": false,
+      "last_bar": "2026-11-08",
+      "price": 1.12,
+      "mcap": 71274735430.0,
+      "mcap_asof": "2026-11-09",
+      "mcap_src": "coingecko"
+    },
     {
       "symbol": "SHIB",
       "name": "Shiba Inu",
@@ -223,12 +252,12 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.88,
-        "atr_pctl": 20.8,
+        "ribbon_pct": 12.28,
+        "atr_pctl": 24.9,
         "vol_pctl": 0.8,
-        "drawdown_pct": 90.1,
-        "coiled": true,
-        "coiled_bars": 1,
+        "drawdown_pct": 90.4,
+        "coiled": false,
+        "coiled_bars": 0,
         "last_coiled": "2026-11-07"
       },
       "base": {
@@ -238,38 +267,10 @@
       },
       "breakout_level": 6.27e-06,
       "provisional": false,
-      "last_bar": "2026-11-07",
-      "price": 4.45e-06,
-      "mcap": 2617061728.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "XRP",
-      "name": "XRP",
-      "yf": "XRP-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.64,
-        "atr_pctl": 36.2,
-        "vol_pctl": 9.0,
-        "drawdown_pct": 68.2,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
-      },
-      "base": {
-        "high": 1.6581,
-        "low": 1.1723,
-        "bars": 60
-      },
-      "breakout_level": 1.6581,
-      "provisional": false,
-      "last_bar": "2026-11-07",
-      "price": 1.1473,
-      "mcap": 72755297742.0,
-      "mcap_asof": "2026-11-08",
+      "last_bar": "2026-11-08",
+      "price": 4.4e-06,
+      "mcap": 2600401989.0,
+      "mcap_asof": "2026-11-09",
       "mcap_src": "coingecko"
     },
     {
@@ -279,10 +280,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 15.21,
-        "atr_pctl": 17.8,
-        "vol_pctl": 5.1,
-        "drawdown_pct": 85.2,
+        "ribbon_pct": 16.24,
+        "atr_pctl": 23.4,
+        "vol_pctl": 5.2,
+        "drawdown_pct": 85.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-01"
@@ -294,10 +295,10 @@
       },
       "breakout_level": 0.10589,
       "provisional": false,
-      "last_bar": "2026-11-07",
-      "price": 0.07101,
-      "mcap": 11115861488.0,
-      "mcap_asof": "2026-11-08",
+      "last_bar": "2026-11-08",
+      "price": 0.06968,
+      "mcap": 10919382792.0,
+      "mcap_asof": "2026-11-09",
       "mcap_src": "coingecko"
     }
   ],
