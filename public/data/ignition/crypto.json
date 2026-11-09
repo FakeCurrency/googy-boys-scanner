@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-09T01:14:26+00:00",
+  "generated_at": "2026-11-09T06:15:15+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-08",
@@ -49,10 +49,10 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 168,
+    "downloaded": 167,
     "screened": 140,
     "skipped": {
-      "short history": 28
+      "short history": 27
     },
     "counts": {
       "IGNITING": 0,
@@ -66,22 +66,22 @@
       "completed_last": "2026-11-08",
       "raw_last": "2026-11-09",
       "expected_completed": "2026-11-08",
-      "lagging": 34,
-      "screened": 168,
+      "lagging": 32,
+      "screened": 167,
       "completed_dist": {
-        "2026-11-08": 134,
-        "2026-11-07": 34
+        "2026-11-08": 135,
+        "2026-11-07": 32
       },
       "raw_dist": {
-        "2026-11-09": 168
+        "2026-11-09": 167
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 116,
-        "yahoo": 34,
+        "binance_vision": 117,
+        "yahoo": 32,
         "coinbase": 18
       },
       "dead": {
@@ -90,10 +90,10 @@
       },
       "errors": {},
       "no_exchange": [
-        "AKE",
         "ALFW",
         "ANVL",
         "APEPE",
+        "AUTO",
         "B",
         "BC",
         "BDX",
@@ -116,7 +116,6 @@
         "GT",
         "HASH",
         "HTX",
-        "JCT",
         "KAG",
         "KAS",
         "KAU",
@@ -149,10 +148,14 @@
         "RAIN",
         "RLB",
         "SHFL",
-        "SN51"
+        "SN51",
+        "UB"
       ],
-      "yahoo_fallback": 34,
+      "yahoo_fallback": 32,
       "identity_rejected": {
+        "AUTO": [
+          "yahoo"
+        ],
         "BR": [
           "yahoo"
         ],
@@ -168,6 +171,9 @@
         ]
       },
       "stale_rejected": {
+        "AUTO": [
+          "binance_vision"
+        ],
         "BEAM": [
           "binance_vision"
         ],
@@ -190,6 +196,7 @@
         ]
       },
       "refused": [
+        "AUTO-USD",
         "BR-USD",
         "BTT-USD",
         "EDGE-USD",
@@ -203,18 +210,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 168,
+      "fresh": 167,
       "reused": 0,
-      "merged": 168,
+      "merged": 167,
       "universe": 201,
       "stale_dropped": 0,
-      "refused": 7
+      "refused": 8
     },
     "mcap": {
       "rows": 3,
       "have": 3
     },
-    "elapsed_s": 122.9
+    "elapsed_s": 131.8
   },
   "results": [
     {
@@ -240,8 +247,8 @@
       "breakout_level": 1.6581,
       "provisional": false,
       "last_bar": "2026-11-08",
-      "price": 1.12,
-      "mcap": 71274735430.0,
+      "price": 1.0985,
+      "mcap": 69588802275.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "coingecko"
     },
@@ -268,8 +275,8 @@
       "breakout_level": 6.27e-06,
       "provisional": false,
       "last_bar": "2026-11-08",
-      "price": 4.4e-06,
-      "mcap": 2600401989.0,
+      "price": 4.38e-06,
+      "mcap": 2585918979.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "coingecko"
     },
@@ -296,8 +303,8 @@
       "breakout_level": 0.10589,
       "provisional": false,
       "last_bar": "2026-11-08",
-      "price": 0.06968,
-      "mcap": 10919382792.0,
+      "price": 0.06914,
+      "mcap": 10825939002.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "coingecko"
     }
