@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-10T04:43:11Z",
+  "generated_at": "2026-11-10T05:15:19Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -238,11 +238,12 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-10T04:18:27Z",
+      "at": "2026-11-10T05:15:17Z",
       "reasons": {
-        "COG": "global_cap",
-        "IFT": "global_cap",
-        "PRN": "global_cap",
+        "ACF": "global_cap",
+        "ELD": "global_cap",
+        "IMD": "global_cap",
+        "SHV": "global_cap",
         "WHC": "global_cap"
       }
     },
