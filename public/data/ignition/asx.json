@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-10T07:56:34+00:00",
+  "generated_at": "2026-11-10T15:08:40+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-10",
@@ -50,12 +50,12 @@
     }
   },
   "summary": {
-    "universe": 2060,
+    "universe": 2061,
     "downloaded": 1850,
-    "screened": 1725,
+    "screened": 1772,
     "skipped": {
-      "short history": 75,
-      "stale frame": 50
+      "short history": 77,
+      "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
@@ -69,28 +69,24 @@
       "completed_last": "2026-11-10",
       "raw_last": "2026-11-10",
       "expected_completed": "2026-11-10",
-      "lagging": 736,
-      "screened": 1800,
+      "lagging": 413,
+      "screened": 1849,
       "completed_dist": {
-        "2026-11-10": 1064,
-        "2026-11-09": 437,
-        "2026-11-06": 141,
-        "2026-11-05": 158,
-        "2026-11-04": 49
+        "2026-11-10": 1436,
+        "2026-11-09": 413,
+        "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-10": 1064,
-        "2026-11-09": 437,
-        "2026-11-06": 141,
-        "2026-11-05": 158,
-        "2026-11-04": 49
+        "2026-11-10": 1436,
+        "2026-11-09": 413,
+        "2026-11-03": 1
       },
       "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1315
+        "yahoo": 1849
       },
       "dead": {},
       "errors": {},
@@ -105,10 +101,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1315,
-      "reused": 535,
+      "fresh": 1849,
+      "reused": 1,
       "merged": 1850,
-      "universe": 2060,
+      "universe": 2061,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -116,7 +112,7 @@
       "rows": 10,
       "have": 10
     },
-    "elapsed_s": 236.3
+    "elapsed_s": 361.3
   },
   "results": [
     {
@@ -260,43 +256,15 @@
       "mcap_src": "cache"
     },
     {
-      "symbol": "PNV",
-      "name": "Polynovo Limited",
-      "yf": "PNV.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 8.65,
-        "atr_pctl": 23.4,
-        "vol_pctl": 21.2,
-        "drawdown_pct": 67.3,
-        "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-11-09"
-      },
-      "base": {
-        "high": 1.16999996,
-        "low": 0.83999997,
-        "bars": 60
-      },
-      "breakout_level": 1.16999996,
-      "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 0.91000003,
-      "mcap": 614849344.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "3PL",
       "name": "3P Learning Limited..",
       "yf": "3PL.AX",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.56,
-        "atr_pctl": 39.9,
-        "vol_pctl": 91.9,
+        "ribbon_pct": 4.98,
+        "atr_pctl": 45.2,
+        "vol_pctl": 92.1,
         "drawdown_pct": 77.0,
         "coiled": false,
         "coiled_bars": 0,
@@ -309,7 +277,7 @@
       },
       "breakout_level": 0.34999999,
       "provisional": false,
-      "last_bar": "2026-11-10",
+      "last_bar": "2026-11-09",
       "price": 0.28999999,
       "mcap": 84601024.0,
       "mcap_asof": "2026-11-09",
@@ -341,6 +309,34 @@
       "price": 1.48000002,
       "mcap": 260511776.0,
       "mcap_asof": "2026-11-06",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "PNV",
+      "name": "Polynovo Limited",
+      "yf": "PNV.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.3,
+        "atr_pctl": 27.0,
+        "vol_pctl": 19.4,
+        "drawdown_pct": 68.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-09"
+      },
+      "base": {
+        "high": 1.16999996,
+        "low": 0.83999997,
+        "bars": 60
+      },
+      "breakout_level": 1.16999996,
+      "provisional": false,
+      "last_bar": "2026-11-10",
+      "price": 0.88499999,
+      "mcap": 614849344.0,
+      "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
     },
     {
