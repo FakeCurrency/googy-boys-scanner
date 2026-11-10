@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-11-10T16:14:32+11:00",
+  "generated_at": "2026-11-10T16:45:43+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
@@ -9,15 +9,28 @@
   },
   "results": [
     {
+      "symbol": "OCN",
+      "name": "Oceana Metals Limited",
+      "sector": "Materials",
+      "dir": "SHORT",
+      "price": 0.245,
+      "turnover_avg20": 77167,
+      "turnover_today": 296895,
+      "rvol": 4.2,
+      "adv_usd": 77167.28,
+      "fund": false,
+      "is_product": false
+    },
+    {
       "symbol": "MEZ",
       "name": "Meridian Energy Limited",
       "sector": "Utilities",
-      "dir": "SHORT",
-      "price": 4.6500001,
-      "turnover_avg20": 62104,
-      "turnover_today": 287700,
+      "dir": "LONG",
+      "price": 4.5999999,
+      "turnover_avg20": 62002,
+      "turnover_today": 285673,
       "rvol": 4.5,
-      "adv_usd": 62104.15,
+      "adv_usd": 62002.83,
       "fund": false,
       "is_product": false
     },
@@ -27,10 +40,23 @@
       "sector": "Pharmaceuticals, Biotechnology & Life Sciences",
       "dir": "LONG",
       "price": 0.017,
-      "turnover_avg20": 30204,
-      "turnover_today": 110823,
-      "rvol": 3.4,
-      "adv_usd": 30204.58,
+      "turnover_avg20": 31214,
+      "turnover_today": 131027,
+      "rvol": 3.9,
+      "adv_usd": 31214.82,
+      "fund": false,
+      "is_product": false
+    },
+    {
+      "symbol": "ZEO",
+      "name": "Zeotech Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.074,
+      "turnover_avg20": 35577,
+      "turnover_today": 127132,
+      "rvol": 3.2,
+      "adv_usd": 35577.89,
       "fund": false,
       "is_product": false
     }
