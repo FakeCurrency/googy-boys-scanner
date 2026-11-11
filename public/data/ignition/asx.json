@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-11T07:25:14+00:00",
+  "generated_at": "2026-11-11T14:37:15+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-11",
@@ -69,18 +69,18 @@
       "completed_last": "2026-11-11",
       "raw_last": "2026-11-11",
       "expected_completed": "2026-11-11",
-      "lagging": 693,
+      "lagging": 700,
       "screened": 1849,
       "completed_dist": {
-        "2026-11-11": 1156,
-        "2026-11-10": 608,
-        "2026-11-09": 85,
+        "2026-11-11": 1149,
+        "2026-11-10": 629,
+        "2026-11-09": 71,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-11": 1156,
-        "2026-11-10": 608,
-        "2026-11-09": 85,
+        "2026-11-11": 1149,
+        "2026-11-10": 629,
+        "2026-11-09": 71,
         "2026-11-03": 1
       },
       "rows_lagging": 2
@@ -88,7 +88,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1477
+        "yahoo": 1373
       },
       "dead": {},
       "errors": {},
@@ -103,8 +103,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1477,
-      "reused": 373,
+      "fresh": 1373,
+      "reused": 477,
       "merged": 1850,
       "universe": 2061,
       "stale_dropped": 0,
@@ -114,7 +114,7 @@
       "rows": 11,
       "have": 11
     },
-    "elapsed_s": 240.6
+    "elapsed_s": 258.4
   },
   "results": [
     {
@@ -253,9 +253,9 @@
       "provisional": false,
       "last_bar": "2026-11-11",
       "price": 0.023,
-      "mcap": 257809696.0,
-      "mcap_asof": "2026-09-28",
-      "mcap_src": "cache"
+      "mcap": 219615664.0,
+      "mcap_asof": "2026-11-11",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "3PL",
@@ -311,7 +311,7 @@
       "price": 1.45000005,
       "mcap": 261413200.0,
       "mcap_asof": "2026-11-11",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PNV",
