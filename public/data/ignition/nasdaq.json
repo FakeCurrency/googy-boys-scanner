@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-11T01:25:16+00:00",
+  "generated_at": "2026-11-11T02:13:28+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-09",
+  "last_closed_bar": "2026-11-10",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -69,19 +69,19 @@
       "completed_last": "2026-11-10",
       "raw_last": "2026-11-10",
       "expected_completed": "2026-11-10",
-      "lagging": 1306,
+      "lagging": 625,
       "screened": 1424,
       "completed_dist": {
-        "2026-11-10": 118,
-        "2026-11-09": 1306,
+        "2026-11-10": 799,
+        "2026-11-09": 625,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-10": 118,
-        "2026-11-09": 1306,
+        "2026-11-10": 799,
+        "2026-11-09": 625,
         "2026-10-28": 1
       },
-      "rows_lagging": 13
+      "rows_lagging": 7
     },
     "sources": {
       "mode": "yahoo",
@@ -112,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 245.6
+    "elapsed_s": 192.3
   },
   "results": [
     {
@@ -125,7 +125,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 5,
+      "bars_since": 6,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -153,40 +153,12 @@
       "mfe_r": 0.04,
       "state": "RUNNING",
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 11.39999962,
-      "change_pct": 0.0,
-      "r_now": 0.0,
-      "trail": 10.5222222,
+      "last_bar": "2026-11-10",
+      "price": 11.39000034,
+      "change_pct": -0.1,
+      "r_now": -0.01,
+      "trail": 10.82333332,
       "mcap": 369742112.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "GPRE",
-      "name": "Green Plains, Inc. - Common Stock",
-      "yf": "GPRE",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.29,
-        "atr_pctl": 8.7,
-        "vol_pctl": 33.9,
-        "drawdown_pct": 51.4,
-        "coiled": true,
-        "coiled_bars": 26,
-        "last_coiled": "2026-11-09"
-      },
-      "base": {
-        "high": 16.57999992,
-        "low": 13.02999973,
-        "bars": 60
-      },
-      "breakout_level": 16.57999992,
-      "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 13.97000027,
-      "mcap": 927361152.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
     },
@@ -244,7 +216,7 @@
       "price": 39.65999985,
       "mcap": 8746085376.0,
       "mcap_asof": "2026-11-11",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "AEBI",
@@ -309,10 +281,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.5,
-        "atr_pctl": 40.3,
-        "vol_pctl": 24.0,
-        "drawdown_pct": 90.0,
+        "ribbon_pct": 3.56,
+        "atr_pctl": 54.2,
+        "vol_pctl": 23.4,
+        "drawdown_pct": 90.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
@@ -324,8 +296,8 @@
       },
       "breakout_level": 23.62000084,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 17.23999977,
+      "last_bar": "2026-11-10",
+      "price": 16.42000008,
       "mcap": 1848745984.0,
       "mcap_asof": "2026-11-10",
       "mcap_src": "previous"
@@ -359,6 +331,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 6.02,
+        "atr_pctl": 4.8,
+        "vol_pctl": 41.3,
+        "drawdown_pct": 69.4,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-06"
+      },
+      "base": {
+        "high": 4.76000023,
+        "low": 3.38000011,
+        "bars": 60
+      },
+      "breakout_level": 4.96999979,
+      "provisional": false,
+      "last_bar": "2026-11-10",
+      "price": 4.80999994,
+      "mcap": 774777472.0,
+      "mcap_asof": "2026-11-10",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "PTON",
       "name": "Peloton Interactive, Inc. - Common Stock",
       "yf": "PTON",
@@ -385,34 +385,6 @@
       "mcap": 2652809984.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "IRWD",
-      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
-      "yf": "IRWD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.86,
-        "atr_pctl": 5.2,
-        "vol_pctl": 35.3,
-        "drawdown_pct": 70.2,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-06"
-      },
-      "base": {
-        "high": 4.5999999,
-        "low": 3.38000011,
-        "bars": 60
-      },
-      "breakout_level": 4.76000023,
-      "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 4.67999983,
-      "mcap": 774777472.0,
-      "mcap_asof": "2026-11-10",
-      "mcap_src": "previous"
     },
     {
       "symbol": "ROOT",
@@ -449,26 +421,54 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.82,
-        "atr_pctl": 43.8,
-        "vol_pctl": 30.0,
-        "drawdown_pct": 54.3,
+        "ribbon_pct": 10.28,
+        "atr_pctl": 52.6,
+        "vol_pctl": 33.1,
+        "drawdown_pct": 56.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
       },
       "base": {
-        "high": 2.33999991,
+        "high": 2.63000011,
         "low": 1.89999998,
         "bars": 60
       },
-      "breakout_level": 2.63000011,
+      "breakout_level": 2.6500001,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 2.61999989,
+      "last_bar": "2026-11-10",
+      "price": 2.51999998,
       "mcap": 230026896.0,
       "mcap_asof": "2026-11-10",
       "mcap_src": "cache"
+    },
+    {
+      "symbol": "GPRE",
+      "name": "Green Plains, Inc. - Common Stock",
+      "yf": "GPRE",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.38,
+        "atr_pctl": 10.7,
+        "vol_pctl": 36.3,
+        "drawdown_pct": 51.9,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-09"
+      },
+      "base": {
+        "high": 16.57999992,
+        "low": 13.02999973,
+        "bars": 60
+      },
+      "breakout_level": 16.57999992,
+      "provisional": false,
+      "last_bar": "2026-11-10",
+      "price": 13.71000004,
+      "mcap": 927361152.0,
+      "mcap_asof": "2026-11-08",
+      "mcap_src": "previous"
     },
     {
       "symbol": "FWRD",
@@ -477,23 +477,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.46,
-        "atr_pctl": 64.5,
-        "vol_pctl": 2.2,
-        "drawdown_pct": 74.0,
+        "ribbon_pct": 11.7,
+        "atr_pctl": 67.7,
+        "vol_pctl": 2.6,
+        "drawdown_pct": 73.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
       },
       "base": {
-        "high": 20.11000061,
+        "high": 19.73999977,
         "low": 14.10000038,
         "bars": 60
       },
-      "breakout_level": 19.73999977,
+      "breakout_level": 19.65999985,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 17.64999962,
+      "last_bar": "2026-11-10",
+      "price": 18.32999992,
       "mcap": 596232256.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
