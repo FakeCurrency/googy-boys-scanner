@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "updated_at": "2026-11-11T03:42:31+11:00",
+ "updated_at": "2026-11-12T03:38:57+11:00",
  "markets": {
   "asx": {
    "seen": {
@@ -14,7 +14,7 @@
      "first_seen": "2026-07-31",
      "price": 0.093,
      "name": "Gale Pacific Limited",
-     "last_seen": "2026-08-10"
+     "last_seen": "2026-11-12"
     },
     "HMG": {
      "first_seen": "2026-07-31",
@@ -440,7 +440,7 @@
      "first_seen": "2026-08-12",
      "price": 0.30500001,
      "name": "Aerometrex Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "ATS": {
      "first_seen": "2026-08-12",
@@ -884,7 +884,7 @@
      "first_seen": "2026-08-21",
      "price": 0.087,
      "name": "Zeotech Limited",
-     "last_seen": "2026-08-24"
+     "last_seen": "2026-11-12"
     },
     "TYX": {
      "first_seen": "2026-08-21",
@@ -982,12 +982,6 @@
      "name": "Manhattan Corporation Limited",
      "last_seen": "2026-08-25"
     },
-    "3PL": {
-     "first_seen": "2026-08-25",
-     "price": 0.34,
-     "name": "3P Learning Limited",
-     "last_seen": "2026-09-01"
-    },
     "RGL": {
      "first_seen": "2026-08-25",
      "price": 0.012,
@@ -1046,12 +1040,6 @@
      "first_seen": "2026-08-28",
      "price": 0.04,
      "name": "Mount Ridley Mines Limited",
-     "last_seen": "2026-09-01"
-    },
-    "CYG": {
-     "first_seen": "2026-08-28",
-     "price": 0.44999999,
-     "name": "Coventry Group Ltd",
      "last_seen": "2026-09-01"
     },
     "EV1": {
@@ -1928,7 +1916,7 @@
      "first_seen": "2026-10-17",
      "price": 0.013,
      "name": "Baumart Holdings Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "CMG": {
      "first_seen": "2026-10-17",
@@ -2000,7 +1988,7 @@
      "first_seen": "2026-10-21",
      "price": 0.058,
      "name": "Aucyber Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "EMA": {
      "first_seen": "2026-10-21",
@@ -2036,7 +2024,7 @@
      "first_seen": "2026-10-27",
      "price": 0.44,
      "name": "Ironbark Balanced Income Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "FGH": {
      "first_seen": "2026-10-27",
@@ -2144,13 +2132,13 @@
      "first_seen": "2026-11-06",
      "price": 0.067,
      "name": "Orcoda Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "ARN": {
      "first_seen": "2026-11-06",
      "price": 0.38999999,
      "name": "Aldoro Resources Limited",
-     "last_seen": "2026-11-09"
+     "last_seen": "2026-11-12"
     },
     "RRE": {
      "first_seen": "2026-11-06",
@@ -2192,19 +2180,19 @@
      "first_seen": "2026-11-08",
      "price": 0.18000001,
      "name": "Credit Clear Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "AN1": {
      "first_seen": "2026-11-08",
      "price": 0.006,
      "name": "Anagenics Limited",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "AQ1": {
      "first_seen": "2026-11-11",
      "price": 0.038,
      "name": "Aqyr Ltd",
-     "last_seen": "2026-11-11"
+     "last_seen": "2026-11-12"
     },
     "ATC": {
      "first_seen": "2026-11-11",
@@ -2217,6 +2205,18 @@
      "price": 0.009,
      "name": "Legend Mining Limited",
      "last_seen": "2026-11-11"
+    },
+    "SFX": {
+     "first_seen": "2026-11-12",
+     "price": 0.0495,
+     "name": "Sheffield Resources Limited",
+     "last_seen": "2026-11-12"
+    },
+    "AUZ": {
+     "first_seen": "2026-11-12",
+     "price": 0.185,
+     "name": "Australian Mines Limited",
+     "last_seen": "2026-11-12"
     }
    },
    "graduates": [
@@ -2829,9 +2829,29 @@
      "vivek_price": 0.50999999,
      "grade": "A+",
      "days": 6
+    },
+    {
+     "symbol": "3PL",
+     "name": "3P Learning Limited",
+     "first_seen": "2026-08-25",
+     "spec_price": 0.34,
+     "graduated": "2026-11-11",
+     "vivek_price": 0.29499999,
+     "grade": "B+",
+     "days": 78
+    },
+    {
+     "symbol": "CYG",
+     "name": "Coventry Group Ltd",
+     "first_seen": "2026-08-28",
+     "spec_price": 0.44999999,
+     "graduated": "2026-11-11",
+     "vivek_price": 0.38999999,
+     "grade": "A",
+     "days": 75
     }
    ],
-   "graduated_total": 61
+   "graduated_total": 63
   },
   "nasdaq": {
    "seen": {},
