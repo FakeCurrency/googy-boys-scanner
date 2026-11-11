@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-10T03:44:16+00:00",
+  "generated_at": "2026-11-11T01:25:16+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-09",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25253.14,
-    "sma200": 25107.04,
-    "above_200": true,
-    "vs_200_pct": 0.6,
-    "as_of": "2026-11-09"
+    "close": 25065.88,
+    "sma200": 25114.37,
+    "above_200": false,
+    "vs_200_pct": -0.2,
+    "as_of": "2026-11-10"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -66,20 +66,22 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-09",
-      "raw_last": "2026-11-09",
-      "expected_completed": "2026-11-09",
-      "lagging": 0,
+      "completed_last": "2026-11-10",
+      "raw_last": "2026-11-10",
+      "expected_completed": "2026-11-10",
+      "lagging": 1306,
       "screened": 1424,
       "completed_dist": {
-        "2026-11-09": 1424,
+        "2026-11-10": 118,
+        "2026-11-09": 1306,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-09": 1424,
+        "2026-11-10": 118,
+        "2026-11-09": 1306,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 13
     },
     "sources": {
       "mode": "yahoo",
@@ -110,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 162.7
+    "elapsed_s": 245.6
   },
   "results": [
     {
@@ -240,9 +242,9 @@
       "provisional": false,
       "last_bar": "2026-11-09",
       "price": 39.65999985,
-      "mcap": 9811764224.0,
-      "mcap_asof": "2026-11-06",
-      "mcap_src": "cache"
+      "mcap": 8746085376.0,
+      "mcap_asof": "2026-11-11",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "AEBI",
@@ -326,7 +328,7 @@
       "price": 17.23999977,
       "mcap": 1848745984.0,
       "mcap_asof": "2026-11-10",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "INMD",
@@ -410,7 +412,7 @@
       "price": 4.67999983,
       "mcap": 774777472.0,
       "mcap_asof": "2026-11-10",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "ROOT",
@@ -464,8 +466,8 @@
       "provisional": false,
       "last_bar": "2026-11-09",
       "price": 2.61999989,
-      "mcap": 207237632.0,
-      "mcap_asof": "2026-07-21",
+      "mcap": 230026896.0,
+      "mcap_asof": "2026-11-10",
       "mcap_src": "cache"
     },
     {
