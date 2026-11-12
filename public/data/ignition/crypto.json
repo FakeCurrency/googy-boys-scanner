@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-11T23:43:51+00:00",
+  "generated_at": "2026-11-12T07:05:06+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-10",
+  "last_closed_bar": "2026-11-11",
   "report_only": true,
   "regime": {
-    "btc_close": 73796.06,
-    "btc_sma200": 73190.9,
+    "btc_close": 74015.19,
+    "btc_sma200": 73172.86,
     "btc_above_200": true,
-    "btc_vs_200_pct": 0.8,
-    "as_of": "2026-11-10"
+    "btc_vs_200_pct": 1.2,
+    "as_of": "2026-11-11"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -58,21 +58,22 @@
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 0,
-      "COILED": 4,
+      "COILED": 3,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-10",
-      "raw_last": "2026-11-11",
-      "expected_completed": "2026-11-10",
-      "lagging": 0,
+      "completed_last": "2026-11-11",
+      "raw_last": "2026-11-12",
+      "expected_completed": "2026-11-11",
+      "lagging": 31,
       "screened": 165,
       "completed_dist": {
-        "2026-11-10": 165
+        "2026-11-11": 134,
+        "2026-11-10": 31
       },
       "raw_dist": {
-        "2026-11-11": 165
+        "2026-11-12": 165
       },
       "rows_lagging": 0
     },
@@ -217,10 +218,10 @@
       "refused": 8
     },
     "mcap": {
-      "rows": 4,
-      "have": 4
+      "rows": 3,
+      "have": 3
     },
-    "elapsed_s": 123.7
+    "elapsed_s": 119.6
   },
   "results": [
     {
@@ -230,53 +231,25 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.9,
-        "atr_pctl": 27.2,
-        "vol_pctl": 12.3,
-        "drawdown_pct": 78.7,
+        "ribbon_pct": 4.65,
+        "atr_pctl": 25.6,
+        "vol_pctl": 12.0,
+        "drawdown_pct": 78.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-09"
       },
       "base": {
         "high": 0.792,
-        "low": 0.624,
+        "low": 0.623,
         "bars": 60
       },
       "breakout_level": 0.792,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 0.6558,
-      "mcap": 1685038075.0,
-      "mcap_asof": "2026-11-11",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "XRP",
-      "name": "XRP",
-      "yf": "XRP-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 12.19,
-        "atr_pctl": 52.6,
-        "vol_pctl": 10.7,
-        "drawdown_pct": 71.1,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
-      },
-      "base": {
-        "high": 1.6581,
-        "low": 1.0764,
-        "bars": 60
-      },
-      "breakout_level": 1.6581,
-      "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 1.048,
-      "mcap": 66595599562.0,
-      "mcap_asof": "2026-11-11",
+      "last_bar": "2026-11-11",
+      "price": 0.661,
+      "mcap": 1699170229.0,
+      "mcap_asof": "2026-11-12",
       "mcap_src": "coingecko"
     },
     {
@@ -286,10 +259,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.92,
-        "atr_pctl": 19.3,
+        "ribbon_pct": 13.27,
+        "atr_pctl": 21.5,
         "vol_pctl": 0.5,
-        "drawdown_pct": 90.2,
+        "drawdown_pct": 90.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-07"
@@ -301,38 +274,38 @@
       },
       "breakout_level": 6.27e-06,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 4.36e-06,
-      "mcap": 2569800088.0,
-      "mcap_asof": "2026-11-11",
+      "last_bar": "2026-11-11",
+      "price": 4.34e-06,
+      "mcap": 2545004642.0,
+      "mcap_asof": "2026-11-12",
       "mcap_src": "coingecko"
     },
     {
-      "symbol": "DOGE",
-      "name": "Dogecoin",
-      "yf": "DOGE-USD",
+      "symbol": "XRP",
+      "name": "XRP",
+      "yf": "XRP-USD",
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 18.18,
-        "atr_pctl": 23.7,
-        "vol_pctl": 5.3,
-        "drawdown_pct": 86.0,
+        "ribbon_pct": 13.43,
+        "atr_pctl": 50.5,
+        "vol_pctl": 10.5,
+        "drawdown_pct": 71.3,
         "coiled": false,
         "coiled_bars": 0,
-        "last_coiled": "2026-11-01"
+        "last_coiled": "2026-11-04"
       },
       "base": {
-        "high": 0.10589,
-        "low": 0.06729,
+        "high": 1.6581,
+        "low": 1.0311,
         "bars": 60
       },
-      "breakout_level": 0.10589,
+      "breakout_level": 1.6581,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 0.06723,
-      "mcap": 10537373048.0,
-      "mcap_asof": "2026-11-11",
+      "last_bar": "2026-11-11",
+      "price": 1.0445,
+      "mcap": 66097235862.0,
+      "mcap_asof": "2026-11-12",
       "mcap_src": "coingecko"
     }
   ],
