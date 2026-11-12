@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-12T15:25:59Z",
+  "generated_at": "2026-11-12T15:44:54Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,7 +132,7 @@
       0.15
     ]
   },
-  "open_total": 58,
+  "open_total": 60,
   "closed_total": 173,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
@@ -223,9 +223,9 @@
       "nasdaq": {
         "financials": 6,
         "industrials": 6,
+        "information technology": 6,
         "health care": 5,
         "consumer staples": 4,
-        "information technology": 4,
         "consumer discretionary": 3,
         "utilities": 2,
         "communication services": 1,
@@ -252,7 +252,7 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-11T21:13:57Z",
+      "at": "2026-11-12T15:44:49Z",
       "reasons": {
         "AVO": "dup_symbol",
         "CAE": "global_cap",
@@ -260,11 +260,9 @@
         "EXE": "global_cap",
         "HTLD": "dup_symbol",
         "IDCC": "global_cap",
-        "IMMR": "global_cap",
         "PCAR": "global_cap",
         "PLAB": "global_cap",
         "RRR": "global_cap",
-        "SCSC": "global_cap",
         "SSNC": "global_cap",
         "TPG": "dup_symbol"
       }
