@@ -1,38 +1,11 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-11-12T15:13:26-05:00",
+  "generated_at": "2026-11-12T16:13:13-05:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "GAINZ",
-      "name": "Gladstone Investment Corporation - 4.875% Notes due 2028",
-      "sector": "",
-      "dir": "LONG",
-      "price": 24.10000038,
-      "turnover_avg20": 199914,
-      "turnover_today": 1783400,
-      "rvol": 8.9,
-      "adv_usd": 199914.56,
-      "fund": false,
-      "is_product": true
-    },
-    {
-      "symbol": "WHFCL",
-      "name": "WhiteHorse Finance, Inc. - 7.875% Notes due 2028",
-      "sector": "",
-      "dir": "LONG",
-      "price": 25.10000038,
-      "turnover_avg20": 104703,
-      "turnover_today": 1139540,
-      "rvol": 10.9,
-      "adv_usd": 104703.23,
-      "fund": false,
-      "is_product": true
-    }
-  ]
+  "results": []
 }
