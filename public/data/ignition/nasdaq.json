@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-11T02:13:28+00:00",
+  "generated_at": "2026-11-12T02:25:02+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-10",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25065.88,
-    "sma200": 25114.37,
-    "above_200": false,
-    "vs_200_pct": -0.2,
-    "as_of": "2026-11-10"
+    "close": 25466.19,
+    "sma200": 25122.61,
+    "above_200": true,
+    "vs_200_pct": 1.4,
+    "as_of": "2026-11-11"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,9 +50,9 @@
     }
   },
   "summary": {
-    "universe": 1425,
-    "downloaded": 1425,
-    "screened": 1324,
+    "universe": 1424,
+    "downloaded": 1424,
+    "screened": 1323,
     "skipped": {
       "short history": 100,
       "stale frame": 1
@@ -66,27 +66,27 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-10",
-      "raw_last": "2026-11-10",
-      "expected_completed": "2026-11-10",
-      "lagging": 625,
-      "screened": 1424,
+      "completed_last": "2026-11-11",
+      "raw_last": "2026-11-11",
+      "expected_completed": "2026-11-11",
+      "lagging": 1303,
+      "screened": 1423,
       "completed_dist": {
-        "2026-11-10": 799,
-        "2026-11-09": 625,
+        "2026-11-11": 120,
+        "2026-11-10": 1303,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-10": 799,
-        "2026-11-09": 625,
+        "2026-11-11": 120,
+        "2026-11-10": 1303,
         "2026-10-28": 1
       },
-      "rows_lagging": 7
+      "rows_lagging": 13
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1425
+        "yahoo": 1424
       },
       "dead": {},
       "errors": {},
@@ -101,10 +101,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1425,
+      "fresh": 1424,
       "reused": 0,
-      "merged": 1425,
-      "universe": 1425,
+      "merged": 1424,
+      "universe": 1424,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -112,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 192.3
+    "elapsed_s": 170.3
   },
   "results": [
     {
@@ -169,13 +169,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.05,
-        "atr_pctl": 6.3,
-        "vol_pctl": 3.4,
-        "drawdown_pct": 68.6,
+        "ribbon_pct": 6.67,
+        "atr_pctl": 5.6,
+        "vol_pctl": 1.6,
+        "drawdown_pct": 68.7,
         "coiled": true,
-        "coiled_bars": 18,
-        "last_coiled": "2026-11-09"
+        "coiled_bars": 19,
+        "last_coiled": "2026-11-10"
       },
       "base": {
         "high": 9.27000046,
@@ -184,39 +184,11 @@
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 8.63000011,
+      "last_bar": "2026-11-10",
+      "price": 8.60999966,
       "mcap": 390337120.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "LINE",
-      "name": "Lineage, Inc. - Common Stock",
-      "yf": "LINE",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.55,
-        "atr_pctl": 1.6,
-        "vol_pctl": 28.4,
-        "drawdown_pct": 50.8,
-        "coiled": true,
-        "coiled_bars": 6,
-        "last_coiled": "2026-11-09"
-      },
-      "base": {
-        "high": 42.44003431,
-        "low": 32.75,
-        "bars": 60
-      },
-      "breakout_level": 41.91316816,
-      "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 39.65999985,
-      "mcap": 8746085376.0,
-      "mcap_asof": "2026-11-11",
-      "mcap_src": "previous"
     },
     {
       "symbol": "AEBI",
@@ -225,26 +197,26 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.36,
-        "atr_pctl": 14.3,
-        "vol_pctl": 24.8,
-        "drawdown_pct": 65.1,
+        "ribbon_pct": 9.22,
+        "atr_pctl": 19.0,
+        "vol_pctl": 25.0,
+        "drawdown_pct": 65.8,
         "coiled": true,
-        "coiled_bars": 4,
-        "last_coiled": "2026-11-09"
+        "coiled_bars": 5,
+        "last_coiled": "2026-11-10"
       },
       "base": {
-        "high": 14.0716182,
+        "high": 13.0636507,
         "low": 10.32999992,
         "bars": 60
       },
-      "breakout_level": 13.0636507,
+      "breakout_level": 13.03999996,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 11.40999985,
-      "mcap": 866828288.0,
-      "mcap_asof": "2026-11-07",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-10",
+      "price": 11.17000008,
+      "mcap": 829966720.0,
+      "mcap_asof": "2026-11-12",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CHA",
@@ -253,13 +225,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.71,
-        "atr_pctl": 7.4,
-        "vol_pctl": 33.7,
-        "drawdown_pct": 67.9,
+        "ribbon_pct": 11.44,
+        "atr_pctl": 5.6,
+        "vol_pctl": 32.3,
+        "drawdown_pct": 68.3,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-11-09"
+        "coiled_bars": 2,
+        "last_coiled": "2026-11-10"
       },
       "base": {
         "high": 13.13000011,
@@ -268,8 +240,8 @@
       },
       "breakout_level": 13.13000011,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 12.56999969,
+      "last_bar": "2026-11-10",
+      "price": 12.43000031,
       "mcap": 2371188224.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
@@ -309,23 +281,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.36,
-        "atr_pctl": 33.3,
-        "vol_pctl": 15.5,
-        "drawdown_pct": 49.6,
+        "ribbon_pct": 5.37,
+        "atr_pctl": 38.1,
+        "vol_pctl": 17.1,
+        "drawdown_pct": 50.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-30"
       },
       "base": {
-        "high": 15.31000042,
+        "high": 15.19999981,
         "low": 13.14000034,
         "bars": 60
       },
       "breakout_level": 15.19999981,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 13.51000023,
+      "last_bar": "2026-11-10",
+      "price": 13.26500034,
       "mcap": 767063808.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
@@ -359,29 +331,57 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "LINE",
+      "name": "Lineage, Inc. - Common Stock",
+      "yf": "LINE",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 6.57,
+        "atr_pctl": 71.2,
+        "vol_pctl": 61.1,
+        "drawdown_pct": 56.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-09"
+      },
+      "base": {
+        "high": 41.91316816,
+        "low": 32.75,
+        "bars": 60
+      },
+      "breakout_level": 41.91316816,
+      "provisional": false,
+      "last_bar": "2026-11-10",
+      "price": 34.88000107,
+      "mcap": 8746085376.0,
+      "mcap_asof": "2026-11-11",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "PTON",
       "name": "Peloton Interactive, Inc. - Common Stock",
       "yf": "PTON",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.05,
-        "atr_pctl": 14.3,
-        "vol_pctl": 21.8,
-        "drawdown_pct": 45.4,
+        "ribbon_pct": 6.79,
+        "atr_pctl": 15.7,
+        "vol_pctl": 18.7,
+        "drawdown_pct": 46.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-03"
       },
       "base": {
-        "high": 5.98000002,
+        "high": 6.0,
         "low": 4.69000006,
         "bars": 60
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 5.94999981,
+      "last_bar": "2026-11-10",
+      "price": 5.80999994,
       "mcap": 2652809984.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
@@ -393,23 +393,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.39,
-        "atr_pctl": 50.8,
-        "vol_pctl": 4.4,
-        "drawdown_pct": 76.0,
+        "ribbon_pct": 8.15,
+        "atr_pctl": 49.8,
+        "vol_pctl": 4.6,
+        "drawdown_pct": 75.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
       },
       "base": {
         "high": 58.84000015,
-        "low": 42.86500168,
+        "low": 42.16999817,
         "bars": 60
       },
       "breakout_level": 58.84000015,
       "provisional": false,
-      "last_bar": "2026-11-09",
-      "price": 43.52000046,
+      "last_bar": "2026-11-10",
+      "price": 43.81999969,
       "mcap": 658887808.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
