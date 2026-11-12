@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-12T02:25:02+00:00",
+  "generated_at": "2026-11-12T03:20:46+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-10",
+  "last_closed_bar": "2026-11-11",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -69,19 +69,17 @@
       "completed_last": "2026-11-11",
       "raw_last": "2026-11-11",
       "expected_completed": "2026-11-11",
-      "lagging": 1303,
+      "lagging": 0,
       "screened": 1423,
       "completed_dist": {
-        "2026-11-11": 120,
-        "2026-11-10": 1303,
+        "2026-11-11": 1423,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-11": 120,
-        "2026-11-10": 1303,
+        "2026-11-11": 1423,
         "2026-10-28": 1
       },
-      "rows_lagging": 13
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
@@ -112,7 +110,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 170.3
+    "elapsed_s": 195.3
   },
   "results": [
     {
@@ -125,7 +123,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 6,
+      "bars_since": 7,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -153,11 +151,11 @@
       "mfe_r": 0.04,
       "state": "RUNNING",
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 11.39000034,
-      "change_pct": -0.1,
-      "r_now": -0.01,
-      "trail": 10.82333332,
+      "last_bar": "2026-11-11",
+      "price": 11.39999962,
+      "change_pct": 0.0,
+      "r_now": 0.0,
+      "trail": 11.1077777,
       "mcap": 369742112.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
@@ -169,13 +167,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.67,
-        "atr_pctl": 5.6,
-        "vol_pctl": 1.6,
-        "drawdown_pct": 68.7,
+        "ribbon_pct": 6.23,
+        "atr_pctl": 4.6,
+        "vol_pctl": 0.4,
+        "drawdown_pct": 68.4,
         "coiled": true,
-        "coiled_bars": 19,
-        "last_coiled": "2026-11-10"
+        "coiled_bars": 20,
+        "last_coiled": "2026-11-11"
       },
       "base": {
         "high": 9.27000046,
@@ -184,39 +182,11 @@
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 8.60999966,
+      "last_bar": "2026-11-11",
+      "price": 8.69999981,
       "mcap": 390337120.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "AEBI",
-      "name": "Aebi Schmidt Holding AG - Common Stock",
-      "yf": "AEBI",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.22,
-        "atr_pctl": 19.0,
-        "vol_pctl": 25.0,
-        "drawdown_pct": 65.8,
-        "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-11-10"
-      },
-      "base": {
-        "high": 13.0636507,
-        "low": 10.32999992,
-        "bars": 60
-      },
-      "breakout_level": 13.03999996,
-      "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 11.17000008,
-      "mcap": 829966720.0,
-      "mcap_asof": "2026-11-12",
-      "mcap_src": "yahoo"
     },
     {
       "symbol": "CHA",
@@ -225,13 +195,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.44,
-        "atr_pctl": 5.6,
-        "vol_pctl": 32.3,
-        "drawdown_pct": 68.3,
+        "ribbon_pct": 11.74,
+        "atr_pctl": 2.5,
+        "vol_pctl": 31.9,
+        "drawdown_pct": 68.5,
         "coiled": true,
-        "coiled_bars": 2,
-        "last_coiled": "2026-11-10"
+        "coiled_bars": 3,
+        "last_coiled": "2026-11-11"
       },
       "base": {
         "high": 13.13000011,
@@ -240,8 +210,8 @@
       },
       "breakout_level": 13.13000011,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 12.43000031,
+      "last_bar": "2026-11-11",
+      "price": 12.32999992,
       "mcap": 2371188224.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
@@ -253,23 +223,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.56,
-        "atr_pctl": 54.2,
-        "vol_pctl": 23.4,
-        "drawdown_pct": 90.5,
+        "ribbon_pct": 4.31,
+        "atr_pctl": 47.0,
+        "vol_pctl": 21.8,
+        "drawdown_pct": 90.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
       },
       "base": {
         "high": 23.62000084,
-        "low": 16.37000084,
+        "low": 16.13999939,
         "bars": 60
       },
       "breakout_level": 23.62000084,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 16.42000008,
+      "last_bar": "2026-11-11",
+      "price": 16.68000031,
       "mcap": 1848745984.0,
       "mcap_asof": "2026-11-10",
       "mcap_src": "previous"
@@ -281,53 +251,25 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.37,
-        "atr_pctl": 38.1,
-        "vol_pctl": 17.1,
-        "drawdown_pct": 50.5,
+        "ribbon_pct": 5.13,
+        "atr_pctl": 40.3,
+        "vol_pctl": 19.6,
+        "drawdown_pct": 48.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-30"
       },
       "base": {
         "high": 15.19999981,
-        "low": 13.14000034,
+        "low": 13.06999969,
         "bars": 60
       },
       "breakout_level": 15.19999981,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 13.26500034,
+      "last_bar": "2026-11-11",
+      "price": 13.72999954,
       "mcap": 767063808.0,
       "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "IRWD",
-      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
-      "yf": "IRWD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.02,
-        "atr_pctl": 4.8,
-        "vol_pctl": 41.3,
-        "drawdown_pct": 69.4,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-06"
-      },
-      "base": {
-        "high": 4.76000023,
-        "low": 3.38000011,
-        "bars": 60
-      },
-      "breakout_level": 4.96999979,
-      "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 4.80999994,
-      "mcap": 774777472.0,
-      "mcap_asof": "2026-11-10",
       "mcap_src": "previous"
     },
     {
@@ -337,10 +279,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.57,
-        "atr_pctl": 71.2,
-        "vol_pctl": 61.1,
-        "drawdown_pct": 56.8,
+        "ribbon_pct": 6.47,
+        "atr_pctl": 67.7,
+        "vol_pctl": 62.9,
+        "drawdown_pct": 56.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-09"
@@ -352,8 +294,8 @@
       },
       "breakout_level": 41.91316816,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 34.88000107,
+      "last_bar": "2026-11-11",
+      "price": 35.40000153,
       "mcap": 8746085376.0,
       "mcap_asof": "2026-11-11",
       "mcap_src": "previous"
@@ -365,10 +307,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.79,
+        "ribbon_pct": 7.37,
         "atr_pctl": 15.7,
         "vol_pctl": 18.7,
-        "drawdown_pct": 46.7,
+        "drawdown_pct": 47.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-03"
@@ -380,10 +322,94 @@
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 5.80999994,
+      "last_bar": "2026-11-11",
+      "price": 5.71999979,
       "mcap": 2652809984.0,
       "mcap_asof": "2026-11-09",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.35,
+        "atr_pctl": 3.8,
+        "vol_pctl": 45.6,
+        "drawdown_pct": 69.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-06"
+      },
+      "base": {
+        "high": 4.96999979,
+        "low": 3.38000011,
+        "bars": 60
+      },
+      "breakout_level": 4.96999979,
+      "provisional": false,
+      "last_bar": "2026-11-11",
+      "price": 4.86999989,
+      "mcap": 774777472.0,
+      "mcap_asof": "2026-11-10",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "AEBI",
+      "name": "Aebi Schmidt Holding AG - Common Stock",
+      "yf": "AEBI",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.31,
+        "atr_pctl": 33.7,
+        "vol_pctl": 32.3,
+        "drawdown_pct": 67.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-10"
+      },
+      "base": {
+        "high": 13.03999996,
+        "low": 10.32999992,
+        "bars": 60
+      },
+      "breakout_level": 13.03999996,
+      "provisional": false,
+      "last_bar": "2026-11-11",
+      "price": 10.69499969,
+      "mcap": 829966720.0,
+      "mcap_asof": "2026-11-12",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "CRNT",
+      "name": "Ceragon Networks Ltd. - Ordinary Shares",
+      "yf": "CRNT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.78,
+        "atr_pctl": 50.8,
+        "vol_pctl": 30.4,
+        "drawdown_pct": 56.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-04"
+      },
+      "base": {
+        "high": 2.6500001,
+        "low": 1.89999998,
+        "bars": 60
+      },
+      "breakout_level": 2.6500001,
+      "provisional": false,
+      "last_bar": "2026-11-11",
+      "price": 2.51999998,
+      "mcap": 230026896.0,
+      "mcap_asof": "2026-11-10",
       "mcap_src": "cache"
     },
     {
@@ -393,10 +419,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.15,
-        "atr_pctl": 49.8,
-        "vol_pctl": 4.6,
-        "drawdown_pct": 75.8,
+        "ribbon_pct": 10.31,
+        "atr_pctl": 42.5,
+        "vol_pctl": 4.2,
+        "drawdown_pct": 75.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
@@ -408,38 +434,38 @@
       },
       "breakout_level": 58.84000015,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 43.81999969,
+      "last_bar": "2026-11-11",
+      "price": 43.97000122,
       "mcap": 658887808.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
     },
     {
-      "symbol": "CRNT",
-      "name": "Ceragon Networks Ltd. - Ordinary Shares",
-      "yf": "CRNT",
+      "symbol": "FWRD",
+      "name": "Forward Air Corporation - Common Stock",
+      "yf": "FWRD",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.28,
-        "atr_pctl": 52.6,
-        "vol_pctl": 33.1,
-        "drawdown_pct": 56.0,
+        "ribbon_pct": 11.17,
+        "atr_pctl": 75.8,
+        "vol_pctl": 4.2,
+        "drawdown_pct": 74.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
       },
       "base": {
-        "high": 2.63000011,
-        "low": 1.89999998,
+        "high": 19.65999985,
+        "low": 14.10000038,
         "bars": 60
       },
-      "breakout_level": 2.6500001,
+      "breakout_level": 19.65999985,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 2.51999998,
-      "mcap": 230026896.0,
-      "mcap_asof": "2026-11-10",
+      "last_bar": "2026-11-11",
+      "price": 17.23999977,
+      "mcap": 596232256.0,
+      "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
     },
     {
@@ -449,10 +475,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.38,
-        "atr_pctl": 10.7,
-        "vol_pctl": 36.3,
-        "drawdown_pct": 51.9,
+        "ribbon_pct": 11.47,
+        "atr_pctl": 12.7,
+        "vol_pctl": 37.3,
+        "drawdown_pct": 52.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-09"
@@ -464,39 +490,11 @@
       },
       "breakout_level": 16.57999992,
       "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 13.71000004,
+      "last_bar": "2026-11-11",
+      "price": 13.59000015,
       "mcap": 927361152.0,
       "mcap_asof": "2026-11-08",
       "mcap_src": "previous"
-    },
-    {
-      "symbol": "FWRD",
-      "name": "Forward Air Corporation - Common Stock",
-      "yf": "FWRD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.7,
-        "atr_pctl": 67.7,
-        "vol_pctl": 2.6,
-        "drawdown_pct": 73.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
-      },
-      "base": {
-        "high": 19.73999977,
-        "low": 14.10000038,
-        "bars": 60
-      },
-      "breakout_level": 19.65999985,
-      "provisional": false,
-      "last_bar": "2026-11-10",
-      "price": 18.32999992,
-      "mcap": 596232256.0,
-      "mcap_asof": "2026-11-09",
-      "mcap_src": "cache"
     }
   ],
   "errors": []
