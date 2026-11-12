@@ -1,13 +1,26 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-11-12T13:16:18+11:00",
+  "generated_at": "2026-11-12T14:15:50+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
+    {
+      "symbol": "RDM",
+      "name": "Red Metal Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 0.12,
+      "turnover_avg20": 33325,
+      "turnover_today": 243489,
+      "rvol": 7.7,
+      "adv_usd": 33325.52,
+      "fund": false,
+      "is_product": false
+    },
     {
       "symbol": "HRN",
       "name": "Horizon Gold Limited",
