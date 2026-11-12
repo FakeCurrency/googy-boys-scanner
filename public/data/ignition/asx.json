@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-12T07:57:15+00:00",
+  "generated_at": "2026-11-12T15:30:56+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-12",
@@ -51,8 +51,8 @@
   },
   "summary": {
     "universe": 2062,
-    "downloaded": 1853,
-    "screened": 1772,
+    "downloaded": 1852,
+    "screened": 1771,
     "skipped": {
       "short history": 80,
       "stale frame": 1
@@ -69,16 +69,18 @@
       "completed_last": "2026-11-12",
       "raw_last": "2026-11-12",
       "expected_completed": "2026-11-12",
-      "lagging": 436,
-      "screened": 1852,
+      "lagging": 478,
+      "screened": 1851,
       "completed_dist": {
-        "2026-11-12": 1416,
-        "2026-11-11": 436,
+        "2026-11-12": 1373,
+        "2026-11-11": 477,
+        "2026-11-10": 1,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-12": 1416,
-        "2026-11-11": 436,
+        "2026-11-12": 1373,
+        "2026-11-11": 477,
+        "2026-11-10": 1,
         "2026-11-03": 1
       },
       "rows_lagging": 1
@@ -86,7 +88,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1852
+        "yahoo": 1500
       },
       "dead": {},
       "errors": {},
@@ -101,9 +103,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1852,
-      "reused": 1,
-      "merged": 1853,
+      "fresh": 1500,
+      "reused": 352,
+      "merged": 1852,
       "universe": 2062,
       "stale_dropped": 0,
       "refused": 0
@@ -112,7 +114,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 351.3
+    "elapsed_s": 318.4
   },
   "results": [
     {
@@ -147,7 +149,7 @@
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.93,
