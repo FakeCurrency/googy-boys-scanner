@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-12T03:20:46+00:00",
+  "generated_at": "2026-11-13T02:03:21+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-11",
@@ -10,11 +10,11 @@
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25466.19,
-    "sma200": 25122.61,
+    "close": 25366.09,
+    "sma200": 25130.16,
     "above_200": true,
-    "vs_200_pct": 1.4,
-    "as_of": "2026-11-11"
+    "vs_200_pct": 0.9,
+    "as_of": "2026-11-12"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,9 +52,9 @@
   "summary": {
     "universe": 1424,
     "downloaded": 1424,
-    "screened": 1323,
+    "screened": 1324,
     "skipped": {
-      "short history": 100,
+      "short history": 99,
       "stale frame": 1
     },
     "counts": {
@@ -66,20 +66,22 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-11",
-      "raw_last": "2026-11-11",
-      "expected_completed": "2026-11-11",
-      "lagging": 0,
+      "completed_last": "2026-11-12",
+      "raw_last": "2026-11-12",
+      "expected_completed": "2026-11-12",
+      "lagging": 1303,
       "screened": 1423,
       "completed_dist": {
-        "2026-11-11": 1423,
+        "2026-11-12": 120,
+        "2026-11-11": 1303,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-11": 1423,
+        "2026-11-12": 120,
+        "2026-11-11": 1303,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 13
     },
     "sources": {
       "mode": "yahoo",
@@ -110,7 +112,7 @@
       "rows": 13,
       "have": 13
     },
-    "elapsed_s": 195.3
+    "elapsed_s": 183.2
   },
   "results": [
     {
@@ -156,9 +158,9 @@
       "change_pct": 0.0,
       "r_now": 0.0,
       "trail": 11.1077777,
-      "mcap": 369742112.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
+      "mcap": 369092832.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CRNC",
@@ -212,9 +214,9 @@
       "provisional": false,
       "last_bar": "2026-11-11",
       "price": 12.32999992,
-      "mcap": 2371188224.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
+      "mcap": 2577212672.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "SRPT",
@@ -268,9 +270,9 @@
       "provisional": false,
       "last_bar": "2026-11-11",
       "price": 13.72999954,
-      "mcap": 767063808.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
+      "mcap": 759007616.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "LINE",
@@ -436,9 +438,9 @@
       "provisional": false,
       "last_bar": "2026-11-11",
       "price": 43.97000122,
-      "mcap": 658887808.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
+      "mcap": 662837824.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "FWRD",
@@ -492,9 +494,9 @@
       "provisional": false,
       "last_bar": "2026-11-11",
       "price": 13.59000015,
-      "mcap": 927361152.0,
-      "mcap_asof": "2026-11-08",
-      "mcap_src": "previous"
+      "mcap": 961131200.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "yahoo"
     }
   ],
   "errors": []
