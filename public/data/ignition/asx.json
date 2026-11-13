@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-13T07:33:09+00:00",
+  "generated_at": "2026-11-13T14:47:59+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-13",
@@ -68,24 +68,24 @@
       "completed_last": "2026-11-13",
       "raw_last": "2026-11-13",
       "expected_completed": "2026-11-13",
-      "lagging": 528,
+      "lagging": 527,
       "screened": 1852,
       "completed_dist": {
-        "2026-11-13": 1324,
-        "2026-11-12": 494,
-        "2026-11-11": 34
+        "2026-11-13": 1325,
+        "2026-11-12": 510,
+        "2026-11-11": 17
       },
       "raw_dist": {
-        "2026-11-13": 1324,
-        "2026-11-12": 494,
-        "2026-11-11": 34
+        "2026-11-13": 1325,
+        "2026-11-12": 510,
+        "2026-11-11": 17
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1710
+        "yahoo": 1580
       },
       "dead": {},
       "errors": {},
@@ -100,8 +100,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1710,
-      "reused": 142,
+      "fresh": 1580,
+      "reused": 272,
       "merged": 1852,
       "universe": 2062,
       "stale_dropped": 0,
@@ -111,7 +111,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 309.2
+    "elapsed_s": 310.7
   },
   "results": [
     {
@@ -140,7 +140,7 @@
       "price": 0.64999998,
       "mcap": 390770656.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "STX",
@@ -168,7 +168,7 @@
       "price": 0.098,
       "mcap": 353412000.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "KPG",
@@ -196,7 +196,7 @@
       "price": 4.32999992,
       "mcap": 196040576.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PNV",
@@ -224,7 +224,7 @@
       "price": 0.88499999,
       "mcap": 611395136.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "NTU",
@@ -336,7 +336,7 @@
       "price": 3.6500001,
       "mcap": 1153310720.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "HMC",
