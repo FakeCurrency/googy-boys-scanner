@@ -2,10 +2,10 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-13T02:03:21+00:00",
+  "generated_at": "2026-11-13T02:54:27+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-11",
+  "last_closed_bar": "2026-11-12",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
@@ -58,30 +58,28 @@
       "stale frame": 1
     },
     "counts": {
-      "IGNITING": 0,
-      "RUNNING": 1,
-      "CLOSED": 0,
+      "IGNITING": 1,
+      "RUNNING": 0,
+      "CLOSED": 1,
       "COILED": 12,
       "provisional": 0,
-      "igniting_confirmed": 0
+      "igniting_confirmed": 1
     },
     "bars": {
       "completed_last": "2026-11-12",
       "raw_last": "2026-11-12",
       "expected_completed": "2026-11-12",
-      "lagging": 1303,
+      "lagging": 0,
       "screened": 1423,
       "completed_dist": {
-        "2026-11-12": 120,
-        "2026-11-11": 1303,
+        "2026-11-12": 1423,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-12": 120,
-        "2026-11-11": 1303,
+        "2026-11-12": 1423,
         "2026-10-28": 1
       },
-      "rows_lagging": 13
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
@@ -109,12 +107,59 @@
       "refused": 0
     },
     "mcap": {
-      "rows": 13,
-      "have": 13
+      "rows": 14,
+      "have": 14
     },
-    "elapsed_s": 183.2
+    "elapsed_s": 210.7
   },
   "results": [
+    {
+      "symbol": "CHA",
+      "name": "Chagee Holdings Limited - American Depositary Shares, each representing 1 Class A ordinary share",
+      "yf": "CHA",
+      "source": "yahoo",
+      "trigger_date": "2026-11-12",
+      "trigger_close": 13.51000023,
+      "entry": 13.51000023,
+      "entry_basis": "trigger_close",
+      "entry_date": null,
+      "bars_since": 0,
+      "rvol": 3.76,
+      "ext_pct": 7.1,
+      "turnover_trigger": 33312959.0,
+      "turnover_base": 8145339.0,
+      "base": {
+        "high": 13.13000011,
+        "low": 10.05000019,
+        "bars": 60,
+        "range_pct": 30.6
+      },
+      "stop": 12.67571595,
+      "risk_pct": 6.2,
+      "wide_stop": false,
+      "mm_target": 16.21000004,
+      "mm_passed": false,
+      "mm_r": 3.24,
+      "coil": {
+        "ribbon_pct": 11.74,
+        "atr_pctl": 2.5,
+        "vol_pctl": 31.9,
+        "drawdown_pct": 68.5,
+        "coiled": true,
+        "coiled_bars": 3
+      },
+      "mfe_r": 0.0,
+      "state": "IGNITING",
+      "provisional": false,
+      "last_bar": "2026-11-12",
+      "price": 13.51000023,
+      "change_pct": 0.0,
+      "r_now": 0.0,
+      "trail": 12.6200001,
+      "mcap": 2577212672.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "previous"
+    },
     {
       "symbol": "PERI",
       "name": "Perion Network Ltd - Ordinary Shares",
@@ -125,7 +170,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 7,
+      "bars_since": 8,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -151,16 +196,21 @@
         "coiled_bars": 10
       },
       "mfe_r": 0.04,
-      "state": "RUNNING",
+      "exit_reason": "trail",
+      "exit_date": "2026-11-12",
+      "exit_price": 11.36999989,
+      "exit_r": -0.02,
+      "exit_pending": true,
+      "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 11.39999962,
-      "change_pct": 0.0,
-      "r_now": 0.0,
-      "trail": 11.1077777,
+      "last_bar": "2026-11-12",
+      "price": 11.36999989,
+      "change_pct": -0.3,
+      "r_now": -0.02,
+      "trail": 11.40444438,
       "mcap": 369092832.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CRNC",
@@ -169,13 +219,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.23,
-        "atr_pctl": 4.6,
-        "vol_pctl": 0.4,
-        "drawdown_pct": 68.4,
+        "ribbon_pct": 6.03,
+        "atr_pctl": 10.1,
+        "vol_pctl": 0.2,
+        "drawdown_pct": 70.3,
         "coiled": true,
-        "coiled_bars": 20,
-        "last_coiled": "2026-11-11"
+        "coiled_bars": 21,
+        "last_coiled": "2026-11-12"
       },
       "base": {
         "high": 9.27000046,
@@ -184,66 +234,66 @@
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 8.69999981,
+      "last_bar": "2026-11-12",
+      "price": 8.15999985,
       "mcap": 390337120.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
     },
     {
-      "symbol": "CHA",
-      "name": "Chagee Holdings Limited - American Depositary Shares, each representing 1 Class A ordinary share",
-      "yf": "CHA",
+      "symbol": "JACK",
+      "name": "Jack In The Box Inc. - Common Stock",
+      "yf": "JACK",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.74,
-        "atr_pctl": 2.5,
-        "vol_pctl": 31.9,
-        "drawdown_pct": 68.5,
+        "ribbon_pct": 11.53,
+        "atr_pctl": 22.6,
+        "vol_pctl": 1.6,
+        "drawdown_pct": 82.9,
         "coiled": true,
-        "coiled_bars": 3,
-        "last_coiled": "2026-11-11"
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-12"
       },
       "base": {
-        "high": 13.13000011,
-        "low": 9.96000004,
+        "high": 18.38999939,
+        "low": 10.77000046,
         "bars": 60
       },
-      "breakout_level": 13.13000011,
+      "breakout_level": 18.38999939,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 12.32999992,
-      "mcap": 2577212672.0,
+      "last_bar": "2026-11-12",
+      "price": 14.06999969,
+      "mcap": 269853152.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "cache"
     },
     {
-      "symbol": "SRPT",
-      "name": "Sarepta Therapeutics, Inc. - Common Stock",
-      "yf": "SRPT",
+      "symbol": "GPRE",
+      "name": "Green Plains, Inc. - Common Stock",
+      "yf": "GPRE",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.31,
-        "atr_pctl": 47.0,
-        "vol_pctl": 21.8,
-        "drawdown_pct": 90.4,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
+        "ribbon_pct": 11.98,
+        "atr_pctl": 9.5,
+        "vol_pctl": 32.9,
+        "drawdown_pct": 52.2,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-12"
       },
       "base": {
-        "high": 23.62000084,
-        "low": 16.13999939,
+        "high": 16.57999992,
+        "low": 13.02999973,
         "bars": 60
       },
-      "breakout_level": 23.62000084,
+      "breakout_level": 16.57999992,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 16.68000031,
-      "mcap": 1848745984.0,
-      "mcap_asof": "2026-11-10",
+      "last_bar": "2026-11-12",
+      "price": 13.60999966,
+      "mcap": 961131200.0,
+      "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
     },
     {
@@ -253,10 +303,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.13,
-        "atr_pctl": 40.3,
-        "vol_pctl": 19.6,
-        "drawdown_pct": 48.8,
+        "ribbon_pct": 5.08,
+        "atr_pctl": 53.2,
+        "vol_pctl": 20.0,
+        "drawdown_pct": 50.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-10-30"
@@ -268,11 +318,39 @@
       },
       "breakout_level": 15.19999981,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 13.72999954,
+      "last_bar": "2026-11-12",
+      "price": 13.18999958,
       "mcap": 759007616.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "SRPT",
+      "name": "Sarepta Therapeutics, Inc. - Common Stock",
+      "yf": "SRPT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 5.89,
+        "atr_pctl": 51.0,
+        "vol_pctl": 20.0,
+        "drawdown_pct": 90.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-04"
+      },
+      "base": {
+        "high": 23.62000084,
+        "low": 16.13999939,
+        "bars": 60
+      },
+      "breakout_level": 23.62000084,
+      "provisional": false,
+      "last_bar": "2026-11-12",
+      "price": 16.01000023,
+      "mcap": 1848745984.0,
+      "mcap_asof": "2026-11-10",
+      "mcap_src": "previous"
     },
     {
       "symbol": "LINE",
@@ -281,10 +359,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.47,
-        "atr_pctl": 67.7,
-        "vol_pctl": 62.9,
-        "drawdown_pct": 56.1,
+        "ribbon_pct": 6.39,
+        "atr_pctl": 64.3,
+        "vol_pctl": 63.7,
+        "drawdown_pct": 56.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-09"
@@ -294,10 +372,10 @@
         "low": 32.75,
         "bars": 60
       },
-      "breakout_level": 41.91316816,
+      "breakout_level": 41.63741878,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 35.40000153,
+      "last_bar": "2026-11-12",
+      "price": 34.93000031,
       "mcap": 8746085376.0,
       "mcap_asof": "2026-11-11",
       "mcap_src": "previous"
@@ -309,10 +387,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.37,
-        "atr_pctl": 15.7,
-        "vol_pctl": 18.7,
-        "drawdown_pct": 47.5,
+        "ribbon_pct": 7.96,
+        "atr_pctl": 17.1,
+        "vol_pctl": 15.7,
+        "drawdown_pct": 49.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-03"
@@ -324,67 +402,11 @@
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 5.71999979,
+      "last_bar": "2026-11-12",
+      "price": 5.53000021,
       "mcap": 2652809984.0,
       "mcap_asof": "2026-11-09",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "IRWD",
-      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
-      "yf": "IRWD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 8.35,
-        "atr_pctl": 3.8,
-        "vol_pctl": 45.6,
-        "drawdown_pct": 69.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-06"
-      },
-      "base": {
-        "high": 4.96999979,
-        "low": 3.38000011,
-        "bars": 60
-      },
-      "breakout_level": 4.96999979,
-      "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 4.86999989,
-      "mcap": 774777472.0,
-      "mcap_asof": "2026-11-10",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "AEBI",
-      "name": "Aebi Schmidt Holding AG - Common Stock",
-      "yf": "AEBI",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.31,
-        "atr_pctl": 33.7,
-        "vol_pctl": 32.3,
-        "drawdown_pct": 67.3,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-10"
-      },
-      "base": {
-        "high": 13.03999996,
-        "low": 10.32999992,
-        "bars": 60
-      },
-      "breakout_level": 13.03999996,
-      "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 10.69499969,
-      "mcap": 829966720.0,
-      "mcap_asof": "2026-11-12",
-      "mcap_src": "previous"
     },
     {
       "symbol": "CRNT",
@@ -393,10 +415,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.78,
-        "atr_pctl": 50.8,
-        "vol_pctl": 30.4,
-        "drawdown_pct": 56.0,
+        "ribbon_pct": 9.38,
+        "atr_pctl": 58.9,
+        "vol_pctl": 29.4,
+        "drawdown_pct": 58.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
@@ -408,11 +430,95 @@
       },
       "breakout_level": 2.6500001,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 2.51999998,
+      "last_bar": "2026-11-12",
+      "price": 2.38000011,
       "mcap": 230026896.0,
       "mcap_asof": "2026-11-10",
       "mcap_src": "cache"
+    },
+    {
+      "symbol": "AEBI",
+      "name": "Aebi Schmidt Holding AG - Common Stock",
+      "yf": "AEBI",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.42,
+        "atr_pctl": 47.2,
+        "vol_pctl": 39.9,
+        "drawdown_pct": 68.6,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-10"
+      },
+      "base": {
+        "high": 13.00951838,
+        "low": 9.99657865,
+        "bars": 60
+      },
+      "breakout_level": 13.00951838,
+      "provisional": false,
+      "last_bar": "2026-11-12",
+      "price": 10.23999977,
+      "mcap": 829966720.0,
+      "mcap_asof": "2026-11-12",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "FWRD",
+      "name": "Forward Air Corporation - Common Stock",
+      "yf": "FWRD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.77,
+        "atr_pctl": 70.8,
+        "vol_pctl": 5.0,
+        "drawdown_pct": 74.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-04"
+      },
+      "base": {
+        "high": 19.65999985,
+        "low": 14.10000038,
+        "bars": 60
+      },
+      "breakout_level": 19.45000076,
+      "provisional": false,
+      "last_bar": "2026-11-12",
+      "price": 17.15999985,
+      "mcap": 596232256.0,
+      "mcap_asof": "2026-11-09",
+      "mcap_src": "cache"
+    },
+    {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 11.06,
+        "atr_pctl": 3.4,
+        "vol_pctl": 49.2,
+        "drawdown_pct": 69.1,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-06"
+      },
+      "base": {
+        "high": 4.96999979,
+        "low": 3.38000011,
+        "bars": 60
+      },
+      "breakout_level": 5.0,
+      "provisional": false,
+      "last_bar": "2026-11-12",
+      "price": 4.8499999,
+      "mcap": 774777472.0,
+      "mcap_asof": "2026-11-10",
+      "mcap_src": "previous"
     },
     {
       "symbol": "ROOT",
@@ -421,10 +527,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.31,
-        "atr_pctl": 42.5,
-        "vol_pctl": 4.2,
-        "drawdown_pct": 75.7,
+        "ribbon_pct": 12.17,
+        "atr_pctl": 38.7,
+        "vol_pctl": 5.2,
+        "drawdown_pct": 75.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
@@ -436,67 +542,11 @@
       },
       "breakout_level": 58.84000015,
       "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 43.97000122,
+      "last_bar": "2026-11-12",
+      "price": 43.63000107,
       "mcap": 662837824.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
-    },
-    {
-      "symbol": "FWRD",
-      "name": "Forward Air Corporation - Common Stock",
-      "yf": "FWRD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.17,
-        "atr_pctl": 75.8,
-        "vol_pctl": 4.2,
-        "drawdown_pct": 74.6,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
-      },
-      "base": {
-        "high": 19.65999985,
-        "low": 14.10000038,
-        "bars": 60
-      },
-      "breakout_level": 19.65999985,
-      "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 17.23999977,
-      "mcap": 596232256.0,
-      "mcap_asof": "2026-11-09",
-      "mcap_src": "cache"
-    },
-    {
-      "symbol": "GPRE",
-      "name": "Green Plains, Inc. - Common Stock",
-      "yf": "GPRE",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.47,
-        "atr_pctl": 12.7,
-        "vol_pctl": 37.3,
-        "drawdown_pct": 52.3,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-09"
-      },
-      "base": {
-        "high": 16.57999992,
-        "low": 13.02999973,
-        "bars": 60
-      },
-      "breakout_level": 16.57999992,
-      "provisional": false,
-      "last_bar": "2026-11-11",
-      "price": 13.59000015,
-      "mcap": 961131200.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
