@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-13T15:25:40Z",
+  "generated_at": "2026-11-13T15:44:39Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -251,8 +251,9 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-12T21:13:53Z",
+      "at": "2026-11-13T15:44:36Z",
       "reasons": {
+        "EXE": "global_cap",
         "FELE": "global_cap",
         "IMMR": "dup_symbol",
         "NTNX": "global_cap"
