@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-13T02:54:27+00:00",
+  "generated_at": "2026-11-14T01:36:58+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-12",
+  "last_closed_bar": "2026-11-13",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 25366.09,
-    "sma200": 25130.16,
-    "above_200": true,
-    "vs_200_pct": 0.9,
-    "as_of": "2026-11-12"
+    "close": 25136.27,
+    "sma200": 25137.41,
+    "above_200": false,
+    "vs_200_pct": -0.0,
+    "as_of": "2026-11-13"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 1424,
-    "downloaded": 1424,
+    "universe": 1425,
+    "downloaded": 1425,
     "screened": 1324,
     "skipped": {
-      "short history": 99,
+      "short history": 100,
       "stale frame": 1
     },
     "counts": {
@@ -66,25 +66,27 @@
       "igniting_confirmed": 1
     },
     "bars": {
-      "completed_last": "2026-11-12",
-      "raw_last": "2026-11-12",
-      "expected_completed": "2026-11-12",
-      "lagging": 0,
-      "screened": 1423,
+      "completed_last": "2026-11-13",
+      "raw_last": "2026-11-13",
+      "expected_completed": "2026-11-13",
+      "lagging": 624,
+      "screened": 1424,
       "completed_dist": {
-        "2026-11-12": 1423,
+        "2026-11-13": 800,
+        "2026-11-12": 624,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-12": 1423,
+        "2026-11-13": 800,
+        "2026-11-12": 624,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 7
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1424
+        "yahoo": 1425
       },
       "dead": {},
       "errors": {},
@@ -99,10 +101,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1424,
+      "fresh": 1425,
       "reused": 0,
-      "merged": 1424,
-      "universe": 1424,
+      "merged": 1425,
+      "universe": 1425,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -110,7 +112,7 @@
       "rows": 14,
       "have": 14
     },
-    "elapsed_s": 210.7
+    "elapsed_s": 218.0
   },
   "results": [
     {
@@ -170,7 +172,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 8,
+      "bars_since": 9,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -197,17 +199,17 @@
       },
       "mfe_r": 0.04,
       "exit_reason": "trail",
-      "exit_date": "2026-11-12",
-      "exit_price": 11.36999989,
-      "exit_r": -0.02,
-      "exit_pending": true,
+      "exit_date": "2026-11-13",
+      "exit_price": 11.39999962,
+      "exit_r": 0.0,
+      "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-12",
+      "last_bar": "2026-11-13",
       "price": 11.36999989,
       "change_pct": -0.3,
       "r_now": -0.02,
-      "trail": 11.40444438,
+      "trail": 11.39999994,
       "mcap": 369092832.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
@@ -236,9 +238,9 @@
       "provisional": false,
       "last_bar": "2026-11-12",
       "price": 8.15999985,
-      "mcap": 390337120.0,
-      "mcap_asof": "2026-11-09",
-      "mcap_src": "cache"
+      "mcap": 358223616.0,
+      "mcap_asof": "2026-11-14",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "JACK",
@@ -247,13 +249,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.53,
-        "atr_pctl": 22.6,
-        "vol_pctl": 1.6,
-        "drawdown_pct": 82.9,
+        "ribbon_pct": 11.22,
+        "atr_pctl": 17.5,
+        "vol_pctl": 1.8,
+        "drawdown_pct": 82.1,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-11-12"
+        "coiled_bars": 2,
+        "last_coiled": "2026-11-13"
       },
       "base": {
         "high": 18.38999939,
@@ -262,39 +264,11 @@
       },
       "breakout_level": 18.38999939,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 14.06999969,
+      "last_bar": "2026-11-13",
+      "price": 14.75,
       "mcap": 269853152.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "GPRE",
-      "name": "Green Plains, Inc. - Common Stock",
-      "yf": "GPRE",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.98,
-        "atr_pctl": 9.5,
-        "vol_pctl": 32.9,
-        "drawdown_pct": 52.2,
-        "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-11-12"
-      },
-      "base": {
-        "high": 16.57999992,
-        "low": 13.02999973,
-        "bars": 60
-      },
-      "breakout_level": 16.57999992,
-      "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 13.60999966,
-      "mcap": 961131200.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
     },
     {
       "symbol": "INMD",
@@ -322,34 +296,6 @@
       "price": 13.18999958,
       "mcap": 759007616.0,
       "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "SRPT",
-      "name": "Sarepta Therapeutics, Inc. - Common Stock",
-      "yf": "SRPT",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 5.89,
-        "atr_pctl": 51.0,
-        "vol_pctl": 20.0,
-        "drawdown_pct": 90.8,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
-      },
-      "base": {
-        "high": 23.62000084,
-        "low": 16.13999939,
-        "bars": 60
-      },
-      "breakout_level": 23.62000084,
-      "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 16.01000023,
-      "mcap": 1848745984.0,
-      "mcap_asof": "2026-11-10",
       "mcap_src": "previous"
     },
     {
@@ -381,6 +327,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "SRPT",
+      "name": "Sarepta Therapeutics, Inc. - Common Stock",
+      "yf": "SRPT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 7.27,
+        "atr_pctl": 43.5,
+        "vol_pctl": 17.3,
+        "drawdown_pct": 90.7,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-04"
+      },
+      "base": {
+        "high": 23.62000084,
+        "low": 15.98999977,
+        "bars": 60
+      },
+      "breakout_level": 23.62000084,
+      "provisional": false,
+      "last_bar": "2026-11-13",
+      "price": 16.06999969,
+      "mcap": 1848745984.0,
+      "mcap_asof": "2026-11-10",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "PTON",
       "name": "Peloton Interactive, Inc. - Common Stock",
       "yf": "PTON",
@@ -404,9 +378,9 @@
       "provisional": false,
       "last_bar": "2026-11-12",
       "price": 5.53000021,
-      "mcap": 2652809984.0,
-      "mcap_asof": "2026-11-09",
-      "mcap_src": "cache"
+      "mcap": 2541347328.0,
+      "mcap_asof": "2026-11-14",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CRNT",
@@ -415,10 +389,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.38,
-        "atr_pctl": 58.9,
-        "vol_pctl": 29.4,
-        "drawdown_pct": 58.5,
+        "ribbon_pct": 8.93,
+        "atr_pctl": 56.9,
+        "vol_pctl": 28.2,
+        "drawdown_pct": 58.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
@@ -430,8 +404,8 @@
       },
       "breakout_level": 2.6500001,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 2.38000011,
+      "last_bar": "2026-11-13",
+      "price": 2.3900001,
       "mcap": 230026896.0,
       "mcap_asof": "2026-11-10",
       "mcap_src": "cache"
@@ -471,54 +445,26 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.77,
-        "atr_pctl": 70.8,
-        "vol_pctl": 5.0,
-        "drawdown_pct": 74.7,
+        "ribbon_pct": 9.97,
+        "atr_pctl": 66.5,
+        "vol_pctl": 6.3,
+        "drawdown_pct": 74.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-04"
       },
       "base": {
-        "high": 19.65999985,
+        "high": 19.45000076,
         "low": 14.10000038,
         "bars": 60
       },
       "breakout_level": 19.45000076,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 17.15999985,
-      "mcap": 596232256.0,
-      "mcap_asof": "2026-11-09",
+      "last_bar": "2026-11-13",
+      "price": 17.38999939,
+      "mcap": 586956480.0,
+      "mcap_asof": "2026-11-13",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "IRWD",
-      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
-      "yf": "IRWD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.06,
-        "atr_pctl": 3.4,
-        "vol_pctl": 49.2,
-        "drawdown_pct": 69.1,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-06"
-      },
-      "base": {
-        "high": 4.96999979,
-        "low": 3.38000011,
-        "bars": 60
-      },
-      "breakout_level": 5.0,
-      "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 4.8499999,
-      "mcap": 774777472.0,
-      "mcap_asof": "2026-11-10",
-      "mcap_src": "previous"
     },
     {
       "symbol": "ROOT",
@@ -546,6 +492,62 @@
       "price": 43.63000107,
       "mcap": 662837824.0,
       "mcap_asof": "2026-11-13",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "GPRE",
+      "name": "Green Plains, Inc. - Common Stock",
+      "yf": "GPRE",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 12.45,
+        "atr_pctl": 10.1,
+        "vol_pctl": 16.1,
+        "drawdown_pct": 53.3,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-12"
+      },
+      "base": {
+        "high": 16.57999992,
+        "low": 13.02999973,
+        "bars": 60
+      },
+      "breakout_level": 16.57999992,
+      "provisional": false,
+      "last_bar": "2026-11-13",
+      "price": 13.31999969,
+      "mcap": 961131200.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "IRWD",
+      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
+      "yf": "IRWD",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 13.93,
+        "atr_pctl": 2.2,
+        "vol_pctl": 50.0,
+        "drawdown_pct": 69.2,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-06"
+      },
+      "base": {
+        "high": 5.0,
+        "low": 3.38000011,
+        "bars": 60
+      },
+      "breakout_level": 5.0,
+      "provisional": false,
+      "last_bar": "2026-11-13",
+      "price": 4.82999992,
+      "mcap": 774777472.0,
+      "mcap_asof": "2026-11-10",
       "mcap_src": "previous"
     }
   ],
