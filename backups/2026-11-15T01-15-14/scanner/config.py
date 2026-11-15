@@ -447,7 +447,7 @@ VIVEK_SCHEMA_VERSION   = 5
 #   app.js  tfDots()            -> plan presence per TF + armed
 #   app.js  star-watch alerts   -> armed, entry_trigger (via headline_tf)
 #   (level_tf + direction ride along: cheap, and chart/hero fall back to them)
-# recs.js, journal.js, phasemap-shared.js, confluence_alert.py,
+# journal.js, phasemap-shared.js, confluence_alert.py,
 # marketcaps/sectorcache read ROW-level fields only — no plans.
 # chart.js, the expanded row and the CSV/copy paths read FULL plans from the
 # detail sidecar. tests/test_payload_split.py pins this tuple's contents and
@@ -693,7 +693,35 @@ VIVEK_BOT_LEVEL_TF_ALLOW = ("weekly", "3d")
 # entry rules were aligned to the four conviction cells; rows it opened keep
 # their tag (the journal's w3-1 evidence strip still reads them). New rows
 # carry "hc4-1": grades A/A+, VIVEK_BOT_ENTRY_CELLS, same level gate.
-VIVEK_BOT_CYCLE_TAG = "hc4-1"
+# 2026-11-02: cycle "hc4-1" ENDED (PR-0 / PR-1 / PR-6 tripped; the owner
+# approved hc4-2 items 2, 3, 4, 6 and 7 -- docs/DECISIONS_2026-10-14.md,
+# "hc4-2 proposal"). Its open rows keep their tag and run to their exits
+# under the rules they were opened with. New rows carry "hc4-2": the same
+# grades, cells and level gate, plus the fill re-check (#152), one position
+# per company (#12), GICS sector buckets (#13/#143), grading on the bot's own
+# plan (#7) and the W+H4 point fix (#148).
+VIVEK_BOT_CYCLE_TAG = "hc4-2"
+# THE FILL RE-CHECK (#152, hc4-2). A break plan's entry is the level that was
+# broken, but the trigger bar has already closed above it, so the book fills
+# higher (median 3.96% above the plan entry live; WBC filled 0.03R below its
+# own TP1). For a plan whose trigger is listed here, R:R is measured again
+# from the ACTUAL fill (to TP2, the plan convention) and the entry is skipped
+# below VIVEK_BOT_MIN_RR (`fill_rr`). A fill at or past TP1 was already
+# refused for every trigger by the journal's don't-chase guard. It only ever
+# refuses entries; the refused slot goes to the next-ranked row (the refill).
+# Empty = off.
+VIVEK_BOT_FILL_RECHECK_TRIGGERS = ("break",)
+# ONE POSITION PER COMPANY (#12, hc4-2). Two listed lines of one issuer
+# (FWONA + FWONK, GOOG + GOOGL, FOX + FOXA) are one bet. The company is the
+# issuer part of the listing name -- NASDAQ names read "Issuer - Class X
+# Stock" -- compared within a market; crypto is exempt. Only tightens.
+VIVEK_BOT_ONE_PER_COMPANY = True
+# THE DAY-14 STAMP (hc4-2 item 4, REPORT ONLY). On the first in-session run at
+# or past this many days held, each open row records its best R so far, its R
+# at that mark and whether TP1 had been hit (`d14`), so the decision pack can
+# set "cut at day 14 if it never reached +0.5R" beside what the rules did.
+# Nothing reads it to decide anything. 0 = off.
+VIVEK_BOT_D14_STAMP_DAYS = 14
 # Per-market leverage: stocks 5× (positions sit smaller), crypto 3×.
 VIVEK_BOT_LEVERAGE     = {"asx": 5, "nasdaq": 5, "crypto": 3}
 # LONG-ONLY: the walk-forward backtest showed the short side loses ~0.5R per
@@ -809,10 +837,34 @@ VIVEK_BOT_MAX_NOTIONAL_PCT_ADV = 2.0
 #    days is going nowhere — close it (exit_reason "time") and free the slot.
 #    Runners past TP1 are exempt: they're already risk-free. 0 = off.
 VIVEK_BOT_MAX_HOLD_DAYS  = 28
+#  • HORIZON_STAMP_DAYS (NEXT100, REPORT ONLY): DERIVED, never typed. The time
+#    stop fires on the first in-session run with held > MAX_HOLD_DAYS (day 29),
+#    so a row still open at MAX_HOLD_DAYS + 1 is a runner past TP1. On that
+#    first run vivek_run._stamp_horizon records its R (`horizon`) for the
+#    decision pack's fixed-horizon what-if. Nothing reads it to decide; it
+#    moves with the time stop (0 = off with it).
+VIVEK_BOT_HORIZON_STAMP_DAYS = (VIVEK_BOT_MAX_HOLD_DAYS + 1) if VIVEK_BOT_MAX_HOLD_DAYS else 0
 #  • REENTRY_COOLDOWN_DAYS: after a full stop-out, don't re-enter the same
 #    symbol for this many days — stops the bot churning the same level and
 #    re-donating 1R per scan cycle while a setup keeps re-arming. 0 = off.
 VIVEK_BOT_REENTRY_COOLDOWN_DAYS = 7
+# A RULES exit (NEXT100 #9): the trade-level `exit_reason` values the bot's
+# own rules write -- the stop, the 28-day time stop, the trail after TP1 and
+# the final target. Anything else -- "manual", a caller's label on a hand
+# close, or no exit_reason at all -- is a human act. A CLASSIFICATION for
+# readers, never a gate (no trade path reads it): every "rules close" figure
+# counts with it -- scripts/decision_pack.py, bot_vs_cells.py, run.py's
+# evidence card, live_vs_replay -- and the site reads it from bot_rules.json
+# `rules_exits` (the MECHANICAL_EXITS literals in app.js / journal.js /
+# status.js are offline fallbacks, pinned to this by test_js_config_mirrors).
+# APPEND-ONLY, lowercase: closed rows keep their reason forever and the
+# decision pack's frozen checkpoints count them, so a reason never leaves; a
+# new close path adds its reason here in the commit that first writes it.
+# tests/test_rules_exits.py fails until it does for a reason stamped through
+# the one close writer (vivek_journal._close_remaining) or an `exit_reason`
+# assignment in vivek_journal.py / vivek_run.py; a writer elsewhere is
+# outside that sweep.
+VIVEK_BOT_RULES_EXITS = ("stop", "time", "trail", "target")
 
 # ── Parity backtest + n≥30 decision pack (simulation-only; live bot UNTOUCHED)
 # These knobs exist so the parity replay and its variant grid read ONE place
@@ -838,10 +890,62 @@ VIVEK_PARITY_V2_CUTS = (
     (10, 0.25), (10, 0.50),
     (14, 0.25), (14, 0.50),
 )
+# V11 adverse cut (2 Nov, the owner's "20 more" #5): close a pre-TP1 trade the
+# first bar its adverse move reaches this many R. Live, 54 closes went -0.5R
+# or worse and 3 of them won; this is the replay's read of cutting there.
+VIVEK_PARITY_MAE_CUTS = (0.5,)
 # A variant only PASSES if its R/slot-month improvement holds in BOTH ASX and
 # NASDAQ and in BOTH time halves of the sample (crypto is reported but not a
 # pass gate — thin N).
 VIVEK_PARITY_PASS_MARKETS = ("asx", "nasdaq")
+# NEXT100 #15 (3 Nov): the live book is always full (60/60 since early Oct)
+# and a 300-name replay almost never is, so its slot competition is far
+# weaker than live. "universe" scales the replay's book cap and per-market
+# sector cap to the sample's share of the live universe (sampled / universe,
+# all markets pooled), never below VIVEK_PARITY_SLOT_SCALE_MIN slots; "none"
+# runs the live caps as they are (the old behaviour). The unscaled baseline
+# is still run once so both book_full counts print side by side.
+VIVEK_PARITY_SLOT_SCALE = "universe"
+VIVEK_PARITY_SLOT_SCALE_MIN = 3
+# The live-mix R per trade reweights the replay's per-market average R to the
+# live book's market mix at entry, read from these cycles' rows in
+# journal/vivek_bot_book.json at run time (equal weights, with a note, when
+# the book is unreadable).
+VIVEK_PARITY_LIVE_CYCLES = ("hc4-1", "hc4-2")
+# NEXT100 #18: every variant that passes the grid is re-run (baseline + that
+# variant only) on a second sample that shares no name with the first -- the
+# even stride over the names the first draw left -- before its verdict reads
+# "PASS (replicated)". At most one extra sample per market per run.
+VIVEK_PARITY_REPLICATE = True
+# A second sample that replays fewer names than this share of the first
+# draw's (over the markets it re-drew) is marked THIN in the replication
+# block: the verdict wording is unchanged, the note says a refusal there is
+# weaker evidence than one on a full draw. A whole-universe run (--limit 0)
+# has no disjoint names and is not replicated at all (the label stays PASS).
+VIVEK_PARITY_REPLICATE_MIN_SHARE = 0.5
+# NEXT100 #16/#17 (3 Nov): the replay's own statistics -- a random-timing
+# baseline (same names, same exit model, random entry days), month-block
+# bootstrap bands, P(no gain) per variant and a dropout-placebo pass rate.
+# Read by scanner/replay_noise.py alone; no trade path reads them.
+VIVEK_PARITY_RANDOM_WINDOW_BARS = 182   # a draw lands within +/- this many bars of the real signal
+VIVEK_PARITY_RANDOM_DRAWS = 20          # random entries per taken trade
+VIVEK_PARITY_RANDOM_SEED = 20261103     # one seed: the same data gives the same draws
+VIVEK_PARITY_BOOTSTRAP_N = 1000         # entry-month block-bootstrap resamples
+VIVEK_PARITY_PLACEBO_N = 200            # dropout placebos scored with the real pass gate
+# NEXT100 #14 (3 Nov 2026): every decision replay also writes a SLIM summary
+# (schema 1, documented in scripts/decision_pack.py: the live-rules arm's
+# taken trades, each variant's verdict and R/slot-month, the run's commit SHA
+# and params) plus its pinned INPUTS (per sampled name: first/last bar, bar
+# count and a digest of the close series), and decision_replay.yml's
+# commit-summary job commits both here. Written only when the replay is run
+# with --summary-dir (scanner/replay_summary.py); simulation-only, no trade
+# path reads it. The digest is sha1 over the closes rounded to _DP decimals,
+# its first _HEX hex chars: enough to tell a yfinance re-base from the same
+# tape, small enough to commit for 900 names.
+VIVEK_PARITY_SUMMARY_DIR = "data/research/decision_replay"
+VIVEK_PARITY_SUMMARY_SCHEMA = 1
+VIVEK_PARITY_INPUT_DIGEST_DP = 6
+VIVEK_PARITY_INPUT_DIGEST_HEX = 12
 #  • STALE PROBE (owner ask, 2026-07-29: "no rotation rule. maybe a PROBE that
 #    position has been open for 2 weeks with minimal movement for me then to
 #    manually make a decision"). REPORT-ONLY — it closes nothing, changes
@@ -909,6 +1013,58 @@ VIVEK_BOT_CRYPTO_MAJORS  = ("BTC", "ETH")
 # market. Empty/unknown stock sectors are exempt (crypto is bucketed above).
 # 0 = off.
 VIVEK_BOT_MAX_PER_SECTOR = 6
+# THE SECTOR BUCKETS ARE THE 11 GICS SECTORS (#13 / #143, hc4-2). The ASX
+# universe labels a name by its GICS INDUSTRY GROUP (27 labels: Banks,
+# Insurance and Financial Services are one sector split three ways), NASDAQ by
+# Yahoo's sector names ("Financial Services", "Healthcare"), so the cap above
+# meant different things in each market. Every known label maps to its GICS
+# sector here (lower-case keys, as the cap compares); "not applic" and "class
+# pend" carry no operating sector and map to blank, which the cap exempts (the
+# bot's fund test still reads the RAW label, so a "Not Applic" ETF stays
+# excluded). A label missing from the table is kept as it is. Published in
+# bot_rules.json so the deck's SECTOR n/6 marker buckets the same way.
+VIVEK_BOT_SECTOR_GICS = {
+    # ASX GICS industry groups
+    "energy": "energy",
+    "materials": "materials",
+    "capital goods": "industrials",
+    "commercial & professional services": "industrials",
+    "transportation": "industrials",
+    "automobiles & components": "consumer discretionary",
+    "consumer durables & apparel": "consumer discretionary",
+    "consumer services": "consumer discretionary",
+    "consumer discretionary distribution & retail": "consumer discretionary",
+    "retailing": "consumer discretionary",
+    "consumer staples distribution & retail": "consumer staples",
+    "food & staples retailing": "consumer staples",
+    "food, beverage & tobacco": "consumer staples",
+    "household & personal products": "consumer staples",
+    "health care equipment & services": "health care",
+    "pharmaceuticals, biotechnology & life sciences": "health care",
+    "banks": "financials",
+    "financial services": "financials",
+    "diversified financials": "financials",
+    "insurance": "financials",
+    "software & services": "information technology",
+    "technology hardware & equipment": "information technology",
+    "semiconductors & semiconductor equipment": "information technology",
+    "telecommunication services": "communication services",
+    "media & entertainment": "communication services",
+    "utilities": "utilities",
+    "equity real estate investment trusts (reits)": "real estate",
+    "real estate management & development": "real estate",
+    "not applic": "",
+    "class pend": "",
+    # Yahoo sector names (NASDAQ, and the cache's fallback for ASX names)
+    "basic materials": "materials",
+    "industrials": "industrials",
+    "consumer cyclical": "consumer discretionary",
+    "consumer defensive": "consumer staples",
+    "healthcare": "health care",
+    "technology": "information technology",
+    "communication services": "communication services",
+    "real estate": "real estate",
+}
 
 # HORIZON (sector breadth) and REGIME (relative strength) were REMOVED ENTIRELY
 # on 2026-09-20 (owner: "get rid of it entirely, rip out the guts of it"). The
@@ -1253,6 +1409,17 @@ WATCHDOG_BACKUP_MAX_AGE_H = 26.0       # newest backups/ snapshot dir
 WATCHDOG_UNIVERSE_MAX_AGE_H = 40.0
 # Crypto scans hourly 24/7, so its roster is judged on plain wall-clock.
 WATCHDOG_UNIVERSE_CRYPTO_MAX_AGE_H = 12.0
+# Each STOCK market on its own clock (NEXT100 #13, 2026-11-03). The book probe's
+# min() age across books is satisfied by crypto's hourly run 24/7, so a dead
+# ASX or NASDAQ scan was invisible to it -- while 57 of 60 open rows are stocks
+# whose stops and time stops fire only in an in-session scan. CRITICAL once a
+# stock market's canonical book (journal/vivek_bot_book.<market>.json, saved by
+# every non-dry run of that market) is older than this many SESSION hours: time
+# inside MARKET_SCAN_WINDOWS, on the market's own weekdays and clock, so a
+# night or a weekend never counts. Scans land hourly in session, so it takes
+# three missed (or late) scans in a row to pass 3. functions/api/health.js mirrors it as
+# STOCK_STALE_SESSION_H (pinned, tests/test_js_config_mirrors.py).
+WATCHDOG_STOCK_SCAN_MAX_SESSION_H = 3.0
 
 # ── Confluence forward-return ledger (scripts/alert_returns.py, 2026-08-20) ──
 # Research artefact only: measures whether multi-lens alignment predicts
@@ -1292,6 +1459,47 @@ ALERT_RETURNS_CAP = 20000
 # tests/test_bar_final.py pins every derivation and both exceptions.
 BAR_FINAL = {"asx": ("Australia/Sydney", 16, 40),
              "nasdaq": ("America/New_York", 16, 30)}
+# MARKET_HOLIDAYS (NEXT100 #4, 3 Nov 2026): every FULL-DAY exchange closure
+# from 2026-09-01 through 2027-12-31, {market: {ISO date: what it is}}, in the
+# market's own calendar. Checked on 3 Nov 2026 against the ASX Trade cash-market
+# calendar and the NYSE Group 2026/2027 holiday calendar, which the US equity
+# markets (Nasdaq included) share; Nasdaq's own 2027 page could not be fetched.
+# Early closes (ASX 24 and 31 Dec, US 27 Nov 2026 / 24 Dec 2026 / 26 Nov 2027)
+# are NOT closures and are not listed; nor is Mon 26 Apr 2027 (the ASX
+# calendar lists the Anzac Day substitute as a trading day). Crypto never
+# closes. REPORT ONLY today: scripts/decision_pack.py flags a projected time
+# stop landing on one (it would book at a stale close on a shut market) and
+# audits day_marks dated on one; no engine path reads it yet, and
+# scanner/time_stop.py still does not model holidays.
+# tests/test_market_holidays.py pins the shape and the certain dates.
+MARKET_HOLIDAYS = {
+    "asx": {
+        "2026-12-25": "Christmas Day",
+        "2026-12-28": "Boxing Day (observed; 26 Dec is a Saturday)",
+        "2027-01-01": "New Year's Day",
+        "2027-01-26": "Australia Day",
+        "2027-03-26": "Good Friday",
+        "2027-03-29": "Easter Monday",
+        "2027-06-14": "King's Birthday",
+        "2027-12-27": "Christmas Day (observed; 25 Dec is a Saturday)",
+        "2027-12-28": "Boxing Day (observed; 26 Dec is a Sunday)",
+    },
+    "nasdaq": {
+        "2026-09-07": "Labor Day",
+        "2026-11-26": "Thanksgiving Day",
+        "2026-12-25": "Christmas Day",
+        "2027-01-01": "New Year's Day",
+        "2027-01-18": "Martin Luther King Jr. Day",
+        "2027-02-15": "Washington's Birthday",
+        "2027-03-26": "Good Friday",
+        "2027-05-31": "Memorial Day",
+        "2027-06-18": "Juneteenth (observed; 19 Jun is a Saturday)",
+        "2027-07-05": "Independence Day (observed; 4 Jul is a Sunday)",
+        "2027-09-06": "Labor Day",
+        "2027-11-25": "Thanksgiving Day",
+        "2027-12-24": "Christmas Day (observed; 25 Dec is a Saturday)",
+    },
+}
 # The ledger's ASX 16:45 is five minutes PAST BAR_FINAL on purpose, not a stale
 # copy: a ledger return is FROZEN at its first stamp (no later run corrects a
 # pre-auction read), and stamp() compares the clock when its fetch STARTS,
@@ -1424,7 +1632,6 @@ WATCHDOG_RUNS = {
     "phasemap.yml":    {"max_age_h": 26.0, "severity": "WARNING"},
     "backup_book.yml": {"max_age_h": 26.0, "severity": "CRITICAL"},
     "confluence.yml":  {"max_age_h": 26.0, "severity": "WARNING"},
-    "reco_note.yml":   {"max_age_h": 26.0, "severity": "WARNING"},   # daily auto note (2026-07-23)
     "alert_returns.yml": {"max_age_h": 26.0, "severity": "WARNING"},  # confluence forward returns (2026-08-20)
     # The evidence files (REFINE200 #79): a weekly cron (Sunday 08:00 UTC, up to
     # ~6h) gets a week plus a day; a monthly one (the 1st, 08:00 UTC; months
