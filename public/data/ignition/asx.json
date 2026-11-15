@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-13T14:47:59+00:00",
+  "generated_at": "2026-11-15T09:37:26+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-13",
@@ -50,7 +50,7 @@
     }
   },
   "summary": {
-    "universe": 2062,
+    "universe": 2061,
     "downloaded": 1852,
     "screened": 1773,
     "skipped": {
@@ -68,24 +68,24 @@
       "completed_last": "2026-11-13",
       "raw_last": "2026-11-13",
       "expected_completed": "2026-11-13",
-      "lagging": 527,
+      "lagging": 141,
       "screened": 1852,
       "completed_dist": {
-        "2026-11-13": 1325,
-        "2026-11-12": 510,
-        "2026-11-11": 17
+        "2026-11-13": 1711,
+        "2026-11-12": 126,
+        "2026-11-11": 15
       },
       "raw_dist": {
-        "2026-11-13": 1325,
-        "2026-11-12": 510,
-        "2026-11-11": 17
+        "2026-11-13": 1711,
+        "2026-11-12": 126,
+        "2026-11-11": 15
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1580
+        "yahoo": 1485
       },
       "dead": {},
       "errors": {},
@@ -100,10 +100,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1580,
-      "reused": 272,
+      "fresh": 1485,
+      "reused": 367,
       "merged": 1852,
-      "universe": 2062,
+      "universe": 2061,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -111,7 +111,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 310.7
+    "elapsed_s": 283.4
   },
   "results": [
     {
@@ -146,7 +146,7 @@
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 10.14,
@@ -363,7 +363,7 @@
       "last_bar": "2026-11-13",
       "price": 3.4000001,
       "mcap": 1402893568.0,
-      "mcap_asof": "2026-11-10",
+      "mcap_asof": "2026-11-14",
       "mcap_src": "cache"
     }
   ],
