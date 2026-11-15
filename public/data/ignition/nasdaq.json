@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-14T01:36:58+00:00",
+  "generated_at": "2026-11-15T12:20:14+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-13",
@@ -61,7 +61,7 @@
       "IGNITING": 1,
       "RUNNING": 0,
       "CLOSED": 1,
-      "COILED": 12,
+      "COILED": 11,
       "provisional": 0,
       "igniting_confirmed": 1
     },
@@ -69,19 +69,19 @@
       "completed_last": "2026-11-13",
       "raw_last": "2026-11-13",
       "expected_completed": "2026-11-13",
-      "lagging": 624,
+      "lagging": 1,
       "screened": 1424,
       "completed_dist": {
-        "2026-11-13": 800,
-        "2026-11-12": 624,
+        "2026-11-13": 1423,
+        "2026-11-12": 1,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-13": 800,
-        "2026-11-12": 624,
+        "2026-11-13": 1423,
+        "2026-11-12": 1,
         "2026-10-28": 1
       },
-      "rows_lagging": 7
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
@@ -109,10 +109,10 @@
       "refused": 0
     },
     "mcap": {
-      "rows": 14,
-      "have": 14
+      "rows": 13,
+      "have": 13
     },
-    "elapsed_s": 218.0
+    "elapsed_s": 177.4
   },
   "results": [
     {
@@ -122,10 +122,10 @@
       "source": "yahoo",
       "trigger_date": "2026-11-12",
       "trigger_close": 13.51000023,
-      "entry": 13.51000023,
-      "entry_basis": "trigger_close",
-      "entry_date": null,
-      "bars_since": 0,
+      "entry": 13.72000027,
+      "entry_basis": "next_open",
+      "entry_date": "2026-11-13",
+      "bars_since": 1,
       "rvol": 3.76,
       "ext_pct": 7.1,
       "turnover_trigger": 33312959.0,
@@ -137,11 +137,11 @@
         "range_pct": 30.6
       },
       "stop": 12.67571595,
-      "risk_pct": 6.2,
+      "risk_pct": 7.6,
       "wide_stop": false,
       "mm_target": 16.21000004,
       "mm_passed": false,
-      "mm_r": 3.24,
+      "mm_r": 2.38,
       "coil": {
         "ribbon_pct": 11.74,
         "atr_pctl": 2.5,
@@ -150,14 +150,14 @@
         "coiled": true,
         "coiled_bars": 3
       },
-      "mfe_r": 0.0,
+      "mfe_r": 0.8,
       "state": "IGNITING",
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 13.51000023,
-      "change_pct": 0.0,
-      "r_now": 0.0,
-      "trail": 12.6200001,
+      "last_bar": "2026-11-13",
+      "price": 14.36999989,
+      "change_pct": 4.7,
+      "r_now": 0.62,
+      "trail": 12.8100001,
       "mcap": 2577212672.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
@@ -221,13 +221,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.03,
-        "atr_pctl": 10.1,
+        "ribbon_pct": 5.83,
+        "atr_pctl": 14.3,
         "vol_pctl": 0.2,
-        "drawdown_pct": 70.3,
+        "drawdown_pct": 71.2,
         "coiled": true,
-        "coiled_bars": 21,
-        "last_coiled": "2026-11-12"
+        "coiled_bars": 22,
+        "last_coiled": "2026-11-13"
       },
       "base": {
         "high": 9.27000046,
@@ -236,11 +236,11 @@
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 8.15999985,
+      "last_bar": "2026-11-13",
+      "price": 7.92000008,
       "mcap": 358223616.0,
       "mcap_asof": "2026-11-14",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "JACK",
@@ -271,57 +271,29 @@
       "mcap_src": "cache"
     },
     {
-      "symbol": "INMD",
-      "name": "InMode Ltd.  - Ordinary Shares",
-      "yf": "INMD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 5.08,
-        "atr_pctl": 53.2,
-        "vol_pctl": 20.0,
-        "drawdown_pct": 50.8,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-10-30"
-      },
-      "base": {
-        "high": 15.19999981,
-        "low": 13.06999969,
-        "bars": 60
-      },
-      "breakout_level": 15.19999981,
-      "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 13.18999958,
-      "mcap": 759007616.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "LINE",
       "name": "Lineage, Inc. - Common Stock",
       "yf": "LINE",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.39,
-        "atr_pctl": 64.3,
-        "vol_pctl": 63.7,
-        "drawdown_pct": 56.7,
+        "ribbon_pct": 6.58,
+        "atr_pctl": 57.7,
+        "vol_pctl": 64.1,
+        "drawdown_pct": 56.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-09"
       },
       "base": {
-        "high": 41.91316816,
+        "high": 41.63741878,
         "low": 32.75,
         "bars": 60
       },
       "breakout_level": 41.63741878,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 34.93000031,
+      "last_bar": "2026-11-13",
+      "price": 35.31000137,
       "mcap": 8746085376.0,
       "mcap_asof": "2026-11-11",
       "mcap_src": "previous"
@@ -350,9 +322,9 @@
       "provisional": false,
       "last_bar": "2026-11-13",
       "price": 16.06999969,
-      "mcap": 1848745984.0,
-      "mcap_asof": "2026-11-10",
-      "mcap_src": "previous"
+      "mcap": 1723280000.0,
+      "mcap_asof": "2026-11-15",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PTON",
@@ -361,10 +333,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.96,
-        "atr_pctl": 17.1,
-        "vol_pctl": 15.7,
-        "drawdown_pct": 49.2,
+        "ribbon_pct": 8.41,
+        "atr_pctl": 15.3,
+        "vol_pctl": 15.5,
+        "drawdown_pct": 47.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-03"
@@ -376,11 +348,11 @@
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 5.53000021,
+      "last_bar": "2026-11-13",
+      "price": 5.69999981,
       "mcap": 2541347328.0,
       "mcap_asof": "2026-11-14",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CRNT",
@@ -406,37 +378,9 @@
       "provisional": false,
       "last_bar": "2026-11-13",
       "price": 2.3900001,
-      "mcap": 230026896.0,
-      "mcap_asof": "2026-11-10",
+      "mcap": 218160432.0,
+      "mcap_asof": "2026-11-14",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "AEBI",
-      "name": "Aebi Schmidt Holding AG - Common Stock",
-      "yf": "AEBI",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.42,
-        "atr_pctl": 47.2,
-        "vol_pctl": 39.9,
-        "drawdown_pct": 68.6,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-10"
-      },
-      "base": {
-        "high": 13.00951838,
-        "low": 9.99657865,
-        "bars": 60
-      },
-      "breakout_level": 13.00951838,
-      "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 10.23999977,
-      "mcap": 829966720.0,
-      "mcap_asof": "2026-11-12",
-      "mcap_src": "previous"
     },
     {
       "symbol": "FWRD",
@@ -467,31 +411,31 @@
       "mcap_src": "cache"
     },
     {
-      "symbol": "ROOT",
-      "name": "Root, Inc. - Common Stock",
-      "yf": "ROOT",
+      "symbol": "AEBI",
+      "name": "Aebi Schmidt Holding AG - Common Stock",
+      "yf": "AEBI",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.17,
-        "atr_pctl": 38.7,
-        "vol_pctl": 5.2,
-        "drawdown_pct": 75.9,
+        "ribbon_pct": 10.6,
+        "atr_pctl": 49.4,
+        "vol_pctl": 42.2,
+        "drawdown_pct": 68.2,
         "coiled": false,
         "coiled_bars": 0,
-        "last_coiled": "2026-11-04"
+        "last_coiled": "2026-11-10"
       },
       "base": {
-        "high": 58.84000015,
-        "low": 42.16999817,
+        "high": 13.00951838,
+        "low": 9.99657865,
         "bars": 60
       },
-      "breakout_level": 58.84000015,
+      "breakout_level": 13.00951838,
       "provisional": false,
-      "last_bar": "2026-11-12",
-      "price": 43.63000107,
-      "mcap": 662837824.0,
-      "mcap_asof": "2026-11-13",
+      "last_bar": "2026-11-13",
+      "price": 10.35999966,
+      "mcap": 829966720.0,
+      "mcap_asof": "2026-11-12",
       "mcap_src": "previous"
     },
     {
@@ -546,8 +490,36 @@
       "provisional": false,
       "last_bar": "2026-11-13",
       "price": 4.82999992,
-      "mcap": 774777472.0,
-      "mcap_asof": "2026-11-10",
+      "mcap": 799610112.0,
+      "mcap_asof": "2026-11-15",
+      "mcap_src": "yahoo"
+    },
+    {
+      "symbol": "ROOT",
+      "name": "Root, Inc. - Common Stock",
+      "yf": "ROOT",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 14.07,
+        "atr_pctl": 32.9,
+        "vol_pctl": 6.2,
+        "drawdown_pct": 75.8,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-04"
+      },
+      "base": {
+        "high": 58.84000015,
+        "low": 42.16999817,
+        "bars": 60
+      },
+      "breakout_level": 58.84000015,
+      "provisional": false,
+      "last_bar": "2026-11-13",
+      "price": 43.86999893,
+      "mcap": 662837824.0,
+      "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
     }
   ],
