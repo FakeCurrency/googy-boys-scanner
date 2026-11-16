@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-16T15:43:37Z",
+  "generated_at": "2026-11-16T16:14:11Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -249,10 +249,13 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-16T15:43:35Z",
+      "at": "2026-11-16T16:14:08Z",
       "reasons": {
+        "ANDE": "dup_symbol",
         "AVO": "dup_symbol",
+        "EXE": "dup_symbol",
         "KMB": "dup_symbol",
+        "NCNO": "dup_symbol",
         "NTNX": "sector_cap",
         "WDAY": "sector_cap"
       }
