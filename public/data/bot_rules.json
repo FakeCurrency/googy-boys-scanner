@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-16T15:25:43Z",
+  "generated_at": "2026-11-16T15:43:37Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 56,
-  "closed_total": 179,
+  "closed_total": 182,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-16",
-        3
-      ],
       [
         "2026-11-18",
         2
@@ -207,6 +203,10 @@
       [
         "2026-12-03",
         1
+      ],
+      [
+        "2026-12-04",
+        3
       ]
     ],
     "sector_load": {
@@ -222,14 +222,15 @@
         "information technology": 1
       },
       "nasdaq": {
-        "financials": 6,
         "industrials": 6,
         "information technology": 6,
+        "financials": 5,
         "health care": 5,
         "consumer staples": 4,
         "consumer discretionary": 3,
         "utilities": 2,
         "communication services": 1,
+        "energy": 1,
         "materials": 1
       }
     }
@@ -248,15 +249,12 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-13T21:01:09Z",
+      "at": "2026-11-16T15:43:35Z",
       "reasons": {
-        "ANDE": "global_cap",
         "AVO": "dup_symbol",
-        "EXE": "global_cap",
         "KMB": "dup_symbol",
-        "NCNO": "global_cap",
-        "NTNX": "global_cap",
-        "WDAY": "global_cap"
+        "NTNX": "sector_cap",
+        "WDAY": "sector_cap"
       }
     }
   },
@@ -281,8 +279,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 48,
-        "avg_r": -0.335
+        "n": 51,
+        "avg_r": -0.301
       }
     },
     "crypto": {
