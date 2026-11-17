@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-16T16:12:59+00:00",
+  "generated_at": "2026-11-17T08:43:22+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-16",
+  "last_closed_bar": "2026-11-17",
   "report_only": true,
   "regime": {
     "index": "^AXJO",
     "label": "ASX 200",
-    "close": 9044.7,
-    "sma200": 8838.43,
+    "close": 8883.2,
+    "sma200": 8838.4,
     "above_200": true,
-    "vs_200_pct": 2.3,
-    "as_of": "2026-11-16"
+    "vs_200_pct": 0.5,
+    "as_of": "2026-11-17"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -54,8 +54,8 @@
     "downloaded": 1850,
     "screened": 1769,
     "skipped": {
-      "short history": 79,
-      "stale frame": 2
+      "short history": 80,
+      "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
@@ -66,29 +66,31 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-16",
-      "raw_last": "2026-11-16",
-      "expected_completed": "2026-11-16",
-      "lagging": 435,
-      "screened": 1848,
+      "completed_last": "2026-11-17",
+      "raw_last": "2026-11-17",
+      "expected_completed": "2026-11-17",
+      "lagging": 853,
+      "screened": 1849,
       "completed_dist": {
-        "2026-11-16": 1413,
-        "2026-11-13": 434,
+        "2026-11-17": 996,
+        "2026-11-16": 720,
+        "2026-11-13": 132,
         "2026-11-12": 1,
-        "2026-11-11": 2
+        "2026-11-11": 1
       },
       "raw_dist": {
-        "2026-11-16": 1413,
-        "2026-11-13": 434,
+        "2026-11-17": 996,
+        "2026-11-16": 720,
+        "2026-11-13": 132,
         "2026-11-12": 1,
-        "2026-11-11": 2
+        "2026-11-11": 1
       },
-      "rows_lagging": 1
+      "rows_lagging": 3
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1479
+        "yahoo": 1283
       },
       "dead": {},
       "errors": {},
@@ -103,8 +105,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1479,
-      "reused": 371,
+      "fresh": 1283,
+      "reused": 567,
       "merged": 1850,
       "universe": 2059,
       "stale_dropped": 0,
@@ -114,7 +116,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 372.0
+    "elapsed_s": 218.8
   },
   "results": [
     {
@@ -124,13 +126,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.29,
-        "atr_pctl": 1.2,
+        "ribbon_pct": 7.25,
+        "atr_pctl": 0.8,
         "vol_pctl": 7.7,
         "drawdown_pct": 73.4,
         "coiled": true,
-        "coiled_bars": 36,
-        "last_coiled": "2026-11-16"
+        "coiled_bars": 37,
+        "last_coiled": "2026-11-17"
       },
       "base": {
         "high": 0.745,
@@ -139,9 +141,37 @@
       },
       "breakout_level": 0.745,
       "provisional": false,
-      "last_bar": "2026-11-16",
+      "last_bar": "2026-11-17",
       "price": 0.64999998,
       "mcap": 390770656.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "KPG",
+      "name": "Kelly Partners Group Holdings Limited",
+      "yf": "KPG.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 6.56,
+        "atr_pctl": 4.6,
+        "vol_pctl": 16.1,
+        "drawdown_pct": 69.1,
+        "coiled": true,
+        "coiled_bars": 12,
+        "last_coiled": "2026-11-17"
+      },
+      "base": {
+        "high": 5.30000019,
+        "low": 4.09000015,
+        "bars": 60
+      },
+      "breakout_level": 5.30000019,
+      "provisional": false,
+      "last_bar": "2026-11-17",
+      "price": 4.19999981,
+      "mcap": 196040576.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
     },
@@ -174,38 +204,10 @@
       "mcap_src": "previous"
     },
     {
-      "symbol": "KPG",
-      "name": "Kelly Partners Group Holdings Limited",
-      "yf": "KPG.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.41,
-        "atr_pctl": 5.0,
-        "vol_pctl": 16.9,
-        "drawdown_pct": 68.7,
-        "coiled": true,
-        "coiled_bars": 11,
-        "last_coiled": "2026-11-16"
-      },
-      "base": {
-        "high": 5.30000019,
-        "low": 4.09000015,
-        "bars": 60
-      },
-      "breakout_level": 5.30000019,
-      "provisional": false,
-      "last_bar": "2026-11-16",
-      "price": 4.26000023,
-      "mcap": 196040576.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.68,
@@ -233,7 +235,7 @@
       "symbol": "NTU",
       "name": "Northern Minerals Limited",
       "yf": "NTU.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 11.36,
@@ -258,14 +260,42 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "AMA",
+      "name": "Ama Group Limited",
+      "yf": "AMA.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 10.89,
+        "atr_pctl": 20.6,
+        "vol_pctl": 8.7,
+        "drawdown_pct": 57.3,
+        "coiled": true,
+        "coiled_bars": 1,
+        "last_coiled": "2026-11-17"
+      },
+      "base": {
+        "high": 0.68372729,
+        "low": 0.41499999,
+        "bars": 60
+      },
+      "breakout_level": 0.68372729,
+      "provisional": false,
+      "last_bar": "2026-11-17",
+      "price": 0.465,
+      "mcap": 279574336.0,
+      "mcap_asof": "2026-09-17",
+      "mcap_src": "cache"
+    },
+    {
       "symbol": "3PL",
       "name": "3P Learning Limited..",
       "yf": "3PL.AX",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.86,
-        "atr_pctl": 51.6,
+        "ribbon_pct": 5.01,
+        "atr_pctl": 45.0,
         "vol_pctl": 92.1,
         "drawdown_pct": 73.0,
         "coiled": false,
@@ -274,44 +304,16 @@
       },
       "base": {
         "high": 0.34999999,
-        "low": 0.28784457,
+        "low": 0.28999999,
         "bars": 60
       },
       "breakout_level": 0.34999999,
       "provisional": false,
-      "last_bar": "2026-11-16",
+      "last_bar": "2026-11-17",
       "price": 0.34,
       "mcap": 83236496.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "CYG",
-      "name": "Coventry Group Limited",
-      "yf": "CYG.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 8.94,
-        "atr_pctl": 35.9,
-        "vol_pctl": 100.0,
-        "drawdown_pct": 73.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-03"
-      },
-      "base": {
-        "high": 0.47499999,
-        "low": 0.34,
-        "bars": 60
-      },
-      "breakout_level": 0.47499999,
-      "provisional": false,
-      "last_bar": "2026-11-13",
-      "price": 0.42500001,
-      "mcap": 59103052.0,
-      "mcap_asof": "2026-11-16",
-      "mcap_src": "previous"
     },
     {
       "symbol": "CAT",
@@ -320,10 +322,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.4,
-        "atr_pctl": 14.3,
-        "vol_pctl": 31.3,
-        "drawdown_pct": 53.1,
+        "ribbon_pct": 10.96,
+        "atr_pctl": 86.5,
+        "vol_pctl": 43.8,
+        "drawdown_pct": 60.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-12"
@@ -335,11 +337,11 @@
       },
       "breakout_level": 3.9000001,
       "provisional": false,
-      "last_bar": "2026-11-16",
-      "price": 3.61999989,
-      "mcap": 1153310720.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-17",
+      "price": 3.01999998,
+      "mcap": 954246080.0,
+      "mcap_asof": "2026-11-17",
+      "mcap_src": "cache"
     },
     {
       "symbol": "HMC",
@@ -348,10 +350,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 18.62,
-        "atr_pctl": 17.7,
-        "vol_pctl": 25.2,
-        "drawdown_pct": 71.4,
+        "ribbon_pct": 19.75,
+        "atr_pctl": 18.7,
+        "vol_pctl": 24.8,
+        "drawdown_pct": 71.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-10"
@@ -363,8 +365,8 @@
       },
       "breakout_level": 3.5999999,
       "provisional": false,
-      "last_bar": "2026-11-16",
-      "price": 3.53999996,
+      "last_bar": "2026-11-17",
+      "price": 3.47000003,
       "mcap": 1402893568.0,
       "mcap_asof": "2026-11-14",
       "mcap_src": "cache"
