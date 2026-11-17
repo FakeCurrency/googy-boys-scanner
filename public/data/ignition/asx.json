@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-17T08:43:22+00:00",
+  "generated_at": "2026-11-17T16:18:33+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-17",
@@ -50,12 +50,12 @@
     }
   },
   "summary": {
-    "universe": 2059,
+    "universe": 2060,
     "downloaded": 1850,
     "screened": 1769,
     "skipped": {
-      "short history": 80,
-      "stale frame": 1
+      "short history": 77,
+      "stale frame": 4
     },
     "counts": {
       "IGNITING": 0,
@@ -69,28 +69,28 @@
       "completed_last": "2026-11-17",
       "raw_last": "2026-11-17",
       "expected_completed": "2026-11-17",
-      "lagging": 853,
-      "screened": 1849,
+      "lagging": 548,
+      "screened": 1846,
       "completed_dist": {
-        "2026-11-17": 996,
-        "2026-11-16": 720,
-        "2026-11-13": 132,
+        "2026-11-17": 1298,
+        "2026-11-16": 530,
+        "2026-11-13": 18,
         "2026-11-12": 1,
         "2026-11-11": 1
       },
       "raw_dist": {
-        "2026-11-17": 996,
-        "2026-11-16": 720,
-        "2026-11-13": 132,
+        "2026-11-17": 1298,
+        "2026-11-16": 530,
+        "2026-11-13": 18,
         "2026-11-12": 1,
         "2026-11-11": 1
       },
-      "rows_lagging": 3
+      "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1283
+        "yahoo": 1732
       },
       "dead": {},
       "errors": {},
@@ -105,10 +105,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1283,
-      "reused": 567,
+      "fresh": 1732,
+      "reused": 118,
       "merged": 1850,
-      "universe": 2059,
+      "universe": 2060,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -116,7 +116,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 218.8
+    "elapsed_s": 207.1
   },
   "results": [
     {
@@ -144,6 +144,34 @@
       "last_bar": "2026-11-17",
       "price": 0.64999998,
       "mcap": 390770656.0,
+      "mcap_asof": "2026-11-13",
+      "mcap_src": "previous"
+    },
+    {
+      "symbol": "STX",
+      "name": "Strike Energy Limited",
+      "yf": "STX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.76,
+        "atr_pctl": 6.0,
+        "vol_pctl": 26.4,
+        "drawdown_pct": 80.2,
+        "coiled": true,
+        "coiled_bars": 13,
+        "last_coiled": "2026-11-17"
+      },
+      "base": {
+        "high": 0.12,
+        "low": 0.094,
+        "bars": 60
+      },
+      "breakout_level": 0.12,
+      "provisional": false,
+      "last_bar": "2026-11-17",
+      "price": 0.1,
+      "mcap": 353412000.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
     },
@@ -176,47 +204,19 @@
       "mcap_src": "previous"
     },
     {
-      "symbol": "STX",
-      "name": "Strike Energy Limited",
-      "yf": "STX.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.06,
-        "atr_pctl": 5.2,
-        "vol_pctl": 22.2,
-        "drawdown_pct": 80.4,
-        "coiled": true,
-        "coiled_bars": 12,
-        "last_coiled": "2026-11-16"
-      },
-      "base": {
-        "high": 0.12,
-        "low": 0.094,
-        "bars": 60
-      },
-      "breakout_level": 0.12,
-      "provisional": false,
-      "last_bar": "2026-11-16",
-      "price": 0.099,
-      "mcap": 353412000.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.68,
-        "atr_pctl": 17.1,
-        "vol_pctl": 19.4,
-        "drawdown_pct": 68.2,
+        "atr_pctl": 14.1,
+        "vol_pctl": 18.7,
+        "drawdown_pct": 68.7,
         "coiled": true,
-        "coiled_bars": 4,
-        "last_coiled": "2026-11-16"
+        "coiled_bars": 5,
+        "last_coiled": "2026-11-17"
       },
       "base": {
         "high": 1.16999996,
@@ -225,8 +225,8 @@
       },
       "breakout_level": 1.16999996,
       "provisional": false,
-      "last_bar": "2026-11-16",
-      "price": 0.88499999,
+      "last_bar": "2026-11-17",
+      "price": 0.87,
       "mcap": 611395136.0,
       "mcap_asof": "2026-11-13",
       "mcap_src": "previous"
@@ -235,16 +235,16 @@
       "symbol": "NTU",
       "name": "Northern Minerals Limited",
       "yf": "NTU.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.36,
-        "atr_pctl": 0.2,
-        "vol_pctl": 18.1,
+        "ribbon_pct": 11.81,
+        "atr_pctl": 0.8,
+        "vol_pctl": 20.4,
         "drawdown_pct": 72.0,
         "coiled": true,
-        "coiled_bars": 4,
-        "last_coiled": "2026-11-16"
+        "coiled_bars": 5,
+        "last_coiled": "2026-11-17"
       },
       "base": {
         "high": 0.029,
@@ -253,7 +253,7 @@
       },
       "breakout_level": 0.029,
       "provisional": false,
-      "last_bar": "2026-11-16",
+      "last_bar": "2026-11-17",
       "price": 0.023,
       "mcap": 219615664.0,
       "mcap_asof": "2026-11-16",
@@ -283,9 +283,9 @@
       "provisional": false,
       "last_bar": "2026-11-17",
       "price": 0.465,
-      "mcap": 279574336.0,
-      "mcap_asof": "2026-09-17",
-      "mcap_src": "cache"
+      "mcap": 223331648.0,
+      "mcap_asof": "2026-11-17",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "3PL",
@@ -294,8 +294,8 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 5.01,
-        "atr_pctl": 45.0,
+        "ribbon_pct": 4.86,
+        "atr_pctl": 51.6,
         "vol_pctl": 92.1,
         "drawdown_pct": 73.0,
         "coiled": false,
@@ -304,12 +304,12 @@
       },
       "base": {
         "high": 0.34999999,
-        "low": 0.28999999,
+        "low": 0.28784457,
         "bars": 60
       },
       "breakout_level": 0.34999999,
       "provisional": false,
-      "last_bar": "2026-11-17",
+      "last_bar": "2026-11-16",
       "price": 0.34,
       "mcap": 83236496.0,
       "mcap_asof": "2026-11-13",
