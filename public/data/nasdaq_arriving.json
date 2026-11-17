@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-11-17T15:13:17-05:00",
+  "generated_at": "2026-11-17T16:13:45-05:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
@@ -9,16 +9,55 @@
   },
   "results": [
     {
-      "symbol": "WHFCL",
-      "name": "WhiteHorse Finance, Inc. - 7.875% Notes due 2028",
+      "symbol": "CHSCO",
+      "name": "CHS Inc - Class B Cumulative Redeemable Preferred Stock",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 24.71999931,
+      "turnover_avg20": 621948,
+      "turnover_today": 2600519,
+      "rvol": 4.3,
+      "adv_usd": 621948.86,
+      "fund": false,
+      "is_product": true
+    },
+    {
+      "symbol": "VLYPO",
+      "name": "Valley National Bancorp - 5.5% Fixed to Floating Rate Series B Non-Cumulative Perpetual Preferred Stock",
       "sector": "",
       "dir": "LONG",
-      "price": 25.36000061,
-      "turnover_avg20": 203251,
-      "turnover_today": 1184312,
-      "rvol": 5.8,
-      "adv_usd": 203251.61,
+      "price": 23.62000084,
+      "turnover_avg20": 190245,
+      "turnover_today": 1632094,
+      "rvol": 8.7,
+      "adv_usd": 190245.94,
       "fund": false,
+      "is_product": true
+    },
+    {
+      "symbol": "ADAML",
+      "name": "Adamas Trust, Inc. - 6.875% Series F Fixed-to-Floating Rate Cumulative Redeemable Preferred Stock, $0.01 par value per share",
+      "sector": "",
+      "dir": "LONG",
+      "price": 19.22999954,
+      "turnover_avg20": 240241,
+      "turnover_today": 1288102,
+      "rvol": 5.9,
+      "adv_usd": 240241.89,
+      "fund": true,
+      "is_product": true
+    },
+    {
+      "symbol": "ADAMI",
+      "name": "Adamas Trust, Inc. - 9.125% Senior Notes Due 2029",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 24.20999908,
+      "turnover_avg20": 226754,
+      "turnover_today": 1124142,
+      "rvol": 5.0,
+      "adv_usd": 226754.7,
+      "fund": true,
       "is_product": true
     }
   ]

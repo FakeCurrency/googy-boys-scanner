@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-17T20:25:26Z",
+  "generated_at": "2026-11-17T21:14:35Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,7 +132,7 @@
       0.15
     ]
   },
-  "open_total": 57,
+  "open_total": 59,
   "closed_total": 182,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
@@ -222,10 +222,10 @@
         "information technology": 1
       },
       "nasdaq": {
+        "financials": 6,
+        "health care": 6,
         "industrials": 6,
         "information technology": 6,
-        "financials": 5,
-        "health care": 5,
         "consumer staples": 4,
         "consumer discretionary": 3,
         "utilities": 2,
@@ -249,10 +249,8 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-17T20:13:51Z",
-      "reasons": {
-        "ADSK": "sector_cap"
-      }
+      "at": "2026-11-17T21:14:27Z",
+      "reasons": {}
     }
   },
   "evidence_by_market": {
