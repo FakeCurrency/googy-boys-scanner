@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-17T00:18:10Z",
+  "generated_at": "2026-11-17T00:23:15Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,7 +132,7 @@
       0.15
     ]
   },
-  "open_total": 56,
+  "open_total": 57,
   "closed_total": 182,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
@@ -215,8 +215,8 @@
         "financials": 4,
         "industrials": 4,
         "consumer discretionary": 3,
+        "communication services": 2,
         "utilities": 2,
-        "communication services": 1,
         "consumer staples": 1,
         "energy": 1,
         "information technology": 1
@@ -237,10 +237,8 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-17T00:18:05Z",
-      "reasons": {
-        "SPK": "stale_cache"
-      }
+      "at": "2026-11-17T00:23:13Z",
+      "reasons": {}
     },
     "crypto": {
       "at": "2026-11-16T23:25:28Z",
