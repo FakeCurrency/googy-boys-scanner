@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-17T00:26:38Z",
+  "generated_at": "2026-11-17T01:18:08Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -237,8 +237,10 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-17T00:23:13Z",
-      "reasons": {}
+      "at": "2026-11-17T01:18:05Z",
+      "reasons": {
+        "SPK": "dup_symbol"
+      }
     },
     "crypto": {
       "at": "2026-11-17T00:26:36Z",
