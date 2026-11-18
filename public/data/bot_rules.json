@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-18T03:25:19Z",
+  "generated_at": "2026-11-18T04:16:12Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,7 +132,7 @@
       0.15
     ]
   },
-  "open_total": 57,
+  "open_total": 58,
   "closed_total": 184,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
@@ -218,6 +218,7 @@
         "communication services": 2,
         "consumer staples": 1,
         "energy": 1,
+        "health care": 1,
         "information technology": 1,
         "utilities": 1
       },
@@ -237,10 +238,9 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-18T03:15:36Z",
+      "at": "2026-11-18T04:16:10Z",
       "reasons": {
-        "RIC": "refused_at_fill",
-        "RMD": "stale_cache"
+        "RIC": "refused_at_fill"
       }
     },
     "crypto": {
