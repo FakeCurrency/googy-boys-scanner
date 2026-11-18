@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-18T08:09:43+00:00",
+  "generated_at": "2026-11-18T15:53:10+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-18",
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 2060,
+    "universe": 2058,
     "downloaded": 1850,
-    "screened": 1771,
+    "screened": 1772,
     "skipped": {
-      "short history": 78,
+      "short history": 77,
       "stale frame": 1
     },
     "counts": {
@@ -69,17 +69,17 @@
       "completed_last": "2026-11-18",
       "raw_last": "2026-11-18",
       "expected_completed": "2026-11-18",
-      "lagging": 400,
+      "lagging": 434,
       "screened": 1849,
       "completed_dist": {
-        "2026-11-18": 1449,
-        "2026-11-17": 399,
+        "2026-11-18": 1415,
+        "2026-11-17": 433,
         "2026-11-16": 1,
         "2026-11-12": 1
       },
       "raw_dist": {
-        "2026-11-18": 1449,
-        "2026-11-17": 399,
+        "2026-11-18": 1415,
+        "2026-11-17": 433,
         "2026-11-16": 1,
         "2026-11-12": 1
       },
@@ -88,7 +88,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1849
+        "yahoo": 1352
       },
       "dead": {},
       "errors": {},
@@ -103,10 +103,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1849,
-      "reused": 1,
+      "fresh": 1352,
+      "reused": 498,
       "merged": 1850,
-      "universe": 2060,
+      "universe": 2058,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -114,7 +114,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 385.6
+    "elapsed_s": 259.4
   },
   "results": [
     {
@@ -143,13 +143,13 @@
       "price": 0.64999998,
       "mcap": 390770656.0,
       "mcap_asof": "2026-11-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.62,
@@ -171,7 +171,7 @@
       "price": 0.098,
       "mcap": 353412000.0,
       "mcap_asof": "2026-11-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "KPG",
@@ -199,13 +199,13 @@
       "price": 4.1500001,
       "mcap": 187891088.0,
       "mcap_asof": "2026-11-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 9.52,
@@ -227,7 +227,7 @@
       "price": 0.83999997,
       "mcap": 580307264.0,
       "mcap_asof": "2026-11-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "NTU",
@@ -311,7 +311,7 @@
       "price": 0.31999999,
       "mcap": 87330088.0,
       "mcap_asof": "2026-11-18",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CAT",
