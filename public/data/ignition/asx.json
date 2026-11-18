@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-17T16:18:33+00:00",
+  "generated_at": "2026-11-18T08:09:43+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-17",
+  "last_closed_bar": "2026-11-18",
   "report_only": true,
   "regime": {
     "index": "^AXJO",
     "label": "ASX 200",
-    "close": 8883.2,
-    "sma200": 8838.4,
-    "above_200": true,
-    "vs_200_pct": 0.5,
-    "as_of": "2026-11-17"
+    "close": 8821.8,
+    "sma200": 8838.97,
+    "above_200": false,
+    "vs_200_pct": -0.2,
+    "as_of": "2026-11-18"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,10 +52,10 @@
   "summary": {
     "universe": 2060,
     "downloaded": 1850,
-    "screened": 1769,
+    "screened": 1771,
     "skipped": {
-      "short history": 77,
-      "stale frame": 4
+      "short history": 78,
+      "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
@@ -66,31 +66,29 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-17",
-      "raw_last": "2026-11-17",
-      "expected_completed": "2026-11-17",
-      "lagging": 548,
-      "screened": 1846,
+      "completed_last": "2026-11-18",
+      "raw_last": "2026-11-18",
+      "expected_completed": "2026-11-18",
+      "lagging": 400,
+      "screened": 1849,
       "completed_dist": {
-        "2026-11-17": 1298,
-        "2026-11-16": 530,
-        "2026-11-13": 18,
-        "2026-11-12": 1,
-        "2026-11-11": 1
+        "2026-11-18": 1449,
+        "2026-11-17": 399,
+        "2026-11-16": 1,
+        "2026-11-12": 1
       },
       "raw_dist": {
-        "2026-11-17": 1298,
-        "2026-11-16": 530,
-        "2026-11-13": 18,
-        "2026-11-12": 1,
-        "2026-11-11": 1
+        "2026-11-18": 1449,
+        "2026-11-17": 399,
+        "2026-11-16": 1,
+        "2026-11-12": 1
       },
-      "rows_lagging": 1
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1732
+        "yahoo": 1849
       },
       "dead": {},
       "errors": {},
@@ -105,8 +103,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1732,
-      "reused": 118,
+      "fresh": 1849,
+      "reused": 1,
       "merged": 1850,
       "universe": 2060,
       "stale_dropped": 0,
@@ -116,7 +114,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 207.1
+    "elapsed_s": 385.6
   },
   "results": [
     {
@@ -126,13 +124,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.25,
-        "atr_pctl": 0.8,
-        "vol_pctl": 7.7,
+        "ribbon_pct": 7.54,
+        "atr_pctl": 0.6,
+        "vol_pctl": 8.3,
         "drawdown_pct": 73.4,
         "coiled": true,
-        "coiled_bars": 37,
-        "last_coiled": "2026-11-17"
+        "coiled_bars": 38,
+        "last_coiled": "2026-11-18"
       },
       "base": {
         "high": 0.745,
@@ -141,11 +139,11 @@
       },
       "breakout_level": 0.745,
       "provisional": false,
-      "last_bar": "2026-11-17",
+      "last_bar": "2026-11-18",
       "price": 0.64999998,
       "mcap": 390770656.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
+      "mcap_asof": "2026-11-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "STX",
@@ -154,13 +152,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 9.76,
-        "atr_pctl": 6.0,
-        "vol_pctl": 26.4,
-        "drawdown_pct": 80.2,
+        "ribbon_pct": 9.62,
+        "atr_pctl": 11.5,
+        "vol_pctl": 31.3,
+        "drawdown_pct": 80.6,
         "coiled": true,
-        "coiled_bars": 13,
-        "last_coiled": "2026-11-17"
+        "coiled_bars": 14,
+        "last_coiled": "2026-11-18"
       },
       "base": {
         "high": 0.12,
@@ -169,11 +167,11 @@
       },
       "breakout_level": 0.12,
       "provisional": false,
-      "last_bar": "2026-11-17",
-      "price": 0.1,
+      "last_bar": "2026-11-18",
+      "price": 0.098,
       "mcap": 353412000.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
+      "mcap_asof": "2026-11-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "KPG",
@@ -182,13 +180,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 6.56,
-        "atr_pctl": 4.6,
-        "vol_pctl": 16.1,
-        "drawdown_pct": 69.1,
+        "ribbon_pct": 6.9,
+        "atr_pctl": 4.8,
+        "vol_pctl": 22.8,
+        "drawdown_pct": 69.5,
         "coiled": true,
-        "coiled_bars": 12,
-        "last_coiled": "2026-11-17"
+        "coiled_bars": 13,
+        "last_coiled": "2026-11-18"
       },
       "base": {
         "high": 5.30000019,
@@ -197,11 +195,11 @@
       },
       "breakout_level": 5.30000019,
       "provisional": false,
-      "last_bar": "2026-11-17",
-      "price": 4.19999981,
-      "mcap": 196040576.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-18",
+      "price": 4.1500001,
+      "mcap": 187891088.0,
+      "mcap_asof": "2026-11-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PNV",
@@ -210,13 +208,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.68,
-        "atr_pctl": 14.1,
-        "vol_pctl": 18.7,
-        "drawdown_pct": 68.7,
+        "ribbon_pct": 9.52,
+        "atr_pctl": 20.4,
+        "vol_pctl": 20.8,
+        "drawdown_pct": 69.8,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-11-17"
+        "coiled_bars": 6,
+        "last_coiled": "2026-11-18"
       },
       "base": {
         "high": 1.16999996,
@@ -225,11 +223,11 @@
       },
       "breakout_level": 1.16999996,
       "provisional": false,
-      "last_bar": "2026-11-17",
-      "price": 0.87,
-      "mcap": 611395136.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-18",
+      "price": 0.83999997,
+      "mcap": 580307264.0,
+      "mcap_asof": "2026-11-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "NTU",
@@ -238,13 +236,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 11.81,
-        "atr_pctl": 0.8,
-        "vol_pctl": 20.4,
+        "ribbon_pct": 11.75,
+        "atr_pctl": 0.2,
+        "vol_pctl": 24.8,
         "drawdown_pct": 72.0,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-11-17"
+        "coiled_bars": 6,
+        "last_coiled": "2026-11-18"
       },
       "base": {
         "high": 0.029,
@@ -253,7 +251,7 @@
       },
       "breakout_level": 0.029,
       "provisional": false,
-      "last_bar": "2026-11-17",
+      "last_bar": "2026-11-18",
       "price": 0.023,
       "mcap": 219615664.0,
       "mcap_asof": "2026-11-16",
@@ -266,13 +264,13 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.89,
-        "atr_pctl": 20.6,
-        "vol_pctl": 8.7,
-        "drawdown_pct": 57.3,
+        "ribbon_pct": 10.74,
+        "atr_pctl": 22.0,
+        "vol_pctl": 9.7,
+        "drawdown_pct": 58.3,
         "coiled": true,
-        "coiled_bars": 1,
-        "last_coiled": "2026-11-17"
+        "coiled_bars": 2,
+        "last_coiled": "2026-11-18"
       },
       "base": {
         "high": 0.68372729,
@@ -281,11 +279,11 @@
       },
       "breakout_level": 0.68372729,
       "provisional": false,
-      "last_bar": "2026-11-17",
-      "price": 0.465,
+      "last_bar": "2026-11-18",
+      "price": 0.45500001,
       "mcap": 223331648.0,
       "mcap_asof": "2026-11-17",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "3PL",
@@ -294,26 +292,26 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.86,
-        "atr_pctl": 51.6,
+        "ribbon_pct": 5.31,
+        "atr_pctl": 64.3,
         "vol_pctl": 92.1,
-        "drawdown_pct": 73.0,
+        "drawdown_pct": 74.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-06"
       },
       "base": {
         "high": 0.34999999,
-        "low": 0.28784457,
+        "low": 0.28999999,
         "bars": 60
       },
       "breakout_level": 0.34999999,
       "provisional": false,
-      "last_bar": "2026-11-16",
-      "price": 0.34,
-      "mcap": 83236496.0,
-      "mcap_asof": "2026-11-13",
-      "mcap_src": "cache"
+      "last_bar": "2026-11-18",
+      "price": 0.31999999,
+      "mcap": 87330088.0,
+      "mcap_asof": "2026-11-18",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "CAT",
@@ -322,10 +320,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.96,
-        "atr_pctl": 86.5,
-        "vol_pctl": 43.8,
-        "drawdown_pct": 60.9,
+        "ribbon_pct": 8.25,
+        "atr_pctl": 91.7,
+        "vol_pctl": 54.4,
+        "drawdown_pct": 62.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-12"
@@ -337,8 +335,8 @@
       },
       "breakout_level": 3.9000001,
       "provisional": false,
-      "last_bar": "2026-11-17",
-      "price": 3.01999998,
+      "last_bar": "2026-11-18",
+      "price": 2.8900001,
       "mcap": 954246080.0,
       "mcap_asof": "2026-11-17",
       "mcap_src": "cache"
@@ -350,10 +348,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 19.75,
-        "atr_pctl": 18.7,
-        "vol_pctl": 24.8,
-        "drawdown_pct": 71.9,
+        "ribbon_pct": 20.23,
+        "atr_pctl": 21.2,
+        "vol_pctl": 20.8,
+        "drawdown_pct": 71.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-10"
@@ -363,12 +361,12 @@
         "low": 2.47000003,
         "bars": 60
       },
-      "breakout_level": 3.5999999,
+      "breakout_level": 3.6099999,
       "provisional": false,
-      "last_bar": "2026-11-17",
-      "price": 3.47000003,
-      "mcap": 1402893568.0,
-      "mcap_asof": "2026-11-14",
+      "last_bar": "2026-11-18",
+      "price": 3.52999997,
+      "mcap": 1456533504.0,
+      "mcap_asof": "2026-11-18",
       "mcap_src": "cache"
     }
   ],
