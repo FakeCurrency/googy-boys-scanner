@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-19T14:42:29+00:00",
+  "generated_at": "2026-11-19T23:49:07+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-18",
@@ -49,8 +49,8 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 168,
-    "screened": 142,
+    "downloaded": 167,
+    "screened": 141,
     "skipped": {
       "short history": 26
     },
@@ -67,12 +67,12 @@
       "raw_last": "2026-11-19",
       "expected_completed": "2026-11-18",
       "lagging": 0,
-      "screened": 168,
+      "screened": 167,
       "completed_dist": {
-        "2026-11-18": 168
+        "2026-11-18": 167
       },
       "raw_dist": {
-        "2026-11-19": 168
+        "2026-11-19": 167
       },
       "rows_lagging": 0
     },
@@ -80,7 +80,7 @@
       "mode": "exchange",
       "by_source": {
         "binance_vision": 117,
-        "yahoo": 32,
+        "yahoo": 31,
         "coinbase": 19
       },
       "dead": {
@@ -110,7 +110,6 @@
         "COCO",
         "CRCLX",
         "DGAI",
-        "EDGE",
         "FLASH",
         "GOMINING",
         "GT",
@@ -132,6 +131,8 @@
         "NVDAX",
         "OHM",
         "OKB",
+        "ONE",
+        "ONYC",
         "OZO",
         "PC0000015",
         "PC0000023",
@@ -142,7 +143,6 @@
         "PI",
         "PIEVERSE",
         "Q",
-        "RAIL",
         "RAIN",
         "RLB",
         "SHFL",
@@ -150,7 +150,7 @@
         "SOSO",
         "UB"
       ],
-      "yahoo_fallback": 32,
+      "yahoo_fallback": 31,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -158,14 +158,14 @@
         "BR": [
           "yahoo"
         ],
-        "EDGE": [
-          "coinbase",
-          "yahoo"
-        ],
         "M": [
           "yahoo"
         ],
         "MNT": [
+          "yahoo"
+        ],
+        "ONE": [
+          "binance_vision",
           "yahoo"
         ]
       },
@@ -198,20 +198,20 @@
         "AUTO-USD",
         "BR-USD",
         "BTT-USD",
-        "EDGE-USD",
         "HTX-USD",
         "LIT-USD",
         "M-USD",
-        "MNT-USD"
+        "MNT-USD",
+        "ONE-USD"
       ],
       "pinned_missing": [],
       "unchecked": 0
     },
     "errors": 0,
     "cache": {
-      "fresh": 168,
+      "fresh": 167,
       "reused": 0,
-      "merged": 168,
+      "merged": 167,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 8
@@ -220,7 +220,7 @@
       "rows": 2,
       "have": 2
     },
-    "elapsed_s": 129.4
+    "elapsed_s": 101.1
   },
   "results": [
     {
@@ -246,8 +246,8 @@
       "breakout_level": 0.18484,
       "provisional": false,
       "last_bar": "2026-11-18",
-      "price": 0.10177,
-      "mcap": 361192682.0,
+      "price": 0.10197,
+      "mcap": 360715783.0,
       "mcap_asof": "2026-11-19",
       "mcap_src": "coingecko"
     },
@@ -274,8 +274,8 @@
       "breakout_level": 0.7815,
       "provisional": false,
       "last_bar": "2026-11-18",
-      "price": 0.5171,
-      "mcap": 1328485648.0,
+      "price": 0.5104,
+      "mcap": 1312768831.0,
       "mcap_asof": "2026-11-19",
       "mcap_src": "coingecko"
     }
