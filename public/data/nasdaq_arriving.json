@@ -1,51 +1,11 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-11-19T15:14:10-05:00",
+  "generated_at": "2026-11-19T16:13:36-05:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": [
-    {
-      "symbol": "HBANL",
-      "name": "Huntington Bancshares Incorporated - Depositary Shares, Each Representing a 1/40th Interest in a Share of 6.875% Series J Non-Cumulative Perpetual Preferred Stock",
-      "sector": "",
-      "dir": "LONG",
-      "price": 24.47999954,
-      "turnover_avg20": 962748,
-      "turnover_today": 3419855,
-      "rvol": 3.6,
-      "adv_usd": 962748.9,
-      "fund": false,
-      "is_product": true
-    },
-    {
-      "symbol": "FULTP",
-      "name": "Fulton Financial Corporation - Depositary Shares Each Representing a 1/40th Interest in a Share of Fixed Rate Non-Cumulative Perpetual Preferred Stock, Series A",
-      "sector": "",
-      "dir": "SHORT",
-      "price": 15.98999977,
-      "turnover_avg20": 385990,
-      "turnover_today": 1299986,
-      "rvol": 3.4,
-      "adv_usd": 385990.75,
-      "fund": false,
-      "is_product": true
-    },
-    {
-      "symbol": "ADAML",
-      "name": "Adamas Trust, Inc. - 6.875% Series F Fixed-to-Floating Rate Cumulative Redeemable Preferred Stock, $0.01 par value per share",
-      "sector": "",
-      "dir": "LONG",
-      "price": 18.89999962,
-      "turnover_avg20": 300534,
-      "turnover_today": 1203929,
-      "rvol": 4.4,
-      "adv_usd": 300534.37,
-      "fund": true,
-      "is_product": true
-    }
-  ]
+  "results": []
 }
