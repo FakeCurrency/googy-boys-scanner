@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-19T15:25:46Z",
+  "generated_at": "2026-11-19T15:43:28Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,8 +132,8 @@
       0.15
     ]
   },
-  "open_total": 60,
-  "closed_total": 187,
+  "open_total": 59,
+  "closed_total": 190,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-19",
-        3
-      ],
       [
         "2026-11-20",
         1
@@ -207,6 +203,10 @@
       [
         "2026-12-07",
         1
+      ],
+      [
+        "2026-12-09",
+        1
       ]
     ],
     "sector_load": {
@@ -226,8 +226,8 @@
         "health care": 6,
         "industrials": 6,
         "information technology": 6,
-        "financials": 5,
         "consumer staples": 4,
+        "financials": 4,
         "consumer discretionary": 3,
         "utilities": 3,
         "communication services": 2,
@@ -250,13 +250,15 @@
       }
     },
     "nasdaq": {
-      "at": "2026-11-18T21:15:07Z",
+      "at": "2026-11-19T15:43:26Z",
       "reasons": {
         "AAL": "sector_cap",
-        "DDOG": "sector_cap",
+        "ALGN": "dup_symbol",
+        "CALM": "dup_symbol",
         "DLO": "sector_cap",
-        "DNLI": "sector_cap",
-        "HLIT": "sector_cap"
+        "GOOGL": "dup_symbol",
+        "HLIT": "sector_cap",
+        "MGEE": "dup_symbol"
       }
     }
   },
@@ -281,8 +283,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 54,
-        "avg_r": -0.3
+        "n": 57,
+        "avg_r": -0.299
       }
     },
     "crypto": {
