@@ -2,7 +2,76 @@
   "version": 2,
   "mode": "paper",
   "market": "crypto",
-  "open": [],
+  "open": [
+    {
+      "id": "TRX:long:3D:2026-11-19",
+      "symbol": "TRX",
+      "name": "TRON",
+      "sector": "",
+      "market": "crypto",
+      "direction": "long",
+      "grade": "A",
+      "entry_type": "reclaim",
+      "timeframe": "3D",
+      "entry": 0.3099,
+      "stop": 0.29318313,
+      "tp1": 0.3246,
+      "tp2": 0.3473,
+      "tp3": 0.3654,
+      "scale": [
+        0.25,
+        0.5,
+        0.15
+      ],
+      "risk": 0.01671687,
+      "rr": 2.24,
+      "trigger_bar": "2026-11-18",
+      "entry_date": "2026-11-19",
+      "opened_at": "2026-11-19T16:25:30+00:00",
+      "status": "open",
+      "tp1_hit": false,
+      "tp2_hit": false,
+      "tp3_hit": false,
+      "booked_pct": 0.0,
+      "realized_r": 0.0,
+      "gross_r": 0.0,
+      "cost_r": 0.0,
+      "exits": [],
+      "mae": 0.3099,
+      "mfe": 0.3099,
+      "mae_r": 0.0,
+      "mfe_r": 0.0,
+      "entry_type_label": "Close back above the 200 SMA after rejection",
+      "units": 8072.32805941,
+      "notional": 2500.0,
+      "leverage": 0.02,
+      "leverage_target": 3.0,
+      "risk_pct": 0.09,
+      "risk_usd": 134.94,
+      "risk_usd_basis": "fill",
+      "sizing_mode": "fixed_notional",
+      "cycle": "hc4-2",
+      "review": [],
+      "source": "vivek_bot",
+      "lens": "vivek",
+      "level_tf": "3d",
+      "signal_entry": 0.3097,
+      "fill_slip_bps": 6.5,
+      "last_mark": 0.3099,
+      "last_mark_day": "2026-11-19",
+      "data_source": "binance_vision",
+      "anchor": [
+        "2026-11-18",
+        0.3097
+      ],
+      "adv": 34181988.15,
+      "adv_share": 7.314e-05,
+      "score": 7,
+      "rank": 1,
+      "rank_of": 1,
+      "trigger_bar_forming": true
+    }
+  ],
   "closed": [
     {
       "id": "BDX:long:1W:2026-06-28",
@@ -978,9 +1047,9 @@
     }
   },
   "summary": {
-    "open": 0,
-    "unreal_usd": 0,
+    "open": 1,
+    "unreal_usd": 0.0,
     "updated_day": "2026-11-19"
   },
-  "updated_at": "2026-11-19T15:25:43+00:00"
+  "updated_at": "2026-11-19T16:25:30+00:00"
 }
