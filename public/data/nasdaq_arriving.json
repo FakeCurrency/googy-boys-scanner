@@ -1,11 +1,38 @@
 {
   "schema_version": 1,
   "market": "nasdaq",
-  "generated_at": "2026-11-20T15:13:05-05:00",
+  "generated_at": "2026-11-20T16:13:14-05:00",
   "rule": {
     "floor": 1000000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
-  "results": []
+  "results": [
+    {
+      "symbol": "ONBPP",
+      "name": "Old National Bancorp - Depositary Shares, Each Representing a 1/40th Interest in a Share of Series A Preferred Stock",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 23.27000046,
+      "turnover_avg20": 318337,
+      "turnover_today": 2500315,
+      "rvol": 8.1,
+      "adv_usd": 318337.58,
+      "fund": false,
+      "is_product": true
+    },
+    {
+      "symbol": "ALCO",
+      "name": "Alico, Inc. - Common Stock",
+      "sector": "",
+      "dir": "SHORT",
+      "price": 35.50999832,
+      "turnover_avg20": 804729,
+      "turnover_today": 2278037,
+      "rvol": 3.0,
+      "adv_usd": 804729.92,
+      "fund": false,
+      "is_product": false
+    }
+  ]
 }
