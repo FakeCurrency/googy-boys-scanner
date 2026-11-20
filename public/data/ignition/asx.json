@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-20T07:58:55+00:00",
+  "generated_at": "2026-11-20T15:41:06+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-20",
@@ -54,8 +54,8 @@
     "downloaded": 1850,
     "screened": 1772,
     "skipped": {
-      "short history": 75,
-      "stale frame": 3
+      "short history": 76,
+      "stale frame": 2
     },
     "counts": {
       "IGNITING": 0,
@@ -69,28 +69,26 @@
       "completed_last": "2026-11-20",
       "raw_last": "2026-11-20",
       "expected_completed": "2026-11-20",
-      "lagging": 676,
-      "screened": 1847,
+      "lagging": 436,
+      "screened": 1848,
       "completed_dist": {
-        "2026-11-20": 1171,
-        "2026-11-19": 585,
-        "2026-11-18": 91,
+        "2026-11-20": 1412,
+        "2026-11-19": 436,
         "2026-11-12": 1,
-        "2026-11-11": 1
+        "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-20": 1171,
-        "2026-11-19": 585,
-        "2026-11-18": 91,
+        "2026-11-20": 1412,
+        "2026-11-19": 436,
         "2026-11-12": 1,
-        "2026-11-11": 1
+        "2026-11-03": 1
       },
-      "rows_lagging": 1
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1468
+        "yahoo": 1850
       },
       "dead": {},
       "errors": {},
@@ -105,8 +103,8 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1468,
-      "reused": 382,
+      "fresh": 1850,
+      "reused": 0,
       "merged": 1850,
       "universe": 2058,
       "stale_dropped": 0,
@@ -116,7 +114,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 373.8
+    "elapsed_s": 242.2
   },
   "results": [
     {
@@ -148,6 +146,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "STX",
+      "name": "Strike Energy Limited",
+      "yf": "STX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.84,
+        "atr_pctl": 13.9,
+        "vol_pctl": 28.4,
+        "drawdown_pct": 80.6,
+        "coiled": true,
+        "coiled_bars": 16,
+        "last_coiled": "2026-11-20"
+      },
+      "base": {
+        "high": 0.12,
+        "low": 0.094,
+        "bars": 60
+      },
+      "breakout_level": 0.12,
+      "provisional": false,
+      "last_bar": "2026-11-20",
+      "price": 0.098,
+      "mcap": 353412000.0,
+      "mcap_asof": "2026-11-18",
+      "mcap_src": "previous"
+    },
+    {
       "symbol": "KPG",
       "name": "Kelly Partners Group Holdings Limited",
       "yf": "KPG.AX",
@@ -172,34 +198,6 @@
       "last_bar": "2026-11-20",
       "price": 4.17000008,
       "mcap": 187891088.0,
-      "mcap_asof": "2026-11-18",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "STX",
-      "name": "Strike Energy Limited",
-      "yf": "STX.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 9.1,
-        "atr_pctl": 11.9,
-        "vol_pctl": 32.5,
-        "drawdown_pct": 80.4,
-        "coiled": true,
-        "coiled_bars": 15,
-        "last_coiled": "2026-11-19"
-      },
-      "base": {
-        "high": 0.12,
-        "low": 0.094,
-        "bars": 60
-      },
-      "breakout_level": 0.12,
-      "provisional": false,
-      "last_bar": "2026-11-19",
-      "price": 0.099,
-      "mcap": 353412000.0,
       "mcap_asof": "2026-11-18",
       "mcap_src": "previous"
     },
@@ -257,7 +255,7 @@
       "price": 0.095,
       "mcap": 169454864.0,
       "mcap_asof": "2026-11-20",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CAT",
