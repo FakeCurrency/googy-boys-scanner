@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-19T23:25:57Z",
+  "generated_at": "2026-11-20T00:16:29Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,8 +132,8 @@
       0.15
     ]
   },
-  "open_total": 60,
-  "closed_total": 190,
+  "open_total": 59,
+  "closed_total": 191,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-20",
-        1
-      ],
       [
         "2026-11-23",
         1
@@ -207,14 +203,18 @@
       [
         "2026-12-09",
         1
+      ],
+      [
+        "2026-12-10",
+        1
       ]
     ],
     "sector_load": {
       "asx": {
         "materials": 5,
         "financials": 4,
-        "industrials": 4,
         "consumer discretionary": 3,
+        "industrials": 3,
         "communication services": 2,
         "consumer staples": 1,
         "energy": 1,
@@ -241,9 +241,9 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-19T04:15:50Z",
+      "at": "2026-11-20T00:16:26Z",
       "reasons": {
-        "HCH": "dup_symbol"
+        "C79": "refused_at_fill"
       }
     },
     "crypto": {
@@ -271,8 +271,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 52,
-        "avg_r": -0.256
+        "n": 53,
+        "avg_r": -0.251
       }
     },
     "nasdaq": {
