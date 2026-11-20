@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-19T02:44:46+00:00",
+  "generated_at": "2026-11-20T02:31:51+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-18",
+  "last_closed_bar": "2026-11-19",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 24429.88,
-    "sma200": 25152.21,
+    "close": 23879.2,
+    "sma200": 25157.08,
     "above_200": false,
-    "vs_200_pct": -2.9,
-    "as_of": "2026-11-18"
+    "vs_200_pct": -5.1,
+    "as_of": "2026-11-19"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 1421,
-    "downloaded": 1421,
-    "screened": 1320,
+    "universe": 1423,
+    "downloaded": 1423,
+    "screened": 1319,
     "skipped": {
-      "short history": 100,
+      "short history": 103,
       "stale frame": 1
     },
     "counts": {
@@ -66,25 +66,27 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-18",
-      "raw_last": "2026-11-18",
-      "expected_completed": "2026-11-18",
-      "lagging": 0,
-      "screened": 1420,
+      "completed_last": "2026-11-19",
+      "raw_last": "2026-11-19",
+      "expected_completed": "2026-11-19",
+      "lagging": 622,
+      "screened": 1422,
       "completed_dist": {
-        "2026-11-18": 1420,
+        "2026-11-19": 800,
+        "2026-11-18": 622,
         "2026-10-28": 1
       },
       "raw_dist": {
-        "2026-11-18": 1420,
+        "2026-11-19": 800,
+        "2026-11-18": 622,
         "2026-10-28": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 5
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1421
+        "yahoo": 1423
       },
       "dead": {},
       "errors": {},
@@ -99,10 +101,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1421,
+      "fresh": 1423,
       "reused": 0,
-      "merged": 1421,
-      "universe": 1421,
+      "merged": 1423,
+      "universe": 1423,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -110,7 +112,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 139.4
+    "elapsed_s": 233.1
   },
   "results": [
     {
@@ -170,7 +172,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 12,
+      "bars_since": 13,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -203,11 +205,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 11.10000038,
-      "change_pct": -2.6,
-      "r_now": -0.2,
-      "trail": 11.2688889,
+      "last_bar": "2026-11-19",
+      "price": 11.07999992,
+      "change_pct": -2.8,
+      "r_now": -0.22,
+      "trail": 11.23444441,
       "mcap": 353511104.0,
       "mcap_asof": "2026-11-18",
       "mcap_src": "previous"
@@ -294,7 +296,7 @@
       "price": 6.98000002,
       "mcap": 315707200.0,
       "mcap_asof": "2026-11-19",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "JACK",
@@ -303,23 +305,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.96,
-        "atr_pctl": 34.9,
-        "vol_pctl": 1.6,
-        "drawdown_pct": 82.0,
+        "ribbon_pct": 10.62,
+        "atr_pctl": 59.7,
+        "vol_pctl": 2.4,
+        "drawdown_pct": 83.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-13"
       },
       "base": {
-        "high": 17.89999962,
+        "high": 16.67000008,
         "low": 10.77000046,
         "bars": 60
       },
-      "breakout_level": 16.67000008,
+      "breakout_level": 16.64999962,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 14.78999996,
+      "last_bar": "2026-11-19",
+      "price": 13.80000019,
       "mcap": 272538272.0,
       "mcap_asof": "2026-11-17",
       "mcap_src": "cache"
@@ -359,23 +361,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 16.73,
-        "atr_pctl": 31.9,
-        "vol_pctl": 20.4,
-        "drawdown_pct": 59.2,
+        "ribbon_pct": 18.27,
+        "atr_pctl": 28.8,
+        "vol_pctl": 20.6,
+        "drawdown_pct": 59.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-12"
       },
       "base": {
         "high": 16.03000069,
-        "low": 12.46000004,
+        "low": 11.59000015,
         "bars": 60
       },
       "breakout_level": 16.03000069,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 11.61999989,
+      "last_bar": "2026-11-19",
+      "price": 11.65999985,
       "mcap": 820598464.0,
       "mcap_asof": "2026-11-18",
       "mcap_src": "cache"
@@ -387,10 +389,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 20.66,
-        "atr_pctl": 1.0,
-        "vol_pctl": 56.9,
-        "drawdown_pct": 69.6,
+        "ribbon_pct": 21.52,
+        "atr_pctl": 2.4,
+        "vol_pctl": 63.7,
+        "drawdown_pct": 70.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-06"
@@ -402,11 +404,11 @@
       },
       "breakout_level": 5.0,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 4.78000021,
-      "mcap": 799610112.0,
-      "mcap_asof": "2026-11-15",
-      "mcap_src": "previous"
+      "last_bar": "2026-11-19",
+      "price": 4.71000004,
+      "mcap": 779744064.0,
+      "mcap_asof": "2026-11-20",
+      "mcap_src": "yahoo"
     }
   ],
   "errors": []
