@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-20T02:31:51+00:00",
+  "generated_at": "2026-11-21T02:42:18+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-19",
+  "last_closed_bar": "2026-11-20",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 23879.2,
-    "sma200": 25157.08,
+    "close": 22617.73,
+    "sma200": 25157.46,
     "above_200": false,
-    "vs_200_pct": -5.1,
-    "as_of": "2026-11-19"
+    "vs_200_pct": -10.1,
+    "as_of": "2026-11-20"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,43 +50,40 @@
     }
   },
   "summary": {
-    "universe": 1423,
-    "downloaded": 1423,
-    "screened": 1319,
+    "universe": 1420,
+    "downloaded": 1420,
+    "screened": 1320,
     "skipped": {
-      "short history": 103,
-      "stale frame": 1
+      "short history": 100
     },
     "counts": {
       "IGNITING": 0,
-      "RUNNING": 1,
-      "CLOSED": 1,
-      "COILED": 7,
+      "RUNNING": 0,
+      "CLOSED": 2,
+      "COILED": 6,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-19",
-      "raw_last": "2026-11-19",
-      "expected_completed": "2026-11-19",
-      "lagging": 622,
-      "screened": 1422,
+      "completed_last": "2026-11-20",
+      "raw_last": "2026-11-20",
+      "expected_completed": "2026-11-20",
+      "lagging": 1,
+      "screened": 1420,
       "completed_dist": {
-        "2026-11-19": 800,
-        "2026-11-18": 622,
-        "2026-10-28": 1
+        "2026-11-20": 1419,
+        "2026-11-19": 1
       },
       "raw_dist": {
-        "2026-11-19": 800,
-        "2026-11-18": 622,
-        "2026-10-28": 1
+        "2026-11-20": 1419,
+        "2026-11-19": 1
       },
-      "rows_lagging": 5
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1423
+        "yahoo": 1420
       },
       "dead": {},
       "errors": {},
@@ -101,18 +98,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1423,
+      "fresh": 1420,
       "reused": 0,
-      "merged": 1423,
-      "universe": 1423,
+      "merged": 1420,
+      "universe": 1420,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 9,
-      "have": 9
+      "rows": 8,
+      "have": 8
     },
-    "elapsed_s": 233.1
+    "elapsed_s": 126.9
   },
   "results": [
     {
@@ -125,7 +122,7 @@
       "entry": 13.72000027,
       "entry_basis": "next_open",
       "entry_date": "2026-11-13",
-      "bars_since": 4,
+      "bars_since": 6,
       "rvol": 3.76,
       "ext_pct": 7.1,
       "turnover_trigger": 33312959.0,
@@ -151,13 +148,18 @@
         "coiled_bars": 3
       },
       "mfe_r": 0.8,
-      "state": "RUNNING",
+      "exit_reason": "trail",
+      "exit_date": "2026-11-20",
+      "exit_price": 13.13000011,
+      "exit_r": -0.56,
+      "exit_pending": true,
+      "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 13.56000042,
-      "change_pct": -1.2,
-      "r_now": -0.15,
-      "trail": 13.20222229,
+      "last_bar": "2026-11-20",
+      "price": 13.13000011,
+      "change_pct": -4.3,
+      "r_now": -0.56,
+      "trail": 13.39777788,
       "mcap": 2611549952.0,
       "mcap_asof": "2026-11-18",
       "mcap_src": "previous"
@@ -172,7 +174,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 13,
+      "bars_since": 14,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -205,11 +207,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-19",
-      "price": 11.07999992,
-      "change_pct": -2.8,
-      "r_now": -0.22,
-      "trail": 11.23444441,
+      "last_bar": "2026-11-20",
+      "price": 11.13000011,
+      "change_pct": -2.4,
+      "r_now": -0.18,
+      "trail": 11.20444446,
       "mcap": 353511104.0,
       "mcap_asof": "2026-11-18",
       "mcap_src": "previous"
@@ -221,12 +223,12 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.31,
-        "atr_pctl": 23.8,
-        "vol_pctl": 27.2,
-        "drawdown_pct": 50.9,
-        "coiled": true,
-        "coiled_bars": 3,
+        "ribbon_pct": 4.11,
+        "atr_pctl": 44.2,
+        "vol_pctl": 31.0,
+        "drawdown_pct": 54.3,
+        "coiled": false,
+        "coiled_bars": 0,
         "last_coiled": "2026-11-18"
       },
       "base": {
@@ -236,10 +238,38 @@
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 5.3499999,
-      "mcap": 2376382720.0,
-      "mcap_asof": "2026-11-16",
+      "last_bar": "2026-11-20",
+      "price": 4.98000002,
+      "mcap": 2220335104.0,
+      "mcap_asof": "2026-11-21",
+      "mcap_src": "yahoo"
+    },
+    {
+      "symbol": "JACK",
+      "name": "Jack In The Box Inc. - Common Stock",
+      "yf": "JACK",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 9.27,
+        "atr_pctl": 72.0,
+        "vol_pctl": 5.4,
+        "drawdown_pct": 84.0,
+        "coiled": false,
+        "coiled_bars": 0,
+        "last_coiled": "2026-11-13"
+      },
+      "base": {
+        "high": 16.64999962,
+        "low": 10.77000046,
+        "bars": 60
+      },
+      "breakout_level": 16.64999962,
+      "provisional": false,
+      "last_bar": "2026-11-20",
+      "price": 13.19999981,
+      "mcap": 272538272.0,
+      "mcap_asof": "2026-11-17",
       "mcap_src": "cache"
     },
     {
@@ -249,23 +279,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.19,
-        "atr_pctl": 62.3,
-        "vol_pctl": 69.2,
-        "drawdown_pct": 58.1,
+        "ribbon_pct": 11.06,
+        "atr_pctl": 85.7,
+        "vol_pctl": 74.0,
+        "drawdown_pct": 61.3,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-09"
       },
       "base": {
-        "high": 40.78064235,
-        "low": 32.75,
+        "high": 40.24392651,
+        "low": 32.375,
         "bars": 60
       },
-      "breakout_level": 40.68216677,
+      "breakout_level": 40.11999893,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 33.79000092,
+      "last_bar": "2026-11-20",
+      "price": 31.21999931,
       "mcap": 8669982720.0,
       "mcap_asof": "2026-11-17",
       "mcap_src": "previous"
@@ -277,54 +307,26 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.03,
-        "atr_pctl": 27.6,
-        "vol_pctl": 0.4,
-        "drawdown_pct": 74.6,
+        "ribbon_pct": 16.18,
+        "atr_pctl": 58.3,
+        "vol_pctl": 1.4,
+        "drawdown_pct": 77.7,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-16"
       },
       "base": {
         "high": 9.27000046,
-        "low": 6.86899996,
+        "low": 6.59000015,
         "bars": 60
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 6.98000002,
+      "last_bar": "2026-11-20",
+      "price": 6.13000011,
       "mcap": 315707200.0,
       "mcap_asof": "2026-11-19",
       "mcap_src": "previous"
-    },
-    {
-      "symbol": "JACK",
-      "name": "Jack In The Box Inc. - Common Stock",
-      "yf": "JACK",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 10.62,
-        "atr_pctl": 59.7,
-        "vol_pctl": 2.4,
-        "drawdown_pct": 83.2,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-13"
-      },
-      "base": {
-        "high": 16.67000008,
-        "low": 10.77000046,
-        "bars": 60
-      },
-      "breakout_level": 16.64999962,
-      "provisional": false,
-      "last_bar": "2026-11-19",
-      "price": 13.80000019,
-      "mcap": 272538272.0,
-      "mcap_asof": "2026-11-17",
-      "mcap_src": "cache"
     },
     {
       "symbol": "AEBI",
@@ -333,23 +335,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 14.8,
-        "atr_pctl": 45.8,
-        "vol_pctl": 56.1,
-        "drawdown_pct": 69.8,
+        "ribbon_pct": 19.2,
+        "atr_pctl": 61.3,
+        "vol_pctl": 65.4,
+        "drawdown_pct": 72.0,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-10"
       },
       "base": {
         "high": 13.00951838,
-        "low": 9.71000004,
+        "low": 9.47000027,
         "bars": 60
       },
       "breakout_level": 13.00951838,
       "provisional": false,
-      "last_bar": "2026-11-18",
-      "price": 9.82999992,
+      "last_bar": "2026-11-20",
+      "price": 9.14000034,
       "mcap": 791263936.0,
       "mcap_asof": "2026-11-17",
       "mcap_src": "previous"
@@ -361,54 +363,26 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 18.27,
-        "atr_pctl": 28.8,
-        "vol_pctl": 20.6,
-        "drawdown_pct": 59.1,
+        "ribbon_pct": 21.01,
+        "atr_pctl": 31.0,
+        "vol_pctl": 23.4,
+        "drawdown_pct": 60.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-12"
       },
       "base": {
         "high": 16.03000069,
-        "low": 11.59000015,
+        "low": 11.43000031,
         "bars": 60
       },
       "breakout_level": 16.03000069,
       "provisional": false,
-      "last_bar": "2026-11-19",
-      "price": 11.65999985,
+      "last_bar": "2026-11-20",
+      "price": 11.27000046,
       "mcap": 820598464.0,
       "mcap_asof": "2026-11-18",
       "mcap_src": "cache"
-    },
-    {
-      "symbol": "IRWD",
-      "name": "Ironwood Pharmaceuticals, Inc. - Class A Common Stock",
-      "yf": "IRWD",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 21.52,
-        "atr_pctl": 2.4,
-        "vol_pctl": 63.7,
-        "drawdown_pct": 70.0,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-06"
-      },
-      "base": {
-        "high": 5.0,
-        "low": 3.38000011,
-        "bars": 60
-      },
-      "breakout_level": 5.0,
-      "provisional": false,
-      "last_bar": "2026-11-19",
-      "price": 4.71000004,
-      "mcap": 779744064.0,
-      "mcap_asof": "2026-11-20",
-      "mcap_src": "yahoo"
     }
   ],
   "errors": []
