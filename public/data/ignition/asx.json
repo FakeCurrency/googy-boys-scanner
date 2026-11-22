@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-20T15:41:06+00:00",
+  "generated_at": "2026-11-22T09:56:14+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-20",
@@ -69,17 +69,17 @@
       "completed_last": "2026-11-20",
       "raw_last": "2026-11-20",
       "expected_completed": "2026-11-20",
-      "lagging": 436,
+      "lagging": 1,
       "screened": 1848,
       "completed_dist": {
-        "2026-11-20": 1412,
-        "2026-11-19": 436,
+        "2026-11-20": 1847,
+        "2026-11-19": 1,
         "2026-11-12": 1,
         "2026-11-03": 1
       },
       "raw_dist": {
-        "2026-11-20": 1412,
-        "2026-11-19": 436,
+        "2026-11-20": 1847,
+        "2026-11-19": 1,
         "2026-11-12": 1,
         "2026-11-03": 1
       },
@@ -114,7 +114,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 242.2
+    "elapsed_s": 247.9
   },
   "results": [
     {
@@ -126,7 +126,7 @@
       "coil": {
         "ribbon_pct": 7.57,
         "atr_pctl": 0.2,
-        "vol_pctl": 9.5,
+        "vol_pctl": 9.7,
         "drawdown_pct": 73.4,
         "coiled": true,
         "coiled_bars": 40,
@@ -210,7 +210,7 @@
       "coil": {
         "ribbon_pct": 11.52,
         "atr_pctl": 20.2,
-        "vol_pctl": 20.0,
+        "vol_pctl": 20.2,
         "drawdown_pct": 70.9,
         "coiled": true,
         "coiled_bars": 8,
@@ -281,9 +281,9 @@
       "provisional": false,
       "last_bar": "2026-11-20",
       "price": 2.68000007,
-      "mcap": 954246080.0,
-      "mcap_asof": "2026-11-17",
-      "mcap_src": "cache"
+      "mcap": 846814400.0,
+      "mcap_asof": "2026-11-22",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "AMA",
@@ -309,9 +309,9 @@
       "provisional": false,
       "last_bar": "2026-11-20",
       "price": 0.42500001,
-      "mcap": 223331648.0,
-      "mcap_asof": "2026-11-17",
-      "mcap_src": "previous"
+      "mcap": 204120320.0,
+      "mcap_asof": "2026-11-22",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "NTU",
@@ -337,9 +337,9 @@
       "provisional": false,
       "last_bar": "2026-11-20",
       "price": 0.022,
-      "mcap": 219615664.0,
-      "mcap_asof": "2026-11-16",
-      "mcap_src": "previous"
+      "mcap": 210067152.0,
+      "mcap_asof": "2026-11-22",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "HMC",
@@ -350,7 +350,7 @@
       "coil": {
         "ribbon_pct": 21.04,
         "atr_pctl": 40.1,
-        "vol_pctl": 16.7,
+        "vol_pctl": 16.9,
         "drawdown_pct": 72.9,
         "coiled": false,
         "coiled_bars": 0,
@@ -365,8 +365,8 @@
       "provisional": false,
       "last_bar": "2026-11-20",
       "price": 3.3499999,
-      "mcap": 1456533504.0,
-      "mcap_asof": "2026-11-18",
+      "mcap": 1382262656.0,
+      "mcap_asof": "2026-11-22",
       "mcap_src": "cache"
     }
   ],
