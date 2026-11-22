@@ -1,6 +1,6 @@
 # Specs backtest — ASX
 
-Generated 2026-11-15 · engine scanner/spec.py (restored 2026-07-02) · universe 2061 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
+Generated 2026-11-22 · engine scanner/spec.py (restored 2026-07-02) · universe 2058 · period 5y · zero-lookahead slice replay, one signal per fire-streak.
 
 > **LIMITATION — SURVIVORSHIP BIAS:** yfinance has no delisted history. Sub-$0.50 specs delist *constantly* — this cohort is missing its casualties and every number below is optimistic. Directional use only.
 
@@ -8,10 +8,10 @@ A **signal** = the first day a fire-streak passes every mandatory gate (3× volu
 
 | cohort | n | fwd 5 | fwd 10 | fwd 20 | target first | stopped | still open | MAE |
 |---|---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 1921 | -1.7% | -1.7% | -1.6% | 30.3% | 31.3% | 38.4% | -18.0% |
-| grade A+ | 715 | +0.0% | +0.1% | -0.1% | 14.3% | 30.9% | 54.8% | -16.7% |
-| grade A | 141 | -1.7% | -2.9% | -0.3% | 9.9% | 40.4% | 49.6% | -17.2% |
-| grade B | 1065 | -2.9% | -2.7% | -2.8% | 43.8% | 30.3% | 25.8% | -18.9% |
+| ALL SIGNALS | 9888 | -1.2% | -1.2% | -1.2% | 30.3% | 31.4% | 38.4% | -17.8% |
+| grade A+ | 3716 | +0.1% | +0.3% | +0.9% | 12.5% | 32.3% | 55.2% | -16.9% |
+| grade A | 806 | -1.2% | -1.1% | -0.1% | 14.9% | 37.2% | 47.9% | -15.2% |
+| grade B | 5366 | -2.1% | -2.4% | -2.8% | 44.9% | 29.9% | 25.2% | -18.9% |
 
 ## R model — what trading the signals earned
 
@@ -19,13 +19,13 @@ Entry at the signal close, the engine's stop, its one target booked in full (res
 
 | cohort | trades | win | R won | R lost | net R | per trade | net $ |
 |---|---|---|---|---|---|---|---|
-| ALL SIGNALS | 1920 | 40.9% | +805.2R | -954.4R | **-149.2R** | -0.078R | $-51,821 |
-| ALL SIGNALS, stop at the worst print | 1920 | 40.9% | +805.2R | -1091.0R | **-285.8R** | -0.149R | $-74,476 |
-| grade A+ | 714 | 35.2% | +415.0R | -371.2R | **+43.8R** | +0.061R | $+2,760 |
-| grade A | 141 | 31.9% | +77.1R | -88.4R | **-11.3R** | -0.080R | $-5,152 |
-| grade B | 1065 | 45.9% | +313.2R | -494.9R | **-181.7R** | -0.171R | $-49,429 |
+| ALL SIGNALS | 9876 | 41.3% | +4037.7R | -4935.1R | **-897.5R** | -0.091R | $-232,654 |
+| ALL SIGNALS, stop at the worst print | 9876 | 41.3% | +4037.7R | -5585.9R | **-1548.2R** | -0.157R | $-353,817 |
+| grade A+ | 3711 | 34.2% | +1979.1R | -2030.5R | **-51.4R** | -0.014R | $-3,400 |
+| grade A | 803 | 35.7% | +476.5R | -473.1R | **+3.4R** | +0.004R | $-5,163 |
+| grade B | 5362 | 47.1% | +1582.1R | -2431.6R | **-849.5R** | -0.158R | $-224,090 |
 
 ## Baseline
-- Random entry on the same sub-$0.50 universe (1921 samples, seeded): fwd 5: +0.9% · fwd 10: +1.6% · fwd 20: +1.6%
+- Random entry on the same sub-$0.50 universe (9888 samples, seeded): fwd 5: +0.3% · fwd 10: +0.8% · fwd 20: +5.7%
 
 Analysis only — not financial advice.
