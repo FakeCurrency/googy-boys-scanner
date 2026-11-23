@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-23T20:25:36Z",
+  "generated_at": "2026-11-23T21:14:12Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,7 +132,7 @@
       0.15
     ]
   },
-  "open_total": 59,
+  "open_total": 60,
   "closed_total": 196,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
@@ -224,9 +224,9 @@
       },
       "nasdaq": {
         "health care": 6,
+        "industrials": 6,
         "information technology": 6,
         "consumer staples": 5,
-        "industrials": 5,
         "consumer discretionary": 3,
         "financials": 3,
         "utilities": 3,
@@ -256,9 +256,26 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-23T20:14:14Z",
+      "at": "2026-11-23T21:14:09Z",
       "reasons": {
-        "JJSF": "dup_symbol"
+        "APEI": "global_cap",
+        "CAE": "global_cap",
+        "CGNT": "global_cap",
+        "CYTK": "global_cap",
+        "DDOG": "dup_symbol",
+        "EGHT": "global_cap",
+        "FER": "global_cap",
+        "GOOGL": "dup_symbol",
+        "HSTM": "sector_cap",
+        "ON": "global_cap",
+        "ORLY": "global_cap",
+        "PLAB": "global_cap",
+        "QCOM": "global_cap",
+        "SCSC": "dup_symbol",
+        "SHOP": "global_cap",
+        "STRF": "global_cap",
+        "VOR": "sector_cap",
+        "WRLD": "global_cap"
       }
     }
   },
