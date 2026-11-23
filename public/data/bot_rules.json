@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-23T14:58:52Z",
+  "generated_at": "2026-11-23T15:44:49Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,8 +132,8 @@
       0.15
     ]
   },
-  "open_total": 60,
-  "closed_total": 195,
+  "open_total": 59,
+  "closed_total": 196,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-23",
-        1
-      ],
       [
         "2026-11-24",
         1
@@ -207,6 +203,10 @@
       [
         "2026-12-10",
         1
+      ],
+      [
+        "2026-12-11",
+        3
       ]
     ],
     "sector_load": {
@@ -227,8 +227,8 @@
         "information technology": 6,
         "consumer staples": 5,
         "industrials": 5,
-        "financials": 4,
         "consumer discretionary": 3,
+        "financials": 3,
         "utilities": 3,
         "communication services": 2,
         "energy": 1,
@@ -256,7 +256,7 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-20T21:13:48Z",
+      "at": "2026-11-23T15:44:46Z",
       "reasons": {
         "JJSF": "dup_symbol"
       }
@@ -283,8 +283,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 58,
-        "avg_r": -0.289
+        "n": 59,
+        "avg_r": -0.297
       }
     },
     "crypto": {
