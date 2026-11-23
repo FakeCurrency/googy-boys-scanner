@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-22T22:48:18+00:00",
+  "generated_at": "2026-11-23T07:27:57+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-21",
+  "last_closed_bar": "2026-11-22",
   "report_only": true,
   "regime": {
-    "btc_close": 60215.77,
-    "btc_sma200": 72485.74,
+    "btc_close": 61271.08,
+    "btc_sma200": 72384.86,
     "btc_above_200": false,
-    "btc_vs_200_pct": -16.9,
-    "as_of": "2026-11-21"
+    "btc_vs_200_pct": -15.4,
+    "as_of": "2026-11-22"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -49,30 +49,30 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 166,
+    "downloaded": 167,
     "screened": 139,
     "skipped": {
-      "short history": 27
+      "short history": 28
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 0,
-      "COILED": 2,
+      "COILED": 1,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-21",
-      "raw_last": "2026-11-22",
-      "expected_completed": "2026-11-21",
+      "completed_last": "2026-11-22",
+      "raw_last": "2026-11-23",
+      "expected_completed": "2026-11-22",
       "lagging": 0,
-      "screened": 166,
+      "screened": 167,
       "completed_dist": {
-        "2026-11-21": 166
+        "2026-11-22": 167
       },
       "raw_dist": {
-        "2026-11-22": 166
+        "2026-11-23": 167
       },
       "rows_lagging": 0
     },
@@ -80,7 +80,7 @@
       "mode": "exchange",
       "by_source": {
         "binance_vision": 116,
-        "yahoo": 31,
+        "yahoo": 32,
         "coinbase": 19
       },
       "dead": {
@@ -124,10 +124,10 @@
         "M",
         "MGLO",
         "MNT",
+        "MWC",
         "MX",
         "NFT",
         "NOPAL",
-        "NPC",
         "NVDAX",
         "OHM",
         "OKB",
@@ -150,7 +150,7 @@
         "SOON",
         "SOSO"
       ],
-      "yahoo_fallback": 31,
+      "yahoo_fallback": 32,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -204,18 +204,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 166,
+      "fresh": 167,
       "reused": 0,
-      "merged": 166,
+      "merged": 167,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 7
     },
     "mcap": {
-      "rows": 2,
-      "have": 2
+      "rows": 1,
+      "have": 1
     },
-    "elapsed_s": 103.4
+    "elapsed_s": 123.6
   },
   "results": [
     {
@@ -225,12 +225,12 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 10.87,
-        "atr_pctl": 19.1,
-        "vol_pctl": 3.2,
-        "drawdown_pct": 82.7,
-        "coiled": true,
-        "coiled_bars": 6,
+        "ribbon_pct": 12.45,
+        "atr_pctl": 14.0,
+        "vol_pctl": 3.5,
+        "drawdown_pct": 82.0,
+        "coiled": false,
+        "coiled_bars": 0,
         "last_coiled": "2026-11-21"
       },
       "base": {
@@ -240,38 +240,10 @@
       },
       "breakout_level": 0.13861,
       "provisional": false,
-      "last_bar": "2026-11-21",
-      "price": 0.1035,
-      "mcap": 366450925.0,
-      "mcap_asof": "2026-11-22",
-      "mcap_src": "coingecko"
-    },
-    {
-      "symbol": "ASTER",
-      "name": "Aster",
-      "yf": "ASTER-USD",
-      "source": "binance_vision",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 23.25,
-        "atr_pctl": 79.4,
-        "vol_pctl": 39.7,
-        "drawdown_pct": 83.8,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-12"
-      },
-      "base": {
-        "high": 0.7815,
-        "low": 0.4784,
-        "bars": 60
-      },
-      "breakout_level": 0.7815,
-      "provisional": false,
-      "last_bar": "2026-11-21",
-      "price": 0.4998,
-      "mcap": 1281666155.0,
-      "mcap_asof": "2026-11-22",
+      "last_bar": "2026-11-22",
+      "price": 0.10293,
+      "mcap": 364275115.0,
+      "mcap_asof": "2026-11-23",
       "mcap_src": "coingecko"
     }
   ],
