@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-23T07:27:57+00:00",
+  "generated_at": "2026-11-23T16:29:42+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-22",
@@ -49,10 +49,10 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 167,
+    "downloaded": 166,
     "screened": 139,
     "skipped": {
-      "short history": 28
+      "short history": 27
     },
     "counts": {
       "IGNITING": 0,
@@ -67,21 +67,21 @@
       "raw_last": "2026-11-23",
       "expected_completed": "2026-11-22",
       "lagging": 0,
-      "screened": 167,
+      "screened": 166,
       "completed_dist": {
-        "2026-11-22": 167
+        "2026-11-22": 166
       },
       "raw_dist": {
-        "2026-11-23": 167
+        "2026-11-23": 166
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 116,
-        "yahoo": 32,
-        "coinbase": 19
+        "binance_vision": 117,
+        "yahoo": 31,
+        "coinbase": 18
       },
       "dead": {
         "binance": "HTTP 451",
@@ -93,7 +93,6 @@
         "ANVL",
         "APEPE",
         "AUTO",
-        "B",
         "BC",
         "BDX",
         "BGB",
@@ -109,6 +108,7 @@
         "COCO",
         "CRCLX",
         "DGAI",
+        "EDGE",
         "FLASH",
         "GOMINING",
         "GT",
@@ -128,6 +128,7 @@
         "MX",
         "NFT",
         "NOPAL",
+        "NPC",
         "NVDAX",
         "OHM",
         "OKB",
@@ -147,15 +148,18 @@
         "RLB",
         "SHFL",
         "SN51",
-        "SOON",
         "SOSO"
       ],
-      "yahoo_fallback": 32,
+      "yahoo_fallback": 31,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
         ],
         "BR": [
+          "yahoo"
+        ],
+        "EDGE": [
+          "coinbase",
           "yahoo"
         ],
         "M": [
@@ -194,6 +198,7 @@
         "AUTO-USD",
         "BR-USD",
         "BTT-USD",
+        "EDGE-USD",
         "HTX-USD",
         "LIT-USD",
         "M-USD",
@@ -204,18 +209,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 167,
+      "fresh": 166,
       "reused": 0,
-      "merged": 167,
+      "merged": 166,
       "universe": 201,
       "stale_dropped": 0,
-      "refused": 7
+      "refused": 8
     },
     "mcap": {
       "rows": 1,
       "have": 1
     },
-    "elapsed_s": 123.6
+    "elapsed_s": 108.2
   },
   "results": [
     {
@@ -241,8 +246,8 @@
       "breakout_level": 0.13861,
       "provisional": false,
       "last_bar": "2026-11-22",
-      "price": 0.10293,
-      "mcap": 364275115.0,
+      "price": 0.10103,
+      "mcap": 357733180.0,
       "mcap_asof": "2026-11-23",
       "mcap_src": "coingecko"
     }
