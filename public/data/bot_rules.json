@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-23T04:18:20Z",
+  "generated_at": "2026-11-23T05:15:26Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -132,7 +132,7 @@
       0.15
     ]
   },
-  "open_total": 57,
+  "open_total": 60,
   "closed_total": 195,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
@@ -211,14 +211,14 @@
     ],
     "sector_load": {
       "asx": {
+        "materials": 6,
         "financials": 4,
-        "materials": 4,
         "consumer discretionary": 3,
         "communication services": 2,
         "health care": 2,
+        "industrials": 2,
         "consumer staples": 1,
         "energy": 1,
-        "industrials": 1,
         "information technology": 1,
         "utilities": 1
       },
@@ -241,10 +241,14 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-23T04:18:16Z",
+      "at": "2026-11-23T05:15:24Z",
       "reasons": {
-        "ELD": "dup_symbol",
-        "SHL": "dup_symbol"
+        "BGL": "dup_symbol",
+        "DOW": "global_cap",
+        "GMD": "global_cap",
+        "MMS": "global_cap",
+        "SMR": "global_cap",
+        "TGN": "global_cap"
       }
     },
     "crypto": {
