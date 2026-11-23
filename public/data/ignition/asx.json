@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-23T08:31:24+00:00",
+  "generated_at": "2026-11-23T18:32:43+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-23",
@@ -51,8 +51,8 @@
   },
   "summary": {
     "universe": 2058,
-    "downloaded": 1850,
-    "screened": 1774,
+    "downloaded": 1849,
+    "screened": 1773,
     "skipped": {
       "short history": 75,
       "stale frame": 1
@@ -69,17 +69,17 @@
       "completed_last": "2026-11-23",
       "raw_last": "2026-11-23",
       "expected_completed": "2026-11-23",
-      "lagging": 404,
-      "screened": 1849,
+      "lagging": 456,
+      "screened": 1848,
       "completed_dist": {
-        "2026-11-23": 1445,
-        "2026-11-20": 403,
+        "2026-11-23": 1392,
+        "2026-11-20": 455,
         "2026-11-19": 1,
         "2026-11-12": 1
       },
       "raw_dist": {
-        "2026-11-23": 1445,
-        "2026-11-20": 403,
+        "2026-11-23": 1392,
+        "2026-11-20": 455,
         "2026-11-19": 1,
         "2026-11-12": 1
       },
@@ -88,7 +88,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1849
+        "yahoo": 1384
       },
       "dead": {},
       "errors": {},
@@ -103,9 +103,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1849,
-      "reused": 1,
-      "merged": 1850,
+      "fresh": 1384,
+      "reused": 465,
+      "merged": 1849,
       "universe": 2058,
       "stale_dropped": 0,
       "refused": 0
@@ -114,7 +114,7 @@
       "rows": 9,
       "have": 9
     },
-    "elapsed_s": 355.5
+    "elapsed_s": 222.8
   },
   "results": [
     {
@@ -143,7 +143,7 @@
       "price": 0.64999998,
       "mcap": 390770656.0,
       "mcap_asof": "2026-11-23",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "STX",
@@ -171,7 +171,7 @@
       "price": 0.098,
       "mcap": 353412000.0,
       "mcap_asof": "2026-11-23",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "KPG",
@@ -199,7 +199,7 @@
       "price": 4.11999989,
       "mcap": 186532832.0,
       "mcap_asof": "2026-11-23",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CVN",
@@ -289,7 +289,7 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 12.35,
@@ -311,7 +311,7 @@
       "price": 0.81999999,
       "mcap": 566490432.0,
       "mcap_asof": "2026-11-23",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "NTU",
