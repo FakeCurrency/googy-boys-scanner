@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-24T09:48:06+00:00",
+  "generated_at": "2026-11-24T16:23:30+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-23",
@@ -79,9 +79,9 @@
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 118,
-        "yahoo": 30,
-        "coinbase": 19
+        "binance_vision": 115,
+        "yahoo": 32,
+        "coinbase": 20
       },
       "dead": {
         "binance": "HTTP 451",
@@ -93,6 +93,7 @@
         "ANVL",
         "APEPE",
         "AUTO",
+        "B",
         "BC",
         "BDX",
         "BGB",
@@ -147,10 +148,9 @@
         "SHFL",
         "SN51",
         "SOSO",
-        "UB",
-        "VSN"
+        "UB"
       ],
-      "yahoo_fallback": 30,
+      "yahoo_fallback": 32,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -180,6 +180,9 @@
           "binance_vision"
         ],
         "LIT": [
+          "binance_vision"
+        ],
+        "PROS": [
           "binance_vision"
         ],
         "XMR": [
@@ -220,7 +223,7 @@
       "rows": 1,
       "have": 1
     },
-    "elapsed_s": 133.3
+    "elapsed_s": 104.8
   },
   "results": [
     {
@@ -246,8 +249,8 @@
       "breakout_level": 0.13861,
       "provisional": false,
       "last_bar": "2026-11-23",
-      "price": 0.10523,
-      "mcap": 372981064.0,
+      "price": 0.10225,
+      "mcap": 363456330.0,
       "mcap_asof": "2026-11-24",
       "mcap_src": "coingecko"
     }
