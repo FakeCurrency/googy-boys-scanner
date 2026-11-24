@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24T15:25:47Z",
+  "generated_at": "2026-11-24T15:44:13Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 196,
+  "closed_total": 197,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-24",
-        1
-      ],
       [
         "2026-11-25",
         6
@@ -207,6 +203,10 @@
       [
         "2026-12-11",
         3
+      ],
+      [
+        "2026-12-15",
+        4
       ]
     ],
     "sector_load": {
@@ -269,24 +269,24 @@
       }
     },
     "nasdaq": {
-      "at": "2026-11-23T21:14:09Z",
+      "at": "2026-11-24T15:44:10Z",
       "reasons": {
         "APEI": "global_cap",
         "CAE": "global_cap",
         "CGNT": "global_cap",
         "CYTK": "global_cap",
         "DDOG": "dup_symbol",
-        "EGHT": "global_cap",
+        "EGHT": "sector_cap",
         "FER": "global_cap",
         "GOOGL": "dup_symbol",
+        "HON": "dup_symbol",
         "HSTM": "sector_cap",
         "ON": "global_cap",
-        "ORLY": "global_cap",
         "PLAB": "global_cap",
         "QCOM": "global_cap",
         "SCSC": "dup_symbol",
-        "SHOP": "global_cap",
-        "STRF": "global_cap",
+        "SHOP": "sector_cap",
+        "STRF": "sector_cap",
         "VOR": "sector_cap",
         "WRLD": "global_cap"
       }
@@ -313,8 +313,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 59,
-        "avg_r": -0.297
+        "n": 60,
+        "avg_r": -0.283
       }
     },
     "crypto": {
