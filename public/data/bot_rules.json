@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24T15:44:13Z",
+  "generated_at": "2026-11-24T16:13:40Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -269,25 +269,26 @@
       }
     },
     "nasdaq": {
-      "at": "2026-11-24T15:44:10Z",
+      "at": "2026-11-24T16:13:38Z",
       "reasons": {
         "APEI": "global_cap",
         "CAE": "global_cap",
         "CGNT": "global_cap",
         "CYTK": "global_cap",
         "DDOG": "dup_symbol",
-        "EGHT": "sector_cap",
+        "EGHT": "global_cap",
         "FER": "global_cap",
         "GOOGL": "dup_symbol",
         "HON": "dup_symbol",
-        "HSTM": "sector_cap",
+        "HSTM": "global_cap",
         "ON": "global_cap",
+        "ORLY": "dup_symbol",
         "PLAB": "global_cap",
         "QCOM": "global_cap",
         "SCSC": "dup_symbol",
-        "SHOP": "sector_cap",
-        "STRF": "sector_cap",
-        "VOR": "sector_cap",
+        "SHOP": "global_cap",
+        "STRF": "global_cap",
+        "VOR": "global_cap",
         "WRLD": "global_cap"
       }
     }
