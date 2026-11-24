@@ -2,17 +2,17 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-23T16:29:42+00:00",
+  "generated_at": "2026-11-24T03:29:44+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-22",
+  "last_closed_bar": "2026-11-23",
   "report_only": true,
   "regime": {
-    "btc_close": 61271.08,
-    "btc_sma200": 72384.86,
+    "btc_close": 61270.93,
+    "btc_sma200": 72291.18,
     "btc_above_200": false,
-    "btc_vs_200_pct": -15.4,
-    "as_of": "2026-11-22"
+    "btc_vs_200_pct": -15.2,
+    "as_of": "2026-11-23"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -49,10 +49,10 @@
   },
   "summary": {
     "universe": 201,
-    "downloaded": 166,
+    "downloaded": 167,
     "screened": 139,
     "skipped": {
-      "short history": 27
+      "short history": 28
     },
     "counts": {
       "IGNITING": 0,
@@ -63,25 +63,26 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-22",
-      "raw_last": "2026-11-23",
-      "expected_completed": "2026-11-22",
-      "lagging": 0,
-      "screened": 166,
+      "completed_last": "2026-11-23",
+      "raw_last": "2026-11-24",
+      "expected_completed": "2026-11-23",
+      "lagging": 30,
+      "screened": 167,
       "completed_dist": {
-        "2026-11-22": 166
+        "2026-11-23": 137,
+        "2026-11-22": 30
       },
       "raw_dist": {
-        "2026-11-23": 166
+        "2026-11-24": 167
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 117,
-        "yahoo": 31,
-        "coinbase": 18
+        "binance_vision": 118,
+        "yahoo": 30,
+        "coinbase": 19
       },
       "dead": {
         "binance": "HTTP 451",
@@ -124,11 +125,9 @@
         "M",
         "MGLO",
         "MNT",
-        "MWC",
         "MX",
         "NFT",
         "NOPAL",
-        "NPC",
         "NVDAX",
         "OHM",
         "OKB",
@@ -148,9 +147,11 @@
         "RLB",
         "SHFL",
         "SN51",
-        "SOSO"
+        "SOSO",
+        "UB",
+        "VSN"
       ],
-      "yahoo_fallback": 31,
+      "yahoo_fallback": 30,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -209,9 +210,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 166,
+      "fresh": 167,
       "reused": 0,
-      "merged": 166,
+      "merged": 167,
       "universe": 201,
       "stale_dropped": 0,
       "refused": 8
@@ -220,7 +221,7 @@
       "rows": 1,
       "have": 1
     },
-    "elapsed_s": 108.2
+    "elapsed_s": 117.2
   },
   "results": [
     {
@@ -230,10 +231,10 @@
       "source": "binance_vision",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.45,
-        "atr_pctl": 14.0,
-        "vol_pctl": 3.5,
-        "drawdown_pct": 82.0,
+        "ribbon_pct": 13.68,
+        "atr_pctl": 13.3,
+        "vol_pctl": 3.7,
+        "drawdown_pct": 82.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-21"
@@ -245,10 +246,10 @@
       },
       "breakout_level": 0.13861,
       "provisional": false,
-      "last_bar": "2026-11-22",
-      "price": 0.10103,
-      "mcap": 357733180.0,
-      "mcap_asof": "2026-11-23",
+      "last_bar": "2026-11-23",
+      "price": 0.10371,
+      "mcap": 366372462.0,
+      "mcap_asof": "2026-11-24",
       "mcap_src": "coingecko"
     }
   ],
