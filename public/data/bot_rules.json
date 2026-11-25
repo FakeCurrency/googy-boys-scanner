@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-25T15:25:45Z",
+  "generated_at": "2026-11-25T15:44:13Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 198,
+  "closed_total": 203,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-25",
-        5
-      ],
       [
         "2026-11-26",
         5
@@ -207,6 +203,10 @@
       [
         "2026-12-15",
         4
+      ],
+      [
+        "2026-12-16",
+        2
       ]
     ],
     "sector_load": {
@@ -224,15 +224,14 @@
       },
       "nasdaq": {
         "health care": 6,
-        "industrials": 6,
         "information technology": 6,
         "consumer staples": 5,
+        "industrials": 5,
+        "utilities": 4,
         "consumer discretionary": 3,
         "financials": 3,
-        "utilities": 3,
         "communication services": 2,
-        "energy": 1,
-        "materials": 1
+        "energy": 2
       },
       "crypto": {
         "crypto-alt": 1
@@ -258,21 +257,16 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-24T21:13:54Z",
+      "at": "2026-11-25T15:44:10Z",
       "reasons": {
-        "GAIN": "global_cap",
-        "GO": "global_cap",
-        "HSTM": "global_cap",
-        "MSEX": "global_cap",
+        "HSTM": "sector_cap",
         "OCFC": "dup_symbol",
         "OTTR": "dup_symbol",
-        "PAYX": "global_cap",
+        "PAYX": "sector_cap",
         "PRTA": "global_cap",
         "QCOM": "global_cap",
-        "STRF": "global_cap",
+        "STRF": "sector_cap",
         "TYRA": "dup_symbol",
-        "VNOM": "global_cap",
-        "YORW": "global_cap",
         "ZM": "global_cap"
       }
     }
@@ -298,8 +292,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 60,
-        "avg_r": -0.283
+        "n": 65,
+        "avg_r": -0.274
       }
     },
     "crypto": {
