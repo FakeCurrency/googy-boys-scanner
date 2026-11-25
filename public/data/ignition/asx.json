@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-25T09:27:07+00:00",
+  "generated_at": "2026-11-25T17:32:20+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-25",
@@ -50,11 +50,11 @@
     }
   },
   "summary": {
-    "universe": 2056,
-    "downloaded": 1850,
-    "screened": 1771,
+    "universe": 2058,
+    "downloaded": 1849,
+    "screened": 1772,
     "skipped": {
-      "short history": 77,
+      "short history": 75,
       "stale frame": 2
     },
     "counts": {
@@ -69,18 +69,18 @@
       "completed_last": "2026-11-25",
       "raw_last": "2026-11-25",
       "expected_completed": "2026-11-25",
-      "lagging": 420,
-      "screened": 1848,
+      "lagging": 477,
+      "screened": 1847,
       "completed_dist": {
-        "2026-11-25": 1428,
-        "2026-11-24": 419,
+        "2026-11-25": 1370,
+        "2026-11-24": 476,
         "2026-11-23": 1,
         "2026-11-19": 1,
         "2026-11-12": 1
       },
       "raw_dist": {
-        "2026-11-25": 1428,
-        "2026-11-24": 419,
+        "2026-11-25": 1370,
+        "2026-11-24": 476,
         "2026-11-23": 1,
         "2026-11-19": 1,
         "2026-11-12": 1
@@ -90,7 +90,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1850
+        "yahoo": 1848
       },
       "dead": {},
       "errors": {},
@@ -105,10 +105,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1850,
-      "reused": 0,
-      "merged": 1850,
-      "universe": 2056,
+      "fresh": 1848,
+      "reused": 1,
+      "merged": 1849,
+      "universe": 2058,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -116,7 +116,7 @@
       "rows": 8,
       "have": 8
     },
-    "elapsed_s": 227.4
+    "elapsed_s": 407.7
   },
   "results": [
     {
@@ -212,7 +212,7 @@
       "coil": {
         "ribbon_pct": 8.36,
         "atr_pctl": 21.0,
-        "vol_pctl": 8.5,
+        "vol_pctl": 9.1,
         "drawdown_pct": 58.3,
         "coiled": true,
         "coiled_bars": 5,
@@ -229,7 +229,7 @@
       "price": 0.096,
       "mcap": 171238608.0,
       "mcap_asof": "2026-11-25",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "CAT",
