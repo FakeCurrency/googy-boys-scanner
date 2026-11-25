@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-25T08:22:42+00:00",
+  "generated_at": "2026-11-25T16:03:59+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-24",
@@ -50,9 +50,9 @@
   "summary": {
     "universe": 201,
     "downloaded": 167,
-    "screened": 140,
+    "screened": 139,
     "skipped": {
-      "short history": 27
+      "short history": 28
     },
     "counts": {
       "IGNITING": 0,
@@ -69,12 +69,12 @@
       "lagging": 0,
       "screened": 167,
       "completed_dist": {
-        "2026-11-25": 4,
-        "2026-11-24": 163
+        "2026-11-25": 1,
+        "2026-11-24": 166
       },
       "raw_dist": {
-        "2026-11-26": 4,
-        "2026-11-25": 163
+        "2026-11-26": 1,
+        "2026-11-25": 166
       },
       "rows_lagging": 0
     },
@@ -82,8 +82,8 @@
       "mode": "exchange",
       "by_source": {
         "binance_vision": 116,
-        "yahoo": 32,
-        "coinbase": 19
+        "yahoo": 31,
+        "coinbase": 20
       },
       "dead": {
         "binance": "HTTP 451",
@@ -95,7 +95,6 @@
         "ANVL",
         "APEPE",
         "AUTO",
-        "B",
         "BC",
         "BDX",
         "BGB",
@@ -150,9 +149,10 @@
         "SHFL",
         "SN51",
         "SOSO",
-        "UB"
+        "UB",
+        "ULTIMA"
       ],
-      "yahoo_fallback": 32,
+      "yahoo_fallback": 31,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -228,7 +228,7 @@
       "rows": 1,
       "have": 1
     },
-    "elapsed_s": 104.4
+    "elapsed_s": 135.1
   },
   "results": [
     {
@@ -254,8 +254,8 @@
       "breakout_level": 0.13454,
       "provisional": false,
       "last_bar": "2026-11-24",
-      "price": 0.10258,
-      "mcap": 363480946.0,
+      "price": 0.10048,
+      "mcap": 356137096.0,
       "mcap_asof": "2026-11-25",
       "mcap_src": "coingecko"
     }
