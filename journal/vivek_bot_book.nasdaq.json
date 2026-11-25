@@ -69,7 +69,7 @@
       "level_tf": "3d",
       "signal_entry": 107.44000244,
       "fill_slip_bps": 161.5,
-      "last_mark": 132.11000061,
+      "last_mark": 132.07000732,
       "day_marks": {
         "2026-11-13": 126.19000244,
         "2026-11-16": 128.08999634,
@@ -81,8 +81,8 @@
         "2026-11-24": 129.58000183,
         "2026-11-25": 132.30999756
       },
-      "unreal_r": 0.549,
-      "unreal_usd": 111.25,
+      "unreal_r": 0.548,
+      "unreal_usd": 111.06,
       "review_before": [],
       "notional_before": 5000.0,
       "units_before": 46.53760133,
@@ -164,7 +164,7 @@
       "level_tf": "3d",
       "signal_entry": 118.34999847,
       "fill_slip_bps": -27.9,
-      "last_mark": 127.37000275,
+      "last_mark": 127.30000305,
       "day_marks": {
         "2026-11-13": 128.91000366,
         "2026-11-16": 129.17999268,
@@ -176,8 +176,8 @@
         "2026-11-24": 127.19000244,
         "2026-11-25": 127.30000305
       },
-      "unreal_r": 1.618,
-      "unreal_usd": 159.41,
+      "unreal_r": 1.606,
+      "unreal_usd": 158.22,
       "last_mark_day": "2026-11-25",
       "d14": {
         "day": "2026-11-02",
@@ -222,11 +222,11 @@
       "status": "open",
       "tp1_hit": true,
       "tp2_hit": true,
-      "tp3_hit": false,
-      "booked_pct": 0.75,
-      "realized_r": 1.4068,
-      "gross_r": 1.4166,
-      "cost_r": 0.0098,
+      "tp3_hit": true,
+      "booked_pct": 0.9,
+      "realized_r": 1.9247,
+      "gross_r": 1.9348,
+      "cost_r": 0.0101,
       "exits": [
         {
           "reason": "tp1",
@@ -239,12 +239,18 @@
           "price": 299.77739993,
           "pct": 0.5,
           "date": "2026-10-22"
+        },
+        {
+          "reason": "tp3",
+          "price": 317.38204174,
+          "pct": 0.15,
+          "date": "2026-11-25"
         }
       ],
       "mae": 263.11999512,
-      "mfe": 316.04998779,
+      "mfe": 317.44000244,
       "mae_r": 0.0,
-      "mfe_r": 3.37,
+      "mfe_r": 3.458,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 9.52889213,
       "notional": 2500.0,
@@ -260,7 +266,7 @@
       "level_tf": "3d",
       "signal_entry": 262.35998535,
       "fill_slip_bps": 29.0,
-      "last_mark": 314.69500732,
+      "last_mark": 317.44000244,
       "day_marks": {
         "2026-11-13": 307.92001343,
         "2026-11-16": 309.92999268,
@@ -272,8 +278,8 @@
         "2026-11-24": 302.10998535,
         "2026-11-25": 310.79000854
       },
-      "unreal_r": 0.821,
-      "unreal_usd": 116.92,
+      "unreal_r": 0.346,
+      "unreal_usd": 49.26,
       "last_mark_day": "2026-11-25",
       "d14": {
         "day": "2026-11-02",
@@ -288,7 +294,8 @@
         "r": 2.123,
         "booked": 1.4068,
         "tp1_hit": true
-      }
+      },
+      "stale_pinged": "2026-11-25"
     },
     {
       "id": "ALRM:long:1W:2026-10-13",
@@ -356,7 +363,7 @@
       "level_tf": "weekly",
       "signal_entry": 55.93000031,
       "fill_slip_bps": 25.0,
-      "last_mark": 65.93000031,
+      "last_mark": 66.51000214,
       "day_marks": {
         "2026-11-13": 66.41999817,
         "2026-11-16": 65.36000061,
@@ -368,8 +375,8 @@
         "2026-11-24": 66.83999634,
         "2026-11-25": 66.80999756
       },
-      "unreal_r": 0.354,
-      "unreal_usd": 107.96,
+      "unreal_r": 0.375,
+      "unreal_usd": 114.31,
       "last_mark_day": "2026-11-25",
       "d14": {
         "day": "2026-11-02",
@@ -463,7 +470,7 @@
       "level_tf": "3d",
       "signal_entry": 5.03999996,
       "fill_slip_bps": 317.5,
-      "last_mark": 7.61000013,
+      "last_mark": 7.9000001,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 7.69999981,
@@ -476,8 +483,8 @@
         "2026-11-24": 8.57999992,
         "2026-11-25": 8.18999958
       },
-      "unreal_r": 0.489,
-      "unreal_usd": 298.86,
+      "unreal_r": 0.548,
+      "unreal_usd": 334.82,
       "d14": {
         "day": "2026-11-05",
         "held": 14,
@@ -491,8 +498,7 @@
         "r": 1.957,
         "booked": 1.4306,
         "tp1_hit": true
-      },
-      "stale_pinged": "2026-11-25"
+      }
     },
     {
       "id": "TYRA:long:3D:2026-10-28",
@@ -557,7 +563,7 @@
       "level_tf": "3d",
       "signal_entry": 21.52000046,
       "fill_slip_bps": -9.3,
-      "last_mark": 21.86499977,
+      "last_mark": 22.07999992,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 19.76499939,
@@ -570,8 +576,8 @@
         "2026-11-24": 20.80999947,
         "2026-11-25": 22.32999992
       },
-      "unreal_r": 0.068,
-      "unreal_usd": 42.4,
+      "unreal_r": 0.108,
+      "unreal_usd": 67.38,
       "d14": {
         "day": "2026-11-11",
         "held": 14,
@@ -635,7 +641,7 @@
       "level_tf": "3d",
       "signal_entry": 129.74000549,
       "fill_slip_bps": 0.0,
-      "last_mark": 132.83000183,
+      "last_mark": 134.30999756,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 132.0,
@@ -648,8 +654,8 @@
         "2026-11-24": 133.82000732,
         "2026-11-25": 134.07000732
       },
-      "unreal_r": 0.181,
-      "unreal_usd": 59.54,
+      "unreal_r": 0.268,
+      "unreal_usd": 88.06,
       "d14": {
         "day": "2026-11-11",
         "held": 14,
@@ -722,7 +728,7 @@
       "level_tf": "3d",
       "signal_entry": 32.61000061,
       "fill_slip_bps": 0.0,
-      "last_mark": 28.70000076,
+      "last_mark": 28.71999931,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 30.47500038,
@@ -735,8 +741,8 @@
         "2026-11-24": 27.62000084,
         "2026-11-25": 29.04999924
       },
-      "unreal_r": -0.56,
-      "unreal_usd": -299.75,
+      "unreal_r": -0.557,
+      "unreal_usd": -298.22,
       "d14": {
         "day": "2026-11-11",
         "held": 14,
@@ -808,7 +814,7 @@
       "level_tf": "3d",
       "signal_entry": 17.68000031,
       "fill_slip_bps": 0.0,
-      "last_mark": 17.61000061,
+      "last_mark": 17.72999954,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 18.09000015,
@@ -821,8 +827,8 @@
         "2026-11-24": 17.39999962,
         "2026-11-25": 17.62000084
       },
-      "unreal_r": -0.026,
-      "unreal_usd": -9.9,
+      "unreal_r": 0.019,
+      "unreal_usd": 7.07,
       "d14": {
         "day": "2026-11-11",
         "held": 14,
@@ -895,7 +901,7 @@
       "level_tf": "weekly",
       "signal_entry": 32.33000183,
       "fill_slip_bps": 0.0,
-      "last_mark": 34.72999954,
+      "last_mark": 34.93000031,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 33.93000031,
@@ -908,8 +914,8 @@
         "2026-11-24": 33.86000061,
         "2026-11-25": 34.97000122
       },
-      "unreal_r": 0.319,
-      "unreal_usd": 185.59,
+      "unreal_r": 0.346,
+      "unreal_usd": 201.05,
       "d14": {
         "day": "2026-11-12",
         "held": 14,
@@ -982,7 +988,7 @@
       "level_tf": "3d",
       "signal_entry": 110.01999664,
       "fill_slip_bps": 0.0,
-      "last_mark": 109.18499756,
+      "last_mark": 109.93499756,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 107.19000244,
@@ -995,8 +1001,8 @@
         "2026-11-24": 107.72000122,
         "2026-11-25": 108.69999695
       },
-      "unreal_r": -0.043,
-      "unreal_usd": -18.97,
+      "unreal_r": -0.004,
+      "unreal_usd": -1.93,
       "d14": {
         "day": "2026-11-12",
         "held": 14,
@@ -1076,7 +1082,7 @@
       "level_tf": "3d",
       "signal_entry": 117.58999634,
       "fill_slip_bps": 0.0,
-      "last_mark": 132.16999817,
+      "last_mark": 133.05999756,
       "last_mark_day": "2026-11-25",
       "day_marks": {
         "2026-11-13": 135.44000244,
@@ -1089,8 +1095,8 @@
         "2026-11-24": 135.67999268,
         "2026-11-25": 134.0
       },
-      "unreal_r": 0.471,
-      "unreal_usd": 232.48,
+      "unreal_r": 0.499,
+      "unreal_usd": 246.67,
       "d14": {
         "day": "2026-11-12",
         "held": 14,
@@ -1163,7 +1169,7 @@
       "level_tf": "3d",
       "signal_entry": 38.5,
       "fill_slip_bps": 813.0,
-      "last_mark": 42.70999908,
+      "last_mark": 44.08000183,
       "last_mark_day": "2026-11-25",
       "adv": 37394502.17,
       "adv_share": 6.685e-05,
@@ -1190,8 +1196,8 @@
         "2026-11-24": 42.65000153,
         "2026-11-25": 43.29999924
       },
-      "unreal_r": 0.123,
-      "unreal_usd": 70.13,
+      "unreal_r": 0.278,
+      "unreal_usd": 159.09,
       "d14": {
         "day": "2026-11-18",
         "held": 14,
@@ -1264,7 +1270,7 @@
       "level_tf": "weekly",
       "signal_entry": 33.09999847,
       "fill_slip_bps": -170.7,
-      "last_mark": 31.01000023,
+      "last_mark": 31.26000023,
       "last_mark_day": "2026-11-25",
       "adv": 5405899.73,
       "adv_share": 0.00046246,
@@ -1291,8 +1297,8 @@
         "2026-11-24": 30.59000015,
         "2026-11-25": 30.96999931
       },
-      "unreal_r": -0.301,
-      "unreal_usd": -115.18,
+      "unreal_r": -0.251,
+      "unreal_usd": -96.3,
       "d14": {
         "day": "2026-11-19",
         "held": 14,
@@ -1337,9 +1343,9 @@
       "cost_r": 0.0028,
       "exits": [],
       "mae": 24.11000061,
-      "mfe": 25.5,
+      "mfe": 25.61000061,
       "mae_r": 0.0,
-      "mfe_r": 0.319,
+      "mfe_r": 0.344,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 103.69141173,
       "notional": 2500.0,
@@ -1365,7 +1371,7 @@
       "level_tf": "weekly",
       "signal_entry": 24.11000061,
       "fill_slip_bps": 0.0,
-      "last_mark": 25.39999962,
+      "last_mark": 25.61000061,
       "last_mark_day": "2026-11-25",
       "adv": 29767675.62,
       "adv_share": 8.398e-05,
@@ -1392,8 +1398,8 @@
         "2026-11-24": 24.40999985,
         "2026-11-25": 25.06999969
       },
-      "unreal_r": 0.296,
-      "unreal_usd": 133.76,
+      "unreal_r": 0.344,
+      "unreal_usd": 155.54,
       "d14": {
         "day": "2026-11-20",
         "held": 14,
@@ -1457,7 +1463,7 @@
       "level_tf": "weekly",
       "signal_entry": 79.86000061,
       "fill_slip_bps": -129.0,
-      "last_mark": 78.97000122,
+      "last_mark": 78.94999695,
       "last_mark_day": "2026-11-25",
       "adv": 19933552.93,
       "adv_share": 0.00012542,
@@ -1484,8 +1490,8 @@
         "2026-11-24": 77.87000275,
         "2026-11-25": 78.52999878
       },
-      "unreal_r": 0.026,
-      "unreal_usd": 4.38,
+      "unreal_r": 0.022,
+      "unreal_usd": 3.76,
       "d14": {
         "day": "2026-11-24",
         "held": 14,
@@ -1549,7 +1555,7 @@
       "level_tf": "weekly",
       "signal_entry": 7.03000021,
       "fill_slip_bps": -113.8,
-      "last_mark": 6.4000001,
+      "last_mark": 6.51999998,
       "last_mark_day": "2026-11-25",
       "adv": 2806330.47,
       "adv_share": 0.00089084,
@@ -1572,8 +1578,8 @@
         "2026-11-24": 6.82999992,
         "2026-11-25": 6.53999996
       },
-      "unreal_r": -0.669,
-      "unreal_usd": -195.59
+      "unreal_r": -0.523,
+      "unreal_usd": -152.92
     },
     {
       "id": "SCSC:long:3D:2026-11-12",
@@ -1638,7 +1644,7 @@
       "level_tf": "3d",
       "signal_entry": 44.68999863,
       "fill_slip_bps": -96.2,
-      "last_mark": 42.26499939,
+      "last_mark": 42.95999908,
       "last_mark_day": "2026-11-25",
       "adv": 19525659.85,
       "adv_share": 0.00012804,
@@ -1661,8 +1667,8 @@
         "2026-11-24": 44.88000107,
         "2026-11-25": 43.38000107
       },
-      "unreal_r": -0.257,
-      "unreal_usd": -111.6
+      "unreal_r": -0.167,
+      "unreal_usd": -72.72
     },
     {
       "id": "NCNO:long:3D:2026-11-16",
@@ -1727,7 +1733,7 @@
       "level_tf": "3d",
       "signal_entry": 22.76000023,
       "fill_slip_bps": 4.0,
-      "last_mark": 21.05999947,
+      "last_mark": 21.40999985,
       "last_mark_day": "2026-11-25",
       "adv": 37973714.36,
       "adv_share": 6.584e-05,
@@ -1749,8 +1755,8 @@
         "2026-11-24": 20.64999962,
         "2026-11-25": 21.14999962
       },
-      "unreal_r": -0.375,
-      "unreal_usd": -187.72
+      "unreal_r": -0.298,
+      "unreal_usd": -149.27
     },
     {
       "id": "EXE:long:1W:2026-11-16",
@@ -1806,7 +1812,7 @@
       "level_tf": "weekly",
       "signal_entry": 88.52999878,
       "fill_slip_bps": -113.5,
-      "last_mark": 84.66000366,
+      "last_mark": 85.56999969,
       "last_mark_day": "2026-11-25",
       "adv": 286712535.16,
       "adv_share": 8.72e-06,
@@ -1828,8 +1834,8 @@
         "2026-11-24": 80.79000092,
         "2026-11-25": 82.05000305
       },
-      "unreal_r": -0.278,
-      "unreal_usd": -80.9
+      "unreal_r": -0.189,
+      "unreal_usd": -55.21
     },
     {
       "id": "TWFG:long:3D:2026-11-17",
@@ -1894,7 +1900,7 @@
       "level_tf": "3d",
       "signal_entry": 26.92000008,
       "fill_slip_bps": 0.0,
-      "last_mark": 25.48999977,
+      "last_mark": 25.45000076,
       "last_mark_day": "2026-11-25",
       "adv": 5797958.69,
       "adv_share": 0.00043119,
@@ -1914,8 +1920,8 @@
         "2026-11-24": 25.38999939,
         "2026-11-25": 25.89999962
       },
-      "unreal_r": -0.251,
-      "unreal_usd": -132.8
+      "unreal_r": -0.258,
+      "unreal_usd": -136.51
     },
     {
       "id": "BMRN:long:3D:2026-11-17",
@@ -1987,7 +1993,7 @@
       "level_tf": "3d",
       "signal_entry": 58.50999832,
       "fill_slip_bps": 0.0,
-      "last_mark": 67.38999939,
+      "last_mark": 67.75,
       "last_mark_day": "2026-11-25",
       "adv": 133798059.12,
       "adv_share": 1.868e-05,
@@ -2007,8 +2013,8 @@
         "2026-11-24": 62.58000183,
         "2026-11-25": 66.36000061
       },
-      "unreal_r": 0.726,
-      "unreal_usd": 284.57
+      "unreal_r": 0.756,
+      "unreal_usd": 296.1
     },
     {
       "id": "MGEE:long:3D:2026-11-18",
@@ -2045,9 +2051,9 @@
       "cost_r": 0.0033,
       "exits": [],
       "mae": 77.87999725,
-      "mfe": 80.23999786,
+      "mfe": 80.44999695,
       "mae_r": -0.193,
-      "mfe_r": 0.003,
+      "mfe_r": 0.021,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 31.17207101,
       "notional": 2500.0,
@@ -2073,7 +2079,7 @@
       "level_tf": "3d",
       "signal_entry": 80.19999695,
       "fill_slip_bps": 0.0,
-      "last_mark": 80.23999786,
+      "last_mark": 80.44999695,
       "last_mark_day": "2026-11-25",
       "adv": 14597626.34,
       "adv_share": 0.00017126,
@@ -2092,8 +2098,8 @@
         "2026-11-24": 78.90000153,
         "2026-11-25": 79.69000244
       },
-      "unreal_r": 0.003,
-      "unreal_usd": 1.25
+      "unreal_r": 0.021,
+      "unreal_usd": 7.79
     },
     {
       "id": "GOOGL:long:3D:2026-11-18",
@@ -2149,7 +2155,7 @@
       "level_tf": "3d",
       "signal_entry": 282.44000244,
       "fill_slip_bps": 0.0,
-      "last_mark": 264.0,
+      "last_mark": 268.33499146,
       "last_mark_day": "2026-11-25",
       "adv": 12287736616.09,
       "adv_share": 2e-07,
@@ -2168,8 +2174,8 @@
         "2026-11-24": 282.1000061,
         "2026-11-25": 279.04998779
       },
-      "unreal_r": -0.94,
-      "unreal_usd": -163.23
+      "unreal_r": -0.719,
+      "unreal_usd": -124.85
     },
     {
       "id": "ALGN:long:3D:2026-11-18",
@@ -2234,7 +2240,7 @@
       "level_tf": "3d",
       "signal_entry": 163.96000671,
       "fill_slip_bps": 0.0,
-      "last_mark": 162.47000122,
+      "last_mark": 165.25999451,
       "last_mark_day": "2026-11-25",
       "adv": 194033734.3,
       "adv_share": 1.288e-05,
@@ -2253,8 +2259,8 @@
         "2026-11-24": 162.3500061,
         "2026-11-25": 164.91000366
       },
-      "unreal_r": -0.058,
-      "unreal_usd": -22.72
+      "unreal_r": 0.05,
+      "unreal_usd": 19.82
     },
     {
       "id": "CALM:long:1W:2026-11-18",
@@ -2319,7 +2325,7 @@
       "level_tf": "weekly",
       "signal_entry": 70.43000031,
       "fill_slip_bps": 0.0,
-      "last_mark": 68.19999695,
+      "last_mark": 68.58000183,
       "last_mark_day": "2026-11-25",
       "adv": 63849127.73,
       "adv_share": 3.915e-05,
@@ -2342,8 +2348,8 @@
         "2026-11-24": 70.19999695,
         "2026-11-25": 68.11000061
       },
-      "unreal_r": -0.141,
-      "unreal_usd": -79.16
+      "unreal_r": -0.117,
+      "unreal_usd": -65.67
     },
     {
       "id": "DDOG:long:3D:2026-11-19",
@@ -2408,7 +2414,7 @@
       "level_tf": "3d",
       "signal_entry": 167.11000061,
       "fill_slip_bps": 499.1,
-      "last_mark": 151.36000061,
+      "last_mark": 153.06500244,
       "last_mark_day": "2026-11-25",
       "adv": 980725774.79,
       "adv_share": 2.55e-06,
@@ -2431,8 +2437,8 @@
         "2026-11-24": 169.02000427,
         "2026-11-25": 165.38000488
       },
-      "unreal_r": -0.695,
-      "unreal_usd": -360.39
+      "unreal_r": -0.646,
+      "unreal_usd": -334.88
     },
     {
       "id": "DNLI:long:3D:2026-11-19",
@@ -2504,7 +2510,7 @@
       "level_tf": "3d",
       "signal_entry": 18.39999962,
       "fill_slip_bps": 125.0,
-      "last_mark": 20.42499924,
+      "last_mark": 20.60000038,
       "last_mark_day": "2026-11-25",
       "adv": 29875442.91,
       "adv_share": 8.368e-05,
@@ -2527,8 +2533,8 @@
         "2026-11-24": 19.86000061,
         "2026-11-25": 21.29999924
       },
-      "unreal_r": 0.492,
-      "unreal_usd": 182.92
+      "unreal_r": 0.54,
+      "unreal_usd": 200.75
     },
     {
       "id": "JJSF:long:3D:2026-11-20",
@@ -2593,7 +2599,7 @@
       "level_tf": "3d",
       "signal_entry": 94.44000244,
       "fill_slip_bps": 101.7,
-      "last_mark": 95.82499695,
+      "last_mark": 96.35279846,
       "last_mark_day": "2026-11-25",
       "adv": 21952054.03,
       "adv_share": 0.00011388,
@@ -2611,8 +2617,8 @@
         "2026-11-24": 94.55999756,
         "2026-11-25": 94.27999878
       },
-      "unreal_r": 0.019,
-      "unreal_usd": 11.25
+      "unreal_r": 0.044,
+      "unreal_usd": 25.22
     },
     {
       "id": "HON:long:3D:2026-11-23",
@@ -2668,7 +2674,7 @@
       "level_tf": "3d",
       "signal_entry": 221.97000122,
       "fill_slip_bps": 0.0,
-      "last_mark": 220.97000122,
+      "last_mark": 223.42999268,
       "last_mark_day": "2026-11-25",
       "adv": 611367421.41,
       "adv_share": 4.09e-06,
@@ -2684,8 +2690,8 @@
         "2026-11-24": 221.97000122,
         "2026-11-25": 224.82000732
       },
-      "unreal_r": -0.038,
-      "unreal_usd": -11.26
+      "unreal_r": 0.056,
+      "unreal_usd": 16.44
     },
     {
       "id": "ORLY:long:3D:2026-11-24",
@@ -2722,9 +2728,9 @@
       "cost_r": 0.0045,
       "exits": [],
       "mae": 94.40499878,
-      "mfe": 95.75,
+      "mfe": 96.59999847,
       "mae_r": 0.0,
-      "mfe_r": 0.13,
+      "mfe_r": 0.211,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 26.70369501,
       "notional": 2500.0,
@@ -2741,7 +2747,7 @@
       "level_tf": "3d",
       "signal_entry": 93.62000275,
       "fill_slip_bps": 83.8,
-      "last_mark": 95.75,
+      "last_mark": 96.59999847,
       "last_mark_day": "2026-11-25",
       "adv": 646951128.46,
       "adv_share": 3.86e-06,
@@ -2761,8 +2767,8 @@
         "2026-11-24": 94.40499878,
         "2026-11-25": 95.43000031
       },
-      "unreal_r": 0.13,
-      "unreal_usd": 35.92
+      "unreal_r": 0.211,
+      "unreal_usd": 58.62
     },
     {
       "id": "GO:long:3D:2026-11-25",
@@ -2799,9 +2805,9 @@
       "cost_r": 0.0037,
       "exits": [],
       "mae": 11.79500008,
-      "mfe": 11.80000019,
+      "mfe": 11.92500019,
       "mae_r": -0.003,
-      "mfe_r": 0.0,
+      "mfe_r": 0.078,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 211.14864597,
       "notional": 2500.0,
@@ -2827,7 +2833,7 @@
       "level_tf": "3d",
       "signal_entry": 11.84000015,
       "fill_slip_bps": -33.8,
-      "last_mark": 11.79500008,
+      "last_mark": 11.92500019,
       "last_mark_day": "2026-11-25",
       "adv": 34000180.9,
       "adv_share": 7.353e-05,
@@ -2846,8 +2852,8 @@
       "day_marks": {
         "2026-11-25": 11.80000019
       },
-      "unreal_r": -0.003,
-      "unreal_usd": -1.06
+      "unreal_r": 0.078,
+      "unreal_usd": 26.39
     },
     {
       "id": "YORW:long:3D:2026-11-25",
@@ -2903,7 +2909,7 @@
       "level_tf": "3d",
       "signal_entry": 31.45000076,
       "fill_slip_bps": 57.2,
-      "last_mark": 31.60000038,
+      "last_mark": 31.62999916,
       "last_mark_day": "2026-11-25",
       "adv": 3030597.72,
       "adv_share": 0.00082492,
@@ -2922,8 +2928,8 @@
       "day_marks": {
         "2026-11-25": 31.62999916
       },
-      "unreal_r": -0.015,
-      "unreal_usd": -2.38
+      "unreal_r": 0.0,
+      "unreal_usd": 0.0
     },
     {
       "id": "MSEX:long:1W:2026-11-25",
@@ -2960,9 +2966,9 @@
       "cost_r": 0.003,
       "exits": [],
       "mae": 58.20999908,
-      "mfe": 58.29000092,
+      "mfe": 58.31000137,
       "mae_r": -0.008,
-      "mfe_r": 0.0,
+      "mfe_r": 0.002,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 43.19281192,
       "notional": 2500.0,
@@ -2988,7 +2994,7 @@
       "level_tf": "weekly",
       "signal_entry": 57.88000107,
       "fill_slip_bps": 70.8,
-      "last_mark": 58.20999908,
+      "last_mark": 58.31000137,
       "last_mark_day": "2026-11-25",
       "adv": 8419868.02,
       "adv_share": 0.00029692,
@@ -3007,8 +3013,8 @@
       "day_marks": {
         "2026-11-25": 58.29000092
       },
-      "unreal_r": -0.008,
-      "unreal_usd": -3.46
+      "unreal_r": 0.002,
+      "unreal_usd": 0.86
     },
     {
       "id": "VNOM:long:3D:2026-11-25",
@@ -3045,9 +3051,9 @@
       "cost_r": 0.0065,
       "exits": [],
       "mae": 40.38000107,
-      "mfe": 40.41999817,
+      "mfe": 40.66999817,
       "mae_r": 0.0,
-      "mfe_r": 0.013,
+      "mfe_r": 0.093,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 62.68806251,
       "notional": 2500.0,
@@ -3064,7 +3070,7 @@
       "level_tf": "3d",
       "signal_entry": 39.88000107,
       "fill_slip_bps": 125.4,
-      "last_mark": 40.41999817,
+      "last_mark": 40.66999817,
       "last_mark_day": "2026-11-25",
       "adv": 96604144.53,
       "adv_share": 2.588e-05,
@@ -3083,8 +3089,8 @@
       "day_marks": {
         "2026-11-25": 40.38000107
       },
-      "unreal_r": 0.013,
-      "unreal_usd": 2.51
+      "unreal_r": 0.093,
+      "unreal_usd": 18.18
     },
     {
       "id": "GAIN:long:3D:2026-11-25",
@@ -3121,9 +3127,9 @@
       "cost_r": 0.0085,
       "exits": [],
       "mae": 13.65999985,
-      "mfe": 13.72500038,
+      "mfe": 13.85499954,
       "mae_r": -0.081,
-      "mfe_r": 0.0,
+      "mfe_r": 0.161,
       "entry_type_label": "Close back above the 200 SMA after rejection",
       "units": 179.98559675,
       "notional": 2500.0,
@@ -3140,7 +3146,7 @@
       "level_tf": "3d",
       "signal_entry": 13.89000034,
       "fill_slip_bps": -118.8,
-      "last_mark": 13.65999985,
+      "last_mark": 13.85499954,
       "last_mark_day": "2026-11-25",
       "adv": 2575256.24,
       "adv_share": 0.00097078,
@@ -3159,8 +3165,8 @@
       "day_marks": {
         "2026-11-25": 13.72500038
       },
-      "unreal_r": -0.081,
-      "unreal_usd": -11.7
+      "unreal_r": 0.161,
+      "unreal_usd": 23.4
     }
   ],
   "closed": [
@@ -12439,28 +12445,28 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": -947.05,
+      "week_usd": -205.3,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_measured": true,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -806.93,
-      "worst_week_usd": -947.05,
+      "worst_session_usd": -65.18,
+      "worst_week_usd": -205.3,
       "realised_usd": -85.61,
-      "open_realised_usd": -6.25,
-      "unrealised_usd": -715.07,
-      "session_usd": -806.93,
+      "open_realised_usd": 2.6,
+      "unrealised_usd": 17.83,
+      "session_usd": -65.18,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
       "open": 36,
-      "open_total_usd": 2019.69,
+      "open_total_usd": 2761.51,
       "notified": ""
     }
   },
   "summary": {
     "open": 36,
-    "unreal_usd": 233.33,
+    "unreal_usd": 901.38,
     "updated_day": "2026-11-25"
   },
-  "updated_at": "2026-11-25T16:14:04+00:00"
+  "updated_at": "2026-11-25T17:13:37+00:00"
 }
