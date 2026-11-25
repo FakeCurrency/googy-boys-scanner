@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-25T15:44:13Z",
+  "generated_at": "2026-11-25T16:14:06Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -257,16 +257,21 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-25T15:44:10Z",
+      "at": "2026-11-25T16:14:04Z",
       "reasons": {
-        "HSTM": "sector_cap",
+        "GAIN": "dup_symbol",
+        "GO": "dup_symbol",
+        "HSTM": "global_cap",
+        "MSEX": "dup_symbol",
         "OCFC": "dup_symbol",
         "OTTR": "dup_symbol",
-        "PAYX": "sector_cap",
+        "PAYX": "global_cap",
         "PRTA": "global_cap",
         "QCOM": "global_cap",
-        "STRF": "sector_cap",
+        "STRF": "global_cap",
         "TYRA": "dup_symbol",
+        "VNOM": "dup_symbol",
+        "YORW": "dup_symbol",
         "ZM": "global_cap"
       }
     }
