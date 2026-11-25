@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-25T01:37:21+00:00",
+  "generated_at": "2026-11-25T08:22:42+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-24",
@@ -50,9 +50,9 @@
   "summary": {
     "universe": 201,
     "downloaded": 167,
-    "screened": 139,
+    "screened": 140,
     "skipped": {
-      "short history": 28
+      "short history": 27
     },
     "counts": {
       "IGNITING": 0,
@@ -66,24 +66,23 @@
       "completed_last": "2026-11-25",
       "raw_last": "2026-11-26",
       "expected_completed": "2026-11-24",
-      "lagging": 31,
+      "lagging": 0,
       "screened": 167,
       "completed_dist": {
-        "2026-11-25": 2,
-        "2026-11-24": 134,
-        "2026-11-23": 31
+        "2026-11-25": 4,
+        "2026-11-24": 163
       },
       "raw_dist": {
-        "2026-11-26": 2,
-        "2026-11-25": 165
+        "2026-11-26": 4,
+        "2026-11-25": 163
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 117,
-        "yahoo": 31,
+        "binance_vision": 116,
+        "yahoo": 32,
         "coinbase": 19
       },
       "dead": {
@@ -153,7 +152,7 @@
         "SOSO",
         "UB"
       ],
-      "yahoo_fallback": 31,
+      "yahoo_fallback": 32,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -164,6 +163,9 @@
         "EDGE": [
           "coinbase",
           "yahoo"
+        ],
+        "LIT": [
+          "coinbase"
         ],
         "M": [
           "yahoo"
@@ -226,7 +228,7 @@
       "rows": 1,
       "have": 1
     },
-    "elapsed_s": 124.5
+    "elapsed_s": 104.4
   },
   "results": [
     {
@@ -252,8 +254,8 @@
       "breakout_level": 0.13454,
       "provisional": false,
       "last_bar": "2026-11-24",
-      "price": 0.10131,
-      "mcap": 359072486.0,
+      "price": 0.10258,
+      "mcap": 363480946.0,
       "mcap_asof": "2026-11-25",
       "mcap_src": "coingecko"
     }
