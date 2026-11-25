@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-25T20:25:26Z",
+  "generated_at": "2026-11-25T21:14:08Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -257,20 +257,31 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-25T20:13:22Z",
+      "at": "2026-11-25T21:14:05Z",
       "reasons": {
+        "ALGN": "dup_symbol",
+        "BLKB": "global_cap",
+        "CDNS": "global_cap",
+        "CHDN": "global_cap",
+        "CHRW": "global_cap",
+        "FCFS": "global_cap",
         "GAIN": "dup_symbol",
-        "GO": "dup_symbol",
+        "GLBE": "global_cap",
+        "GRFS": "global_cap",
         "HSTM": "global_cap",
+        "KMB": "dup_symbol",
+        "MGEE": "dup_symbol",
+        "MLKN": "global_cap",
         "MSEX": "dup_symbol",
+        "NTES": "global_cap",
         "OCFC": "dup_symbol",
         "OTTR": "dup_symbol",
         "PAYX": "global_cap",
-        "PRTA": "global_cap",
-        "QCOM": "global_cap",
+        "PCAR": "global_cap",
         "STRF": "global_cap",
+        "SWKS": "global_cap",
         "TYRA": "dup_symbol",
-        "VNOM": "dup_symbol",
+        "WFRD": "global_cap",
         "YORW": "dup_symbol",
         "ZM": "global_cap"
       }
