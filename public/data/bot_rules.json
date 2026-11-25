@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24T23:08:52Z",
+  "generated_at": "2026-11-25T00:17:29Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 197,
+  "closed_total": 198,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -162,7 +162,7 @@
     "time_stops_due": [
       [
         "2026-11-25",
-        6
+        5
       ],
       [
         "2026-11-26",
@@ -241,24 +241,20 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-24T05:15:19Z",
+      "at": "2026-11-25T00:17:26Z",
       "reasons": {
         "A1M": "global_cap",
         "ACF": "global_cap",
         "AMC": "dup_symbol",
         "AUE": "dup_symbol",
-        "C79": "global_cap",
         "COL": "global_cap",
         "DNL": "global_cap",
-        "FBU": "global_cap",
-        "GNC": "global_cap",
         "LFG": "global_cap",
-        "NST": "global_cap",
+        "NST": "sector_cap",
         "ORI": "global_cap",
         "RMD": "dup_symbol",
-        "SMR": "global_cap",
+        "SHL": "dup_symbol",
         "SYL": "global_cap",
-        "TNE": "global_cap",
         "WHC": "dup_symbol"
       }
     },
@@ -297,8 +293,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 56,
-        "avg_r": -0.289
+        "n": 57,
+        "avg_r": -0.294
       }
     },
     "nasdaq": {
