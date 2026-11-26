@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-25T17:32:20+00:00",
+  "generated_at": "2026-11-26T09:03:55+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-25",
+  "last_closed_bar": "2026-11-26",
   "report_only": true,
   "regime": {
     "index": "^AXJO",
     "label": "ASX 200",
-    "close": 8692.4,
-    "sma200": 8831.75,
+    "close": 8763.8,
+    "sma200": 8830.74,
     "above_200": false,
-    "vs_200_pct": -1.6,
-    "as_of": "2026-11-25"
+    "vs_200_pct": -0.8,
+    "as_of": "2026-11-26"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -51,46 +51,46 @@
   },
   "summary": {
     "universe": 2058,
-    "downloaded": 1849,
+    "downloaded": 1850,
     "screened": 1772,
     "skipped": {
-      "short history": 75,
+      "short history": 76,
       "stale frame": 2
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 0,
-      "COILED": 8,
+      "COILED": 7,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-25",
-      "raw_last": "2026-11-25",
-      "expected_completed": "2026-11-25",
-      "lagging": 477,
-      "screened": 1847,
+      "completed_last": "2026-11-26",
+      "raw_last": "2026-11-26",
+      "expected_completed": "2026-11-26",
+      "lagging": 846,
+      "screened": 1848,
       "completed_dist": {
-        "2026-11-25": 1370,
-        "2026-11-24": 476,
+        "2026-11-26": 1002,
+        "2026-11-25": 696,
+        "2026-11-24": 149,
         "2026-11-23": 1,
-        "2026-11-19": 1,
-        "2026-11-12": 1
+        "2026-11-19": 1
       },
       "raw_dist": {
-        "2026-11-25": 1370,
-        "2026-11-24": 476,
+        "2026-11-26": 1002,
+        "2026-11-25": 696,
+        "2026-11-24": 149,
         "2026-11-23": 1,
-        "2026-11-19": 1,
-        "2026-11-12": 1
+        "2026-11-19": 1
       },
-      "rows_lagging": 0
+      "rows_lagging": 2
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1848
+        "yahoo": 1297
       },
       "dead": {},
       "errors": {},
@@ -105,18 +105,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1848,
-      "reused": 1,
-      "merged": 1849,
+      "fresh": 1297,
+      "reused": 553,
+      "merged": 1850,
       "universe": 2058,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 8,
-      "have": 8
+      "rows": 7,
+      "have": 7
     },
-    "elapsed_s": 407.7
+    "elapsed_s": 191.2
   },
   "results": [
     {
@@ -126,32 +126,60 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.07,
+        "ribbon_pct": 6.92,
         "atr_pctl": 0.2,
-        "vol_pctl": 14.7,
+        "vol_pctl": 5.8,
         "drawdown_pct": 73.4,
         "coiled": true,
-        "coiled_bars": 43,
-        "last_coiled": "2026-11-25"
+        "coiled_bars": 44,
+        "last_coiled": "2026-11-26"
       },
       "base": {
         "high": 0.71249998,
         "low": 0.64999998,
         "bars": 60
       },
-      "breakout_level": 0.71249998,
+      "breakout_level": 0.70999998,
       "provisional": false,
-      "last_bar": "2026-11-25",
+      "last_bar": "2026-11-26",
       "price": 0.64999998,
       "mcap": 390770656.0,
       "mcap_asof": "2026-11-23",
       "mcap_src": "previous"
     },
     {
+      "symbol": "KPG",
+      "name": "Kelly Partners Group Holdings Limited",
+      "yf": "KPG.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 6.4,
+        "atr_pctl": 4.2,
+        "vol_pctl": 24.4,
+        "drawdown_pct": 67.4,
+        "coiled": true,
+        "coiled_bars": 19,
+        "last_coiled": "2026-11-26"
+      },
+      "base": {
+        "high": 5.30000019,
+        "low": 4.09000015,
+        "bars": 60
+      },
+      "breakout_level": 5.30000019,
+      "provisional": false,
+      "last_bar": "2026-11-26",
+      "price": 4.42999983,
+      "mcap": 193776832.0,
+      "mcap_asof": "2026-11-26",
+      "mcap_src": "cache"
+    },
+    {
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 8.23,
@@ -176,47 +204,19 @@
       "mcap_src": "cache"
     },
     {
-      "symbol": "KPG",
-      "name": "Kelly Partners Group Holdings Limited",
-      "yf": "KPG.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 6.97,
-        "atr_pctl": 1.2,
-        "vol_pctl": 21.6,
-        "drawdown_pct": 69.3,
-        "coiled": true,
-        "coiled_bars": 18,
-        "last_coiled": "2026-11-25"
-      },
-      "base": {
-        "high": 5.30000019,
-        "low": 4.09000015,
-        "bars": 60
-      },
-      "breakout_level": 5.30000019,
-      "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 4.17999983,
-      "mcap": 186532832.0,
-      "mcap_asof": "2026-11-23",
-      "mcap_src": "previous"
-    },
-    {
       "symbol": "CVN",
       "name": "Carnarvon Energy Limited",
       "yf": "CVN.AX",
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.36,
-        "atr_pctl": 21.0,
-        "vol_pctl": 9.1,
-        "drawdown_pct": 58.3,
+        "ribbon_pct": 8.99,
+        "atr_pctl": 20.8,
+        "vol_pctl": 4.0,
+        "drawdown_pct": 58.7,
         "coiled": true,
-        "coiled_bars": 5,
-        "last_coiled": "2026-11-25"
+        "coiled_bars": 6,
+        "last_coiled": "2026-11-26"
       },
       "base": {
         "high": 0.115,
@@ -225,38 +225,10 @@
       },
       "breakout_level": 0.115,
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 0.096,
+      "last_bar": "2026-11-26",
+      "price": 0.095,
       "mcap": 171238608.0,
       "mcap_asof": "2026-11-25",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "CAT",
-      "name": "Catapult Sports Ltd",
-      "yf": "CAT.AX",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 11.95,
-        "atr_pctl": 93.1,
-        "vol_pctl": 74.2,
-        "drawdown_pct": 64.9,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-12"
-      },
-      "base": {
-        "high": 3.9000001,
-        "low": 2.55999994,
-        "bars": 60
-      },
-      "breakout_level": 3.9000001,
-      "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 2.71000004,
-      "mcap": 846814400.0,
-      "mcap_asof": "2026-11-22",
       "mcap_src": "previous"
     },
     {
@@ -266,9 +238,9 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 12.63,
-        "atr_pctl": 31.3,
-        "vol_pctl": 19.2,
+        "ribbon_pct": 13.27,
+        "atr_pctl": 24.6,
+        "vol_pctl": 20.8,
         "drawdown_pct": 60.1,
         "coiled": false,
         "coiled_bars": 0,
@@ -281,7 +253,7 @@
       },
       "breakout_level": 0.68372729,
       "provisional": false,
-      "last_bar": "2026-11-25",
+      "last_bar": "2026-11-26",
       "price": 0.435,
       "mcap": 204120320.0,
       "mcap_asof": "2026-11-22",
@@ -291,7 +263,7 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 14.31,
@@ -322,10 +294,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 15.61,
-        "atr_pctl": 11.3,
-        "vol_pctl": 30.4,
-        "drawdown_pct": 74.4,
+        "ribbon_pct": 17.2,
+        "atr_pctl": 20.4,
+        "vol_pctl": 35.1,
+        "drawdown_pct": 75.6,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-19"
@@ -337,8 +309,8 @@
       },
       "breakout_level": 0.027,
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 0.021,
+      "last_bar": "2026-11-26",
+      "price": 0.02,
       "mcap": 210067152.0,
       "mcap_asof": "2026-11-22",
       "mcap_src": "previous"
