@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-25T23:25:19Z",
+  "generated_at": "2026-11-26T00:14:41Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 203,
+  "closed_total": 204,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -162,7 +162,7 @@
     "time_stops_due": [
       [
         "2026-11-26",
-        5
+        4
       ],
       [
         "2026-11-27",
@@ -211,8 +211,8 @@
     ],
     "sector_load": {
       "asx": {
-        "materials": 6,
-        "financials": 4,
+        "financials": 5,
+        "materials": 5,
         "consumer discretionary": 3,
         "communication services": 2,
         "health care": 2,
@@ -240,14 +240,14 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-25T05:15:48Z",
+      "at": "2026-11-26T00:14:39Z",
       "reasons": {
         "COL": "global_cap",
         "DNL": "global_cap",
-        "JHX": "dup_symbol",
-        "LFG": "global_cap",
+        "FBU": "global_cap",
         "NST": "global_cap",
         "RMD": "dup_symbol",
+        "SHL": "dup_symbol",
         "SYL": "global_cap",
         "TNE": "dup_symbol"
       }
@@ -296,7 +296,7 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 57,
+        "n": 58,
         "avg_r": -0.294
       }
     },
