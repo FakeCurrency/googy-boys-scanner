@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-26T09:03:55+00:00",
+  "generated_at": "2026-11-26T17:10:56+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-26",
@@ -51,10 +51,10 @@
   },
   "summary": {
     "universe": 2058,
-    "downloaded": 1850,
+    "downloaded": 1849,
     "screened": 1772,
     "skipped": {
-      "short history": 76,
+      "short history": 75,
       "stale frame": 2
     },
     "counts": {
@@ -69,28 +69,28 @@
       "completed_last": "2026-11-26",
       "raw_last": "2026-11-26",
       "expected_completed": "2026-11-26",
-      "lagging": 846,
-      "screened": 1848,
+      "lagging": 491,
+      "screened": 1847,
       "completed_dist": {
-        "2026-11-26": 1002,
-        "2026-11-25": 696,
-        "2026-11-24": 149,
+        "2026-11-26": 1356,
+        "2026-11-25": 489,
+        "2026-11-24": 1,
         "2026-11-23": 1,
         "2026-11-19": 1
       },
       "raw_dist": {
-        "2026-11-26": 1002,
-        "2026-11-25": 696,
-        "2026-11-24": 149,
+        "2026-11-26": 1356,
+        "2026-11-25": 489,
+        "2026-11-24": 1,
         "2026-11-23": 1,
         "2026-11-19": 1
       },
-      "rows_lagging": 2
+      "rows_lagging": 0
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1297
+        "yahoo": 1848
       },
       "dead": {},
       "errors": {},
@@ -105,9 +105,9 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1297,
-      "reused": 553,
-      "merged": 1850,
+      "fresh": 1848,
+      "reused": 1,
+      "merged": 1849,
       "universe": 2058,
       "stale_dropped": 0,
       "refused": 0
@@ -116,7 +116,7 @@
       "rows": 7,
       "have": 7
     },
-    "elapsed_s": 191.2
+    "elapsed_s": 290.8
   },
   "results": [
     {
@@ -148,6 +148,34 @@
       "mcap_src": "previous"
     },
     {
+      "symbol": "STX",
+      "name": "Strike Energy Limited",
+      "yf": "STX.AX",
+      "source": "yahoo",
+      "state": "COILED",
+      "coil": {
+        "ribbon_pct": 8.05,
+        "atr_pctl": 14.7,
+        "vol_pctl": 26.4,
+        "drawdown_pct": 79.2,
+        "coiled": true,
+        "coiled_bars": 20,
+        "last_coiled": "2026-11-26"
+      },
+      "base": {
+        "high": 0.12,
+        "low": 0.094,
+        "bars": 60
+      },
+      "breakout_level": 0.12,
+      "provisional": false,
+      "last_bar": "2026-11-26",
+      "price": 0.105,
+      "mcap": 367836992.0,
+      "mcap_asof": "2026-11-25",
+      "mcap_src": "cache"
+    },
+    {
       "symbol": "KPG",
       "name": "Kelly Partners Group Holdings Limited",
       "yf": "KPG.AX",
@@ -173,34 +201,6 @@
       "price": 4.42999983,
       "mcap": 193776832.0,
       "mcap_asof": "2026-11-26",
-      "mcap_src": "cache"
-    },
-    {
-      "symbol": "STX",
-      "name": "Strike Energy Limited",
-      "yf": "STX.AX",
-      "source": "cache",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 8.23,
-        "atr_pctl": 12.9,
-        "vol_pctl": 27.8,
-        "drawdown_pct": 79.2,
-        "coiled": true,
-        "coiled_bars": 19,
-        "last_coiled": "2026-11-25"
-      },
-      "base": {
-        "high": 0.12,
-        "low": 0.094,
-        "bars": 60
-      },
-      "breakout_level": 0.12,
-      "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 0.105,
-      "mcap": 367836992.0,
-      "mcap_asof": "2026-11-25",
       "mcap_src": "cache"
     },
     {
@@ -263,13 +263,13 @@
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 14.31,
-        "atr_pctl": 29.2,
-        "vol_pctl": 22.6,
-        "drawdown_pct": 69.6,
+        "ribbon_pct": 15.53,
+        "atr_pctl": 38.3,
+        "vol_pctl": 22.4,
+        "drawdown_pct": 71.2,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-20"
@@ -281,8 +281,8 @@
       },
       "breakout_level": 1.07500005,
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 0.84500003,
+      "last_bar": "2026-11-26",
+      "price": 0.80000001,
       "mcap": 566490432.0,
       "mcap_asof": "2026-11-23",
       "mcap_src": "previous"
