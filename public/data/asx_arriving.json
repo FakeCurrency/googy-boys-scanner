@@ -1,26 +1,13 @@
 {
   "schema_version": 1,
   "market": "asx",
-  "generated_at": "2026-11-26T16:16:57+11:00",
+  "generated_at": "2026-11-26T16:45:24+11:00",
   "rule": {
     "floor": 100000,
     "min_rvol": 3.0,
     "note": "today's turnover alone >= floor AND today's volume >= min_rvol x own 20d avg; report-only, never traded"
   },
   "results": [
-    {
-      "symbol": "ZEU",
-      "name": "Zeus Resources Limited",
-      "sector": "Energy",
-      "dir": "SHORT",
-      "price": 0.01,
-      "turnover_avg20": 33383,
-      "turnover_today": 209730,
-      "rvol": 4.9,
-      "adv_usd": 33383.7,
-      "fund": false,
-      "is_product": false
-    },
     {
       "symbol": "CD1",
       "name": "Cd Private Equity Fund I",
@@ -33,6 +20,19 @@
       "adv_usd": 15474.72,
       "fund": true,
       "is_product": true
+    },
+    {
+      "symbol": "RHI",
+      "name": "Red Hill Minerals Limited",
+      "sector": "Materials",
+      "dir": "LONG",
+      "price": 4.0999999,
+      "turnover_avg20": 25773,
+      "turnover_today": 102274,
+      "rvol": 4.0,
+      "adv_usd": 25773.91,
+      "fund": false,
+      "is_product": false
     }
   ]
 }
