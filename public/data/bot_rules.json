@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-26T00:14:41Z",
+  "generated_at": "2026-11-26T00:21:11Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -240,11 +240,12 @@
   },
   "skips": {
     "asx": {
-      "at": "2026-11-26T00:14:39Z",
+      "at": "2026-11-26T00:21:07Z",
       "reasons": {
         "COL": "global_cap",
         "DNL": "global_cap",
         "FBU": "global_cap",
+        "LFG": "dup_symbol",
         "NST": "global_cap",
         "RMD": "dup_symbol",
         "SHL": "dup_symbol",
