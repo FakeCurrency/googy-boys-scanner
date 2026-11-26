@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "crypto",
-  "generated_at": "2026-11-26T01:10:45+00:00",
+  "generated_at": "2026-11-26T08:08:30+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-25",
@@ -66,24 +66,23 @@
       "completed_last": "2026-11-26",
       "raw_last": "2026-11-27",
       "expected_completed": "2026-11-25",
-      "lagging": 31,
+      "lagging": 0,
       "screened": 168,
       "completed_dist": {
-        "2026-11-26": 4,
-        "2026-11-25": 133,
-        "2026-11-24": 31
+        "2026-11-26": 6,
+        "2026-11-25": 162
       },
       "raw_dist": {
-        "2026-11-27": 4,
-        "2026-11-26": 164
+        "2026-11-27": 6,
+        "2026-11-26": 162
       },
       "rows_lagging": 0
     },
     "sources": {
       "mode": "exchange",
       "by_source": {
-        "binance_vision": 118,
-        "yahoo": 31,
+        "binance_vision": 117,
+        "yahoo": 32,
         "coinbase": 19
       },
       "dead": {
@@ -144,16 +143,16 @@
         "PI",
         "PIEVERSE",
         "Q",
+        "RAIL",
         "RAIN",
         "RLB",
         "SHFL",
         "SN51",
         "SOSO",
         "UB",
-        "ULTIMA",
-        "VSN"
+        "ULTIMA"
       ],
-      "yahoo_fallback": 31,
+      "yahoo_fallback": 32,
       "identity_rejected": {
         "AUTO": [
           "yahoo"
@@ -164,6 +163,9 @@
         "EDGE": [
           "coinbase",
           "yahoo"
+        ],
+        "LIT": [
+          "coinbase"
         ],
         "M": [
           "yahoo"
@@ -183,9 +185,6 @@
           "binance_vision"
         ],
         "LIT": [
-          "binance_vision"
-        ],
-        "PROS": [
           "binance_vision"
         ],
         "XMR": [
@@ -226,7 +225,7 @@
       "rows": 1,
       "have": 1
     },
-    "elapsed_s": 121.4
+    "elapsed_s": 135.7
   },
   "results": [
     {
@@ -252,8 +251,8 @@
       "breakout_level": 0.13454,
       "provisional": false,
       "last_bar": "2026-11-25",
-      "price": 0.10429,
-      "mcap": 369067426.0,
+      "price": 0.1041,
+      "mcap": 371999004.0,
       "mcap_asof": "2026-11-26",
       "mcap_src": "coingecko"
     }
