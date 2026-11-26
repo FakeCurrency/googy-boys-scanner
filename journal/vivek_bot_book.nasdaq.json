@@ -2893,9 +2893,9 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0046,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0046,
       "exits": [],
       "mae": 26.61000061,
       "mfe": 26.61000061,
@@ -2918,7 +2918,7 @@
       "signal_entry": 26.61000061,
       "fill_slip_bps": 0.0,
       "last_mark": 26.61000061,
-      "last_mark_day": "2026-11-26",
+      "last_mark_day": "2026-11-25",
       "adv": 8204747.71,
       "adv_share": 0.0003047,
       "score": 10,
@@ -2932,7 +2932,12 @@
       "earnings": {
         "next": "2027-02-22",
         "lookup": "ok"
-      }
+      },
+      "day_marks": {
+        "2026-11-26": 26.61000061
+      },
+      "unreal_r": 0.0,
+      "unreal_usd": 0.0
     },
     {
       "id": "GRFS:long:1W:2026-11-26",
@@ -2964,9 +2969,9 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0026,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0026,
       "exits": [],
       "mae": 8.25,
       "mfe": 8.25,
@@ -2998,7 +3003,7 @@
       "signal_entry": 8.25,
       "fill_slip_bps": 0.0,
       "last_mark": 8.25,
-      "last_mark_day": "2026-11-26",
+      "last_mark_day": "2026-11-25",
       "adv": 6372531.05,
       "adv_share": 0.00039231,
       "score": 10,
@@ -3012,7 +3017,12 @@
       "earnings": {
         "next": null,
         "lookup": "ok"
-      }
+      },
+      "day_marks": {
+        "2026-11-26": 8.25
+      },
+      "unreal_r": 0.0,
+      "unreal_usd": 0.0
     },
     {
       "id": "WFRD:long:3D:2026-11-26",
@@ -3044,9 +3054,9 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0038,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0038,
       "exits": [],
       "mae": 77.44999695,
       "mfe": 77.44999695,
@@ -3069,7 +3079,7 @@
       "signal_entry": 77.44999695,
       "fill_slip_bps": 0.0,
       "last_mark": 77.44999695,
-      "last_mark_day": "2026-11-26",
+      "last_mark_day": "2026-11-25",
       "adv": 74614889.38,
       "adv_share": 3.351e-05,
       "score": 9,
@@ -3083,7 +3093,12 @@
       "earnings": {
         "next": "2027-02-02",
         "lookup": "ok"
-      }
+      },
+      "day_marks": {
+        "2026-11-26": 77.44999695
+      },
+      "unreal_r": -0.0,
+      "unreal_usd": -0.0
     },
     {
       "id": "GLBE:long:1W:2026-11-26",
@@ -3115,9 +3130,9 @@
       "tp2_hit": false,
       "tp3_hit": false,
       "booked_pct": 0.0,
-      "realized_r": 0.0,
+      "realized_r": -0.0023,
       "gross_r": 0.0,
-      "cost_r": 0.0,
+      "cost_r": 0.0023,
       "exits": [],
       "mae": 38.00999832,
       "mfe": 38.00999832,
@@ -3149,7 +3164,7 @@
       "signal_entry": 38.00999832,
       "fill_slip_bps": 0.0,
       "last_mark": 38.00999832,
-      "last_mark_day": "2026-11-26",
+      "last_mark_day": "2026-11-25",
       "adv": 75734860.38,
       "adv_share": 3.301e-05,
       "score": 8,
@@ -3163,7 +3178,12 @@
       "earnings": {
         "next": "2027-02-17",
         "lookup": "ok"
-      }
+      },
+      "day_marks": {
+        "2026-11-26": 38.00999832
+      },
+      "unreal_r": 0.0,
+      "unreal_usd": 0.0
     }
   ],
   "closed": [
@@ -12817,21 +12837,21 @@
       "breach_kind": null,
       "limit_usd": 4500.0,
       "limit_pct": 3.0,
-      "week_usd": 1674.75,
+      "week_usd": 1669.76,
       "week_limit_usd": 9000.0,
       "week_limit_pct": 6.0,
       "week_measured": true,
       "week_unpriced_worst_usd": 0.0,
-      "worst_session_usd": -4.97,
-      "worst_week_usd": 1674.75,
+      "worst_session_usd": -9.96,
+      "worst_week_usd": 1669.76,
       "realised_usd": -4.97,
-      "open_realised_usd": 0.0,
+      "open_realised_usd": -4.99,
       "unrealised_usd": 0.0,
-      "session_usd": -4.97,
+      "session_usd": -9.96,
       "unpriced": [],
       "unpriced_worst_usd": 0.0,
-      "open": 32,
-      "open_total_usd": 3219.94,
+      "open": 36,
+      "open_total_usd": 3214.95,
       "notified": ""
     }
   },
@@ -12840,5 +12860,5 @@
     "unreal_usd": 1354.83,
     "updated_day": "2026-11-26"
   },
-  "updated_at": "2026-11-26T15:44:44+00:00"
+  "updated_at": "2026-11-26T16:14:16+00:00"
 }
