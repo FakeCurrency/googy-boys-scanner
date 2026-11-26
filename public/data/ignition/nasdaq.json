@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-25T04:29:34+00:00",
+  "generated_at": "2026-11-26T03:43:43+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-24",
+  "last_closed_bar": "2026-11-25",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 23733.54,
-    "sma200": 25165.23,
+    "close": 23585.8,
+    "sma200": 25167.65,
     "above_200": false,
-    "vs_200_pct": -5.7,
-    "as_of": "2026-11-24"
+    "vs_200_pct": -6.3,
+    "as_of": "2026-11-25"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -52,9 +52,10 @@
   "summary": {
     "universe": 1418,
     "downloaded": 1418,
-    "screened": 1319,
+    "screened": 1318,
     "skipped": {
-      "short history": 99
+      "short history": 99,
+      "stale frame": 1
     },
     "counts": {
       "IGNITING": 0,
@@ -65,18 +66,18 @@
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-24",
-      "raw_last": "2026-11-24",
-      "expected_completed": "2026-11-24",
-      "lagging": 2,
-      "screened": 1418,
+      "completed_last": "2026-11-25",
+      "raw_last": "2026-11-25",
+      "expected_completed": "2026-11-25",
+      "lagging": 1,
+      "screened": 1417,
       "completed_dist": {
-        "2026-11-24": 1416,
+        "2026-11-25": 1416,
         "2026-11-20": 1,
         "2026-11-19": 1
       },
       "raw_dist": {
-        "2026-11-24": 1416,
+        "2026-11-25": 1416,
         "2026-11-20": 1,
         "2026-11-19": 1
       },
@@ -111,7 +112,7 @@
       "rows": 6,
       "have": 6
     },
-    "elapsed_s": 126.2
+    "elapsed_s": 165.0
   },
   "results": [
     {
@@ -124,7 +125,7 @@
       "entry": 11.68237581,
       "entry_basis": "next_open",
       "entry_date": "2026-11-13",
-      "bars_since": 8,
+      "bars_since": 9,
       "rvol": 3.76,
       "ext_pct": 7.1,
       "turnover_trigger": 28365488.0,
@@ -157,11 +158,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-24",
-      "price": 10.92000008,
-      "change_pct": -6.5,
-      "r_now": -0.86,
-      "trail": 11.5077006,
+      "last_bar": "2026-11-25",
+      "price": 10.77000046,
+      "change_pct": -7.8,
+      "r_now": -1.03,
+      "trail": 11.42619356,
       "mcap": 2109842432.0,
       "mcap_asof": "2026-11-23",
       "mcap_src": "cache"
@@ -176,7 +177,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 16,
+      "bars_since": 17,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -209,11 +210,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-24",
-      "price": 11.19999981,
-      "change_pct": -1.8,
-      "r_now": -0.13,
-      "trail": 11.15555551,
+      "last_bar": "2026-11-25",
+      "price": 11.26000023,
+      "change_pct": -1.2,
+      "r_now": -0.09,
+      "trail": 11.14333333,
       "mcap": 361951200.0,
       "mcap_asof": "2026-11-24",
       "mcap_src": "previous"
@@ -225,10 +226,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 3.97,
-        "atr_pctl": 30.6,
-        "vol_pctl": 37.9,
-        "drawdown_pct": 48.2,
+        "ribbon_pct": 4.0,
+        "atr_pctl": 32.3,
+        "vol_pctl": 40.5,
+        "drawdown_pct": 47.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-18"
@@ -240,8 +241,8 @@
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-24",
-      "price": 5.63999987,
+      "last_bar": "2026-11-25",
+      "price": 5.67999983,
       "mcap": 2389758464.0,
       "mcap_asof": "2026-11-23",
       "mcap_src": "cache"
@@ -253,23 +254,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 7.78,
-        "atr_pctl": 57.1,
-        "vol_pctl": 5.2,
-        "drawdown_pct": 82.9,
+        "ribbon_pct": 8.12,
+        "atr_pctl": 52.6,
+        "vol_pctl": 3.6,
+        "drawdown_pct": 82.1,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-13"
       },
       "base": {
-        "high": 16.64999962,
+        "high": 16.61000061,
         "low": 10.77000046,
         "bars": 60
       },
-      "breakout_level": 16.61000061,
+      "breakout_level": 16.39999962,
       "provisional": false,
-      "last_bar": "2026-11-24",
-      "price": 14.10000038,
+      "last_bar": "2026-11-25",
+      "price": 14.77000046,
       "mcap": 270428576.0,
       "mcap_asof": "2026-11-24",
       "mcap_src": "cache"
@@ -281,10 +282,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 23.84,
-        "atr_pctl": 54.2,
-        "vol_pctl": 1.8,
-        "drawdown_pct": 76.7,
+        "ribbon_pct": 27.29,
+        "atr_pctl": 56.3,
+        "vol_pctl": 2.2,
+        "drawdown_pct": 76.8,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-16"
@@ -296,8 +297,8 @@
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-24",
-      "price": 6.42000008,
+      "last_bar": "2026-11-25",
+      "price": 6.38000011,
       "mcap": 298519680.0,
       "mcap_asof": "2026-11-24",
       "mcap_src": "previous"
@@ -309,23 +310,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 26.79,
-        "atr_pctl": 39.1,
-        "vol_pctl": 18.1,
-        "drawdown_pct": 62.3,
+        "ribbon_pct": 30.08,
+        "atr_pctl": 41.1,
+        "vol_pctl": 24.2,
+        "drawdown_pct": 62.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-12"
       },
       "base": {
         "high": 16.03000069,
-        "low": 10.97999954,
+        "low": 10.60000038,
         "bars": 60
       },
       "breakout_level": 16.03000069,
       "provisional": false,
-      "last_bar": "2026-11-24",
-      "price": 10.73999977,
+      "last_bar": "2026-11-25",
+      "price": 10.72999954,
       "mcap": 795881664.0,
       "mcap_asof": "2026-11-22",
       "mcap_src": "cache"
