@@ -2,7 +2,7 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "asx",
-  "generated_at": "2026-11-27T09:21:26+00:00",
+  "generated_at": "2026-11-27T16:55:17+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
   "last_closed_bar": "2026-11-27",
@@ -50,12 +50,12 @@
     }
   },
   "summary": {
-    "universe": 2058,
-    "downloaded": 1849,
-    "screened": 1773,
+    "universe": 2059,
+    "downloaded": 1847,
+    "screened": 1770,
     "skipped": {
       "short history": 74,
-      "stale frame": 2
+      "stale frame": 3
     },
     "counts": {
       "IGNITING": 0,
@@ -69,28 +69,28 @@
       "completed_last": "2026-11-27",
       "raw_last": "2026-11-27",
       "expected_completed": "2026-11-27",
-      "lagging": 870,
-      "screened": 1847,
+      "lagging": 782,
+      "screened": 1844,
       "completed_dist": {
-        "2026-11-27": 977,
-        "2026-11-26": 730,
-        "2026-11-25": 139,
+        "2026-11-27": 1062,
+        "2026-11-26": 684,
+        "2026-11-25": 97,
         "2026-11-24": 1,
         "2026-11-19": 1
       },
       "raw_dist": {
-        "2026-11-27": 977,
-        "2026-11-26": 730,
-        "2026-11-25": 139,
+        "2026-11-27": 1062,
+        "2026-11-26": 684,
+        "2026-11-25": 97,
         "2026-11-24": 1,
         "2026-11-19": 1
       },
-      "rows_lagging": 2
+      "rows_lagging": 1
     },
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1301
+        "yahoo": 1432
       },
       "dead": {},
       "errors": {},
@@ -105,10 +105,10 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1301,
-      "reused": 548,
-      "merged": 1849,
-      "universe": 2058,
+      "fresh": 1432,
+      "reused": 415,
+      "merged": 1847,
+      "universe": 2059,
       "stale_dropped": 0,
       "refused": 0
     },
@@ -116,7 +116,7 @@
       "rows": 7,
       "have": 7
     },
-    "elapsed_s": 267.7
+    "elapsed_s": 348.4
   },
   "results": [
     {
@@ -151,7 +151,7 @@
       "symbol": "STX",
       "name": "Strike Energy Limited",
       "yf": "STX.AX",
-      "source": "yahoo",
+      "source": "cache",
       "state": "COILED",
       "coil": {
         "ribbon_pct": 7.87,
@@ -257,19 +257,19 @@
       "price": 0.435,
       "mcap": 208873200.0,
       "mcap_asof": "2026-11-27",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     },
     {
       "symbol": "PNV",
       "name": "Polynovo Limited",
       "yf": "PNV.AX",
-      "source": "cache",
+      "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 15.53,
-        "atr_pctl": 38.3,
-        "vol_pctl": 22.4,
-        "drawdown_pct": 71.2,
+        "ribbon_pct": 16.83,
+        "atr_pctl": 33.9,
+        "vol_pctl": 22.2,
+        "drawdown_pct": 71.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-20"
@@ -281,8 +281,8 @@
       },
       "breakout_level": 1.07500005,
       "provisional": false,
-      "last_bar": "2026-11-26",
-      "price": 0.80000001,
+      "last_bar": "2026-11-27",
+      "price": 0.79500002,
       "mcap": 566490432.0,
       "mcap_asof": "2026-11-23",
       "mcap_src": "previous"
@@ -313,7 +313,7 @@
       "price": 0.02,
       "mcap": 190970144.0,
       "mcap_asof": "2026-11-27",
-      "mcap_src": "yahoo"
+      "mcap_src": "previous"
     }
   ],
   "errors": []
