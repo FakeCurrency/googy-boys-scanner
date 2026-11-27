@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-27T15:25:24Z",
+  "generated_at": "2026-11-27T15:44:26Z",
   "source": "scanner/config.py \u2014 single source of truth for bot rules",
   "grades": [
     "A+",
@@ -133,7 +133,7 @@
     ]
   },
   "open_total": 60,
-  "closed_total": 208,
+  "closed_total": 210,
   "entry_quality": {
     "source": "vivek_backtest_longonly.json",
     "generated_at": "2026-11-01T14:52:45Z",
@@ -160,10 +160,6 @@
   },
   "capacity": {
     "time_stops_due": [
-      [
-        "2026-11-27",
-        2
-      ],
       [
         "2026-11-30",
         3
@@ -207,6 +203,10 @@
       [
         "2026-12-17",
         6
+      ],
+      [
+        "2026-12-18",
+        2
       ]
     ],
     "sector_load": {
@@ -223,15 +223,15 @@
         "utilities": 1
       },
       "nasdaq": {
-        "health care": 6,
         "information technology": 6,
         "consumer staples": 5,
+        "health care": 5,
         "industrials": 5,
         "utilities": 4,
         "consumer discretionary": 3,
         "energy": 3,
-        "communication services": 2,
-        "financials": 2
+        "financials": 3,
+        "communication services": 2
       },
       "crypto": {
         "crypto-alt": 1
@@ -257,10 +257,10 @@
       "reasons": {}
     },
     "nasdaq": {
-      "at": "2026-11-26T21:14:09Z",
+      "at": "2026-11-27T15:44:23Z",
       "reasons": {
         "ALGN": "dup_symbol",
-        "BLKB": "global_cap",
+        "BLKB": "sector_cap",
         "CDNS": "global_cap",
         "CHDN": "global_cap",
         "CHRW": "global_cap",
@@ -269,17 +269,15 @@
         "GLBE": "dup_symbol",
         "GRFS": "dup_symbol",
         "HSTM": "dup_symbol",
-        "KMB": "dup_symbol",
         "MGEE": "dup_symbol",
         "MLKN": "global_cap",
         "MSEX": "dup_symbol",
         "NTES": "global_cap",
-        "OCFC": "global_cap",
         "OTTR": "dup_symbol",
         "PAYX": "global_cap",
         "PCAR": "global_cap",
         "STRF": "global_cap",
-        "SWKS": "global_cap",
+        "SWKS": "sector_cap",
         "TYRA": "global_cap",
         "WFRD": "dup_symbol",
         "YORW": "dup_symbol",
@@ -308,8 +306,8 @@
         "generated_at": "2026-11-01T14:52:45Z"
       },
       "live": {
-        "n": 69,
-        "avg_r": -0.259
+        "n": 71,
+        "avg_r": -0.245
       }
     },
     "crypto": {
