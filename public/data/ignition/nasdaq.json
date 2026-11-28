@@ -2,19 +2,19 @@
   "schema_version": 1,
   "lens": "ignition",
   "market": "nasdaq",
-  "generated_at": "2026-11-27T04:31:29+00:00",
+  "generated_at": "2026-11-28T03:28:53+00:00",
   "ruleset_version": "1.0.0",
   "timeframe": "1d",
-  "last_closed_bar": "2026-11-25",
+  "last_closed_bar": "2026-11-27",
   "report_only": true,
   "regime": {
     "index": "^IXIC",
     "label": "NASDAQ Composite",
-    "close": 23585.8,
-    "sma200": 25167.65,
+    "close": 24129.5,
+    "sma200": 25172.96,
     "above_200": false,
-    "vs_200_pct": -6.3,
-    "as_of": "2026-11-25"
+    "vs_200_pct": -4.1,
+    "as_of": "2026-11-27"
   },
   "params": {
     "ribbon_max": 0.12,
@@ -50,34 +50,36 @@
     }
   },
   "summary": {
-    "universe": 1418,
-    "downloaded": 1418,
-    "screened": 1318,
+    "universe": 1420,
+    "downloaded": 1420,
+    "screened": 1319,
     "skipped": {
-      "short history": 98,
+      "short history": 99,
       "stale frame": 2
     },
     "counts": {
       "IGNITING": 0,
       "RUNNING": 0,
       "CLOSED": 2,
-      "COILED": 4,
+      "COILED": 3,
       "provisional": 0,
       "igniting_confirmed": 0
     },
     "bars": {
-      "completed_last": "2026-11-25",
-      "raw_last": "2026-11-25",
-      "expected_completed": "2026-11-25",
-      "lagging": 0,
-      "screened": 1416,
+      "completed_last": "2026-11-27",
+      "raw_last": "2026-11-27",
+      "expected_completed": "2026-11-27",
+      "lagging": 1,
+      "screened": 1418,
       "completed_dist": {
-        "2026-11-25": 1416,
+        "2026-11-27": 1417,
+        "2026-11-25": 1,
         "2026-11-20": 1,
         "2026-11-19": 1
       },
       "raw_dist": {
-        "2026-11-25": 1416,
+        "2026-11-27": 1417,
+        "2026-11-25": 1,
         "2026-11-20": 1,
         "2026-11-19": 1
       },
@@ -86,7 +88,7 @@
     "sources": {
       "mode": "yahoo",
       "by_source": {
-        "yahoo": 1418
+        "yahoo": 1420
       },
       "dead": {},
       "errors": {},
@@ -101,18 +103,18 @@
     },
     "errors": 0,
     "cache": {
-      "fresh": 1418,
+      "fresh": 1420,
       "reused": 0,
-      "merged": 1418,
-      "universe": 1418,
+      "merged": 1420,
+      "universe": 1420,
       "stale_dropped": 0,
       "refused": 0
     },
     "mcap": {
-      "rows": 6,
-      "have": 6
+      "rows": 5,
+      "have": 5
     },
-    "elapsed_s": 187.3
+    "elapsed_s": 207.8
   },
   "results": [
     {
@@ -125,7 +127,7 @@
       "entry": 11.68237581,
       "entry_basis": "next_open",
       "entry_date": "2026-11-13",
-      "bars_since": 9,
+      "bars_since": 10,
       "rvol": 3.76,
       "ext_pct": 7.1,
       "turnover_trigger": 28365488.0,
@@ -158,14 +160,14 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 10.77000046,
-      "change_pct": -7.8,
-      "r_now": -1.03,
-      "trail": 11.42619356,
-      "mcap": 2109842432.0,
-      "mcap_asof": "2026-11-23",
-      "mcap_src": "cache"
+      "last_bar": "2026-11-27",
+      "price": 10.72000027,
+      "change_pct": -8.2,
+      "r_now": -1.08,
+      "trail": 11.25776683,
+      "mcap": 2044982912.0,
+      "mcap_asof": "2026-11-28",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "PERI",
@@ -177,7 +179,7 @@
       "entry": 11.39999962,
       "entry_basis": "next_open",
       "entry_date": "2026-11-03",
-      "bars_since": 17,
+      "bars_since": 18,
       "rvol": 38.81,
       "ext_pct": 26.7,
       "turnover_trigger": 89175995.0,
@@ -210,11 +212,11 @@
       "exit_pending": false,
       "state": "CLOSED",
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 11.26000023,
-      "change_pct": -1.2,
-      "r_now": -0.09,
-      "trail": 11.14333333,
+      "last_bar": "2026-11-27",
+      "price": 11.30000019,
+      "change_pct": -0.9,
+      "r_now": -0.07,
+      "trail": 11.13555559,
       "mcap": 361951200.0,
       "mcap_asof": "2026-11-24",
       "mcap_src": "previous"
@@ -226,10 +228,10 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 4.0,
-        "atr_pctl": 32.3,
-        "vol_pctl": 40.5,
-        "drawdown_pct": 47.9,
+        "ribbon_pct": 4.15,
+        "atr_pctl": 30.0,
+        "vol_pctl": 39.9,
+        "drawdown_pct": 48.5,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-18"
@@ -241,11 +243,11 @@
       },
       "breakout_level": 6.0,
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 5.67999983,
-      "mcap": 2389758464.0,
-      "mcap_asof": "2026-11-23",
-      "mcap_src": "cache"
+      "last_bar": "2026-11-27",
+      "price": 5.61000013,
+      "mcap": 2501220864.0,
+      "mcap_asof": "2026-11-28",
+      "mcap_src": "yahoo"
     },
     {
       "symbol": "JACK",
@@ -254,23 +256,23 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 8.12,
-        "atr_pctl": 52.6,
-        "vol_pctl": 3.6,
-        "drawdown_pct": 82.1,
+        "ribbon_pct": 7.76,
+        "atr_pctl": 52.0,
+        "vol_pctl": 1.2,
+        "drawdown_pct": 82.4,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-13"
       },
       "base": {
-        "high": 16.61000061,
+        "high": 16.39999962,
         "low": 10.77000046,
         "bars": 60
       },
       "breakout_level": 16.39999962,
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 14.77000046,
+      "last_bar": "2026-11-27",
+      "price": 14.51000023,
       "mcap": 270428576.0,
       "mcap_asof": "2026-11-24",
       "mcap_src": "cache"
@@ -282,53 +284,25 @@
       "source": "yahoo",
       "state": "COILED",
       "coil": {
-        "ribbon_pct": 27.29,
-        "atr_pctl": 56.3,
-        "vol_pctl": 2.2,
-        "drawdown_pct": 76.8,
+        "ribbon_pct": 29.89,
+        "atr_pctl": 45.2,
+        "vol_pctl": 1.6,
+        "drawdown_pct": 75.9,
         "coiled": false,
         "coiled_bars": 0,
         "last_coiled": "2026-11-16"
       },
       "base": {
         "high": 9.27000046,
-        "low": 5.9749999,
+        "low": 5.94999981,
         "bars": 60
       },
       "breakout_level": 9.27000046,
       "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 6.38000011,
+      "last_bar": "2026-11-27",
+      "price": 6.63999987,
       "mcap": 298519680.0,
       "mcap_asof": "2026-11-24",
-      "mcap_src": "previous"
-    },
-    {
-      "symbol": "GPRE",
-      "name": "Green Plains, Inc. - Common Stock",
-      "yf": "GPRE",
-      "source": "yahoo",
-      "state": "COILED",
-      "coil": {
-        "ribbon_pct": 30.08,
-        "atr_pctl": 41.1,
-        "vol_pctl": 24.2,
-        "drawdown_pct": 62.4,
-        "coiled": false,
-        "coiled_bars": 0,
-        "last_coiled": "2026-11-12"
-      },
-      "base": {
-        "high": 16.03000069,
-        "low": 10.60000038,
-        "bars": 60
-      },
-      "breakout_level": 16.03000069,
-      "provisional": false,
-      "last_bar": "2026-11-25",
-      "price": 10.72999954,
-      "mcap": 757747072.0,
-      "mcap_asof": "2026-11-27",
       "mcap_src": "previous"
     }
   ],
